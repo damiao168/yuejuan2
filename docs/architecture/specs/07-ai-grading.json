@@ -1,0 +1,1691 @@
+{
+  "file": "07-ai-grading.drawio",
+  "title": "AI 阅卷、模型适配与仲裁",
+  "pages": [
+    {
+      "id": "actual_entry",
+      "title": "01 实际生产入口：单适配器建议与服务端结算",
+      "width": 2340,
+      "height": 1963,
+      "note": "v1 以文本建议为主；数学 v2 是具备有效裁片与证据治理的多模态路径，受配置和准入限制。",
+      "nodes": [
+        {
+          "id": "entry",
+          "label": "用户命令：单题 Grade / AI 批次\n任务引用答案、量规、模型/提示版本",
+          "x": 140,
+          "y": 253,
+          "w": 487,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/subjective/handlers_grade.go:21",
+          "display_label": "单题 / AI 批次",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "worker",
+          "label": "subjective-grading-worker\nclaim → heartbeat → ExecuteWorker\n推理实际由 Go API 调用 AI service",
+          "x": 859,
+          "y": 253,
+          "w": 532,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/subjective-grading-worker/subjective_grading_worker/runner.py:26",
+          "display_label": "主观题 Worker",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "prepare",
+          "label": "Prepare：来源/租约/版本检查\nLoadContext + 数学证据 + A14 准入",
+          "x": 1590,
+          "y": 265,
+          "w": 550,
+          "h": 87,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/subjective/worker_execution_service.go:81",
+          "display_label": "租约 / 来源 / 版本校验",
+          "show_evidence": false,
+          "title_font_size": 52,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "gate",
+          "label": "准入允许外部 AI？",
+          "x": 1615,
+          "y": 612,
+          "w": 502,
+          "h": 155,
+          "status": "implemented",
+          "kind": "decision",
+          "evidence": "services/api-gateway/internal/subjective/worker_execution_service.go:119",
+          "display_label": "允许 AI？",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "abstain",
+          "label": "拒绝 / 证据不可用\n不可重试或冲突终态\n保留人工处理入口",
+          "x": 894,
+          "y": 617,
+          "w": 460,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/subjective/worker_execution_service.go:110",
+          "display_label": "拒绝 / 转人工",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "input",
+          "label": "buildAdapterInput\n普通 v1 文本 + 量规；数学 v2 使用\n核验有效裁片 + 数学产物 + 冻结规则",
+          "x": 108,
+          "y": 629,
+          "w": 550,
+          "h": 87,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/subjective/grading_agent_v2_builder.go:125",
+          "display_label": "冻结答案 / 细则 / 证据",
+          "show_evidence": false,
+          "title_font_size": 52,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "adapter",
+          "label": "Go HTTPAdapter / HTTPAdapterV2\n每次真实入口只调用一个 activeAdapter\n版本契约、超时、有限重试",
+          "x": 105,
+          "y": 1003,
+          "w": 557,
+          "h": 93,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/subjective/handlers_worker.go:110",
+          "display_label": "单一 activeAdapter",
+          "show_evidence": false,
+          "title_font_size": 57,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "agent",
+          "label": "Python grading_agent\n路由能力矩阵、提示版本、结构化输出\n本地 llama.cpp / DashScope Native",
+          "x": 850,
+          "y": 994,
+          "w": 549,
+          "h": 111,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "ai-services/grading_agent/app.py:37",
+          "display_label": "grading-agent",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "settle",
+          "label": "服务端 GradeSettlementPipeline\n核验输出/证据；数学确定性结算\n注入/低置信风险 → NeedsHumanReview",
+          "x": 1587,
+          "y": 998,
+          "w": 557,
+          "h": 104,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/subjective/grade_settlement_pipeline.go:49",
+          "display_label": "服务端校验 / 算分",
+          "show_evidence": false,
+          "title_font_size": 66,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "complete",
+          "label": "worker 回传 CompleteWorker\nai_grade 幂等写入 → runtime 完成\n→ subjective run succeeded",
+          "x": 1591,
+          "y": 1380,
+          "w": 549,
+          "h": 94,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/subjective/worker_completion_service.go:49",
+          "display_label": "保存建议 / 完成任务",
+          "show_evidence": false,
+          "title_font_size": 58,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "human",
+          "label": "教师复核 AI 建议\nAI 结果不直接创建最终发布成绩\n主观题冻结模式仍要求人工确认",
+          "x": 968,
+          "y": 1371,
+          "w": 312,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/grading/scoring_run_routing.go:63",
+          "display_label": "教师确认",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "missing",
+          "label": "三智能体接入状态：部分\nA/B/C 内核与测试存在；普通同步/worker\n路由未调用 PanelOrchestrator",
+          "x": 180,
+          "y": 1348,
+          "w": 408,
+          "h": 157,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/subjective/handlers.go:66",
+          "display_label": "A/B/C 内核\n普通生产入口未接入",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "version",
+          "label": "可追溯：run / grade / request_id\nanswer、rubric、model、prompt 版本\n有效 crop 与 math 证据修订绑定",
+          "x": 382,
+          "y": 1686,
+          "w": 745,
+          "h": 111,
+          "status": "infra",
+          "kind": "note",
+          "evidence": "services/api-gateway/internal/subjective/worker_execution_service.go:136",
+          "display_label": "run / grade 版本记录",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        }
+      ],
+      "edges": [
+        {
+          "source": "entry",
+          "target": "worker",
+          "label": "独立批次 / 队列",
+          "dashed": true,
+          "display_label": "独立批次 / 队列"
+        },
+        {
+          "source": "worker",
+          "target": "prepare",
+          "label": "Execute",
+          "dashed": false,
+          "display_label": "Execute"
+        },
+        {
+          "source": "prepare",
+          "target": "gate",
+          "label": "治理门禁",
+          "dashed": false,
+          "display_label": "治理门禁"
+        },
+        {
+          "source": "gate",
+          "target": "abstain",
+          "label": "拒绝",
+          "dashed": false,
+          "display_label": "拒绝"
+        },
+        {
+          "source": "gate",
+          "target": "input",
+          "label": "允许",
+          "dashed": false,
+          "points": [
+            [
+              1866,
+              852
+            ],
+            [
+              384,
+              852
+            ]
+          ],
+          "display_label": "允许"
+        },
+        {
+          "source": "input",
+          "target": "adapter",
+          "label": "冻结请求",
+          "dashed": false,
+          "display_label": "冻结请求"
+        },
+        {
+          "source": "adapter",
+          "target": "agent",
+          "label": "HTTP /grading/grade[-v2]",
+          "dashed": false,
+          "display_label": "HTTP /grading/grade[-v2]"
+        },
+        {
+          "source": "agent",
+          "target": "settle",
+          "label": "结构化候选",
+          "dashed": false,
+          "display_label": "结构化候选"
+        },
+        {
+          "source": "settle",
+          "target": "complete",
+          "label": "worker完成回传",
+          "dashed": false,
+          "display_label": "worker完成回传"
+        },
+        {
+          "source": "complete",
+          "target": "human",
+          "label": "建议事实",
+          "dashed": false,
+          "display_label": "建议事实"
+        },
+        {
+          "source": "missing",
+          "target": "adapter",
+          "label": "现有路由核验说明",
+          "dashed": true,
+          "display_label": "现有路由核验说明"
+        }
+      ],
+      "display_note": "",
+      "typography_layout_base": {
+        "width": 1800,
+        "height": 1510,
+        "nodes": {
+          "entry": {
+            "x": 80,
+            "y": 170,
+            "w": 430,
+            "h": 135
+          },
+          "worker": {
+            "x": 650,
+            "y": 170,
+            "w": 430,
+            "h": 135
+          },
+          "prepare": {
+            "x": 1220,
+            "y": 170,
+            "w": 430,
+            "h": 135
+          },
+          "gate": {
+            "x": 1220,
+            "y": 450,
+            "w": 430,
+            "h": 160
+          },
+          "abstain": {
+            "x": 650,
+            "y": 450,
+            "w": 430,
+            "h": 135
+          },
+          "input": {
+            "x": 80,
+            "y": 450,
+            "w": 430,
+            "h": 135
+          },
+          "adapter": {
+            "x": 80,
+            "y": 740,
+            "w": 430,
+            "h": 135
+          },
+          "agent": {
+            "x": 650,
+            "y": 740,
+            "w": 430,
+            "h": 135
+          },
+          "settle": {
+            "x": 1220,
+            "y": 740,
+            "w": 430,
+            "h": 135
+          },
+          "complete": {
+            "x": 1220,
+            "y": 1030,
+            "w": 430,
+            "h": 135
+          },
+          "human": {
+            "x": 650,
+            "y": 1030,
+            "w": 430,
+            "h": 135
+          },
+          "missing": {
+            "x": 80,
+            "y": 1030,
+            "w": 430,
+            "h": 135
+          },
+          "version": {
+            "x": 80,
+            "y": 1280,
+            "w": 1000,
+            "h": 120
+          }
+        },
+        "points": {
+          "4": [
+            [
+              1435,
+              655
+            ],
+            [
+              295,
+              655
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "panel_kernel",
+      "title": "02 已实现的三智能体内核：并行主评、盲仲裁",
+      "width": 2340,
+      "height": 1963,
+      "note": "这页是可调用且有测试的内核，不能画成所有生产任务默认运行三次模型。",
+      "nodes": [
+        {
+          "id": "policy",
+          "label": "库入口：GradeWithApprovedPolicy\n精确学段/学科/原型批准策略\n已完成评估 + 模型集合 + 各模型审批",
+          "x": 105,
+          "y": 258,
+          "w": 558,
+          "h": 101,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/subjective/panel_orchestrator.go:78",
+          "display_label": "批准的 Panel 策略",
+          "show_evidence": false,
+          "title_font_size": 64,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "panel",
+          "label": "GetOrCreatePanel\n冻结 answer_version / rubric / policy阈值\n终态重放已保存角色成绩",
+          "x": 849,
+          "y": 258,
+          "w": 552,
+          "h": 102,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/subjective/panel_orchestrator.go:185",
+          "display_label": "创建 / 恢复 Panel",
+          "show_evidence": false,
+          "title_font_size": 65,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "a",
+          "label": "Primary A：独立盲评\n冻结题目、学生证据、量规",
+          "x": 190,
+          "y": 643,
+          "w": 387,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/subjective/panel_orchestrator.go:206",
+          "display_label": "A 独立盲评",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "b",
+          "label": "Primary B：独立盲评\n并行运行；请求深拷贝不共享结果",
+          "x": 934,
+          "y": 643,
+          "w": 382,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/subjective/panel_orchestrator.go:448",
+          "display_label": "B 独立盲评",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "derive",
+          "label": "各角色候选由服务端算分\n不信任模型总分；独立 ai_grade/run\n无效、失败、弃权转人工",
+          "x": 1674,
+          "y": 643,
+          "w": 384,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/subjective/panel_orchestrator.go:405",
+          "display_label": "服务端算分",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "compare",
+          "label": "收齐 A/B：是否精确共识？\n分数、评分点、必答点、证据、置信/风险\n差异低于阈值仍不能平均消除",
+          "x": 844,
+          "y": 1042,
+          "w": 561,
+          "h": 114,
+          "status": "implemented",
+          "kind": "decision",
+          "evidence": "services/api-gateway/internal/subjective/panel_disagreement.go:22",
+          "display_label": "A/B 精确共识？",
+          "show_evidence": false,
+          "title_font_size": 49,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "consensus",
+          "label": "resolved：primary_consensus\n精确一致且无仲裁触发\n保存 A 的服务端推导分",
+          "x": 180,
+          "y": 1020,
+          "w": 408,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/subjective/panel_orchestrator.go:260",
+          "display_label": "采纳 A 共识",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "c",
+          "label": "Arbiter C：更强且版本不同\n仅冻结原材料，完全不含 A/B 输出\narbitration_pending → 盲评",
+          "x": 1711,
+          "y": 1020,
+          "w": 309,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/subjective/panel_orchestrator.go:267",
+          "display_label": "C 盲仲裁",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "safe",
+          "label": "C 置信度 / 硬风险 / 加权量规一致性\n满足已冻结策略？",
+          "x": 1588,
+          "y": 1443,
+          "w": 556,
+          "h": 104,
+          "status": "implemented",
+          "kind": "decision",
+          "evidence": "services/api-gateway/internal/subjective/panel_orchestrator.go:281",
+          "display_label": "C 结果满足策略？",
+          "show_evidence": false,
+          "title_font_size": 44,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "human",
+          "label": "human_review：review_task\n主评失败、C 失败/不收敛\n先写 panel 状态再建/关联任务",
+          "x": 896,
+          "y": 1423,
+          "w": 456,
+          "h": 111,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/subjective/panel_orchestrator.go:493",
+          "display_label": "人工复核任务",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "resolved",
+          "label": "resolved：arbiter\n采用 C 的服务端结算分",
+          "x": 182,
+          "y": 1423,
+          "w": 402,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/subjective/panel_orchestrator.go:287",
+          "display_label": "采纳 C 仲裁",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "boundary",
+          "label": "部分实现边界：内核未自动挂接普通路由\nresolved panel 不等同 final_grade / 发布\n影子评估保存去标识观察值",
+          "x": 562,
+          "y": 1702,
+          "w": 384,
+          "h": 157,
+          "status": "partial",
+          "kind": "note",
+          "evidence": "services/api-gateway/internal/subjective/panel_shadow_runner.go:80",
+          "display_label": "内核可调用\n未默认接入生产路由",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        }
+      ],
+      "edges": [
+        {
+          "source": "policy",
+          "target": "panel",
+          "label": "已批准绑定",
+          "dashed": false,
+          "display_label": "已批准绑定"
+        },
+        {
+          "source": "panel",
+          "target": "a",
+          "label": "并行",
+          "dashed": false,
+          "points": [
+            [
+              1118,
+              500
+            ],
+            [
+              384,
+              500
+            ]
+          ],
+          "display_label": "并行"
+        },
+        {
+          "source": "panel",
+          "target": "b",
+          "label": "并行",
+          "dashed": false,
+          "display_label": "并行"
+        },
+        {
+          "source": "a",
+          "target": "derive",
+          "label": "结果",
+          "dashed": false,
+          "points": [
+            [
+              384,
+              871
+            ],
+            [
+              1866,
+              871
+            ]
+          ],
+          "display_label": "结果"
+        },
+        {
+          "source": "b",
+          "target": "derive",
+          "label": "结果",
+          "dashed": false,
+          "display_label": "结果"
+        },
+        {
+          "source": "derive",
+          "target": "compare",
+          "label": "均成功",
+          "dashed": false,
+          "exitX": 0,
+          "exitY": 0.75,
+          "entryX": 1,
+          "entryY": 0.25,
+          "points": [
+            [
+              1560,
+              743
+            ],
+            [
+              1430,
+              743
+            ],
+            [
+              1430,
+              1043
+            ]
+          ],
+          "display_label": "均成功"
+        },
+        {
+          "source": "compare",
+          "target": "consensus",
+          "label": "精确共识",
+          "dashed": false,
+          "display_label": "精确共识"
+        },
+        {
+          "source": "compare",
+          "target": "c",
+          "label": "分歧",
+          "dashed": false,
+          "display_label": "分歧"
+        },
+        {
+          "source": "derive",
+          "target": "human",
+          "label": "主评失败",
+          "dashed": false,
+          "points": [
+            [
+              2236,
+              910
+            ],
+            [
+              2236,
+              1332
+            ],
+            [
+              1118,
+              1332
+            ]
+          ],
+          "display_label": "主评失败"
+        },
+        {
+          "source": "c",
+          "target": "safe",
+          "label": "C 结果",
+          "dashed": false,
+          "display_label": "C 结果"
+        },
+        {
+          "source": "safe",
+          "target": "human",
+          "label": "不满足 / 失败",
+          "dashed": false,
+          "display_label": "不满足 / 失败"
+        },
+        {
+          "source": "safe",
+          "target": "resolved",
+          "label": "满足",
+          "dashed": false,
+          "points": [
+            [
+              1866,
+              1638
+            ],
+            [
+              384,
+              1638
+            ]
+          ],
+          "display_label": "满足"
+        },
+        {
+          "source": "human",
+          "target": "boundary",
+          "label": "待人工",
+          "dashed": false,
+          "display_label": "待人工"
+        },
+        {
+          "source": "resolved",
+          "target": "boundary",
+          "label": "评分事实",
+          "dashed": false,
+          "display_label": "评分事实"
+        }
+      ],
+      "display_note": "",
+      "typography_layout_base": {
+        "width": 1800,
+        "height": 1510,
+        "nodes": {
+          "policy": {
+            "x": 80,
+            "y": 170,
+            "w": 430,
+            "h": 135
+          },
+          "panel": {
+            "x": 650,
+            "y": 170,
+            "w": 430,
+            "h": 135
+          },
+          "a": {
+            "x": 80,
+            "y": 470,
+            "w": 430,
+            "h": 135
+          },
+          "b": {
+            "x": 650,
+            "y": 470,
+            "w": 430,
+            "h": 135
+          },
+          "derive": {
+            "x": 1220,
+            "y": 470,
+            "w": 430,
+            "h": 135
+          },
+          "compare": {
+            "x": 650,
+            "y": 760,
+            "w": 430,
+            "h": 170
+          },
+          "consensus": {
+            "x": 80,
+            "y": 760,
+            "w": 430,
+            "h": 135
+          },
+          "c": {
+            "x": 1220,
+            "y": 760,
+            "w": 430,
+            "h": 135
+          },
+          "safe": {
+            "x": 1220,
+            "y": 1070,
+            "w": 430,
+            "h": 160
+          },
+          "human": {
+            "x": 650,
+            "y": 1070,
+            "w": 430,
+            "h": 135
+          },
+          "resolved": {
+            "x": 80,
+            "y": 1070,
+            "w": 430,
+            "h": 135
+          },
+          "boundary": {
+            "x": 80,
+            "y": 1310,
+            "w": 1000,
+            "h": 120
+          }
+        },
+        "points": {
+          "1": [
+            [
+              860,
+              385
+            ],
+            [
+              295,
+              385
+            ]
+          ],
+          "3": [
+            [
+              295,
+              670
+            ],
+            [
+              1435,
+              670
+            ]
+          ],
+          "5": [
+            [
+              1200,
+              571.25
+            ],
+            [
+              1100,
+              571.25
+            ],
+            [
+              1100,
+              802.5
+            ]
+          ],
+          "8": [
+            [
+              1720,
+              700
+            ],
+            [
+              1720,
+              1025
+            ],
+            [
+              860,
+              1025
+            ]
+          ],
+          "11": [
+            [
+              1435,
+              1260
+            ],
+            [
+              295,
+              1260
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "failure_cost",
+      "title": "03 模型失败、幂等与成本边界",
+      "width": 2340,
+      "height": 1534,
+      "note": "错误重试、应用修复与 runtime 接管是不同层级；未发现这些入口保证全链路 exactly-once 推理或统一费用预算。",
+      "nodes": [
+        {
+          "id": "request",
+          "label": "请求绑定版本与 idempotency_key\n同键不同正文 → 409",
+          "x": 105,
+          "y": 257,
+          "w": 557,
+          "h": 104,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "ai-services/grading_agent/app.py:125",
+          "display_label": "冻结版本 / 请求键",
+          "show_evidence": false,
+          "title_font_size": 66,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "cache",
+          "label": "进程内 TTL/LRU 成功缓存\n同键 in-flight Event 共享结果\n多进程/重启不共享",
+          "x": 968,
+          "y": 253,
+          "w": 312,
+          "h": 111,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "ai-services/grading_agent/app.py:56",
+          "display_label": "成功缓存",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "session",
+          "label": "供应商 adapter session\n本地模型队列超时与并发槽\nmax_output_tokens / 模型超时",
+          "x": 1587,
+          "y": 234,
+          "w": 557,
+          "h": 150,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "ai-services/grading_agent/model.py:482",
+          "display_label": "并发槽 / 模型超时\n输出 Token 上限",
+          "show_evidence": false,
+          "title_font_size": 66,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "retry",
+          "label": "Python：有限修复 / 重试\n无效输出、证据校验、不可用、限流\nmodel_timeout 不在修复码列表",
+          "x": 1588,
+          "y": 686,
+          "w": 555,
+          "h": 77,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "ai-services/grading_agent/app.py:176",
+          "display_label": "无效响应：修复 / 有限重试",
+          "show_evidence": false,
+          "title_font_size": 44,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "go_retry",
+          "label": "Go：有限 HTTP 重试\n100ms 等待，可被 ctx 取消\nmodel_timeout 明确不重试",
+          "x": 846,
+          "y": 653,
+          "w": 558,
+          "h": 144,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/subjective/adapter_http.go:157",
+          "display_label": "Go HTTP 有限重试\n模型超时不重试",
+          "show_evidence": false,
+          "title_font_size": 61,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "worker_retry",
+          "label": "worker：APIError → Retryable=True\nruntime attempt/backoff限制整任务重跑\n可能再次进入模型请求",
+          "x": 106,
+          "y": 673,
+          "w": 555,
+          "h": 104,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "services/subjective-grading-worker/subjective_grading_worker/runner.py:51",
+          "display_label": "Worker 任务重试",
+          "show_evidence": false,
+          "title_font_size": 66,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "usage",
+          "label": "遥测聚合 attempts / token usage\nai_grade 保存输入/输出 tokens、延迟\n不等于全链路费用硬上限",
+          "x": 106,
+          "y": 1079,
+          "w": 556,
+          "h": 149,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "ai-services/grading_agent/app.py:190",
+          "display_label": "Token / 延迟计量\n全链费用无硬上限",
+          "show_evidence": false,
+          "title_font_size": 65,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "gap",
+          "label": "恢复缺口：主观完成分三步提交\ntask succeeded 后 run 更新失败\nCompleteWorker 重放在 Prepare 被拒绝",
+          "x": 848,
+          "y": 1113,
+          "w": 552,
+          "h": 82,
+          "status": "issue",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/subjective/worker_completion_service.go:57",
+          "display_label": "问题：评分链路分步提交",
+          "show_evidence": false,
+          "title_font_size": 48,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "panel_gap",
+          "label": "内核恢复缺口：human_review先落库\n建任务失败后终态重放不补建任务\n进入生产前需修复",
+          "x": 1587,
+          "y": 1117,
+          "w": 557,
+          "h": 74,
+          "status": "issue",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/subjective/panel_orchestrator.go:493",
+          "display_label": "问题：人工终态早于任务关联",
+          "show_evidence": false,
+          "title_font_size": 41,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        }
+      ],
+      "edges": [
+        {
+          "source": "request",
+          "target": "cache",
+          "label": "同键同内容",
+          "dashed": false,
+          "display_label": "同键同内容"
+        },
+        {
+          "source": "cache",
+          "target": "session",
+          "label": "首个请求推理",
+          "dashed": false,
+          "display_label": "首个请求推理"
+        },
+        {
+          "source": "session",
+          "target": "retry",
+          "label": "响应/错误",
+          "dashed": false,
+          "display_label": "响应/错误"
+        },
+        {
+          "source": "retry",
+          "target": "go_retry",
+          "label": "错误返回",
+          "dashed": false,
+          "display_label": "错误返回"
+        },
+        {
+          "source": "go_retry",
+          "target": "worker_retry",
+          "label": "重试耗尽",
+          "dashed": false,
+          "display_label": "重试耗尽"
+        },
+        {
+          "source": "retry",
+          "target": "usage",
+          "label": "成功候选",
+          "dashed": false,
+          "exitX": 0,
+          "exitY": 0.75,
+          "entryX": 1,
+          "entryY": 0.25,
+          "points": [
+            [
+              1560,
+              769
+            ],
+            [
+              1430,
+              769
+            ],
+            [
+              1430,
+              1040
+            ],
+            [
+              689,
+              1040
+            ],
+            [
+              689,
+              1110
+            ]
+          ],
+          "display_label": "成功候选"
+        },
+        {
+          "source": "worker_retry",
+          "target": "usage",
+          "label": "重试成本累积",
+          "dashed": false,
+          "display_label": "重试成本累积"
+        },
+        {
+          "source": "go_retry",
+          "target": "gap",
+          "label": "完成阶段另有风险",
+          "dashed": true,
+          "display_label": "完成阶段另有风险"
+        }
+      ],
+      "display_note": "",
+      "typography_layout_base": {
+        "width": 1800,
+        "height": 1180,
+        "nodes": {
+          "request": {
+            "x": 80,
+            "y": 170,
+            "w": 430,
+            "h": 135
+          },
+          "cache": {
+            "x": 650,
+            "y": 170,
+            "w": 430,
+            "h": 135
+          },
+          "session": {
+            "x": 1220,
+            "y": 170,
+            "w": 430,
+            "h": 135
+          },
+          "retry": {
+            "x": 1220,
+            "y": 490,
+            "w": 430,
+            "h": 135
+          },
+          "go_retry": {
+            "x": 650,
+            "y": 490,
+            "w": 430,
+            "h": 135
+          },
+          "worker_retry": {
+            "x": 80,
+            "y": 490,
+            "w": 430,
+            "h": 135
+          },
+          "usage": {
+            "x": 80,
+            "y": 820,
+            "w": 430,
+            "h": 135
+          },
+          "gap": {
+            "x": 650,
+            "y": 820,
+            "w": 430,
+            "h": 135
+          },
+          "panel_gap": {
+            "x": 1220,
+            "y": 820,
+            "w": 430,
+            "h": 135
+          }
+        },
+        "points": {
+          "5": [
+            [
+              1200,
+              591.25
+            ],
+            [
+              1100,
+              591.25
+            ],
+            [
+              1100,
+              800
+            ],
+            [
+              530,
+              800
+            ],
+            [
+              530,
+              853.75
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "multimodal_math",
+      "title": "04 数学多模态输入与确定性结算",
+      "width": 2340,
+      "height": 1872,
+      "note": "math v2 确有生产调用；图片协议存在不代表所有 provider/model 已验证视觉能力。普通 v1 与数学 v2 输入分开说明。",
+      "nodes": [
+        {
+          "id": "v1",
+          "label": "普通 v1：题干 + AnswerText + rubric\nHTTP wire 未发送 AnswerImageRef\n不是已实现任意图片主观评分",
+          "x": 174,
+          "y": 253,
+          "w": 419,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/subjective/adapter_http.go:291",
+          "display_label": "v1 文本评分",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "v2_entry",
+          "label": "数学 v2：配置开启 + 数学适用条件\n冻结 math artifact/revision/scoring version\n选 mathAdapter",
+          "x": 848,
+          "y": 256,
+          "w": 553,
+          "h": 106,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/subjective/math_grading.go:53",
+          "display_label": "数学 v2 条件入口",
+          "show_evidence": false,
+          "title_font_size": 68,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "crop",
+          "label": "ActiveCropResolver：读取有效 PNG\ntenant/exam/owner/尺寸/大小/SHA 校验\n读取前后比较元数据与绑定",
+          "x": 1638,
+          "y": 253,
+          "w": 456,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/subjective/active_crop_resolver.go:59",
+          "display_label": "读取有效裁片",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "build",
+          "label": "Go v2 builder：media_evidence base64\ncrop hash + math facts + frozen rubric\n禁止模型 final_score",
+          "x": 1600,
+          "y": 643,
+          "w": 532,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/subjective/grading_agent_v2_builder.go:186",
+          "display_label": "图片 / 文本证据",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "app",
+          "label": "POST /grading/grade-v2\nProductionMathV2Application\n独立于同文件 fixture seam",
+          "x": 948,
+          "y": 643,
+          "w": 352,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "ai-services/grading_agent/app_v2.py:365",
+          "display_label": "grade-v2",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "messages",
+          "label": "math_candidate_messages\n文字 + 一张 PNG data URI image_url\nrequest_structured → candidate_mapping",
+          "x": 192,
+          "y": 643,
+          "w": 384,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "ai-services/grading_agent/app_v2.py:321",
+          "display_label": "多模态消息",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "local",
+          "label": "Local adapter → /chat/completions\n传递 messages；视觉模型能力需实测",
+          "x": 112,
+          "y": 1048,
+          "w": 544,
+          "h": 81,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "ai-services/grading_agent/model.py:553",
+          "display_label": "本地 chat/completions",
+          "show_evidence": false,
+          "title_font_size": 47,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "native",
+          "label": "DashScopeNative → text-generation 路径\n本函数未转换专用原生视觉格式/端点\n提供商图片接入与效果待验证",
+          "x": 848,
+          "y": 1021,
+          "w": 554,
+          "h": 136,
+          "status": "unknown",
+          "kind": "box",
+          "evidence": "ai-services/grading_agent/model.py:684",
+          "display_label": "DashScope 原生协议\n图片支持待验证",
+          "show_evidence": false,
+          "title_font_size": 54,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "candidate",
+          "label": "模型输出 criteria/evidence candidate\n不是公开成绩；needs_human_review\n服务端重读版本、防中途事实修订",
+          "x": 1587,
+          "y": 1037,
+          "w": 557,
+          "h": 104,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/subjective/math_grading.go:120",
+          "display_label": "候选评分点 / 证据",
+          "show_evidence": false,
+          "title_font_size": 66,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "settle",
+          "label": "Go 按冻结 rubric + 有效数学事实结算\n模型总分无最终权威\n版本/证据不符则拒绝",
+          "x": 1602,
+          "y": 1436,
+          "w": 528,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/subjective/math_grading.go:139",
+          "display_label": "按冻结细则结算",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "human",
+          "label": "diagram/uncertain/歧义/关键质量低 → 人工\n成功数学建议仍需要教师确认\nfinal_grade / score_release 另有发布路径",
+          "x": 848,
+          "y": 1447,
+          "w": 554,
+          "h": 90,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/subjective/math_grading.go:128",
+          "display_label": "歧义 / 质量低 → 人工",
+          "show_evidence": false,
+          "title_font_size": 55,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "empty",
+          "label": "v2 也要求非空 AnswerText\n不是图片任意上传就可自动评分\n统一主观空白识别待确认",
+          "x": 108,
+          "y": 1442,
+          "w": 550,
+          "h": 99,
+          "status": "unknown",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/subjective/grading_agent_v2_builder.go:283",
+          "display_label": "v2 仍要求答案文本",
+          "show_evidence": false,
+          "title_font_size": 62,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        }
+      ],
+      "edges": [
+        {
+          "source": "v2_entry",
+          "target": "crop",
+          "label": "取当前裁片",
+          "dashed": false,
+          "display_label": "取当前裁片"
+        },
+        {
+          "source": "crop",
+          "target": "build",
+          "label": "通过绑定",
+          "dashed": false,
+          "display_label": "通过绑定"
+        },
+        {
+          "source": "build",
+          "target": "app",
+          "label": "版本契约",
+          "dashed": false,
+          "display_label": "版本契约"
+        },
+        {
+          "source": "app",
+          "target": "messages",
+          "label": "构造推理输入",
+          "dashed": false,
+          "display_label": "构造推理输入"
+        },
+        {
+          "source": "messages",
+          "target": "local",
+          "label": "配置 local",
+          "dashed": false,
+          "display_label": "配置 local"
+        },
+        {
+          "source": "messages",
+          "target": "native",
+          "label": "配置 native",
+          "dashed": true,
+          "exitX": 1,
+          "exitY": 0.75,
+          "entryX": 0,
+          "entryY": 0.25,
+          "points": [
+            [
+              689,
+              743
+            ],
+            [
+              819,
+              743
+            ],
+            [
+              819,
+              1045
+            ]
+          ],
+          "display_label": "配置 native"
+        },
+        {
+          "source": "app",
+          "target": "candidate",
+          "label": "候选输出",
+          "dashed": false,
+          "exitX": 1,
+          "exitY": 0.75,
+          "entryX": 0,
+          "entryY": 0.25,
+          "points": [
+            [
+              1430,
+              743
+            ],
+            [
+              1560,
+              743
+            ],
+            [
+              1560,
+              1045
+            ]
+          ],
+          "display_label": "候选输出"
+        },
+        {
+          "source": "candidate",
+          "target": "settle",
+          "label": "服务端结算",
+          "dashed": false,
+          "display_label": "服务端结算"
+        },
+        {
+          "source": "settle",
+          "target": "human",
+          "label": "待教师确认",
+          "dashed": false,
+          "display_label": "待教师确认"
+        }
+      ],
+      "display_note": "",
+      "typography_layout_base": {
+        "width": 1800,
+        "height": 1440,
+        "nodes": {
+          "v1": {
+            "x": 80,
+            "y": 170,
+            "w": 430,
+            "h": 135
+          },
+          "v2_entry": {
+            "x": 650,
+            "y": 170,
+            "w": 430,
+            "h": 135
+          },
+          "crop": {
+            "x": 1220,
+            "y": 170,
+            "w": 430,
+            "h": 135
+          },
+          "build": {
+            "x": 1220,
+            "y": 470,
+            "w": 430,
+            "h": 135
+          },
+          "app": {
+            "x": 650,
+            "y": 470,
+            "w": 430,
+            "h": 135
+          },
+          "messages": {
+            "x": 80,
+            "y": 470,
+            "w": 430,
+            "h": 135
+          },
+          "local": {
+            "x": 80,
+            "y": 770,
+            "w": 430,
+            "h": 135
+          },
+          "native": {
+            "x": 650,
+            "y": 770,
+            "w": 430,
+            "h": 135
+          },
+          "candidate": {
+            "x": 1220,
+            "y": 770,
+            "w": 430,
+            "h": 135
+          },
+          "settle": {
+            "x": 1220,
+            "y": 1080,
+            "w": 430,
+            "h": 135
+          },
+          "human": {
+            "x": 650,
+            "y": 1080,
+            "w": 430,
+            "h": 135
+          },
+          "empty": {
+            "x": 80,
+            "y": 1080,
+            "w": 430,
+            "h": 135
+          }
+        },
+        "points": {
+          "5": [
+            [
+              530,
+              571.25
+            ],
+            [
+              630,
+              571.25
+            ],
+            [
+              630,
+              803.75
+            ]
+          ],
+          "6": [
+            [
+              1100,
+              571.25
+            ],
+            [
+              1200,
+              571.25
+            ],
+            [
+              1200,
+              803.75
+            ]
+          ]
+        }
+      }
+    }
+  ],
+  "compact": true
+}

@@ -17,6 +17,8 @@ import { EmptyState } from "./PageState";
 import { ResponsiveTable } from "./ResponsiveTable";
 import { StatusTag } from "./StatusTag";
 import { hashQueryParam } from "../router/query";
+import { listProcessingActors, type WorkflowActor } from "../api/workflowActors";
+import { ProcessingExceptionEvidence } from "./ProcessingExceptionEvidence";
 import type { StatusTone } from "../types";
 
 function formatError(error: unknown) {
@@ -81,7 +83,17 @@ function processingExceptionStatusLabel(status: string) {
   return "待处理";
 }
 
-export function ProcessingOperationsPanel({ examId, canManage }: { examId: string; canManage: boolean }) {
+function processingAssigneeLabel(exception: ProcessingException) {
+  // 是否已指派取绑定 ID；展示只用业务摘要，不把缺失的人员资料替换成 UUID。
+  if (!exception.assigned_to) return "未指派";
+  const name = exception.assigned_to_name?.trim();
+  const username = exception.assigned_to_username?.trim();
+  if (!name) return username || "已指派，人员资料暂不可用";
+  const usernameSuffix = username ? `（${username}）` : "";
+  return `${name}${usernameSuffix}`;
+}
+
+export function ProcessingOperationsPanel({ examId, canManage, onNavigate }: Readonly<{ examId: string; canManage: boolean; onNavigate?: (path: string) => void }>) {
   const { message } = App.useApp();
   const focusedExceptionID = hashQueryParam("exception");
   const [summary, setSummary] = useState<ProcessingSummary | null>(null);
@@ -95,6 +107,20 @@ export function ProcessingOperationsPanel({ examId, canManage }: { examId: strin
   const [assigneeID, setAssigneeID] = useState("");
   const [resolving, setResolving] = useState<ProcessingException | null>(null);
   const [resolution, setResolution] = useState("");
+  const [viewing, setViewing] = useState<ProcessingException | null>(null);
+  const [actors, setActors] = useState<WorkflowActor[]>([]);
+  const [actorError, setActorError] = useState("");
+  const [actorAttempt, setActorAttempt] = useState(0);
+  const [actorLoading, setActorLoading] = useState(false);
+
+  useEffect(() => { setAssigning(null); setResolving(null); setViewing(null); }, [examId]);
+  useEffect(() => {
+    if (!assigning || !canManage) return;
+    let active = true;
+    setActors([]); setActorError(""); setActorLoading(true);
+    void listProcessingActors(examId).then(values => { if (active) setActors(values); }).catch(cause => { if (active) setActorError(getUserErrorMessage(cause, "处理人员加载失败")); }).finally(() => { if (active) setActorLoading(false); });
+    return () => { active = false; };
+  }, [examId, assigning, canManage, actorAttempt]);
 
   const load = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
@@ -145,8 +171,8 @@ export function ProcessingOperationsPanel({ examId, canManage }: { examId: strin
   const assign = useCallback(async () => {
     if (!assigning) return;
     const normalizedAssigneeID = assigneeID.trim();
-    if (!normalizedAssigneeID) {
-      message.warning("请输入处理人账号 ID");
+    if (!canManage || actorLoading || !actors.some(actor => actor.id === normalizedAssigneeID)) {
+      message.warning("请选择本校有处理权限的启用人员");
       return;
     }
     setActioning(`assign:${assigning.id}`);
@@ -161,7 +187,7 @@ export function ProcessingOperationsPanel({ examId, canManage }: { examId: strin
     } finally {
       setActioning(null);
     }
-  }, [assigneeID, assigning, load, message]);
+  }, [actors, actorLoading, canManage, assigneeID, assigning, load, message]);
 
   const resolve = useCallback(async () => {
     if (!resolving) return;
@@ -191,7 +217,7 @@ export function ProcessingOperationsPanel({ examId, canManage }: { examId: strin
       render: (_, exception) => (
         <div className="capture-identity-cell">
           <strong>{processingIssueLabel(exception.code)}</strong>
-          <span className="muted-text">页面 {exception.page_id.slice(0, 8)}</span>
+          <span className="muted-text">考号 {exception.candidate_no || "尚未匹配"} · {exception.page_no ? `第 ${exception.page_no} 页` : "页号待核对"}</span>
         </div>
       )
     },
@@ -211,7 +237,7 @@ export function ProcessingOperationsPanel({ examId, canManage }: { examId: strin
       title: "处理人",
       dataIndex: "assigned_to",
       width: 132,
-      render: (value?: string) => value || "未指派"
+      render: (_value: string | undefined, exception) => processingAssigneeLabel(exception)
     },
     {
       title: "更新时间",
@@ -225,6 +251,7 @@ export function ProcessingOperationsPanel({ examId, canManage }: { examId: strin
       width: 220,
       render: (_, exception) => (
         <Space className="table-actions" size={4} wrap>
+          <Button size="small" onClick={() => setViewing(exception)}>查看异常页</Button>
           {canManage && exception.status !== "resolved" && exception.retry_source_id ? (
             <Button
               size="small"
@@ -258,7 +285,6 @@ export function ProcessingOperationsPanel({ examId, canManage }: { examId: strin
               解决
             </Button>
           ) : null}
-          {!canManage || exception.status === "resolved" ? "-" : null}
         </Space>
       )
     }
@@ -373,8 +399,13 @@ export function ProcessingOperationsPanel({ examId, canManage }: { examId: strin
         onCancel={() => setAssigning(null)}
         onOk={() => void assign()}
       >
-        <p className="muted-text">输入学校内处理人的账号 ID。</p>
-        <Input autoFocus value={assigneeID} onChange={(event) => setAssigneeID(event.target.value)} placeholder="处理人账号 ID" />
+        <p className="muted-text">选择当前考试所在学校内、具有处理权限的启用人员。</p>
+        {actorError ? <Alert type="error" message={actorError} action={<Button onClick={() => setActorAttempt(value => value + 1)}>重试人员列表</Button>} /> : null}
+        {!actorLoading && !actorError && actors.length === 0 ? <Alert type="info" message="当前没有可分派的处理人员，请在学校人员管理中配置处理权限后重试。" /> : null}
+        <Select style={{ width: "100%" }} showSearch optionFilterProp="label" loading={actorLoading} value={assigneeID || undefined} onChange={setAssigneeID} placeholder="选择处理人员" options={actors.map(actor => ({ value: actor.id, label: `${actor.display_name || actor.username}（${actor.username}）` }))} />
+      </Modal>
+      <Modal title="异常页面材料" open={Boolean(viewing)} onCancel={() => setViewing(null)} footer={null} width={800} destroyOnHidden>
+        {viewing ? <ProcessingExceptionEvidence key={`${examId}:${viewing.id}`} id={viewing.id} examId={examId} onNavigate={onNavigate} /> : null}
       </Modal>
       <Modal
         title="确认解决异常"

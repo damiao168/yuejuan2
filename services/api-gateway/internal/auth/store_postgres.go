@@ -883,7 +883,8 @@ SELECT u.id::text, u.username, u.display_name, u.status,
        COALESCE(array_agg(DISTINCT r.code) FILTER (WHERE r.code IS NOT NULL), '{}'),
 	   COALESCE(u.school_id::text, ''), COALESCE(u.phone_normalized, ''), COALESCE(u.employee_no, ''),
 	   u.activated_at, u.last_login_at,
-       u.created_at
+       u.created_at,
+       ARRAY(SELECT tc.class_id::text FROM teacher_class tc WHERE tc.tenant_id=u.tenant_id AND tc.teacher_id=u.id AND tc.deleted_at IS NULL ORDER BY tc.class_id::text)
 FROM app_user u
 LEFT JOIN user_role ur ON ur.tenant_id = u.tenant_id AND ur.user_id = u.id AND ur.deleted_at IS NULL
 LEFT JOIN role r ON r.tenant_id = u.tenant_id AND r.id = ur.role_id AND r.deleted_at IS NULL
@@ -910,7 +911,7 @@ LIMIT NULLIF($7, 0)
 	for rows.Next() {
 		var user ManagedUser
 		var phone string
-		if err := rows.Scan(&user.ID, &user.Username, &user.DisplayName, &user.Status, pqArray(&user.Roles), &user.SchoolID, &phone, &user.EmployeeNo, &user.ActivatedAt, &user.LastLoginAt, &user.CreatedAt); err != nil {
+		if err := rows.Scan(&user.ID, &user.Username, &user.DisplayName, &user.Status, pqArray(&user.Roles), &user.SchoolID, &phone, &user.EmployeeNo, &user.ActivatedAt, &user.LastLoginAt, &user.CreatedAt, pqArray(&user.ClassIDs)); err != nil {
 			return nil, err
 		}
 		user.PhoneMasked = MaskPhone(phone)
@@ -945,99 +946,30 @@ ORDER BY name, code
 	return out, rows.Err()
 }
 
+// CreateManagedUser 在同一事务内创建账户、职责、班级和可选激活记录，任一步失败都回滚。
 func (s *PostgresStore) CreateManagedUser(ctx context.Context, actor User, actorScope AccessScope, input CreateManagedUserInput, passwordHash string) (ManagedUser, error) {
-	policy := RolePolicy(input.RoleCode)
-	if !CanAssignManagedRole(actor, input.RoleCode) {
-		return ManagedUser{}, ErrRoleAssignment
+	roles := managedRoleCodes(input)
+	schoolID, err := managedUserCreationSchool(actor, actorScope, input, roles)
+	if err != nil {
+		return ManagedUser{}, err
 	}
-	if len(input.ClassIDs) > 0 && !policy.ClassBinding {
-		return ManagedUser{}, ErrInvalidRoleBinding
-	}
-	schoolID := strings.TrimSpace(input.SchoolID)
-	if schoolID == "" && HasRole(actor, "school_admin") && len(actorScope.SchoolIDs) == 1 {
-		schoolID = actorScope.SchoolIDs[0]
-	}
-	if policy.SchoolRequired && schoolID == "" {
-		return ManagedUser{}, ErrInvalidRoleBinding
-	}
-	if schoolID != "" && !actorScope.AllowsSchool(schoolID) {
-		return ManagedUser{}, ErrOrganizationScope
-	}
-
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return ManagedUser{}, err
 	}
 	defer tx.Rollback()
-
-	var roleID, roleScopeType string
-	if err := tx.QueryRowContext(ctx, `
-SELECT id::text, scope_type FROM role
-WHERE tenant_id = $1::uuid AND code = $2 AND deleted_at IS NULL
-`, actor.TenantID, input.RoleCode).Scan(&roleID, &roleScopeType); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return ManagedUser{}, ErrRoleNotFound
-		}
-		return ManagedUser{}, err
-	}
-	if roleScopeType != policy.CanonicalScope {
-		return ManagedUser{}, ErrRoleAssignment
-	}
-	if schoolID != "" {
-		var exists bool
-		if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM school WHERE tenant_id=$1::uuid AND id::text=$2 AND deleted_at IS NULL)`, actor.TenantID, schoolID).Scan(&exists); err != nil {
-			return ManagedUser{}, err
-		}
-		if !exists {
-			return ManagedUser{}, ErrInvalidRoleBinding
-		}
-	}
-	if len(input.ClassIDs) > 0 {
-		var count int
-		var minSchoolID, maxSchoolID string
-		if err := tx.QueryRowContext(ctx, `
-SELECT count(*), COALESCE(min(school_id::text), ''), COALESCE(max(school_id::text), '')
-FROM school_class
-WHERE tenant_id=$1::uuid AND id::text=ANY(string_to_array($2, ',')) AND deleted_at IS NULL
-`, actor.TenantID, strings.Join(input.ClassIDs, ",")).Scan(&count, &minSchoolID, &maxSchoolID); err != nil {
-			return ManagedUser{}, err
-		}
-		if count != len(input.ClassIDs) || minSchoolID == "" || minSchoolID != maxSchoolID || minSchoolID != schoolID {
-			return ManagedUser{}, ErrInvalidRoleBinding
-		}
-		for _, classID := range input.ClassIDs {
-			if !actorScope.TenantWide && !actorScope.AllowsSchool(schoolID) && !actorScope.AllowsClass(classID) {
-				return ManagedUser{}, ErrOrganizationScope
-			}
-		}
-	}
-
-	var user ManagedUser
-	status := "active"
-	var activatedAt any = time.Now().UTC()
-	if input.ActivationTokenHash != "" {
-		status = "invited"
-		activatedAt = nil
-	}
-	err = tx.QueryRowContext(ctx, `
-INSERT INTO app_user (tenant_id, school_id, username, display_name, password_hash, phone_normalized, employee_no, status, activated_at, password_changed_at)
-VALUES ($1::uuid, NULLIF($2, '')::uuid, $3, $4, $5, NULLIF($6, ''), NULLIF($7, ''), $8, $9, $9)
-RETURNING id::text, username, display_name, status, COALESCE(school_id::text,''), activated_at, created_at
-`, actor.TenantID, schoolID, input.Username, input.DisplayName, passwordHash, input.Phone, input.EmployeeNo, status, activatedAt).Scan(&user.ID, &user.Username, &user.DisplayName, &user.Status, &user.SchoolID, &user.ActivatedAt, &user.CreatedAt)
+	roleIDs, err := resolveManagedUserCreationRoles(ctx, tx, actor.TenantID, roles)
 	if err != nil {
-		lowerError := strings.ToLower(err.Error())
-		if strings.Contains(lowerError, "uq_app_user_tenant_phone") || strings.Contains(lowerError, "uq_app_user_tenant_employee_no") {
-			return ManagedUser{}, ErrIdentityExists
-		}
-		if strings.Contains(lowerError, "unique") || strings.Contains(lowerError, "duplicate") {
-			return ManagedUser{}, ErrUsernameExists
-		}
 		return ManagedUser{}, err
 	}
-	if _, err := tx.ExecContext(ctx, `
-INSERT INTO user_role (tenant_id, user_id, role_id, data_scope)
-VALUES ($1::uuid, $2::uuid, $3::uuid, $4::jsonb)
-`, actor.TenantID, user.ID, roleID, auditJSON(canonicalRoleDataScope(input.RoleCode, schoolID))); err != nil {
+	if err := validateManagedUserCreationOrganization(ctx, tx, actor.TenantID, schoolID, input.ClassIDs, actorScope); err != nil {
+		return ManagedUser{}, err
+	}
+	user, err := insertManagedUser(ctx, tx, actor.TenantID, schoolID, input, passwordHash)
+	if err != nil {
+		return ManagedUser{}, err
+	}
+	if err := insertManagedUserCreationRoles(ctx, tx, actor.TenantID, user.ID, schoolID, roles, roleIDs); err != nil {
 		return ManagedUser{}, err
 	}
 	if len(input.ClassIDs) > 0 {
@@ -1060,10 +992,125 @@ VALUES ($1::uuid, $2::uuid, $3, $4)
 	if err := tx.Commit(); err != nil {
 		return ManagedUser{}, err
 	}
-	user.Roles = []string{input.RoleCode}
+	user.Roles = roles
+	user.ClassIDs = append([]string{}, input.ClassIDs...)
 	user.PhoneMasked = MaskPhone(input.Phone)
 	user.EmployeeNo = input.EmployeeNo
 	return user, nil
+}
+
+func managedUserCreationSchool(actor User, actorScope AccessScope, input CreateManagedUserInput, roles []string) (string, error) {
+	if err := validateManagedAccess(actor, roles, input.ClassIDs); err != nil {
+		return "", err
+	}
+	schoolID := strings.TrimSpace(input.SchoolID)
+	// 只有学校管理员且授权范围恰好一所学校时才能省略学校，不能凭班级猜测学校。
+	if schoolID == "" && HasRole(actor, "school_admin") && len(actorScope.SchoolIDs) == 1 {
+		schoolID = actorScope.SchoolIDs[0]
+	}
+	for _, code := range roles {
+		if RolePolicy(code).SchoolRequired && schoolID == "" {
+			return "", ErrInvalidRoleBinding
+		}
+	}
+	if schoolID != "" && !actorScope.AllowsSchool(schoolID) {
+		return "", ErrOrganizationScope
+	}
+	return schoolID, nil
+}
+
+func resolveManagedUserCreationRoles(ctx context.Context, tx *sql.Tx, tenantID string, roles []string) (map[string]string, error) {
+	roleIDs := map[string]string{}
+	for _, code := range roles {
+		var roleID, roleScopeType string
+		if err := tx.QueryRowContext(ctx, `
+SELECT id::text, scope_type FROM role
+WHERE tenant_id = $1::uuid AND code = $2 AND deleted_at IS NULL
+`, tenantID, code).Scan(&roleID, &roleScopeType); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return nil, ErrRoleNotFound
+			}
+			return nil, err
+		}
+		if roleScopeType != RolePolicy(code).CanonicalScope {
+			return nil, ErrRoleAssignment
+		}
+		roleIDs[code] = roleID
+	}
+	return roleIDs, nil
+}
+
+// 班级必须全部存在并同属所选学校；保留调用方的班级顺序和数量，不在此处去重。
+func validateManagedUserCreationOrganization(ctx context.Context, tx *sql.Tx, tenantID, schoolID string, classes []string, actorScope AccessScope) error {
+	if schoolID != "" {
+		var exists bool
+		if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM school WHERE tenant_id=$1::uuid AND id::text=$2 AND deleted_at IS NULL)`, tenantID, schoolID).Scan(&exists); err != nil {
+			return err
+		}
+		if !exists {
+			return ErrInvalidRoleBinding
+		}
+	}
+	if len(classes) == 0 {
+		return nil
+	}
+	var count int
+	var minSchoolID, maxSchoolID string
+	if err := tx.QueryRowContext(ctx, `
+SELECT count(*), COALESCE(min(school_id::text), ''), COALESCE(max(school_id::text), '')
+FROM school_class
+WHERE tenant_id=$1::uuid AND id::text=ANY(string_to_array($2, ',')) AND deleted_at IS NULL
+`, tenantID, strings.Join(classes, ",")).Scan(&count, &minSchoolID, &maxSchoolID); err != nil {
+		return err
+	}
+	if count != len(classes) || minSchoolID == "" || minSchoolID != maxSchoolID || minSchoolID != schoolID {
+		return ErrInvalidRoleBinding
+	}
+	for _, classID := range classes {
+		if !actorScope.TenantWide && !actorScope.AllowsSchool(schoolID) && !actorScope.AllowsClass(classID) {
+			return ErrOrganizationScope
+		}
+	}
+	return nil
+}
+
+func insertManagedUser(ctx context.Context, tx *sql.Tx, tenantID, schoolID string, input CreateManagedUserInput, passwordHash string) (ManagedUser, error) {
+	var user ManagedUser
+	status := "active"
+	var activatedAt any = time.Now().UTC()
+	// 邀请账户尚未激活，激活时间和密码变更时间共用 NULL；直接创建则共用本次 UTC 时间。
+	if input.ActivationTokenHash != "" {
+		status = "invited"
+		activatedAt = nil
+	}
+	err := tx.QueryRowContext(ctx, `
+INSERT INTO app_user (tenant_id, school_id, username, display_name, password_hash, phone_normalized, employee_no, status, activated_at, password_changed_at)
+VALUES ($1::uuid, NULLIF($2, '')::uuid, $3, $4, $5, NULLIF($6, ''), NULLIF($7, ''), $8, $9, $9)
+RETURNING id::text, username, display_name, status, COALESCE(school_id::text,''), activated_at, created_at
+`, tenantID, schoolID, input.Username, input.DisplayName, passwordHash, input.Phone, input.EmployeeNo, status, activatedAt).Scan(&user.ID, &user.Username, &user.DisplayName, &user.Status, &user.SchoolID, &user.ActivatedAt, &user.CreatedAt)
+	if err != nil {
+		lowerError := strings.ToLower(err.Error())
+		if strings.Contains(lowerError, "uq_app_user_tenant_phone") || strings.Contains(lowerError, "uq_app_user_tenant_employee_no") {
+			return ManagedUser{}, ErrIdentityExists
+		}
+		if strings.Contains(lowerError, "unique") || strings.Contains(lowerError, "duplicate") {
+			return ManagedUser{}, ErrUsernameExists
+		}
+		return ManagedUser{}, err
+	}
+	return user, nil
+}
+
+func insertManagedUserCreationRoles(ctx context.Context, tx *sql.Tx, tenantID, userID, schoolID string, roles []string, roleIDs map[string]string) error {
+	for _, code := range roles {
+		if _, err := tx.ExecContext(ctx, `
+INSERT INTO user_role (tenant_id, user_id, role_id, data_scope)
+VALUES ($1::uuid, $2::uuid, $3::uuid, $4::jsonb)
+`, tenantID, userID, roleIDs[code], auditJSON(canonicalRoleDataScope(code, schoolID))); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *PostgresStore) FindActivation(ctx context.Context, tokenHash string, now time.Time) (ActivationPreview, error) {
@@ -1402,29 +1449,8 @@ FOR UPDATE
 	if user.ID == actor.ID {
 		return ManagedUser{}, "", ErrUserStatusForbidden
 	}
-	rows, err := tx.QueryContext(ctx, `
-SELECT r.code
-FROM user_role ur
-JOIN role r ON r.tenant_id=ur.tenant_id AND r.id=ur.role_id AND r.deleted_at IS NULL
-WHERE ur.tenant_id=$1::uuid AND ur.user_id=$2::uuid AND ur.deleted_at IS NULL
-ORDER BY r.code
-`, actor.TenantID, user.ID)
+	user.Roles, err = loadManagedUserRolesTx(ctx, tx, actor.TenantID, user.ID)
 	if err != nil {
-		return ManagedUser{}, "", err
-	}
-	for rows.Next() {
-		var role string
-		if err := rows.Scan(&role); err != nil {
-			rows.Close()
-			return ManagedUser{}, "", err
-		}
-		user.Roles = append(user.Roles, role)
-	}
-	if err := rows.Err(); err != nil {
-		rows.Close()
-		return ManagedUser{}, "", err
-	}
-	if err := rows.Close(); err != nil {
 		return ManagedUser{}, "", err
 	}
 	if !CanManageUserRoles(actor, user.Roles) {
@@ -1495,6 +1521,37 @@ WHERE tenant_id=$1::uuid AND user_id=$2::uuid AND revoked_at IS NULL
 	return user, previousStatus, nil
 }
 
+// 角色读取使用账户状态事务；行读取或关闭失败时，调用方不能继续执行权限判断和状态写入。
+func loadManagedUserRolesTx(ctx context.Context, tx *sql.Tx, tenantID, userID string) ([]string, error) {
+	rows, err := tx.QueryContext(ctx, `
+SELECT r.code
+FROM user_role ur
+JOIN role r ON r.tenant_id=ur.tenant_id AND r.id=ur.role_id AND r.deleted_at IS NULL
+WHERE ur.tenant_id=$1::uuid AND ur.user_id=$2::uuid AND ur.deleted_at IS NULL
+ORDER BY r.code
+`, tenantID, userID)
+	if err != nil {
+		return nil, err
+	}
+	var roles []string
+	for rows.Next() {
+		var role string
+		if err := rows.Scan(&role); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		roles = append(roles, role)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return nil, err
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	return roles, nil
+}
+
 func auditJSON(value map[string]any) any {
 	if len(value) == 0 {
 		return nil
@@ -1524,7 +1581,7 @@ func nullableTime(value time.Time) any {
 	return value
 }
 
-// pqArray scans a PostgreSQL text array in the simple {"a","b"} form returned by lib/pq-compatible drivers.
+// pqArray 解析 PostgreSQL 文本数组，格式为 lib/pq 兼容驱动返回的简单 {"a","b"} 形式。
 func pqArray(target *[]string) any {
 	return scannerFunc(func(src any) error {
 		if src == nil {

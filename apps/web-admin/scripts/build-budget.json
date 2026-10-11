@@ -1,0 +1,7 @@
+{
+  "maxInitialJavaScriptGzipBytes": 616190,
+  "blockedInitialChunkPatterns": ["assets/(?:SchoolConversation|MathMarkdown|conversationPdf|pdf)[-.]"],
+  "baselineInitialJavaScriptGzipBytes": 560172,
+  "measuredOn": "2026-10-04",
+  "growthAllowance": 0.1
+}

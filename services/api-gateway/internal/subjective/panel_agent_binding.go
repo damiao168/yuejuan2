@@ -11,26 +11,30 @@ type PanelModelConnectionStore interface {
 	GetManagedAPIConnection(context.Context, string, string) (modelgovernance.ManagedAPIConnection, error)
 }
 
-// PanelAdapterFactory is supplied by the deployment runtime. It must build a
-// role-isolated rubric adapter for the resolved, capability-tested connection;
-// it must never place peer scores or results in the model request.
+// PanelAdapterFactory 由部署运行时提供，必须为已解析且通过能力测试的连接构建角色隔离的评分细则适配器；
+// 绝不能将其他评审方的分数或结果放入模型请求。
 type PanelAdapterFactory func(modelgovernance.ManagedAPIConnection, modelgovernance.ModelRoleBinding, ModelPolicy) (LLMGradingAdapter, error)
 
-// ResolvePanelAgents ties every A/B/C execution to a governed role binding.
-// A strength rank only selects the shadow candidate; real senior-subject
-// adjudication evaluation remains required before production activation.
-func ResolvePanelAgents(ctx context.Context, tenantID, stage, subject, archetype string, roles modelgovernance.ModelRoleBindingStore,
-	connections PanelModelConnectionStore, factory PanelAdapterFactory, minConfidence float64) (PanelAgents, error) {
-	if roles == nil || connections == nil || factory == nil || strings.TrimSpace(tenantID) == "" ||
+// PanelAgentRuntime 提供受治理连接的读取和适配器构建依赖；连接每次解析时仍须重新读取并校验。
+type PanelAgentRuntime struct {
+	Roles       modelgovernance.ModelRoleBindingStore
+	Connections PanelModelConnectionStore
+	Factory     PanelAdapterFactory
+}
+
+// ResolvePanelAgents 将每次 A/B/C 执行绑定到受治理的角色绑定。
+// 能力排序只选择影子候选；生产启用前仍需真实的资深学科裁决评估。
+func ResolvePanelAgents(ctx context.Context, tenantID, stage, subject, archetype string, runtime PanelAgentRuntime, minConfidence float64) (PanelAgents, error) {
+	if runtime.Roles == nil || runtime.Connections == nil || runtime.Factory == nil || strings.TrimSpace(tenantID) == "" ||
 		minConfidence <= 0 || minConfidence > 1 {
 		return PanelAgents{}, ErrPanelConfiguration
 	}
-	bindings, err := modelgovernance.ResolvePanelRoleBindings(ctx, roles, tenantID, stage, subject, archetype)
+	bindings, err := modelgovernance.ResolvePanelRoleBindings(ctx, runtime.Roles, tenantID, stage, subject, archetype)
 	if err != nil {
 		return PanelAgents{}, err
 	}
 	build := func(binding modelgovernance.ModelRoleBinding) (PanelAgentBinding, error) {
-		connection, getErr := connections.GetManagedAPIConnection(ctx, tenantID, binding.ManagedModelAPIConfigID)
+		connection, getErr := runtime.Connections.GetManagedAPIConnection(ctx, tenantID, binding.ManagedModelAPIConfigID)
 		if getErr != nil {
 			return PanelAgentBinding{}, getErr
 		}
@@ -41,7 +45,7 @@ func ResolvePanelAgents(ctx context.Context, tenantID, stage, subject, archetype
 			return PanelAgentBinding{}, ErrPanelConfiguration
 		}
 		policy := ModelPolicy{ModelVersion: connection.Config.ModelVersion, PromptVersion: binding.PromptVersion, MinConfidence: minConfidence}
-		adapter, buildErr := factory(connection, binding, policy)
+		adapter, buildErr := runtime.Factory(connection, binding, policy)
 		if buildErr != nil {
 			return PanelAgentBinding{}, buildErr
 		}

@@ -1,5 +1,4 @@
 import base64
-import binascii
 import hashlib
 import json
 import math
@@ -158,17 +157,7 @@ def build_dashscope_grading_payload(
     return payload
 
 
-def _validate_approved_crop(crop, expected_binding):
-    if not isinstance(crop, ApprovedImageCrop):
-        raise TypeError("crop must be an ApprovedImageCrop")
-    if crop.scope != "answer_segment_crop":
-        raise ValueError("only answer-segment crops may be exported")
-    _bounded_identifier(crop.binding, _SHA256, "crop binding")
-    _bounded_identifier(expected_binding, _SHA256, "expected crop binding")
-    if crop.binding != expected_binding:
-        raise ValueError("crop is not bound to the current answer segment")
-    if crop.media_type != _APPROVED_IMAGE_MEDIA_TYPE:
-        raise ValueError("crop media type is not approved")
+def _validate_crop_dimensions(crop):
     if (
         isinstance(crop.width_pixels, bool)
         or isinstance(crop.height_pixels, bool)
@@ -179,20 +168,26 @@ def _validate_approved_crop(crop, expected_binding):
         or crop.width_pixels * crop.height_pixels > MAX_CROP_PIXELS
     ):
         raise ValueError("crop dimensions are invalid or too large")
-    if not isinstance(crop.normalized_bbox, tuple) or len(crop.normalized_bbox) != 4:
+
+
+def _validate_crop_bbox(bbox):
+    if not isinstance(bbox, tuple) or len(bbox) != 4:
         raise ValueError("crop bbox must contain four normalized values")
-    x, y, width, height = crop.normalized_bbox
-    if any(isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) for value in crop.normalized_bbox):
+    x, y, width, height = bbox
+    if any(isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) for value in bbox):
         raise ValueError("crop bbox values must be finite numbers")
     if x < 0 or y < 0 or width <= 0 or height <= 0 or x + width > 1 or y + height > 1:
         raise ValueError("crop bbox must stay within its source page")
     if width * height >= 0.9:
         raise ValueError("whole-page or near-whole-page images cannot be exported")
+
+
+def _validate_crop_image(crop):
     if not isinstance(crop.data_base64, str) or not crop.data_base64:
         raise ValueError("crop image data is required")
     try:
         image_bytes = base64.b64decode(crop.data_base64, validate=True)
-    except (ValueError, binascii.Error) as exc:
+    except ValueError as exc:
         raise ValueError("crop image data is not valid base64") from exc
     if not image_bytes or len(image_bytes) > MAX_CROP_BYTES:
         raise ValueError("crop image data is empty or too large")
@@ -204,6 +199,23 @@ def _validate_approved_crop(crop, expected_binding):
         raise ValueError("crop dimensions do not match the decoded PNG")
     if not _SHA256.fullmatch(crop.sha256) or hashlib.sha256(image_bytes).hexdigest() != crop.sha256:
         raise ValueError("crop content hash does not match its attestation")
+
+
+def _validate_approved_crop(crop, expected_binding):
+    if not isinstance(crop, ApprovedImageCrop):
+        raise TypeError("crop must be an ApprovedImageCrop")
+    if crop.scope != "answer_segment_crop":
+        raise ValueError("only answer-segment crops may be exported")
+    _bounded_identifier(crop.binding, _SHA256, "crop binding")
+    _bounded_identifier(expected_binding, _SHA256, "expected crop binding")
+    if crop.binding != expected_binding:
+        raise ValueError("crop is not bound to the current answer segment")
+    if crop.media_type != _APPROVED_IMAGE_MEDIA_TYPE:
+        raise ValueError("crop media type is not approved")
+    # 先拒绝错题绑定、范围和尺寸，再解码图像；每一步仍保留原有首个失败原因。
+    _validate_crop_dimensions(crop)
+    _validate_crop_bbox(crop.normalized_bbox)
+    _validate_crop_image(crop)
     return f"data:{crop.media_type};base64,{crop.data_base64}"
 
 

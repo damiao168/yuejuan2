@@ -48,7 +48,7 @@ func TestBusinessCommandHandlerResponsesValidateAgainstOpenAPI(t *testing.T) {
 		t.Fatalf("recover: %d %s", rec.Code, rec.Body)
 	}
 	validateResponseBody(t, doc, "/api/v1/review-commands/{commandId}", "get", "200", rec.Body.Bytes())
-	// Validate the operation-specific result too; the generic envelope is not sufficient.
+	// 还要校验操作专属结果；通用响应封装不足以覆盖该约束。
 	receipt, err := store.RecoverCommand(commandreceipt.WithID(context.Background(), "review-contract"), "tenant-1", "actor-1", "review-contract")
 	if err != nil {
 		t.Fatal(err)

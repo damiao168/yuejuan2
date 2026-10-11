@@ -36,7 +36,7 @@ export function preparationTaskGroups(checks: ReadinessCheck[], gradingLabel: st
   return [
     build("students", "学生范围", "确定参加考试的班级与学生", students, "students"),
     build("materials", "考试资料", "试卷、答案、评分标准与答题卡", materials, "paper"),
-    { key: "grading", label: "阅卷方式", description: gradingLabel, checks: [], passed: 1, total: 1, complete: true },
+    build("grading", "逐题评分方式", `${gradingLabel}；请在准备页核对已保存的逐题方式`, checks.filter((check) => check.section === "grading"), "paper"),
     build("checks", "开考检查", "完成全部真实检查项后确认准备", checks)
   ];
 }

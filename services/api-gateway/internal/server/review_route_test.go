@@ -153,15 +153,23 @@ func TestQualityManagementRoutesDoNotExposeGoldOrSeedEvidenceToGraders(t *testin
 	router := reviewRouter(authStore, review.NewMemoryStore())
 	graderToken := reviewLogin(t, router, "review_grader")
 
-	// These paths deliberately need review:manage even when their backing
-	// store is empty.  A 403 proves the permission boundary runs before any
-	// Gold/Seed/quality projection can be returned.
+	// 即使底层存储为空，这些路径也要求 review:manage。
+	// 403 证明权限边界在返回任何 Gold、Seed 或质量投影之前执行。
 	for _, path := range []string{
 		"/api/v1/gold-papers",
 		"/api/v1/exams/exam-1/questions/question-1/answer-groups",
 		"/api/v1/exams/exam-1/questions/question-1/answer-group-metrics",
 		"/api/v1/seed-observations",
 		"/api/v1/grading-quality-incidents",
+		"/api/v1/regrade-items/item-1/review-context",
+		"/api/v1/regrade-items/item-1/review-segment-image",
+		"/api/v1/answer-groups/group-1/samples/segment-1/context",
+		"/api/v1/answer-groups/group-1/samples/segment-1/segment-image",
+		"/api/v1/exams/exam-1/review-actors",
+		"/api/v1/exams/exam-1/processing/actors",
+		"/api/v1/processing/exceptions/exception-1/context",
+		"/api/v1/processing/exceptions/exception-1/page-image",
+		"/api/v1/exams/exam-1/capture-targets?submission_id=submission-1",
 	} {
 		req := reviewAuthedRequest(http.MethodGet, path, "", graderToken)
 		rec := httptest.NewRecorder()
@@ -200,6 +208,26 @@ func TestReviewWorkPermissionIsScopedToAssignedTasks(t *testing.T) {
 	assignReviewTaskForRoute(t, router, managerToken, firstID, reviewGraderID)
 	assignReviewTaskForRoute(t, router, managerToken, secondID, reviewSecondGraderID)
 
+	reviewAssertAssignedTaskVisibility(t, router, firstID, secondID, graderToken, teacherToken)
+	reviewAssertDraftAndImageAuthority(t, router, firstID, graderToken, teacherToken, managerToken, evidenceOnlyToken)
+	req := reviewAuthedRequest(http.MethodPost, "/api/v1/review-tasks/"+firstID+"/submit", `{"expected_revision":2,"score":4,"rubric_selections":[{"point_id":"p1","score":4}]}`, graderToken)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("review worker should submit assigned task, got %d %s", rec.Code, rec.Body.String())
+	}
+
+	req = reviewAuthedRequest(http.MethodPost, "/api/v1/review-tasks/"+firstID+"/return", `{"reason":"worker cannot return"}`, graderToken)
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("review worker should not return tasks, got %d %s", rec.Code, rec.Body.String())
+	}
+}
+
+// 任务列表、读取和派发分别核对已分配范围；教师的管理权限仍不能绕过任务归属。
+func reviewAssertAssignedTaskVisibility(t *testing.T, router http.Handler, firstID, secondID, graderToken, teacherToken string) {
+	t.Helper()
 	req := reviewAuthedRequest(http.MethodGet, "/api/v1/review-tasks", "", graderToken)
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -249,8 +277,13 @@ func TestReviewWorkPermissionIsScopedToAssignedTasks(t *testing.T) {
 		t.Fatalf("review worker should not assign tasks, got %d %s", rec.Code, rec.Body.String())
 	}
 
-	req = reviewAuthedRequest(http.MethodGet, "/api/v1/review-tasks/"+firstID+"/draft", "", managerToken)
-	rec = httptest.NewRecorder()
+}
+
+// 管理者不能读写他人的草稿；通用证据入口和带身份的原图分别按原权限断言，不把 404 当作内容存在。
+func reviewAssertDraftAndImageAuthority(t *testing.T, router http.Handler, firstID, graderToken, teacherToken, managerToken, evidenceOnlyToken string) {
+	t.Helper()
+	req := reviewAuthedRequest(http.MethodGet, "/api/v1/review-tasks/"+firstID+"/draft", "", managerToken)
+	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 	if rec.Code != http.StatusForbidden {
 		t.Fatalf("review manager must not read the assigned reviewer's draft, got %d %s", rec.Code, rec.Body.String())
@@ -312,19 +345,6 @@ func TestReviewWorkPermissionIsScopedToAssignedTasks(t *testing.T) {
 		t.Fatalf("non-admin evidence manager must not access the original image, got %d %s", rec.Code, rec.Body.String())
 	}
 
-	req = reviewAuthedRequest(http.MethodPost, "/api/v1/review-tasks/"+firstID+"/submit", `{"expected_revision":2,"score":4,"rubric_selections":[{"point_id":"p1","score":4}]}`, graderToken)
-	rec = httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
-	if rec.Code != http.StatusCreated {
-		t.Fatalf("review worker should submit assigned task, got %d %s", rec.Code, rec.Body.String())
-	}
-
-	req = reviewAuthedRequest(http.MethodPost, "/api/v1/review-tasks/"+firstID+"/return", `{"reason":"worker cannot return"}`, graderToken)
-	rec = httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
-	if rec.Code != http.StatusForbidden {
-		t.Fatalf("review worker should not return tasks, got %d %s", rec.Code, rec.Body.String())
-	}
 }
 
 func TestReviewWorkerCanReturnOnlyOwnActiveClaim(t *testing.T) {
@@ -451,10 +471,9 @@ func TestReviewTaskClaimNextNeverImplicitlyAssignsPendingTask(t *testing.T) {
 	}
 }
 
-// This is the server-side acceptance path used by the grading workbench.  It
-// deliberately reads the next assigned task's context before the first task
-// is submitted: context prefetch must remain read-only and must not take the
-// next task's lease.  The browser then owns only the task returned by /next.
+// 这是评分工作台所用的服务器端验收路径。
+// 它在首个任务提交前读取下一个已分配任务的上下文：预取必须保持只读，不能取得下一任务的租约。
+// 浏览器随后只持有 /next 返回的任务。
 func TestReviewWorkbenchClaimDraftRefreshSubmitAndNext(t *testing.T) {
 	authStore := reviewAuthStoreByUser(t, map[string][]string{
 		"review_manager": {"review:manage"},
@@ -477,6 +496,37 @@ func TestReviewWorkbenchClaimDraftRefreshSubmitAndNext(t *testing.T) {
 	assignReviewTaskForRoute(t, router, managerToken, firstID, reviewGraderID)
 	assignReviewTaskForRoute(t, router, managerToken, secondID, reviewGraderID)
 
+	reviewAssertNextContextPrefetchIsReadOnly(t, reviewStore, router, graderToken, secondID)
+	req := reviewAuthedRequest(http.MethodPost, "/api/v1/review-tasks/next", `{}`, graderToken)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"id":"`+firstID+`"`) {
+		t.Fatalf("claim first assigned task expected 200, got %d %s", rec.Code, rec.Body.String())
+	}
+	claimed, err := reviewStore.GetTask(t.Context(), reviewTenantID, firstID)
+	if err != nil || claimed.Revision != 3 {
+		t.Fatalf("claim must establish the first task lease/version, task=%#v err=%v", claimed, err)
+	}
+
+	reviewAssertDraftRefreshAndVersionConflict(t, router, graderToken, firstID)
+	req = reviewAuthedRequest(http.MethodPost, "/api/v1/review-tasks/"+firstID+"/submit", `{"expected_revision":3,"score":4,"rubric_selections":[{"point_id":"p1","score":4}],"comments":"final grade","reason":"manual review"}`, graderToken)
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusCreated || !strings.Contains(rec.Body.String(), `"status":"submitted"`) {
+		t.Fatalf("submit first task expected 201, got %d %s", rec.Code, rec.Body.String())
+	}
+
+	req = reviewAuthedRequest(http.MethodPost, "/api/v1/review-tasks/next", `{}`, graderToken)
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"id":"`+secondID+`"`) {
+		t.Fatalf("next task after submit expected second assigned task, got %d %s", rec.Code, rec.Body.String())
+	}
+}
+
+// 预取下一任务只读上下文，读取前后的修订号和 assigned 状态必须保持一致，随后才领取当前任务。
+func reviewAssertNextContextPrefetchIsReadOnly(t *testing.T, reviewStore *review.MemoryStore, router http.Handler, graderToken, secondID string) {
+	t.Helper()
 	beforePrefetch, err := reviewStore.GetTask(t.Context(), reviewTenantID, secondID)
 	if err != nil {
 		t.Fatalf("get next task before prefetch: %v", err)
@@ -492,20 +542,14 @@ func TestReviewWorkbenchClaimDraftRefreshSubmitAndNext(t *testing.T) {
 		t.Fatalf("context prefetch must not claim or mutate next task, before=%#v after=%#v err=%v", beforePrefetch, afterPrefetch, err)
 	}
 
-	req = reviewAuthedRequest(http.MethodPost, "/api/v1/review-tasks/next", `{}`, graderToken)
-	rec = httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
-	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"id":"`+firstID+`"`) {
-		t.Fatalf("claim first assigned task expected 200, got %d %s", rec.Code, rec.Body.String())
-	}
-	claimed, err := reviewStore.GetTask(t.Context(), reviewTenantID, firstID)
-	if err != nil || claimed.Revision != 3 {
-		t.Fatalf("claim must establish the first task lease/version, task=%#v err=%v", claimed, err)
-	}
+}
 
+// 同一已领取任务依次保存草稿、刷新恢复和拒绝旧修订号，确认服务端草稿与租约版本没有混用。
+func reviewAssertDraftRefreshAndVersionConflict(t *testing.T, router http.Handler, graderToken, firstID string) {
+	t.Helper()
 	draftBody := `{"score":4,"rubric_selections":[{"point_id":"p1","score":4}],"comments":"draft survives refresh","private_note":"teacher only","student_feedback":"good work","viewer_state":{"mode":"segment"},"expected_revision":0}`
-	req = reviewAuthedRequest(http.MethodPut, "/api/v1/review-tasks/"+firstID+"/draft", draftBody, graderToken)
-	rec = httptest.NewRecorder()
+	req := reviewAuthedRequest(http.MethodPut, "/api/v1/review-tasks/"+firstID+"/draft", draftBody, graderToken)
+	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"revision":1`) {
 		t.Fatalf("initial draft save expected 200 revision 1, got %d %s", rec.Code, rec.Body.String())
@@ -526,19 +570,6 @@ func TestReviewWorkbenchClaimDraftRefreshSubmitAndNext(t *testing.T) {
 		t.Fatalf("stale draft revision must return conflict, got %d %s", rec.Code, rec.Body.String())
 	}
 
-	req = reviewAuthedRequest(http.MethodPost, "/api/v1/review-tasks/"+firstID+"/submit", `{"expected_revision":3,"score":4,"rubric_selections":[{"point_id":"p1","score":4}],"comments":"final grade","reason":"manual review"}`, graderToken)
-	rec = httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
-	if rec.Code != http.StatusCreated || !strings.Contains(rec.Body.String(), `"status":"submitted"`) {
-		t.Fatalf("submit first task expected 201, got %d %s", rec.Code, rec.Body.String())
-	}
-
-	req = reviewAuthedRequest(http.MethodPost, "/api/v1/review-tasks/next", `{}`, graderToken)
-	rec = httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
-	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"id":"`+secondID+`"`) {
-		t.Fatalf("next task after submit expected second assigned task, got %d %s", rec.Code, rec.Body.String())
-	}
 }
 
 func TestReviewTaskReleaseKeepsAssignmentAndAllowsResume(t *testing.T) {
@@ -872,8 +903,24 @@ func TestArbitrationWorkPermissionIsScopedToAssignedTasks(t *testing.T) {
 	}
 	arbitrationID := decodeArbitrationIDFromSubmit(t, rec.Body.Bytes())
 
-	req = reviewAuthedRequest(http.MethodGet, "/api/v1/arbitration-tasks?exam_id=exam-1", "", managerToken)
+	reviewAssertArbitrationFilterAndUnassignedSubmission(t, router, managerToken, arbitrationID)
+	reviewAssertInvalidArbitrationAssignees(t, router, managerToken, arbitrationID)
+	reviewAssertUnassignedArbitrationAccess(t, router, arbitrationID, arbitratorToken, teacherToken)
+	req = reviewAuthedRequest(http.MethodPost, "/api/v1/arbitration-tasks/"+arbitrationID+"/assign", `{"assigned_to":"`+reviewArbitratorID+`","expected_revision":1}`, managerToken)
 	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("assign arbitration expected 200, got %d %s", rec.Code, rec.Body.String())
+	}
+
+	reviewAssertAssignedArbitrationMaterialsAndSubmission(t, router, arbitrationID, arbitratorToken, otherArbitratorToken)
+}
+
+// 考试筛选分别检查包含和排除；管理者提交不能隐式把未分配的仲裁任务指派给自己。
+func reviewAssertArbitrationFilterAndUnassignedSubmission(t *testing.T, router http.Handler, managerToken, arbitrationID string) {
+	t.Helper()
+	req := reviewAuthedRequest(http.MethodGet, "/api/v1/arbitration-tasks?exam_id=exam-1", "", managerToken)
+	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), arbitrationID) {
 		t.Fatalf("matching exam filter should include arbitration task, got %d %s", rec.Code, rec.Body.String())
@@ -893,6 +940,11 @@ func TestArbitrationWorkPermissionIsScopedToAssignedTasks(t *testing.T) {
 		t.Fatalf("manager must not implicitly self-assign an arbitration task while submitting, got %d %s", rec.Code, rec.Body.String())
 	}
 
+}
+
+// 原有子测试分别保留角色、停用状态和租户边界检查，失败仍只中止对应子测试。
+func reviewAssertInvalidArbitrationAssignees(t *testing.T, router http.Handler, managerToken, arbitrationID string) {
+	t.Helper()
 	for name, assigneeID := range map[string]string{
 		"manager role":            reviewManagerID,
 		"grader role":             reviewGraderID,
@@ -909,8 +961,13 @@ func TestArbitrationWorkPermissionIsScopedToAssignedTasks(t *testing.T) {
 		})
 	}
 
-	req = reviewAuthedRequest(http.MethodGet, "/api/v1/arbitration-tasks/"+arbitrationID, "", arbitratorToken)
-	rec = httptest.NewRecorder()
+}
+
+// 正确仲裁角色在未分配时仍不能读取；教师管理权限也不能替代管理员派发。
+func reviewAssertUnassignedArbitrationAccess(t *testing.T, router http.Handler, arbitrationID, arbitratorToken, teacherToken string) {
+	t.Helper()
+	req := reviewAuthedRequest(http.MethodGet, "/api/v1/arbitration-tasks/"+arbitrationID, "", arbitratorToken)
+	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 	if rec.Code != http.StatusForbidden {
 		t.Fatalf("unassigned arbitration worker should not get task, got %d %s", rec.Code, rec.Body.String())
@@ -930,18 +987,27 @@ func TestArbitrationWorkPermissionIsScopedToAssignedTasks(t *testing.T) {
 		t.Fatalf("teacher with arbitration:manage must not assign arbitration tasks, got %d %s", rec.Code, rec.Body.String())
 	}
 
-	req = reviewAuthedRequest(http.MethodPost, "/api/v1/arbitration-tasks/"+arbitrationID+"/assign", `{"assigned_to":"`+reviewArbitratorID+`","expected_revision":1}`, managerToken)
-	rec = httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
-	if rec.Code != http.StatusOK {
-		t.Fatalf("assign arbitration expected 200, got %d %s", rec.Code, rec.Body.String())
-	}
+}
 
-	req = reviewAuthedRequest(http.MethodGet, "/api/v1/arbitration-tasks/"+arbitrationID, "", arbitratorToken)
-	rec = httptest.NewRecorder()
+// 派发后只向负责人提供冻结标准；先拒绝其他仲裁者的读取和提交，再由负责人产生最终成绩。
+func reviewAssertAssignedArbitrationMaterialsAndSubmission(t *testing.T, router http.Handler, arbitrationID, arbitratorToken, otherArbitratorToken string) {
+	t.Helper()
+	req := reviewAuthedRequest(http.MethodGet, "/api/v1/arbitration-tasks/"+arbitrationID, "", arbitratorToken)
+	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), arbitrationID) {
 		t.Fatalf("assigned arbitration worker should get task, got %d %s", rec.Code, rec.Body.String())
+	}
+	// 普通仲裁教师没有 exam:manage；自己的任务仍需提供冻结满分和评分标准。
+	var materials struct {
+		Task review.ArbitrationTask `json:"arbitration_task"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &materials); err != nil {
+		t.Fatal(err)
+	}
+	if materials.Task.Context.Question == nil || materials.Task.Context.Question.Score != 5 ||
+		materials.Task.Context.Rubric == nil || materials.Task.Context.Rubric.MaxScore != 5 || len(materials.Task.Context.Rubric.Points) == 0 {
+		t.Fatalf("assigned worker has no frozen standards: %s", rec.Body.String())
 	}
 
 	req = reviewAuthedRequest(http.MethodGet, "/api/v1/arbitration-tasks/"+arbitrationID, "", otherArbitratorToken)
@@ -964,6 +1030,7 @@ func TestArbitrationWorkPermissionIsScopedToAssignedTasks(t *testing.T) {
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("assigned arbitration worker should submit task, got %d %s", rec.Code, rec.Body.String())
 	}
+
 }
 
 func TestDoubleMarkAndArbitrationRoutes(t *testing.T) {
@@ -992,28 +1059,7 @@ func TestDoubleMarkAndArbitrationRoutes(t *testing.T) {
 	}
 	session := decodeDoubleMarkSession(t, rec.Body.Bytes())
 
-	req = reviewAuthedRequest(http.MethodPost, "/api/v1/review-tasks/"+session.FirstReviewTaskID+"/submit", `{"expected_revision":1,"score":4,"rubric_selections":[{"point_id":"p1","score":4}]}`, firstToken)
-	rec = httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
-	if rec.Code != http.StatusCreated || strings.Contains(rec.Body.String(), `"second_score"`) {
-		t.Fatalf("first mark should not expose second score, got %d %s", rec.Code, rec.Body.String())
-	}
-
-	req = reviewAuthedRequest(http.MethodGet, "/api/v1/review-tasks/"+session.FirstReviewTaskID, "", firstToken)
-	rec = httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
-	if rec.Code != http.StatusOK || strings.Contains(rec.Body.String(), `"first_score"`) || strings.Contains(rec.Body.String(), `"second_score"`) {
-		t.Fatalf("review task detail must remain blind, got %d %s", rec.Code, rec.Body.String())
-	}
-
-	req = reviewAuthedRequest(http.MethodPost, "/api/v1/review-tasks/"+session.SecondReviewTaskID+"/submit", `{"expected_revision":1,"score":1,"rubric_selections":[{"point_id":"p1","score":1}]}`, secondToken)
-	rec = httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
-	if rec.Code != http.StatusCreated || !strings.Contains(rec.Body.String(), `"arbitration_task"`) || strings.Contains(rec.Body.String(), `"final_grade"`) {
-		t.Fatalf("second mark should create arbitration without final grade, got %d %s", rec.Code, rec.Body.String())
-	}
-	arbitrationID := decodeArbitrationIDFromSubmit(t, rec.Body.Bytes())
-
+	arbitrationID := reviewSubmitBlindDoubleMarks(t, router, session.FirstReviewTaskID, session.SecondReviewTaskID, firstToken, secondToken)
 	req = reviewAuthedRequest(http.MethodPost, "/api/v1/arbitration-tasks/"+arbitrationID+"/assign", `{"assigned_to":"`+reviewGraderID+`","expected_revision":1}`, managerToken)
 	rec = httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -1048,6 +1094,33 @@ func TestDoubleMarkAndArbitrationRoutes(t *testing.T) {
 	reviewAssertAuditAction(t, authStore, "arbitration.task_assigned")
 	reviewAssertAuditAction(t, authStore, "arbitration.submitted")
 	reviewAssertAuditAction(t, authStore, "final_grade.created")
+}
+
+// 第一轮提交和任务详情均保持盲评；第二轮产生仲裁而不是直接终结成绩，然后才允许派发仲裁。
+func reviewSubmitBlindDoubleMarks(t *testing.T, router http.Handler, firstID, secondID, firstToken, secondToken string) string {
+	t.Helper()
+	req := reviewAuthedRequest(http.MethodPost, "/api/v1/review-tasks/"+firstID+"/submit", `{"expected_revision":1,"score":4,"rubric_selections":[{"point_id":"p1","score":4}]}`, firstToken)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusCreated || strings.Contains(rec.Body.String(), `"second_score"`) {
+		t.Fatalf("first mark should not expose second score, got %d %s", rec.Code, rec.Body.String())
+	}
+
+	req = reviewAuthedRequest(http.MethodGet, "/api/v1/review-tasks/"+firstID, "", firstToken)
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK || strings.Contains(rec.Body.String(), `"first_score"`) || strings.Contains(rec.Body.String(), `"second_score"`) {
+		t.Fatalf("review task detail must remain blind, got %d %s", rec.Code, rec.Body.String())
+	}
+
+	req = reviewAuthedRequest(http.MethodPost, "/api/v1/review-tasks/"+secondID+"/submit", `{"expected_revision":1,"score":1,"rubric_selections":[{"point_id":"p1","score":1}]}`, secondToken)
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusCreated || !strings.Contains(rec.Body.String(), `"arbitration_task"`) || strings.Contains(rec.Body.String(), `"final_grade"`) {
+		t.Fatalf("second mark should create arbitration without final grade, got %d %s", rec.Code, rec.Body.String())
+	}
+	return decodeArbitrationIDFromSubmit(t, rec.Body.Bytes())
+
 }
 
 func reviewRouter(authStore *auth.MemoryStore, reviewStore review.Store) http.Handler {

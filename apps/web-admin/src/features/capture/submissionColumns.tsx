@@ -25,6 +25,21 @@ interface PageColumnOptions {
   actioning: string | null;
 }
 
+function primaryActionLabel({ qualityPending, needsReady, needsOcr, ocrFailed, needsSegments }: Readonly<{
+  qualityPending: boolean;
+  needsReady: boolean;
+  needsOcr: boolean;
+  ocrFailed: boolean;
+  needsSegments: boolean;
+}>) {
+  // 按钮文字按 runNext 的分支顺序选择；质量与待识别状态优先于后续识别、切分操作。
+  if (qualityPending) return "检查图片质量";
+  if (needsReady) return "转入待识别";
+  if (needsOcr) return ocrFailed ? "重试识别" : "开始识别";
+  if (needsSegments) return "生成题目区域";
+  return "查看答题卡";
+}
+
 export function captureSubmissionColumns({ studentName, canWrite, actioning, runAction, refreshSingle, openPages, openOcrDrawer }: SubmissionColumnOptions): TableColumnsType<SubmissionView> {
   return [
     {
@@ -125,15 +140,7 @@ export function captureSubmissionColumns({ studentName, canWrite, actioning, run
           return Promise.resolve();
         };
 
-        const primaryLabel = qualityPending
-          ? "检查图片质量"
-          : needsReady
-            ? "转入待识别"
-            : needsOcr
-              ? ocrFailed ? "重试识别" : "开始识别"
-              : needsSegments
-                ? "生成题目区域"
-                : "查看答题卡";
+        const primaryLabel = primaryActionLabel({ qualityPending, needsReady, needsOcr, ocrFailed, needsSegments });
         return (
           <Space className="table-actions" size={6}>
             <Button

@@ -1,12 +1,6 @@
 import { EduGradeApi } from "@edugrade/sdk";
 import type {
-  BackmarkBatch,
   CreateBackmarkBatchRequest,
-  BackmarkGraderContext,
-  BackmarkGraderItem,
-  BackmarkPolicy,
-  BackmarkPreview,
-  BackmarkSummary,
   BackmarkSelector,
   BackmarkRegradeInput,
   RegradePreview,
@@ -17,7 +11,7 @@ import { apiClient } from "./client";
 
 const generatedApi = new EduGradeApi(apiClient);
 
-export type { BackmarkBatch, BackmarkGraderContext, BackmarkGraderItem, BackmarkPolicy, BackmarkPreview, BackmarkSelector, BackmarkSummary, BackmarkRegradeInput };
+export type { BackmarkBatch, BackmarkGraderContext, BackmarkGraderItem, BackmarkPolicy, BackmarkPreview, BackmarkSelector, BackmarkSummary, BackmarkRegradeInput } from "@edugrade/sdk";
 
 export interface BackmarkPageOptions {
   limit?: number;

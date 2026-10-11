@@ -42,8 +42,7 @@ func (c *postgresRuntimeCoordinator) CompleteTask(ctx context.Context, tenantID,
 	if err != nil {
 		return Task{}, err
 	}
-	// Keep the same source-then-runtime lock order as create, failure and the
-	// in-memory coordinator. A mismatched runtime rolls the source mutation back.
+	// 与创建、失败处理及内存协调器保持相同的先来源、后运行时加锁顺序。运行时不匹配时回滚来源变更。
 	if err = validateRuntimeSourceInTx(ctx, tx, tenantID, input.RuntimeTaskID, taskID); err != nil {
 		return Task{}, err
 	}
@@ -98,9 +97,8 @@ FOR UPDATE
 	return nil
 }
 
-// SeedCompletedTask is the trusted importer path. It creates or reuses the OCR
-// source and records both source results and a succeeded runtime envelope in a
-// single transaction, so a retry cannot observe a half-completed pair.
+// SeedCompletedTask 是可信导入路径。它在一个事务中创建或复用 OCR 来源，
+// 并同时记录来源结果与 succeeded 状态的运行时封装，避免重试看到只完成一侧的状态。
 func (s *PostgresStore) SeedCompletedTask(ctx context.Context, tenantID, submissionID, actorID string, create CreateTaskInput, complete CompleteTaskInput) (Task, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -129,8 +127,7 @@ func (s *PostgresStore) SeedCompletedTask(ctx context.Context, tenantID, submiss
 	return task, tx.Commit()
 }
 
-// ReconcileCompletedRuntimeTask is an explicit, idempotent recovery path for a
-// historical completed OCR source whose runtime envelope was never finalized.
+// ReconcileCompletedRuntimeTask 为已完成但运行时封装未最终完成的历史 OCR 来源提供显式、幂等的恢复路径。
 func (s *PostgresStore) ReconcileCompletedRuntimeTask(ctx context.Context, tenantID, actorID, taskID string) (Task, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -154,10 +151,9 @@ func (s *PostgresStore) ReconcileCompletedRuntimeTask(ctx context.Context, tenan
 	return task, tx.Commit()
 }
 
-// reconcileCompletedRuntimeInTx is deliberately more permissive than the
-// normal trusted seed path. It repairs historical runtime envelopes after the
-// completed OCR source has been locked and verified, including exhausted or
-// expired attempts, while preserving a conflict for a different prior result.
+// reconcileCompletedRuntimeInTx 比正常的可信导入路径更宽松。
+// 在锁定并核验已完成的 OCR 来源后，它修复历史运行时封装，包括已耗尽或过期的尝试；
+// 若之前存在不同的结果，仍保留冲突。
 func reconcileCompletedRuntimeInTx(ctx context.Context, tx *sql.Tx, tenantID, actorID string, task Task) error {
 	create := runtimeCreateInput(task)
 	complete := runtimeCompleteInput(task, "")

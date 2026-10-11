@@ -1,0 +1,5 @@
+{
+  "command": "go test -p 1 ./internal/server -run 'TestE2EPostgres(UXHistoricalACLAndActualMemberResponsibilities|QuestionBankMetadataACLSearch)$' -v",
+  "exitCode": 0,
+  "attempt": 2
+}

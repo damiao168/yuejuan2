@@ -29,9 +29,11 @@ PREDICTION_SET = "synthetic-v2"
 ORIGINAL_ENTRY_ID = "synthetic-equation-001"
 ORIGINAL_PREDICTION_SOURCE = "predictions/smoke-v1/synthetic-equation-001.json"
 ORIGINAL_PREFIX = "../../synthetic/math-recognition-synthetic-v2/pages"
+SYSTEM_SOLUTION_TEXT = "x=2,y=1"
+LINEAR_EQUATION_TEXT = "2x+1=7"
 
 # ---------------------------------------------------------------------------
-# Restricted-AST builders (the same vocabulary math-verification-worker emits).
+# 受限 AST 构造器（与 math-verification-worker 输出使用相同词汇）。
 # ---------------------------------------------------------------------------
 
 
@@ -136,8 +138,8 @@ def det_(matrix: Any) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# Category matrix. Every entry follows the plan's required coverage list;
-# each category carries >= 2 samples and the corpus totals 54 samples.
+# 类别矩阵。每项都遵循计划要求的覆盖清单；
+# 每类至少有 2 个样本，整个语料集共 54 个样本。
 # ---------------------------------------------------------------------------
 
 CATEGORIES: dict[str, list[dict[str, Any]]] = {
@@ -210,10 +212,10 @@ CATEGORIES: dict[str, list[dict[str, Any]]] = {
     ],
     "system-of-equations": [
         {
-            "formulas": [("formula-1", r"\begin{cases}x+y=3\\x-y=1\end{cases}", cases(eq(op("+", sym("x"), sym("y")), num("3")), eq(op("-", sym("x"), sym("y")), num("1")))), ("formula-2", "x=2,y=1", sset(eq(sym("x"), num("2")), eq(sym("y"), num("1"))))],
+            "formulas": [("formula-1", r"\begin{cases}x+y=3\\x-y=1\end{cases}", cases(eq(op("+", sym("x"), sym("y")), num("3")), eq(op("-", sym("x"), sym("y")), num("1")))), ("formula-2", SYSTEM_SOLUTION_TEXT, sset(eq(sym("x"), num("2")), eq(sym("y"), num("1"))))],
             "symbols": ["x", "y", "3", "1", "2", "=", "{", "}"],
             "relations": [("formula-1", "formula-2", "solves")],
-            "steps": [("step-1", "x+y=3"), ("step-2", "x-y=1"), ("step-3", "2x=4"), ("step-4", "x=2,y=1")],
+            "steps": [("step-1", "x+y=3"), ("step-2", "x-y=1"), ("step-3", "2x=4"), ("step-4", SYSTEM_SOLUTION_TEXT)],
             "rubric": [("solve_system_of_equations", "supported")],
         },
         {
@@ -350,7 +352,7 @@ CATEGORIES: dict[str, list[dict[str, Any]]] = {
         {
             "formulas": [("formula-1", r"\begin{pmatrix}x\\y\end{pmatrix}=\begin{pmatrix}2\\1\end{pmatrix}", eq(mat([[sym("x")], [sym("y")]]), mat([[num("2")], [num("1")]])))],
             "symbols": ["x", "y", "2", "1", "="],
-            "steps": [("step-1", "(x,y)ᵀ=(2,1)ᵀ"), ("step-2", "x=2,y=1")],
+            "steps": [("step-1", "(x,y)ᵀ=(2,1)ᵀ"), ("step-2", SYSTEM_SOLUTION_TEXT)],
             "rubric": [("read_matrix_solution", "supported")],
         },
     ],
@@ -386,10 +388,10 @@ CATEGORIES: dict[str, list[dict[str, Any]]] = {
     ],
     "vertical-step": [
         {
-            "formulas": [("formula-1", "2x+1=7", eq(op("+", op("*", num("2"), sym("x")), num("1")), num("7"))), ("formula-2", "x=3", None)],
+            "formulas": [("formula-1", LINEAR_EQUATION_TEXT, eq(op("+", op("*", num("2"), sym("x")), num("1")), num("7"))), ("formula-2", "x=3", None)],
             "symbols": ["x", "2", "1", "7", "3", "="],
             "edge_kind": "arrow_down",
-            "steps": [("step-1", "2x+1=7"), ("step-2", "2x=6"), ("step-3", "x=3")],
+            "steps": [("step-1", LINEAR_EQUATION_TEXT), ("step-2", "2x=6"), ("step-3", "x=3")],
         },
         {
             "formulas": [("formula-1", "x^2-5x+6=0", eq(op("-", op("+", pow_(sym("x"), num("2")), num("6")), op("*", num("5"), sym("x"))), num("0"))), ("formula-2", "x_1=2,x_2=3", None)],
@@ -521,10 +523,10 @@ CATEGORIES: dict[str, list[dict[str, Any]]] = {
     ],
     "solution-chain": [
         {
-            "formulas": [("formula-1", "2x+1=7", eq(op("+", op("*", num("2"), sym("x")), num("1")), num("7"))), ("formula-2", "2x=6", eq(op("*", num("2"), sym("x")), num("6"))), ("formula-3", "x=3", eq(sym("x"), num("3")))],
+            "formulas": [("formula-1", LINEAR_EQUATION_TEXT, eq(op("+", op("*", num("2"), sym("x")), num("1")), num("7"))), ("formula-2", "2x=6", eq(op("*", num("2"), sym("x")), num("6"))), ("formula-3", "x=3", eq(sym("x"), num("3")))],
             "symbols": ["x", "2", "1", "7", "6", "3", "="],
             "edge_kind": "derives",
-            "steps": [("step-1", "2x+1=7"), ("step-2", "2x=6"), ("step-3", "x=3")],
+            "steps": [("step-1", LINEAR_EQUATION_TEXT), ("step-2", "2x=6"), ("step-3", "x=3")],
             "rubric": [("solve_linear_equation", "supported"), ("show_steps", "supported")],
         },
         {
@@ -544,9 +546,9 @@ CATEGORIES: dict[str, list[dict[str, Any]]] = {
     ],
 }
 
-# Deterministic defect schedule: position = global sample index % len(cycle).
-# Each defect appears at least three times across the 54-sample corpus so every
-# metric observes both hits and misses.
+# 确定的缺陷安排：位置 = 全局样本索引 % len(cycle)。
+# 每种缺陷在 54 个样本中至少出现三次，让每项
+# 指标都能观察到命中和未命中的情况。
 DEFECT_CYCLE = (
     "exact",
     "latex_normalization_only",
@@ -568,7 +570,7 @@ DEFECT_CYCLE = (
 
 
 # ---------------------------------------------------------------------------
-# Spec normalization.
+# 规范化规格。
 # ---------------------------------------------------------------------------
 
 
@@ -608,7 +610,7 @@ def normalized_spec(spec: dict[str, Any]) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# Deliberate prediction mutations (all deterministic).
+# 刻意修改预测结果（全部按确定规则执行）。
 # ---------------------------------------------------------------------------
 
 
@@ -642,43 +644,71 @@ def flipped_status(status: str) -> str:
     return {"verified": "unverified", "unverified": "verified"}.get(status, "verified")
 
 
+def _mutate_first_formula(formulas: list[dict[str, Any]], defect: str) -> None:
+    if not formulas:
+        return
+    formula = formulas[0]
+    if defect == "latex_normalization_only":
+        formula["latex"] = spacing_variant(formula["latex"])
+    elif defect == "latex_variant_ast_equal":
+        formula["latex"] = semantic_variant(formula["latex"])
+    elif defect == "ast_mismatch" and formula["ast"] is not None:
+        formula["ast"] = swapped_ast(formula["ast"])
+
+
+def _mutated_symbols(symbols: list[str]) -> list[str]:
+    if symbols:
+        symbols = symbols[:-1]
+    # 先删末项再检查 Δ；碰撞时固定追加 ω，不额外去重。
+    return symbols + (["Δ"] if "Δ" not in symbols else ["ω"])
+
+
+def _mutated_relations(
+    relations: list[dict[str, Any]], formulas: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    # 原本有两项以上才删末项；单项关系保留，仍追加一个错误关系。
+    if len(relations) >= 2:
+        relations = relations[:-1]
+    target = formulas[0]["id"] if formulas else "formula-1"
+    return relations + [{"from_id": "region-x", "to_id": target, "kind": "spurious_overlap"}]
+
+
+def _merged_first_steps(steps: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    if len(steps) < 2:
+        return steps
+    merged = {
+        "id": steps[0]["id"],
+        "normalized_text": steps[0]["normalized_text"] + ";" + steps[1]["normalized_text"],
+    }
+    return [merged] + steps[2:]
+
+
+def _flip_first_equivalence(verifications: list[dict[str, Any]]) -> None:
+    # 一个样本只注入一次等价性缺陷，后续验证结果保留原值。
+    for verification in verifications:
+        if verification["kind"] == "equivalence":
+            verification["status"] = flipped_status(verification["status"])
+            break
+
+
 def mutated_prediction(truth: dict[str, Any], defect: str) -> dict[str, Any]:
+    # 缺陷只作用于预测副本，嵌套 AST、步骤和验证不能改写标准答案。
     pred = copy.deepcopy(truth)
     formulas = pred["formulas"]
-    if defect == "latex_normalization_only" and formulas:
-        formulas[0]["latex"] = spacing_variant(formulas[0]["latex"])
-    elif defect == "latex_variant_ast_equal" and formulas:
-        formulas[0]["latex"] = semantic_variant(formulas[0]["latex"])
-    elif defect == "ast_mismatch" and formulas and formulas[0]["ast"] is not None:
-        formulas[0]["ast"] = swapped_ast(formulas[0]["ast"])
+    if defect in ("latex_normalization_only", "latex_variant_ast_equal", "ast_mismatch"):
+        _mutate_first_formula(formulas, defect)
     elif defect == "symbol_error":
-        if pred["symbols"]:
-            pred["symbols"] = pred["symbols"][:-1]
-        pred["symbols"] = pred["symbols"] + (["Δ"] if "Δ" not in pred["symbols"] else ["ω"])
+        pred["symbols"] = _mutated_symbols(pred["symbols"])
     elif defect == "relation_error":
-        relations = pred["relations"]
-        if len(relations) >= 2:
-            relations = relations[:-1]
-        target = formulas[0]["id"] if formulas else "formula-1"
-        relations = relations + [{"from_id": "region-x", "to_id": target, "kind": "spurious_overlap"}]
-        pred["relations"] = relations
+        pred["relations"] = _mutated_relations(pred["relations"], formulas)
     elif defect == "step_grouping_error":
-        steps = pred["solution_graph"]["steps"]
-        if len(steps) >= 2:
-            merged = {
-                "id": steps[0]["id"],
-                "normalized_text": steps[0]["normalized_text"] + ";" + steps[1]["normalized_text"],
-            }
-            pred["solution_graph"]["steps"] = [merged] + steps[2:]
+        pred["solution_graph"]["steps"] = _merged_first_steps(pred["solution_graph"]["steps"])
     elif defect == "edge_kind_error":
         edges = pred["solution_graph"]["edges"]
         if edges:
             edges[-1]["kind"] = "spurious_jump"
     elif defect == "equivalence_error":
-        for verification in pred["verifications"]:
-            if verification["kind"] == "equivalence":
-                verification["status"] = flipped_status(verification["status"])
-                break
+        _flip_first_equivalence(pred["verifications"])
     elif defect == "rubric_error":
         evidence = pred["rubric_evidence"]
         if evidence:
@@ -720,7 +750,7 @@ def build_all() -> dict[str, dict[str, Any]]:
 
 
 # ---------------------------------------------------------------------------
-# Idempotent file emission.
+# 幂等输出文件。
 # ---------------------------------------------------------------------------
 
 

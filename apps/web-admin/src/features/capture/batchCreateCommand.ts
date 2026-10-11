@@ -12,8 +12,8 @@ export function batchCreateCommandKey(tenant: string, actor: string, exam: strin
 export function loadBatchCreateCommand(storage: Pick<Storage, "getItem">, key: string): BatchCreateCommand | null {
   const raw = storage.getItem(key);
   if (!raw) return null;
-  // Corrupt recovery data is an error: silently replacing it could duplicate
-  // a command whose first response was lost.
+  // 恢复数据损坏时应报错；静默替换可能重复执行
+  // 首次响应已丢失的命令。
   const value = JSON.parse(raw) as BatchCreateCommand;
   if (value.version !== 1 || !value.payload?.idempotency_key || !value.payload.name || !value.payload.source_type) throw new Error("采集批次恢复记录无效，请先核对已有批次");
   return value;

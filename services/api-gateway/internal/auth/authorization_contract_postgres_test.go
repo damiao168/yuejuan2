@@ -15,9 +15,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// TestAuthorizationContractPostgres checks the final database state, including
-// grants revoked or repaired by later migrations. It intentionally does not
-// infer authorization from SQL source text.
+// TestAuthorizationContractPostgres 检查最终数据库状态，包括后续迁移撤销或修复的授权；不从 SQL 源文本推断授权结果。
 func TestAuthorizationContractPostgres(t *testing.T) {
 	dsn := strings.TrimSpace(os.Getenv("EDUGRADE_E2E_DATABASE_URL"))
 	if dsn == "" {
@@ -64,20 +62,7 @@ func TestAuthorizationContractPostgres(t *testing.T) {
 	}
 	defer db.Close(context.Background())
 
-	migrationFiles, err := filepath.Glob(filepath.Join("..", "..", "migrations", "*.sql"))
-	if err != nil || len(migrationFiles) == 0 {
-		t.Fatalf("find migrations: %v (count=%d)", err, len(migrationFiles))
-	}
-	slices.Sort(migrationFiles)
-	for _, file := range migrationFiles {
-		sqlText, err := os.ReadFile(file)
-		if err != nil {
-			t.Fatalf("read migration %s: %v", file, err)
-		}
-		if _, err := db.Exec(ctx, string(sqlText)); err != nil {
-			t.Fatalf("apply migration %s: %v", filepath.Base(file), err)
-		}
-	}
+	applyAuthorizationContractMigrations(t, ctx, db)
 
 	contractRaw, err := os.ReadFile(filepath.Join("..", "..", "..", "..", "contracts", "authorization", "role-matrix.json"))
 	if err != nil {
@@ -141,21 +126,7 @@ func compareAuthorizationMatrix(contract map[string]authorizationRoleContract, a
 			differences = append(differences, fmt.Sprintf("missing database role %s", code))
 			continue
 		}
-		if role.Scope != expected.Scope {
-			differences = append(differences, fmt.Sprintf("%s scope: contract=%s database=%s", code, expected.Scope, role.Scope))
-		}
-		want := append([]string(nil), expected.Permissions...)
-		slices.Sort(want)
-		for _, permission := range want {
-			if !slices.Contains(role.Permissions, permission) {
-				differences = append(differences, fmt.Sprintf("%s missing database grant %s", code, permission))
-			}
-		}
-		for _, permission := range role.Permissions {
-			if !slices.Contains(want, permission) {
-				differences = append(differences, fmt.Sprintf("%s has undocumented database grant %s", code, permission))
-			}
-		}
+		differences = append(differences, authorizationRoleDifferences(code, expected, role)...)
 	}
 	for code := range actual {
 		if _, ok := contract[code]; !ok {
@@ -180,4 +151,44 @@ func TestCompareAuthorizationMatrixDetectsBothDirections(t *testing.T) {
 			t.Fatalf("missing %q from differences: %s", expected, differences)
 		}
 	}
+}
+
+// 按历史文件顺序完整执行迁移，再读取隔离数据库的最终授权矩阵。
+func applyAuthorizationContractMigrations(t *testing.T, ctx context.Context, db *pgx.Conn) {
+	t.Helper()
+	migrationFiles, err := filepath.Glob(filepath.Join("..", "..", "migrations", "*.sql"))
+	if err != nil || len(migrationFiles) == 0 {
+		t.Fatalf("find migrations: %v (count=%d)", err, len(migrationFiles))
+	}
+	slices.Sort(migrationFiles)
+	for _, file := range migrationFiles {
+		sqlText, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatalf("read migration %s: %v", file, err)
+		}
+		if _, err := db.Exec(ctx, string(sqlText)); err != nil {
+			t.Fatalf("apply migration %s: %v", filepath.Base(file), err)
+		}
+	}
+}
+
+// 同一角色同时核对范围、缺失权限和额外权限；调用方统一排序全部差异。
+func authorizationRoleDifferences(code string, expected authorizationRoleContract, role databaseRoleContract) []string {
+	differences := []string{}
+	if role.Scope != expected.Scope {
+		differences = append(differences, fmt.Sprintf("%s scope: contract=%s database=%s", code, expected.Scope, role.Scope))
+	}
+	want := append([]string(nil), expected.Permissions...)
+	slices.Sort(want)
+	for _, permission := range want {
+		if !slices.Contains(role.Permissions, permission) {
+			differences = append(differences, fmt.Sprintf("%s missing database grant %s", code, permission))
+		}
+	}
+	for _, permission := range role.Permissions {
+		if !slices.Contains(want, permission) {
+			differences = append(differences, fmt.Sprintf("%s has undocumented database grant %s", code, permission))
+		}
+	}
+	return differences
 }

@@ -39,9 +39,8 @@ func (h *Handler) WithEligibilityGate(gate EligibilityGate) *Handler {
 	return h
 }
 
-// NewShadowPanelOrchestrator connects panel calls to the same A14 admission
-// path used by the legacy synchronous and worker grading flows. A missing
-// production gate fails closed; this does not change the existing HTTP route.
+// NewShadowPanelOrchestrator 将评审组调用接入旧同步流程和 worker 评分流程所用的同一 A14 准入路径。
+// 生产门禁缺失时拒绝执行；此处不改变既有 HTTP 路由。
 func (h *Handler) NewShadowPanelOrchestrator(agents PanelAgents) (*PanelOrchestrator, error) {
 	if h == nil || h.eligibility == nil {
 		return nil, ErrPanelConfiguration
@@ -64,8 +63,7 @@ func (h *Handler) NewShadowPanelOrchestrator(agents PanelAgents) (*PanelOrchestr
 	return panel, nil
 }
 
-// NewApprovedPanelOrchestrator enables only the evaluation-backed policy
-// entry point. It does not change or auto-enable the existing grading route.
+// NewApprovedPanelOrchestrator 只启用有评估依据的策略入口，不改变或自动启用既有评分路由。
 func (h *Handler) NewApprovedPanelOrchestrator(agents PanelAgents, policies PanelPolicyStore, approvals PanelModelApprovalReader) (*PanelOrchestrator, error) {
 	if policies == nil || approvals == nil {
 		return nil, ErrPanelConfiguration
@@ -77,9 +75,8 @@ func (h *Handler) NewApprovedPanelOrchestrator(agents PanelAgents, policies Pane
 	return panel.WithApprovedPolicyStore(policies).WithManagedApprovals(approvals), nil
 }
 
-// EvaluationEvidenceProvider supplies only the aggregate, aligned offline
-// evidence needed by A14. It cannot expose answers or make a model eligible
-// by itself; the admission policy remains the final gate.
+// EvaluationEvidenceProvider 只提供 A14 所需的聚合、对齐离线证据。
+// 它不能暴露答案，也不能自行使模型获得资格；准入策略仍是最终门禁。
 type EvaluationEvidenceProvider interface {
 	AdmissionEvidenceFor(context.Context, string, string, string, string, assessment.SubjectCode, string) (gradingevaluation.AdmissionEvidence, error)
 }
@@ -99,10 +96,8 @@ func (h *Handler) WithCalibrationEvidence(provider CalibrationEvidenceProvider) 
 	return h
 }
 
-// ParserQualityProvider supplies specialised parser quality only for the
-// answer segment being considered. It must return nil when that evidence is
-// absent so the AI admission policy can abstain rather than treat OCR text
-// quality as a mathematical, chemical, diagram, or table parse.
+// ParserQualityProvider 只提供当前待评答案分段的专用解析器质量。
+// 证据缺失时必须返回 nil，使 AI 准入策略放弃判断，而不把 OCR 文本质量当作数学、化学、图示或表格解析质量。
 type ParserQualityProvider interface {
 	ParserQualityForSegment(context.Context, string, string, assessment.SubjectCode, string) (*float64, error)
 }

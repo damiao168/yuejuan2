@@ -25,8 +25,7 @@ func NormalizePanelDecisionConfig(config PanelDecisionConfig) PanelDecisionConfi
 	if config.ArbiterAgreementThreshold == 0 {
 		config.ArbiterAgreementThreshold = 0.80
 	}
-	// Evidence disagreement is always safety-significant even when the two
-	// rubric projections happen to produce the same numeric score.
+	// 即使两份评分细则投影恰好得到相同数值分数，证据分歧也始终具有安全意义。
 	config.TriggerEvidenceConflict = true
 	if config.HardRiskCodes == nil {
 		config.HardRiskCodes = []string{
@@ -108,10 +107,8 @@ func validatePanelState(panel GradingPanel) error {
 	if panel.MaxScore <= 0 || !validPanelStatus(panel.Status) {
 		return ErrPanelConfiguration
 	}
-	for _, score := range []*float64{panel.ScoreA, panel.ScoreB, panel.ScoreC, panel.ResolvedScore} {
-		if score != nil && (math.IsNaN(*score) || math.IsInf(*score, 0) || *score < 0 || *score > panel.MaxScore) {
-			return ErrPanelConfiguration
-		}
+	if !panelScoresWithinBounds(panel) {
+		return ErrPanelConfiguration
 	}
 	for _, gap := range []*float64{panel.ScoreGap, panel.CriterionGap} {
 		if gap != nil && !unitInterval(*gap) {
@@ -126,6 +123,16 @@ func validatePanelState(panel GradingPanel) error {
 		return ErrPanelConfiguration
 	}
 	return nil
+}
+
+// nil 表示尚无分数；已有分数沿用有限值、非负值与 MaxScore 上界的检查。
+func panelScoresWithinBounds(panel GradingPanel) bool {
+	for _, score := range []*float64{panel.ScoreA, panel.ScoreB, panel.ScoreC, panel.ResolvedScore} {
+		if score != nil && (math.IsNaN(*score) || math.IsInf(*score, 0) || *score < 0 || *score > panel.MaxScore) {
+			return false
+		}
+	}
+	return true
 }
 
 func applyPanelUpdate(panel *GradingPanel, input UpdatePanelInput) {

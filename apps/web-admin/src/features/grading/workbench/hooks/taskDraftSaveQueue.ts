@@ -1,4 +1,4 @@
-/** Serializes saves per account and task, while allowing different tasks to save independently. */
+/** 同一账号和任务的保存操作串行执行，不同任务可以独立保存。 */
 export class TaskDraftSaveQueue {
   private readonly tails = new Map<string, Promise<void>>();
   private readonly revisions = new Map<string, number>();

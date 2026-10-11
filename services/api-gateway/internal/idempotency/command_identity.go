@@ -8,9 +8,7 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/httpx"
 )
 
-// CommandIdentity validates the existing key format for transactional command
-// handlers. It deliberately does not replay the HTTP response cache: handlers
-// recheck current private-content ACLs before returning a durable receipt.
+// CommandIdentity 为事务性命令处理器校验已有键格式，不重放 HTTP 响应缓存；处理器返回持久回执前会重新检查当前私有内容 ACL。
 func CommandIdentity(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {

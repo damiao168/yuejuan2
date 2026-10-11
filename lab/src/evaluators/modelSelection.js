@@ -1,3 +1,11 @@
+// 没有合格模型时先报告候选缺失；证据用途状态不代替 Pilot 的真实 Gold 准入校验。
+function modelSelectionDecisionStatus(eligible, evidenceScope) {
+  if (eligible.length === 0) return "no_eligible_local_model";
+  if (evidenceScope === "pilot_in_domain_gold") return "pilot_real_gold_selection";
+  if (evidenceScope === "external_real_benchmark") return "external_benchmark_only";
+  return "preliminary_synthetic_baseline";
+}
+
 export function compareModelSelectionReports(reports) {
   if (!Array.isArray(reports) || reports.length < 2) throw new Error("at least two model selection reports are required");
   const candidateIds = reports.map((report) => report?.candidate_id);
@@ -44,9 +52,7 @@ export function compareModelSelectionReports(reports) {
   });
   const eligible = candidates.filter((candidate) => candidate.eligible)
     .sort((left, right) => left.mae_completed_samples - right.mae_completed_samples || left.p95_latency_ms - right.p95_latency_ms);
-  const decisionStatus = eligible.length === 0 ? "no_eligible_local_model" :
-    evidenceScope === "pilot_in_domain_gold" ? "pilot_real_gold_selection" :
-      evidenceScope === "external_real_benchmark" ? "external_benchmark_only" : "preliminary_synthetic_baseline";
+  const decisionStatus = modelSelectionDecisionStatus(eligible, evidenceScope);
   return {
     schema_version: "model-selection-decision-v1",
     synthetic_only: reports[0].synthetic_only === true,
@@ -64,6 +70,18 @@ export function compareModelSelectionReports(reports) {
   };
 }
 
+// 每轮每组最多取一条；达到限额立即停止，只消费调用方已复制的队列。
+function appendBenchmarkRound(queues, selected, limit) {
+  let added = false;
+  for (const queue of queues) {
+    if (queue.length === 0) continue;
+    selected.push(queue.shift());
+    added = true;
+    if (selected.length === limit) break;
+  }
+  return added;
+}
+
 export function selectDiverseBenchmarkSamples(samples, limit) {
   if (limit === undefined || limit === null) return [...samples];
   if (!Number.isInteger(limit) || limit <= 0) throw new Error("benchmark sample limit must be a positive integer");
@@ -78,13 +96,7 @@ export function selectDiverseBenchmarkSamples(samples, limit) {
   const queues = [...groups.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([, records]) => [...records]);
   const selected = [];
   while (selected.length < limit) {
-    let added = false;
-    for (const queue of queues) {
-      if (queue.length === 0) continue;
-      selected.push(queue.shift());
-      added = true;
-      if (selected.length === limit) break;
-    }
+    const added = appendBenchmarkRound(queues, selected, limit);
     if (!added) break;
   }
   return selected;

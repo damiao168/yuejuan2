@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Alert, Button, Drawer, Empty, Input, List, Popconfirm, Space, Tag } from "antd";
 import { Pencil, Plus, Trash2 } from "lucide-react";
-import { getUserErrorMessage } from "../../../api/client";
+import { ApiClientError, getUserErrorMessage } from "../../../api/client";
 import type { ReviewCommentTemplate } from "../../../api/reviewAnnotations";
 
 interface TemplateDraft {
@@ -28,11 +28,13 @@ export function CommentTemplateManager({
   onCreate,
   onUpdate,
   onDelete
-}: CommentTemplateManagerProps) {
+}: Readonly<CommentTemplateManagerProps>) {
   const [editing, setEditing] = useState<ReviewCommentTemplate>();
   const [draft, setDraft] = useState<TemplateDraft>(emptyDraft);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string>();
+  const [failedDelete, setFailedDelete] = useState<ReviewCommentTemplate>();
+  const [conflicted, setConflicted] = useState(false);
 
   useEffect(() => {
     if (!open) {
@@ -43,18 +45,22 @@ export function CommentTemplateManager({
   }, [open]);
 
   const beginEdit = (template: ReviewCommentTemplate) => {
+    if (saving) return;
+    setConflicted(false);
     setEditing(template);
     setDraft({ title: template.title, shortcut: template.shortcut, content: template.content });
     setError(undefined);
   };
 
   const reset = () => {
+    setConflicted(false);
     setEditing(undefined);
     setDraft(emptyDraft);
     setError(undefined);
   };
 
   const save = async () => {
+    if (saving || conflicted) return;
     if (!draft.title.trim() || !draft.shortcut.trim() || !draft.content.trim()) {
       setError("名称、快捷码和评语内容均不能为空");
       return;
@@ -66,16 +72,32 @@ export function CommentTemplateManager({
       else await onCreate(draft);
       reset();
     } catch (saveError) {
+      setConflicted(saveError instanceof ApiClientError && saveError.status === 409);
       setError(getUserErrorMessage(saveError, "保存常用评语失败"));
     } finally {
       setSaving(false);
     }
   };
 
+  const remove = async (template: ReviewCommentTemplate) => {
+    if (saving) return;
+    setSaving(true); setError(undefined); setFailedDelete(undefined);
+    try {
+      await onDelete(template);
+      if (editing?.id === template.id) reset();
+    } catch (cause) {
+      // 删除失败保持列表和编辑草稿；冲突后的新版仍需用户明确再次删除。
+      setFailedDelete(template);
+      setError(getUserErrorMessage(cause, "删除常用评语失败，内容仍保留"));
+    } finally { setSaving(false); }
+  };
+
   return (
     <Drawer title="个人常用评语" width={480} open={open} onClose={onClose} destroyOnHidden>
       <div className="review-template-form">
         {error ? <Alert type="error" showIcon message={error} /> : null}
+        {failedDelete ? <Button loading={saving} onClick={() => void remove(templates.find(item => item.id === failedDelete.id) ?? failedDelete)}>重试删除“{failedDelete.title}”</Button> : null}
+        {conflicted && editing ? <Alert type="warning" message="评语已有新版本，当前输入已保留。请核对列表中的新内容后继续。" action={<Button onClick={() => { const latest = templates.find(item => item.id === editing.id); if (latest) { setEditing(latest); setConflicted(false); setError(undefined); } }}>以新版为基础继续编辑</Button>} /> : null}
         <Input
           aria-label="评语名称"
           placeholder="名称，例如：步骤完整"
@@ -84,7 +106,7 @@ export function CommentTemplateManager({
         />
         <Input
           aria-label="评语快捷码"
-          addonBefore="/"
+          prefix="/"
           placeholder="例如 step-ok"
           value={draft.shortcut}
           onChange={(event) => setDraft((current) => ({ ...current, shortcut: event.target.value.toLowerCase() }))}
@@ -97,7 +119,7 @@ export function CommentTemplateManager({
           onChange={(event) => setDraft((current) => ({ ...current, content: event.target.value }))}
         />
         <Space>
-          <Button type="primary" icon={editing ? <Pencil size={15} /> : <Plus size={15} />} loading={saving} onClick={() => void save()}>
+          <Button type="primary" disabled={conflicted} icon={editing ? <Pencil size={15} /> : <Plus size={15} />} loading={saving} onClick={() => void save()}>
             {editing ? "保存修改" : "新增评语"}
           </Button>
           {editing ? <Button onClick={reset}>取消编辑</Button> : null}
@@ -117,7 +139,7 @@ export function CommentTemplateManager({
                     title="删除这条常用评语？"
                     okText="删除"
                     cancelText="取消"
-                    onConfirm={() => onDelete(template)}
+                    onConfirm={() => remove(template)}
                   >
                     <Button type="text" danger icon={<Trash2 size={15} />}>删除</Button>
                   </Popconfirm>

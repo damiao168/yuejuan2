@@ -6,11 +6,11 @@ interface ErrorBoundaryProps {
   children: ReactNode;
   fallback?: ReactNode;
   /**
-   * Changes to this value clear a captured error. Pass the current route so a
-   * navigation recovers the page. Prefer this over a `key` on the boundary:
-   * a `key` would remount the whole subtree on every navigation, discarding
-   * unsaved editor state and re-issuing the page's data requests even when
-   * nothing ever failed.
+   * 此值变化时会清除已捕获的错误。传入当前路由，
+   * 使导航能够恢复页面。优先使用它而不是边界上的 `key`：
+   * 使用 `key` 会在每次导航时重新挂载整个子树，
+   * 即使没有发生错误，也会丢弃未保存的编辑状态，
+   * 并重新发起页面的数据请求。
    */
   resetKey?: string;
 }
@@ -36,14 +36,14 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     }
   }
 
-  private reload = () => {
+  private readonly reload = () => {
     window.location.reload();
   };
 
-  // A full reload rather than a hash change plus setState: the failing page may
-  // be the dashboard itself, and lazy() caches a rejected chunk forever, so
-  // re-rendering in place would just throw again.
-  private backToDashboard = () => {
+  // 这里完全重载页面，不仅修改 hash 并调用 setState：
+  // 故障页面可能就是仪表盘，而 lazy() 会持续缓存被拒绝的模块加载，
+  // 所以原地重新渲染仍会抛出同一个错误。
+  private readonly backToDashboard = () => {
     window.location.hash = "/dashboard";
     window.location.reload();
   };

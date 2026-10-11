@@ -1,0 +1,18 @@
+{
+  "source": "html-validation-02/issues.json",
+  "scope_note": "额外两项已在权威生成器修订并正常生成；同规则全仓及HTML复验仍待确认。",
+  "findings": [
+    {
+      "key": "cb72da98-d338-447a-aa79-4399b8ed8166",
+      "rule": "javascript:S7773",
+      "state": "changed_awaiting_sonar",
+      "change": "使用Number.parseFloat读取缩放容器的maxHeight。"
+    },
+    {
+      "key": "7896c681-434e-4ce0-b3e6-94aec494f659",
+      "rule": "javascript:S2681",
+      "state": "changed_awaiting_sonar",
+      "change": "明确updateHash花括号范围；回到顶部仍在每次show之后执行。"
+    }
+  ]
+}

@@ -4,9 +4,8 @@ import "sort"
 
 const readinessSnapshotVersion = 1
 
-// readinessConfigurationSnapshot is deliberately separate from persistence
-// DTOs. Adding timestamps, audit fields, storage locations, or import
-// provenance must not invalidate a confirmed exam configuration.
+// readinessConfigurationSnapshot 与持久化 DTO 分开定义。
+// 新增时间戳、审计字段、存储位置或导入来源信息，不能使已确认的考试配置失效。
 type readinessConfigurationSnapshot struct {
 	Version    int                         `json:"version"`
 	Total      float64                     `json:"total"`
@@ -47,10 +46,8 @@ type readinessQuestionSnapshot struct {
 	Rubric              *readinessRubricSnapshot   `json:"rubric,omitempty"`
 }
 
-// readinessImportSnapshot is the content-only companion to a confirmed
-// readiness record. It intentionally omits candidates, papers and answer-area
-// coordinates: historical question imports need frozen authored facts, not
-// student identities or the old paper layout.
+// readinessImportSnapshot 是已确认准备度记录的纯内容伴随快照。
+// 它刻意省略考生、试卷和答题区域坐标：历史题目导入需要冻结的编写事实，不需要学生身份或旧试卷布局。
 type readinessImportSnapshot struct {
 	Version           int                               `json:"version"`
 	ConfigurationHash string                            `json:"configuration_hash"`
@@ -159,25 +156,7 @@ func newReadinessConfigurationSnapshot(total float64, classIDs, candidateIDs []s
 		if item.SourceType == "question_bank" {
 			snapshot.Version = 2
 		}
-		question := readinessQuestionSnapshot{
-			ParentQuestionNo: item.ParentQuestionNo, SubquestionNo: item.SubquestionNo, Options: append([]string(nil), item.Options...),
-			BankContent: item.BankContent, SourceContentHash: item.SourceContentHash,
-			ID: item.ID, ExamPaperID: item.ExamPaperID, QuestionNo: item.QuestionNo,
-			QuestionType: item.QuestionType, AssessmentArchetype: readinessAssessmentArchetype(item),
-			Score: item.Score, Stem: item.Stem, KnowledgePoints: append([]string(nil), item.KnowledgePoints...),
-			AnswerArea: item.AnswerArea, SortOrder: item.SortOrder, Status: item.Status,
-		}
-		sort.Strings(question.KnowledgePoints)
-		if item.AnswerKey != nil {
-			question.Answer = &readinessAnswerSnapshot{StandardAnswer: item.AnswerKey.StandardAnswer, EquivalentAnswers: item.AnswerKey.EquivalentAnswers, Tolerance: item.AnswerKey.Tolerance}
-		}
-		if item.Solution != nil {
-			question.Solution = &readinessSolutionSnapshot{RawText: item.Solution.RawText, Steps: item.Solution.Steps, VerificationStatus: item.Solution.VerificationStatus}
-		}
-		if item.Rubric != nil {
-			question.Rubric = &readinessRubricSnapshot{Status: item.Rubric.Status, MaxScore: item.Rubric.MaxScore, Points: item.Rubric.Points, Deductions: item.Rubric.Deductions, Examples: item.Rubric.Examples}
-		}
-		snapshot.Questions = append(snapshot.Questions, question)
+		snapshot.Questions = append(snapshot.Questions, readinessConfigurationQuestionSnapshot(item))
 	}
 	sort.Slice(snapshot.Questions, func(i, j int) bool {
 		if snapshot.Questions[i].SortOrder != snapshot.Questions[j].SortOrder {
@@ -200,6 +179,29 @@ func newReadinessConfigurationSnapshot(total float64, classIDs, candidateIDs []s
 		snapshot.Template = &template
 	}
 	return snapshot
+}
+
+// 配置 hash 保留原有内容字段；知识点排序使用副本，不能改变原题目或 nil/空集合的编码。
+func readinessConfigurationQuestionSnapshot(item Question) readinessQuestionSnapshot {
+	question := readinessQuestionSnapshot{
+		ParentQuestionNo: item.ParentQuestionNo, SubquestionNo: item.SubquestionNo, Options: append([]string(nil), item.Options...),
+		BankContent: item.BankContent, SourceContentHash: item.SourceContentHash,
+		ID: item.ID, ExamPaperID: item.ExamPaperID, QuestionNo: item.QuestionNo,
+		QuestionType: item.QuestionType, AssessmentArchetype: readinessAssessmentArchetype(item),
+		Score: item.Score, Stem: item.Stem, KnowledgePoints: append([]string(nil), item.KnowledgePoints...),
+		AnswerArea: item.AnswerArea, SortOrder: item.SortOrder, Status: item.Status,
+	}
+	sort.Strings(question.KnowledgePoints)
+	if item.AnswerKey != nil {
+		question.Answer = &readinessAnswerSnapshot{StandardAnswer: item.AnswerKey.StandardAnswer, EquivalentAnswers: item.AnswerKey.EquivalentAnswers, Tolerance: item.AnswerKey.Tolerance}
+	}
+	if item.Solution != nil {
+		question.Solution = &readinessSolutionSnapshot{RawText: item.Solution.RawText, Steps: item.Solution.Steps, VerificationStatus: item.Solution.VerificationStatus}
+	}
+	if item.Rubric != nil {
+		question.Rubric = &readinessRubricSnapshot{Status: item.Rubric.Status, MaxScore: item.Rubric.MaxScore, Points: item.Rubric.Points, Deductions: item.Rubric.Deductions, Examples: item.Rubric.Examples}
+	}
+	return question
 }
 
 func newReadinessImportSnapshot(configurationHash string, questions []Question) readinessImportSnapshot {

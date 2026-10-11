@@ -252,15 +252,29 @@ func (s *MemoryStore) ListExamGrades(_ context.Context, tenantID string, examID 
 	defer s.mu.RUnlock()
 	grades := s.listSubmissionGradesLocked(examID, true)
 	result := GradeListResult{Grades: []SubmissionGrade{}, Total: len(grades), AllLocked: len(grades) > 0}
+	// 总数和锁定汇总基于全部成绩，筛选或分页不能把未锁定的学生隐藏成整场已锁定。
+	result.AllLocked = prepareExamGradeList(grades, tenantID)
+	filtered := filterExamGradeList(grades, filter)
+	result.FilteredTotal = len(filtered)
+	result.Grades = pageExamGradeList(filtered, filter)
+	return result, nil
+}
+
+func prepareExamGradeList(grades []SubmissionGrade, tenantID string) bool {
+	allLocked := len(grades) > 0
 	for i := range grades {
 		grades[i].TenantID = tenantID
 		for j := range grades[i].Items {
 			grades[i].Items[j].TenantID = tenantID
 		}
 		if !grades[i].Locked && grades[i].Status != "published" && grades[i].Status != "locked" {
-			result.AllLocked = false
+			allLocked = false
 		}
 	}
+	return allLocked
+}
+
+func filterExamGradeList(grades []SubmissionGrade, filter GradeListFilter) []SubmissionGrade {
 	query := strings.ToLower(strings.TrimSpace(filter.Query))
 	filtered := make([]SubmissionGrade, 0, len(grades))
 	for _, grade := range grades {
@@ -273,7 +287,10 @@ func (s *MemoryStore) ListExamGrades(_ context.Context, tenantID string, examID 
 		}
 		filtered = append(filtered, grade)
 	}
-	result.FilteredTotal = len(filtered)
+	return filtered
+}
+
+func pageExamGradeList(filtered []SubmissionGrade, filter GradeListFilter) []SubmissionGrade {
 	if filter.CursorAnonymousCode != "" && filter.CursorID != "" {
 		start := 0
 		for start < len(filtered) && (filtered[start].AnonymousCode < filter.CursorAnonymousCode ||
@@ -285,8 +302,7 @@ func (s *MemoryStore) ListExamGrades(_ context.Context, tenantID string, examID 
 	if filter.Limit > 0 && len(filtered) > filter.Limit {
 		filtered = filtered[:filter.Limit]
 	}
-	result.Grades = filtered
-	return result, nil
+	return filtered
 }
 
 func (s *MemoryStore) CheckQuality(_ context.Context, _ string, examID string, requirePendingPublish bool) (QualityReport, error) {
@@ -527,6 +543,16 @@ func (s *MemoryStore) recalculateSubmissionGradesLocked(tenantID string, examID 
 }
 
 func (s *MemoryStore) qualityLocked(examID string, requirePendingPublish bool) QualityReport {
+	// 质量检查只汇总事实；问题按任务、终分、名册、确认状态的原顺序输出。
+	issues := s.taskAndFinalQualityIssuesLocked(examID)
+	issues = appendRosterQualityIssues(issues, s.rosterReportLocked(examID))
+	if requirePendingPublish {
+		issues = s.appendUnconfirmedQualityIssuesLocked(issues, examID)
+	}
+	return QualityReport{Passed: len(issues) == 0, Issues: issues}
+}
+
+func (s *MemoryStore) taskAndFinalQualityIssuesLocked(examID string) []QualityIssue {
 	issues := []QualityIssue{}
 	if count := countTasks(s.reviewTasks, examID, func(status string) bool { return status != "submitted" && status != "completed" }); count > 0 {
 		issues = append(issues, QualityIssue{Code: "unfinished_review_tasks", Message: "there are unfinished review tasks", Blocking: true, Count: count})
@@ -548,7 +574,10 @@ func (s *MemoryStore) qualityLocked(examID string, requirePendingPublish bool) Q
 	if missing > 0 {
 		issues = append(issues, QualityIssue{Code: "missing_final_grades", Message: "there are answer segments without final grades", Blocking: true, Count: missing})
 	}
-	roster := s.rosterReportLocked(examID)
+	return issues
+}
+
+func appendRosterQualityIssues(issues []QualityIssue, roster RosterReport) []QualityIssue {
 	missingSubmissions := 0
 	for _, entry := range roster.Entries {
 		if entry.ResolutionCode == "missing_submission" {
@@ -564,18 +593,20 @@ func (s *MemoryStore) qualityLocked(examID string, requirePendingPublish bool) Q
 	if roster.Summary.MissingPages > 0 {
 		issues = append(issues, QualityIssue{Code: "missing_pages_unresolved", Message: "matched submissions have unresolved missing or rejected pages", Blocking: true, Count: roster.Summary.MissingPages})
 	}
-	if requirePendingPublish {
-		unconfirmed := 0
-		for _, grade := range s.submissions {
-			if grade.ExamID == examID && grade.Status != "confirmed" && grade.Status != "pending_publish" && grade.Status != "published" && grade.Status != "locked" {
-				unconfirmed++
-			}
-		}
-		if unconfirmed > 0 {
-			issues = append(issues, QualityIssue{Code: "grades_not_confirmed", Message: "there are grades not ready for publish", Blocking: true, Count: unconfirmed})
+	return issues
+}
+
+func (s *MemoryStore) appendUnconfirmedQualityIssuesLocked(issues []QualityIssue, examID string) []QualityIssue {
+	unconfirmed := 0
+	for _, grade := range s.submissions {
+		if grade.ExamID == examID && grade.Status != "confirmed" && grade.Status != "pending_publish" && grade.Status != "published" && grade.Status != "locked" {
+			unconfirmed++
 		}
 	}
-	return QualityReport{Passed: len(issues) == 0, Issues: issues}
+	if unconfirmed > 0 {
+		issues = append(issues, QualityIssue{Code: "grades_not_confirmed", Message: "there are grades not ready for publish", Blocking: true, Count: unconfirmed})
+	}
+	return issues
 }
 
 func (s *MemoryStore) rosterReportLocked(examID string) RosterReport {
@@ -594,54 +625,86 @@ func (s *MemoryStore) rosterReportLocked(examID string) RosterReport {
 			report.Summary.Received++
 		}
 	}
+	s.appendRosterStudentEntriesLocked(examID, rosterKeys, submissionCounts, &report)
+	s.appendUnidentifiedRosterEntriesLocked(examID, rosterKeys, submissionCounts, &report)
+	// 学生未匹配、无法识别答卷和缺页分别计入原有汇总；缺页不在学生条目阶段重复计数。
+	report.Summary.Unresolved += report.Summary.Unidentified + report.Summary.MissingPages
+	sort.Slice(report.Entries, func(i, j int) bool {
+		if report.Entries[i].ClassName == report.Entries[j].ClassName {
+			return report.Entries[i].StudentNo < report.Entries[j].StudentNo
+		}
+		return report.Entries[i].ClassName < report.Entries[j].ClassName
+	})
+	return report
+}
+
+func (s *MemoryStore) appendRosterStudentEntriesLocked(examID string, rosterKeys map[string]RosterSeed, submissionCounts map[string]int, report *RosterReport) {
 	for rosterKey, seed := range rosterKeys {
 		decision := s.attendance[rosterKey]
-		submissionCount := submissionCounts[seed.StudentID]
-		entry := RosterEntry{
-			Key: "student:" + seed.StudentID, StudentID: seed.StudentID, StudentNo: seed.StudentNo,
-			StudentName: seed.StudentName, ClassID: seed.ClassID, ClassName: seed.ClassName,
-			Status: "unmatched", ResolutionCode: "missing_submission",
-			AttendanceReason: decision.AttendanceReason, MarkedBy: decision.MarkedBy, MarkedAt: cloneTime(decision.MarkedAt),
-		}
-		if decision.Status == "absent" && submissionCount == 0 {
-			// 缺考只在没有答卷时消除缺交；已有答卷的缺考标记仍是待核对冲突。
-			entry.Status = "absent"
-			entry.ResolutionCode = "absent"
+		entry := s.rosterStudentEntryLocked(examID, seed, decision, submissionCounts[seed.StudentID])
+		switch entry.Status {
+		case "absent":
 			report.Summary.Absent++
-		} else if submissionCount == 1 && decision.Status != "absent" {
-			for _, submission := range s.rosterSubmissions {
-				if submission.ExamID != examID || submission.StudentID != seed.StudentID {
-					continue
-				}
-				entry.SubmissionID = submission.SubmissionID
-				entry.CandidateNo = submission.CandidateNo
-				entry.ExpectedPageCount = submission.ExpectedPages
-				entry.ActualPageCount = submission.ActualPages
-				if submission.ActualPages < submission.ExpectedPages || submission.QualityStatus == "failed" || submission.SubmissionStatus == "rejected" {
-					entry.Status = "missing_pages"
-					entry.ResolutionCode = "missing_pages"
-					report.Summary.MissingPages++
-				} else if grade, ok := s.submissions[key(examID, submission.SubmissionID)]; ok {
-					entry.Status = "graded"
-					entry.ResolutionCode = "graded"
-					total, max := grade.TotalScore, grade.MaxScore
-					entry.TotalScore, entry.MaxScore = &total, &max
-					report.Summary.Graded++
-				} else {
-					entry.ResolutionCode = "grading_incomplete"
-				}
-				break
-			}
-		} else if submissionCount > 1 {
-			entry.ResolutionCode = "duplicate_submission"
-		} else if decision.Status == "absent" {
-			entry.ResolutionCode = "absent_has_submission"
-		}
-		if entry.Status == "unmatched" {
+		case "missing_pages":
+			report.Summary.MissingPages++
+		case "graded":
+			report.Summary.Graded++
+		case "unmatched":
 			report.Summary.Unresolved++
 		}
 		report.Entries = append(report.Entries, entry)
 	}
+}
+
+func (s *MemoryStore) rosterStudentEntryLocked(examID string, seed RosterSeed, decision RosterEntry, submissionCount int) RosterEntry {
+	entry := RosterEntry{
+		Key: "student:" + seed.StudentID, StudentID: seed.StudentID, StudentNo: seed.StudentNo,
+		StudentName: seed.StudentName, ClassID: seed.ClassID, ClassName: seed.ClassName,
+		Status: "unmatched", ResolutionCode: "missing_submission",
+		AttendanceReason: decision.AttendanceReason, MarkedBy: decision.MarkedBy, MarkedAt: cloneTime(decision.MarkedAt),
+	}
+	switch {
+	case decision.Status == "absent" && submissionCount == 0:
+		// 缺考只在没有答卷时消除缺交；已有答卷的缺考标记仍是待核对冲突。
+		entry.Status = "absent"
+		entry.ResolutionCode = "absent"
+	case submissionCount == 1 && decision.Status != "absent":
+		return s.matchedRosterStudentEntryLocked(examID, seed.StudentID, entry)
+	case submissionCount > 1:
+		entry.ResolutionCode = "duplicate_submission"
+	case decision.Status == "absent":
+		entry.ResolutionCode = "absent_has_submission"
+	}
+	return entry
+}
+
+func (s *MemoryStore) matchedRosterStudentEntryLocked(examID, studentID string, entry RosterEntry) RosterEntry {
+	for _, submission := range s.rosterSubmissions {
+		if submission.ExamID != examID || submission.StudentID != studentID {
+			continue
+		}
+		entry.SubmissionID = submission.SubmissionID
+		entry.CandidateNo = submission.CandidateNo
+		entry.ExpectedPageCount = submission.ExpectedPages
+		entry.ActualPageCount = submission.ActualPages
+		// 缺页、质量失败或拒收先于已有分数，不能因成绩存在就把答卷标成完成。
+		if submission.ActualPages < submission.ExpectedPages || submission.QualityStatus == "failed" || submission.SubmissionStatus == "rejected" {
+			entry.Status = "missing_pages"
+			entry.ResolutionCode = "missing_pages"
+		} else if grade, ok := s.submissions[key(examID, submission.SubmissionID)]; ok {
+			entry.Status = "graded"
+			entry.ResolutionCode = "graded"
+			total, max := grade.TotalScore, grade.MaxScore
+			entry.TotalScore, entry.MaxScore = &total, &max
+		} else {
+			entry.ResolutionCode = "grading_incomplete"
+		}
+		break
+	}
+	return entry
+}
+
+func (s *MemoryStore) appendUnidentifiedRosterEntriesLocked(examID string, rosterKeys map[string]RosterSeed, submissionCounts map[string]int, report *RosterReport) {
 	for _, submission := range s.rosterSubmissions {
 		if submission.ExamID != examID {
 			continue
@@ -669,14 +732,6 @@ func (s *MemoryStore) rosterReportLocked(examID string) RosterReport {
 		})
 		report.Summary.Unidentified++
 	}
-	report.Summary.Unresolved += report.Summary.Unidentified + report.Summary.MissingPages
-	sort.Slice(report.Entries, func(i, j int) bool {
-		if report.Entries[i].ClassName == report.Entries[j].ClassName {
-			return report.Entries[i].StudentNo < report.Entries[j].StudentNo
-		}
-		return report.Entries[i].ClassName < report.Entries[j].ClassName
-	})
-	return report
 }
 
 func canPublishExamStatus(status string) bool {

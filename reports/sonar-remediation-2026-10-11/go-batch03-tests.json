@@ -1,0 +1,74 @@
+{
+  "started_at": "2026-10-11T17:03:51.587442+08:00",
+  "finished_at": "2026-10-11T17:04:47.725320+08:00",
+  "duration_seconds": 56.14100000000326,
+  "command": [
+    "go",
+    "test",
+    "-json",
+    "-p",
+    "1",
+    "-count=1",
+    "-timeout=5m",
+    "./internal/review",
+    "./internal/files",
+    "./internal/processing",
+    "./internal/regrade",
+    "./internal/grading",
+    "./internal/answergroup"
+  ],
+  "cwd": "D:\\project\\yuejuan\\services\\api-gateway",
+  "exit_code": 0,
+  "isolation": {
+    "toolchain": "local",
+    "module_proxy": "off",
+    "checksum_service": "off",
+    "GOMAXPROCS": 2,
+    "cleared_environment_names": []
+  },
+  "package_results": [
+    {
+      "Time": "2026-10-11T17:04:00.7844734+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/review",
+      "Elapsed": 1.264
+    },
+    {
+      "Time": "2026-10-11T17:04:30.7019948+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/files",
+      "Elapsed": 3.2640000000000002
+    },
+    {
+      "Time": "2026-10-11T17:04:33.6409232+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/processing",
+      "Elapsed": 1.009
+    },
+    {
+      "Time": "2026-10-11T17:04:37.2536201+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/regrade",
+      "Elapsed": 1.179
+    },
+    {
+      "Time": "2026-10-11T17:04:43.8275359+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/grading",
+      "Elapsed": 3.134
+    },
+    {
+      "Time": "2026-10-11T17:04:47.1051066+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/answergroup",
+      "Elapsed": 1.271
+    }
+  ],
+  "test_result_counts": {
+    "pass": 444,
+    "fail": 0,
+    "skip": 0
+  },
+  "skipped_tests": [],
+  "note": "只报告实际运行的包；环境缺失跳过项不算真实数据库或外部模型集成通过。"
+}

@@ -44,9 +44,8 @@ func NewGradeSettlementPipeline(settleMath mathSettlementFunc, recordCalibration
 	return &GradeSettlementPipeline{settleMath: settleMath, recordCalibration: recordCalibration}
 }
 
-// Settle applies the common synchronous/asynchronous result policy in one
-// place. Persistence is deliberately left to the caller so transaction and
-// idempotency behavior remain unchanged.
+// Settle 在一处应用同步和异步共用的结果策略。
+// 持久化留给调用方，以保持事务和幂等行为不变。
 func (p *GradeSettlementPipeline) Settle(ctx context.Context, input GradeSettlementInput, output *AdapterOutput) error {
 	if input.MathRun {
 		if p.settleMath == nil {

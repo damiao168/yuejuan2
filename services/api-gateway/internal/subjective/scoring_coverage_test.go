@@ -7,10 +7,8 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/subjective"
 )
 
-// TestAIAssistedQuestionTypesMatchAdapter guards the readiness advisory against
-// drift. paper.HasAutomatedScoringPath tells the exam owner which questions are
-// 100% human graded; this adapter decides which ones actually get an AI
-// suggestion.
+// TestAIAssistedQuestionTypesMatchAdapter 防止准备度提示发生偏移。
+// paper.HasAutomatedScoringPath 告知考试负责人哪些题目完全由人工评分；此适配器决定哪些题目实际获得 AI 建议。
 func TestAIAssistedQuestionTypesMatchAdapter(t *testing.T) {
 	for _, questionType := range paper.AIAssistedQuestionTypes() {
 		if !subjective.IsSupportedQuestionType(questionType) {

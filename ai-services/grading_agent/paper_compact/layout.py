@@ -101,6 +101,20 @@ def _column_partition(items):
     page_width = page_right - page_left
     if page_width <= 0:
         return None
+    candidates = _column_split_candidates(boxed, page_left, page_width)
+    for crossing, _, _, split in sorted(candidates):
+        if crossing > max(3, int(len(boxed) * 0.05)):
+            continue
+        left, right, spanning = _partition_at_split(items, split)
+        if len(left) < 4 or len(right) < 4:
+            continue
+        if _vertical_overlap(left, right) < 0.25:
+            continue
+        return left, right, spanning
+    return None
+
+
+def _column_split_candidates(boxed, page_left, page_width):
     candidates = []
     for step in range(15, 86):
         split = page_left + page_width * step / 100
@@ -116,34 +130,29 @@ def _column_partition(items):
         balance = min(len(left_boxes), len(right_boxes)) / max(
             len(left_boxes), len(right_boxes)
         )
-        # Prefer a clear whitespace gutter, then a well-supported split. Sampling
-        # every one percent also handles three-column pages through recursion.
+        # 先选择穿越块少的空白栏缝，再按两栏数量均衡及接近页中部排序；同分保持采样顺序。
         candidates.append((crossing, -balance, abs(step - 50), split))
-    for crossing, _, _, split in sorted(candidates):
-        if crossing > max(3, int(len(boxed) * 0.05)):
+    return candidates
+
+
+def _partition_at_split(items, split):
+    left = []
+    right = []
+    spanning = []
+    for item in items:
+        box = _box(item)
+        if box is None:
+            spanning.append(item)
             continue
-        left = []
-        right = []
-        spanning = []
-        for item in items:
-            box = _box(item)
-            if box is None:
-                spanning.append(item)
-                continue
-            crosses = box[0] < split < box[0] + box[2]
-            center = box[0] + box[2] / 2
-            if crosses:
-                spanning.append(item)
-            elif center <= split:
-                left.append(item)
-            else:
-                right.append(item)
-        if len(left) < 4 or len(right) < 4:
-            continue
-        if _vertical_overlap(left, right) < 0.25:
-            continue
-        return left, right, spanning
-    return None
+        crosses = box[0] < split < box[0] + box[2]
+        center = box[0] + box[2] / 2
+        if crosses:
+            spanning.append(item)
+        elif center <= split:
+            left.append(item)
+        else:
+            right.append(item)
+    return left, right, spanning
 
 
 def _vertical_overlap(left, right):
@@ -169,6 +178,6 @@ def _center_y(item):
 
 def _geometric_key(item):
     box = _box(item)
-    # Formula crops are deliberately padded and can start above their host text
-    # line. Their vertical centre is a better baseline proxy than the top edge.
+    # 公式裁剪刻意留有边距，顶部可能高于所属文本行。
+    # 相比顶边，竖直中心更适合用来估计基线。
     return (box[1] + box[3] / 2, box[0], item[0]) if box else (float("inf"), 0, item[0])

@@ -1,0 +1,3890 @@
+{
+  "file": "01-feature-tree.drawio",
+  "title": "完整系统功能树",
+  "pages": [
+    {
+      "id": "feature-overview",
+      "title": "01 系统功能总览与详细页入口",
+      "width": 2340,
+      "height": 1859,
+      "note": "功能编号 F01–F10；分组状态表示当前接入范围，下一页起按业务域展示子模块和具体功能。",
+      "nodes": [
+        {
+          "id": "system",
+          "label": "yuejuan 智能阅卷系统\n当前工作区实际实现",
+          "x": 936,
+          "y": 235,
+          "w": 467,
+          "h": 76,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "apps/web-admin/src/router/pageRendering.tsx;services/api-gateway/internal/server/application_modules.go",
+          "display_label": "yuejuan 智能阅卷系统",
+          "show_evidence": false,
+          "title_font_size": 43,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F01",
+          "label": "F01 身份与平台\n已编码，接入边界见详页\n阅读入口：第 02 页",
+          "x": 286,
+          "y": 478,
+          "w": 533,
+          "h": 111,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "apps/web-admin/src/router/routes.tsx;services/api-gateway/internal/server/routes_auth.go",
+          "display_label": "F01 身份与平台",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F02",
+          "label": "F02 组织与学校\n主要业务入口已有代码\n阅读入口：第 03 页",
+          "x": 286,
+          "y": 731,
+          "w": 533,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_org.go;apps/web-admin/src/router/pageRendering.tsx",
+          "display_label": "F02 组织与学校",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F03",
+          "label": "F03 题库与试卷\n主要业务入口已有代码\n阅读入口：第 04 页",
+          "x": 286,
+          "y": 984,
+          "w": 533,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_questionbank.go;services/api-gateway/internal/server/routes_paper.go",
+          "display_label": "F03 题库与试卷",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F04",
+          "label": "F04 考试管理\n主要业务入口已有代码\n阅读入口：第 05 页",
+          "x": 322,
+          "y": 1238,
+          "w": 461,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_exam.go;apps/web-admin/src/features/exams/create/CreateExamPage.tsx",
+          "display_label": "F04 考试管理",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F05",
+          "label": "F05 采集、图像与模板\n已编码，接入边界见详页\n阅读入口：第 06 页",
+          "x": 178,
+          "y": 1492,
+          "w": 749,
+          "h": 111,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_capture.go;docs/architecture/specs/06-image-template-pipeline.json",
+          "display_label": "F05 采集、图像与模板",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F06",
+          "label": "F06 OCR 与答案理解\n主要业务入口已有代码\n阅读入口：第 07 页",
+          "x": 1432,
+          "y": 478,
+          "w": 711,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_processing.go;services/api-gateway/internal/server/routes_exam.go",
+          "display_label": "F06 OCR 与答案理解",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F07",
+          "label": "F07 AI 评分与人工复核\n已编码，接入边界见详页\n阅读入口：第 08 页",
+          "x": 1400,
+          "y": 731,
+          "w": 776,
+          "h": 111,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_grading.go;docs/architecture/specs/07-ai-grading.json",
+          "display_label": "F07 AI 评分与人工复核",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F08",
+          "label": "F08 成绩、发布与学生\n已编码，接入边界见详页\n阅读入口：第 09 页",
+          "x": 1413,
+          "y": 984,
+          "w": 749,
+          "h": 111,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_release.go;apps/student-portal/src/App.tsx",
+          "display_label": "F08 成绩、发布与学生",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F09",
+          "label": "F09 模型治理与阅卷质量\n已编码，接入边界见详页\n阅读入口：第 10 页",
+          "x": 1377,
+          "y": 1238,
+          "w": 821,
+          "h": 111,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_governance.go;services/api-gateway/internal/server/routes_review.go",
+          "display_label": "F09 模型治理与阅卷质量",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F10",
+          "label": "F10 桌面客户端与运维\n已编码，接入边界见详页\n阅读入口：第 11 页",
+          "x": 1413,
+          "y": 1492,
+          "w": 749,
+          "h": 111,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "apps/desktop-client/src/App.tsx;services/api-gateway/internal/server/routes_system.go",
+          "display_label": "F10 桌面客户端与运维",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        }
+      ],
+      "edges": [
+        {
+          "source": "system",
+          "target": "F01",
+          "label": "",
+          "evidence": "apps/web-admin/src/router/routes.tsx;services/api-gateway/internal/server/routes_auth.go",
+          "points": [
+            [
+              1118,
+              396
+            ],
+            [
+              1118,
+              533
+            ]
+          ],
+          "exitX": 0.25,
+          "exitY": 1,
+          "entryX": 1,
+          "entryY": 0.5,
+          "display_label": ""
+        },
+        {
+          "source": "system",
+          "target": "F02",
+          "label": "",
+          "evidence": "services/api-gateway/internal/server/routes_org.go;apps/web-admin/src/router/pageRendering.tsx",
+          "points": [
+            [
+              1118,
+              396
+            ],
+            [
+              1118,
+              786
+            ]
+          ],
+          "exitX": 0.25,
+          "exitY": 1,
+          "entryX": 1,
+          "entryY": 0.5,
+          "display_label": ""
+        },
+        {
+          "source": "system",
+          "target": "F03",
+          "label": "",
+          "evidence": "services/api-gateway/internal/server/routes_questionbank.go;services/api-gateway/internal/server/routes_paper.go",
+          "points": [
+            [
+              1118,
+              396
+            ],
+            [
+              1118,
+              1040
+            ]
+          ],
+          "exitX": 0.25,
+          "exitY": 1,
+          "entryX": 1,
+          "entryY": 0.5,
+          "display_label": ""
+        },
+        {
+          "source": "system",
+          "target": "F04",
+          "label": "",
+          "evidence": "services/api-gateway/internal/server/routes_exam.go;apps/web-admin/src/features/exams/create/CreateExamPage.tsx",
+          "points": [
+            [
+              1118,
+              396
+            ],
+            [
+              1118,
+              1294
+            ]
+          ],
+          "exitX": 0.25,
+          "exitY": 1,
+          "entryX": 1,
+          "entryY": 0.5,
+          "display_label": ""
+        },
+        {
+          "source": "system",
+          "target": "F05",
+          "label": "",
+          "evidence": "services/api-gateway/internal/server/routes_capture.go;docs/architecture/specs/06-image-template-pipeline.json",
+          "points": [
+            [
+              1118,
+              396
+            ],
+            [
+              1118,
+              1547
+            ]
+          ],
+          "exitX": 0.25,
+          "exitY": 1,
+          "entryX": 1,
+          "entryY": 0.5,
+          "display_label": ""
+        },
+        {
+          "source": "system",
+          "target": "F06",
+          "label": "",
+          "evidence": "services/api-gateway/internal/server/routes_processing.go;services/api-gateway/internal/server/routes_exam.go",
+          "points": [
+            [
+              1222,
+              396
+            ],
+            [
+              1222,
+              533
+            ]
+          ],
+          "exitX": 0.75,
+          "exitY": 1,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": ""
+        },
+        {
+          "source": "system",
+          "target": "F07",
+          "label": "",
+          "evidence": "services/api-gateway/internal/server/routes_grading.go;docs/architecture/specs/07-ai-grading.json",
+          "points": [
+            [
+              1222,
+              396
+            ],
+            [
+              1222,
+              786
+            ]
+          ],
+          "exitX": 0.75,
+          "exitY": 1,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": ""
+        },
+        {
+          "source": "system",
+          "target": "F08",
+          "label": "",
+          "evidence": "services/api-gateway/internal/server/routes_release.go;apps/student-portal/src/App.tsx",
+          "points": [
+            [
+              1222,
+              396
+            ],
+            [
+              1222,
+              1040
+            ]
+          ],
+          "exitX": 0.75,
+          "exitY": 1,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": ""
+        },
+        {
+          "source": "system",
+          "target": "F09",
+          "label": "",
+          "evidence": "services/api-gateway/internal/server/routes_governance.go;services/api-gateway/internal/server/routes_review.go",
+          "points": [
+            [
+              1222,
+              396
+            ],
+            [
+              1222,
+              1294
+            ]
+          ],
+          "exitX": 0.75,
+          "exitY": 1,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": ""
+        },
+        {
+          "source": "system",
+          "target": "F10",
+          "label": "",
+          "evidence": "apps/desktop-client/src/App.tsx;services/api-gateway/internal/server/routes_system.go",
+          "points": [
+            [
+              1222,
+              396
+            ],
+            [
+              1222,
+              1547
+            ]
+          ],
+          "exitX": 0.75,
+          "exitY": 1,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": ""
+        }
+      ],
+      "display_note": "",
+      "typography_layout_base": {
+        "width": 1800,
+        "height": 1430,
+        "nodes": {
+          "system": {
+            "x": 720,
+            "y": 145,
+            "w": 360,
+            "h": 130
+          },
+          "F01": {
+            "x": 40,
+            "y": 340,
+            "w": 770,
+            "h": 140
+          },
+          "F02": {
+            "x": 40,
+            "y": 535,
+            "w": 770,
+            "h": 140
+          },
+          "F03": {
+            "x": 40,
+            "y": 730,
+            "w": 770,
+            "h": 140
+          },
+          "F04": {
+            "x": 40,
+            "y": 925,
+            "w": 770,
+            "h": 140
+          },
+          "F05": {
+            "x": 40,
+            "y": 1120,
+            "w": 770,
+            "h": 140
+          },
+          "F06": {
+            "x": 990,
+            "y": 340,
+            "w": 770,
+            "h": 140
+          },
+          "F07": {
+            "x": 990,
+            "y": 535,
+            "w": 770,
+            "h": 140
+          },
+          "F08": {
+            "x": 990,
+            "y": 730,
+            "w": 770,
+            "h": 140
+          },
+          "F09": {
+            "x": 990,
+            "y": 925,
+            "w": 770,
+            "h": 140
+          },
+          "F10": {
+            "x": 990,
+            "y": 1120,
+            "w": 770,
+            "h": 140
+          }
+        },
+        "points": {
+          "0": [
+            [
+              860,
+              305
+            ],
+            [
+              860,
+              410
+            ]
+          ],
+          "1": [
+            [
+              860,
+              305
+            ],
+            [
+              860,
+              605
+            ]
+          ],
+          "2": [
+            [
+              860,
+              305
+            ],
+            [
+              860,
+              800
+            ]
+          ],
+          "3": [
+            [
+              860,
+              305
+            ],
+            [
+              860,
+              995
+            ]
+          ],
+          "4": [
+            [
+              860,
+              305
+            ],
+            [
+              860,
+              1190
+            ]
+          ],
+          "5": [
+            [
+              940,
+              305
+            ],
+            [
+              940,
+              410
+            ]
+          ],
+          "6": [
+            [
+              940,
+              305
+            ],
+            [
+              940,
+              605
+            ]
+          ],
+          "7": [
+            [
+              940,
+              305
+            ],
+            [
+              940,
+              800
+            ]
+          ],
+          "8": [
+            [
+              940,
+              305
+            ],
+            [
+              940,
+              995
+            ]
+          ],
+          "9": [
+            [
+              940,
+              305
+            ],
+            [
+              940,
+              1190
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "f01",
+      "title": "02 F01 身份与平台",
+      "width": 2340,
+      "height": 1742,
+      "note": "从左至右：业务域 → 子模块 → 带独立编号的具体功能。已实现表示有代码依据，不代表本次生产环境或真实设备验收。",
+      "nodes": [
+        {
+          "id": "F01",
+          "label": "F01\n身份与平台",
+          "x": 168,
+          "y": 604,
+          "w": 184,
+          "h": 157,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "apps/web-admin/src/router/routes.tsx;services/api-gateway/internal/server/routes_auth.go",
+          "display_label": "F01\n身份与平台",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F01.01",
+          "label": "F01.01 登录与账户安全",
+          "x": 588,
+          "y": 322,
+          "w": 449,
+          "h": 72,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_auth.go",
+          "display_label": "F01.01 登录与账户安全",
+          "show_evidence": false,
+          "title_font_size": 40,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F01.01.features",
+          "label": "具体功能\nF01.01.01 密码 / Token / 微信登录\nF01.01.02 激活、恢复、改密与会话撤销\nF01.01.03 锁定、近期认证、TOTP 与恢复码",
+          "x": 1359,
+          "y": 258,
+          "w": 832,
+          "h": 198,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_auth.go",
+          "display_label": "密码 / Token / 微信登录\nF01.01.02 激活、恢复、改密与会话撤销\nF01.01.03 锁定、近期认证、TOTP 与恢复码",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F01.02",
+          "label": "F01.02 平台控制台",
+          "x": 590,
+          "y": 667,
+          "w": 445,
+          "h": 83,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "apps/web-admin/src/router/pageRendering.tsx;services/api-gateway/internal/server/routes_platform_schools.go",
+          "display_label": "F01.02 平台控制台",
+          "show_evidence": false,
+          "title_font_size": 49,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F01.02.features",
+          "label": "具体功能\nF01.02.01 平台首次启用与学校管理入口\nF01.02.02 工作台汇总、操作审计与导出\nF01.02.03 平台管理员与学校工作区分离",
+          "x": 1366,
+          "y": 610,
+          "w": 816,
+          "h": 198,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "apps/web-admin/src/router/pageRendering.tsx;services/api-gateway/internal/server/routes_platform_schools.go",
+          "display_label": "平台启用与学校管理入口\nF01.02.02 工作台汇总、操作审计与导出\nF01.02.03 平台管理员与学校工作区分离",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F01.03",
+          "label": "F01.03 产品身份与页面访问",
+          "x": 548,
+          "y": 1024,
+          "w": 529,
+          "h": 72,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "apps/web-admin/src/router/experience.ts;apps/web-admin/src/router/routes.tsx",
+          "display_label": "F01.03 产品身份与页面访问",
+          "show_evidence": false,
+          "title_font_size": 40,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F01.03.features",
+          "label": "具体功能\nF01.03.01 admin / teacher / auditor / student 体验\nF01.03.02 角色、权限、工作区及深链接边界\nF01.03.03 4 个 mock 页仅开发 / demo；生产禁用",
+          "x": 1314,
+          "y": 962,
+          "w": 921,
+          "h": 194,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "apps/web-admin/src/router/experience.ts;apps/web-admin/src/router/routes.tsx",
+          "display_label": "管理员、教师、审计员、学生\nF01.03.02 角色、权限、工作区及深链接边界\nF01.03.03 4 个 mock 页仅开发 / demo；生产禁用",
+          "show_evidence": false,
+          "title_font_size": 69,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F01-boundary",
+          "label": "阅读边界与未接入能力\n功能状态依据当前工作区源码；登录方案已编码不代表本次完成外部身份服务验收。",
+          "x": 720,
+          "y": 1410,
+          "w": 888,
+          "h": 111,
+          "status": "partial",
+          "kind": "note",
+          "evidence": "apps/web-admin/src/router/routes.tsx;services/api-gateway/internal/server/routes_auth.go",
+          "display_label": "外部身份服务：未现场验收",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        }
+      ],
+      "edges": [
+        {
+          "source": "F01",
+          "target": "F01.01",
+          "label": "归属",
+          "evidence": "services/api-gateway/internal/server/routes_auth.go",
+          "points": [
+            [
+              500,
+              682
+            ],
+            [
+              500,
+              358
+            ]
+          ],
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "归属"
+        },
+        {
+          "source": "F01.01",
+          "target": "F01.01.features",
+          "label": "包含",
+          "evidence": "services/api-gateway/internal/server/routes_auth.go",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "包含"
+        },
+        {
+          "source": "F01",
+          "target": "F01.02",
+          "label": "归属",
+          "evidence": "apps/web-admin/src/router/pageRendering.tsx;services/api-gateway/internal/server/routes_platform_schools.go",
+          "points": [
+            [
+              500,
+              682
+            ],
+            [
+              500,
+              708
+            ]
+          ],
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "归属"
+        },
+        {
+          "source": "F01.02",
+          "target": "F01.02.features",
+          "label": "包含",
+          "evidence": "apps/web-admin/src/router/pageRendering.tsx;services/api-gateway/internal/server/routes_platform_schools.go",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "包含"
+        },
+        {
+          "source": "F01",
+          "target": "F01.03",
+          "label": "归属",
+          "evidence": "apps/web-admin/src/router/experience.ts;apps/web-admin/src/router/routes.tsx",
+          "points": [
+            [
+              500,
+              682
+            ],
+            [
+              500,
+              1060
+            ]
+          ],
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "归属"
+        },
+        {
+          "source": "F01.03",
+          "target": "F01.03.features",
+          "label": "包含",
+          "evidence": "apps/web-admin/src/router/experience.ts;apps/web-admin/src/router/routes.tsx",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "包含"
+        }
+      ],
+      "display_note": "",
+      "typography_layout_base": {
+        "width": 1800,
+        "height": 1340,
+        "nodes": {
+          "F01": {
+            "x": 70,
+            "y": 435,
+            "w": 260,
+            "h": 180
+          },
+          "F01.01": {
+            "x": 450,
+            "y": 180,
+            "w": 350,
+            "h": 190
+          },
+          "F01.01.features": {
+            "x": 1010,
+            "y": 180,
+            "w": 710,
+            "h": 190
+          },
+          "F01.02": {
+            "x": 450,
+            "y": 450,
+            "w": 350,
+            "h": 190
+          },
+          "F01.02.features": {
+            "x": 1010,
+            "y": 450,
+            "w": 710,
+            "h": 190
+          },
+          "F01.03": {
+            "x": 450,
+            "y": 720,
+            "w": 350,
+            "h": 190
+          },
+          "F01.03.features": {
+            "x": 1010,
+            "y": 720,
+            "w": 710,
+            "h": 190
+          },
+          "F01-boundary": {
+            "x": 70,
+            "y": 1040,
+            "w": 1650,
+            "h": 175
+          }
+        },
+        "points": {
+          "0": [
+            [
+              385,
+              525
+            ],
+            [
+              385,
+              275
+            ]
+          ],
+          "2": [
+            [
+              385,
+              525
+            ],
+            [
+              385,
+              545
+            ]
+          ],
+          "4": [
+            [
+              385,
+              525
+            ],
+            [
+              385,
+              815
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "f02",
+      "title": "03 F02 组织与学校",
+      "width": 2340,
+      "height": 1742,
+      "note": "从左至右：业务域 → 子模块 → 带独立编号的具体功能。已实现表示有代码依据，不代表本次生产环境或真实设备验收。",
+      "nodes": [
+        {
+          "id": "F02",
+          "label": "F02\n组织与学校",
+          "x": 168,
+          "y": 604,
+          "w": 184,
+          "h": 157,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_org.go;apps/web-admin/src/router/pageRendering.tsx",
+          "display_label": "F02\n组织与学校",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F02.01",
+          "label": "F02.01 组织结构",
+          "x": 586,
+          "y": 312,
+          "w": 452,
+          "h": 92,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_org.go;apps/web-admin/src/pages/OrganizationSetupPage.tsx",
+          "display_label": "F02.01 组织结构",
+          "show_evidence": false,
+          "title_font_size": 56,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F02.01.features",
+          "label": "具体功能\nF02.01.01 学校初始化与机构配置\nF02.01.02 学年、年级、班级维护\nF02.01.03 学校级成员作用域管理",
+          "x": 1402,
+          "y": 258,
+          "w": 744,
+          "h": 198,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_org.go;apps/web-admin/src/pages/OrganizationSetupPage.tsx",
+          "display_label": "学校初始化与机构配置\nF02.01.02 学年、年级、班级维护\nF02.01.03 学校级成员作用域管理",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F02.02",
+          "label": "F02.02 学生与教师",
+          "x": 590,
+          "y": 667,
+          "w": 445,
+          "h": 83,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "apps/web-admin/src/pages/StudentManagementPage.tsx;apps/web-admin/src/features/members/teachers/TeacherManagementPage.tsx;services/api-gateway/internal/server/routes_auth.go",
+          "display_label": "F02.02 学生与教师",
+          "show_evidence": false,
+          "title_font_size": 49,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F02.02.features",
+          "label": "具体功能\nF02.02.01 学生名单维护、导入与班级归属\nF02.02.02 教师账号、状态与访问权限\nF02.02.03 账户激活和凭据重置入口",
+          "x": 1330,
+          "y": 610,
+          "w": 888,
+          "h": 198,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "apps/web-admin/src/pages/StudentManagementPage.tsx;apps/web-admin/src/features/members/teachers/TeacherManagementPage.tsx;services/api-gateway/internal/server/routes_auth.go",
+          "display_label": "学生名单、导入与班级归属\nF02.02.02 教师账号、状态与访问权限\nF02.02.03 账户激活和凭据重置入口",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F02.03",
+          "label": "F02.03 学校助手",
+          "x": 586,
+          "y": 1014,
+          "w": 452,
+          "h": 92,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "apps/web-admin/src/api/schoolAiChat.ts;services/api-gateway/internal/server/routes_school_assistant.go;services/api-gateway/internal/schoolassistant/handlers.go",
+          "display_label": "F02.03 学校助手",
+          "show_evidence": false,
+          "title_font_size": 56,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F02.03.features",
+          "label": "具体功能\nF02.03.01 学校管理员模型聊天与 SSE\nF02.03.02 助手查询考试、处理与成绩上下文\nF02.03.03 工具查询重新校验业务权限与范围",
+          "x": 1409,
+          "y": 960,
+          "w": 731,
+          "h": 198,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "apps/web-admin/src/api/schoolAiChat.ts;services/api-gateway/internal/server/routes_school_assistant.go;services/api-gateway/internal/schoolassistant/handlers.go",
+          "display_label": "学校管理员聊天 / SSE\nF02.03.02 助手查询考试、处理与成绩上下文\nF02.03.03 工具查询重新校验业务权限与范围",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F02-boundary",
+          "label": "阅读边界与未接入能力\n学校 AI 助手入口限 school_admin；聊天正文不进入通用幂等收据。",
+          "x": 696,
+          "y": 1410,
+          "w": 936,
+          "h": 111,
+          "status": "infra",
+          "kind": "note",
+          "evidence": "services/api-gateway/internal/server/routes_org.go;apps/web-admin/src/router/pageRendering.tsx",
+          "display_label": "学校 AI 助手：仅学校管理员",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        }
+      ],
+      "edges": [
+        {
+          "source": "F02",
+          "target": "F02.01",
+          "label": "归属",
+          "evidence": "services/api-gateway/internal/server/routes_org.go;apps/web-admin/src/pages/OrganizationSetupPage.tsx",
+          "points": [
+            [
+              500,
+              682
+            ],
+            [
+              500,
+              358
+            ]
+          ],
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "归属"
+        },
+        {
+          "source": "F02.01",
+          "target": "F02.01.features",
+          "label": "包含",
+          "evidence": "services/api-gateway/internal/server/routes_org.go;apps/web-admin/src/pages/OrganizationSetupPage.tsx",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "包含"
+        },
+        {
+          "source": "F02",
+          "target": "F02.02",
+          "label": "归属",
+          "evidence": "apps/web-admin/src/pages/StudentManagementPage.tsx;apps/web-admin/src/features/members/teachers/TeacherManagementPage.tsx;services/api-gateway/internal/server/routes_auth.go",
+          "points": [
+            [
+              500,
+              682
+            ],
+            [
+              500,
+              708
+            ]
+          ],
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "归属"
+        },
+        {
+          "source": "F02.02",
+          "target": "F02.02.features",
+          "label": "包含",
+          "evidence": "apps/web-admin/src/pages/StudentManagementPage.tsx;apps/web-admin/src/features/members/teachers/TeacherManagementPage.tsx;services/api-gateway/internal/server/routes_auth.go",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "包含"
+        },
+        {
+          "source": "F02",
+          "target": "F02.03",
+          "label": "归属",
+          "evidence": "apps/web-admin/src/api/schoolAiChat.ts;services/api-gateway/internal/server/routes_school_assistant.go;services/api-gateway/internal/schoolassistant/handlers.go",
+          "points": [
+            [
+              500,
+              682
+            ],
+            [
+              500,
+              1060
+            ]
+          ],
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "归属"
+        },
+        {
+          "source": "F02.03",
+          "target": "F02.03.features",
+          "label": "包含",
+          "evidence": "apps/web-admin/src/api/schoolAiChat.ts;services/api-gateway/internal/server/routes_school_assistant.go;services/api-gateway/internal/schoolassistant/handlers.go",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "包含"
+        }
+      ],
+      "display_note": "",
+      "typography_layout_base": {
+        "width": 1800,
+        "height": 1340,
+        "nodes": {
+          "F02": {
+            "x": 70,
+            "y": 435,
+            "w": 260,
+            "h": 180
+          },
+          "F02.01": {
+            "x": 450,
+            "y": 180,
+            "w": 350,
+            "h": 190
+          },
+          "F02.01.features": {
+            "x": 1010,
+            "y": 180,
+            "w": 710,
+            "h": 190
+          },
+          "F02.02": {
+            "x": 450,
+            "y": 450,
+            "w": 350,
+            "h": 190
+          },
+          "F02.02.features": {
+            "x": 1010,
+            "y": 450,
+            "w": 710,
+            "h": 190
+          },
+          "F02.03": {
+            "x": 450,
+            "y": 720,
+            "w": 350,
+            "h": 190
+          },
+          "F02.03.features": {
+            "x": 1010,
+            "y": 720,
+            "w": 710,
+            "h": 190
+          },
+          "F02-boundary": {
+            "x": 70,
+            "y": 1040,
+            "w": 1650,
+            "h": 175
+          }
+        },
+        "points": {
+          "0": [
+            [
+              385,
+              525
+            ],
+            [
+              385,
+              275
+            ]
+          ],
+          "2": [
+            [
+              385,
+              525
+            ],
+            [
+              385,
+              545
+            ]
+          ],
+          "4": [
+            [
+              385,
+              525
+            ],
+            [
+              385,
+              815
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "f03",
+      "title": "04 F03 题库与试卷",
+      "width": 2340,
+      "height": 1742,
+      "note": "从左至右：业务域 → 子模块 → 带独立编号的具体功能。已实现表示有代码依据，不代表本次生产环境或真实设备验收。",
+      "nodes": [
+        {
+          "id": "F03",
+          "label": "F03\n题库与试卷",
+          "x": 168,
+          "y": 604,
+          "w": 184,
+          "h": 157,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_questionbank.go;services/api-gateway/internal/server/routes_paper.go",
+          "display_label": "F03\n题库与试卷",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F03.01",
+          "label": "F03.01 题库与访问控制",
+          "x": 588,
+          "y": 322,
+          "w": 449,
+          "h": 72,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_questionbank.go;apps/web-admin/src/features/question-bank/QuestionBankPage.tsx",
+          "display_label": "F03.01 题库与访问控制",
+          "show_evidence": false,
+          "title_font_size": 40,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F03.01.features",
+          "label": "具体功能\nF03.01.01 题库题目、内容、资产与元数据\nF03.01.02 成员权限与 ACL 管理\nF03.01.03 题库题目实例化到考试",
+          "x": 1366,
+          "y": 258,
+          "w": 816,
+          "h": 198,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_questionbank.go;apps/web-admin/src/features/question-bank/QuestionBankPage.tsx",
+          "display_label": "题库内容、资产与元数据\nF03.01.02 成员权限与 ACL 管理\nF03.01.03 题库题目实例化到考试",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F03.02",
+          "label": "F03.02 试卷资料导入",
+          "x": 589,
+          "y": 670,
+          "w": 447,
+          "h": 77,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_paper.go;services/api-gateway/internal/paper/paper_import_structure_handlers.go",
+          "display_label": "F03.02 试卷资料导入",
+          "show_evidence": false,
+          "title_font_size": 44,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F03.02.features",
+          "label": "具体功能\nF03.02.01 试卷来源上传、解析与人工确认\nF03.02.02 内容补齐、结构预览与结构采纳\nF03.02.03 取消、重试解析与量规草案",
+          "x": 1330,
+          "y": 610,
+          "w": 888,
+          "h": 198,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_paper.go;services/api-gateway/internal/paper/paper_import_structure_handlers.go",
+          "display_label": "试卷上传、解析与人工确认\nF03.02.02 内容补齐、结构预览与结构采纳\nF03.02.03 取消、重试解析与量规草案",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F03.03",
+          "label": "F03.03 题目与评估策略",
+          "x": 588,
+          "y": 1024,
+          "w": 449,
+          "h": 72,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_exam.go;services/api-gateway/internal/paper/configuration_handlers.go;apps/web-admin/src/pages/PaperRubricPage.tsx",
+          "display_label": "F03.03 题目与评估策略",
+          "show_evidence": false,
+          "title_font_size": 40,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F03.03.features",
+          "label": "具体功能\nF03.03.01 题目、参考答案、量规与规则版本\nF03.03.02 学科画像 / 题型原型配置及快照\nF03.03.03 试卷准备检查与配置 hash 确认",
+          "x": 1314,
+          "y": 962,
+          "w": 921,
+          "h": 194,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_exam.go;services/api-gateway/internal/paper/configuration_handlers.go;apps/web-admin/src/pages/PaperRubricPage.tsx",
+          "display_label": "题目、答案、量规与规则版本\nF03.03.02 学科画像 / 题型原型配置及快照\nF03.03.03 试卷准备检查与配置 hash 确认",
+          "show_evidence": false,
+          "title_font_size": 69,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F03-boundary",
+          "label": "阅读边界与未接入能力\n题库素材与考试题目是不同资源；实例化需要 exam:manage 与 question_bank:read。",
+          "x": 815,
+          "y": 1387,
+          "w": 697,
+          "h": 157,
+          "status": "infra",
+          "kind": "note",
+          "evidence": "services/api-gateway/internal/server/routes_questionbank.go;services/api-gateway/internal/server/routes_paper.go",
+          "display_label": "题库素材 ≠ 考试题目\n实例化需考试管理 + 题库读取权限",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        }
+      ],
+      "edges": [
+        {
+          "source": "F03",
+          "target": "F03.01",
+          "label": "归属",
+          "evidence": "services/api-gateway/internal/server/routes_questionbank.go;apps/web-admin/src/features/question-bank/QuestionBankPage.tsx",
+          "points": [
+            [
+              500,
+              682
+            ],
+            [
+              500,
+              358
+            ]
+          ],
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "归属"
+        },
+        {
+          "source": "F03.01",
+          "target": "F03.01.features",
+          "label": "包含",
+          "evidence": "services/api-gateway/internal/server/routes_questionbank.go;apps/web-admin/src/features/question-bank/QuestionBankPage.tsx",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "包含"
+        },
+        {
+          "source": "F03",
+          "target": "F03.02",
+          "label": "归属",
+          "evidence": "services/api-gateway/internal/server/routes_paper.go;services/api-gateway/internal/paper/paper_import_structure_handlers.go",
+          "points": [
+            [
+              500,
+              682
+            ],
+            [
+              500,
+              708
+            ]
+          ],
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "归属"
+        },
+        {
+          "source": "F03.02",
+          "target": "F03.02.features",
+          "label": "包含",
+          "evidence": "services/api-gateway/internal/server/routes_paper.go;services/api-gateway/internal/paper/paper_import_structure_handlers.go",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "包含"
+        },
+        {
+          "source": "F03",
+          "target": "F03.03",
+          "label": "归属",
+          "evidence": "services/api-gateway/internal/server/routes_exam.go;services/api-gateway/internal/paper/configuration_handlers.go;apps/web-admin/src/pages/PaperRubricPage.tsx",
+          "points": [
+            [
+              500,
+              682
+            ],
+            [
+              500,
+              1060
+            ]
+          ],
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "归属"
+        },
+        {
+          "source": "F03.03",
+          "target": "F03.03.features",
+          "label": "包含",
+          "evidence": "services/api-gateway/internal/server/routes_exam.go;services/api-gateway/internal/paper/configuration_handlers.go;apps/web-admin/src/pages/PaperRubricPage.tsx",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "包含"
+        }
+      ],
+      "display_note": "",
+      "typography_layout_base": {
+        "width": 1800,
+        "height": 1340,
+        "nodes": {
+          "F03": {
+            "x": 70,
+            "y": 435,
+            "w": 260,
+            "h": 180
+          },
+          "F03.01": {
+            "x": 450,
+            "y": 180,
+            "w": 350,
+            "h": 190
+          },
+          "F03.01.features": {
+            "x": 1010,
+            "y": 180,
+            "w": 710,
+            "h": 190
+          },
+          "F03.02": {
+            "x": 450,
+            "y": 450,
+            "w": 350,
+            "h": 190
+          },
+          "F03.02.features": {
+            "x": 1010,
+            "y": 450,
+            "w": 710,
+            "h": 190
+          },
+          "F03.03": {
+            "x": 450,
+            "y": 720,
+            "w": 350,
+            "h": 190
+          },
+          "F03.03.features": {
+            "x": 1010,
+            "y": 720,
+            "w": 710,
+            "h": 190
+          },
+          "F03-boundary": {
+            "x": 70,
+            "y": 1040,
+            "w": 1650,
+            "h": 175
+          }
+        },
+        "points": {
+          "0": [
+            [
+              385,
+              525
+            ],
+            [
+              385,
+              275
+            ]
+          ],
+          "2": [
+            [
+              385,
+              525
+            ],
+            [
+              385,
+              545
+            ]
+          ],
+          "4": [
+            [
+              385,
+              525
+            ],
+            [
+              385,
+              815
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "f04",
+      "title": "05 F04 考试管理",
+      "width": 2340,
+      "height": 1742,
+      "note": "从左至右：业务域 → 子模块 → 带独立编号的具体功能。已实现表示有代码依据，不代表本次生产环境或真实设备验收。",
+      "nodes": [
+        {
+          "id": "F04",
+          "label": "F04\n考试管理",
+          "x": 184,
+          "y": 604,
+          "w": 152,
+          "h": 157,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_exam.go;apps/web-admin/src/features/exams/create/CreateExamPage.tsx",
+          "display_label": "F04\n考试管理",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F04.01",
+          "label": "F04.01 创建与管理",
+          "x": 590,
+          "y": 316,
+          "w": 445,
+          "h": 83,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_exam.go;apps/web-admin/src/features/exams/management/ManagementExamOverviewPage.tsx",
+          "display_label": "F04.01 创建与管理",
+          "show_evidence": false,
+          "title_font_size": 49,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F04.01.features",
+          "label": "具体功能\nF04.01.01 新建单科考试或多科考试场次\nF04.01.02 考试模板、列表与管理总览\nF04.01.03 考试资料修改及命令回执恢复",
+          "x": 1364,
+          "y": 258,
+          "w": 820,
+          "h": 198,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_exam.go;apps/web-admin/src/features/exams/management/ManagementExamOverviewPage.tsx",
+          "display_label": "新建单科考试 / 多科场次\nF04.01.02 考试模板、列表与管理总览\nF04.01.03 考试资料修改及命令回执恢复",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F04.02",
+          "label": "F04.02 准备与采集边界",
+          "x": 588,
+          "y": 672,
+          "w": 449,
+          "h": 72,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_exam.go;services/api-gateway/internal/server/routes_paper.go;apps/web-admin/src/pages/ExamPreparationPage.tsx",
+          "display_label": "F04.02 准备与采集边界",
+          "show_evidence": false,
+          "title_font_size": 40,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F04.02.features",
+          "label": "具体功能\nF04.02.01 学生范围、名单与候选人刷新\nF04.02.02 readiness 检查、确认、开始采集\nF04.02.03 冻结配置变化后重新检查",
+          "x": 1314,
+          "y": 612,
+          "w": 921,
+          "h": 194,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_exam.go;services/api-gateway/internal/server/routes_paper.go;apps/web-admin/src/pages/ExamPreparationPage.tsx",
+          "display_label": "学生范围、名单与候选人刷新\nF04.02.02 readiness 检查、确认、开始采集\nF04.02.03 冻结配置变化后重新检查",
+          "show_evidence": false,
+          "title_font_size": 69,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F04.03",
+          "label": "F04.03 考试工作区",
+          "x": 590,
+          "y": 1018,
+          "w": 445,
+          "h": 83,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "apps/web-admin/src/router/pageRendering.tsx;apps/web-admin/src/router/routes.tsx;services/api-gateway/internal/exam/management_archive_handlers.go",
+          "display_label": "F04.03 考试工作区",
+          "show_evidence": false,
+          "title_font_size": 49,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F04.03.features",
+          "label": "具体功能\nF04.03.01 13 个 admin 分区承载各业务阶段\nF04.03.02 管理考试归档检查、归档与恢复\nF04.03.03 归档事实控制工作区只读入口",
+          "x": 1318,
+          "y": 962,
+          "w": 914,
+          "h": 196,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "apps/web-admin/src/router/pageRendering.tsx;apps/web-admin/src/router/routes.tsx;services/api-gateway/internal/exam/management_archive_handlers.go",
+          "display_label": "13 个管理分区承载业务阶段\nF04.03.02 管理考试归档检查、归档与恢复\nF04.03.03 归档事实控制工作区只读入口",
+          "show_evidence": false,
+          "title_font_size": 71,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F04-boundary",
+          "label": "阅读边界与未接入能力\n工作区动态路由不计入 24 个生产静态入口；teacher/auditor/student 无考试工作区分区授权。",
+          "x": 756,
+          "y": 1410,
+          "w": 816,
+          "h": 111,
+          "status": "infra",
+          "kind": "note",
+          "evidence": "services/api-gateway/internal/server/routes_exam.go;apps/web-admin/src/features/exams/create/CreateExamPage.tsx",
+          "display_label": "考试工作区：按分区授权",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        }
+      ],
+      "edges": [
+        {
+          "source": "F04",
+          "target": "F04.01",
+          "label": "归属",
+          "evidence": "services/api-gateway/internal/server/routes_exam.go;apps/web-admin/src/features/exams/management/ManagementExamOverviewPage.tsx",
+          "points": [
+            [
+              500,
+              682
+            ],
+            [
+              500,
+              358
+            ]
+          ],
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "归属"
+        },
+        {
+          "source": "F04.01",
+          "target": "F04.01.features",
+          "label": "包含",
+          "evidence": "services/api-gateway/internal/server/routes_exam.go;apps/web-admin/src/features/exams/management/ManagementExamOverviewPage.tsx",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "包含"
+        },
+        {
+          "source": "F04",
+          "target": "F04.02",
+          "label": "归属",
+          "evidence": "services/api-gateway/internal/server/routes_exam.go;services/api-gateway/internal/server/routes_paper.go;apps/web-admin/src/pages/ExamPreparationPage.tsx",
+          "points": [
+            [
+              500,
+              682
+            ],
+            [
+              500,
+              708
+            ]
+          ],
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "归属"
+        },
+        {
+          "source": "F04.02",
+          "target": "F04.02.features",
+          "label": "包含",
+          "evidence": "services/api-gateway/internal/server/routes_exam.go;services/api-gateway/internal/server/routes_paper.go;apps/web-admin/src/pages/ExamPreparationPage.tsx",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "包含"
+        },
+        {
+          "source": "F04",
+          "target": "F04.03",
+          "label": "归属",
+          "evidence": "apps/web-admin/src/router/pageRendering.tsx;apps/web-admin/src/router/routes.tsx;services/api-gateway/internal/exam/management_archive_handlers.go",
+          "points": [
+            [
+              500,
+              682
+            ],
+            [
+              500,
+              1060
+            ]
+          ],
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "归属"
+        },
+        {
+          "source": "F04.03",
+          "target": "F04.03.features",
+          "label": "包含",
+          "evidence": "apps/web-admin/src/router/pageRendering.tsx;apps/web-admin/src/router/routes.tsx;services/api-gateway/internal/exam/management_archive_handlers.go",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "包含"
+        }
+      ],
+      "display_note": "",
+      "typography_layout_base": {
+        "width": 1800,
+        "height": 1340,
+        "nodes": {
+          "F04": {
+            "x": 70,
+            "y": 435,
+            "w": 260,
+            "h": 180
+          },
+          "F04.01": {
+            "x": 450,
+            "y": 180,
+            "w": 350,
+            "h": 190
+          },
+          "F04.01.features": {
+            "x": 1010,
+            "y": 180,
+            "w": 710,
+            "h": 190
+          },
+          "F04.02": {
+            "x": 450,
+            "y": 450,
+            "w": 350,
+            "h": 190
+          },
+          "F04.02.features": {
+            "x": 1010,
+            "y": 450,
+            "w": 710,
+            "h": 190
+          },
+          "F04.03": {
+            "x": 450,
+            "y": 720,
+            "w": 350,
+            "h": 190
+          },
+          "F04.03.features": {
+            "x": 1010,
+            "y": 720,
+            "w": 710,
+            "h": 190
+          },
+          "F04-boundary": {
+            "x": 70,
+            "y": 1040,
+            "w": 1650,
+            "h": 175
+          }
+        },
+        "points": {
+          "0": [
+            [
+              385,
+              525
+            ],
+            [
+              385,
+              275
+            ]
+          ],
+          "2": [
+            [
+              385,
+              525
+            ],
+            [
+              385,
+              545
+            ]
+          ],
+          "4": [
+            [
+              385,
+              525
+            ],
+            [
+              385,
+              815
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "f05",
+      "title": "06 F05 采集、图像与模板",
+      "width": 2340,
+      "height": 1742,
+      "note": "从左至右：业务域 → 子模块 → 带独立编号的具体功能。已实现表示有代码依据，不代表本次生产环境或真实设备验收。",
+      "nodes": [
+        {
+          "id": "F05",
+          "label": "F05\n采集、图像与模板",
+          "x": 120,
+          "y": 604,
+          "w": 280,
+          "h": 157,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_capture.go;docs/architecture/specs/06-image-template-pipeline.json",
+          "display_label": "F05\n采集、图像与模板",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F05.01",
+          "label": "F05.01 模板编辑与打印",
+          "x": 588,
+          "y": 322,
+          "w": 449,
+          "h": 72,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_paper.go;services/api-gateway/internal/server/routes_grading.go;apps/web-admin/src/pages/AnswerSheetTemplatePage.tsx",
+          "display_label": "F05.01 模板编辑与打印",
+          "show_evidence": false,
+          "title_font_size": 40,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F05.01.features",
+          "label": "具体功能\nF05.01.01 模板页与 ROI 编辑、锁定和克隆\nF05.01.02 绑定已有模板、条码与学生打印包\nF05.01.03 OMR 校准案例标注、批准和撤销",
+          "x": 1315,
+          "y": 258,
+          "w": 919,
+          "h": 198,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_paper.go;services/api-gateway/internal/server/routes_grading.go;apps/web-admin/src/pages/AnswerSheetTemplatePage.tsx",
+          "display_label": "模板 ROI 编辑、锁定与克隆\nF05.01.02 绑定已有模板、条码与学生打印包\nF05.01.03 OMR 校准案例标注、批准和撤销",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F05.02",
+          "label": "F05.02 采集与图像处理",
+          "x": 588,
+          "y": 672,
+          "w": 449,
+          "h": 72,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/capture/registration_store_postgres.go;services/page-processing-worker/page_processing/registration.py;services/image-quality-worker/image_quality/engine.py",
+          "display_label": "F05.02 采集与图像处理",
+          "show_evidence": false,
+          "title_font_size": 40,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F05.02.features",
+          "label": "具体功能\nF05.02.01 采集批次、文件解码、多页 PNG\nF05.02.02 质量检测、条码观测与身份核对\nF05.02.03 候选模板匹配、OpenCV 配准及 ROI 切题",
+          "x": 1316,
+          "y": 610,
+          "w": 916,
+          "h": 196,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/capture/registration_store_postgres.go;services/page-processing-worker/page_processing/registration.py;services/image-quality-worker/image_quality/engine.py",
+          "display_label": "采集批次、解码与多页 PNG\nF05.02.02 质量检测、条码观测与身份核对\nF05.02.03 候选模板匹配、OpenCV 配准及 ROI 切题",
+          "show_evidence": false,
+          "title_font_size": 71,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F05.03",
+          "label": "F05.03 人工纠正与处理中心",
+          "x": 548,
+          "y": 1024,
+          "w": 529,
+          "h": 72,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_capture.go;services/api-gateway/internal/processing/handlers.go;apps/web-admin/src/features/capture/MatchingWorkspace.tsx",
+          "display_label": "F05.03 人工纠正与处理中心",
+          "show_evidence": false,
+          "title_font_size": 40,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F05.03.features",
+          "label": "具体功能\nF05.03.01 页面 / 学生匹配确认、拆分与合并\nF05.03.02 质量覆写、重试与四点校正预览\nF05.03.03 应用 / 撤销校正及阻断异常定位",
+          "x": 1314,
+          "y": 960,
+          "w": 922,
+          "h": 198,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_capture.go;services/api-gateway/internal/processing/handlers.go;apps/web-admin/src/features/capture/MatchingWorkspace.tsx",
+          "display_label": "页/学生匹配确认、拆分合并\nF05.03.02 质量覆写、重试与四点校正预览\nF05.03.03 应用 / 撤销校正及阻断异常定位",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F05-boundary",
+          "label": "阅读边界与未接入能力\nF05.04（待确认）：未发现 YOLO 备用识别与未知版面自动建模板的实现；不能接入主流程。配准完成事务边界问题见图 09。",
+          "x": 679,
+          "y": 1410,
+          "w": 969,
+          "h": 111,
+          "status": "unknown",
+          "kind": "note",
+          "evidence": "services/api-gateway/internal/server/routes_capture.go;docs/architecture/specs/06-image-template-pipeline.json",
+          "display_label": "待确认：YOLO 未知版面模板",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        }
+      ],
+      "edges": [
+        {
+          "source": "F05",
+          "target": "F05.01",
+          "label": "归属",
+          "evidence": "services/api-gateway/internal/server/routes_paper.go;services/api-gateway/internal/server/routes_grading.go;apps/web-admin/src/pages/AnswerSheetTemplatePage.tsx",
+          "points": [
+            [
+              500,
+              682
+            ],
+            [
+              500,
+              358
+            ]
+          ],
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "归属"
+        },
+        {
+          "source": "F05.01",
+          "target": "F05.01.features",
+          "label": "包含",
+          "evidence": "services/api-gateway/internal/server/routes_paper.go;services/api-gateway/internal/server/routes_grading.go;apps/web-admin/src/pages/AnswerSheetTemplatePage.tsx",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "包含"
+        },
+        {
+          "source": "F05",
+          "target": "F05.02",
+          "label": "归属",
+          "evidence": "services/api-gateway/internal/capture/registration_store_postgres.go;services/page-processing-worker/page_processing/registration.py;services/image-quality-worker/image_quality/engine.py",
+          "points": [
+            [
+              500,
+              682
+            ],
+            [
+              500,
+              708
+            ]
+          ],
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "归属"
+        },
+        {
+          "source": "F05.02",
+          "target": "F05.02.features",
+          "label": "包含",
+          "evidence": "services/api-gateway/internal/capture/registration_store_postgres.go;services/page-processing-worker/page_processing/registration.py;services/image-quality-worker/image_quality/engine.py",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "包含"
+        },
+        {
+          "source": "F05",
+          "target": "F05.03",
+          "label": "归属",
+          "evidence": "services/api-gateway/internal/server/routes_capture.go;services/api-gateway/internal/processing/handlers.go;apps/web-admin/src/features/capture/MatchingWorkspace.tsx",
+          "points": [
+            [
+              500,
+              682
+            ],
+            [
+              500,
+              1060
+            ]
+          ],
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "归属"
+        },
+        {
+          "source": "F05.03",
+          "target": "F05.03.features",
+          "label": "包含",
+          "evidence": "services/api-gateway/internal/server/routes_capture.go;services/api-gateway/internal/processing/handlers.go;apps/web-admin/src/features/capture/MatchingWorkspace.tsx",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "包含"
+        }
+      ],
+      "display_note": "",
+      "typography_layout_base": {
+        "width": 1800,
+        "height": 1340,
+        "nodes": {
+          "F05": {
+            "x": 70,
+            "y": 435,
+            "w": 260,
+            "h": 180
+          },
+          "F05.01": {
+            "x": 450,
+            "y": 180,
+            "w": 350,
+            "h": 190
+          },
+          "F05.01.features": {
+            "x": 1010,
+            "y": 180,
+            "w": 710,
+            "h": 190
+          },
+          "F05.02": {
+            "x": 450,
+            "y": 450,
+            "w": 350,
+            "h": 190
+          },
+          "F05.02.features": {
+            "x": 1010,
+            "y": 450,
+            "w": 710,
+            "h": 190
+          },
+          "F05.03": {
+            "x": 450,
+            "y": 720,
+            "w": 350,
+            "h": 190
+          },
+          "F05.03.features": {
+            "x": 1010,
+            "y": 720,
+            "w": 710,
+            "h": 190
+          },
+          "F05-boundary": {
+            "x": 70,
+            "y": 1040,
+            "w": 1650,
+            "h": 175
+          }
+        },
+        "points": {
+          "0": [
+            [
+              385,
+              525
+            ],
+            [
+              385,
+              275
+            ]
+          ],
+          "2": [
+            [
+              385,
+              525
+            ],
+            [
+              385,
+              545
+            ]
+          ],
+          "4": [
+            [
+              385,
+              525
+            ],
+            [
+              385,
+              815
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "f06",
+      "title": "07 F06 OCR 与答案理解",
+      "width": 2340,
+      "height": 1742,
+      "note": "从左至右：业务域 → 子模块 → 带独立编号的具体功能。已实现表示有代码依据，不代表本次生产环境或真实设备验收。",
+      "nodes": [
+        {
+          "id": "F06",
+          "label": "F06\nOCR 与答案理解",
+          "x": 130,
+          "y": 604,
+          "w": 261,
+          "h": 157,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_processing.go;services/api-gateway/internal/server/routes_exam.go",
+          "display_label": "F06\nOCR 与答案理解",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F06.01",
+          "label": "F06.01 OCR 任务",
+          "x": 585,
+          "y": 314,
+          "w": 455,
+          "h": 88,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/ocr/runtime_coordinator_postgres.go;services/api-gateway/internal/server/routes_processing.go",
+          "display_label": "F06.01 OCR 任务",
+          "show_evidence": false,
+          "title_font_size": 53,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F06.01.features",
+          "label": "具体功能\nF06.01.01 答卷 OCR 创建、读取、开始与结果提交\nF06.01.02 worker 任务来源与租约校验\nF06.01.03 OCR 结果与 runtime 完成的事务协调",
+          "x": 1315,
+          "y": 260,
+          "w": 919,
+          "h": 195,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/ocr/runtime_coordinator_postgres.go;services/api-gateway/internal/server/routes_processing.go",
+          "display_label": "答卷 OCR 创建、读取与提交\nF06.01.02 worker 任务来源与租约校验\nF06.01.03 OCR 结果与 runtime 完成的事务协调",
+          "show_evidence": false,
+          "title_font_size": 70,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F06.02",
+          "label": "F06.02 分段答案与证据",
+          "x": 588,
+          "y": 672,
+          "w": 449,
+          "h": 72,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_processing.go;services/api-gateway/internal/mathunderstanding/handlers.go",
+          "display_label": "F06.02 分段答案与证据",
+          "show_evidence": false,
+          "title_font_size": 40,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F06.02.features",
+          "label": "具体功能\nF06.02.01 答案分段生成、修订及图像读取\nF06.02.02 OCR / 公式 / 数学证据关联\nF06.02.03 当前答案版本与有效裁片追踪",
+          "x": 1330,
+          "y": 610,
+          "w": 888,
+          "h": 198,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_processing.go;services/api-gateway/internal/mathunderstanding/handlers.go",
+          "display_label": "答案分段生成、修订与读图\nF06.02.02 OCR / 公式 / 数学证据关联\nF06.02.03 当前答案版本与有效裁片追踪",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F06.03",
+          "label": "F06.03 数学理解与验证",
+          "x": 588,
+          "y": 1024,
+          "w": 449,
+          "h": 72,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/mathunderstanding/handlers.go;services/api-gateway/internal/server/routes_worker.go",
+          "display_label": "F06.03 数学理解与验证",
+          "show_evidence": false,
+          "title_font_size": 40,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F06.03.features",
+          "label": "具体功能\nF06.03.01 数学理解任务、产物与证据核验\nF06.03.02 符号、图形、空间与量规辅助\nF06.03.03 worker runtime 回调绑定授权任务",
+          "x": 1330,
+          "y": 960,
+          "w": 888,
+          "h": 198,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/mathunderstanding/handlers.go;services/api-gateway/internal/server/routes_worker.go",
+          "display_label": "数学任务、产物与证据核验\nF06.03.02 符号、图形、空间与量规辅助\nF06.03.03 worker runtime 回调绑定授权任务",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F06-boundary",
+          "label": "阅读边界与未接入能力\nOCR、数学产物和模型建议都是版本化证据；不把识别成功直接等同人工确认或最终成绩。",
+          "x": 726,
+          "y": 1410,
+          "w": 875,
+          "h": 111,
+          "status": "infra",
+          "kind": "note",
+          "evidence": "services/api-gateway/internal/server/routes_processing.go;services/api-gateway/internal/server/routes_exam.go",
+          "display_label": "识别≠人工确认 / 最终成绩",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        }
+      ],
+      "edges": [
+        {
+          "source": "F06",
+          "target": "F06.01",
+          "label": "归属",
+          "evidence": "services/api-gateway/internal/ocr/runtime_coordinator_postgres.go;services/api-gateway/internal/server/routes_processing.go",
+          "points": [
+            [
+              500,
+              682
+            ],
+            [
+              500,
+              358
+            ]
+          ],
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "归属"
+        },
+        {
+          "source": "F06.01",
+          "target": "F06.01.features",
+          "label": "包含",
+          "evidence": "services/api-gateway/internal/ocr/runtime_coordinator_postgres.go;services/api-gateway/internal/server/routes_processing.go",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "包含"
+        },
+        {
+          "source": "F06",
+          "target": "F06.02",
+          "label": "归属",
+          "evidence": "services/api-gateway/internal/server/routes_processing.go;services/api-gateway/internal/mathunderstanding/handlers.go",
+          "points": [
+            [
+              500,
+              682
+            ],
+            [
+              500,
+              708
+            ]
+          ],
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "归属"
+        },
+        {
+          "source": "F06.02",
+          "target": "F06.02.features",
+          "label": "包含",
+          "evidence": "services/api-gateway/internal/server/routes_processing.go;services/api-gateway/internal/mathunderstanding/handlers.go",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "包含"
+        },
+        {
+          "source": "F06",
+          "target": "F06.03",
+          "label": "归属",
+          "evidence": "services/api-gateway/internal/mathunderstanding/handlers.go;services/api-gateway/internal/server/routes_worker.go",
+          "points": [
+            [
+              500,
+              682
+            ],
+            [
+              500,
+              1060
+            ]
+          ],
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "归属"
+        },
+        {
+          "source": "F06.03",
+          "target": "F06.03.features",
+          "label": "包含",
+          "evidence": "services/api-gateway/internal/mathunderstanding/handlers.go;services/api-gateway/internal/server/routes_worker.go",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "包含"
+        }
+      ],
+      "display_note": "",
+      "typography_layout_base": {
+        "width": 1800,
+        "height": 1340,
+        "nodes": {
+          "F06": {
+            "x": 70,
+            "y": 435,
+            "w": 260,
+            "h": 180
+          },
+          "F06.01": {
+            "x": 450,
+            "y": 180,
+            "w": 350,
+            "h": 190
+          },
+          "F06.01.features": {
+            "x": 1010,
+            "y": 180,
+            "w": 710,
+            "h": 190
+          },
+          "F06.02": {
+            "x": 450,
+            "y": 450,
+            "w": 350,
+            "h": 190
+          },
+          "F06.02.features": {
+            "x": 1010,
+            "y": 450,
+            "w": 710,
+            "h": 190
+          },
+          "F06.03": {
+            "x": 450,
+            "y": 720,
+            "w": 350,
+            "h": 190
+          },
+          "F06.03.features": {
+            "x": 1010,
+            "y": 720,
+            "w": 710,
+            "h": 190
+          },
+          "F06-boundary": {
+            "x": 70,
+            "y": 1040,
+            "w": 1650,
+            "h": 175
+          }
+        },
+        "points": {
+          "0": [
+            [
+              385,
+              525
+            ],
+            [
+              385,
+              275
+            ]
+          ],
+          "2": [
+            [
+              385,
+              525
+            ],
+            [
+              385,
+              545
+            ]
+          ],
+          "4": [
+            [
+              385,
+              525
+            ],
+            [
+              385,
+              815
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "f07",
+      "title": "08 F07 AI 评分与人工复核",
+      "width": 2340,
+      "height": 1742,
+      "note": "从左至右：业务域 → 子模块 → 带独立编号的具体功能。已实现表示有代码依据，不代表本次生产环境或真实设备验收。",
+      "nodes": [
+        {
+          "id": "F07",
+          "label": "F07\nAI 评分与人工复核",
+          "x": 116,
+          "y": 604,
+          "w": 289,
+          "h": 157,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_grading.go;docs/architecture/specs/07-ai-grading.json",
+          "display_label": "F07\nAI 评分与人工复核",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F07.01",
+          "label": "F07.01 规则与 AI 建议",
+          "x": 590,
+          "y": 320,
+          "w": 445,
+          "h": 74,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/grading/scoring_run_routing.go;services/api-gateway/internal/subjective/handlers_worker.go;services/api-gateway/internal/subjective/grade_settlement_pipeline.go",
+          "display_label": "F07.01 规则与 AI 建议",
+          "show_evidence": false,
+          "title_font_size": 41,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F07.01.features",
+          "label": "具体功能\nF07.01.01 客观题规则 / OMR 评分与评分运行\nF07.01.02 主观题单题、批次、排队和重试\nF07.01.03 单 activeAdapter + 服务端结算与证据风险",
+          "x": 1320,
+          "y": 258,
+          "w": 910,
+          "h": 198,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/grading/scoring_run_routing.go;services/api-gateway/internal/subjective/handlers_worker.go;services/api-gateway/internal/subjective/grade_settlement_pipeline.go",
+          "display_label": "客观题规则/OMR 评分运行\nF07.01.02 主观题单题、批次、排队和重试\nF07.01.03 单 activeAdapter + 服务端结算与证据风险",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F07.02",
+          "label": "F07.02 人工阅卷与仲裁",
+          "x": 588,
+          "y": 672,
+          "w": 449,
+          "h": 72,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_review.go;services/api-gateway/internal/server/routes_grading.go;apps/web-admin/src/features/grading/workbench/GradingWorkbench.tsx",
+          "display_label": "F07.02 人工阅卷与仲裁",
+          "show_evidence": false,
+          "title_font_size": 40,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F07.02.features",
+          "label": "具体功能\nF07.02.01 任务领取、续租、分派、草稿及提交\nF07.02.02 双评策略与人工分差仲裁\nF07.02.03 批注 / 评语、退回与匿名裁片工作台",
+          "x": 1314,
+          "y": 614,
+          "w": 920,
+          "h": 188,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_review.go;services/api-gateway/internal/server/routes_grading.go;apps/web-admin/src/features/grading/workbench/GradingWorkbench.tsx",
+          "display_label": "领取、续租、分派、草稿、提交\nF07.02.02 双评策略与人工分差仲裁\nF07.02.03 批注 / 评语、退回与匿名裁片工作台",
+          "show_evidence": false,
+          "title_font_size": 64,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F07.03",
+          "label": "F07.03 三智能体 A/B/C 内核",
+          "x": 535,
+          "y": 1024,
+          "w": 555,
+          "h": 72,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/subjective/panel_orchestrator.go;services/api-gateway/internal/subjective/panel_shadow_runner.go;services/api-gateway/internal/subjective/handlers.go",
+          "display_label": "F07.03 三智能体 A/B/C 内核",
+          "show_evidence": false,
+          "title_font_size": 40,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F07.03.features",
+          "label": "具体功能\nF07.03.01 A/B 并行盲评与差异比较内核\nF07.03.02 C 盲仲裁、准入策略与影子评估\nF07.03.03 普通生产 Grade / worker 未自动调用 Panel",
+          "x": 1360,
+          "y": 960,
+          "w": 830,
+          "h": 198,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/subjective/panel_orchestrator.go;services/api-gateway/internal/subjective/panel_shadow_runner.go;services/api-gateway/internal/subjective/handlers.go",
+          "display_label": "A/B 并行盲评与差异比较\nF07.03.02 C 盲仲裁、准入策略与影子评估\nF07.03.03 普通生产 Grade / worker 未自动调用 Panel",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F07-boundary",
+          "label": "阅读边界与未接入能力\n人工双评与 AI Panel 是两种不同机制。AI 建议不直接创建最终发布成绩；主观题仍要求人工确认。",
+          "x": 810,
+          "y": 1387,
+          "w": 707,
+          "h": 157,
+          "status": "partial",
+          "kind": "note",
+          "evidence": "services/api-gateway/internal/server/routes_grading.go;docs/architecture/specs/07-ai-grading.json",
+          "display_label": "人工双评 ≠ AI Panel\n主观题建议需人工确认",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        }
+      ],
+      "edges": [
+        {
+          "source": "F07",
+          "target": "F07.01",
+          "label": "归属",
+          "evidence": "services/api-gateway/internal/grading/scoring_run_routing.go;services/api-gateway/internal/subjective/handlers_worker.go;services/api-gateway/internal/subjective/grade_settlement_pipeline.go",
+          "points": [
+            [
+              500,
+              682
+            ],
+            [
+              500,
+              358
+            ]
+          ],
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "归属"
+        },
+        {
+          "source": "F07.01",
+          "target": "F07.01.features",
+          "label": "包含",
+          "evidence": "services/api-gateway/internal/grading/scoring_run_routing.go;services/api-gateway/internal/subjective/handlers_worker.go;services/api-gateway/internal/subjective/grade_settlement_pipeline.go",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "包含"
+        },
+        {
+          "source": "F07",
+          "target": "F07.02",
+          "label": "归属",
+          "evidence": "services/api-gateway/internal/server/routes_review.go;services/api-gateway/internal/server/routes_grading.go;apps/web-admin/src/features/grading/workbench/GradingWorkbench.tsx",
+          "points": [
+            [
+              500,
+              682
+            ],
+            [
+              500,
+              708
+            ]
+          ],
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "归属"
+        },
+        {
+          "source": "F07.02",
+          "target": "F07.02.features",
+          "label": "包含",
+          "evidence": "services/api-gateway/internal/server/routes_review.go;services/api-gateway/internal/server/routes_grading.go;apps/web-admin/src/features/grading/workbench/GradingWorkbench.tsx",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "包含"
+        },
+        {
+          "source": "F07",
+          "target": "F07.03",
+          "label": "归属",
+          "evidence": "services/api-gateway/internal/subjective/panel_orchestrator.go;services/api-gateway/internal/subjective/panel_shadow_runner.go;services/api-gateway/internal/subjective/handlers.go",
+          "points": [
+            [
+              500,
+              682
+            ],
+            [
+              500,
+              1060
+            ]
+          ],
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "归属"
+        },
+        {
+          "source": "F07.03",
+          "target": "F07.03.features",
+          "label": "包含",
+          "evidence": "services/api-gateway/internal/subjective/panel_orchestrator.go;services/api-gateway/internal/subjective/panel_shadow_runner.go;services/api-gateway/internal/subjective/handlers.go",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "包含"
+        }
+      ],
+      "display_note": "",
+      "typography_layout_base": {
+        "width": 1800,
+        "height": 1340,
+        "nodes": {
+          "F07": {
+            "x": 70,
+            "y": 435,
+            "w": 260,
+            "h": 180
+          },
+          "F07.01": {
+            "x": 450,
+            "y": 180,
+            "w": 350,
+            "h": 190
+          },
+          "F07.01.features": {
+            "x": 1010,
+            "y": 180,
+            "w": 710,
+            "h": 190
+          },
+          "F07.02": {
+            "x": 450,
+            "y": 450,
+            "w": 350,
+            "h": 190
+          },
+          "F07.02.features": {
+            "x": 1010,
+            "y": 450,
+            "w": 710,
+            "h": 190
+          },
+          "F07.03": {
+            "x": 450,
+            "y": 720,
+            "w": 350,
+            "h": 190
+          },
+          "F07.03.features": {
+            "x": 1010,
+            "y": 720,
+            "w": 710,
+            "h": 190
+          },
+          "F07-boundary": {
+            "x": 70,
+            "y": 1040,
+            "w": 1650,
+            "h": 175
+          }
+        },
+        "points": {
+          "0": [
+            [
+              385,
+              525
+            ],
+            [
+              385,
+              275
+            ]
+          ],
+          "2": [
+            [
+              385,
+              525
+            ],
+            [
+              385,
+              545
+            ]
+          ],
+          "4": [
+            [
+              385,
+              525
+            ],
+            [
+              385,
+              815
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "f08",
+      "title": "09 F08 成绩、发布与学生",
+      "width": 2340,
+      "height": 1742,
+      "note": "从左至右：业务域 → 子模块 → 带独立编号的具体功能。已实现表示有代码依据，不代表本次生产环境或真实设备验收。",
+      "nodes": [
+        {
+          "id": "F08",
+          "label": "F08\n成绩、发布与学生",
+          "x": 120,
+          "y": 604,
+          "w": 280,
+          "h": 157,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_release.go;apps/student-portal/src/App.tsx",
+          "display_label": "F08\n成绩、发布与学生",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F08.01",
+          "label": "F08.01 成绩汇总与发布",
+          "x": 588,
+          "y": 322,
+          "w": 449,
+          "h": 72,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_release.go;services/api-gateway/internal/scorerelease/handlers.go;services/api-gateway/internal/regraderelease/handlers.go",
+          "display_label": "F08.01 成绩汇总与发布",
+          "show_evidence": false,
+          "title_font_size": 40,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F08.01.features",
+          "label": "具体功能\nF08.01.01 finalize、质量检查、缺考及名单核对\nF08.01.02 确认成绩；旧发布与新快照/门禁并存\nF08.01.03 成绩导出、重评结果发布",
+          "x": 1314,
+          "y": 260,
+          "w": 921,
+          "h": 194,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_release.go;services/api-gateway/internal/scorerelease/handlers.go;services/api-gateway/internal/regraderelease/handlers.go",
+          "display_label": "结分、质检、缺考与名单核对\nF08.01.02 确认成绩；旧发布与新快照/门禁并存\nF08.01.03 成绩导出、重评结果发布",
+          "show_evidence": false,
+          "title_font_size": 69,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F08.02",
+          "label": "F08.02 统计与复核",
+          "x": 590,
+          "y": 667,
+          "w": 445,
+          "h": 83,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_release.go;apps/web-admin/src/pages/LearningReportsPage.tsx;apps/web-admin/src/pages/QuestionAppealCenterPage.tsx",
+          "display_label": "F08.02 统计与复核",
+          "show_evidence": false,
+          "title_font_size": 49,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F08.02.features",
+          "label": "具体功能\nF08.02.01 考试 / 班级 / 题目 / 阅卷质量报告\nF08.02.02 成绩复核分派、教师建议与决定\nF08.02.03 公开逐题申诉、重评与新版本关联",
+          "x": 1320,
+          "y": 614,
+          "w": 909,
+          "h": 190,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_release.go;apps/web-admin/src/pages/LearningReportsPage.tsx;apps/web-admin/src/pages/QuestionAppealCenterPage.tsx",
+          "display_label": "考试/班级/题目/阅卷质量报告\nF08.02.02 成绩复核分派、教师建议与决定\nF08.02.03 公开逐题申诉、重评与新版本关联",
+          "show_evidence": false,
+          "title_font_size": 66,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F08.03",
+          "label": "F08.03 学生端",
+          "x": 586,
+          "y": 1008,
+          "w": 453,
+          "h": 102,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "apps/student-portal/src/App.tsx;apps/student-portal/src/api.ts;services/api-gateway/internal/studentportal/handlers.go",
+          "display_label": "F08.03 学生端",
+          "show_evidence": false,
+          "title_font_size": 65,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F08.03.features",
+          "label": "具体功能\nF08.03.01 本人已发布考试、成绩与逐题反馈\nF08.03.02 答题图片 / 公开批注按 release 读取\nF08.03.03 圈选申诉区域、草稿与发布变化处理",
+          "x": 1330,
+          "y": 960,
+          "w": 888,
+          "h": 198,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "apps/student-portal/src/App.tsx;apps/student-portal/src/api.ts;services/api-gateway/internal/studentportal/handlers.go",
+          "display_label": "本人已发布成绩与逐题反馈\nF08.03.02 答题图片 / 公开批注按 release 读取\nF08.03.03 圈选申诉区域、草稿与发布变化处理",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F08-boundary",
+          "label": "阅读边界与未接入能力\n学生页面同时检查角色与读取权限。旧 /exams/{examId}/publish 仅发布grade并执行旧质量检查；新版 score_release 路径才提供快照/当前指针和对应门禁。",
+          "x": 828,
+          "y": 1387,
+          "w": 672,
+          "h": 157,
+          "status": "partial",
+          "kind": "note",
+          "evidence": "services/api-gateway/internal/server/routes_release.go;apps/student-portal/src/App.tsx",
+          "display_label": "旧发布与新快照并存\n门禁与学生读取来源不同",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        }
+      ],
+      "edges": [
+        {
+          "source": "F08",
+          "target": "F08.01",
+          "label": "归属",
+          "evidence": "services/api-gateway/internal/server/routes_release.go;services/api-gateway/internal/scorerelease/handlers.go;services/api-gateway/internal/regraderelease/handlers.go",
+          "points": [
+            [
+              500,
+              682
+            ],
+            [
+              500,
+              358
+            ]
+          ],
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "归属"
+        },
+        {
+          "source": "F08.01",
+          "target": "F08.01.features",
+          "label": "包含",
+          "evidence": "services/api-gateway/internal/server/routes_release.go;services/api-gateway/internal/scorerelease/handlers.go;services/api-gateway/internal/regraderelease/handlers.go",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "包含"
+        },
+        {
+          "source": "F08",
+          "target": "F08.02",
+          "label": "归属",
+          "evidence": "services/api-gateway/internal/server/routes_release.go;apps/web-admin/src/pages/LearningReportsPage.tsx;apps/web-admin/src/pages/QuestionAppealCenterPage.tsx",
+          "points": [
+            [
+              500,
+              682
+            ],
+            [
+              500,
+              708
+            ]
+          ],
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "归属"
+        },
+        {
+          "source": "F08.02",
+          "target": "F08.02.features",
+          "label": "包含",
+          "evidence": "services/api-gateway/internal/server/routes_release.go;apps/web-admin/src/pages/LearningReportsPage.tsx;apps/web-admin/src/pages/QuestionAppealCenterPage.tsx",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "包含"
+        },
+        {
+          "source": "F08",
+          "target": "F08.03",
+          "label": "归属",
+          "evidence": "apps/student-portal/src/App.tsx;apps/student-portal/src/api.ts;services/api-gateway/internal/studentportal/handlers.go",
+          "points": [
+            [
+              500,
+              682
+            ],
+            [
+              500,
+              1060
+            ]
+          ],
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "归属"
+        },
+        {
+          "source": "F08.03",
+          "target": "F08.03.features",
+          "label": "包含",
+          "evidence": "apps/student-portal/src/App.tsx;apps/student-portal/src/api.ts;services/api-gateway/internal/studentportal/handlers.go",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "包含"
+        }
+      ],
+      "display_note": "",
+      "typography_layout_base": {
+        "width": 1800,
+        "height": 1340,
+        "nodes": {
+          "F08": {
+            "x": 70,
+            "y": 435,
+            "w": 260,
+            "h": 180
+          },
+          "F08.01": {
+            "x": 450,
+            "y": 180,
+            "w": 350,
+            "h": 190
+          },
+          "F08.01.features": {
+            "x": 1010,
+            "y": 180,
+            "w": 710,
+            "h": 190
+          },
+          "F08.02": {
+            "x": 450,
+            "y": 450,
+            "w": 350,
+            "h": 190
+          },
+          "F08.02.features": {
+            "x": 1010,
+            "y": 450,
+            "w": 710,
+            "h": 190
+          },
+          "F08.03": {
+            "x": 450,
+            "y": 720,
+            "w": 350,
+            "h": 190
+          },
+          "F08.03.features": {
+            "x": 1010,
+            "y": 720,
+            "w": 710,
+            "h": 190
+          },
+          "F08-boundary": {
+            "x": 70,
+            "y": 1040,
+            "w": 1650,
+            "h": 175
+          }
+        },
+        "points": {
+          "0": [
+            [
+              385,
+              525
+            ],
+            [
+              385,
+              275
+            ]
+          ],
+          "2": [
+            [
+              385,
+              525
+            ],
+            [
+              385,
+              545
+            ]
+          ],
+          "4": [
+            [
+              385,
+              525
+            ],
+            [
+              385,
+              815
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "f09",
+      "title": "10 F09 模型治理与阅卷质量",
+      "width": 2340,
+      "height": 1742,
+      "note": "从左至右：业务域 → 子模块 → 带独立编号的具体功能。已实现表示有代码依据，不代表本次生产环境或真实设备验收。",
+      "nodes": [
+        {
+          "id": "F09",
+          "label": "F09\n模型治理与阅卷质量",
+          "x": 104,
+          "y": 604,
+          "w": 312,
+          "h": 157,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_governance.go;services/api-gateway/internal/server/routes_review.go",
+          "display_label": "F09\n模型治理与阅卷质量",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F09.01",
+          "label": "F09.01 模型与策略治理",
+          "x": 588,
+          "y": 322,
+          "w": 449,
+          "h": 72,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_governance.go;apps/web-admin/src/pages/PlatformModelConfigPage.tsx",
+          "display_label": "F09.01 模型与策略治理",
+          "show_evidence": false,
+          "title_font_size": 40,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F09.01.features",
+          "label": "具体功能\nF09.01.01 托管 API 配置、探测与学校模型授权\nF09.01.02 模型角色绑定、提示版本与评估\nF09.01.03 批准 / 撤销、校准与 AI 准入",
+          "x": 1330,
+          "y": 258,
+          "w": 890,
+          "h": 198,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_governance.go;apps/web-admin/src/pages/PlatformModelConfigPage.tsx",
+          "display_label": "API 配置、探测与学校授权\nF09.01.02 模型角色绑定、提示版本与评估\nF09.01.03 批准 / 撤销、校准与 AI 准入",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F09.02",
+          "label": "F09.02 人工阅卷质量",
+          "x": 589,
+          "y": 670,
+          "w": 447,
+          "h": 77,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_review.go;services/api-gateway/internal/server/routes_governance.go",
+          "display_label": "F09.02 人工阅卷质量",
+          "show_evidence": false,
+          "title_font_size": 44,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F09.02.features",
+          "label": "具体功能\nF09.02.01 Gold 样卷、校准、答案组与 Seed\nF09.02.02 评分分歧、阅卷员漂移与 backmark\nF09.02.03 重评批次与质量仪表板",
+          "x": 1316,
+          "y": 611,
+          "w": 916,
+          "h": 195,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_review.go;services/api-gateway/internal/server/routes_governance.go",
+          "display_label": "样卷、校准、答案组与 Seed\nF09.02.02 评分分歧、阅卷员漂移与 backmark\nF09.02.03 重评批次与质量仪表板",
+          "show_evidence": false,
+          "title_font_size": 70,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F09.03",
+          "label": "F09.03 治理边界与外部验证",
+          "x": 548,
+          "y": 1024,
+          "w": 529,
+          "h": 72,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_governance.go;services/api-gateway/internal/subjective/panel_orchestrator.go;docs/verification-status.md",
+          "display_label": "F09.03 治理边界与外部验证",
+          "show_evidence": false,
+          "title_font_size": 40,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F09.03.features",
+          "label": "具体功能\nF09.03.01 旧 provider / deployment 写路由返回 410\nF09.03.02 三智能体策略管理不表示生产自动接入\nF09.03.03 真实模型效果、成本与样本验收待外部验证",
+          "x": 1380,
+          "y": 960,
+          "w": 788,
+          "h": 198,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_governance.go;services/api-gateway/internal/subjective/panel_orchestrator.go;docs/verification-status.md",
+          "display_label": "旧模型写接口返回 410\nF09.03.02 三智能体策略管理不表示生产自动接入\nF09.03.03 真实模型效果、成本与样本验收待外部验证",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F09-boundary",
+          "label": "阅读边界与未接入能力\n/system/models 由 AppShell 兼容重定向到 /platform/model-config?tab=governance；最终共用模型配置页面。",
+          "x": 662,
+          "y": 1410,
+          "w": 1002,
+          "h": 111,
+          "status": "partial",
+          "kind": "note",
+          "evidence": "services/api-gateway/internal/server/routes_governance.go;services/api-gateway/internal/server/routes_review.go",
+          "display_label": "旧模型入口 → 共用模型配置页",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        }
+      ],
+      "edges": [
+        {
+          "source": "F09",
+          "target": "F09.01",
+          "label": "归属",
+          "evidence": "services/api-gateway/internal/server/routes_governance.go;apps/web-admin/src/pages/PlatformModelConfigPage.tsx",
+          "points": [
+            [
+              500,
+              682
+            ],
+            [
+              500,
+              358
+            ]
+          ],
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "归属"
+        },
+        {
+          "source": "F09.01",
+          "target": "F09.01.features",
+          "label": "包含",
+          "evidence": "services/api-gateway/internal/server/routes_governance.go;apps/web-admin/src/pages/PlatformModelConfigPage.tsx",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "包含"
+        },
+        {
+          "source": "F09",
+          "target": "F09.02",
+          "label": "归属",
+          "evidence": "services/api-gateway/internal/server/routes_review.go;services/api-gateway/internal/server/routes_governance.go",
+          "points": [
+            [
+              500,
+              682
+            ],
+            [
+              500,
+              708
+            ]
+          ],
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "归属"
+        },
+        {
+          "source": "F09.02",
+          "target": "F09.02.features",
+          "label": "包含",
+          "evidence": "services/api-gateway/internal/server/routes_review.go;services/api-gateway/internal/server/routes_governance.go",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "包含"
+        },
+        {
+          "source": "F09",
+          "target": "F09.03",
+          "label": "归属",
+          "evidence": "services/api-gateway/internal/server/routes_governance.go;services/api-gateway/internal/subjective/panel_orchestrator.go;docs/verification-status.md",
+          "points": [
+            [
+              500,
+              682
+            ],
+            [
+              500,
+              1060
+            ]
+          ],
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "归属"
+        },
+        {
+          "source": "F09.03",
+          "target": "F09.03.features",
+          "label": "包含",
+          "evidence": "services/api-gateway/internal/server/routes_governance.go;services/api-gateway/internal/subjective/panel_orchestrator.go;docs/verification-status.md",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "包含"
+        }
+      ],
+      "display_note": "",
+      "typography_layout_base": {
+        "width": 1800,
+        "height": 1340,
+        "nodes": {
+          "F09": {
+            "x": 70,
+            "y": 435,
+            "w": 260,
+            "h": 180
+          },
+          "F09.01": {
+            "x": 450,
+            "y": 180,
+            "w": 350,
+            "h": 190
+          },
+          "F09.01.features": {
+            "x": 1010,
+            "y": 180,
+            "w": 710,
+            "h": 190
+          },
+          "F09.02": {
+            "x": 450,
+            "y": 450,
+            "w": 350,
+            "h": 190
+          },
+          "F09.02.features": {
+            "x": 1010,
+            "y": 450,
+            "w": 710,
+            "h": 190
+          },
+          "F09.03": {
+            "x": 450,
+            "y": 720,
+            "w": 350,
+            "h": 190
+          },
+          "F09.03.features": {
+            "x": 1010,
+            "y": 720,
+            "w": 710,
+            "h": 190
+          },
+          "F09-boundary": {
+            "x": 70,
+            "y": 1040,
+            "w": 1650,
+            "h": 175
+          }
+        },
+        "points": {
+          "0": [
+            [
+              385,
+              525
+            ],
+            [
+              385,
+              275
+            ]
+          ],
+          "2": [
+            [
+              385,
+              525
+            ],
+            [
+              385,
+              545
+            ]
+          ],
+          "4": [
+            [
+              385,
+              525
+            ],
+            [
+              385,
+              815
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "f10",
+      "title": "11 F10 桌面客户端与运维",
+      "width": 2340,
+      "height": 1742,
+      "note": "从左至右：业务域 → 子模块 → 带独立编号的具体功能。已实现表示有代码依据，不代表本次生产环境或真实设备验收。",
+      "nodes": [
+        {
+          "id": "F10",
+          "label": "F10\n桌面客户端与运维",
+          "x": 120,
+          "y": 604,
+          "w": 280,
+          "h": 157,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "apps/desktop-client/src/App.tsx;services/api-gateway/internal/server/routes_system.go",
+          "display_label": "F10\n桌面客户端与运维",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F10.01",
+          "label": "F10.01 采集工作站",
+          "x": 590,
+          "y": 316,
+          "w": 445,
+          "h": 83,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "apps/desktop-client/src/api/captureUploads.ts;apps/desktop-client/src-tauri/src/scanner.rs;apps/desktop-client/src/App.tsx",
+          "display_label": "F10.01 采集工作站",
+          "show_evidence": false,
+          "title_font_size": 49,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F10.01.features",
+          "label": "具体功能\nF10.01.01 文件导入、批次定位与持久上传队列\nF10.01.02 分块续传、offset 确认与失败恢复\nF10.01.03 WIA 设备发现 / Profile / 预检；硬件采集待现场验收",
+          "x": 1313,
+          "y": 244,
+          "w": 923,
+          "h": 228,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "apps/desktop-client/src/api/captureUploads.ts;apps/desktop-client/src-tauri/src/scanner.rs;apps/desktop-client/src/App.tsx",
+          "display_label": "文件导入、批次与持久上传队列\nF10.01.02 分块续传、offset 确认与失败恢复\nF10.01.03 WIA 设备发现 / Profile / 预检；硬件采集待现场验收",
+          "show_evidence": false,
+          "title_font_size": 64,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F10.02",
+          "label": "F10.02 离线阅卷",
+          "x": 586,
+          "y": 662,
+          "w": 452,
+          "h": 92,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "apps/desktop-client/src/components/OfflineWorkbench.tsx;apps/desktop-client/src-tauri/src/durable_store/mod.rs;apps/desktop-client/src-tauri/src/durable_store/offline_access.rs",
+          "display_label": "F10.02 离线阅卷",
+          "show_evidence": false,
+          "title_font_size": 56,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F10.02.features",
+          "label": "具体功能\nF10.02.01 下载任务、SQLite 加密草稿载荷与本机授权\nF10.02.02 版本冲突 / 回执核对与联网同步\nF10.02.03 系统凭据库、Spool 与账号范围隔离",
+          "x": 1330,
+          "y": 610,
+          "w": 888,
+          "h": 198,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "apps/desktop-client/src/components/OfflineWorkbench.tsx;apps/desktop-client/src-tauri/src/durable_store/mod.rs;apps/desktop-client/src-tauri/src/durable_store/offline_access.rs",
+          "display_label": "下载、加密草稿与本机授权\nF10.02.02 版本冲突 / 回执核对与联网同步\nF10.02.03 系统凭据库、Spool 与账号范围隔离",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F10.03",
+          "label": "F10.03 运维与基础设施",
+          "x": 588,
+          "y": 1024,
+          "w": 449,
+          "h": 72,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_system.go;apps/desktop-client/src/lib/localRuntime.ts;apps/desktop-client/src-tauri/src/lib.rs",
+          "display_label": "F10.03 运维与基础设施",
+          "show_evidence": false,
+          "title_font_size": 40,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F10.03.features",
+          "label": "具体功能\nF10.03.01 健康检查、依赖状态、指标与文件对账\nF10.03.02 本地日志与运行时能力诊断\nF10.03.03 设备登记 / 吊销与自动更新仍为预留",
+          "x": 1314,
+          "y": 962,
+          "w": 921,
+          "h": 194,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_system.go;apps/desktop-client/src/lib/localRuntime.ts;apps/desktop-client/src-tauri/src/lib.rs",
+          "display_label": "健康、依赖、指标与文件对账\nF10.03.02 本地日志与运行时能力诊断\nF10.03.03 设备登记 / 吊销与自动更新仍为预留",
+          "show_evidence": false,
+          "title_font_size": 69,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "F10-boundary",
+          "label": "阅读边界与未接入能力\nF10.04（仅规划）：独立 teacher-portal 尚无业务代码。浏览器开发回退与 Windows 原生能力分开标识。",
+          "x": 792,
+          "y": 1387,
+          "w": 744,
+          "h": 157,
+          "status": "partial",
+          "kind": "note",
+          "evidence": "apps/desktop-client/src/App.tsx;services/api-gateway/internal/server/routes_system.go",
+          "display_label": "独立教师门户：仅规划\nWindows 能力与浏览器回退分开",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        }
+      ],
+      "edges": [
+        {
+          "source": "F10",
+          "target": "F10.01",
+          "label": "归属",
+          "evidence": "apps/desktop-client/src/api/captureUploads.ts;apps/desktop-client/src-tauri/src/scanner.rs;apps/desktop-client/src/App.tsx",
+          "points": [
+            [
+              500,
+              682
+            ],
+            [
+              500,
+              358
+            ]
+          ],
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "归属"
+        },
+        {
+          "source": "F10.01",
+          "target": "F10.01.features",
+          "label": "包含",
+          "evidence": "apps/desktop-client/src/api/captureUploads.ts;apps/desktop-client/src-tauri/src/scanner.rs;apps/desktop-client/src/App.tsx",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "包含"
+        },
+        {
+          "source": "F10",
+          "target": "F10.02",
+          "label": "归属",
+          "evidence": "apps/desktop-client/src/components/OfflineWorkbench.tsx;apps/desktop-client/src-tauri/src/durable_store/mod.rs;apps/desktop-client/src-tauri/src/durable_store/offline_access.rs",
+          "points": [
+            [
+              500,
+              682
+            ],
+            [
+              500,
+              708
+            ]
+          ],
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "归属"
+        },
+        {
+          "source": "F10.02",
+          "target": "F10.02.features",
+          "label": "包含",
+          "evidence": "apps/desktop-client/src/components/OfflineWorkbench.tsx;apps/desktop-client/src-tauri/src/durable_store/mod.rs;apps/desktop-client/src-tauri/src/durable_store/offline_access.rs",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "包含"
+        },
+        {
+          "source": "F10",
+          "target": "F10.03",
+          "label": "归属",
+          "evidence": "services/api-gateway/internal/server/routes_system.go;apps/desktop-client/src/lib/localRuntime.ts;apps/desktop-client/src-tauri/src/lib.rs",
+          "points": [
+            [
+              500,
+              682
+            ],
+            [
+              500,
+              1060
+            ]
+          ],
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "归属"
+        },
+        {
+          "source": "F10.03",
+          "target": "F10.03.features",
+          "label": "包含",
+          "evidence": "services/api-gateway/internal/server/routes_system.go;apps/desktop-client/src/lib/localRuntime.ts;apps/desktop-client/src-tauri/src/lib.rs",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "包含"
+        }
+      ],
+      "display_note": "",
+      "typography_layout_base": {
+        "width": 1800,
+        "height": 1340,
+        "nodes": {
+          "F10": {
+            "x": 70,
+            "y": 435,
+            "w": 260,
+            "h": 180
+          },
+          "F10.01": {
+            "x": 450,
+            "y": 180,
+            "w": 350,
+            "h": 190
+          },
+          "F10.01.features": {
+            "x": 1010,
+            "y": 180,
+            "w": 710,
+            "h": 190
+          },
+          "F10.02": {
+            "x": 450,
+            "y": 450,
+            "w": 350,
+            "h": 190
+          },
+          "F10.02.features": {
+            "x": 1010,
+            "y": 450,
+            "w": 710,
+            "h": 190
+          },
+          "F10.03": {
+            "x": 450,
+            "y": 720,
+            "w": 350,
+            "h": 190
+          },
+          "F10.03.features": {
+            "x": 1010,
+            "y": 720,
+            "w": 710,
+            "h": 190
+          },
+          "F10-boundary": {
+            "x": 70,
+            "y": 1040,
+            "w": 1650,
+            "h": 175
+          }
+        },
+        "points": {
+          "0": [
+            [
+              385,
+              525
+            ],
+            [
+              385,
+              275
+            ]
+          ],
+          "2": [
+            [
+              385,
+              525
+            ],
+            [
+              385,
+              545
+            ]
+          ],
+          "4": [
+            [
+              385,
+              525
+            ],
+            [
+              385,
+              815
+            ]
+          ]
+        }
+      }
+    }
+  ],
+  "compact": true
+}

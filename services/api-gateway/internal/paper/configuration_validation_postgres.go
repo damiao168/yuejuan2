@@ -27,6 +27,9 @@ func (s *PostgresStore) ValidateConfig(ctx context.Context, tenantID string, exa
 		}
 		count++
 		total += score
+		if score <= 0 {
+			result.Issues = append(result.Issues, ValidationIssue{Code: "question_score_missing", Message: "第" + no + "题分值待确认"})
+		}
 		if no == "" || kind == "" {
 			result.Issues = append(result.Issues, ValidationIssue{Code: "question_incomplete", Message: "题目缺少题号或题型"})
 		}

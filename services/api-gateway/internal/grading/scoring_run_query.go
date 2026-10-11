@@ -142,10 +142,8 @@ ORDER BY q.sort_order,seg.created_at`, tenantID, run.ExamID, runID)
 	return detail, rows.Err()
 }
 
-// GetExamAutomationResults returns the current, exam-wide objective grading
-// facts independently of a particular orchestration run. This is the operator
-// view: a rerun is process history, while the latest recognition and grade are
-// the facts that must be auditable during live marking.
+// GetExamAutomationResults 返回当前全考试的客观题评分事实，不依赖特定编排运行。
+// 这是操作员视图：重跑属于处理历史，最新识别与成绩才是实时阅卷期间必须可审计的事实。
 func (s *PostgresStore) GetExamAutomationResults(ctx context.Context, tenantID, examID string) (ExamAutomationResults, error) {
 	out := ExamAutomationResults{Items: []ScoringRunItem{}}
 	rows, err := s.db.QueryContext(ctx, `

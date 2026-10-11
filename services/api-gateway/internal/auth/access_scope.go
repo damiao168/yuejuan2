@@ -16,9 +16,7 @@ var (
 	ErrAccessScopeInvalid = errors.New("access scope is invalid")
 )
 
-// AccessScope is the server-derived data boundary for one authenticated actor.
-// IDs sourced from user-provided headers or request bodies must never be added
-// to this value.
+// AccessScope 是服务端为已认证主体派生的数据边界，不得向其中加入来自用户请求头或请求体的 ID。
 type AccessScope struct {
 	TenantID           string
 	ActorID            string
@@ -34,12 +32,9 @@ type AccessScope struct {
 	ReviewTaskIDs      []string
 	ArbitrationTaskIDs []string
 	StudentID          string
-	// schoolWide records a trusted school-scoped role. It is deliberately
-	// separate from SchoolIDs because class-scoped roles also expand to their
-	// parent school for read filtering, but must not gain school-level task
-	// management authority.
+	// schoolWide 记录可信的学校级角色，并与 SchoolIDs 分开；班级级角色也会扩展到所属学校用于读取筛选，但不能因此取得学校级任务管理权。
 	schoolWide bool
-	// syntheticUnbounded is only available to explicit in-memory test fixtures.
+	// syntheticUnbounded 仅供显式声明的内存测试夹具使用。
 	syntheticUnbounded bool
 }
 
@@ -96,15 +91,10 @@ func (s AccessScope) HasDataAccess() bool {
 		len(s.ReviewTaskIDs) > 0 || len(s.ArbitrationTaskIDs) > 0
 }
 
-// IsSchoolWide reports whether the scope came from a trusted school-scoped
-// role.  It intentionally does not expose the backing field so callers cannot
-// manufacture a school-wide scope from request data.
+// IsSchoolWide 判断作用域是否来自可信的学校级角色。它不暴露底层字段，避免调用方从请求数据伪造全校作用域。
 func (s AccessScope) IsSchoolWide() bool { return s.schoolWide }
 
-// QueryMode returns the coarse-grained mode repositories should use when
-// applying collection filters.  Collection endpoints must apply this mode in
-// addition to the direct-resource boundary middleware; otherwise a scoped
-// identity could still receive another school's rows from a list endpoint.
+// QueryMode 返回仓储进行集合筛选时使用的粗粒度模式。集合端点除直接资源边界中间件外，还必须应用此模式，否则受限身份仍可能从列表取得其他学校的记录。
 func (s AccessScope) QueryMode() string {
 	if s.IsPlatform {
 		return "platform"
@@ -136,8 +126,8 @@ func (s AccessScope) normalized() AccessScope {
 	return s
 }
 
-// ResolveDeclaredAccessScope strictly parses the persisted RBAC data_scope.
-// Relationship-derived IDs are added by the Store resolver, not by callers.
+// ResolveDeclaredAccessScope 严格解析持久化 RBAC data_scope；
+// 通过关联关系派生的 ID 由 Store 解析器添加，不能由调用方添加。
 func ResolveDeclaredAccessScope(user User) (AccessScope, error) {
 	if strings.TrimSpace(user.TenantID) == "" || strings.TrimSpace(user.ID) == "" {
 		return AccessScope{}, ErrAccessScopeMissing
@@ -147,27 +137,9 @@ func ResolveDeclaredAccessScope(user User) (AccessScope, error) {
 		return AccessScope{}, ErrAccessScopeMissing
 	}
 
-	scopes := make([]map[string]any, 0, len(user.DataScope))
-	if _, flat := user.DataScope["scope"]; flat {
-		scopes = append(scopes, user.DataScope)
-	} else {
-		roles := make(map[string]struct{}, len(user.Roles))
-		for _, role := range user.Roles {
-			roles[role] = struct{}{}
-		}
-		for role, raw := range user.DataScope {
-			if _, ok := roles[role]; !ok {
-				return AccessScope{}, fmt.Errorf("%w: unknown role scope %q", ErrAccessScopeInvalid, role)
-			}
-			nested, ok := raw.(map[string]any)
-			if !ok {
-				return AccessScope{}, fmt.Errorf("%w: role scope %q is not an object", ErrAccessScopeInvalid, role)
-			}
-			if !declaredRoleScopeAllowed(role, nested) {
-				return AccessScope{}, fmt.Errorf("%w: role %q has non-canonical scope", ErrAccessScopeInvalid, role)
-			}
-			scopes = append(scopes, nested)
-		}
+	scopes, err := declaredRoleScopes(user)
+	if err != nil {
+		return AccessScope{}, err
 	}
 	if len(scopes) == 0 {
 		return AccessScope{}, ErrAccessScopeMissing
@@ -182,6 +154,32 @@ func ResolveDeclaredAccessScope(user User) (AccessScope, error) {
 		return AccessScope{}, fmt.Errorf("%w: platform scope requires platform administrator", ErrAccessScopeInvalid)
 	}
 	return out.normalized(), nil
+}
+
+// 角色作用域只能来自账户已持有的角色，且必须符合该角色的标准作用域类型。
+func declaredRoleScopes(user User) ([]map[string]any, error) {
+	if _, flat := user.DataScope["scope"]; flat {
+		return []map[string]any{user.DataScope}, nil
+	}
+	roles := make(map[string]struct{}, len(user.Roles))
+	for _, role := range user.Roles {
+		roles[role] = struct{}{}
+	}
+	scopes := make([]map[string]any, 0, len(user.DataScope))
+	for role, raw := range user.DataScope {
+		if _, ok := roles[role]; !ok {
+			return nil, fmt.Errorf("%w: unknown role scope %q", ErrAccessScopeInvalid, role)
+		}
+		nested, ok := raw.(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("%w: role scope %q is not an object", ErrAccessScopeInvalid, role)
+		}
+		if !declaredRoleScopeAllowed(role, nested) {
+			return nil, fmt.Errorf("%w: role %q has non-canonical scope", ErrAccessScopeInvalid, role)
+		}
+		scopes = append(scopes, nested)
+	}
+	return scopes, nil
 }
 
 func declaredRoleScopeAllowed(role string, scope map[string]any) bool {
@@ -218,9 +216,7 @@ func mergeDeclaredScope(out *AccessScope, raw map[string]any) error {
 		out.TenantWide = true
 	case "school":
 		out.schoolWide = true
-		// The PostgreSQL resolver adds the trusted app_user/teacher_class
-		// school relationship. Explicit IDs remain useful for migrations and
-		// in-memory tests.
+		// PostgreSQL 解析器添加可信的 app_user/teacher_class 学校关系；显式 ID 仍用于迁移和内存测试。
 	case "grade", "class", "exam":
 	case "assigned", "exam_task":
 		out.AssignedOnly = true
@@ -326,9 +322,7 @@ func AccessScopeFromContext(ctx context.Context) (AccessScope, bool) {
 	return scope, ok
 }
 
-// RequireScopedResource enforces the server-derived AccessScope for route IDs.
-// It complements store-level filtering and is intended for routes whose
-// resource type is unambiguous in the URL.
+// RequireScopedResource 对路由 ID 强制应用服务端派生的 AccessScope。它补充存储层筛选，适用于 URL 中资源类型明确的路由。
 func RequireScopedResource(resource string, pathParam string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

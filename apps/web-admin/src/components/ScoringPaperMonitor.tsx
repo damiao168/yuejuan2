@@ -99,14 +99,35 @@ function groupCandidates(items: ScoringRunItem[]) {
 
 function scoreText(item: ScoringRunItem) {
   if (typeof item.score !== "number") return "";
-  const score = Number.isInteger(item.score) ? item.score : item.score.toFixed(1);
-  const max = typeof item.max_score === "number"
-    ? (Number.isInteger(item.max_score) ? item.max_score : item.max_score.toFixed(1))
-    : "";
-  return `${item.grade_source === "ai_suggestion" ? "≈" : ""}${score}${max === "" ? "" : `/${max}`}`;
+  const score = formatScoreValue(item.score);
+  const prefix = item.grade_source === "ai_suggestion" ? "≈" : "";
+  const maximum = typeof item.max_score === "number" ? `/${formatScoreValue(item.max_score)}` : "";
+  return `${prefix}${score}${maximum}`;
 }
 
-export function ScoringPaperMonitor({ run, items, loading, onRefresh }: ScoringPaperMonitorProps) {
+function formatScoreValue(value: number) {
+  return Number.isInteger(value) ? value : value.toFixed(1);
+}
+
+function runHeading(run?: ScoringRun) {
+  if (run?.status === "needs_review") return "自动识别完成，等待教师确认";
+  if (run?.status === "completed") return "本批答卷已处理完成";
+  return "正在逐卷识别与评分";
+}
+
+function candidateStatusIcon(candidate: CandidateGroup) {
+  if (candidate.failed > 0) return <CircleAlert size={16} className="danger" />;
+  if (candidate.confirmed === candidate.items.length) return <CheckCircle2 size={16} className="success" />;
+  return <Clock3 size={16} className="processing" />;
+}
+
+function activityTone(item: ScoringRunItem) {
+  if (item.state === "failed") return "danger";
+  if (item.state === "review") return "warning";
+  return "processing";
+}
+
+export function ScoringPaperMonitor({ run, items, loading, onRefresh }: Readonly<ScoringPaperMonitorProps>) {
   const candidates = useMemo(() => groupCandidates(items), [items]);
   const [selectedCode, setSelectedCode] = useState("");
   const [pageUrls, setPageUrls] = useState<Record<string, string>>({});
@@ -135,6 +156,7 @@ export function ScoringPaperMonitor({ run, items, loading, onRefresh }: ScoringP
   }, [selected]);
   const pageKey = pages.map((page) => page.assetId).join("|");
 
+  // 切卷或卸载后忽略迟到的下载；只回收本轮创建的 URL，旧影像不能进入新卷。
   useEffect(() => {
     let disposed = false;
     const urls: string[] = [];
@@ -191,7 +213,7 @@ export function ScoringPaperMonitor({ run, items, loading, onRefresh }: ScoringP
       <header className="scoring-monitor-header">
         <div>
           <span className="scoring-monitor-kicker">逐卷处理记录</span>
-          <h3>{run?.status === "needs_review" ? "自动识别完成，等待教师确认" : run?.status === "completed" ? "本批答卷已处理完成" : "正在逐卷识别与评分"}</h3>
+          <h3>{runHeading(run)}</h3>
           <p>红色批注标记已确认得分；“≈”表示 AI 建议分，需要教师确认。</p>
         </div>
         <div className="scoring-monitor-progress">
@@ -217,11 +239,7 @@ export function ScoringPaperMonitor({ run, items, loading, onRefresh }: ScoringP
                   <strong>{candidate.code}</strong>
                   <small>{candidate.processed}/{candidate.items.length} 已识别 · {candidate.review} 待确认</small>
                 </span>
-                {candidate.failed > 0
-                  ? <CircleAlert size={16} className="danger" />
-                  : candidate.confirmed === candidate.items.length
-                    ? <CheckCircle2 size={16} className="success" />
-                    : <Clock3 size={16} className="processing" />}
+                {candidateStatusIcon(candidate)}
               </button>
             );
           })}
@@ -284,7 +302,7 @@ export function ScoringPaperMonitor({ run, items, loading, onRefresh }: ScoringP
                 <div className="scoring-activity-item" key={item.answer_segment_id}>
                   <span className={`scoring-activity-dot ${item.state}`} />
                   <div><strong>{item.question_no} · {stateLabel[item.state] ?? "处理中"}</strong><small title={detail.raw}>{detail.label}</small></div>
-                  <StatusTag tone={item.state === "failed" ? "danger" : item.state === "review" ? "warning" : "processing"}>{`第 ${item.page_no} 页`}</StatusTag>
+                  <StatusTag tone={activityTone(item)}>{`第 ${item.page_no} 页`}</StatusTag>
                 </div>
               );
             }) : <div className="scoring-activity-done"><CheckCircle2 size={24} /><span>当前答卷已全部确认</span></div>}

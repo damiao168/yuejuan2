@@ -14,11 +14,8 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/paper"
 )
 
-// OMRCalibrationSession freezes the exact template, reference asset, worker
-// profile, and deterministic sample population used to justify an
-// automatic-confirmation permission. New sessions cover every OMR question in
-// one immutable template; ScopeType keeps legacy question-scoped evidence
-// readable without silently widening it.
+// OMRCalibrationSession 冻结用于证明自动确认权限的确切模板、参考资源、工作器配置和确定性样本集合。
+// 新会话覆盖一个不可变模板中的全部 OMR 题目；ScopeType 保持旧的题目级证据可读，不静默扩大其范围。
 type OMRCalibrationSession struct {
 	ID                       string                `json:"id"`
 	TenantID                 string                `json:"tenant_id"`
@@ -57,9 +54,7 @@ type OMRCalibrationSession struct {
 	Summary                  OMRCalibrationSummary `json:"summary"`
 }
 
-// OMRCalibrationCase is an immutable OMR output snapshot that an operator
-// labels after inspecting the protected crop and overlay. A label can be set
-// exactly once while the session is a draft.
+// OMRCalibrationCase 是不可变 OMR 输出快照，操作员检查受保护的裁剪图和覆盖图后进行标注；会话为草稿时，标签只能设置一次。
 type OMRCalibrationCase struct {
 	ID                 string           `json:"id"`
 	CalibrationID      string           `json:"calibration_id"`
@@ -106,9 +101,7 @@ type OMRCalibrationDetail struct {
 }
 
 type CreateOMRCalibrationInput struct {
-	// QuestionID is retained only so older clients receive a harmless,
-	// backwards-compatible request shape. New sessions always cover the
-	// complete immutable template.
+	// QuestionID 仅为旧客户端保留无副作用、向后兼容的请求结构；新会话始终覆盖完整的不可变模板。
 	QuestionID string `json:"question_id,omitempty"`
 }
 
@@ -129,9 +122,7 @@ type DiscardOMRCalibrationInput struct {
 	Reason string `json:"reason"`
 }
 
-// OMRCalibrationStore is separate from the base grading Store. This keeps
-// legacy in-memory grading tests independent while production PostgreSQL owns
-// the approval and evidence chain.
+// OMRCalibrationStore 与基础评分 Store 分开，使旧内存评分测试保持独立；生产 PostgreSQL 负责审批及证据链。
 type OMRCalibrationStore interface {
 	CreateOMRCalibration(context.Context, string, string, string, CreateOMRCalibrationInput) (OMRCalibrationDetail, error)
 	ListOMRCalibrations(context.Context, string, string) ([]OMRCalibrationSession, error)
@@ -145,6 +136,16 @@ type OMRCalibrationStore interface {
 type calibrationQueryer interface {
 	QueryContext(context.Context, string, ...any) (*sql.Rows, error)
 	QueryRowContext(context.Context, string, ...any) *sql.Row
+}
+
+// 模板、识别配置和参考图共同限定校准证据的适用范围，读取时必须匹配同一组冻结值。
+type omrCalibrationScope struct {
+	templateID           string
+	templateContentHash  string
+	profileVersion       string
+	profileHash          string
+	referenceFileAssetID string
+	referenceSHA256      string
 }
 
 const omrCalibrationSessionColumns = `
@@ -215,7 +216,15 @@ FOR UPDATE OF t
 	if _, err = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, scopeKey); err != nil {
 		return OMRCalibrationDetail{}, err
 	}
-	if existing, existingErr := getActiveOMRCalibrationSessionTx(ctx, tx, tenantID, templateID, contentHash, policy.RuntimeProfile.Version, policy.ProfileHash, policy.Reference.FileAssetID, policy.Reference.HashSHA256); existingErr == nil {
+	scope := omrCalibrationScope{
+		templateID:           templateID,
+		templateContentHash:  contentHash,
+		profileVersion:       policy.RuntimeProfile.Version,
+		profileHash:          policy.ProfileHash,
+		referenceFileAssetID: policy.Reference.FileAssetID,
+		referenceSHA256:      policy.Reference.HashSHA256,
+	}
+	if existing, existingErr := getActiveOMRCalibrationSessionTx(ctx, tx, tenantID, scope); existingErr == nil {
 		if err = tx.Commit(); err != nil {
 			return OMRCalibrationDetail{}, err
 		}
@@ -613,7 +622,7 @@ VALUES ($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5::uuid,$6,$7,$8::jsonb,$9,$10,$11,
 	return err
 }
 
-func getActiveOMRCalibrationSessionTx(ctx context.Context, tx *sql.Tx, tenantID, templateID, templateHash, profileVersion, profileHash, referenceAssetID, referenceSHA256 string) (OMRCalibrationSession, error) {
+func getActiveOMRCalibrationSessionTx(ctx context.Context, tx *sql.Tx, tenantID string, scope omrCalibrationScope) (OMRCalibrationSession, error) {
 	row := tx.QueryRowContext(ctx, `SELECT `+omrCalibrationSessionColumns+`
 FROM omr_calibration_session
 WHERE tenant_id=$1::uuid AND template_id=$2::uuid AND template_content_hash=$3 AND scope_type='template'
@@ -621,7 +630,7 @@ WHERE tenant_id=$1::uuid AND template_id=$2::uuid AND template_content_hash=$3 A
   AND status IN ('draft','approved') AND deleted_at IS NULL
 ORDER BY CASE status WHEN 'approved' THEN 0 ELSE 1 END,created_at DESC
 LIMIT 1
-FOR UPDATE`, tenantID, templateID, templateHash, profileVersion, profileHash, referenceAssetID, referenceSHA256)
+FOR UPDATE`, tenantID, scope.templateID, scope.templateContentHash, scope.profileVersion, scope.profileHash, scope.referenceFileAssetID, scope.referenceSHA256)
 	var out OMRCalibrationSession
 	return out, scanOMRCalibrationSession(row, &out)
 }
@@ -762,34 +771,49 @@ func summarizeOMRCalibration(session OMRCalibrationSession, cases []OMRCalibrati
 		summary.QuestionCoverage[questionID] = 0
 	}
 	for _, item := range cases {
-		summary.TotalCount++
-		summary.QuestionCoverage[item.QuestionID]++
-		summary.StratumCoverage[item.SampleStratum]++
-		// 模板校准只要求可能自动确认的高置信单个选项结果零错；其他层仍须标注并满足覆盖要求。
-		eligible := item.SampleStratum == "selected_high" || (session.ScopeType != "template" && item.SampleStratum == "")
+		addOMRCalibrationCaseToSummary(&summary, session.ScopeType, item)
+	}
+	appendOMRCalibrationEvidenceBlockers(session, &summary)
+	appendOMRCalibrationCoverageBlockers(session, &summary)
+	if session.Status != "draft" {
+		summary.Blockers = append(summary.Blockers, "calibration_not_draft")
+	}
+	summary.ReadyToApprove = len(summary.Blockers) == 0
+	return summary
+}
+
+func addOMRCalibrationCaseToSummary(summary *OMRCalibrationSummary, scopeType string, item OMRCalibrationCase) {
+	summary.TotalCount++
+	summary.QuestionCoverage[item.QuestionID]++
+	summary.StratumCoverage[item.SampleStratum]++
+	// 模板校准只要求可能自动确认的高置信单个选项结果零错；旧题目级空分层仍属于自动确认候选。
+	eligible := item.SampleStratum == "selected_high" || (scopeType != "template" && item.SampleStratum == "")
+	if eligible {
+		summary.EligibleCount++
+	}
+	// 未标注样本仍计入题目和分层覆盖，但不能贡献选项覆盖或一致性计数。
+	if item.ExpectedOptions == nil || item.Matches == nil {
+		summary.PendingCount++
+		return
+	}
+	summary.LabeledCount++
+	for _, option := range item.ExpectedOptions {
+		summary.OptionCoverage[option]++
+	}
+	if *item.Matches {
+		summary.MatchCount++
 		if eligible {
-			summary.EligibleCount++
+			summary.EligibleMatchCount++
 		}
-		if item.ExpectedOptions == nil || item.Matches == nil {
-			summary.PendingCount++
-			continue
-		}
-		summary.LabeledCount++
-		for _, option := range item.ExpectedOptions {
-			summary.OptionCoverage[option]++
-		}
-		if *item.Matches {
-			summary.MatchCount++
-			if eligible {
-				summary.EligibleMatchCount++
-			}
-		} else {
-			summary.MismatchCount++
-			if eligible {
-				summary.EligibleMismatchCount++
-			}
+	} else {
+		summary.MismatchCount++
+		if eligible {
+			summary.EligibleMismatchCount++
 		}
 	}
+}
+
+func appendOMRCalibrationEvidenceBlockers(session OMRCalibrationSession, summary *OMRCalibrationSummary) {
 	if summary.TotalCount < session.MinimumSamples {
 		summary.Blockers = append(summary.Blockers, "sample_count_below_minimum")
 	}
@@ -803,6 +827,9 @@ func summarizeOMRCalibration(session OMRCalibrationSession, cases []OMRCalibrati
 		}
 		summary.Blockers = append(summary.Blockers, blocker)
 	}
+}
+
+func appendOMRCalibrationCoverageBlockers(session OMRCalibrationSession, summary *OMRCalibrationSummary) {
 	for _, label := range session.OptionLabels {
 		if summary.OptionCoverage[label] < session.MinimumSamplesPerOption {
 			summary.Blockers = append(summary.Blockers, "option_coverage_incomplete")
@@ -815,19 +842,15 @@ func summarizeOMRCalibration(session OMRCalibrationSession, cases []OMRCalibrati
 			break
 		}
 	}
-	if session.ScopeType == "template" {
-		for _, stratum := range []string{"selected_high", "selected_low", "blank", "ambiguous"} {
-			if summary.StratumCoverage[stratum] < session.MinimumSamplesPerStratum {
-				summary.Blockers = append(summary.Blockers, "stratum_coverage_incomplete")
-				break
-			}
+	if session.ScopeType != "template" {
+		return
+	}
+	for _, stratum := range []string{"selected_high", "selected_low", "blank", "ambiguous"} {
+		if summary.StratumCoverage[stratum] < session.MinimumSamplesPerStratum {
+			summary.Blockers = append(summary.Blockers, "stratum_coverage_incomplete")
+			break
 		}
 	}
-	if session.Status != "draft" {
-		summary.Blockers = append(summary.Blockers, "calibration_not_draft")
-	}
-	summary.ReadyToApprove = len(summary.Blockers) == 0
-	return summary
 }
 
 type calibrationQuestion struct {
@@ -858,7 +881,10 @@ WHERE tenant_id=$1::uuid AND exam_id=$2::uuid AND deleted_at IS NULL
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
+	return calibrationQuestionsForLayout(layout, metadata)
+}
 
+func calibrationQuestionsForLayout(layout paper.TemplateLayout, metadata map[string]calibrationQuestion) ([]calibrationQuestion, error) {
 	out := []calibrationQuestion{}
 	seenQuestions := map[string]bool{}
 	// 只按模板实际题区建立校准题集，并排除没有 OMR 自动路径的题型，避免校准范围悄悄扩大。
@@ -871,23 +897,33 @@ WHERE tenant_id=$1::uuid AND exam_id=$2::uuid AND deleted_at IS NULL
 			if item.Type != "single_choice" && item.Type != "multiple_choice" && item.Type != "true_false" {
 				continue
 			}
-			seenLabels := map[string]bool{}
-			for _, option := range region.OptionRegions {
-				label := strings.TrimSpace(option.Label)
-				if label == "" || seenLabels[label] {
-					return nil, ErrInvalidInput
-				}
-				seenLabels[label] = true
-				item.OptionLabels = append(item.OptionLabels, label)
+			labels, err := calibrationOptionLabels(region.OptionRegions)
+			if err != nil {
+				return nil, err
 			}
-			if len(item.OptionLabels) < 2 {
-				return nil, ErrInvalidInput
-			}
+			item.OptionLabels = labels
 			seenQuestions[item.ID] = true
 			out = append(out, item)
 		}
 	}
 	return out, nil
+}
+
+func calibrationOptionLabels(options []paper.OptionRegion) ([]string, error) {
+	labels := []string{}
+	seenLabels := map[string]bool{}
+	for _, option := range options {
+		label := strings.TrimSpace(option.Label)
+		if label == "" || seenLabels[label] {
+			return nil, ErrInvalidInput
+		}
+		seenLabels[label] = true
+		labels = append(labels, label)
+	}
+	if len(labels) < 2 {
+		return nil, ErrInvalidInput
+	}
+	return labels, nil
 }
 
 func containsCalibrationOption(options []string, expected string) bool {
@@ -986,10 +1022,8 @@ func omrCalibrationEvidenceHash(session OMRCalibrationSession, cases []OMRCalibr
 	return "sha256:" + hex.EncodeToString(sum[:]), nil
 }
 
-// loadApprovedOMRCalibrationTx is deliberately called while creating the OMR
-// run, before the worker receives any task. It never trusts a session id from a
-// client or worker payload.
-func (s *PostgresStore) loadApprovedOMRCalibrationTx(ctx context.Context, tx *sql.Tx, tenantID, templateID, templateContentHash, questionID, profileVersion, profileHash, referenceFileAssetID, referenceSHA256 string) (*paper.OMRCalibrationApproval, error) {
+// loadApprovedOMRCalibrationTx 在创建 OMR 运行时调用，早于工作器收到任何任务；不信任客户端或工作器载荷提供的会话 ID。
+func (s *PostgresStore) loadApprovedOMRCalibrationTx(ctx context.Context, tx *sql.Tx, tenantID string, scope omrCalibrationScope, questionID string) (*paper.OMRCalibrationApproval, error) {
 	var out paper.OMRCalibrationApproval
 	err := tx.QueryRowContext(ctx, `
 SELECT id::text,template_id::text,template_content_hash,scope_type,COALESCE(question_id::text,''),profile_version,profile_hash,
@@ -1000,7 +1034,7 @@ WHERE tenant_id=$1::uuid AND template_id=$2::uuid AND template_content_hash=$3
   AND profile_version=$5 AND profile_hash=$6 AND reference_file_asset_id=$7::uuid AND reference_sha256=$8
   AND status='approved' AND deleted_at IS NULL
 ORDER BY CASE scope_type WHEN 'template' THEN 0 ELSE 1 END,approved_at DESC
-LIMIT 1`, tenantID, templateID, templateContentHash, questionID, profileVersion, profileHash, referenceFileAssetID, referenceSHA256).Scan(
+LIMIT 1`, tenantID, scope.templateID, scope.templateContentHash, questionID, scope.profileVersion, scope.profileHash, scope.referenceFileAssetID, scope.referenceSHA256).Scan(
 		&out.ID, &out.TemplateID, &out.TemplateContentHash, &out.ScopeType, &out.QuestionID, &out.ProfileVersion, &out.ProfileHash,
 		&out.ReferenceFileAssetID, &out.ReferenceSHA256, &out.MinimumConfidence, &out.EvidenceHash, &out.Status)
 	if errors.Is(err, sql.ErrNoRows) {

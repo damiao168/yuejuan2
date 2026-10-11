@@ -1,5 +1,6 @@
 import hashlib
 import json
+import re
 from dataclasses import dataclass
 
 from .dashscope_native_contract import (
@@ -16,6 +17,8 @@ MAX_DASHSCOPE_TEXT_REQUEST_BYTES = 512 * 1024
 MAX_DASHSCOPE_IMAGE_REQUEST_BYTES = 8 * 1024 * 1024
 MAX_DASHSCOPE_RESPONSE_BYTES = 1024 * 1024
 FIXTURE_AUTHORIZATION = "Bearer synthetic-dashscope-fixture-token"
+JSON_CONTENT_TYPE = "application/json"
+_EXTERNAL_IMAGE_URI = re.compile(r"(?:https?|file|oss)://")
 
 
 @dataclass(frozen=True)
@@ -25,7 +28,7 @@ class FixtureDashScopeResponse:
     body: bytes
 
     @classmethod
-    def from_json(cls, status, payload, content_type="application/json"):
+    def from_json(cls, status, payload, content_type=JSON_CONTENT_TYPE):
         return cls(
             status=status,
             content_type=content_type,
@@ -107,9 +110,9 @@ class DashScopeNativeTransportSeam:
     def _execute(self, *, path, payload, request_limit, parser):
         body = self._request_body(payload, request_limit)
         headers = {
-            "Accept": "application/json",
+            "Accept": JSON_CONTENT_TYPE,
             "Authorization": FIXTURE_AUTHORIZATION,
-            "Content-Type": "application/json",
+            "Content-Type": JSON_CONTENT_TYPE,
             "X-DashScope-SSE": "disable",
         }
         try:
@@ -135,20 +138,17 @@ class DashScopeNativeTransportSeam:
                     raise error from exc
 
                 try:
-                    response_payload = self._response_json(response)
+                    result = self._parse_response(response, parser)
                 except AgentError as error:
-                    self._log("failed", path, attempt + 1, error.code)
-                    raise
-                if response.status != 200:
-                    error = map_dashscope_error(response.status, response_payload)
-                    if error.retryable and attempt < self.max_retries:
+                    # 只有供应商失败响应可重试；成功响应中的解析错误不能再次触发请求。
+                    if (
+                        type(response) is FixtureDashScopeResponse
+                        and response.status != 200
+                        and error.retryable
+                        and attempt < self.max_retries
+                    ):
                         self._log("retrying", path, attempt + 1, error.code)
                         continue
-                    self._log("failed", path, attempt + 1, error.code)
-                    raise error
-                try:
-                    result = parser(response_payload)
-                except AgentError as error:
                     self._log("failed", path, attempt + 1, error.code)
                     raise
                 self._log("succeeded", path, attempt + 1)
@@ -158,6 +158,13 @@ class DashScopeNativeTransportSeam:
             body[:] = b"\x00" * len(body)
             body.clear()
         raise AgentError("internal_error", "native transport seam ended unexpectedly", status=500)
+
+    @classmethod
+    def _parse_response(cls, response, parser):
+        response_payload = cls._response_json(response)
+        if response.status != 200:
+            raise map_dashscope_error(response.status, response_payload)
+        return parser(response_payload)
 
     @staticmethod
     def _request_body(payload, limit):
@@ -192,19 +199,7 @@ class DashScopeNativeTransportSeam:
             )
         forbidden = set()
         image_values = []
-
-        def inspect(value):
-            if isinstance(value, dict):
-                forbidden.update(key for key in value if key in FORBIDDEN_EXPORT_KEYS)
-                for key, child in value.items():
-                    if key == "image":
-                        image_values.append(child)
-                    inspect(child)
-            elif isinstance(value, list):
-                for child in value:
-                    inspect(child)
-
-        inspect(payload)
+        DashScopeNativeTransportSeam._inspect_payload(payload, forbidden, image_values)
         if forbidden:
             raise AgentError(
                 "invalid_request",
@@ -217,14 +212,12 @@ class DashScopeNativeTransportSeam:
                 "text payload cannot contain images",
                 status=400,
             )
+        # 这里只接收内联 PNG；协议字符串用于拒绝外部资源，本 transport 不创建网络连接。
         if multimodal and (
             len(image_values) != 1
             or not isinstance(image_values[0], str)
             or not image_values[0].startswith("data:image/png;base64,")
-            or any(
-                scheme in image_values[0].lower()
-                for scheme in ("http://", "https://", "file://", "oss://")
-            )
+            or _EXTERNAL_IMAGE_URI.search(image_values[0].lower())
         ):
             raise AgentError(
                 "invalid_request",
@@ -233,10 +226,22 @@ class DashScopeNativeTransportSeam:
             )
 
     @staticmethod
+    def _inspect_payload(value, forbidden, image_values):
+        if isinstance(value, dict):
+            forbidden.update(value.keys() & FORBIDDEN_EXPORT_KEYS)
+            for key, child in value.items():
+                if key == "image":
+                    image_values.append(child)
+                DashScopeNativeTransportSeam._inspect_payload(child, forbidden, image_values)
+        elif isinstance(value, list):
+            for child in value:
+                DashScopeNativeTransportSeam._inspect_payload(child, forbidden, image_values)
+
+    @staticmethod
     def _response_json(response):
         if type(response) is not FixtureDashScopeResponse:
             raise AgentError("model_output_invalid", "provider response type is invalid", status=502)
-        if response.content_type.split(";", 1)[0].strip().lower() != "application/json":
+        if response.content_type.split(";", 1)[0].strip().lower() != JSON_CONTENT_TYPE:
             raise AgentError(
                 "model_output_invalid",
                 "provider response content type is invalid",
@@ -257,13 +262,16 @@ class DashScopeNativeTransportSeam:
                 value[key] = item
             return value
 
+        def reject_nonfinite(_value):
+            raise ValueError("non-finite JSON number")
+
         try:
             return json.loads(
                 response.body.decode("utf-8"),
                 object_pairs_hook=reject_duplicates,
-                parse_constant=lambda _value: (_ for _ in ()).throw(ValueError("non-finite JSON number")),
+                parse_constant=reject_nonfinite,
             )
-        except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
+        except ValueError as exc:
             raise AgentError(
                 "model_output_invalid",
                 "provider response was not strict UTF-8 JSON",

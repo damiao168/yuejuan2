@@ -29,8 +29,7 @@ type CriterionDecision struct {
 	ReasonCode          string   `json:"reason_code"`
 }
 
-// CriterionCandidate deliberately has no score field. Candidates are hints,
-// never authority to award or deny a frozen rubric point.
+// CriterionCandidate 刻意没有分数字段。候选项仅为提示，不能据此授予或拒绝冻结评分细则的得分点。
 type CriterionCandidate struct {
 	RubricPointID string   `json:"rubric_point_id"`
 	Status        string   `json:"status"`
@@ -65,7 +64,7 @@ type RubricScore struct {
 	MissingPoints              []grading.PointResult `json:"missing_points"`
 }
 
-// Scores use fixed 1/10000-point units to avoid binary-float aggregation drift.
+// 分数使用固定的 1/10000 分单位，避免二进制浮点累计误差。
 func scoreUnits(score float64) (int64, bool) {
 	if math.IsNaN(score) || math.IsInf(score, 0) || score < 0 || score > 1e6 {
 		return 0, false
@@ -128,44 +127,16 @@ func ScoreFrozenRubric(frozen FrozenRubric, effective EffectiveArtifact, candida
 		ArtifactID: base.ID, ArtifactVersion: base.Version, CorrectionRevision: effective.CorrectionRevision, VerifiedCorrectionRevision: base.CorrectionRevision,
 		ExamQuestionSnapshotID: frozen.SnapshotID, RubricID: rubricID, RubricVersion: version, RubricSnapshotHash: hash, MaxScore: r.MaxScore,
 		CriterionDecisions: []CriterionDecision{}, RubricEvidence: []RubricEvidence{}, MatchedPoints: []grading.PointResult{}, MissingPoints: []grading.PointResult{},
-		// A settled arithmetic suggestion still requires teacher confirmation.
+		// 已确定的算术建议仍须教师确认。
 		RequiresHumanReview: true}
 	input := EvidenceMatchInput{Requirements: RequirementsFromRubric(r.Points), Graph: contract.SolutionGraph, Blocks: contract.Blocks, Formulas: contract.Formulas, Verifications: contract.Verifications}
 	matched, err := MatchRubricEvidence(input)
 	if err != nil {
 		return RubricScore{}, err
 	}
-	known := map[string]bool{}
-	pointIDs := map[string]bool{}
-	for _, point := range r.Points {
-		pointIDs[point.ID] = true
-	}
-	for _, block := range contract.Blocks {
-		known[block.ID] = true
-	}
-	for _, formula := range contract.Formulas {
-		known[formula.ID] = true
-	}
-	for _, step := range contract.SolutionGraph.Steps {
-		known[step.ID] = true
-	}
-	byPoint := map[string]CriterionCandidate{}
-	for _, candidate := range candidates {
-		if !pointIDs[candidate.RubricPointID] || !set("supported", "contradicted", "uncertain", "not_applicable", "unsupported")[candidate.Status] {
-			return RubricScore{}, ErrInvalidInput
-		}
-		if set("supported", "contradicted")[candidate.Status] && len(candidate.EvidenceIDs) == 0 {
-			return RubricScore{}, ErrInvalidInput
-		}
-		if _, exists := byPoint[candidate.RubricPointID]; exists {
-			return RubricScore{}, ErrInvalidInput
-		}
-		for _, id := range candidate.EvidenceIDs {
-			if !known[id] {
-				return RubricScore{}, ErrInvalidInput
-			}
-		}
-		byPoint[candidate.RubricPointID] = candidate
+	byPoint, err := indexCriterionCandidates(r.Points, contract, candidates)
+	if err != nil {
+		return RubricScore{}, err
 	}
 	pending := ""
 	if base.Stage != "verified" || effective.CorrectionRevision > 0 {
@@ -176,22 +147,7 @@ func ScoreFrozenRubric(frozen FrozenRubric, effective EffectiveArtifact, candida
 	}
 	verified, unresolvedUnits := int64(0), int64(0)
 	for index, point := range r.Points {
-		evidence := matched[index]
-		m := matchRequirement(input.Requirements[index], input)
-		if pending != "" {
-			evidence.Status = "uncertain"
-			evidence.Explanation = pending
-			evidence.SourceArtifactIDs = []string{}
-			evidence.VerificationIDs = []string{}
-			evidence.Confidence = 0
-			m = unresolved(pending)
-		}
-		decision := CriterionDecision{RubricPointID: point.ID, Status: evidence.Status, MaxScore: point.Score, EvidenceIDs: uniqueIDs(evidence.SourceArtifactIDs), VerificationIDs: uniqueIDs(evidence.VerificationIDs), DecisionSource: m.source, ReasonCode: evidence.Explanation}
-		if candidate, exists := byPoint[point.ID]; exists && decision.Status == "uncertain" && pending == "" {
-			decision.EvidenceIDs = uniqueIDs(append(decision.EvidenceIDs, candidate.EvidenceIDs...))
-			decision.DecisionSource = "model_candidate"
-			decision.ReasonCode = "model_candidate_requires_review"
-		}
+		decision, evidence := buildCriterionDecision(point, matched[index], input.Requirements[index], input, pending, byPoint)
 		units, _ := scoreUnits(point.Score)
 		switch decision.Status {
 		case "supported":
@@ -220,4 +176,67 @@ func ScoreFrozenRubric(frozen FrozenRubric, effective EffectiveArtifact, candida
 		out.SuggestedScore = &value
 	}
 	return out, nil
+}
+
+func indexCriterionCandidates(points []paper.RubricPoint, contract CreateArtifactInput, candidates []CriterionCandidate) (map[string]CriterionCandidate, error) {
+	known := map[string]bool{}
+	pointIDs := map[string]bool{}
+	for _, point := range points {
+		pointIDs[point.ID] = true
+	}
+	for _, block := range contract.Blocks {
+		known[block.ID] = true
+	}
+	for _, formula := range contract.Formulas {
+		known[formula.ID] = true
+	}
+	for _, step := range contract.SolutionGraph.Steps {
+		known[step.ID] = true
+	}
+	byPoint := map[string]CriterionCandidate{}
+	for _, candidate := range candidates {
+		if err := validateCriterionCandidate(candidate, pointIDs, known, byPoint); err != nil {
+			return nil, err
+		}
+		byPoint[candidate.RubricPointID] = candidate
+	}
+	return byPoint, nil
+}
+
+func validateCriterionCandidate(candidate CriterionCandidate, pointIDs, known map[string]bool, byPoint map[string]CriterionCandidate) error {
+	if !pointIDs[candidate.RubricPointID] || !set("supported", "contradicted", "uncertain", "not_applicable", "unsupported")[candidate.Status] {
+		return ErrInvalidInput
+	}
+	if set("supported", "contradicted")[candidate.Status] && len(candidate.EvidenceIDs) == 0 {
+		return ErrInvalidInput
+	}
+	if _, exists := byPoint[candidate.RubricPointID]; exists {
+		return ErrInvalidInput
+	}
+	for _, id := range candidate.EvidenceIDs {
+		if !known[id] {
+			return ErrInvalidInput
+		}
+	}
+	return nil
+}
+
+func buildCriterionDecision(point paper.RubricPoint, evidence RubricEvidence, requirement EvidenceRequirement, input EvidenceMatchInput, pending string, byPoint map[string]CriterionCandidate) (CriterionDecision, RubricEvidence) {
+	m := matchRequirement(requirement, input)
+	// 尚未完成核验或扣分规则需复核时，先撤去确定性证据；模型候选不能覆盖这个待复核状态。
+	if pending != "" {
+		evidence.Status = "uncertain"
+		evidence.Explanation = pending
+		evidence.SourceArtifactIDs = []string{}
+		evidence.VerificationIDs = []string{}
+		evidence.Confidence = 0
+		m = unresolved(pending)
+	}
+	decision := CriterionDecision{RubricPointID: point.ID, Status: evidence.Status, MaxScore: point.Score, EvidenceIDs: uniqueIDs(evidence.SourceArtifactIDs), VerificationIDs: uniqueIDs(evidence.VerificationIDs), DecisionSource: m.source, ReasonCode: evidence.Explanation}
+	if candidate, exists := byPoint[point.ID]; exists && decision.Status == "uncertain" && pending == "" {
+		decision.EvidenceIDs = uniqueIDs(append(decision.EvidenceIDs, candidate.EvidenceIDs...))
+		decision.DecisionSource = "model_candidate"
+		decision.ReasonCode = "model_candidate_requires_review"
+	}
+	return decision, evidence
 }

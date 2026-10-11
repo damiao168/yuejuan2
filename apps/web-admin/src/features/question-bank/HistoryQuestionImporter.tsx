@@ -1,27 +1,18 @@
 import { useMemo, useRef, useState } from "react";
-import { Alert, App, Button, Checkbox, Input, List, Modal, Select, Space, Spin, Tag } from "antd";
-import { ArchiveRestore, ExternalLink, SearchCheck } from "lucide-react";
+import { Alert, App, Button, Checkbox, Modal, Select, Spin } from "antd";
+import { ArchiveRestore } from "lucide-react";
 import type {
 	QuestionBank,
-	QuestionBankBatchImportItem,
 	QuestionBankBatchImportRequest,
 	QuestionBankBatchImportResultItem,
-	QuestionBankImportPreview,
 } from "@edugrade/sdk";
 import { getExamReadiness, type ExamReadiness } from "../../api/configuration";
 import type { Question } from "../../api/papers";
 import { getUserErrorMessage } from "../../api/userError";
 import { questionBankApi } from "../../api/questionBank";
-import { questionTypeOptions } from "../../constants/examCatalog";
+import { buildHistoryImportRequest, importErrorMessage, type ImportDraft } from "./historyImportCommands";
+import { HistoryImportActions, HistoryImportPreviews, HistoryImportResults } from "./HistoryImportPresentation";
 import "./history-question-importer.css";
-
-type ImportDraft = {
-	preview: QuestionBankImportPreview;
-	itemCode: string;
-	decision: "new_item" | "new_version";
-	existingItemId?: string;
-	optionsText: string;
-};
 
 const copyrightOptions = [
 	{ label: "未知（保存为草稿）", value: "unknown" },
@@ -29,33 +20,19 @@ const copyrightOptions = [
 	{ label: "已获许可", value: "licensed" },
 ];
 
-function importErrorMessage(errorCode?: string) {
-	switch (errorCode) {
-		case "source_snapshot_unavailable": return "该题没有完整冻结来源，暂不能精选";
-		case "resource_not_found": return "来源题或目标题库不在当前授权范围";
-		case "target_revision_conflict": return "目标题库已更新，请重新预览";
-		case "command_payload_conflict": return "同一命令编号已用于不同内容";
-		case "target_locked": return "目标题库或题目已锁定";
-		default: return "精选失败，请稍后重试";
-	}
-}
-function duplicateLabel(kind: string) {
-	return kind === "exact_bundle" ? "完全重复" : kind === "similar_content" ? "相似题干" : "内容相同、评分不同";
-}
-
 export function HistoryQuestionImporter({
 	examId,
 	questions,
 	onImported,
 	onOpenBank,
 	scopeKey,
-}: {
+}: Readonly<{
 	examId: string;
 	questions: Question[];
 	onImported: () => Promise<void> | void;
-	onOpenBank?: () => void;
+	onOpenBank?: (path?: string) => void;
 	scopeKey: string;
-}) {
+}>) {
 	const { message } = App.useApp();
 	const [open, setOpen] = useState(false);
 	const [loading, setLoading] = useState(false);
@@ -160,36 +137,9 @@ export function HistoryQuestionImporter({
 		setConfirming(true);
 		try {
 			if (!pending.current && selectedBank) {
-				const requests: QuestionBankBatchImportItem[] = [];
-				for (const draft of drafts) {
-					let expectedRevision = selectedBank.revision;
-					if (draft.decision === "new_version" && draft.existingItemId) {
-						const existing = await questionBankApi.getQuestionBankItem({ path: { itemId: draft.existingItemId } });
-						expectedRevision = existing.item.revision;
-					}
-					const options = draft.optionsText.split("\n").map((value) => value.trim()).filter(Boolean);
-					requests.push({
-						question_id: draft.preview.question_id,
-						target_bank_id: selectedBank.id,
-						source_snapshot_id: draft.preview.source.readiness_snapshot_id,
-						assessment_snapshot_id: draft.preview.source.assessment_snapshot_id,
-						scoring_source: "original_exam",
-						dedup_decision: draft.decision,
-						...(draft.decision === "new_version" ? { existing_item_id: draft.existingItemId } : {}),
-						expected_target_revision: expectedRevision,
-						expected_target_schema_version: selectedBank.metadata_schema_version,
-						mapping: {
-							...(draft.decision === "new_item" ? { item_code: draft.itemCode.trim() } : {}),
-							...(gradeScope.trim() ? { grade_scope: gradeScope.trim() } : {}),
-							copyright,
-							intended_use: "exam",
-							options,
-						},
-						command_id: crypto.randomUUID(),
-					} as QuestionBankBatchImportItem);
-				}
+				const request = buildHistoryImportRequest(drafts, selectedBank, gradeScope, copyright);
 				// 逐题命令先落到本地再发送；响应丢失时重放同一命令编号，服务端才能识别为同一次导入。
-				pending.current = { items: requests };
+				pending.current = request instanceof Promise ? await request : request;
 				localStorage.setItem(storageKey, JSON.stringify(pending.current));
 				setHasPending(true);
 			}
@@ -233,19 +183,15 @@ export function HistoryQuestionImporter({
 			width={920}
 			styles={{ body: { maxHeight: "min(65vh, 720px)", overflowY: "auto", paddingRight: 4 } }}
 			onCancel={() => setOpen(false)}
-			footer={<Space wrap>
-				<Button onClick={() => setOpen(false)}>关闭</Button>
-				<Button icon={<SearchCheck size={16} />} loading={previewing} disabled={loading || confirming || (hasPending && !canRepreview) || Boolean(frozenUnavailable) || !bankId || selectedIds.length === 0} onClick={() => void preview()}>{hasPending ? "重新预览失败项" : "预览冻结内容"}</Button>
-				<Button type="primary" loading={confirming} disabled={!hasPending && (!drafts.length || drafts.some((draft) => !draft.preview.available || (draft.decision === "new_version" && !draft.existingItemId)))} onClick={() => void confirm()}>{hasPending ? "重试原逐题命令" : `生成 ${drafts.length || ""} 个草稿`}</Button>
-			</Space>}
+			footer={<HistoryImportActions loading={loading} confirming={confirming} previewing={previewing} hasPending={hasPending} canRepreview={canRepreview} frozenUnavailable={Boolean(frozenUnavailable)} bankId={bankId} selectedCount={selectedIds.length} drafts={drafts} close={() => setOpen(false)} preview={preview} confirm={confirm} />}
 		>
 			{loading ? <div className="history-import-loading"><Spin /> 正在读取冻结来源与已授权题库…</div> : null}
-			{hasPending ? <Alert type="warning" showIcon message="已保留原导入请求" description={canRepreview ? "成功题目已移出待处理列表。重试将复用失败题目的原请求；也可重新预览失败项后调整。" : "导入结果尚未确认。请重试原逐题命令核对结果，再调整选择，以免重复生成草稿。"} /> : null}
-			{frozenUnavailable ? <Alert type="warning" showIcon message="没有可导入的冻结来源" description="原记录没有保存完整题目内容，或当前配置尚未确认。请在考试准备中重新确认后再精选。" /> : null}
-			{readiness?.snapshot_id && readiness.import_snapshot_available ? <Alert type="info" showIcon message="已锁定来源快照" description="读取考试确认时保存的内容，不包含学生作答与原答题区坐标。" /> : null}
+			{hasPending ? <Alert type="warning" showIcon message="未完成的导入已保留" description={canRepreview ? "成功题目已移出列表。可重试未完成题目，或重新预览后调整。" : "结果尚未确认，请先重试本次导入。系统会核对原请求，避免重复生成草稿。"} /> : null}
+			{frozenUnavailable ? <Alert type="warning" showIcon message="没有可保存的已确认试卷内容" description="当前试卷尚未确认完整内容，或历史记录没有保存完整资料。请联系考试负责人核对；已结束的考试不能重新冻结准备配置。" /> : null}
+			{readiness?.snapshot_id && readiness.import_snapshot_available ? <Alert type="info" showIcon message="从已确认的试卷保存题目" description="只保存确认时的题目、答案和评分标准，不包含学生作答。保存后为题库草稿，仍需审核和发布才能选入其他考试。" /> : null}
 			<div className="history-import-controls">
 				<label><span>目标题库</span><Select value={bankId || undefined} placeholder="选择已授权题库" options={banks.map((bank) => ({ label: bank.name, value: bank.id }))} onChange={(value) => { setBankId(value); setDrafts([]); setResults([]); }} /></label>
-				<label><span>目标年级范围</span><Input value={gradeScope} placeholder="例如 grade_8；可留空后在草稿补齐" onChange={(event) => { setGradeScope(event.target.value); setDrafts([]); }} /></label>
+				<label><span>适用年级</span><Select allowClear value={gradeScope || undefined} placeholder="选择年级，可留空后补齐" options={[{value:"grade_7",label:"七年级"},{value:"grade_8",label:"八年级"},{value:"grade_9",label:"九年级"},{value:"grade_10",label:"高一"},{value:"grade_11",label:"高二"},{value:"grade_12",label:"高三"}]} onChange={value=>{setGradeScope(value ?? "");setDrafts([]);}} /></label>
 				<label><span>版权</span><Select value={copyright} options={copyrightOptions} onChange={(value) => { setCopyright(value); setDrafts([]); }} /></label>
 			</div>
 			<div className="history-import-selector">
@@ -255,25 +201,8 @@ export function HistoryQuestionImporter({
 				</Checkbox.Group>
 			</div>
 			{Object.keys(previewFailures).length ? <Alert type="warning" showIcon message="部分题目不可预览" description={<ul>{Object.entries(previewFailures).map(([id, reason]) => <li key={id}>{questions.find((question) => question.id === id)?.question_no ?? id}: {reason}</li>)}</ul>} /> : null}
-			{drafts.length ? <List
-				className="history-import-previews"
-				dataSource={drafts}
-				renderItem={(draft) => <List.Item>
-					<div className="history-import-preview">
-						<div className="history-import-preview-head"><strong>第 {draft.preview.source.question_no} 题</strong><Space wrap><Tag>{questionTypeOptions.find((option) => option.value === draft.preview.content.question_type)?.label ?? "题目"}</Tag><Tag>{draft.preview.content.default_score} 分</Tag><Tag color={draft.preview.available ? "green" : "red"}>{draft.preview.available ? "来源一致" : "来源冲突"}</Tag></Space></div>
-						<p>{draft.preview.content.stem}</p>
-						<div className="history-import-row">
-							<label><span>保存方式</span><Select value={draft.decision} options={[{ label: "新建题目", value: "new_item" }, { label: "关联为新版本", value: "new_version", disabled: draft.preview.duplicate_hints.length === 0 }]} onChange={(value) => patchDraft(draft.preview.question_id, { decision: value, existingItemId: undefined })} /></label>
-							{draft.decision === "new_item" ? <label><span>题目编码</span><Input value={draft.itemCode} onChange={(event) => patchDraft(draft.preview.question_id, { itemCode: event.target.value })} /></label> : <label><span>关联 Item</span><Select value={draft.existingItemId} options={[...new Map(draft.preview.duplicate_hints.map((hint) => [hint.item_id, { label: `${hint.item_code} · ${duplicateLabel(hint.kind)}`, value: hint.item_id }])).values()]} onChange={(value) => patchDraft(draft.preview.question_id, { existingItemId: value })} /></label>}
-						</div>
-						{draft.preview.content.assessment_archetype === "selected_response" && draft.preview.content.question_type !== "true_false" ? <label className="history-import-options"><span>选项（每行一个；历史题未冻结选项时需补齐）</span><Input.TextArea rows={3} value={draft.optionsText} onChange={(event) => patchDraft(draft.preview.question_id, { optionsText: event.target.value })} /></label> : null}
-						{draft.preview.issues.length ? <ul className="history-import-issues">{draft.preview.issues.map((issue) => <li key={`${issue.code}-${issue.field ?? ""}`}>{issue.message}</li>)}</ul> : null}
-						{draft.preview.duplicate_hints.length ? <Alert type="warning" showIcon message={`${draft.preview.duplicate_hints.length} 个目标题库命中`} description={<><p>请比较已授权题目，选择新建题目或关联为新草稿版本。</p><ul>{draft.preview.duplicate_hints.map((hint) => <li key={hint.version_id}><strong>{hint.item_code} · v{hint.version_no} · {duplicateLabel(hint.kind)}</strong><p>{hint.stem_summary}</p></li>)}</ul></>} /> : null}
-						<details><summary>冻结来源与评分事实</summary><div className="history-import-facts"><span>readiness hash：{draft.preview.source.snapshot_hash}</span><span>Assessment Snapshot：{draft.preview.source.assessment_snapshot_id}</span><span>Assessment hash：{draft.preview.source.assessment_snapshot_hash}</span><span>Profile：{JSON.stringify(draft.preview.source.profile_snapshot)}</span><span>Archetype：{JSON.stringify(draft.preview.source.archetype_snapshot)}</span><span>答案：{JSON.stringify(draft.preview.scoring.answer)}</span><span>解析：{JSON.stringify(draft.preview.scoring.solution)}</span><span>Rubric：{JSON.stringify(draft.preview.scoring.rubric)}</span><span>附件：{draft.preview.scoring.assets.map((asset) => asset.name).join("、") || "无"}</span></div></details>
-					</div>
-				</List.Item>}
-			/> : null}
-			{results.length ? <Alert type={results.every((item) => item.status === "succeeded") ? "success" : "warning"} showIcon message="逐题导入回执" description={<><ul>{results.map((item) => <li key={item.command_id}>第 {questions.find((question) => question.id === item.question_id)?.question_no ?? item.question_id} 题：{item.status === "succeeded" ? `已生成 Draft ${item.result?.version.id.slice(0, 8)}` : `${importErrorMessage(item.error_code)}${item.retryable ? "（可重试）" : ""}`}</li>)}</ul>{results.some((item) => item.status === "succeeded") && onOpenBank ? <Button type="link" icon={<ExternalLink size={14} />} onClick={onOpenBank}>打开题库审核草稿</Button> : null}</>} /> : null}
+			<HistoryImportPreviews drafts={drafts} patchDraft={patchDraft} />
+			<HistoryImportResults results={results} questions={questions} onOpenBank={onOpenBank} />
 		</Modal>
 	</>;
 }

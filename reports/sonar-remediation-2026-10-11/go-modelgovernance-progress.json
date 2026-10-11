@@ -1,0 +1,403 @@
+{
+  "updated_at_utc": "2026-10-11T10:26:43.019278+00:00",
+  "original_count": 12,
+  "files_count": 6,
+  "issues": [
+    {
+      "key": "d6c9fc78-8075-4d13-85b4-554748ddd284",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/modelgovernance/governance_routing_state_refactor_test.go",
+      "original_line": 201,
+      "state": "validated_fix_pending_platform_rescan",
+      "batch": "modelgovernance-critical-01",
+      "change": "按协议编码/请求生命周期/错误原子性/流事件阶段抽取具名测试辅助函数，保留原测试案例与所有失败/日志调用",
+      "current_sha256": "a806847943e490918e3b01850779ee74d78ec9ed0f8f3f97122682f3bf62a4a9",
+      "validation": {
+        "report": "go-modelgovernance-test-execution.json",
+        "baseline_exit_code": 0,
+        "current_exit_code": 0,
+        "current_sha256": "a806847943e490918e3b01850779ee74d78ec9ed0f8f3f97122682f3bf62a4a9",
+        "same_test_ids": true,
+        "same_skip_ids": true,
+        "same_stream_traces": true
+      }
+    },
+    {
+      "key": "8bacfdbb-b883-458b-a02b-67ca11b48c96",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/modelgovernance/managed_agent_http_test.go",
+      "original_line": 38,
+      "state": "validated_fix_pending_platform_rescan",
+      "batch": "modelgovernance-critical-01",
+      "change": "按协议编码/请求生命周期/错误原子性/流事件阶段抽取具名测试辅助函数，保留原测试案例与所有失败/日志调用",
+      "current_sha256": "e2fd0b0f0db78f74723375a86e6306ea7131d52ccf58e6261f7a844a64b4df22",
+      "validation": {
+        "report": "go-modelgovernance-test-execution.json",
+        "baseline_exit_code": 0,
+        "current_exit_code": 0,
+        "current_sha256": "e2fd0b0f0db78f74723375a86e6306ea7131d52ccf58e6261f7a844a64b4df22",
+        "same_test_ids": true,
+        "same_skip_ids": true,
+        "same_stream_traces": true
+      }
+    },
+    {
+      "key": "6e588db2-cc1a-479a-acc1-e4d166535fae",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/modelgovernance/managed_agent_http_test.go",
+      "original_line": 185,
+      "state": "validated_fix_pending_platform_rescan",
+      "batch": "modelgovernance-critical-01",
+      "change": "按协议编码/请求生命周期/错误原子性/流事件阶段抽取具名测试辅助函数，保留原测试案例与所有失败/日志调用",
+      "current_sha256": "e2fd0b0f0db78f74723375a86e6306ea7131d52ccf58e6261f7a844a64b4df22",
+      "validation": {
+        "report": "go-modelgovernance-test-execution.json",
+        "baseline_exit_code": 0,
+        "current_exit_code": 0,
+        "current_sha256": "e2fd0b0f0db78f74723375a86e6306ea7131d52ccf58e6261f7a844a64b4df22",
+        "same_test_ids": true,
+        "same_skip_ids": true,
+        "same_stream_traces": true
+      }
+    },
+    {
+      "key": "9183213a-96e9-4ffc-a158-024b78b4a23e",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/modelgovernance/managed_agent_http_test.go",
+      "original_line": 323,
+      "state": "validated_fix_pending_platform_rescan",
+      "batch": "modelgovernance-critical-01",
+      "change": "按协议编码/请求生命周期/错误原子性/流事件阶段抽取具名测试辅助函数，保留原测试案例与所有失败/日志调用",
+      "current_sha256": "e2fd0b0f0db78f74723375a86e6306ea7131d52ccf58e6261f7a844a64b4df22",
+      "validation": {
+        "report": "go-modelgovernance-test-execution.json",
+        "baseline_exit_code": 0,
+        "current_exit_code": 0,
+        "current_sha256": "e2fd0b0f0db78f74723375a86e6306ea7131d52ccf58e6261f7a844a64b4df22",
+        "same_test_ids": true,
+        "same_skip_ids": true,
+        "same_stream_traces": true
+      }
+    },
+    {
+      "key": "d75154b5-0a50-45fc-95e5-97e5587b085b",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/modelgovernance/managed_chat_test.go",
+      "original_line": 97,
+      "state": "validated_fix_pending_platform_rescan",
+      "batch": "modelgovernance-critical-01",
+      "change": "按协议编码/请求生命周期/错误原子性/流事件阶段抽取具名测试辅助函数，保留原测试案例与所有失败/日志调用",
+      "current_sha256": "473cb0e5b1eb52518229d15da87b5ff949880088785223231c315d5b5f70f3f1",
+      "validation": {
+        "report": "go-modelgovernance-test-execution.json",
+        "baseline_exit_code": 0,
+        "current_exit_code": 0,
+        "current_sha256": "473cb0e5b1eb52518229d15da87b5ff949880088785223231c315d5b5f70f3f1",
+        "same_test_ids": true,
+        "same_skip_ids": true,
+        "same_stream_traces": true
+      }
+    },
+    {
+      "key": "c53a9855-5f50-4264-850d-ed0490987eaf",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/modelgovernance/managed_config_probe_http_test.go",
+      "original_line": 100,
+      "state": "validated_fix_pending_platform_rescan",
+      "batch": "modelgovernance-critical-01",
+      "change": "按协议编码/请求生命周期/错误原子性/流事件阶段抽取具名测试辅助函数，保留原测试案例与所有失败/日志调用",
+      "current_sha256": "f9b4eb670a87ffa0c5b11049900cd73b8df99780313956cb0d354a1da20259aa",
+      "validation": {
+        "report": "go-modelgovernance-test-execution.json",
+        "baseline_exit_code": 0,
+        "current_exit_code": 0,
+        "current_sha256": "f9b4eb670a87ffa0c5b11049900cd73b8df99780313956cb0d354a1da20259aa",
+        "same_test_ids": true,
+        "same_skip_ids": true,
+        "same_stream_traces": true
+      }
+    },
+    {
+      "key": "d4549b29-14ec-4f0b-b5b0-d1baf73828aa",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/modelgovernance/managed_config_probe_http_test.go",
+      "original_line": 226,
+      "state": "validated_fix_pending_platform_rescan",
+      "batch": "modelgovernance-critical-01",
+      "change": "按协议编码/请求生命周期/错误原子性/流事件阶段抽取具名测试辅助函数，保留原测试案例与所有失败/日志调用",
+      "current_sha256": "f9b4eb670a87ffa0c5b11049900cd73b8df99780313956cb0d354a1da20259aa",
+      "validation": {
+        "report": "go-modelgovernance-test-execution.json",
+        "baseline_exit_code": 0,
+        "current_exit_code": 0,
+        "current_sha256": "f9b4eb670a87ffa0c5b11049900cd73b8df99780313956cb0d354a1da20259aa",
+        "same_test_ids": true,
+        "same_skip_ids": true,
+        "same_stream_traces": true
+      }
+    },
+    {
+      "key": "5719ee29-7260-4201-816e-0b17f1a38d0d",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/modelgovernance/managed_config_probe_http_test.go",
+      "original_line": 327,
+      "state": "validated_fix_pending_platform_rescan",
+      "batch": "modelgovernance-critical-01",
+      "change": "按协议编码/请求生命周期/错误原子性/流事件阶段抽取具名测试辅助函数，保留原测试案例与所有失败/日志调用",
+      "current_sha256": "f9b4eb670a87ffa0c5b11049900cd73b8df99780313956cb0d354a1da20259aa",
+      "validation": {
+        "report": "go-modelgovernance-test-execution.json",
+        "baseline_exit_code": 0,
+        "current_exit_code": 0,
+        "current_sha256": "f9b4eb670a87ffa0c5b11049900cd73b8df99780313956cb0d354a1da20259aa",
+        "same_test_ids": true,
+        "same_skip_ids": true,
+        "same_stream_traces": true
+      }
+    },
+    {
+      "key": "8303d0cd-5224-4012-b849-39040b6c0bf5",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/modelgovernance/managed_governance_refactor_test.go",
+      "original_line": 201,
+      "state": "validated_fix_pending_platform_rescan",
+      "batch": "modelgovernance-critical-01",
+      "change": "按协议编码/请求生命周期/错误原子性/流事件阶段抽取具名测试辅助函数，保留原测试案例与所有失败/日志调用",
+      "current_sha256": "cdbd51253074184ebb1d02f26de099a11a4046312b5472a9ffef821c84e0f562",
+      "validation": {
+        "report": "go-modelgovernance-test-execution.json",
+        "baseline_exit_code": 0,
+        "current_exit_code": 0,
+        "current_sha256": "cdbd51253074184ebb1d02f26de099a11a4046312b5472a9ffef821c84e0f562",
+        "same_test_ids": true,
+        "same_skip_ids": true,
+        "same_stream_traces": true
+      }
+    },
+    {
+      "key": "358bf845-2379-4d4b-93e6-6e324b3cf411",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/modelgovernance/managed_governance_refactor_test.go",
+      "original_line": 326,
+      "state": "validated_fix_pending_platform_rescan",
+      "batch": "modelgovernance-critical-01",
+      "change": "按协议编码/请求生命周期/错误原子性/流事件阶段抽取具名测试辅助函数，保留原测试案例与所有失败/日志调用",
+      "current_sha256": "cdbd51253074184ebb1d02f26de099a11a4046312b5472a9ffef821c84e0f562",
+      "validation": {
+        "report": "go-modelgovernance-test-execution.json",
+        "baseline_exit_code": 0,
+        "current_exit_code": 0,
+        "current_sha256": "cdbd51253074184ebb1d02f26de099a11a4046312b5472a9ffef821c84e0f562",
+        "same_test_ids": true,
+        "same_skip_ids": true,
+        "same_stream_traces": true
+      }
+    },
+    {
+      "key": "5ba5d602-e0e2-4d12-b50b-18f8682837aa",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/modelgovernance/managed_governance_refactor_test.go",
+      "original_line": 401,
+      "state": "validated_fix_pending_platform_rescan",
+      "batch": "modelgovernance-critical-01",
+      "change": "按协议编码/请求生命周期/错误原子性/流事件阶段抽取具名测试辅助函数，保留原测试案例与所有失败/日志调用",
+      "current_sha256": "cdbd51253074184ebb1d02f26de099a11a4046312b5472a9ffef821c84e0f562",
+      "validation": {
+        "report": "go-modelgovernance-test-execution.json",
+        "baseline_exit_code": 0,
+        "current_exit_code": 0,
+        "current_sha256": "cdbd51253074184ebb1d02f26de099a11a4046312b5472a9ffef821c84e0f562",
+        "same_test_ids": true,
+        "same_skip_ids": true,
+        "same_stream_traces": true
+      }
+    },
+    {
+      "key": "4c83193b-668a-4d70-bf34-df8c7edb4160",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/modelgovernance/role_binding_test.go",
+      "original_line": 52,
+      "state": "validated_fix_pending_platform_rescan",
+      "batch": "modelgovernance-critical-01",
+      "change": "按协议编码/请求生命周期/错误原子性/流事件阶段抽取具名测试辅助函数，保留原测试案例与所有失败/日志调用",
+      "current_sha256": "b099d73089c5f6fa2cc2073e2a6743838b83043efea0e7b8b4ed89cfea1e2242",
+      "validation": {
+        "report": "go-modelgovernance-test-execution.json",
+        "baseline_exit_code": 0,
+        "current_exit_code": 0,
+        "current_sha256": "b099d73089c5f6fa2cc2073e2a6743838b83043efea0e7b8b4ed89cfea1e2242",
+        "same_test_ids": true,
+        "same_skip_ids": true,
+        "same_stream_traces": true
+      }
+    }
+  ],
+  "files": [
+    {
+      "path": "services/api-gateway/internal/modelgovernance/governance_routing_state_refactor_test.go",
+      "before_sha256": "9638351127bf13c6ff46f6a8b6b97b0cd46f65e32de74f9723915756981c9775",
+      "current_sha256": "a806847943e490918e3b01850779ee74d78ec9ed0f8f3f97122682f3bf62a4a9",
+      "full_file_review_status": "reviewed",
+      "reviewed_lines_before": 429,
+      "original_test_identities_preserved": true,
+      "failure_and_log_call_inventory_preserved": true,
+      "failure_and_log_call_count": 31,
+      "tests": "passed_baseline_overlay_and_current",
+      "gofmt_syntax_validation": {
+        "exit_code": 0,
+        "command": "gofmt -w <six owned files>"
+      },
+      "validation": {
+        "report": "go-modelgovernance-test-execution.json",
+        "baseline_exit_code": 0,
+        "current_exit_code": 0,
+        "current_sha256": "a806847943e490918e3b01850779ee74d78ec9ed0f8f3f97122682f3bf62a4a9",
+        "same_test_ids": true,
+        "same_skip_ids": true,
+        "same_stream_traces": true
+      }
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/managed_agent_http_test.go",
+      "before_sha256": "e118d8951e4a67860ff841b12839cc94e182391baeb591ef6ca179e81c5d276c",
+      "current_sha256": "e2fd0b0f0db78f74723375a86e6306ea7131d52ccf58e6261f7a844a64b4df22",
+      "full_file_review_status": "reviewed",
+      "reviewed_lines_before": 367,
+      "original_test_identities_preserved": true,
+      "failure_and_log_call_inventory_preserved": true,
+      "failure_and_log_call_count": 37,
+      "tests": "passed_baseline_overlay_and_current",
+      "gofmt_syntax_validation": {
+        "exit_code": 0,
+        "command": "gofmt -w <six owned files>"
+      },
+      "validation": {
+        "report": "go-modelgovernance-test-execution.json",
+        "baseline_exit_code": 0,
+        "current_exit_code": 0,
+        "current_sha256": "e2fd0b0f0db78f74723375a86e6306ea7131d52ccf58e6261f7a844a64b4df22",
+        "same_test_ids": true,
+        "same_skip_ids": true,
+        "same_stream_traces": true
+      }
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/managed_chat_test.go",
+      "before_sha256": "ce530ef8f35ef8a1713b32836d2e3b182dd6963d87947e4146b79f0cc6fafa7c",
+      "current_sha256": "473cb0e5b1eb52518229d15da87b5ff949880088785223231c315d5b5f70f3f1",
+      "full_file_review_status": "reviewed",
+      "reviewed_lines_before": 175,
+      "original_test_identities_preserved": true,
+      "failure_and_log_call_inventory_preserved": true,
+      "failure_and_log_call_count": 19,
+      "tests": "passed_baseline_overlay_and_current",
+      "gofmt_syntax_validation": {
+        "exit_code": 0,
+        "command": "gofmt -w <six owned files>"
+      },
+      "validation": {
+        "report": "go-modelgovernance-test-execution.json",
+        "baseline_exit_code": 0,
+        "current_exit_code": 0,
+        "current_sha256": "473cb0e5b1eb52518229d15da87b5ff949880088785223231c315d5b5f70f3f1",
+        "same_test_ids": true,
+        "same_skip_ids": true,
+        "same_stream_traces": true
+      }
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/managed_config_probe_http_test.go",
+      "before_sha256": "9b70a95056ad98ba69e35f536fb2dd1c12231eb57844440410ee87932ce113c9",
+      "current_sha256": "f9b4eb670a87ffa0c5b11049900cd73b8df99780313956cb0d354a1da20259aa",
+      "full_file_review_status": "reviewed",
+      "reviewed_lines_before": 617,
+      "original_test_identities_preserved": true,
+      "failure_and_log_call_inventory_preserved": true,
+      "failure_and_log_call_count": 45,
+      "tests": "passed_baseline_overlay_and_current",
+      "gofmt_syntax_validation": {
+        "exit_code": 0,
+        "command": "gofmt -w <six owned files>"
+      },
+      "validation": {
+        "report": "go-modelgovernance-test-execution.json",
+        "baseline_exit_code": 0,
+        "current_exit_code": 0,
+        "current_sha256": "f9b4eb670a87ffa0c5b11049900cd73b8df99780313956cb0d354a1da20259aa",
+        "same_test_ids": true,
+        "same_skip_ids": true,
+        "same_stream_traces": true
+      }
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/managed_governance_refactor_test.go",
+      "before_sha256": "6e3bd6be19c04450c0f0870b04f6c78d8a82c2a9e99fc5467ffc72d19bab31d8",
+      "current_sha256": "cdbd51253074184ebb1d02f26de099a11a4046312b5472a9ffef821c84e0f562",
+      "full_file_review_status": "reviewed",
+      "reviewed_lines_before": 499,
+      "original_test_identities_preserved": true,
+      "failure_and_log_call_inventory_preserved": true,
+      "failure_and_log_call_count": 42,
+      "tests": "passed_baseline_overlay_and_current",
+      "gofmt_syntax_validation": {
+        "exit_code": 0,
+        "command": "gofmt -w <six owned files>"
+      },
+      "validation": {
+        "report": "go-modelgovernance-test-execution.json",
+        "baseline_exit_code": 0,
+        "current_exit_code": 0,
+        "current_sha256": "cdbd51253074184ebb1d02f26de099a11a4046312b5472a9ffef821c84e0f562",
+        "same_test_ids": true,
+        "same_skip_ids": true,
+        "same_stream_traces": true
+      }
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/role_binding_test.go",
+      "before_sha256": "3a28b6d0c8995e1c4458df30f36b455898cf37d0745929d99f3bbd184bb2f1b2",
+      "current_sha256": "b099d73089c5f6fa2cc2073e2a6743838b83043efea0e7b8b4ed89cfea1e2242",
+      "full_file_review_status": "reviewed",
+      "reviewed_lines_before": 230,
+      "original_test_identities_preserved": true,
+      "failure_and_log_call_inventory_preserved": true,
+      "failure_and_log_call_count": 16,
+      "tests": "passed_baseline_overlay_and_current",
+      "gofmt_syntax_validation": {
+        "exit_code": 0,
+        "command": "gofmt -w <six owned files>"
+      },
+      "validation": {
+        "report": "go-modelgovernance-test-execution.json",
+        "baseline_exit_code": 0,
+        "current_exit_code": 0,
+        "current_sha256": "b099d73089c5f6fa2cc2073e2a6743838b83043efea0e7b8b4ed89cfea1e2242",
+        "same_test_ids": true,
+        "same_skip_ids": true,
+        "same_stream_traces": true
+      }
+    }
+  ],
+  "platform_actions_performed": false,
+  "runtime_validation": "passed",
+  "static_verification_limit": "失败/日志调用多重集及原Test身份保留仅证明未删断言，不替代实际测试、执行次序审读或平台复扫",
+  "static_validation": {
+    "report": "go-modelgovernance-static-validation.json",
+    "passed": true
+  },
+  "summary": {
+    "validated_fix_pending_platform_rescan": 12
+  }
+}

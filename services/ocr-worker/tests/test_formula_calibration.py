@@ -84,13 +84,8 @@ def test_latency_goal_is_explicit_not_inferred_from_capacity():
 
 @pytest.mark.parametrize("batch_sizes", [[], [0], [17]])
 def test_invalid_batch_sweep_is_rejected(batch_sizes):
-    with pytest.raises(ValueError, match="batch sizes"):
-        calibrate_formula_runtime(
-            settings(),
-            [b"one"],
-            batch_sizes=batch_sizes,
-            repeats=1,
-            lifecycle_goal="compatibility",
-            engine=FakeEngine(),
-            detector=FakeDetector(),
-        )
+    test_settings = settings()
+    engine = FakeEngine()
+    detector = FakeDetector()
+    with pytest.raises(ValueError, match='batch sizes'):
+        calibrate_formula_runtime(test_settings, [b'one'], batch_sizes=batch_sizes, repeats=1, lifecycle_goal='compatibility', engine=engine, detector=detector)

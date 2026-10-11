@@ -30,6 +30,16 @@ func TestMathUnderstandingContractKeepsEvidenceAndSubjectBoundaries(t *testing.T
 	if _, ok := paths["/api/v1/math-answer-segments/{segmentId}/rubric-score"]; !ok {
 		t.Fatal("missing frozen math scoring preview route")
 	}
+	assertMathScoringPreviewAuthority(t, schemas)
+	assertMathModelCandidateAuthority(t, schemas)
+	assertMathSubjectiveSuggestionBinding(t, schemas)
+	assertMathUnderstandingEvidenceAndSDK(t, schemas)
+	assertMathArtifactMetadataAndPilotSubjectBoundaries(t, schemas)
+}
+
+// 评分预览不能获得最终成绩权限，不确定依据必须允许空分数。
+func assertMathScoringPreviewAuthority(t *testing.T, schemas map[string]any) {
+	t.Helper()
 	score := object(t, schemas, "MathRubricScoreResponse")
 	scoreProperties := object(t, score, "properties")
 	if object(t, scoreProperties, "scope")["const"] != "teacher_suggestion_only" || object(t, scoreProperties, "requires_human_review")["const"] != true {
@@ -44,6 +54,11 @@ func TestMathUnderstandingContractKeepsEvidenceAndSubjectBoundaries(t *testing.T
 	if _, ok := object(t, decisionProperties, "awarded_score")["anyOf"]; !ok {
 		t.Fatal("uncertain criterion must allow a null score")
 	}
+}
+
+// 模型只能提出语义候选，不得自行发明任何评分字段。
+func assertMathModelCandidateAuthority(t *testing.T, schemas map[string]any) {
+	t.Helper()
 	candidate := object(t, schemas, "MathCriterionCandidate")
 	if candidate["additionalProperties"] != false {
 		t.Fatal("model candidate must reject invented score fields")
@@ -62,6 +77,11 @@ func TestMathUnderstandingContractKeepsEvidenceAndSubjectBoundaries(t *testing.T
 			t.Fatalf("grading-agent v2 semantic candidate controls %s", property)
 		}
 	}
+}
+
+// 主观题建议必须绑定不可变数学证据并保留人工复核要求。
+func assertMathSubjectiveSuggestionBinding(t *testing.T, schemas map[string]any) {
+	t.Helper()
 	gradeProperties := object(t, object(t, schemas, "SubjectiveAIGrade"), "properties")
 	for _, property := range []string{"math_artifact_id", "math_artifact_version", "math_correction_revision", "math_scoring_version"} {
 		if _, ok := gradeProperties[property]; !ok {
@@ -71,6 +91,11 @@ func TestMathUnderstandingContractKeepsEvidenceAndSubjectBoundaries(t *testing.T
 	if object(t, gradeProperties, "needs_human_review")["const"] != true {
 		t.Fatal("subjective AI suggestion expanded final-grade authority")
 	}
+}
+
+// 有效证据在HTTP与SDK中保持有类型的可空数组和修订字段。
+func assertMathUnderstandingEvidenceAndSDK(t *testing.T, schemas map[string]any) {
+	t.Helper()
 	understanding := object(t, schemas, "MathUnderstandingResponse")
 	understandingProperties := object(t, understanding, "properties")
 	for _, property := range []string{"artifact", "effective_artifact", "correction_revision", "corrected", "corrections"} {
@@ -98,6 +123,11 @@ func TestMathUnderstandingContractKeepsEvidenceAndSubjectBoundaries(t *testing.T
 			t.Fatalf("effective %s must remain a typed nullable evidence array in the SDK", property)
 		}
 	}
+}
+
+// 证据修订元数据、公式候选与试点学科边界共同约束可追溯的建议能力。
+func assertMathArtifactMetadataAndPilotSubjectBoundaries(t *testing.T, schemas map[string]any) {
+	t.Helper()
 	artifactProperties := object(t, object(t, schemas, "MathUnderstandingArtifact"), "properties")
 	for _, property := range []string{"stage", "parent_artifact_id", "correction_revision", "quality_summary"} {
 		if _, ok := artifactProperties[property]; !ok {

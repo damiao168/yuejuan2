@@ -1,0 +1,46 @@
+{
+  "started_at": "2026-10-11T17:30:20.761666+08:00",
+  "finished_at": "2026-10-11T17:32:05.226332+08:00",
+  "duration_seconds": 104.46899999999732,
+  "command": [
+    "go",
+    "test",
+    "-json",
+    "-p",
+    "1",
+    "-count=1",
+    "-timeout=5m",
+    "./internal/workspace",
+    "./internal/idempotency"
+  ],
+  "cwd": "D:\\project\\yuejuan\\services\\api-gateway",
+  "exit_code": 0,
+  "isolation": {
+    "toolchain": "local",
+    "module_proxy": "off",
+    "checksum_service": "off",
+    "GOMAXPROCS": 2,
+    "cleared_environment_names": []
+  },
+  "package_results": [
+    {
+      "Time": "2026-10-11T17:31:58.2414411+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/workspace",
+      "Elapsed": 3.041
+    },
+    {
+      "Time": "2026-10-11T17:32:04.8329561+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/idempotency",
+      "Elapsed": 1.4689999999999999
+    }
+  ],
+  "test_result_counts": {
+    "pass": 76,
+    "fail": 0,
+    "skip": 0
+  },
+  "skipped_tests": [],
+  "note": "只报告实际运行的包；环境缺失跳过项不算真实数据库或外部模型集成通过。"
+}

@@ -1,17 +1,17 @@
 import type { ReactNode } from "react";
 
-/** Keeps operational table headings, actions and table content aligned. */
+/** 让业务表格的标题、操作和表格内容保持对齐。 */
 export function DataTableShell({
   title,
   description,
   actions,
   children
-}: {
+}: Readonly<{
   title: ReactNode;
   description?: ReactNode;
   actions?: ReactNode;
   children: ReactNode;
-}) {
+}>) {
   return (
     <section className="eg-data-table-shell">
       <div className="eg-data-table-heading">

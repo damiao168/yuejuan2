@@ -1,0 +1,61 @@
+{
+  "started_at": "2026-10-11T17:12:49.554415+08:00",
+  "finished_at": "2026-10-11T17:13:43.540228+08:00",
+  "duration_seconds": 53.98400000001129,
+  "command": [
+    "go",
+    "test",
+    "-json",
+    "-p",
+    "1",
+    "-count=1",
+    "-timeout=5m",
+    "./internal/backmark",
+    "./internal/auth"
+  ],
+  "cwd": "D:\\project\\yuejuan\\services\\api-gateway",
+  "exit_code": 0,
+  "isolation": {
+    "toolchain": "local",
+    "module_proxy": "off",
+    "checksum_service": "off",
+    "GOMAXPROCS": 2,
+    "cleared_environment_names": []
+  },
+  "package_results": [
+    {
+      "Time": "2026-10-11T17:13:03.8417695+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/backmark",
+      "Elapsed": 1.518
+    },
+    {
+      "Time": "2026-10-11T17:13:43.1063986+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/auth",
+      "Elapsed": 9.45
+    }
+  ],
+  "test_result_counts": {
+    "pass": 348,
+    "fail": 0,
+    "skip": 2
+  },
+  "skipped_tests": [
+    {
+      "Time": "2026-10-11T17:13:03.8350189+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/backmark",
+      "Test": "TestPostgresBackmarkCountsAndFilteredCursorPages",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T17:13:37.9962502+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/auth",
+      "Test": "TestAuthorizationContractPostgres",
+      "Elapsed": 0
+    }
+  ],
+  "note": "只报告实际运行的包；环境缺失跳过项不算真实数据库或外部模型集成通过。"
+}

@@ -29,6 +29,28 @@ function scoreReleaseTone(status: string): StatusTone {
   return status === "published" ? "success" : "processing";
 }
 
+function releaseGateTone(gate: ScoreReleaseGate | null): StatusTone {
+  if (!gate) return "neutral";
+  return gate.passed ? "success" : "danger";
+}
+
+function releaseGateLabel(gate: ScoreReleaseGate | null): string {
+  if (!gate) return "门禁待读取";
+  return gate.passed ? "门禁通过" : "门禁待处理";
+}
+
+function releaseStatusLabel(release: ScoreRelease, publishedRelease?: ScoreRelease): string {
+  if (publishedRelease?.id === release.id) return "门户当前版本";
+  if (release.status === "published") return "历史已发布";
+  return scoreReleaseStatusLabels[release.status] ?? "未知状态";
+}
+
+function regradeStatusTone(status: RegradeJob["status"]): StatusTone {
+  if (status === "ready_for_release") return "success";
+  if (status === "cancelled") return "neutral";
+  return "processing";
+}
+
 export function ScoreReleaseWorkspace({
   canWrite,
   selectedExamId,
@@ -39,8 +61,10 @@ export function ScoreReleaseWorkspace({
   publishedRelease,
   actioning,
   releaseWorkflow,
-  regradeWorkflow
-}: {
+  regradeWorkflow,
+  onPreviewRelease,
+  portalUrl
+}: Readonly<{
   canWrite: boolean;
   selectedExamId: string;
   gradeTotal: number;
@@ -49,9 +73,11 @@ export function ScoreReleaseWorkspace({
   regradeJobs: RegradeJob[];
   publishedRelease?: ScoreRelease;
   actioning: string | null;
-  releaseWorkflow: ReturnType<typeof useScoreReleaseWorkflow>;
-  regradeWorkflow: ReturnType<typeof useRegradeWorkflow>;
-}) {
+  releaseWorkflow: Pick<ReturnType<typeof useScoreReleaseWorkflow>, "openReleaseModal" | "publishRelease" | "revokeSharedPaper">;
+  regradeWorkflow: Pick<ReturnType<typeof useRegradeWorkflow>, "openRegradeModal" | "regradeQuestionOptions" | "transitionRegrade" | "openRegradeReview" | "materializeRegradeRelease">;
+  onPreviewRelease?: (release: ScoreRelease) => void;
+  portalUrl?: string;
+}>) {
   const { openReleaseModal, publishRelease, revokeSharedPaper } = releaseWorkflow;
   const {
     openRegradeModal, regradeQuestionOptions, transitionRegrade,
@@ -61,16 +87,18 @@ export function ScoreReleaseWorkspace({
   return <section className="score-release-workspace">
     <div className="score-release-heading">
       <div>
-        <h2>正式成绩版本</h2>
-        <p>只有已发布版本会对学生生效；任何更正都以新版本发布，历史版本保持可追溯。</p>
+        <h2>学生门户成绩版本</h2>
+        <p>推荐流程：汇总并确认成绩 → 创建门户草稿 → 核对学生视角 → 发布到学生门户。创建草稿不会改变学生所见。</p>
+        <p>目标入口：{portalUrl ? <a href={portalUrl} target="_blank" rel="noreferrer">学生门户 · {portalUrl}</a> : "学生门户（入口链接尚未配置，请使用学校发放的地址）"}；学校原有成绩查询入口按需独立公开。</p>
       </div>
       <Space wrap>
-        <StatusTag tone={releaseGate?.passed ? "success" : "danger"}>{releaseGate?.passed ? "发布门禁通过" : "发布门禁待处理"}</StatusTag>
-        <Button type="primary" disabled={!canWrite || !selectedExamId || gradeTotal === 0} onClick={openReleaseModal}>创建发布草稿</Button>
+        <StatusTag tone={releaseGateTone(releaseGate)}>{releaseGateLabel(releaseGate)}</StatusTag>
+        <Button disabled={!canWrite || !selectedExamId || gradeTotal === 0} onClick={openReleaseModal}>创建门户版本草稿</Button>
       </Space>
     </div>
 
-    {releaseGate && (!releaseGate.passed || releaseGate.warnings.length > 0) ? <List
+    {!releaseGate && <Alert type="info" showIcon message="等待发布门禁数据" description="门禁结果读取完成后才能发布版本。" />}
+    {releaseGate && (!releaseGate.passed || releaseGate.warnings.length > 0) && <List
       className="score-release-gate-list"
       size="small"
       dataSource={[...releaseGate.blocking, ...releaseGate.warnings]}
@@ -79,27 +107,33 @@ export function ScoreReleaseWorkspace({
           <StatusTag tone={issue.blocking ? "danger" : "warning"}>{issue.blocking ? "阻断" : "提醒"}</StatusTag>
           <div><strong>{getSafeUserText(issue.message, "成绩质量检查未通过")}</strong><span>{issue.count} 项 · {issue.code}</span></div>
           {issue.action_route === "quality" ? <Button size="small" href={selectedExamId ? `#/admin/exams/${encodeURIComponent(selectedExamId)}/quality` : undefined}>查看质量</Button> : null}
+          {issue.action_route === "questions" ? <Button size="small" href={selectedExamId ? `#/admin/exams/${encodeURIComponent(selectedExamId)}/questions` : undefined}>配置题目</Button> : null}
           {issue.action_route === "regrade" ? <Button size="small" onClick={openRegradeModal}>查看复评</Button> : null}
         </div>
       </List.Item>}
-    /> : <Alert type="success" showIcon message="当前发布门禁通过" description="创建草稿后，仍会在实际发布时再次核验，避免状态变化后误发布。" />}
+    />}
+    {releaseGate?.passed && releaseGate.warnings.length === 0 && <Alert type="success" showIcon message="当前发布门禁通过" description="创建草稿后，仍会在实际发布时再次核验，避免状态变化后误发布。" />}
 
     <div className="score-release-columns">
       <section>
-        <div className="score-release-subhead"><h3>当前与草稿</h3><span>{scoreReleases.length} 个版本</span></div>
+        <div className="score-release-subhead"><h3>门户版本记录</h3><span>{scoreReleases.length} 个版本</span></div>
         {scoreReleases.length ? <List
           size="small"
           dataSource={scoreReleases}
-          renderItem={(release) => <List.Item actions={release.status === "draft"
-            ? [<Button key="publish" size="small" type="primary" disabled={!canWrite || !releaseGate?.passed} loading={actioning === "release-publish"} onClick={() => publishRelease(release)}>发布 V{release.version}</Button>]
-            : (publishedRelease?.id === release.id && release.visibility_policy.show_high_score_paper
-              ? [<Button key="revoke-paper" size="small" danger disabled={!canWrite} loading={actioning === "release-high-score-revoke"} onClick={() => revokeSharedPaper(release)}>撤回范例卷分享</Button>]
-              : undefined)}>
+          renderItem={(release) => {
+            const actions: React.ReactNode[] = onPreviewRelease ? [<Button key="preview" size="small" disabled={!canWrite} onClick={() => onPreviewRelease(release)}>学生视角预览 V{release.version}</Button>] : [];
+            if (release.status === "draft") {
+              actions.push(<Button key="publish" size="small" type="primary" disabled={!canWrite || !releaseGate?.passed} loading={actioning === "release-publish"} onClick={() => publishRelease(release)}>发布到门户 V{release.version}</Button>);
+            } else if (publishedRelease?.id === release.id && release.visibility_policy.show_high_score_paper) {
+              actions.push(<Button key="revoke-paper" size="small" danger disabled={!canWrite} loading={actioning === "release-high-score-revoke"} onClick={() => revokeSharedPaper(release)}>撤回范例卷分享</Button>);
+            }
+            return <List.Item actions={actions}>
             <div className="score-release-row">
               <div><strong>V{release.version} · {scoreReleaseSourceLabels[release.source] ?? "其他来源"}</strong><span>{release.reason}</span></div>
-              <StatusTag tone={scoreReleaseTone(release.status)}>{scoreReleaseStatusLabels[release.status] ?? "未知状态"}</StatusTag>
+              <StatusTag tone={scoreReleaseTone(release.status)}>{releaseStatusLabel(release, publishedRelease)}</StatusTag>
             </div>
-          </List.Item>}
+          </List.Item>;
+          }}
         /> : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="尚未创建正式成绩版本" />}
       </section>
 
@@ -120,7 +154,7 @@ export function ScoreReleaseWorkspace({
           ]}>
             <div className="score-release-row">
               <div><strong>题目复评 · 影响 {job.affected_count} 份</strong><span>{job.reason_text}</span></div>
-              <StatusTag tone={job.status === "ready_for_release" ? "success" : job.status === "cancelled" ? "neutral" : "processing"}>{regradeStatusLabels[job.status] ?? "未知状态"}</StatusTag>
+              <StatusTag tone={regradeStatusTone(job.status)}>{regradeStatusLabels[job.status] ?? "未知状态"}</StatusTag>
             </div>
           </List.Item>}
         /> : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={publishedRelease ? "当前没有题目复评任务" : "发布首个成绩版本后，可发起题目级复评"} />}

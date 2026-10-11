@@ -1,0 +1,62 @@
+{
+  "version": "1.179.0",
+  "findings": 105,
+  "rules_with_findings": 19,
+  "severities": {
+    "MEDIUM": 11,
+    "WARNING": 87,
+    "ERROR": 7
+  },
+  "errors": 16,
+  "scanned_files": 3197,
+  "rules": {
+    "audit.package_managers.dependabot.dependabot-missing-cooldown.dependabot-missing-cooldown": 11,
+    "audit.python.lang.security.audit.httpsconnection-detected.httpsconnection-detected": 1,
+    "audit.python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected": 23,
+    "audit.generic.nginx.security.header-redefinition.header-redefinition": 14,
+    "audit.javascript.lang.security.audit.unknown-value-with-script-tag.unknown-value-with-script-tag": 3,
+    "audit.python.lang.security.use-defused-xml.use-defused-xml": 2,
+    "audit.python.lang.security.use-defused-xml-parse.use-defused-xml-parse": 2,
+    "audit.generic.nginx.security.request-host-used.request-host-used": 6,
+    "audit.python.lang.security.audit.exec-detected.exec-detected": 1,
+    "audit.go.lang.security.audit.net.cookie-missing-secure.cookie-missing-secure": 9,
+    "audit.go.lang.security.audit.net.cookie-missing-httponly.cookie-missing-httponly": 5,
+    "audit.go.lang.security.audit.database.string-formatted-query.string-formatted-query": 21,
+    "audit.go.lang.security.audit.crypto.missing-ssl-minversion.missing-ssl-minversion": 1,
+    "audit.go.lang.security.audit.crypto.math_random.math-random-used": 1,
+    "audit.dockerfile.security.missing-user.missing-user": 1,
+    "audit.dockerfile.security.missing-user-entrypoint.missing-user-entrypoint": 1,
+    "audit.python.lang.security.deserialization.pickle.avoid-pickle": 1,
+    "audit.dockerfile.security.last-user-is-root.last-user-is-root": 1,
+    "audit.python.lang.security.audit.hardcoded-password-default-argument.hardcoded-password-default-argument": 1
+  },
+  "errors_by_type": {
+    "PartialParsing": 16
+  },
+  "rule_skips": [],
+  "rules_error_count": null,
+  "rules_loaded": 735,
+  "rules_run_cli": 434,
+  "rules_not_run": 301,
+  "rule_skip_detail": "raw skipped_rules 为空；不据此把全部 735 条当成已运行。283 条无本次语言，其余差额没有逐规则执行理由。",
+  "engine_requested": "OSS",
+  "human_status": {
+    "hardening": 11,
+    "false_positive": 68,
+    "needs_review": 13,
+    "context_limited": 4,
+    "needs_deployment_review": 2,
+    "test_only": 7
+  },
+  "human_severity": {
+    "low": 24,
+    "not_applicable": 68,
+    "medium": 13
+  },
+  "human_pending_findings": 0,
+  "confirmed_exploitable_production_vulnerabilities": 0,
+  "inventory_file_review": "告警位置已核验不代表每个文件全部人工审读；source-inventory 全文件仍为 pending。",
+  "post_scan_resolved_findings": [
+    "SG-090"
+  ]
+}

@@ -57,7 +57,7 @@ class ImageQualityRunner:
                     thread_name=f"image-quality-heartbeat-{self.config.worker_instance_id}",
                 ) as heartbeat:
                     self._process_job(job, heartbeat)
-            except Exception as exc:  # noqa: BLE001 - task boundary must report arbitrary decoder/client failures.
+            except Exception as exc:  # noqa: BLE001 - 任务边界必须报告解码器或客户端的任何失败。
                 self._fail_job(job, exc)
             processed += 1
         return processed

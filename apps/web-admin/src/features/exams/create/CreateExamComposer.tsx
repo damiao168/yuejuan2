@@ -19,10 +19,16 @@ const creationModes: Array<{
   icon: typeof Upload;
   recommended?: boolean;
 }> = [
-  { value: "materials", title: "从试卷资料创建", description: "已有 Word、PDF、图片或文本，创建后直接上传识别", icon: Upload, recommended: true },
+  { value: "materials", title: "从试卷资料创建", description: "上传完整试卷识别题目与分值，无需预填题目数量", icon: Upload, recommended: true },
   { value: "quick", title: "快速创建", description: "先建立考试与科目，稍后继续完善资料和设置", icon: Zap },
   { value: "template", title: "使用考试方案", description: "套用学校或系统方案中的科目和试卷结构", icon: LayoutTemplate }
 ];
+
+const creationSubmitLabels = new Map<ExamCreationMode, string>([
+  ["materials", "创建考试并上传试卷"],
+  ["template", "使用方案创建考试"],
+  ["quick", "创建考试"]
+]);
 
 function issueFor(issues: CreateExamValidationIssue[], field: string) {
   return issues.find((issue) => issue.field === field)?.message;
@@ -32,12 +38,26 @@ function FieldError({ message }: { message?: string }) {
   return message ? <span className="exam-composer-field-error" role="alert">{message}</span> : null;
 }
 
-function ClassChips({ classes, selectedIds, onChange, compact = false }: {
+function ExamSchoolField({ schools, schoolId, school, issues, onChangeSchool }: Readonly<{
+  schools: School[];
+  schoolId: string;
+  school: School | undefined;
+  issues: CreateExamValidationIssue[];
+  onChangeSchool: (schoolId: string) => void;
+}>) {
+  return <div className="exam-composer-school" data-exam-field="schoolId">
+    <span>所属学校</span>
+    {schools.length > 1 ? <Select id={createExamFieldId("schoolId")} value={schoolId || undefined} status={issueFor(issues, "schoolId") ? "error" : undefined} options={schools.map((item) => ({ label: item.name, value: item.id }))} onChange={onChangeSchool} /> : <strong>{school?.name ?? "尚未选择"}</strong>}
+    <FieldError message={issueFor(issues, "schoolId")} />
+  </div>;
+}
+
+function ClassChips({ classes, selectedIds, onChange, compact = false }: Readonly<{
   classes: SchoolClass[];
   selectedIds: string[];
   onChange: (classIds: string[]) => void;
   compact?: boolean;
-}) {
+}>) {
   const selected = new Set(selectedIds);
   return <div className={`exam-composer-chip-grid${compact ? " is-compact" : ""}`}>
     {classes.map((schoolClass) => {
@@ -56,12 +76,12 @@ function ClassChips({ classes, selectedIds, onChange, compact = false }: {
   </div>;
 }
 
-function SubjectCard({ subject, classes, issues, onChange }: {
+function SubjectCard({ subject, classes, issues, onChange }: Readonly<{
   subject: SubjectExamDraft;
   classes: SchoolClass[];
   issues: CreateExamValidationIssue[];
   onChange: (subject: SubjectExamDraft) => void;
-}) {
+}>) {
   const prefix = `subject.${subject.subject}`;
   const scoreError = issueFor(issues, `${prefix}.totalScore`);
   const durationError = issueFor(issues, `${prefix}.durationMinutes`);
@@ -74,13 +94,13 @@ function SubjectCard({ subject, classes, issues, onChange }: {
     </header>
     <div className="exam-subject-fields">
       <label className="exam-composer-field" data-exam-field={`${prefix}.totalScore`} htmlFor={createExamFieldId(`${prefix}.totalScore`)}>
-        <span>满分</span>
-        <InputNumber id={createExamFieldId(`${prefix}.totalScore`)} min={1} precision={0} value={subject.totalScore} status={scoreError ? "error" : undefined} aria-invalid={Boolean(scoreError)} addonAfter="分" onChange={(value) => onChange({ ...subject, totalScore: Number(value ?? 0) })} />
+        <span>预期满分</span>
+        <InputNumber id={createExamFieldId(`${prefix}.totalScore`)} min={1} precision={0} value={subject.totalScore} status={scoreError ? "error" : undefined} aria-invalid={Boolean(scoreError)} suffix="分" onChange={(value) => onChange({ ...subject, totalScore: Number(value ?? 0) })} />
         <FieldError message={scoreError} />
       </label>
       <label className="exam-composer-field" data-exam-field={`${prefix}.durationMinutes`} htmlFor={createExamFieldId(`${prefix}.durationMinutes`)}>
         <span>考试时间</span>
-        <InputNumber id={createExamFieldId(`${prefix}.durationMinutes`)} min={1} precision={0} value={subject.durationMinutes} status={durationError ? "error" : undefined} aria-invalid={Boolean(durationError)} addonAfter="分钟" onChange={(value) => onChange({ ...subject, durationMinutes: Number(value ?? 0) })} />
+        <InputNumber id={createExamFieldId(`${prefix}.durationMinutes`)} min={1} precision={0} value={subject.durationMinutes} status={durationError ? "error" : undefined} aria-invalid={Boolean(durationError)} suffix="分钟" onChange={(value) => onChange({ ...subject, durationMinutes: Number(value ?? 0) })} />
         <FieldError message={durationError} />
       </label>
     </div>
@@ -96,18 +116,17 @@ function SubjectCard({ subject, classes, issues, onChange }: {
   </motion.article>;
 }
 
-export function CreateExamComposer({ draft, schools, grades, classes, templates, savedAt, submitting, issues, onChange, onSubmit }: {
+export function CreateExamComposer({ draft, schools, grades, classes, templates, submitting, issues, onChange, onSubmit }: Readonly<{
   draft: CreateExamDraft;
   schools: School[];
   grades: Grade[];
   classes: SchoolClass[];
   templates: ExamTemplate[];
-  savedAt: string;
   submitting: boolean;
   issues: CreateExamValidationIssue[];
   onChange: (patch: Partial<CreateExamDraft>) => void;
   onSubmit: () => void;
-}) {
+}>) {
   const [templateOpen, setTemplateOpen] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const school = schools.find((item) => item.id === draft.schoolId);
@@ -122,6 +141,10 @@ export function CreateExamComposer({ draft, schools, grades, classes, templates,
   const changeSubjects = (subjects: string[]) => onChange({
     subjects: subjects.map((subject) => draft.subjects.find((item) => item.subject === subject) ?? createSubjectDraft(subject))
   });
+  const changeSchool = (schoolId: string) => {
+    // 更换学校后，旧学校的年级、方案和班级范围不能继续沿用。
+    onChange({ schoolId, gradeId: "", templateId: "", classIds: [], subjects: [] });
+  };
   const selectMode = (creationMode: ExamCreationMode) => {
     if (creationMode === "template") {
       onChange({ creationMode });
@@ -134,17 +157,12 @@ export function CreateExamComposer({ draft, schools, grades, classes, templates,
     onChange({ creationMode: "template", templateId: template.id, subjects: template.subjects.map(subjectDraftFromTemplate) });
     setTemplateOpen(false);
   };
-  const cta = draft.creationMode === "materials" ? "创建考试并上传试卷" : draft.creationMode === "template" ? "使用方案创建考试" : "创建考试";
+  const cta = creationSubmitLabels.get(draft.creationMode) ?? "创建考试";
 
   return <div className="exam-composer">
     <div className="exam-composer-inner">
-      <header className="exam-composer-heading">
-        <div><h1>新建考试</h1><p>先创建考试，试卷、答案和评分标准可在下一步继续配置。</p></div>
-        <span className="exam-draft-status" role="status"><Check size={14} /> {savedAt ? "已自动保存" : "正在保存草稿"}<small>{savedAt ? `保存在当前浏览器 · ${savedAt}` : ""}</small></span>
-      </header>
-
-      <section className="exam-composer-mode" aria-labelledby="creation-mode-title">
-        <div className="exam-composer-section-heading"><div><span className="exam-section-kicker">创建方式</span><h2 id="creation-mode-title">你准备怎样开始？</h2></div>{selectedTemplate ? <button type="button" onClick={() => setTemplateOpen(true)}>当前方案：{selectedTemplate.name}</button> : null}</div>
+      <section className="exam-composer-mode" aria-label="创建方式">
+        {selectedTemplate ? <div className="exam-composer-section-heading"><button type="button" onClick={() => setTemplateOpen(true)}>当前方案：{selectedTemplate.name}</button></div> : null}
         <div className="exam-mode-grid">
           {creationModes.map((item) => {
             const Icon = item.icon;
@@ -180,21 +198,17 @@ export function CreateExamComposer({ draft, schools, grades, classes, templates,
                 <FieldError message={issueFor(issues, "gradeId")} />
               </label>
             </div>
-            <div className="exam-composer-school" data-exam-field="schoolId">
-              <span>所属学校</span>
-              {schools.length > 1 ? <Select id={createExamFieldId("schoolId")} value={draft.schoolId || undefined} status={issueFor(issues, "schoolId") ? "error" : undefined} options={schools.map((item) => ({ label: item.name, value: item.id }))} onChange={(schoolId) => onChange({ schoolId, gradeId: "", templateId: "", classIds: [], subjects: [] })} /> : <strong>{school?.name ?? "尚未选择"}</strong>}
-              <FieldError message={issueFor(issues, "schoolId")} />
-            </div>
+            <ExamSchoolField schools={schools} schoolId={draft.schoolId} school={school} issues={issues} onChangeSchool={changeSchool} />
           </section>
 
           <section className="exam-section" id="exam-section-subjects" data-exam-field="subjects">
             <header><h2>2. 添加考试学科</h2><p>选择本场考试包含的学科，并设置每科满分和考试时间。</p></header>
-            <div className="exam-subject-picker" role="group" aria-label="选择考试科目">
+            <fieldset className="exam-subject-picker" aria-label="选择考试科目">
               {examSubjectOptions.map((item) => {
                 const selected = draft.subjects.some((subject) => subject.subject === item.value);
                 return <button type="button" key={item.value} className={selected ? "is-selected" : ""} aria-pressed={selected} onClick={() => changeSubjects(selected ? draft.subjects.map((subject) => subject.subject).filter((subject) => subject !== item.value) : [...draft.subjects.map((subject) => subject.subject), item.value])}>{selected ? <Check size={14} /> : null}{item.label}</button>;
               })}
-            </div>
+            </fieldset>
             <FieldError message={issueFor(issues, "subjects")} />
             <motion.div layout className="exam-subject-list">
               <AnimatePresence initial={false}>
@@ -228,6 +242,7 @@ export function CreateExamComposer({ draft, schools, grades, classes, templates,
                 <div className="exam-advanced-inline"><label className="exam-composer-field"><span>更多阅卷方式</span><Radio.Group value={draft.gradingMode} onChange={(event) => onChange({ gradingMode: event.target.value as GradingChoice })}><Radio value="double_mark">双评</Radio><Radio value="blind_double_mark">盲双评</Radio></Radio.Group></label></div>
                 <label className="exam-composer-field"><span>成绩发布</span><Select value={draft.publishPolicy} options={publishPolicyOptions} onChange={(publishPolicy) => onChange({ publishPolicy })} /></label>
                 <Checkbox checked={draft.appealEnabled} onChange={(event) => onChange({ appealEnabled: event.target.checked })}>成绩发布后允许申诉</Checkbox>
+                <p>此处选择阅卷组织方式。每道题实际采用的评分策略会在考试准备时核对并冻结，AI 建议不能代替教师确认。</p>
               </motion.div> : null}
             </AnimatePresence>
           </section>

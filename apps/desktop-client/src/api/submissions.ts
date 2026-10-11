@@ -19,6 +19,20 @@ export async function runSubmissionQualityCheck(client: DesktopApiClient, submis
   });
 }
 
+export interface SubmissionImageQuality {
+  id: string;
+  exam_id: string;
+  quality_status: string;
+  quality_issues: { code: string; message: string }[];
+  expected_page_count: number;
+  actual_page_count: number;
+}
+
+/** 页数检查的 valid 不代表图像质量通过；图像结论只从答卷的服务端聚合状态读取。 */
+export function getSubmissionImageQuality(client: DesktopApiClient, submissionId: string) {
+  return client.request<{ submission: SubmissionImageQuality }>(`/api/v1/submissions/${encodeURIComponent(submissionId)}`);
+}
+
 export async function listSubmissionPages(client: DesktopApiClient, submissionId: string) {
   return client.request<{ pages: SubmissionPage[] }>(`/api/v1/submissions/${encodeURIComponent(submissionId)}/pages`);
 }

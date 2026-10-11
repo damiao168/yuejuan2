@@ -3,6 +3,7 @@ package paper
 import (
 	"errors"
 	"net/http"
+	"strings"
 )
 
 func (h *Handler) ListTemplates(w http.ResponseWriter, r *http.Request) {
@@ -134,10 +135,24 @@ func (h *Handler) GetReadiness(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"readiness": result})
 }
 
+// ConfirmReadiness 在提供复核 hash 时只冻结该版本；冲突返回最新准备度且不改变状态。
 func (h *Handler) ConfirmReadiness(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
-	result, err := h.readiness.ConfirmReadiness(r.Context(), user.TenantID, r.PathValue("examId"), user.ID)
+	var input ConfirmReadinessInput
+	// 旧客户端没有请求体；新客户端带上复核 hash，由持锁仓储核对而非依赖界面二次读取。
+	if r.ContentLength != 0 && !decodeJSON(w, r, &input) {
+		return
+	}
+	if len(input.ExpectedConfigurationHash) > 128 || strings.TrimSpace(input.ExpectedConfigurationHash) != input.ExpectedConfigurationHash {
+		writeConfigurationError(w, r, http.StatusBadRequest, "invalid_request", "配置校验值不合法")
+		return
+	}
+	result, err := h.readiness.ConfirmReadiness(r.Context(), user.TenantID, r.PathValue("examId"), user.ID, input)
 	if err != nil {
+		if errors.Is(err, ErrReadinessChanged) {
+			writeJSON(w, http.StatusConflict, map[string]any{"error": map[string]any{"code": "readiness_configuration_changed", "message": "考试准备内容已变化，请重新核对名单和评分方式后确认"}, "readiness": result})
+			return
+		}
 		if errors.Is(err, ErrNotReady) {
 			writeJSON(w, http.StatusConflict, map[string]any{"error": map[string]any{"code": "exam_not_ready", "message": "考试配置尚未满足开考条件"}, "readiness": result})
 			return

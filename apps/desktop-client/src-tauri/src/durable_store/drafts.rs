@@ -1,4 +1,4 @@
-use rusqlite::{params, OptionalExtension};
+use rusqlite::{params, Connection, OptionalExtension, TransactionBehavior};
 use serde_json::Value;
 use tauri::AppHandle;
 
@@ -99,10 +99,55 @@ pub fn update_durable_draft_status(
 }
 
 pub fn purge_expired_durable_drafts(app: AppHandle, now: String) -> Result<usize, String> {
-    let conn = open_connection(&app)?;
+    let root = store_root(&app)?;
+    let key = master_key(&root)?;
+    let mut conn = open_connection_at(&root)?;
     initialize_schema(&conn)?;
-    conn.execute("DELETE FROM draft WHERE expires_at <= ?1", params![now])
-        .map_err(sql_error)
+    purge_expired_drafts(&mut conn, &key, &now)
+}
+
+fn purge_expired_drafts(conn: &mut Connection, key: &[u8; 32], now: &str) -> Result<usize, String> {
+    // 查询到删除使用同一写事务，避免清理期间新保存的未确认命令被旧候选误删。
+    let tx = conn
+        .transaction_with_behavior(TransactionBehavior::Immediate)
+        .map_err(sql_error)?;
+    let candidates = {
+        let mut statement = tx
+            .prepare("SELECT task_id, sync_status, payload_ciphertext, payload_nonce FROM draft WHERE expires_at <= ?1 ORDER BY task_id")
+            .map_err(sql_error)?;
+        let rows = statement
+            .query_map(params![now], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                    row.get::<_, String>(3)?,
+                ))
+            })
+            .map_err(sql_error)?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(sql_error)?;
+        rows
+    };
+    let mut removed = 0;
+    for (task_id, status, ciphertext, nonce) in candidates {
+        // 保留期只约束可清理的草稿；响应丢失后唯一的命令 ID 和原输入必须留下。
+        // 解密失败会回滚本次全部删除，不能把未知正文当成普通草稿。
+        let record: Value = decrypt_json(key, &ciphertext, &nonce)?;
+        record
+            .as_object()
+            .ok_or("expired offline draft payload is not an object; cleanup was stopped")?;
+        // 状态元数据可能比正文新；服务端成功已持久化后，冻结正文也可按保留期清理。
+        // 未提交的普通草稿也可能是唯一评分副本；不因过期而删除未同步记录。
+        if status != "synced" {
+            continue;
+        }
+        removed += tx
+            .execute("DELETE FROM draft WHERE task_id = ?1", params![task_id])
+            .map_err(sql_error)?;
+    }
+    tx.commit().map_err(sql_error)?;
+    Ok(removed)
 }
 
 fn validate_draft_status(status: &str) -> Result<(), String> {
@@ -148,4 +193,97 @@ pub(crate) fn draft_metadata(value: &Value) -> Result<DraftMetadata, String> {
     };
     validate_draft_status(&metadata.sync_status)?;
     Ok(metadata)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    const KEY: [u8; 32] = [37; 32];
+    const NOW: &str = "2026-10-04T00:00:00Z";
+
+    fn fixture() -> Connection {
+        let conn = Connection::open_in_memory().expect("open fixture");
+        initialize_schema(&conn).expect("initialize fixture");
+        conn
+    }
+
+    fn insert(conn: &Connection, id: &str, status: &str, command: bool, expires_at: &str) {
+        let mut record = json!({"taskId": id, "syncStatus": "syncing", "draft": {"score": 0}});
+        if command {
+            record["submissionCommand"] = json!({"id": "frozen-command", "payload": {"score": 0}});
+        }
+        let (ciphertext, nonce) = encrypt_json(&KEY, &record).expect("encrypt fixture");
+        conn.execute(
+            "INSERT INTO draft (task_id, anonymous_code, saved_at, expires_at, sync_status, payload_ciphertext, payload_nonce, updated_at)
+             VALUES (?1, 'anonymous', ?2, ?3, ?4, ?5, ?6, ?2)",
+            params![id, NOW, expires_at, status, ciphertext, nonce],
+        )
+        .expect("insert fixture");
+    }
+
+    fn ids(conn: &Connection) -> Vec<String> {
+        conn.prepare("SELECT task_id FROM draft ORDER BY task_id")
+            .expect("prepare remaining IDs")
+            .query_map([], |row| row.get(0))
+            .expect("query remaining IDs")
+            .collect::<Result<Vec<_>, _>>()
+            .expect("read remaining IDs")
+    }
+
+    #[test]
+    fn expired_cleanup_preserves_every_unsynced_draft_and_cleans_confirmed_records() {
+        let mut conn = fixture();
+        insert(&conn, "legacy-draft", "draft", false, NOW);
+        insert(&conn, "ordinary-failed", "failed", false, NOW);
+        insert(&conn, "confirmed", "synced", true, NOW);
+        insert(&conn, "pending-failed", "failed", true, NOW);
+        insert(&conn, "pending-syncing", "syncing", true, NOW);
+        insert(&conn, "pending-conflict", "conflict", true, NOW);
+        insert(&conn, "future", "draft", false, "2026-10-05T00:00:00Z");
+
+        assert_eq!(purge_expired_drafts(&mut conn, &KEY, NOW).unwrap(), 1);
+        assert_eq!(
+            ids(&conn),
+            vec![
+                "future",
+                "legacy-draft",
+                "ordinary-failed",
+                "pending-conflict",
+                "pending-failed",
+                "pending-syncing"
+            ]
+        );
+        let (ciphertext, nonce): (String, String) = conn
+            .query_row("SELECT payload_ciphertext, payload_nonce FROM draft WHERE task_id = 'pending-failed'", [], |row| Ok((row.get(0)?, row.get(1)?)))
+            .unwrap();
+        let record: Value = decrypt_json(&KEY, &ciphertext, &nonce).unwrap();
+        assert_eq!(record["submissionCommand"]["id"], "frozen-command");
+    }
+
+    #[test]
+    fn corrupt_expired_payload_rolls_back_other_deletions() {
+        let mut conn = fixture();
+        insert(&conn, "a-ordinary", "draft", false, NOW);
+        insert(&conn, "z-pending", "failed", true, NOW);
+        conn.execute(
+            "UPDATE draft SET payload_ciphertext = 'corrupt' WHERE task_id = 'z-pending'",
+            [],
+        )
+        .unwrap();
+
+        assert!(purge_expired_drafts(&mut conn, &KEY, NOW).is_err());
+        assert_eq!(ids(&conn), vec!["a-ordinary", "z-pending"]);
+    }
+
+    #[test]
+    fn wrong_key_preserves_all_expired_records() {
+        let mut conn = fixture();
+        insert(&conn, "ordinary", "draft", false, NOW);
+        insert(&conn, "pending", "failed", true, NOW);
+
+        assert!(purge_expired_drafts(&mut conn, &[88; 32], NOW).is_err());
+        assert_eq!(ids(&conn), vec!["ordinary", "pending"]);
+    }
 }

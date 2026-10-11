@@ -20,10 +20,7 @@ type Service struct {
 	now   func() time.Time
 }
 
-// AdmissionEvidence is a conservative projection of a completed offline run.
-// It deliberately contains no answer, Gold content, or model output.  The
-// caller still applies its own tenant policy thresholds before admitting an
-// external scoring call.
+// AdmissionEvidence 是已完成离线运行的保守投影，不包含答案、Gold 内容或模型输出；调用方允许外部评分调用前，仍须应用自身租户策略的阈值。
 type AdmissionEvidence struct {
 	Approved        bool
 	SampleCount     int
@@ -50,9 +47,7 @@ func (s *Service) AddObservation(ctx context.Context, tenantID, runID string, in
 	return s.store.AddObservation(ctx, tenantID, runID, input)
 }
 
-// Complete calculates every metric only from observations that were actually
-// recorded for this immutable run. It does not fabricate a missing model
-// response or infer a teacher reference from OCR/model output.
+// Complete 仅根据当前不可变运行实际记录的观察计算各项指标，不伪造缺失模型响应，也不从 OCR 或模型输出推断教师参考。
 // 完成时把当前观测数量作为期望值传给存储层，由存储层再次校验，防止计算期间悄悄新增样本。
 func (s *Service) Complete(ctx context.Context, tenantID, runID string) (Run, error) {
 	if s.store == nil || strings.TrimSpace(tenantID) == "" || strings.TrimSpace(runID) == "" {
@@ -76,9 +71,7 @@ func (s *Service) Complete(ctx context.Context, tenantID, runID string) (Run, er
 	return s.store.ReplaceComputed(ctx, tenantID, runID, len(items), sliceMetrics(runID, items, computedAt), responseDifficulty(runID, items, computedAt), computedAt)
 }
 
-// CompletePanel closes a panel-only evaluation run after validating every
-// de-identified A/B/C observation. Mixing legacy single-model observations
-// and panel observations in one run is rejected to preserve metric meaning.
+// CompletePanel 验证每条去标识化 A/B/C 观察后，关闭仅模型组评测的运行。同一运行不能混用旧版单模型观察和模型组观察，以保留指标含义。
 func (s *Service) CompletePanel(ctx context.Context, tenantID, runID string) (Run, PanelMetrics, error) {
 	if s == nil || s.store == nil || strings.TrimSpace(tenantID) == "" || strings.TrimSpace(runID) == "" {
 		return Run{}, PanelMetrics{}, ErrInvalidInput
@@ -130,9 +123,7 @@ func (s *Service) ListRuns(ctx context.Context, tenantID string, filter RunFilte
 	return s.store.ListRuns(ctx, tenantID, filter)
 }
 
-// ListObservations exposes the already-sanitized, opaque aligned observations
-// to evidence consumers such as A15 calibration. It does not expose answer
-// text, images, OCR output, or Gold content.
+// ListObservations 为 A15 校准等证据使用方提供已清理的不透明对齐观察，不暴露答案文本、图片、OCR 输出或 Gold 内容。
 func (s *Service) ListObservations(ctx context.Context, tenantID, runID string) ([]Observation, error) {
 	if s.store == nil || strings.TrimSpace(tenantID) == "" || strings.TrimSpace(runID) == "" {
 		return nil, ErrInvalidInput
@@ -172,10 +163,8 @@ func (s *Service) Invalidate(ctx context.Context, tenantID, runID, reason string
 	return s.store.InvalidateRun(ctx, tenantID, runID, strings.TrimSpace(reason), s.now().UTC())
 }
 
-// AdmissionEvidenceFor finds the newest completed, non-invalidated offline
-// run for the exact model/prompt/rubric and returns metrics calculated only
-// from observations in the requested subject/archetype intersection.  It is
-// intentionally fail-closed: absence of an aligned run is not an approval.
+// AdmissionEvidenceFor 查找精确模型、提示词和评分细则对应的最新已完成且未失效离线运行，只根据所请求学科与题型交集中的观察计算指标。
+// 找不到对齐运行时拒绝放行，缺失不等于批准。
 func (s *Service) AdmissionEvidenceFor(ctx context.Context, tenantID, modelReference, promptVersion, rubricVersion string, subject assessment.SubjectCode, archetype string) (AdmissionEvidence, error) {
 	if s.store == nil || strings.TrimSpace(tenantID) == "" || strings.TrimSpace(modelReference) == "" || strings.TrimSpace(promptVersion) == "" || strings.TrimSpace(rubricVersion) == "" || !subject.Valid() || !assessment.IsQuestionArchetype(archetype) {
 		return AdmissionEvidence{}, ErrInvalidInput
@@ -248,46 +237,19 @@ func calculateQualitySummary(items []Observation) QualitySummary {
 	var cropTotal, cerTotal, rubricTotal float64
 	attribution := map[ErrorSource]*ErrorAttribution{}
 	for _, item := range items {
-		if item.PageMatchCorrect != nil {
-			summary.PageMatchAccuracy.ObservedCount++
-			if *item.PageMatchCorrect {
-				pageCorrect++
-			}
-		}
-		if item.CropIoU != nil {
-			summary.MeanCropIoU.ObservedCount++
-			cropTotal += *item.CropIoU
-		}
-		if item.TranscriptionCER != nil {
-			summary.MeanTranscriptionCER.ObservedCount++
-			cerTotal += *item.TranscriptionCER
-		}
-		if item.FormulaExact != nil {
-			summary.FormulaExactRate.ObservedCount++
-			if *item.FormulaExact {
-				formulaCorrect++
-			}
-		}
-		if item.RubricAgreement != nil {
-			summary.MeanRubricCriterionAgreement.ObservedCount++
-			rubricTotal += *item.RubricAgreement
-		}
+		observeQualityRate(item.PageMatchCorrect, &summary.PageMatchAccuracy, &pageCorrect)
+		observeQualityMean(item.CropIoU, &summary.MeanCropIoU, &cropTotal)
+		observeQualityMean(item.TranscriptionCER, &summary.MeanTranscriptionCER, &cerTotal)
+		observeQualityRate(item.FormulaExact, &summary.FormulaExactRate, &formulaCorrect)
+		observeQualityMean(item.RubricAgreement, &summary.MeanRubricCriterionAgreement, &rubricTotal)
 		if item.NeedsHumanReview {
 			reviewed++
 		}
+		// 无错误但需复核的样本只计入总复核率，不计入风险错误召回率。
 		if item.ErrorSource != ErrorNone {
 			risky++
-			entry := attribution[item.ErrorSource]
-			if entry == nil {
-				entry = &ErrorAttribution{Source: item.ErrorSource}
-				attribution[item.ErrorSource] = entry
-			}
-			entry.Count++
-			if severeError(item) {
-				entry.SevereErrorCount++
-			}
+			recordErrorAttribution(attribution, item)
 			if item.NeedsHumanReview {
-				entry.HumanReviewCount++
 				riskyReviewed++
 			}
 		}
@@ -303,6 +265,7 @@ func calculateQualitySummary(items []Observation) QualitySummary {
 	if risky > 0 {
 		summary.RiskyErrorRoutingRecall = rounded(float64(riskyReviewed) / float64(risky))
 	}
+	// 来源占比以全量样本为分母，来源召回率只用该来源的错误样本；按来源排序保持输出稳定。
 	sources := make([]string, 0, len(attribution))
 	for source := range attribution {
 		sources = append(sources, string(source))
@@ -317,6 +280,40 @@ func calculateQualitySummary(items []Observation) QualitySummary {
 		summary.ErrorAttribution = append(summary.ErrorAttribution, *entry)
 	}
 	return summary
+}
+
+// 缺失质量观测不进入分母；实际观察到的 false 和零值仍计入覆盖数量。
+func observeQualityRate(value *bool, metric *CoveredRate, correct *int) {
+	if value == nil {
+		return
+	}
+	metric.ObservedCount++
+	if *value {
+		*correct += 1
+	}
+}
+
+func observeQualityMean(value *float64, metric *CoveredMean, total *float64) {
+	if value == nil {
+		return
+	}
+	metric.ObservedCount++
+	*total += *value
+}
+
+func recordErrorAttribution(attribution map[ErrorSource]*ErrorAttribution, item Observation) {
+	entry := attribution[item.ErrorSource]
+	if entry == nil {
+		entry = &ErrorAttribution{Source: item.ErrorSource}
+		attribution[item.ErrorSource] = entry
+	}
+	entry.Count++
+	if severeError(item) {
+		entry.SevereErrorCount++
+	}
+	if item.NeedsHumanReview {
+		entry.HumanReviewCount++
+	}
 }
 
 func ratioPointer(numerator, denominator int) *float64 {
@@ -354,10 +351,10 @@ func calculateMetrics(items []Observation) Metrics {
 		if severeError(item) {
 			severe++
 		}
-		if item.ModelScore < scoreEpsilon && item.ReferenceScore > scoreEpsilon {
+		if falseZeroError(item) {
 			falseZero++
 		}
-		if item.ModelScore >= item.MaxScore-scoreEpsilon && item.ReferenceScore < item.MaxScore-scoreEpsilon {
+		if falseFullError(item) {
 			falseFull++
 		}
 	}
@@ -380,9 +377,7 @@ func responseDifficulty(runID string, observations []Observation, computedAt tim
 	result := make([]ResponseDifficulty, 0, len(observations))
 	for _, item := range observations {
 		normalizedError := math.Min(1, math.Abs(item.ModelScore-item.ReferenceScore)/item.MaxScore)
-		// The score is intentionally transparent: observed normalized error plus
-		// bounded metadata friction. It is a hard-case triage hint, never an
-		// estimate of a student's ability or a final production decision.
+		// 该分值的计算保持透明：已观察到的归一化误差加上有上限的元数据差异项。它只提示疑难案例分流，不估计学生能力，也不作最终生产决策。
 		friction := 0.0
 		if item.OCRQuality == "low" {
 			friction += .15
@@ -426,20 +421,11 @@ func conservativeQWK(items []Observation) (float64, bool, string) {
 	if maxScore < 1 || maxScore > 100 || math.Abs(maxScore-math.Round(maxScore)) > scoreEpsilon {
 		return 0, false, "requires_single_integer_score_scale"
 	}
-	maxClass := int(math.Round(maxScore))
-	observed := make([][]float64, maxClass+1)
-	for i := range observed {
-		observed[i] = make([]float64, maxClass+1)
+	observed, aligned := qwkObservedDistribution(items, maxScore)
+	if !aligned {
+		return 0, false, "requires_single_integer_score_scale"
 	}
-	for _, item := range items {
-		if math.Abs(item.MaxScore-maxScore) > scoreEpsilon ||
-			math.Abs(item.ReferenceScore-math.Round(item.ReferenceScore)) > scoreEpsilon ||
-			math.Abs(item.ModelScore-math.Round(item.ModelScore)) > scoreEpsilon ||
-			item.ReferenceScore < 0 || item.ReferenceScore > maxScore || item.ModelScore < 0 || item.ModelScore > maxScore {
-			return 0, false, "requires_single_integer_score_scale"
-		}
-		observed[int(math.Round(item.ReferenceScore))][int(math.Round(item.ModelScore))]++
-	}
+	maxClass := len(observed) - 1
 	n := float64(len(items))
 	row, column := make([]float64, maxClass+1), make([]float64, maxClass+1)
 	for i := 0; i <= maxClass; i++ {
@@ -462,11 +448,29 @@ func conservativeQWK(items []Observation) (float64, bool, string) {
 	}
 	qwk := rounded(1 - weightedObserved/weightedExpected)
 	if qwk < -1 || qwk > 1 {
-		// Keep the persisted contract deliberately bounded. An exotic sparse
-		// distribution is reported as unavailable rather than silently clipped.
+		// 持久化约定有明确边界；异常稀疏分布报告为不可用，不静默截断。
 		return 0, false, "outside_conservative_qwk_range"
 	}
 	return qwk, true, ""
+}
+
+// 外层已校验整数满分；每条观察仍须对齐量表、整数得分和范围，不能用取整掩盖不对齐的样本。
+func qwkObservedDistribution(items []Observation, maxScore float64) ([][]float64, bool) {
+	maxClass := int(math.Round(maxScore))
+	observed := make([][]float64, maxClass+1)
+	for i := range observed {
+		observed[i] = make([]float64, maxClass+1)
+	}
+	for _, item := range items {
+		if math.Abs(item.MaxScore-maxScore) > scoreEpsilon ||
+			math.Abs(item.ReferenceScore-math.Round(item.ReferenceScore)) > scoreEpsilon ||
+			math.Abs(item.ModelScore-math.Round(item.ModelScore)) > scoreEpsilon ||
+			item.ReferenceScore < 0 || item.ReferenceScore > maxScore || item.ModelScore < 0 || item.ModelScore > maxScore {
+			return nil, false
+		}
+		observed[int(math.Round(item.ReferenceScore))][int(math.Round(item.ModelScore))]++
+	}
+	return observed, true
 }
 
 func scoreBand(reference, max float64) string {
@@ -481,6 +485,15 @@ func scoreBand(reference, max float64) string {
 
 func severeError(item Observation) bool {
 	return math.Abs(item.ModelScore-item.ReferenceScore) >= math.Max(1, item.MaxScore*.4)-scoreEpsilon
+}
+
+// 假零分和假满分沿用评分误差容差；参考分位于相同端点容差内时不记作端点误判。
+func falseZeroError(item Observation) bool {
+	return item.ModelScore < scoreEpsilon && item.ReferenceScore > scoreEpsilon
+}
+
+func falseFullError(item Observation) bool {
+	return item.ModelScore >= item.MaxScore-scoreEpsilon && item.ReferenceScore < item.MaxScore-scoreEpsilon
 }
 
 func rounded(value float64) float64 { return math.Round(value*1e6) / 1e6 }

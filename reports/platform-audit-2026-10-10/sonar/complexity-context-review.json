@@ -1,0 +1,60 @@
+{
+  "recorded_at": "2026-10-11T13:17:03.902048+08:00",
+  "source": "live local workspace",
+  "files": [
+    {
+      "path": "apps/student-portal/src/App.tsx",
+      "reviewed_line_ranges": [
+        [
+          1,
+          170
+        ],
+        [
+          218,
+          327
+        ]
+      ],
+      "current_sha256": "0052d450540f9d921a9786359420ca9dcd0a2c5614a4f7a800f4af470e963295",
+      "manifest_sha256": "0052d450540f9d921a9786359420ca9dcd0a2c5614a4f7a800f4af470e963295",
+      "matches_resume_manifest": true,
+      "manual_file_review_status": "pending",
+      "scope": "partial context review; not a whole-file security or architecture assessment"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/store_memory.go",
+      "reviewed_line_ranges": [
+        [
+          1,
+          98
+        ],
+        [
+          899,
+          982
+        ]
+      ],
+      "current_sha256": "22e9290b0c5445f496e9fb281d883a669c3a0ed0c6431da4e3ce5a39402d1b6e",
+      "manifest_sha256": "22e9290b0c5445f496e9fb281d883a669c3a0ed0c6431da4e3ce5a39402d1b6e",
+      "matches_resume_manifest": true,
+      "manual_file_review_status": "pending",
+      "scope": "partial context review; not a whole-file security or architecture assessment"
+    },
+    {
+      "path": "services/api-gateway/internal/paper/paper_import_reconcile.go",
+      "reviewed_line_ranges": [
+        [
+          1,
+          175
+        ],
+        [
+          537,
+          644
+        ]
+      ],
+      "current_sha256": "f2c9ec5ebb3f422dc5bb91f94089e59bc5ac592cd4b671993d1fbab5207995c7",
+      "manifest_sha256": "f2c9ec5ebb3f422dc5bb91f94089e59bc5ac592cd4b671993d1fbab5207995c7",
+      "matches_resume_manifest": true,
+      "manual_file_review_status": "pending",
+      "scope": "partial context review; not a whole-file security or architecture assessment"
+    }
+  ]
+}

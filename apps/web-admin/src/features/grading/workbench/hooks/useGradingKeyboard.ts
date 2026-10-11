@@ -1,6 +1,7 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { isInputTarget } from "../gradingWorkbench.model";
 import { gradingShortcutIntent } from "../keyboardShortcuts";
+import { useSingleKeyShortcuts } from "../shortcutPreference";
 
 export interface UseGradingKeyboardOptions {
   hasTask: boolean;
@@ -23,8 +24,19 @@ export interface UseGradingKeyboardOptions {
 }
 
 export function useGradingKeyboard(options: UseGradingKeyboardOptions) {
+  const { enabled: singleKeyShortcutsEnabled } = useSingleKeyShortcuts();
+  // options 更新会重绑监听；输入法状态保留在 ref 中，不能把重渲染当成组合结束。
+  const composition = useRef({ active: false, awaitingKeyUp: false });
   useEffect(() => {
+    const onCompositionStart = () => { composition.current = { active: true, awaitingKeyUp: false }; };
+    // 部分输入法先结束组合再发送确认 Enter；松键前仍忽略提交，避免确认候选词时误交评分。
+    const onCompositionEnd = () => { composition.current = { active: false, awaitingKeyUp: true }; };
+    const onKeyUp = () => { composition.current.awaitingKeyUp = false; };
+    const onPointerUp = () => { if (!composition.current.active) composition.current.awaitingKeyUp = false; };
+    const onBlur = () => { composition.current = { active: false, awaitingKeyUp: false }; };
     const onKeyDown = (event: KeyboardEvent) => {
+      // 系统候选窗鼠标确认可能没有页面 keyup；新的非 Enter 按键结束这次确认保护。
+      if (event.key !== "Enter") composition.current.awaitingKeyUp = false;
       // 输入法组合、弹层和控件自身的 Enter 优先，避免打字或确认对话框时误提交评分。
       const intent = gradingShortcutIntent({
         key: event.key,
@@ -32,8 +44,10 @@ export function useGradingKeyboard(options: UseGradingKeyboardOptions) {
         ctrlKey: event.ctrlKey,
         metaKey: event.metaKey,
         altKey: event.altKey,
-        isComposing: event.isComposing || event.keyCode === 229,
+        isComposing: event.isComposing || composition.current.active || (event.key === "Enter" && composition.current.awaitingKeyUp),
         repeat: event.repeat,
+        defaultPrevented: event.defaultPrevented,
+        singleKeyShortcutsEnabled,
         blocked: Boolean(document.querySelector('.ant-modal-wrap:not([style*="display: none"]), .ant-drawer-open, .ant-popover:not(.ant-popover-hidden)')),
         quickSubmit: options.quickSubmit,
         isInputTarget: isInputTarget(event.target) || (event.key === "Enter" && !event.ctrlKey && !event.metaKey && event.target instanceof Element && Boolean(event.target.closest('button, a, [role="button"], [role="checkbox"], [role="combobox"]'))),
@@ -75,7 +89,20 @@ export function useGradingKeyboard(options: UseGradingKeyboardOptions) {
           break;
       }
     };
+    // 组合事件和松键可能被输入控件截住；捕获阶段记录生命周期，快捷键仍在冒泡阶段尊重控件消费。
+    window.addEventListener("compositionstart", onCompositionStart, true);
+    window.addEventListener("compositionend", onCompositionEnd, true);
+    window.addEventListener("keyup", onKeyUp, true);
+    window.addEventListener("pointerup", onPointerUp, true);
+    window.addEventListener("blur", onBlur);
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [options]);
+    return () => {
+      window.removeEventListener("compositionstart", onCompositionStart, true);
+      window.removeEventListener("compositionend", onCompositionEnd, true);
+      window.removeEventListener("keyup", onKeyUp, true);
+      window.removeEventListener("pointerup", onPointerUp, true);
+      window.removeEventListener("blur", onBlur);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [options, singleKeyShortcutsEnabled]);
 }

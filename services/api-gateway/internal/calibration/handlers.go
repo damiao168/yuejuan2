@@ -12,6 +12,10 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/logger"
 )
 
+const (
+	reviewManagePermission = "review:manage"
+)
+
 type Handler struct {
 	service *Service
 	audit   auth.AuditRecorder
@@ -21,9 +25,7 @@ func NewHandler(service *Service, audit auth.AuditRecorder) *Handler {
 	return &Handler{service: service, audit: audit}
 }
 
-// RegisterRoutes leaves permission vocabulary with the composition root:
-// policy management is administrative; session/attempt operations are grader
-// work; qualification reads are needed both by administrators and claim gates.
+// RegisterRoutes 将权限定义留给组装入口：策略管理属于管理操作，会话和作答操作属于阅卷者工作，资格读取供管理员和领取门禁共同使用。
 func RegisterRoutes(mux *http.ServeMux, h *Handler, requireRead, requireManage, requireGrade func(http.HandlerFunc) http.Handler) {
 	mux.Handle("GET /api/v1/exams/{examId}/questions/{questionId}/calibration-policy", requireRead(h.GetPolicy))
 	mux.Handle("PUT /api/v1/exams/{examId}/questions/{questionId}/calibration-policy", requireManage(h.PutPolicy))
@@ -77,7 +79,7 @@ func (h *Handler) CreateSession(w http.ResponseWriter, r *http.Request) {
 	if graderID == "" {
 		graderID = user.ID
 	}
-	if graderID != user.ID && !auth.HasPermission(user, "review:manage") {
+	if graderID != user.ID && !auth.HasPermission(user, reviewManagePermission) {
 		httpx.Error(w, r, http.StatusForbidden, "forbidden", "only review managers may start calibration for another grader")
 		return
 	}
@@ -100,7 +102,7 @@ func (h *Handler) GetSession(w http.ResponseWriter, r *http.Request) {
 		writeHandlerError(w, r, err)
 		return
 	}
-	if session.GraderID != user.ID && !auth.HasPermission(user, "review:manage") {
+	if session.GraderID != user.ID && !auth.HasPermission(user, reviewManagePermission) {
 		httpx.Error(w, r, http.StatusForbidden, "forbidden", "calibration session belongs to another grader")
 		return
 	}
@@ -121,7 +123,7 @@ func (h *Handler) SubmitAttempt(w http.ResponseWriter, r *http.Request) {
 		writeHandlerError(w, r, err)
 		return
 	}
-	if existing.GraderID != user.ID && !auth.HasPermission(user, "review:manage") {
+	if existing.GraderID != user.ID && !auth.HasPermission(user, reviewManagePermission) {
 		httpx.Error(w, r, http.StatusForbidden, "forbidden", "calibration session belongs to another grader")
 		return
 	}
@@ -147,7 +149,7 @@ func (h *Handler) GetQualification(w http.ResponseWriter, r *http.Request) {
 	if graderID == "" {
 		graderID = user.ID
 	}
-	if graderID != user.ID && !auth.HasPermission(user, "review:manage") {
+	if graderID != user.ID && !auth.HasPermission(user, reviewManagePermission) {
 		httpx.Error(w, r, http.StatusForbidden, "forbidden", "only review managers may read another grader qualification")
 		return
 	}

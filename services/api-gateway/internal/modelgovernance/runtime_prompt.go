@@ -52,7 +52,8 @@ func NewHTTPRuntimePromptSource(baseURL string, token string, timeout time.Durat
 	}
 }
 
-// 运行时提示词必须来自固定部署清单，校验组件白名单、哈希和不可变标志后才允许评分服务使用。
+// Current 读取固定部署清单，校验组件白名单、哈希字段长度和不可变标志。
+// 这里不重新计算组件内容哈希；部署清单的内容完整性由提示词服务负责。
 func (s *HTTPRuntimePromptSource) Current(ctx context.Context) (RuntimePrompt, error) {
 	if s == nil || s.baseURL == "" || len(s.token) < 32 {
 		return RuntimePrompt{}, ErrRuntimePromptUnavailable
@@ -75,6 +76,10 @@ func (s *HTTPRuntimePromptSource) Current(ctx context.Context) (RuntimePrompt, e
 	if err != nil || int64(len(body)) > maxRuntimePromptResponseBytes {
 		return RuntimePrompt{}, ErrRuntimePromptUnavailable
 	}
+	return decodeRuntimePromptResponse(body)
+}
+
+func decodeRuntimePromptResponse(body []byte) (RuntimePrompt, error) {
 	var envelope struct {
 		Prompt RuntimePrompt `json:"prompt"`
 	}

@@ -1,0 +1,98 @@
+{
+  "component": {
+    "key": "yuejuan-remediation-html-20261011",
+    "name": "yuejuan remediation HTML verification 2026-10-11",
+    "qualifier": "TRK",
+    "measures": [
+      {
+        "metric": "complexity",
+        "value": "4"
+      },
+      {
+        "metric": "duplicated_lines_density",
+        "value": "2.4",
+        "bestValue": false
+      },
+      {
+        "metric": "duplicated_lines",
+        "value": "34",
+        "bestValue": false
+      },
+      {
+        "metric": "sqale_index",
+        "value": "7",
+        "bestValue": false
+      },
+      {
+        "metric": "sqale_rating",
+        "value": "1.0",
+        "bestValue": true
+      },
+      {
+        "metric": "bugs",
+        "value": "0",
+        "bestValue": true
+      },
+      {
+        "metric": "duplicated_files",
+        "value": "2",
+        "bestValue": false
+      },
+      {
+        "metric": "ncloc",
+        "value": "1307"
+      },
+      {
+        "metric": "lines",
+        "value": "1396"
+      },
+      {
+        "metric": "reliability_rating",
+        "value": "1.0",
+        "bestValue": true
+      },
+      {
+        "metric": "code_smells",
+        "value": "2",
+        "bestValue": false
+      },
+      {
+        "metric": "ncloc_language_distribution",
+        "value": "web=1307"
+      },
+      {
+        "metric": "security_rating",
+        "value": "1.0",
+        "bestValue": true
+      },
+      {
+        "metric": "security_hotspots",
+        "value": "0",
+        "bestValue": true
+      },
+      {
+        "metric": "security_review_rating",
+        "value": "1.0",
+        "bestValue": true
+      },
+      {
+        "metric": "alert_status",
+        "value": "OK"
+      },
+      {
+        "metric": "duplicated_blocks",
+        "value": "2",
+        "bestValue": false
+      },
+      {
+        "metric": "files",
+        "value": "4"
+      },
+      {
+        "metric": "vulnerabilities",
+        "value": "0",
+        "bestValue": true
+      }
+    ]
+  }
+}

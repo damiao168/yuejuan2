@@ -116,10 +116,17 @@ export function useCaptureMatchActions({ selectedId, loadMatching, loadDetail, s
           "人工合并散页答卷",
         ),
       );
-      await loadDetail(selectedId, true);
-      message.success("答卷已合并");
+      // 页面刷新失败不能把已保存的合并说成失败，返回的新队列仍可供面板核对目标。
+      try {
+        await loadDetail(selectedId, true);
+        message.success("答卷已合并");
+      } catch (refreshError) {
+        message.warning(`答卷已合并；批次刷新失败，请刷新查看最新页面。${getUserErrorMessage(refreshError, "暂时无法读取最新批次")}`);
+      }
     } catch (currentError) {
       message.error(getUserErrorMessage(currentError, "操作失败，请重试"));
+      // 合并面板需要区分成功与失败，不能把已处理的失败当作成功完成。
+      throw currentError;
     } finally {
       setActioning(false);
     }

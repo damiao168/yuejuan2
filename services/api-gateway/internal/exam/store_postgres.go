@@ -131,8 +131,7 @@ GROUP BY e.id, es.id
 	return out, nil
 }
 
-// ListSessionExams returns only accessible subject exams in the current session.
-// It avoids a tenant-wide exam listing on every workspace navigation.
+// ListSessionExams 仅返回当前场次中可访问的学科考试，避免每次工作区导航都查询整个租户的考试列表。
 func (s *PostgresStore) ListSessionExams(ctx context.Context, scope auth.AccessScope, sessionID string) ([]Exam, error) {
 	rows, err := s.db.QueryContext(ctx, `
 SELECT DISTINCT e.id::text, e.subject, e.total_score::float8
@@ -181,44 +180,55 @@ func (s *PostgresStore) UpdateExam(ctx context.Context, scope auth.AccessScope, 
 	if classIDsChanged && !CanChangeCandidateRoster(current.Status) {
 		return Exam{}, ErrCandidatesFrozen
 	}
-	merged := current
-	if input.SchoolID != nil {
-		merged.SchoolID = *input.SchoolID
-	}
-	if input.Name != nil {
-		merged.Name = *input.Name
-	}
-	if input.Subject != nil {
-		merged.Subject = *input.Subject
-	}
-	if input.ExamType != nil {
-		merged.ExamType = *input.ExamType
-	}
-	if input.TotalScore != nil {
-		merged.TotalScore = *input.TotalScore
-	}
-	if input.GradingMode != nil {
-		merged.GradingMode = *input.GradingMode
-	}
-	if input.AppealEnabled != nil {
-		merged.AppealEnabled = *input.AppealEnabled
-	}
-	if input.PublishPolicy != nil {
-		merged.PublishPolicy = *input.PublishPolicy
-	}
-	classIDs := current.ClassIDs
-	if input.ClassIDs != nil {
-		classIDs = *input.ClassIDs
-	}
-	if !scopeAllowsRequestedClasses(scope, merged.SchoolID, classIDs) {
+	// 可选字段先合并到局部副本；作用域检查使用合并后的学校与班级。
+	merged := applyMemoryExamUpdate(current, input)
+	if !scopeAllowsRequestedClasses(scope, merged.SchoolID, merged.ClassIDs) {
 		return Exam{}, ErrScopeForbidden
 	}
 	if err := s.requireSchoolInTenant(ctx, tx, scope.TenantID, merged.SchoolID); err != nil {
 		return Exam{}, err
 	}
-	// 只写入真正变化的基本字段，避免 name 等无关修改触发 readiness 失效触发器。
+	setClauses, args := examUpdateFields(current, merged, scope.TenantID, id, input.ExpectedRevision)
+	query := fmt.Sprintf(`
+UPDATE exam
+SET %s
+WHERE tenant_id = $1 AND id::text = $2 AND revision = $%d AND deleted_at IS NULL
+RETURNING id::text, tenant_id::text, school_id::text, name, subject, exam_type,
+          total_score::float8, status, grading_mode, appeal_enabled, publish_policy,
+          created_by::text, revision, created_at, updated_at
+`, strings.Join(setClauses, ", "), len(args))
+	row := tx.QueryRowContext(ctx, query, args...)
+	var out Exam
+	if err := scanExam(row, &out); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return Exam{}, ErrRevisionConflict
+		}
+		return Exam{}, err
+	}
+	if input.ClassIDs != nil {
+		if classIDsChanged {
+			if err := s.replaceClasses(ctx, tx, scope, id, *input.ClassIDs); err != nil {
+				return Exam{}, err
+			}
+			if err := s.refreshExamCandidateSnapshot(ctx, tx, scope.TenantID, id); err != nil {
+				return Exam{}, err
+			}
+		}
+		out.ClassIDs = cloneStrings(*input.ClassIDs)
+	} else {
+		out.ClassIDs = current.ClassIDs
+	}
+	if err := tx.Commit(); err != nil {
+		return Exam{}, err
+	}
+	return out, nil
+}
+
+// 只写入真正变化的基本字段，避免 name 等无关修改触发 readiness 失效触发器。
+// 参数按固定字段顺序追加，修订号始终占最后一个占位符。
+func examUpdateFields(current, merged Exam, tenantID, id string, expectedRevision int64) ([]string, []any) {
 	setClauses := []string{}
-	args := []any{scope.TenantID, id}
+	args := []any{tenantID, id}
 	addChangedField := func(column string, value any) {
 		args = append(args, value)
 		setClauses = append(setClauses, fmt.Sprintf("%s = $%d", column, len(args)))
@@ -248,44 +258,15 @@ func (s *PostgresStore) UpdateExam(ctx context.Context, scope auth.AccessScope, 
 		addChangedField("publish_policy", merged.PublishPolicy)
 	}
 	setClauses = append(setClauses, "revision = revision + 1", "updated_at = now()")
-	args = append(args, input.ExpectedRevision)
-	revisionPlaceholder := len(args)
-	query := fmt.Sprintf(`
-UPDATE exam
-SET %s
-WHERE tenant_id = $1 AND id::text = $2 AND revision = $%d AND deleted_at IS NULL
-RETURNING id::text, tenant_id::text, school_id::text, name, subject, exam_type,
-          total_score::float8, status, grading_mode, appeal_enabled, publish_policy,
-          created_by::text, revision, created_at, updated_at
-`, strings.Join(setClauses, ", "), revisionPlaceholder)
-	row := tx.QueryRowContext(ctx, query, args...)
-	var out Exam
-	if err := scanExam(row, &out); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return Exam{}, ErrRevisionConflict
-		}
-		return Exam{}, err
-	}
-	if input.ClassIDs != nil {
-		if classIDsChanged {
-			if err := s.replaceClasses(ctx, tx, scope, id, *input.ClassIDs); err != nil {
-				return Exam{}, err
-			}
-			if err := s.refreshExamCandidateSnapshot(ctx, tx, scope.TenantID, id); err != nil {
-				return Exam{}, err
-			}
-		}
-		out.ClassIDs = cloneStrings(*input.ClassIDs)
-	} else {
-		out.ClassIDs = current.ClassIDs
-	}
-	if err := tx.Commit(); err != nil {
-		return Exam{}, err
-	}
-	return out, nil
+	args = append(args, expectedRevision)
+	return setClauses, args
 }
 
 func (s *PostgresStore) UpdateStatus(ctx context.Context, scope auth.AccessScope, id string, status string, expectedRevision int64) (Exam, error) {
+	// 服务内调用也不能绕过整场资格检查，将业务阶段覆盖成旧式单科 archived。
+	if status == "archived" {
+		return Exam{}, ErrManagementArchiveRequired
+	}
 	if expectedRevision <= 0 {
 		return Exam{}, ErrRevisionConflict
 	}

@@ -1,0 +1,224 @@
+{
+  "audited_at_utc": "2026-10-11T11:57:21.640169+00:00",
+  "reviewer": "/root/sonar_python_fix",
+  "scope": "当前正式final-remediation-report.md全文人工审读；CSV/JSON全部2270行直接对照原始/新增平台key及最终原始状态。旧draft不作本次交付。只写独立检查，不改源、不运行测试。",
+  "analysis_id": "07c1210c-b44c-49f6-a3fe-c2bb211a0ce3",
+  "markdown_full_read": true,
+  "markdown_lines": 170,
+  "csv_rows_checked": 2270,
+  "json_rows_checked": 2270,
+  "expected_unique_keys": 2270,
+  "all_status_counts": {
+    "FALSE_POSITIVE": 34,
+    "FIXED": 2235,
+    "ACCEPTED": 1
+  },
+  "original_status_counts": {
+    "FALSE_POSITIVE": 30,
+    "FIXED": 2192,
+    "ACCEPTED": 1
+  },
+  "new47_status_counts": {
+    "FIXED": 43,
+    "FALSE_POSITIVE": 4
+  },
+  "quality_gate_status": "ERROR",
+  "gate_failed_metrics": [
+    "new_coverage"
+  ],
+  "language_rows_checked": 6,
+  "rule_rows_checked": 51,
+  "local_links_checked": [
+    {
+      "label": "最终平台与源码审计",
+      "target": "D:/project/yuejuan/reports/sonar-remediation-2026-10-11/full-checkpoint-04/final-audit.json",
+      "exists": true,
+      "sha256": "4cbb98beea63c63de64fa3b19630e8742fd5f438ea5327c97555985a678e40c5"
+    },
+    {
+      "label": "冻结源码 SHA 清单",
+      "target": "D:/project/yuejuan/reports/sonar-remediation-2026-10-11/full-checkpoint-04/source-scope.json",
+      "exists": true,
+      "sha256": "177acdb8bb41922715b9be5246f6c5e0d01f9f3f6aa7dd8c442ca72d6d38e98f"
+    },
+    {
+      "label": "最终独立审计",
+      "target": "D:/project/yuejuan/reports/sonar-remediation-2026-10-11/delivery-independent-checkpoint04-final-platform-audit-python-agent.md",
+      "exists": true,
+      "sha256": "a3b92d6c2183a4a52b6815d4c8ea7da9362d2f0644e648a59994f217fe403482"
+    },
+    {
+      "label": "2270 项最终 CSV",
+      "target": "D:/project/yuejuan/reports/sonar-remediation-2026-10-11/final-issues.csv",
+      "exists": true,
+      "sha256": "2641a22a0732a53cf1984d35328be4657ea500350ae136d22e909f0390c90692"
+    },
+    {
+      "label": "2270 项最终 JSON",
+      "target": "D:/project/yuejuan/reports/sonar-remediation-2026-10-11/final-issues.json",
+      "exists": true,
+      "sha256": "2c0667e91ab3224428f7d79851a0f07b33761cb50ea41ea995b9785badd3e7e9"
+    },
+    {
+      "label": "root-platform-disposition-results.json",
+      "target": "D:/project/yuejuan/reports/sonar-remediation-2026-10-11/root-platform-disposition-results.json",
+      "exists": true,
+      "sha256": "ce14e5dc9b75bba1616e3619204e131512105d5cdb7633e803315355bc69449d"
+    },
+    {
+      "label": "root-platform-disposition-phase02-results.json",
+      "target": "D:/project/yuejuan/reports/sonar-remediation-2026-10-11/root-platform-disposition-phase02-results.json",
+      "exists": true,
+      "sha256": "6ad621f750e94f126816d8117e082f4026289c5f3c67e6fbff2eed967d01cf0d"
+    },
+    {
+      "label": "root-platform-disposition-phase03-results.json",
+      "target": "D:/project/yuejuan/reports/sonar-remediation-2026-10-11/root-platform-disposition-phase03-results.json",
+      "exists": true,
+      "sha256": "8abfa32dbf95451836a733e9539b5d15f73dc7b08b1d95066483372ff83815c9"
+    },
+    {
+      "label": "full03-fp-independent-review-python-agent.md",
+      "target": "D:/project/yuejuan/reports/sonar-remediation-2026-10-11/full03-fp-independent-review-python-agent.md",
+      "exists": true,
+      "sha256": "9aa154859fce7a7d135bf55d24edbdbfd6c743417eb6af2020aec1f2f3c1c1c4"
+    },
+    {
+      "label": "frontend-web-retry-01-execution.json",
+      "target": "D:/project/yuejuan/reports/sonar-remediation-2026-10-11/frontend-web-retry-01-execution.json",
+      "exists": true,
+      "sha256": "1630b647bdd4433e2f986c461add8e76a999b5be58bf7d29ffaddba61fcf62ca"
+    },
+    {
+      "label": "frontend-web-current-typecheck-02.json",
+      "target": "D:/project/yuejuan/reports/sonar-remediation-2026-10-11/frontend-web-current-typecheck-02.json",
+      "exists": true,
+      "sha256": "186a0d213ee8a67b571c8280e0b81fdb5e9eda08b9abeb70c1a0e9d5141bf2b6"
+    },
+    {
+      "label": "frontend-production-contracts-current-01.json",
+      "target": "D:/project/yuejuan/reports/sonar-remediation-2026-10-11/frontend-production-contracts-current-01.json",
+      "exists": true,
+      "sha256": "e7893507ab2bbc69ae541ef7e83df0f448182a155e686712163b9a991f73a2bf"
+    },
+    {
+      "label": "go-final-validation-audit.md",
+      "target": "D:/project/yuejuan/reports/sonar-remediation-2026-10-11/go-final-validation-audit.md",
+      "exists": true,
+      "sha256": "f0429d7e1415441c99eb5d90517e72518e01d977cfaa8999a9b71e27bd044f88"
+    },
+    {
+      "label": "go-server-batch04-tests.json",
+      "target": "D:/project/yuejuan/reports/sonar-remediation-2026-10-11/go-server-batch04-tests.json",
+      "exists": true,
+      "sha256": "9ea3e380614f581b895775a46f0f2e69aa8923d8b6614c52d3462147741b94e5"
+    },
+    {
+      "label": "go-server-question-bank-progress.md",
+      "target": "D:/project/yuejuan/reports/sonar-remediation-2026-10-11/go-server-question-bank-progress.md",
+      "exists": true,
+      "sha256": "e458fa624b3058fbbe939fcd3c24d104004940483e6a1239265ef10805f24e08"
+    },
+    {
+      "label": "delivery-independent-fresh-followup-audit-python-agent.md",
+      "target": "D:/project/yuejuan/reports/sonar-remediation-2026-10-11/delivery-independent-fresh-followup-audit-python-agent.md",
+      "exists": true,
+      "sha256": "8932f818b6ff9660770c2f0998a67d3cf406c40441e0599601aeebb5d934be52"
+    },
+    {
+      "label": "execution.json",
+      "target": "D:/project/yuejuan/reports/sonar-remediation-2026-10-11/fresh-python-dynamic-01/execution.json",
+      "exists": true,
+      "sha256": "54bf182e8270119d55a93639bf332fcc344e9ceecee940072738287f94965b95"
+    },
+    {
+      "label": "root-new-js-tests-02.json",
+      "target": "D:/project/yuejuan/reports/sonar-remediation-2026-10-11/root-new-js-tests-02.json",
+      "exists": true,
+      "sha256": "a1da7b80216b366f6f180f2e0c19bc5177bfd3b0e97589afa2d7f0ce186b3887"
+    },
+    {
+      "label": "frontend-api-scope-equivalence-02.json",
+      "target": "D:/project/yuejuan/reports/sonar-remediation-2026-10-11/frontend-api-scope-equivalence-02.json",
+      "exists": true,
+      "sha256": "34833387e5b92a381a6bc46eb6a970b7768461a204d34887bbf1daaa5d68c12f"
+    },
+    {
+      "label": "python-tls-platform-evidence.md",
+      "target": "D:/project/yuejuan/reports/sonar-remediation-2026-10-11/python-tls-platform-evidence.md",
+      "exists": true,
+      "sha256": "4a528cac8964cd1c46d2366d5c16e97ea4213d7f1747a38a4a47f49bd4954ca0"
+    },
+    {
+      "label": "root-go-final-02-progress.md",
+      "target": "D:/project/yuejuan/reports/sonar-remediation-2026-10-11/root-go-final-02-progress.md",
+      "exists": true,
+      "sha256": "cb6898192df77fcfe78f7e35838919e194a40ab14e3d2f9e02423d4b29ee78a0"
+    },
+    {
+      "label": "go-import-final-independent-review.md",
+      "target": "D:/project/yuejuan/reports/sonar-remediation-2026-10-11/go-import-final-independent-review.md",
+      "exists": true,
+      "sha256": "0c2d6f1a1b11b293fba7b7095deeb56ae1a44398cf892cc592e00dd1a03d687f"
+    },
+    {
+      "label": "go-server-reliability-independent-review.md",
+      "target": "D:/project/yuejuan/reports/sonar-remediation-2026-10-11/go-server-reliability-independent-review.md",
+      "exists": true,
+      "sha256": "bc6758fb4fcfbb72976e330faa1a03a912ee0ae2e7d55a200cee1b282a5b6676"
+    },
+    {
+      "label": "frontend-e2e-independent-review-python-agent.md",
+      "target": "D:/project/yuejuan/reports/sonar-remediation-2026-10-11/frontend-e2e-independent-review-python-agent.md",
+      "exists": true,
+      "sha256": "3b11cd88e43ca683aa375d08a57885fe1f31d9c83b6a608ed5c75fd7efa49b0e"
+    },
+    {
+      "label": "全部平台原始详细报告",
+      "target": "D:/project/yuejuan/reports/platform-audit-2026-10-10/README.md",
+      "exists": true,
+      "sha256": "9d063101ea59f7b1a4d6b4ec847718a7550923763fc72ff5bba8249da1dc0294"
+    }
+  ],
+  "artifact_sha256_before": {
+    "final-remediation-report.md": "0c56b2d75f3efca0730df97213cd8a5e22c40b636a324b87f0607c02eaac0862",
+    "final-issues.csv": "2641a22a0732a53cf1984d35328be4657ea500350ae136d22e909f0390c90692",
+    "final-issues.json": "2c0667e91ab3224428f7d79851a0f07b33761cb50ea41ea995b9785badd3e7e9",
+    "final-report-data.json": "99ffc47fb3203a31e7906923c0d9ec31db5443df2363996588efc80ce74ffa53"
+  },
+  "artifact_sha256_after": {
+    "final-remediation-report.md": "0c56b2d75f3efca0730df97213cd8a5e22c40b636a324b87f0607c02eaac0862",
+    "final-issues.csv": "2641a22a0732a53cf1984d35328be4657ea500350ae136d22e909f0390c90692",
+    "final-issues.json": "2c0667e91ab3224428f7d79851a0f07b33761cb50ea41ea995b9785badd3e7e9",
+    "final-report-data.json": "99ffc47fb3203a31e7906923c0d9ec31db5443df2363996588efc80ce74ffa53"
+  },
+  "inputs": [
+    {
+      "file": "D:\\project\\yuejuan\\reports\\platform-audit-2026-10-10\\sonar\\issues.json",
+      "sha256": "d8d5948f1f6694d45419cdfd4abcd98f3c321fb4d844c42bc6aebd66e2198cd8"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\reports\\sonar-remediation-2026-10-11\\full-checkpoint-04\\final-original-statuses.json",
+      "sha256": "7627d6c4c0753d85d240797f8c5b7c5ea0efcdf42b14473af603d00affccc121"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\reports\\sonar-remediation-2026-10-11\\full-checkpoint-04\\final-checkpoint02-new-statuses.json",
+      "sha256": "12d6abae2933c4dd206bc79c4f8c963334a45908da25afb43042ba08721e1c84"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\reports\\sonar-remediation-2026-10-11\\full-checkpoint-04\\quality-gate.json",
+      "sha256": "dfde57308415e20ad1415d617599379f6fcd85cea8a0b60cc442011397e8e2f9"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\reports\\sonar-remediation-2026-10-11\\full-checkpoint-04\\metrics.json",
+      "sha256": "e1ee92431d9f7c99a3eba91e0228dffa54731ab734ebbb7035fc14736032fec4"
+    }
+  ],
+  "passed": true,
+  "differences": [],
+  "limitations_preserved": [
+    "覆盖率缺少导入，门禁ERROR不当作通过。",
+    "E2E中断/10失败、61 PG条件skip+1helper，不算业务通过。",
+    "历史其它平台/覆盖率只对应历史冻结版本，不是当前全仓复检。"
+  ]
+}

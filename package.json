@@ -40,6 +40,7 @@
     "ci:contracts": "node scripts/ci/check-generated-contracts.mjs && npm run check:openapi-breaking && npm run test:contract-gates && npm run check:authorization-contract && npm run test:authorization-contract && npm run check:schema-version",
     "ci:web:full": "npm run ci:web:fast && npm run ci:contracts && npm --workspaces --if-present run test",
     "check:user-facing-copy": "node scripts/check-user-facing-copy.mjs",
+    "check:test-user-facing-copy": "node --test scripts/ci/user-facing-copy.test.mjs",
     "lint": "biome lint",
     "typecheck": "npm run check:user-facing-copy && npm --workspaces --if-present run typecheck",
     "preview": "npm --workspace apps/web-admin run preview",

@@ -12,6 +12,7 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/paper"
 	"edugrade-enterprise/services/api-gateway/internal/platformschools"
 	"edugrade-enterprise/services/api-gateway/internal/processing"
+	"edugrade-enterprise/services/api-gateway/internal/schoolassistant"
 )
 
 type ApplicationModules struct {
@@ -21,6 +22,7 @@ type ApplicationModules struct {
 	Grading         *GradingQualityModule
 	Release         *ReleaseModule
 	AIGovernance    *AIGovernanceModule
+	Assistant       *SchoolAssistantModule
 	PlatformSchools *platformschools.Handler
 	Idempotency     idempotency.Store
 }
@@ -57,7 +59,7 @@ func newApplicationModules(dependencies ApplicationDependencies, stores Applicat
 	})
 	captureDependencies := CaptureProcessingDependencies{
 		Auth: identity.AuthStore, Exams: stores.Exam.Exam, Files: stores.Exam.Files,
-		Objects: dependencies.ObjectStore, Submissions: stores.Exam.Submissions, Processing: processingService,
+		Objects: dependencies.ObjectStore, Submissions: stores.Exam.Submissions, Processing: processingService, Paper: examModule.PaperStore,
 	}
 	var captureModule *CaptureProcessingModule
 	var err error
@@ -82,6 +84,7 @@ func newApplicationModules(dependencies ApplicationDependencies, stores Applicat
 	})
 	releaseModule := NewReleaseModule(stores.Release, ReleaseDependencies{
 		Auth: identity.AuthStore, Regrade: gradingQuality.RegradeService,
+		Exams:                stores.Exam.Exam,
 		StudentQuestionImage: examModule.SegmentImages, StudentPaperPageImage: examModule.SegmentImages,
 		DB: dependencies.DB, FileStore: stores.Exam.Files, ObjectStore: dependencies.ObjectStore,
 		FileBucket: dependencies.Config.Files.Bucket,
@@ -91,9 +94,19 @@ func newApplicationModules(dependencies ApplicationDependencies, stores Applicat
 		EligibilityHandler: aiFoundation.EligibilityHandler, GradingEvaluationHandler: aiFoundation.GradingEvaluationHandler,
 		ModelCalibrationHandler: aiFoundation.ModelCalibrationHandler, DisagreementHandler: aiFoundation.DisagreementHandler,
 	})
+	resourceResolver, _ := identity.AuthStore.(auth.ResourceBoundaryResolver)
+	managedModels, _ := stores.AIGovernance.ModelGovernance.(modelgovernance.ManagedAPIConfigStore)
+	modelUsage, _ := stores.AIGovernance.ModelGovernance.(modelgovernance.UsageLedger)
+	assistant := NewSchoolAssistantModule(schoolassistant.Dependencies{
+		Exams: examModule.ExamStore, Workspaces: examModule.WorkspaceService,
+		Gates: releaseModule.ReleaseGateService, CurrentReleases: releaseModule.ScoreReleaseService,
+		Resources: resourceResolver, Audit: identity.AuthStore,
+		Conversation: schoolassistant.ConversationDependencies{Models: managedModels, Usage: modelUsage},
+	})
 	return ApplicationModules{
 		Identity: identity, Exam: examModule, Capture: captureModule, Grading: gradingQuality,
-		Release: releaseModule, AIGovernance: aiGovernance, PlatformSchools: platformschools.NewHandler(stores.PlatformSchools), Idempotency: stores.Idempotency,
+		Release: releaseModule, AIGovernance: aiGovernance, Assistant: assistant,
+		PlatformSchools: platformschools.NewHandler(stores.PlatformSchools), Idempotency: stores.Idempotency,
 	}, nil
 }
 

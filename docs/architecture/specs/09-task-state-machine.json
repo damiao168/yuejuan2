@@ -1,0 +1,1478 @@
+{
+  "file": "09-task-state-machine.drawio",
+  "title": "任务状态、重试与异常恢复",
+  "pages": [
+    {
+      "id": "runtime",
+      "title": "01 agent_worker_task 的真实状态机",
+      "width": 2340,
+      "height": 1885,
+      "note": "本页仅为 Worker Runtime；needs_review、retryable_error 等是领域状态，不能混为同一枚举。",
+      "nodes": [
+        {
+          "id": "queued",
+          "label": "queued\nnot_before 控制退避；不是 retry_wait 状态\nidempotency_key / dedupe_key 绑定任务",
+          "x": 234,
+          "y": 253,
+          "w": 298,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/workerruntime/store_postgres.go:45",
+          "display_label": "queued",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "leased",
+          "label": "leased\nFOR UPDATE SKIP LOCKED 领取\n新 token、attempt_count + 1、租约截止",
+          "x": 997,
+          "y": 253,
+          "w": 255,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/workerruntime/store_postgres.go:212",
+          "display_label": "leased",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "running",
+          "label": "running\nHeartbeat核验 token、实例与数据库时间\n续租并记录 progress / attempt",
+          "x": 1710,
+          "y": 253,
+          "w": 312,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/workerruntime/store_postgres.go:296",
+          "display_label": "running",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "success",
+          "label": "succeeded：Store 支持同 token/schema/hash重放\nHTTP服务能力只授权 leased/running\n接口可重放仍须核查各来源完成命令",
+          "x": 1664,
+          "y": 682,
+          "w": 403,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/workerruntime/store_postgres.go:381",
+          "display_label": "succeeded",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "retry",
+          "label": "可重试且 attempt < max？",
+          "x": 840,
+          "y": 706,
+          "w": 570,
+          "h": 97,
+          "status": "implemented",
+          "kind": "decision",
+          "evidence": "services/api-gateway/internal/workerruntime/store_postgres.go:452",
+          "display_label": "可重试且未达上限？",
+          "show_evidence": false,
+          "title_font_size": 40,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "failed",
+          "label": "failed\n不可重试失败；记录错误和 attempt",
+          "x": 270,
+          "y": 682,
+          "w": 227,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/workerruntime/store_postgres.go:473",
+          "display_label": "failed",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "dead",
+          "label": "dead_letter\n可重试但次数耗尽\nClaim也收敛普通来源过期耗尽任务",
+          "x": 168,
+          "y": 1111,
+          "w": 432,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/workerruntime/store_postgres.go:143",
+          "display_label": "dead_letter",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "expired",
+          "label": "lease_expired 是 attempt 记录状态\nClaim接管至 leased、更换 token\n最后 runtime.Complete 拒绝旧执行者",
+          "x": 850,
+          "y": 1128,
+          "w": 548,
+          "h": 77,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/workerruntime/store_postgres.go:255",
+          "display_label": "租约过期 → attempt 记录",
+          "show_evidence": false,
+          "title_font_size": 44,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "cancel",
+          "label": "cancelled\n只可从 queued / leased / running 转入\n完成开放 attempt",
+          "x": 1685,
+          "y": 1111,
+          "w": 361,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/workerruntime/store_postgres.go:679",
+          "display_label": "cancelled",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "manual",
+          "label": "显式 Requeue\nfailed / dead_letter → queued\n保证至少再给一次机会；不归零 attempts",
+          "x": 130,
+          "y": 1527,
+          "w": 507,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/workerruntime/store_postgres.go:530",
+          "display_label": "显式 Requeue",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "boundary",
+          "label": "入口与 runtime 最后提交均检查租约；领域是否同事务见第三页\nPython heartbeat 只能尽早停止，不能替代最终校验\npaper import 耗尽有业务 reconciler，通用 Claim 耗尽逻辑排除它",
+          "x": 1267,
+          "y": 1508,
+          "w": 456,
+          "h": 157,
+          "status": "infra",
+          "kind": "note",
+          "evidence": "services/api-gateway/internal/workerruntime/store_postgres.go:156",
+          "display_label": "入口校验租约\n提交原子性见下一页",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        }
+      ],
+      "edges": [
+        {
+          "source": "queued",
+          "target": "leased",
+          "label": "到期可领",
+          "dashed": false,
+          "display_label": "到期可领"
+        },
+        {
+          "source": "leased",
+          "target": "running",
+          "label": "心跳",
+          "dashed": false,
+          "display_label": "心跳"
+        },
+        {
+          "source": "running",
+          "target": "success",
+          "label": "Complete",
+          "dashed": false,
+          "display_label": "Complete"
+        },
+        {
+          "source": "running",
+          "target": "retry",
+          "label": "Fail",
+          "dashed": false,
+          "exitX": 0,
+          "exitY": 0.75,
+          "entryX": 1,
+          "entryY": 0.25,
+          "points": [
+            [
+              1560,
+              353
+            ],
+            [
+              1430,
+              353
+            ],
+            [
+              1430,
+              702
+            ]
+          ],
+          "display_label": "Fail"
+        },
+        {
+          "source": "leased",
+          "target": "retry",
+          "label": "Fail",
+          "dashed": false,
+          "points": [
+            [
+              1118,
+              494
+            ],
+            [
+              1118,
+              611
+            ]
+          ],
+          "display_label": "Fail"
+        },
+        {
+          "source": "retry",
+          "target": "queued",
+          "label": "是：设置退避",
+          "dashed": false,
+          "points": [
+            [
+              793,
+              845
+            ],
+            [
+              793,
+              481
+            ],
+            [
+              384,
+              481
+            ]
+          ],
+          "display_label": "是：设置退避"
+        },
+        {
+          "source": "retry",
+          "target": "failed",
+          "label": "不可重试",
+          "dashed": false,
+          "display_label": "不可重试"
+        },
+        {
+          "source": "retry",
+          "target": "dead",
+          "label": "可重试但耗尽",
+          "dashed": false,
+          "exitX": 0,
+          "exitY": 0.75,
+          "entryX": 1,
+          "entryY": 0.25,
+          "points": [
+            [
+              819,
+              806
+            ],
+            [
+              689,
+              806
+            ],
+            [
+              689,
+              1123
+            ]
+          ],
+          "display_label": "可重试但耗尽"
+        },
+        {
+          "source": "leased",
+          "target": "expired",
+          "label": "租约过期",
+          "dashed": false,
+          "points": [
+            [
+              780,
+              507
+            ],
+            [
+              780,
+              1040
+            ]
+          ],
+          "display_label": "租约过期"
+        },
+        {
+          "source": "running",
+          "target": "expired",
+          "label": "租约过期",
+          "dashed": false,
+          "points": [
+            [
+              2236,
+              520
+            ],
+            [
+              2236,
+              975
+            ],
+            [
+              1118,
+              975
+            ]
+          ],
+          "display_label": "租约过期"
+        },
+        {
+          "source": "expired",
+          "target": "leased",
+          "label": "下次 Claim / 新 token",
+          "dashed": false,
+          "points": [
+            [
+              1456,
+              1196
+            ],
+            [
+              1456,
+              143
+            ],
+            [
+              1118,
+              143
+            ]
+          ],
+          "display_label": "下次 Claim / 新 token"
+        },
+        {
+          "source": "queued",
+          "target": "cancel",
+          "label": "Cancel",
+          "dashed": true,
+          "points": [
+            [
+              384,
+              136
+            ],
+            [
+              2236,
+              136
+            ],
+            [
+              2236,
+              1170
+            ]
+          ],
+          "display_label": "Cancel"
+        },
+        {
+          "source": "failed",
+          "target": "manual",
+          "label": "管理员/来源重试",
+          "dashed": false,
+          "exitX": 1,
+          "exitY": 0.75,
+          "entryX": 1,
+          "entryY": 0.25,
+          "points": [
+            [
+              689,
+              782
+            ],
+            [
+              689,
+              1539
+            ]
+          ],
+          "display_label": "管理员/来源重试"
+        },
+        {
+          "source": "dead",
+          "target": "manual",
+          "label": "管理员/来源重试",
+          "dashed": false,
+          "display_label": "管理员/来源重试"
+        },
+        {
+          "source": "manual",
+          "target": "queued",
+          "label": "显式重排",
+          "dashed": false,
+          "points": [
+            [
+              58,
+              1573
+            ],
+            [
+              58,
+              312
+            ]
+          ],
+          "display_label": "显式重排"
+        }
+      ],
+      "display_note": "",
+      "typography_layout_base": {
+        "width": 1800,
+        "height": 1450,
+        "nodes": {
+          "queued": {
+            "x": 80,
+            "y": 170,
+            "w": 430,
+            "h": 135
+          },
+          "leased": {
+            "x": 650,
+            "y": 170,
+            "w": 430,
+            "h": 135
+          },
+          "running": {
+            "x": 1220,
+            "y": 170,
+            "w": 430,
+            "h": 135
+          },
+          "success": {
+            "x": 1220,
+            "y": 500,
+            "w": 430,
+            "h": 135
+          },
+          "retry": {
+            "x": 650,
+            "y": 500,
+            "w": 430,
+            "h": 160
+          },
+          "failed": {
+            "x": 80,
+            "y": 500,
+            "w": 430,
+            "h": 135
+          },
+          "dead": {
+            "x": 80,
+            "y": 830,
+            "w": 430,
+            "h": 135
+          },
+          "expired": {
+            "x": 650,
+            "y": 830,
+            "w": 430,
+            "h": 135
+          },
+          "cancel": {
+            "x": 1220,
+            "y": 830,
+            "w": 430,
+            "h": 135
+          },
+          "manual": {
+            "x": 80,
+            "y": 1150,
+            "w": 430,
+            "h": 135
+          },
+          "boundary": {
+            "x": 650,
+            "y": 1150,
+            "w": 1000,
+            "h": 140
+          }
+        },
+        "points": {
+          "3": [
+            [
+              1200,
+              271.25
+            ],
+            [
+              1100,
+              271.25
+            ],
+            [
+              1100,
+              540.0
+            ]
+          ],
+          "4": [
+            [
+              860,
+              380
+            ],
+            [
+              860,
+              470
+            ]
+          ],
+          "5": [
+            [
+              610,
+              650
+            ],
+            [
+              610,
+              370
+            ],
+            [
+              295,
+              370
+            ]
+          ],
+          "7": [
+            [
+              630,
+              620.0
+            ],
+            [
+              530,
+              620.0
+            ],
+            [
+              530,
+              863.75
+            ]
+          ],
+          "8": [
+            [
+              600,
+              390
+            ],
+            [
+              600,
+              800
+            ]
+          ],
+          "9": [
+            [
+              1720,
+              400
+            ],
+            [
+              1720,
+              750
+            ],
+            [
+              860,
+              750
+            ]
+          ],
+          "10": [
+            [
+              1120,
+              920
+            ],
+            [
+              1120,
+              110
+            ],
+            [
+              860,
+              110
+            ]
+          ],
+          "11": [
+            [
+              295,
+              105
+            ],
+            [
+              1720,
+              105
+            ],
+            [
+              1720,
+              900
+            ]
+          ],
+          "12": [
+            [
+              530,
+              601.25
+            ],
+            [
+              530,
+              1183.75
+            ]
+          ],
+          "14": [
+            [
+              45,
+              1210
+            ],
+            [
+              45,
+              240
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "business_states",
+      "title": "02 评分编排与人工双评的领域状态",
+      "width": 2340,
+      "height": 1885,
+      "note": "评分编排与人工双评分别有事实存储；这里展示已核实的转换，不把所有状态画成一个总状态机。",
+      "nodes": [
+        {
+          "id": "start",
+          "label": "scoring_run 新命令\n空片段→failed；全人工→needs_review\n其余→processing；同键先重放",
+          "x": 106,
+          "y": 258,
+          "w": 555,
+          "h": 102,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/grading/scoring_run_start.go:56",
+          "display_label": "创建 scoring_run",
+          "show_evidence": false,
+          "title_font_size": 65,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "processing",
+          "label": "processing\n统计 OMR 活跃数、待人工/仲裁数\n与当前确认成绩数",
+          "x": 916,
+          "y": 253,
+          "w": 417,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/grading/scoring_run_lifecycle.go:243",
+          "display_label": "processing",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "review",
+          "label": "needs_review\nqueued=0 且 review>0\n人工提交后再次 RefreshScoringRun",
+          "x": 1610,
+          "y": 253,
+          "w": 510,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/grading/scoring_run_lifecycle.go:266",
+          "display_label": "needs_review",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "failed",
+          "label": "failed\n存在 terminal_error 或 total=0\n可显式重试失败 OMR",
+          "x": 270,
+          "y": 643,
+          "w": 227,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/grading/scoring_run_lifecycle.go:262",
+          "display_label": "failed",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "done",
+          "label": "completed\n无队列、无待人工且确认数≥total",
+          "x": 920,
+          "y": 643,
+          "w": 410,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/grading/scoring_run_lifecycle.go:268",
+          "display_label": "completed",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "cancelling",
+          "label": "cancelling\n先落业务状态，再取消外部任务\n中断后允许继续相同取消流程",
+          "x": 1672,
+          "y": 643,
+          "w": 387,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/grading/scoring_run_lifecycle.go:9",
+          "display_label": "cancelling",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "cancelled",
+          "label": "cancelled\n全部后台工作停止后作废未完成人工任务\n本轮当前成绩失效；保留锁定 final_grade",
+          "x": 1685,
+          "y": 1020,
+          "w": 361,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/grading/scoring_run_lifecycle.go:70",
+          "display_label": "cancelled",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "first",
+          "label": "double_mark_session\npending → first_submitted / second_submitted\n两份 human_grade 收齐才结算",
+          "x": 228,
+          "y": 1020,
+          "w": 312,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/review/store_postgres_resolution.go:73",
+          "display_label": "人工双评",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "diff",
+          "label": "|first-second| ≤ threshold？\n单位为分，按会话冻结值结算\nScoringRun双评入口默认阈值为0",
+          "x": 847,
+          "y": 1034,
+          "w": 555,
+          "h": 115,
+          "status": "implemented",
+          "kind": "decision",
+          "evidence": "services/api-gateway/internal/review/store_postgres_resolution.go:92",
+          "display_label": "分差在阈值内？",
+          "show_evidence": false,
+          "title_font_size": 50,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "auto",
+          "label": "auto_finalized\n冻结策略合分 → final_grade\n两张 review_task → completed",
+          "x": 118,
+          "y": 1423,
+          "w": 530,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/review/store_postgres_resolution.go:95",
+          "display_label": "auto_finalized",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "arb",
+          "label": "needs_arbitration\n创建人工 arbitration_task\n是否原阅卷人仲裁按任务冻结策略",
+          "x": 848,
+          "y": 1431,
+          "w": 554,
+          "h": 96,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/review/store_postgres_resolution.go:120",
+          "display_label": "needs_arbitration",
+          "show_evidence": false,
+          "title_font_size": 60,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "notice",
+          "label": "人工双评 ≠ AI A/B/C Panel\nexam 状态有独立转换约束\n旧 publish 改exam；新发布切release指针",
+          "x": 1590,
+          "y": 1453,
+          "w": 551,
+          "h": 78,
+          "status": "infra",
+          "kind": "note",
+          "evidence": "services/api-gateway/internal/exam/status.go:49",
+          "display_label": "人工双评与 AI Panel 分开",
+          "show_evidence": false,
+          "title_font_size": 45,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        }
+      ],
+      "edges": [
+        {
+          "source": "start",
+          "target": "processing",
+          "label": "有自动任务",
+          "dashed": false,
+          "display_label": "有自动任务"
+        },
+        {
+          "source": "processing",
+          "target": "review",
+          "label": "仅剩人工",
+          "dashed": false,
+          "display_label": "仅剩人工"
+        },
+        {
+          "source": "processing",
+          "target": "done",
+          "label": "全部确认",
+          "dashed": false,
+          "display_label": "全部确认"
+        },
+        {
+          "source": "processing",
+          "target": "failed",
+          "label": "失败计数>0",
+          "dashed": false,
+          "exitX": 0,
+          "exitY": 0.75,
+          "entryX": 1,
+          "entryY": 0.25,
+          "points": [
+            [
+              819,
+              353
+            ],
+            [
+              689,
+              353
+            ],
+            [
+              689,
+              655
+            ]
+          ],
+          "display_label": "失败计数>0"
+        },
+        {
+          "source": "review",
+          "target": "processing",
+          "label": "刷新后有活跃任务",
+          "dashed": true,
+          "display_label": "刷新后有活跃任务"
+        },
+        {
+          "source": "processing",
+          "target": "cancelling",
+          "label": "取消命令",
+          "dashed": false,
+          "exitX": 1,
+          "exitY": 0.75,
+          "entryX": 0,
+          "entryY": 0.25,
+          "points": [
+            [
+              1430,
+              353
+            ],
+            [
+              1560,
+              353
+            ],
+            [
+              1560,
+              655
+            ]
+          ],
+          "display_label": "取消命令"
+        },
+        {
+          "source": "review",
+          "target": "cancelling",
+          "label": "取消命令",
+          "dashed": false,
+          "display_label": "取消命令"
+        },
+        {
+          "source": "failed",
+          "target": "cancelling",
+          "label": "取消命令",
+          "dashed": false,
+          "points": [
+            [
+              384,
+              864
+            ],
+            [
+              1866,
+              864
+            ]
+          ],
+          "display_label": "取消命令"
+        },
+        {
+          "source": "cancelling",
+          "target": "cancelled",
+          "label": "后台停止后",
+          "dashed": false,
+          "display_label": "后台停止后"
+        },
+        {
+          "source": "first",
+          "target": "diff",
+          "label": "两份收齐",
+          "dashed": false,
+          "display_label": "两份收齐"
+        },
+        {
+          "source": "diff",
+          "target": "auto",
+          "label": "≤阈值",
+          "dashed": false,
+          "exitX": 0,
+          "exitY": 0.75,
+          "entryX": 1,
+          "entryY": 0.25,
+          "points": [
+            [
+              819,
+              1144
+            ],
+            [
+              689,
+              1144
+            ],
+            [
+              689,
+              1435
+            ]
+          ],
+          "display_label": "≤阈值"
+        },
+        {
+          "source": "diff",
+          "target": "arb",
+          "label": ">阈值",
+          "dashed": false,
+          "display_label": ">阈值"
+        }
+      ],
+      "display_note": "",
+      "typography_layout_base": {
+        "width": 1800,
+        "height": 1450,
+        "nodes": {
+          "start": {
+            "x": 80,
+            "y": 170,
+            "w": 430,
+            "h": 135
+          },
+          "processing": {
+            "x": 650,
+            "y": 170,
+            "w": 430,
+            "h": 135
+          },
+          "review": {
+            "x": 1220,
+            "y": 170,
+            "w": 430,
+            "h": 135
+          },
+          "failed": {
+            "x": 80,
+            "y": 470,
+            "w": 430,
+            "h": 135
+          },
+          "done": {
+            "x": 650,
+            "y": 470,
+            "w": 430,
+            "h": 135
+          },
+          "cancelling": {
+            "x": 1220,
+            "y": 470,
+            "w": 430,
+            "h": 135
+          },
+          "cancelled": {
+            "x": 1220,
+            "y": 760,
+            "w": 430,
+            "h": 135
+          },
+          "first": {
+            "x": 80,
+            "y": 760,
+            "w": 430,
+            "h": 135
+          },
+          "diff": {
+            "x": 650,
+            "y": 760,
+            "w": 430,
+            "h": 160
+          },
+          "auto": {
+            "x": 80,
+            "y": 1070,
+            "w": 430,
+            "h": 135
+          },
+          "arb": {
+            "x": 650,
+            "y": 1070,
+            "w": 430,
+            "h": 135
+          },
+          "notice": {
+            "x": 1220,
+            "y": 1070,
+            "w": 430,
+            "h": 155
+          }
+        },
+        "points": {
+          "3": [
+            [
+              630,
+              271.25
+            ],
+            [
+              530,
+              271.25
+            ],
+            [
+              530,
+              503.75
+            ]
+          ],
+          "5": [
+            [
+              1100,
+              271.25
+            ],
+            [
+              1200,
+              271.25
+            ],
+            [
+              1200,
+              503.75
+            ]
+          ],
+          "7": [
+            [
+              295,
+              665
+            ],
+            [
+              1435,
+              665
+            ]
+          ],
+          "10": [
+            [
+              630,
+              880.0
+            ],
+            [
+              530,
+              880.0
+            ],
+            [
+              530,
+              1103.75
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "commit_boundaries",
+      "title": "03 提交边界与已确认恢复缺口",
+      "width": 2340,
+      "height": 1872,
+      "note": "绿色说明已实现事务边界，红色说明具体触发与影响。静态代码依据，未声称跑过生产故障注入。",
+      "nodes": [
+        {
+          "id": "quality",
+          "label": "质量结果：同事务\nquality run + submission page + capture\n排配准任务 + runtime.Complete",
+          "x": 156,
+          "y": 253,
+          "w": 456,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/imagequality/coordinator_postgres.go:49",
+          "display_label": "质量：同事务",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "match",
+          "label": "模板匹配：同事务\nrun + exam binding + 后续配准任务\nruntime.Complete；租约失败整体回滚",
+          "x": 848,
+          "y": 257,
+          "w": 552,
+          "h": 104,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/capture/template_match_store_postgres.go:210",
+          "display_label": "模板匹配：同事务",
+          "show_evidence": false,
+          "title_font_size": 66,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "ocr",
+          "label": "OCR：同事务\nsource task / 识别结果 + runtime 完成\n历史完成来源有显式 Reconcile",
+          "x": 1631,
+          "y": 253,
+          "w": 469,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/ocr/runtime_coordinator_postgres.go:32",
+          "display_label": "OCR：同事务",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "reg_write",
+          "label": "入口 TaskScope 已校验租约/来源\n配准领域事务再提交裁片/页状态\n事务内未共同锁task核验租约",
+          "x": 106,
+          "y": 681,
+          "w": 554,
+          "h": 88,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/capture/handlers.go:760",
+          "display_label": "配准：先提交领域结果",
+          "show_evidence": false,
+          "title_font_size": 53,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "reg_finish",
+          "label": "随后独立 runtime.Complete\n入口后失租 / 最终存储失败\n无法回滚已提交领域事实",
+          "x": 848,
+          "y": 671,
+          "w": 554,
+          "h": 108,
+          "status": "issue",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/capture/handlers.go:766",
+          "display_label": "再完成 Runtime",
+          "show_evidence": false,
+          "title_font_size": 70,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "reg_effect",
+          "label": "P1：领域成功与 runtime 分裂\n入口后失租，旧结果可能先写裁片\n需同事务来源/task锁与最终租约校验",
+          "x": 1590,
+          "y": 684,
+          "w": 552,
+          "h": 82,
+          "status": "issue",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/capture/registration_store_postgres.go:444",
+          "display_label": "问题：两处状态可能分裂",
+          "show_evidence": false,
+          "title_font_size": 48,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "ai_grade",
+          "label": "主观完成：先 ai_grade 写入\n再 runtime.Complete",
+          "x": 105,
+          "y": 1091,
+          "w": 557,
+          "h": 74,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/subjective/worker_completion_service.go:49",
+          "display_label": "主观题：先存分，再完成任务",
+          "show_evidence": false,
+          "title_font_size": 41,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "ai_run",
+          "label": "最后 run → succeeded\n若更新失败：task成功、run仍processing\n下一次 Prepare 拒绝 succeeded task",
+          "x": 932,
+          "y": 1072,
+          "w": 386,
+          "h": 111,
+          "status": "issue",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/subjective/worker_execution_service.go:91",
+          "display_label": "再更新 run",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "ai_effect",
+          "label": "P1：末步失败缺完成恢复路径\ngrade已存、task成功，run仍processing\n已成功task使入口/Prepare拒绝再提交",
+          "x": 1588,
+          "y": 1084,
+          "w": 554,
+          "h": 88,
+          "status": "issue",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/subjective/worker_completion_service.go:64",
+          "display_label": "问题：末步失败难恢复",
+          "show_evidence": false,
+          "title_font_size": 53,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "panel_state",
+          "label": "Panel先写 human_review 终态\n再创建/关联 review_task",
+          "x": 109,
+          "y": 1486,
+          "w": 550,
+          "h": 89,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/subjective/panel_orchestrator.go:493",
+          "display_label": "Panel：先写人工终态",
+          "show_evidence": false,
+          "title_font_size": 54,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "panel_replay",
+          "label": "建任务/关联失败后再次 Grade\n直接加载终态成绩，不补齐任务",
+          "x": 846,
+          "y": 1479,
+          "w": 557,
+          "h": 104,
+          "status": "issue",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/subjective/panel_orchestrator.go:193",
+          "display_label": "再创建 / 关联任务",
+          "show_evidence": false,
+          "title_font_size": 66,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "panel_effect",
+          "label": "P2：内核恢复缺口\n已持久化人工状态但工作台可缺任务/关联\n生产接入前修复",
+          "x": 1590,
+          "y": 1490,
+          "w": 552,
+          "h": 82,
+          "status": "issue",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/subjective/panel_store_postgres.go:103",
+          "display_label": "问题：终态重放不补任务",
+          "show_evidence": false,
+          "title_font_size": 48,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        }
+      ],
+      "edges": [
+        {
+          "source": "reg_write",
+          "target": "reg_finish",
+          "label": "先后独立提交",
+          "dashed": false,
+          "display_label": "先后独立提交"
+        },
+        {
+          "source": "reg_finish",
+          "target": "reg_effect",
+          "label": "失败时",
+          "dashed": false,
+          "display_label": "失败时"
+        },
+        {
+          "source": "ai_grade",
+          "target": "ai_run",
+          "label": "task完成后",
+          "dashed": false,
+          "display_label": "task完成后"
+        },
+        {
+          "source": "ai_run",
+          "target": "ai_effect",
+          "label": "更新失败/重复提交",
+          "dashed": false,
+          "display_label": "更新失败/重复提交"
+        },
+        {
+          "source": "panel_state",
+          "target": "panel_replay",
+          "label": "第二/三步失败后重试",
+          "dashed": false,
+          "display_label": "第二/三步失败后重试"
+        },
+        {
+          "source": "panel_replay",
+          "target": "panel_effect",
+          "label": "终态短路",
+          "dashed": false,
+          "display_label": "终态短路"
+        }
+      ],
+      "display_note": "",
+      "typography_layout_base": {
+        "width": 1800,
+        "height": 1440,
+        "nodes": {
+          "quality": {
+            "x": 80,
+            "y": 170,
+            "w": 430,
+            "h": 135
+          },
+          "match": {
+            "x": 650,
+            "y": 170,
+            "w": 430,
+            "h": 135
+          },
+          "ocr": {
+            "x": 1220,
+            "y": 170,
+            "w": 430,
+            "h": 135
+          },
+          "reg_write": {
+            "x": 80,
+            "y": 490,
+            "w": 430,
+            "h": 135
+          },
+          "reg_finish": {
+            "x": 650,
+            "y": 490,
+            "w": 430,
+            "h": 135
+          },
+          "reg_effect": {
+            "x": 1220,
+            "y": 490,
+            "w": 430,
+            "h": 135
+          },
+          "ai_grade": {
+            "x": 80,
+            "y": 800,
+            "w": 430,
+            "h": 135
+          },
+          "ai_run": {
+            "x": 650,
+            "y": 800,
+            "w": 430,
+            "h": 135
+          },
+          "ai_effect": {
+            "x": 1220,
+            "y": 800,
+            "w": 430,
+            "h": 135
+          },
+          "panel_state": {
+            "x": 80,
+            "y": 1110,
+            "w": 430,
+            "h": 135
+          },
+          "panel_replay": {
+            "x": 650,
+            "y": 1110,
+            "w": 430,
+            "h": 135
+          },
+          "panel_effect": {
+            "x": 1220,
+            "y": 1110,
+            "w": 430,
+            "h": 135
+          }
+        },
+        "points": {}
+      }
+    }
+  ],
+  "compact": true
+}

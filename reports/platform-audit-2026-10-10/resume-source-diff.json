@@ -1,0 +1,9 @@
+{
+  "changed": [
+    "docs/architecture/previews/index.html",
+    "docs/architecture/tools/build_module_catalog.py",
+    "docs/architecture/tools/simplify_diagrams.py"
+  ],
+  "added": [],
+  "removed": []
+}

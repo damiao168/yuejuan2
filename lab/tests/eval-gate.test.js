@@ -1,11 +1,53 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { checkGate, loadGateConfig } from "../src/evaluators/gateChecker.js";
 import { computeMetrics } from "../src/evaluators/metrics.js";
-import { runEvaluation, writeEvaluationReport } from "../src/evaluators/runEval.js";
+import { MockGradingAdapter } from "../src/adapters/index.js";
+import { runEvaluation, runEvaluationAsync, writeEvaluationReport } from "../src/evaluators/runEval.js";
+
+function syntheticEvaluationSample(sampleId, overrides = {}) {
+  return {
+    synthetic: true,
+    sample_id: sampleId,
+    subject: "math",
+    grade_level: "synthetic-grade",
+    question_type: "short_answer",
+    question_text: "synthetic unit question",
+    max_score: 1,
+    expected_score: 1,
+    answer_text: "unit",
+    ocr_confidence: 1,
+    should_need_human_review: false,
+    tags: [],
+    rubric: {
+      rubric_id: "synthetic-rubric",
+      rubric_version: "synthetic-rubric-v1",
+      max_score: 1,
+      points: [{ id: "p1", description: "unit", score: 1, required: true, aliases: ["unit"], evidence_required: true }],
+      deductions: [], equivalent_answers: [], examples: [], scoring_notes: []
+    },
+    ...overrides
+  };
+}
+
+// 临时输入由显式合成夹具生成，不读取仓库数据集或真实学生内容。
+function temporaryEvaluationDataset(t, samples) {
+  const dir = mkdtempSync(join(tmpdir(), "lab-evaluation-batch24-"));
+  t.after(() => {
+    // 递归清理只允许本测试的临时子目录，避免路径变化时删除其他目录。
+    const cleanupPath = resolve(dir);
+    if (dirname(cleanupPath) !== resolve(tmpdir()) || !basename(cleanupPath).startsWith("lab-evaluation-batch24-")) {
+      throw new Error("refusing to remove an unexpected synthetic evaluation temp directory");
+    }
+    rmSync(cleanupPath, { recursive: true, force: true });
+  });
+  const datasetPath = join(dir, "synthetic-test-input.jsonl");
+  writeFileSync(datasetPath, `${samples.map((sample) => JSON.stringify(sample)).join("\n")}\n`, "utf8");
+  return { dir, datasetPath };
+}
 
 test("mock adapter can run full synthetic eval", () => {
   const report = runEvaluation({ datasetPath: "evals/synthetic/samples.jsonl", adapterName: "mock" });
@@ -111,4 +153,76 @@ test("eval writer emits JSON, markdown, and failed cases", () => {
   assert.equal(JSON.parse(readFileSync(jsonPath, "utf8")).sample_count, 1);
   assert.match(readFileSync(mdPath, "utf8"), /Eval Report/);
   assert.equal(readFileSync(failedPath, "utf8").trim().length >= 0, true);
+});
+
+test("sync and async synthetic eval preserve classification, review flags and serial sample order", async (t) => {
+  const { datasetPath } = temporaryEvaluationDataset(t, [
+    syntheticEvaluationSample("first"),
+    syntheticEvaluationSample("discussion", { question_type: "discussion", should_need_human_review: true }),
+    syntheticEvaluationSample("low-ocr", { ocr_confidence: 0.5, should_need_human_review: true })
+  ]);
+  const synchronous = runEvaluation({ datasetPath });
+  const grade = MockGradingAdapter.prototype.grade;
+  const calls = [];
+  t.mock.method(MockGradingAdapter.prototype, "grade", async function (input) {
+    calls.push(`start:${input.request_id}`);
+    // 让出一次执行权，才能发现后一条样本是否在前一条完成前启动。
+    await Promise.resolve();
+    const output = grade.call(this, input);
+    calls.push(`end:${input.request_id}`);
+    return output;
+  });
+  const asynchronous = await runEvaluationAsync({ datasetPath });
+  assert.deepEqual({ ...asynchronous, generated_at: synchronous.generated_at }, synchronous);
+  assert.equal(asynchronous.dataset_kind, "synthetic");
+  assert.deepEqual(asynchronous.results.map((record) => record.sample_id), ["first", "discussion", "low-ocr"]);
+  assert.deepEqual(asynchronous.results.map((record) => record.needs_human_review), [false, true, true]);
+  assert.ok(asynchronous.results.every((record) => record.schema_valid && record.evidence_valid && record.risk_flags.includes("MOCK_OUTPUT")));
+  assert.deepEqual(calls, ["start:first", "end:first", "start:discussion", "end:discussion", "start:low-ocr", "end:low-ocr"]);
+});
+
+test("sync and async empty filtered eval stay synthetic and hash the full input file", async (t) => {
+  const { datasetPath } = temporaryEvaluationDataset(t, [syntheticEvaluationSample("filtered")]);
+  const full = runEvaluation({ datasetPath });
+  const options = { datasetPath, filters: { tag: "not-in-the-synthetic-fixture" } };
+  const reports = [runEvaluation(options), await runEvaluationAsync(options)];
+  for (const report of reports) {
+    assert.equal(report.dataset_kind, "synthetic");
+    assert.equal(report.sample_count, 0);
+    assert.deepEqual(report.results, []);
+    assert.equal(report.dataset_sha256, full.dataset_sha256);
+    assert.equal(report.metrics.schema_validity_rate, 0);
+  }
+});
+
+test("sync and async eval stop before grading an invalid sample or its successors", async (t) => {
+  const { datasetPath } = temporaryEvaluationDataset(t, [
+    syntheticEvaluationSample("first"),
+    syntheticEvaluationSample("invalid", { question_text: "" }),
+    syntheticEvaluationSample("unreached")
+  ]);
+  const grade = MockGradingAdapter.prototype.grade;
+  const calls = [];
+  t.mock.method(MockGradingAdapter.prototype, "grade", function (input) {
+    calls.push(input.request_id);
+    return grade.call(this, input);
+  });
+  const expected = { message: "Invalid sample input invalid: input.question_text is required" };
+  assert.throws(() => runEvaluation({ datasetPath }), expected);
+  assert.deepEqual(calls, ["first"]);
+  calls.length = 0;
+  await assert.rejects(() => runEvaluationAsync({ datasetPath }), expected);
+  assert.deepEqual(calls, ["first"]);
+});
+
+test("eval writer keeps JSON and stops before failed cases when the markdown directory is missing", (t) => {
+  const { dir, datasetPath } = temporaryEvaluationDataset(t, [syntheticEvaluationSample("writer")]);
+  const report = runEvaluation({ datasetPath });
+  const jsonPath = join(dir, "json", "report.json");
+  const markdownPath = join(dir, "missing-markdown-directory", "report.md");
+  const failedPath = join(dir, "failed-cases.jsonl");
+  assert.throws(() => writeEvaluationReport(report, jsonPath, markdownPath, failedPath), { code: "ENOENT" });
+  assert.deepEqual(JSON.parse(readFileSync(jsonPath, "utf8")), report);
+  assert.equal(existsSync(markdownPath), false);
+  assert.equal(existsSync(failedPath), false);
 });

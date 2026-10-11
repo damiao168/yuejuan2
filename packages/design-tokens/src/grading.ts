@@ -1,6 +1,6 @@
 /**
- * Semantic grading colors. UI code should refer to these meanings rather than
- * choosing an ad-hoc red, amber, or blue for a score state.
+ * 按评分语义定义颜色。界面代码应引用这些含义，
+ * 不要为成绩状态临时挑选红色、琥珀色或蓝色。
  */
 export const gradingColors = {
   correct: "var(--eg-grading-correct)",

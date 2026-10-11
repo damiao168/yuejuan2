@@ -25,7 +25,9 @@ func (s *Service) WithHighScorePaper(manager HighScorePaperManager) *Service {
 }
 
 func (s *Service) Create(ctx context.Context, tenantID, examID, actorID string, input CreateInput) (Release, error) {
+	// 申诉以已公开的单题分数为依据；只公开总分时不能开启单题申诉窗口。
 	if !validIDs(tenantID, examID, actorID) || !normalizeCreate(&input) ||
+		(input.AppealWindow.Enabled && !input.VisibilityPolicy.ShowQuestionScores) ||
 		(input.VisibilityPolicy.ShowHighScorePaper && !input.VisibilityPolicy.ShowQuestionScores) {
 		return Release{}, ErrInvalidInput
 	}
@@ -39,9 +41,8 @@ func (s *Service) CreateRollback(ctx context.Context, tenantID, examID, actorID 
 	return s.store.CreateRollback(ctx, tenantID, examID, actorID, input)
 }
 
-// CreateFromRegrade materialises a later immutable release from a reviewed
-// A19 plan. It only delegates frozen source-release facts and explicit
-// reviewed replacements to the store; it never reads current mutable grades.
+// CreateFromRegrade 根据已复核的 A19 计划实例化后续不可变发布。
+// 它只将冻结的来源发布事实和显式复核替换项交给存储，绝不读取当前可变成绩。
 func (s *Service) CreateFromRegrade(ctx context.Context, tenantID, examID, actorID string, input CreateRegradeInput) (Release, error) {
 	if !validIDs(tenantID, examID, actorID) || !normalizeRegrade(&input) {
 		return Release{}, ErrInvalidInput
@@ -88,6 +89,10 @@ func (s *Service) Publish(ctx context.Context, tenantID, id, actorID string) (Re
 	if detail.Release.Status == StatusPublished {
 		return s.store.Publish(ctx, tenantID, id, actorID)
 	}
+	// 旧草稿或从历史版本复制的草稿也要核对冻结策略；已发布版本的幂等重试保留历史事实。
+	if detail.Release.AppealWindow.Enabled && !detail.Release.VisibilityPolicy.ShowQuestionScores {
+		return Release{}, ErrInvalidInput
+	}
 	if detail.Release.VisibilityPolicy.ShowHighScorePaper {
 		if s.highScorePaper == nil {
 			return Release{}, ErrAnonymousPaperUnavailable
@@ -124,25 +129,25 @@ func (s *Service) StudentResult(ctx context.Context, tenantID, examID, studentID
 	return s.store.StudentResult(ctx, tenantID, examID, studentID)
 }
 
-func (s *Service) StudentQuestion(ctx context.Context, tenantID, examID, studentID, questionID string) (StudentQuestion, error) {
+func (s *Service) StudentQuestion(ctx context.Context, tenantID, examID, studentID, questionID string, expectedReleaseID ...string) (StudentQuestion, error) {
 	if !validIDs(tenantID, examID, studentID, questionID) {
 		return StudentQuestion{}, ErrInvalidInput
 	}
-	return s.store.StudentQuestion(ctx, tenantID, examID, studentID, questionID)
+	return s.store.StudentQuestion(ctx, tenantID, examID, studentID, questionID, expectedReleaseID...)
 }
 
-func (s *Service) StudentQuestionImage(ctx context.Context, tenantID, examID, studentID, questionID string) (StudentQuestionImageSource, error) {
+func (s *Service) StudentQuestionImage(ctx context.Context, tenantID, examID, studentID, questionID string, expectedReleaseID ...string) (StudentQuestionImageSource, error) {
 	if !validIDs(tenantID, examID, studentID, questionID) {
 		return StudentQuestionImageSource{}, ErrInvalidInput
 	}
-	return s.store.StudentQuestionImage(ctx, tenantID, examID, studentID, questionID)
+	return s.store.StudentQuestionImage(ctx, tenantID, examID, studentID, questionID, expectedReleaseID...)
 }
 
-func (s *Service) StudentPaperPageImage(ctx context.Context, tenantID, examID, studentID, questionID string, highScore bool) (StudentQuestionImageSource, error) {
+func (s *Service) StudentPaperPageImage(ctx context.Context, tenantID, examID, studentID, questionID string, highScore bool, expectedReleaseID ...string) (StudentQuestionImageSource, error) {
 	if !validIDs(tenantID, examID, studentID, questionID) {
 		return StudentQuestionImageSource{}, ErrInvalidInput
 	}
-	return s.store.StudentPaperPageImage(ctx, tenantID, examID, studentID, questionID, highScore)
+	return s.store.StudentPaperPageImage(ctx, tenantID, examID, studentID, questionID, highScore, expectedReleaseID...)
 }
 
 func normalizeCreate(input *CreateInput) bool {
@@ -240,19 +245,21 @@ func oneOf(value string, values ...string) bool {
 
 // 申诉窗口包含开始时刻、不包含结束时刻；未设置的端点不限制该方向的时间。
 func appealView(window AppealWindow, now time.Time) StudentAppealView {
-	view := StudentAppealView{}
+	view := StudentAppealView{State: "disabled"}
 	if !window.Enabled {
 		return view
 	}
+	view.OpensAt, view.ClosesAt = cloneTime(window.OpensAt), cloneTime(window.ClosesAt)
 	if window.OpensAt != nil && now.Before(*window.OpensAt) {
-		view.ClosesAt = cloneTime(window.ClosesAt)
+		view.State = "upcoming"
 		return view
 	}
 	if window.ClosesAt != nil && !now.Before(*window.ClosesAt) {
-		view.ClosesAt = cloneTime(window.ClosesAt)
+		view.State = "closed"
 		return view
 	}
 	view.Open = true
+	view.State = "open"
 	view.ClosesAt = cloneTime(window.ClosesAt)
 	view.AllowedReasonCodes = append([]string(nil), window.AllowedReasonCodes...)
 	return view

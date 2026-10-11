@@ -14,8 +14,7 @@ import (
 
 var ErrNotActive = errors.New("file is not active")
 
-// DownloadReader is the narrow private-file capability used after a review
-// task has been authorized. It still enforces the file's own data scope.
+// DownloadReader 是复核任务获授权后使用的有限私有文件能力，仍强制检查文件自身的数据作用域。
 type DownloadReader interface {
 	ReadDownload(context.Context, auth.User, string) (binaryresource.Resource, error)
 }

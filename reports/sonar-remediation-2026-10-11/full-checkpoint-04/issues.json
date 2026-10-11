@@ -1,0 +1,13 @@
+{
+  "total": 0,
+  "exported": 0,
+  "issues": [],
+  "paging": [
+    {
+      "partition": "all",
+      "pageIndex": 1,
+      "pageSize": 500,
+      "total": 0
+    }
+  ]
+}

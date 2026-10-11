@@ -46,7 +46,7 @@ RETURNING id::text
 	if err != nil {
 		return GoldPaper{}, err
 	}
-	if _, err := insertVersion(ctx, tx, tenantID, goldID, actorID, 1, source, versionInput); err != nil {
+	if _, err := insertVersion(ctx, tx, tenantID, goldID, versionForInsert(source, actorID, 1, versionInput)); err != nil {
 		return GoldPaper{}, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -93,7 +93,7 @@ FOR UPDATE
 	if !containsAll(source.AvailableGradeIDs, input.SourceGradeIDs) {
 		return GoldPaper{}, ErrSourceGradeMissing
 	}
-	if _, err := insertVersion(ctx, tx, tenantID, goldID, actorID, nextVersion, source, input); err != nil {
+	if _, err := insertVersion(ctx, tx, tenantID, goldID, versionForInsert(source, actorID, nextVersion, input)); err != nil {
 		if isUniqueViolation(err) {
 			return GoldPaper{}, ErrConflict
 		}
@@ -283,20 +283,31 @@ WHERE tenant_id=$1::uuid AND answer_segment_id=$2::uuid AND deleted_at IS NULL
 	return source, rows.Err()
 }
 
-func insertVersion(ctx context.Context, tx *sql.Tx, tenantID, goldID, actorID string, version int, source Source, input CreateVersionInput) (string, error) {
-	rubric, err := json.Marshal(source.RubricSnapshot)
+// 来源快照和提名输入已由调用方校验；版本号仍由创建事务分配，不从请求输入取得。
+func versionForInsert(source Source, actorID string, number int, input CreateVersionInput) Version {
+	return Version{
+		Version: number, ExamQuestionSnapshotID: source.SnapshotID, MaxScore: source.MaxScore,
+		RubricSnapshot: source.RubricSnapshot, ReferenceScore: input.ReferenceScore,
+		Explanation: input.Explanation, TraitScores: input.TraitScores,
+		ErrorTags: input.ErrorTags, SourceGradeIDs: input.SourceGradeIDs, NominatedBy: actorID,
+	}
+}
+
+// insertVersion 只写入提名事实；主记录和版本的提交或回滚仍由调用方事务负责。
+func insertVersion(ctx context.Context, tx *sql.Tx, tenantID, goldID string, version Version) (string, error) {
+	rubric, err := json.Marshal(version.RubricSnapshot)
 	if err != nil {
 		return "", ErrInvalidInput
 	}
-	traits, err := json.Marshal(input.TraitScores)
+	traits, err := json.Marshal(version.TraitScores)
 	if err != nil {
 		return "", ErrInvalidInput
 	}
-	tags, err := json.Marshal(input.ErrorTags)
+	tags, err := json.Marshal(version.ErrorTags)
 	if err != nil {
 		return "", ErrInvalidInput
 	}
-	grades, err := json.Marshal(input.SourceGradeIDs)
+	grades, err := json.Marshal(version.SourceGradeIDs)
 	if err != nil {
 		return "", ErrInvalidInput
 	}
@@ -307,7 +318,7 @@ INSERT INTO grading_gold_paper_version (
  rubric_snapshot_json,explanation,trait_scores_json,error_tags_json,source_grade_ids_json,nominated_by
 ) VALUES ($1::uuid,$2::uuid,$3,$4::uuid,$5,$6,$7::jsonb,$8,$9::jsonb,$10::jsonb,$11::jsonb,$12::uuid)
 RETURNING id::text
-`, tenantID, goldID, version, source.SnapshotID, input.ReferenceScore, source.MaxScore, rubric, input.Explanation, traits, tags, grades, actorID).Scan(&id)
+`, tenantID, goldID, version.Version, version.ExamQuestionSnapshotID, version.ReferenceScore, version.MaxScore, rubric, version.Explanation, traits, tags, grades, version.NominatedBy).Scan(&id)
 	return id, err
 }
 

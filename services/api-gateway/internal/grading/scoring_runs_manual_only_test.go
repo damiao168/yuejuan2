@@ -9,8 +9,7 @@ import (
 
 func TestRouteScoringSegmentSendsManualOnlyTypesToHumanReview(t *testing.T) {
 	for _, questionType := range paper.ManualOnlyQuestionTypes() {
-		// A manual-only question can be fully configured: published rule,
-		// recorded answer, option regions. None of that gives it a scoring path.
+		// 纯人工题可以有完整配置：已发布规则、已记录答案和选项区域；这些仍不能赋予它自动评分路径。
 		route := routeScoringSegment(questionType, true, true, 4)
 		if route.Kind != scoringRouteManualReview {
 			t.Fatalf("%s must be routed to a human, got %#v", questionType, route)
@@ -69,9 +68,7 @@ func TestFrozenScoringModeOverridesAvailableRule(t *testing.T) {
 	}
 }
 
-// TestScoringRunWithFormulaQuestionCompletes covers the exam-day failure this
-// routing exists for: a paper whose formula question passed the readiness gate
-// must produce a started run with human work, not a failed run.
+// TestScoringRunWithFormulaQuestionCompletes 覆盖此路由要解决的考试日故障：公式题已通过就绪门禁的试卷必须成功启动运行并产生人工工作，不能令运行失败。
 func TestScoringRunWithFormulaQuestionCompletes(t *testing.T) {
 	segments := []struct {
 		kind    string
@@ -144,9 +141,8 @@ func TestManualReviewRouteForGradeErrorReplacesRunFailure(t *testing.T) {
 	}
 }
 
-// TestRuleGradedQuestionTypesMatchEngine guards the readiness advisory against
-// drift: paper.HasAutomatedScoringPath decides what the exam owner is told, and
-// this engine decides what actually happens.
+// TestRuleGradedQuestionTypesMatchEngine 防止就绪提示与实际行为偏离；
+// paper.HasAutomatedScoringPath 决定告知考试负责人的信息，本引擎决定实际执行行为。
 func TestRuleGradedQuestionTypesMatchEngine(t *testing.T) {
 	engine := NewEngine()
 	grade := func(questionType string) error {

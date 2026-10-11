@@ -28,9 +28,8 @@ type argon2Parameters struct {
 	hash        []byte
 }
 
-// HashPassword writes new credentials using Argon2id in the standard PHC
-// format. Existing bcrypt hashes remain readable through CheckPassword and
-// are upgraded after the next successful login.
+// HashPassword 用 Argon2id 和标准 PHC 格式写入新凭据。
+// CheckPassword 仍可读取已有 bcrypt 哈希，并在下一次成功登录后升级。
 func HashPassword(password string) (string, error) {
 	salt := make([]byte, argon2SaltLength)
 	if _, err := rand.Read(salt); err != nil {
@@ -52,9 +51,7 @@ func CheckPassword(hash string, password string) bool {
 	return valid
 }
 
-// VerifyPassword also reports whether a valid legacy or outdated hash should
-// be replaced. Parsing is deliberately bounded so a malformed database value
-// cannot request excessive CPU or memory.
+// VerifyPassword 还会报告有效的旧版或过时哈希是否应被替换。解析有明确边界，避免格式错误的数据库值请求过多 CPU 或内存。
 func VerifyPassword(encodedHash string, password string) (bool, bool) {
 	if strings.HasPrefix(encodedHash, "$2") {
 		if bcrypt.CompareHashAndPassword([]byte(encodedHash), []byte(password)) != nil {

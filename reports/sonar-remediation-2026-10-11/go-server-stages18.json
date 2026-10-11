@@ -1,0 +1,16 @@
+{
+  "files": [
+    {
+      "file": "services/api-gateway/internal/server/e2e_postgres_test.go",
+      "sha256": "36b8c2e1087c59247cdf42f5cd6610a54f27a3150b5b1115339009da2ac180b5",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_postgres_test.go"
+    }
+  ],
+  "issue_functions": [
+    {
+      "file": "services/api-gateway/internal/server/e2e_postgres_test.go",
+      "function": "TestCoreWorkflowE2EWithPostgresTestDatabase"
+    }
+  ],
+  "checkpoint_relation": "after checkpoint02; requires subsequent scan"
+}

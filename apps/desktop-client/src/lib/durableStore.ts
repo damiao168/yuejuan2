@@ -4,11 +4,11 @@ import type { OfflineDraftRecord, OfflineSyncStatus, ScanQualityCheck, SyncQueue
 import { isTauriRuntime } from "./localRuntime";
 
 /**
- * Native storage boundary for the Windows scan station.
+ * Windows 扫描站的原生存储边界。
  *
- * The Tauri implementation owns SQLite, encryption and filesystem paths. Browser
- * development is deliberately not a replacement for this store: callers must
- * choose an explicit development fallback where one is still supported.
+ * Tauri 实现负责 SQLite、加密和文件系统路径。浏览器开发模式
+ * 不能替代此存储；仍支持开发回退的地方，
+ * 调用方必须显式选择该回退路径。
  */
 export interface DurableStoreStatus {
   ready: boolean;
@@ -21,6 +21,9 @@ export interface SpoolAssetInput {
   file: File;
   examId?: string;
   captureBatchId?: string;
+  examName?: string;
+  captureBatchName?: string;
+  captureBatchCreatedAt?: string;
   submissionId?: string;
   pageNo?: number;
   qualityChecks?: ScanQualityCheck[];
@@ -85,6 +88,44 @@ export async function clearDurableSession(): Promise<void> {
   await sessionTransition;
 }
 
+export interface OfflineAccess {
+  server: string;
+  tenantId: string;
+  actorId: string;
+  tenantCode: string;
+  username: string;
+  displayName: string;
+  authorizedAt: string;
+  expiresAt: string;
+}
+
+export async function authorizeOfflineAccess(access: OfflineAccess, sessionId: string): Promise<OfflineAccess> {
+  requireDurableRuntime();
+  return invokeScoped<OfflineAccess>("authorize_offline_access", { access }, sessionId);
+}
+export async function readOfflineAccess(): Promise<OfflineAccess | null> {
+  requireDurableRuntime();
+  return invoke<OfflineAccess | null>("read_offline_access");
+}
+export async function revokeOfflineAccess(sessionId?: string): Promise<void> {
+  requireDurableRuntime();
+  if (sessionId) await invokeScoped("revoke_offline_access", {}, sessionId);
+  else await invoke("revoke_offline_access", { sessionId: null });
+}
+export async function unlockOfflineAccess(access: OfflineAccess): Promise<{ sessionId: string; access: OfflineAccess }> {
+  requireDurableRuntime();
+  const version = ++transitionVersion;
+  activeSessionId = null;
+  let result: { sessionId: string; access: OfflineAccess } | null = null;
+  sessionTransition = sessionTransition.catch(() => undefined).then(async () => {
+    const [sessionId, stored] = await invoke<[string, OfflineAccess]>("unlock_offline_access", { server: access.server, tenantId: access.tenantId, actorId: access.actorId });
+    if (version === transitionVersion) { activeSessionId = sessionId; result = { sessionId, access: stored }; }
+  });
+  await sessionTransition;
+  if (!result) throw new Error("账号已切换，本机解锁已停止。");
+  return result;
+}
+
 export async function claimLegacyDurableStore(expectedSessionId: string): Promise<void> {
   requireDurableRuntime();
   await invokeScoped("claim_legacy_durable_store", {}, expectedSessionId);
@@ -102,6 +143,9 @@ export async function spoolScanAsset(input: SpoolAssetInput, expectedSessionId?:
       sha256,
       examId: input.examId,
       captureBatchId: input.captureBatchId,
+      examName: input.examName,
+      captureBatchName: input.captureBatchName,
+      captureBatchCreatedAt: input.captureBatchCreatedAt,
       submissionId: input.submissionId,
       pageNo: input.pageNo,
       qualityChecks: input.qualityChecks
@@ -127,6 +171,21 @@ export async function listDurableScanQueue(expectedSessionId?: string): Promise<
   return invokeScoped<SyncQueueItem[]>("list_durable_scan_queue", {}, expectedSessionId);
 }
 
+export interface DurableStorageUsage { spoolBytes: number; databaseBytes: number; freeBytes: number | null; assetCount: number }
+export interface ArchivedCleanupCandidate { id: string; filename: string; confirmedAt: string; sizeBytes: number }
+export async function getDurableStorageUsage(expectedSessionId: string): Promise<DurableStorageUsage> {
+  requireDurableRuntime();
+  return invokeScoped("durable_storage_usage", {}, expectedSessionId);
+}
+export async function listArchivedCleanupCandidates(retainDays: number, expectedSessionId: string): Promise<ArchivedCleanupCandidate[]> {
+  requireDurableRuntime();
+  return invokeScoped("list_archived_cleanup_candidates", { retainDays }, expectedSessionId);
+}
+export async function cleanupArchivedOriginals(retainDays: number, ids: string[], expectedSessionId: string): Promise<{ removed: number; failures: string[] }> {
+  requireDurableRuntime();
+  return invokeScoped("cleanup_archived_originals", { retainDays, ids }, expectedSessionId);
+}
+
 export async function persistDurableScanQueueItem(item: SyncQueueItem, expectedSessionId?: string): Promise<void> {
   requireDurableRuntime();
   await invokeScoped("persist_durable_scan_queue_item", { item: withoutPreview(item) }, expectedSessionId);
@@ -135,6 +194,10 @@ export async function persistDurableScanQueueItem(item: SyncQueueItem, expectedS
 export async function archiveDurableScanQueueItems(ids: string[], expectedSessionId?: string): Promise<void> {
   requireDurableRuntime();
   await invokeScoped("archive_durable_scan_queue_items", { ids }, expectedSessionId);
+}
+export async function removeUnstartedScanQueueItem(id: string, sessionId: string): Promise<void> {
+  requireDurableRuntime();
+  await invokeScoped("remove_unstarted_scan_queue_item", { id }, sessionId);
 }
 
 export async function loadDurableSpoolFile(localAssetId: string, expectedSessionId?: string): Promise<CaptureUploadSource> {

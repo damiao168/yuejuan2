@@ -116,9 +116,7 @@ type ObservedDeviceInput struct {
 	ExpiresAt      time.Time
 }
 
-// RiskStore is deliberately separate from Store so authentication remains
-// available when an older or specialized store has not implemented RBA yet.
-// In that case the handler fails neutral and records only a limited decision.
+// RiskStore 与 Store 分离，使旧存储或专用存储尚未实现 RBA 时认证仍可用；此时处理器按中性结果回退，只记录有限的决策。
 type RiskStore interface {
 	LoadLoginRiskContext(ctx context.Context, request LoginRiskContextRequest) (LoginRiskContext, error)
 	RecordRiskEvent(ctx context.Context, event RiskEvent) error
@@ -139,9 +137,7 @@ func DefaultLoginRiskDecision(now time.Time) RiskDecision {
 	}
 }
 
-// EvaluateLoginRisk uses capped, independent signal families. Network and
-// browser novelty cannot by themselves block a teacher behind campus NAT, and
-// cold-start accounts are never promoted to high risk merely for being new.
+// EvaluateLoginRisk 使用独立且有上限的信号类别。网络和浏览器的新颖性不能单独阻止校园 NAT 后的教师，冷启动账户也不会仅因新建而被提升为高风险。
 func EvaluateLoginRisk(input LoginRiskContext, now time.Time) RiskDecision {
 	decision := RiskDecision{
 		Purpose:           RiskPurposeLogin,

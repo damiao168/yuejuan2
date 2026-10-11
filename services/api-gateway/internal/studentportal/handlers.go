@@ -12,14 +12,12 @@ type Handler struct{ service *Service }
 
 func NewHandler(service *Service) *Handler { return &Handler{service: service} }
 
-// RegisterRoutes adds the A21 discovery endpoint. A18 already registers the
-// two canonical student-safe result endpoints on this same path family:
+// RegisterRoutes 添加 A21 发现端点。A18 已在相同路径系列中注册两个标准的学生安全结果端点：
 //
 //	GET /api/v1/student/exams/{examId}/result
 //	GET /api/v1/student/exams/{examId}/questions/{questionId}
 //
-// Keeping a single owner for those DTOs prevents the portal from drifting into
-// an admin/review representation or registering duplicate ServeMux patterns.
+// 这些 DTO 保持唯一归属，避免门户偏移为管理员或复核表示，也避免注册重复的 ServeMux 模式。
 func RegisterRoutes(mux *http.ServeMux, h *Handler, requireStudentRead func(http.HandlerFunc) http.Handler) {
 	mux.Handle("GET /api/v1/student/exams", requireStudentRead(h.ListPublishedExams))
 }

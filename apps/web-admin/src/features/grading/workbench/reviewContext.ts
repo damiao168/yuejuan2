@@ -31,10 +31,10 @@ export function frozenRubricFromContext(context: ReviewTaskContext): Rubric {
   return {
     id: asString(source.id, `snapshot-${context.question_snapshot.id}`),
     question_id: asString(source.question_id, context.task.question_id),
-    version: asString(source.version, String(context.question_snapshot.snapshot_version)),
+    version: asString(source.version),
     status: asString(source.status, "frozen"),
     max_score: asNumber(source.max_score, context.question.score),
-    points: Array.isArray(source.points) ? source.points.map(normalizeRubricPoint) : [],
+    points: Array.isArray(source.points) ? source.points.map((point, index) => normalizeRubricPoint(point, index)) : [],
     deductions: Array.isArray(source.deductions) ? source.deductions : [],
     examples: Array.isArray(source.examples) ? source.examples : []
   };
@@ -50,7 +50,9 @@ export function questionFromContext(context: ReviewTaskContext): Question {
     question_type: source.question_type,
     score: source.score,
     stem: source.stem,
-    options: [],
+    options: Array.isArray(source.options) ? source.options.filter((option): option is string => typeof option === "string") : [],
+    answer_key: source.answer_key as Question["answer_key"],
+    solution: source.solution as Question["solution"],
     knowledge_points: source.knowledge_points ?? [],
     sort_order: 0,
     status: "ready",
@@ -59,7 +61,7 @@ export function questionFromContext(context: ReviewTaskContext): Question {
 }
 
 export function requiresExplicitSecondOpinion(context: ReviewTaskContext): boolean {
-  // The immutable policy applies even before an AI suggestion exists.
+  // 即使尚无 AI 建议，不可变策略仍然生效。
   return (context.question_snapshot.risk_tier === "R3" && context.question_snapshot.scoring_policy_snapshot.mode === "HUMAN_PRIMARY")
     || (context.ai_second_opinion?.presentation === "explicit_second_opinion" && context.ai_second_opinion.score_prefill_allowed === false);
 }

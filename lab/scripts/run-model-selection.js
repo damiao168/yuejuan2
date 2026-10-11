@@ -45,7 +45,8 @@ if (!governance.valid) throw new Error(`Model selection dataset failed governanc
 const invalidInputs = samples.map((sample) => ({ sample_id: sample.sample_id, validation: validateGradingInput(sampleToInput(sample)) }))
   .filter((item) => !item.validation.valid);
 if (invalidInputs.length) {
-  throw new Error(`Model selection inputs are invalid: ${invalidInputs.slice(0, 5).map((item) => `${item.sample_id}: ${item.validation.errors.join("; ")}`).join(" | ")}`);
+  const details = invalidInputs.slice(0, 5).map((item) => `${item.sample_id}: ${item.validation.errors.join("; ")}`).join(" | ");
+  throw new Error(`Model selection inputs are invalid: ${details}`);
 }
 let adapter;
 if (candidateId === "rules_alias") {
@@ -76,6 +77,10 @@ for (const sample of samples) {
 }
 // 质量指标只统计完成的样本；失败另计 completion_rate，解读时必须同时看完成率。
 const quality = computeMetrics(records);
+let selectionMethod;
+if (completeDataset) selectionMethod = "full_dataset";
+else if (requestedSampleId) selectionMethod = "explicit_sample_id_diagnostic";
+else selectionMethod = "deterministic_question_round_robin_smoke";
 const report = {
   schema_version: "model-selection-report-v1",
   generated_at: new Date().toISOString(),
@@ -90,8 +95,7 @@ const report = {
     source_total_samples: sourceSamples.length,
     source_sha256: createHash("sha256").update(datasetText).digest("hex"),
     complete_dataset: completeDataset,
-    selection_method: completeDataset ? "full_dataset" :
-      requestedSampleId ? "explicit_sample_id_diagnostic" : "deterministic_question_round_robin_smoke",
+    selection_method: selectionMethod,
     source_id: datasetSource.source_id,
     evidence_scope: datasetSource.evidence_scope,
     governance_passed: true

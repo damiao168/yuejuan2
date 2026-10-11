@@ -1,0 +1,1653 @@
+{
+  "scan_kind": "report_scope_fixed_snapshot",
+  "all_scoped_paths_scanned": true,
+  "scoped_paths": 46,
+  "original_finding_paths_covered": 37,
+  "findings_reviewed": 65,
+  "pending_finding_reviews": 0,
+  "whole_file_review_claimed": false,
+  "findings": [
+    {
+      "id": "RS-001",
+      "rule": "python.lang.security.audit.httpsconnection-detected.httpsconnection-detected",
+      "path": "ai-services/grading_agent/managed_model.py",
+      "reported_line": 62,
+      "source_line_from_byte_offset": 62,
+      "source_match_sha256": "d1ce184bf8ccf758a8063899e6d5fe8033cbfae8e30d6bb22d78f72557038e26",
+      "severity": "WARNING",
+      "status": "false_positive_existing_controls",
+      "reason": "请求只接受 HTTPS，DNS 全部地址要求 global，socket 固定已验证地址但保留原主机 SNI。TLS client context 强制证书链和主机名校验；HTTP 状态非2xx报错，不自动跟随重定向。",
+      "original_rule_path_ids": [
+        "SG-012"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-002",
+      "rule": "python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected",
+      "path": "ai-services/tests/test_http.py",
+      "reported_line": 29,
+      "source_line_from_byte_offset": 29,
+      "source_match_sha256": "aaf4961ee56c8fed1ec5812fb20bdc62a8314181ea20dd9bbf6aec482d10a0a1",
+      "severity": "WARNING",
+      "status": "false_positive_test_scope",
+      "reason": "测试自行启动127.0.0.1随机端口服务；URL来自该fixture并有timeout。服务令牌为合成测试值，没有生产用户可控目标或真实服务凭据输入。",
+      "original_rule_path_ids": [
+        "SG-016",
+        "SG-017",
+        "SG-018",
+        "SG-019",
+        "SG-020",
+        "SG-021",
+        "SG-022",
+        "SG-023"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-003",
+      "rule": "python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected",
+      "path": "ai-services/tests/test_http.py",
+      "reported_line": 31,
+      "source_line_from_byte_offset": 31,
+      "source_match_sha256": "4480e1c6524e6b62c20ad7fc3f7d553d8c4016677a8d0e0ed7303b9370a44d48",
+      "severity": "WARNING",
+      "status": "false_positive_test_scope",
+      "reason": "测试自行启动127.0.0.1随机端口服务；URL来自该fixture并有timeout。服务令牌为合成测试值，没有生产用户可控目标或真实服务凭据输入。",
+      "original_rule_path_ids": [
+        "SG-016",
+        "SG-017",
+        "SG-018",
+        "SG-019",
+        "SG-020",
+        "SG-021",
+        "SG-022",
+        "SG-023"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-004",
+      "rule": "python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected",
+      "path": "ai-services/tests/test_http.py",
+      "reported_line": 36,
+      "source_line_from_byte_offset": 36,
+      "source_match_sha256": "4480e1c6524e6b62c20ad7fc3f7d553d8c4016677a8d0e0ed7303b9370a44d48",
+      "severity": "WARNING",
+      "status": "false_positive_test_scope",
+      "reason": "测试自行启动127.0.0.1随机端口服务；URL来自该fixture并有timeout。服务令牌为合成测试值，没有生产用户可控目标或真实服务凭据输入。",
+      "original_rule_path_ids": [
+        "SG-016",
+        "SG-017",
+        "SG-018",
+        "SG-019",
+        "SG-020",
+        "SG-021",
+        "SG-022",
+        "SG-023"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-005",
+      "rule": "python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected",
+      "path": "ai-services/tests/test_http.py",
+      "reported_line": 50,
+      "source_line_from_byte_offset": 50,
+      "source_match_sha256": "340be9273c10d34975b3cc0005865d6edb2a53225ce0ae7c9bbe2a9a2114c57a",
+      "severity": "WARNING",
+      "status": "false_positive_test_scope",
+      "reason": "测试自行启动127.0.0.1随机端口服务；URL来自该fixture并有timeout。服务令牌为合成测试值，没有生产用户可控目标或真实服务凭据输入。",
+      "original_rule_path_ids": [
+        "SG-016",
+        "SG-017",
+        "SG-018",
+        "SG-019",
+        "SG-020",
+        "SG-021",
+        "SG-022",
+        "SG-023"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-006",
+      "rule": "python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected",
+      "path": "ai-services/tests/test_http.py",
+      "reported_line": 64,
+      "source_line_from_byte_offset": 64,
+      "source_match_sha256": "6ec1de5d0b5611260c8e517e2cf36998e83c425b6c991e7f54126f30f68dae8f",
+      "severity": "WARNING",
+      "status": "false_positive_test_scope",
+      "reason": "测试自行启动127.0.0.1随机端口服务；URL来自该fixture并有timeout。服务令牌为合成测试值，没有生产用户可控目标或真实服务凭据输入。",
+      "original_rule_path_ids": [
+        "SG-016",
+        "SG-017",
+        "SG-018",
+        "SG-019",
+        "SG-020",
+        "SG-021",
+        "SG-022",
+        "SG-023"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-007",
+      "rule": "python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected",
+      "path": "ai-services/tests/test_http.py",
+      "reported_line": 75,
+      "source_line_from_byte_offset": 75,
+      "source_match_sha256": "d45f894c63472cd8864bce71d014c98879c687978122914f6ddba4f4bb5082f9",
+      "severity": "WARNING",
+      "status": "false_positive_test_scope",
+      "reason": "测试自行启动127.0.0.1随机端口服务；URL来自该fixture并有timeout。服务令牌为合成测试值，没有生产用户可控目标或真实服务凭据输入。",
+      "original_rule_path_ids": [
+        "SG-016",
+        "SG-017",
+        "SG-018",
+        "SG-019",
+        "SG-020",
+        "SG-021",
+        "SG-022",
+        "SG-023"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-008",
+      "rule": "python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected",
+      "path": "ai-services/tests/test_http.py",
+      "reported_line": 117,
+      "source_line_from_byte_offset": 117,
+      "source_match_sha256": "d45f894c63472cd8864bce71d014c98879c687978122914f6ddba4f4bb5082f9",
+      "severity": "WARNING",
+      "status": "false_positive_test_scope",
+      "reason": "测试自行启动127.0.0.1随机端口服务；URL来自该fixture并有timeout。服务令牌为合成测试值，没有生产用户可控目标或真实服务凭据输入。",
+      "original_rule_path_ids": [
+        "SG-016",
+        "SG-017",
+        "SG-018",
+        "SG-019",
+        "SG-020",
+        "SG-021",
+        "SG-022",
+        "SG-023"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-009",
+      "rule": "python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected",
+      "path": "ai-services/tests/test_http.py",
+      "reported_line": 151,
+      "source_line_from_byte_offset": 151,
+      "source_match_sha256": "d45f894c63472cd8864bce71d014c98879c687978122914f6ddba4f4bb5082f9",
+      "severity": "WARNING",
+      "status": "false_positive_test_scope",
+      "reason": "测试自行启动127.0.0.1随机端口服务；URL来自该fixture并有timeout。服务令牌为合成测试值，没有生产用户可控目标或真实服务凭据输入。",
+      "original_rule_path_ids": [
+        "SG-016",
+        "SG-017",
+        "SG-018",
+        "SG-019",
+        "SG-020",
+        "SG-021",
+        "SG-022",
+        "SG-023"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-010",
+      "rule": "python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected",
+      "path": "ai-services/tests/test_math_v2_production.py",
+      "reported_line": 164,
+      "source_line_from_byte_offset": 164,
+      "source_match_sha256": "d45f894c63472cd8864bce71d014c98879c687978122914f6ddba4f4bb5082f9",
+      "severity": "WARNING",
+      "status": "false_positive_test_scope",
+      "reason": "测试自行启动127.0.0.1随机端口服务；URL来自该fixture并有timeout。服务令牌为合成测试值，没有生产用户可控目标或真实服务凭据输入。",
+      "original_rule_path_ids": [
+        "SG-024"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-011",
+      "rule": "python.lang.security.audit.dangerous-subprocess-use-tainted-env-args.dangerous-subprocess-use-tainted-env-args",
+      "path": "ai-services/tests/test_model_transport_security.py",
+      "reported_line": 100,
+      "source_line_from_byte_offset": 100,
+      "source_match_sha256": "39af7ad6f1c6dd1b2814d2120f9c0a4bad2159decab0c5e5b6533f506bda6470",
+      "severity": "ERROR",
+      "status": "trusted_local_test_tool",
+      "reason": "OpenSSL来自本地测试环境变量或shutil.which；要求绝对路径并strict resolve。参数为固定req选项与随机临时证书文件，shell未启用。测试操作者需要选择可信本地可执行文件，未见生产API用户输入。",
+      "original_rule_path_ids": [],
+      "new_rule_path": true,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-012",
+      "rule": "generic.nginx.security.header-redefinition.header-redefinition",
+      "path": "apps/web-admin/nginx.conf",
+      "reported_line": 17,
+      "source_line_from_byte_offset": 17,
+      "source_match_sha256": "152171e8448df3a25052fa4c88618a93bf5dac90fe3ce20335eb808b057fbbb2",
+      "severity": "WARNING",
+      "status": "false_positive_existing_controls",
+      "reason": "health location声明add_header会停止继承；此处同时重复server层全部安全响应头和always，没有丢掉安全策略。",
+      "original_rule_path_ids": [
+        "SG-025",
+        "SG-026",
+        "SG-027",
+        "SG-028",
+        "SG-029",
+        "SG-030"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-013",
+      "rule": "generic.nginx.security.header-redefinition.header-redefinition",
+      "path": "apps/web-admin/nginx.conf",
+      "reported_line": 19,
+      "source_line_from_byte_offset": 19,
+      "source_match_sha256": "27ef9cd12c9b6d24ec0148a331b1a5c76e6b7e34a28d3a46710ffcac63261bcc",
+      "severity": "WARNING",
+      "status": "false_positive_existing_controls",
+      "reason": "health location声明add_header会停止继承；此处同时重复server层全部安全响应头和always，没有丢掉安全策略。",
+      "original_rule_path_ids": [
+        "SG-025",
+        "SG-026",
+        "SG-027",
+        "SG-028",
+        "SG-029",
+        "SG-030"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-014",
+      "rule": "generic.nginx.security.header-redefinition.header-redefinition",
+      "path": "apps/web-admin/nginx.conf",
+      "reported_line": 20,
+      "source_line_from_byte_offset": 20,
+      "source_match_sha256": "1c5882aace75562fef605f03283eafb260322cb4b0972b8eb248c786323faa79",
+      "severity": "WARNING",
+      "status": "false_positive_existing_controls",
+      "reason": "health location声明add_header会停止继承；此处同时重复server层全部安全响应头和always，没有丢掉安全策略。",
+      "original_rule_path_ids": [
+        "SG-025",
+        "SG-026",
+        "SG-027",
+        "SG-028",
+        "SG-029",
+        "SG-030"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-015",
+      "rule": "generic.nginx.security.header-redefinition.header-redefinition",
+      "path": "apps/web-admin/nginx.conf",
+      "reported_line": 21,
+      "source_line_from_byte_offset": 21,
+      "source_match_sha256": "bf81cb6098c5c1622b5717ca1b12f79767f55c59c830ae6a16e307699a10c60b",
+      "severity": "WARNING",
+      "status": "false_positive_existing_controls",
+      "reason": "health location声明add_header会停止继承；此处同时重复server层全部安全响应头和always，没有丢掉安全策略。",
+      "original_rule_path_ids": [
+        "SG-025",
+        "SG-026",
+        "SG-027",
+        "SG-028",
+        "SG-029",
+        "SG-030"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-016",
+      "rule": "generic.nginx.security.header-redefinition.header-redefinition",
+      "path": "apps/web-admin/nginx.conf",
+      "reported_line": 22,
+      "source_line_from_byte_offset": 22,
+      "source_match_sha256": "1bf3e3f7f69a2d2565e7c262673116fef173534912c9c91daa856f750865b8c6",
+      "severity": "WARNING",
+      "status": "false_positive_existing_controls",
+      "reason": "health location声明add_header会停止继承；此处同时重复server层全部安全响应头和always，没有丢掉安全策略。",
+      "original_rule_path_ids": [
+        "SG-025",
+        "SG-026",
+        "SG-027",
+        "SG-028",
+        "SG-029",
+        "SG-030"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-017",
+      "rule": "generic.nginx.security.header-redefinition.header-redefinition",
+      "path": "apps/web-admin/nginx.conf",
+      "reported_line": 23,
+      "source_line_from_byte_offset": 23,
+      "source_match_sha256": "e4589edd2bc2ef7b6d86c33a292235d708050a6cb15c0419a9d1e7e6fbe3c0fa",
+      "severity": "WARNING",
+      "status": "false_positive_existing_controls",
+      "reason": "health location声明add_header会停止继承；此处同时重复server层全部安全响应头和always，没有丢掉安全策略。",
+      "original_rule_path_ids": [
+        "SG-025",
+        "SG-026",
+        "SG-027",
+        "SG-028",
+        "SG-029",
+        "SG-030"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-018",
+      "rule": "javascript.lang.security.audit.unknown-value-with-script-tag.unknown-value-with-script-tag",
+      "path": "apps/web-admin/src/auth/mfaFlow.test.ts",
+      "reported_line": 196,
+      "source_line_from_byte_offset": 196,
+      "source_match_sha256": "64a7994c6feb92d40f0c88d34e120cf1a01b6e36af329ab2f2444a8c0e4a2043",
+      "severity": "WARNING",
+      "status": "false_positive_test_scope",
+      "reason": "MFA测试故意把script字样放入mock recovery_codes，断言confirm变uncertain且phase关闭；不是把不可信值写入DOM的生产代码。",
+      "original_rule_path_ids": [
+        "SG-031",
+        "SG-032",
+        "SG-033"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-019",
+      "rule": "javascript.lang.security.audit.unknown-value-with-script-tag.unknown-value-with-script-tag",
+      "path": "apps/web-admin/src/auth/mfaFlow.test.ts",
+      "reported_line": 196,
+      "source_line_from_byte_offset": 196,
+      "source_match_sha256": "64a7994c6feb92d40f0c88d34e120cf1a01b6e36af329ab2f2444a8c0e4a2043",
+      "severity": "WARNING",
+      "status": "false_positive_test_scope",
+      "reason": "MFA测试故意把script字样放入mock recovery_codes，断言confirm变uncertain且phase关闭；不是把不可信值写入DOM的生产代码。",
+      "original_rule_path_ids": [
+        "SG-031",
+        "SG-032",
+        "SG-033"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-020",
+      "rule": "javascript.lang.security.audit.unknown-value-with-script-tag.unknown-value-with-script-tag",
+      "path": "apps/web-admin/src/auth/mfaFlow.test.ts",
+      "reported_line": 196,
+      "source_line_from_byte_offset": 196,
+      "source_match_sha256": "64a7994c6feb92d40f0c88d34e120cf1a01b6e36af329ab2f2444a8c0e4a2043",
+      "severity": "WARNING",
+      "status": "false_positive_test_scope",
+      "reason": "MFA测试故意把script字样放入mock recovery_codes，断言confirm变uncertain且phase关闭；不是把不可信值写入DOM的生产代码。",
+      "original_rule_path_ids": [
+        "SG-031",
+        "SG-032",
+        "SG-033"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-021",
+      "rule": "python.lang.security.use-defused-xml.use-defused-xml",
+      "path": "docs/architecture/tools/build_diagrams.py",
+      "reported_line": 6,
+      "source_line_from_byte_offset": 6,
+      "source_match_sha256": "925185a804f421190a7a0276a73594730bf5ea098b8fd7fb781ad42e365b8cc9",
+      "severity": "ERROR",
+      "status": "false_positive_generation_import_after_fix",
+      "reason": "SG-034的标准库ET仅用于Element/SubElement/indent/write生成与序列化；生成文件再解析使用safe_xml.parse(forbid_dtd=True)。import命中没有区分生成与解析，解析边界已修复但保留标准库生成API。",
+      "original_rule_path_ids": [
+        "SG-034"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-022",
+      "rule": "generic.nginx.security.header-redefinition.header-redefinition",
+      "path": "infra/docker-compose/nginx/story056-e2e.conf",
+      "reported_line": 18,
+      "source_line_from_byte_offset": 18,
+      "source_match_sha256": "152171e8448df3a25052fa4c88618a93bf5dac90fe3ce20335eb808b057fbbb2",
+      "severity": "WARNING",
+      "status": "false_positive_test_scope",
+      "reason": "隔离E2E网关health仅设置Content-Type；server层没有需要继承的add_header。此测试配置不能当作生产安全响应头策略。",
+      "original_rule_path_ids": [
+        "SG-046"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-023",
+      "rule": "generic.nginx.security.header-redefinition.header-redefinition",
+      "path": "infra/docker-compose/nginx/story060-e2e.conf",
+      "reported_line": 18,
+      "source_line_from_byte_offset": 18,
+      "source_match_sha256": "152171e8448df3a25052fa4c88618a93bf5dac90fe3ce20335eb808b057fbbb2",
+      "severity": "WARNING",
+      "status": "false_positive_test_scope",
+      "reason": "隔离E2E网关health仅设置Content-Type；server层没有需要继承的add_header。此测试配置不能当作生产安全响应头策略。",
+      "original_rule_path_ids": [
+        "SG-049"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-024",
+      "rule": "python.lang.security.audit.dangerous-subprocess-use-tainted-env-args.dangerous-subprocess-use-tainted-env-args",
+      "path": "infra/docker-compose/nginx/tests/check_proxy_authority.py",
+      "reported_line": 143,
+      "source_line_from_byte_offset": 143,
+      "source_match_sha256": "a3d7bbc4d0aba068ad15900a342d4b9857b66076f0de9cb7d9f446b80d72e673",
+      "severity": "ERROR",
+      "status": "trusted_local_test_tool",
+      "reason": "命中测试者显式--nginx本地路径的固定-v版本查询；路径resolve为绝对地址，subprocess参数为数组，shell未启用。测试操作者需要选择可信本地可执行文件，未见生产API用户输入。",
+      "original_rule_path_ids": [],
+      "new_rule_path": true,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-025",
+      "rule": "python.lang.security.audit.exec-detected.exec-detected",
+      "path": "scripts/test_fujian_math_batch29.py",
+      "reported_line": 25,
+      "source_line_from_byte_offset": 25,
+      "source_match_sha256": "921f51f06d20fecb2668b2fc927993067c53d532e6fa0bec902d1a39382ef954",
+      "severity": "WARNING",
+      "status": "false_positive_test_scope",
+      "reason": "测试从仓库固定脚本读取AST，只选择固定白名单的三个FunctionDef并compile/exec；不是生产接口接受的用户源码。仓库源文件本身需可信。",
+      "original_rule_path_ids": [
+        "SG-052"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-026",
+      "rule": "go.lang.security.audit.net.cookie-missing-secure.cookie-missing-secure",
+      "path": "services/api-gateway/internal/auth/cookies.go",
+      "reported_line": 10,
+      "source_line_from_byte_offset": 10,
+      "source_match_sha256": "d59321b31a8da8c28e8189707093a2ba50463f58cea091f16845ea5653d7df2e",
+      "severity": "WARNING",
+      "status": "false_positive_existing_controls",
+      "reason": "实际Cookie字面量包含HttpOnly=true和Secure=h.cookieSecure。构造器接收配置，生产类环境默认Secure=true并拒绝false启动；本地HTTP测试允许配置false。",
+      "original_rule_path_ids": [
+        "SG-053",
+        "SG-054",
+        "SG-055",
+        "SG-056"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-027",
+      "rule": "go.lang.security.audit.net.cookie-missing-secure.cookie-missing-secure",
+      "path": "services/api-gateway/internal/auth/cookies.go",
+      "reported_line": 27,
+      "source_line_from_byte_offset": 27,
+      "source_match_sha256": "8a030ed4d2ce61820853fd0bd9dfc09fff428a7eef497e0a7f33ddb6b5bd2141",
+      "severity": "WARNING",
+      "status": "false_positive_existing_controls",
+      "reason": "实际Cookie字面量包含HttpOnly=true和Secure=h.cookieSecure。构造器接收配置，生产类环境默认Secure=true并拒绝false启动；本地HTTP测试允许配置false。",
+      "original_rule_path_ids": [
+        "SG-053",
+        "SG-054",
+        "SG-055",
+        "SG-056"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-028",
+      "rule": "go.lang.security.audit.net.cookie-missing-secure.cookie-missing-secure",
+      "path": "services/api-gateway/internal/auth/cookies.go",
+      "reported_line": 54,
+      "source_line_from_byte_offset": 54,
+      "source_match_sha256": "b42e8c27e50d4ddd8b1270f0e1887ddde9967af09b099ccf49c142ffa5086142",
+      "severity": "WARNING",
+      "status": "false_positive_existing_controls",
+      "reason": "实际Cookie字面量包含HttpOnly=true和Secure=h.cookieSecure。构造器接收配置，生产类环境默认Secure=true并拒绝false启动；本地HTTP测试允许配置false。",
+      "original_rule_path_ids": [
+        "SG-053",
+        "SG-054",
+        "SG-055",
+        "SG-056"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-029",
+      "rule": "go.lang.security.audit.net.cookie-missing-secure.cookie-missing-secure",
+      "path": "services/api-gateway/internal/auth/cookies.go",
+      "reported_line": 62,
+      "source_line_from_byte_offset": 62,
+      "source_match_sha256": "8f877b75a4dff502234d106bd728dceb1259a7bd9b90cb6436f82d9d9a0dd44b",
+      "severity": "WARNING",
+      "status": "false_positive_existing_controls",
+      "reason": "实际Cookie字面量包含HttpOnly=true和Secure=h.cookieSecure。构造器接收配置，生产类环境默认Secure=true并拒绝false启动；本地HTTP测试允许配置false。",
+      "original_rule_path_ids": [
+        "SG-053",
+        "SG-054",
+        "SG-055",
+        "SG-056"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-030",
+      "rule": "go.lang.security.audit.net.cookie-missing-httponly.cookie-missing-httponly",
+      "path": "services/api-gateway/internal/auth/mfa_http_test.go",
+      "reported_line": 36,
+      "source_line_from_byte_offset": 36,
+      "source_match_sha256": "20dcf77e59859b696c245ede2056f9ad2cd34ad52ff4267b99a652b5496ed952",
+      "severity": "WARNING",
+      "status": "false_positive_test_scope",
+      "reason": "httptest.AddCookie把合成Cookie作为请求头输入，用于验证CSRF/授权边界；这是请求fixture，不是浏览器Set-Cookie响应配置。",
+      "original_rule_path_ids": [
+        "SG-057"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-031",
+      "rule": "go.lang.security.audit.net.cookie-missing-secure.cookie-missing-secure",
+      "path": "services/api-gateway/internal/auth/mfa_http_test.go",
+      "reported_line": 36,
+      "source_line_from_byte_offset": 36,
+      "source_match_sha256": "20dcf77e59859b696c245ede2056f9ad2cd34ad52ff4267b99a652b5496ed952",
+      "severity": "WARNING",
+      "status": "false_positive_test_scope",
+      "reason": "httptest.AddCookie把合成Cookie作为请求头输入，用于验证CSRF/授权边界；这是请求fixture，不是浏览器Set-Cookie响应配置。",
+      "original_rule_path_ids": [
+        "SG-058"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-032",
+      "rule": "go.lang.security.audit.database.string-formatted-query.string-formatted-query",
+      "path": "services/api-gateway/internal/files/store_postgres.go",
+      "reported_line": 221,
+      "source_line_from_byte_offset": 221,
+      "source_match_sha256": "068ac6c2e2c06a4f66dc9c56fba8c2a781c4abd104b1d519c1934e053215bc97",
+      "severity": "WARNING",
+      "status": "false_positive_existing_controls",
+      "reason": "拼接部分仅由内部状态列表长度生成$7以后数字占位符及固定assetColumns；租户、资产、revision、状态和detail均通过args绑定。",
+      "original_rule_path_ids": [
+        "SG-059"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-033",
+      "rule": "go.lang.security.audit.net.cookie-missing-httponly.cookie-missing-httponly",
+      "path": "services/api-gateway/internal/middleware/middleware_test.go",
+      "reported_line": 64,
+      "source_line_from_byte_offset": 64,
+      "source_match_sha256": "88dee521cd4cd21be1dee4aaac379ba627682230bea494a6e2de00b6a0948b48",
+      "severity": "WARNING",
+      "status": "false_positive_test_scope",
+      "reason": "httptest.AddCookie把合成Cookie作为请求头输入，用于验证CSRF/授权边界；这是请求fixture，不是浏览器Set-Cookie响应配置。",
+      "original_rule_path_ids": [
+        "SG-060",
+        "SG-062",
+        "SG-064",
+        "SG-066"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-034",
+      "rule": "go.lang.security.audit.net.cookie-missing-secure.cookie-missing-secure",
+      "path": "services/api-gateway/internal/middleware/middleware_test.go",
+      "reported_line": 64,
+      "source_line_from_byte_offset": 64,
+      "source_match_sha256": "88dee521cd4cd21be1dee4aaac379ba627682230bea494a6e2de00b6a0948b48",
+      "severity": "WARNING",
+      "status": "false_positive_test_scope",
+      "reason": "httptest.AddCookie把合成Cookie作为请求头输入，用于验证CSRF/授权边界；这是请求fixture，不是浏览器Set-Cookie响应配置。",
+      "original_rule_path_ids": [
+        "SG-061",
+        "SG-063",
+        "SG-065",
+        "SG-067"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-035",
+      "rule": "go.lang.security.audit.net.cookie-missing-httponly.cookie-missing-httponly",
+      "path": "services/api-gateway/internal/middleware/middleware_test.go",
+      "reported_line": 78,
+      "source_line_from_byte_offset": 78,
+      "source_match_sha256": "8b122a0ee3a3ea288cf506582db9e7fe91567c92f2b7fda45062a8bb38f17468",
+      "severity": "WARNING",
+      "status": "false_positive_test_scope",
+      "reason": "httptest.AddCookie把合成Cookie作为请求头输入，用于验证CSRF/授权边界；这是请求fixture，不是浏览器Set-Cookie响应配置。",
+      "original_rule_path_ids": [
+        "SG-060",
+        "SG-062",
+        "SG-064",
+        "SG-066"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-036",
+      "rule": "go.lang.security.audit.net.cookie-missing-secure.cookie-missing-secure",
+      "path": "services/api-gateway/internal/middleware/middleware_test.go",
+      "reported_line": 78,
+      "source_line_from_byte_offset": 78,
+      "source_match_sha256": "8b122a0ee3a3ea288cf506582db9e7fe91567c92f2b7fda45062a8bb38f17468",
+      "severity": "WARNING",
+      "status": "false_positive_test_scope",
+      "reason": "httptest.AddCookie把合成Cookie作为请求头输入，用于验证CSRF/授权边界；这是请求fixture，不是浏览器Set-Cookie响应配置。",
+      "original_rule_path_ids": [
+        "SG-061",
+        "SG-063",
+        "SG-065",
+        "SG-067"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-037",
+      "rule": "go.lang.security.audit.net.cookie-missing-httponly.cookie-missing-httponly",
+      "path": "services/api-gateway/internal/middleware/middleware_test.go",
+      "reported_line": 93,
+      "source_line_from_byte_offset": 93,
+      "source_match_sha256": "88dee521cd4cd21be1dee4aaac379ba627682230bea494a6e2de00b6a0948b48",
+      "severity": "WARNING",
+      "status": "false_positive_test_scope",
+      "reason": "httptest.AddCookie把合成Cookie作为请求头输入，用于验证CSRF/授权边界；这是请求fixture，不是浏览器Set-Cookie响应配置。",
+      "original_rule_path_ids": [
+        "SG-060",
+        "SG-062",
+        "SG-064",
+        "SG-066"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-038",
+      "rule": "go.lang.security.audit.net.cookie-missing-secure.cookie-missing-secure",
+      "path": "services/api-gateway/internal/middleware/middleware_test.go",
+      "reported_line": 93,
+      "source_line_from_byte_offset": 93,
+      "source_match_sha256": "88dee521cd4cd21be1dee4aaac379ba627682230bea494a6e2de00b6a0948b48",
+      "severity": "WARNING",
+      "status": "false_positive_test_scope",
+      "reason": "httptest.AddCookie把合成Cookie作为请求头输入，用于验证CSRF/授权边界；这是请求fixture，不是浏览器Set-Cookie响应配置。",
+      "original_rule_path_ids": [
+        "SG-061",
+        "SG-063",
+        "SG-065",
+        "SG-067"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-039",
+      "rule": "go.lang.security.audit.net.cookie-missing-httponly.cookie-missing-httponly",
+      "path": "services/api-gateway/internal/middleware/middleware_test.go",
+      "reported_line": 132,
+      "source_line_from_byte_offset": 132,
+      "source_match_sha256": "88dee521cd4cd21be1dee4aaac379ba627682230bea494a6e2de00b6a0948b48",
+      "severity": "WARNING",
+      "status": "false_positive_test_scope",
+      "reason": "httptest.AddCookie把合成Cookie作为请求头输入，用于验证CSRF/授权边界；这是请求fixture，不是浏览器Set-Cookie响应配置。",
+      "original_rule_path_ids": [
+        "SG-060",
+        "SG-062",
+        "SG-064",
+        "SG-066"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-040",
+      "rule": "go.lang.security.audit.net.cookie-missing-secure.cookie-missing-secure",
+      "path": "services/api-gateway/internal/middleware/middleware_test.go",
+      "reported_line": 132,
+      "source_line_from_byte_offset": 132,
+      "source_match_sha256": "88dee521cd4cd21be1dee4aaac379ba627682230bea494a6e2de00b6a0948b48",
+      "severity": "WARNING",
+      "status": "false_positive_test_scope",
+      "reason": "httptest.AddCookie把合成Cookie作为请求头输入，用于验证CSRF/授权边界；这是请求fixture，不是浏览器Set-Cookie响应配置。",
+      "original_rule_path_ids": [
+        "SG-061",
+        "SG-063",
+        "SG-065",
+        "SG-067"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-041",
+      "rule": "go.lang.security.audit.crypto.missing-ssl-minversion.missing-ssl-minversion",
+      "path": "services/api-gateway/internal/minioadapter/client_test.go",
+      "reported_line": 73,
+      "source_line_from_byte_offset": 73,
+      "source_match_sha256": "b9dbedad6a1ec5d83a8042e4040191bbbceec56e69fbc392e96058cff031d8ae",
+      "severity": "WARNING",
+      "status": "false_positive_test_scope",
+      "reason": "这是故意设置MaxVersion=TLS1.1的httptest服务端，用来断言真实MinIO客户端在发送HTTP前拒绝旧协议；不是客户端生产TLS配置。",
+      "original_rule_path_ids": [
+        "SG-068"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-042",
+      "rule": "go.lang.security.audit.crypto.math_random.math-random-used",
+      "path": "services/api-gateway/internal/modelgovernance/managed_config_probe.go",
+      "reported_line": 14,
+      "source_line_from_byte_offset": 14,
+      "source_match_sha256": "d1d7f07627fe405a414cc1af5cdb5718beb0dbaa44e717e578e202373b40f654",
+      "severity": "WARNING",
+      "status": "false_positive_existing_controls",
+      "reason": "math/rand只生成幂等模型列表探测重试的短暂停顿jitter；令牌、密钥与认证随机数没有使用此调用。",
+      "original_rule_path_ids": [
+        "SG-069"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-043",
+      "rule": "go.lang.security.audit.database.string-formatted-query.string-formatted-query",
+      "path": "services/api-gateway/internal/score/store_postgres.go",
+      "reported_line": 100,
+      "source_line_from_byte_offset": 100,
+      "source_match_sha256": "49c2e68f1b68c0e1faf4bc9782ee875b40572ffb99dda5d1faafd63670f0ea03",
+      "severity": "WARNING",
+      "status": "false_positive_existing_controls",
+      "reason": "where由固定SQL片段与按args长度生成的数字占位符组成；tenant/exam/status/query均绑定参数，查询文本不会拼为SQL代码。",
+      "original_rule_path_ids": [
+        "SG-070"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-044",
+      "rule": "go.lang.security.audit.database.string-formatted-query.string-formatted-query",
+      "path": "services/api-gateway/internal/server/e2e_business_command_test.go",
+      "reported_line": 354,
+      "source_line_from_byte_offset": 354,
+      "source_match_sha256": "d526ab501dd3af974bcc8c5aae530aa0189716736a22956cbd9f3c74f69a52f4",
+      "severity": "WARNING",
+      "status": "false_positive_test_scope",
+      "reason": "函数/触发器名由固定前缀和去连字符UUID生成，commandID也是本地UUID；在临时E2E数据库中构造回滚故障，没有外部字符串输入。",
+      "original_rule_path_ids": [
+        "SG-071",
+        "SG-072",
+        "SG-073",
+        "SG-074"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-045",
+      "rule": "go.lang.security.audit.database.string-formatted-query.string-formatted-query",
+      "path": "services/api-gateway/internal/server/e2e_business_command_test.go",
+      "reported_line": 362,
+      "source_line_from_byte_offset": 362,
+      "source_match_sha256": "5c41aeffdb2be905980448a4cf9437da6e5d2a22d0a75cfd103c23df16803bea",
+      "severity": "WARNING",
+      "status": "false_positive_test_scope",
+      "reason": "函数/触发器名由固定前缀和去连字符UUID生成，commandID也是本地UUID；在临时E2E数据库中构造回滚故障，没有外部字符串输入。",
+      "original_rule_path_ids": [
+        "SG-071",
+        "SG-072",
+        "SG-073",
+        "SG-074"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-046",
+      "rule": "go.lang.security.audit.database.string-formatted-query.string-formatted-query",
+      "path": "services/api-gateway/internal/server/e2e_business_command_test.go",
+      "reported_line": 363,
+      "source_line_from_byte_offset": 363,
+      "source_match_sha256": "13db039270e1979d2292ed9f689661ce007814033854bf1a6270ca3123fe74b5",
+      "severity": "WARNING",
+      "status": "false_positive_test_scope",
+      "reason": "函数/触发器名由固定前缀和去连字符UUID生成，commandID也是本地UUID；在临时E2E数据库中构造回滚故障，没有外部字符串输入。",
+      "original_rule_path_ids": [
+        "SG-071",
+        "SG-072",
+        "SG-073",
+        "SG-074"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-047",
+      "rule": "go.lang.security.audit.database.string-formatted-query.string-formatted-query",
+      "path": "services/api-gateway/internal/server/e2e_business_command_test.go",
+      "reported_line": 365,
+      "source_line_from_byte_offset": 365,
+      "source_match_sha256": "f446307765fcd69f3d3a330eff4415b5b8e0242f9877f5f0bbc1171805758b9c",
+      "severity": "WARNING",
+      "status": "false_positive_test_scope",
+      "reason": "函数/触发器名由固定前缀和去连字符UUID生成，commandID也是本地UUID；在临时E2E数据库中构造回滚故障，没有外部字符串输入。",
+      "original_rule_path_ids": [
+        "SG-071",
+        "SG-072",
+        "SG-073",
+        "SG-074"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-048",
+      "rule": "go.lang.security.audit.database.string-formatted-query.string-formatted-query",
+      "path": "services/api-gateway/internal/server/e2e_compose_bootstrap_test.go",
+      "reported_line": 49,
+      "source_line_from_byte_offset": 49,
+      "source_match_sha256": "8db2669bb31d8bb7b34d57f844f5e190695b67593c897ab046d5830a1041727c",
+      "severity": "WARNING",
+      "status": "false_positive_test_scope",
+      "reason": "数据库/角色名由固定前缀和本地UUID生成并经pgx.Identifier.Sanitize引用；密码为测试现场生成的固定前缀和UUID。仅操作可丢弃E2E数据库。",
+      "original_rule_path_ids": [
+        "SG-075",
+        "SG-076",
+        "SG-077"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-049",
+      "rule": "go.lang.security.audit.database.string-formatted-query.string-formatted-query",
+      "path": "services/api-gateway/internal/server/e2e_compose_bootstrap_test.go",
+      "reported_line": 53,
+      "source_line_from_byte_offset": 53,
+      "source_match_sha256": "fa839a5d9a32f6ed47738a2f1a77b2a7fc7d73ccd083a2555046102e119be9a4",
+      "severity": "WARNING",
+      "status": "false_positive_test_scope",
+      "reason": "数据库/角色名由固定前缀和本地UUID生成并经pgx.Identifier.Sanitize引用；密码为测试现场生成的固定前缀和UUID。仅操作可丢弃E2E数据库。",
+      "original_rule_path_ids": [
+        "SG-075",
+        "SG-076",
+        "SG-077"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-050",
+      "rule": "go.lang.security.audit.database.string-formatted-query.string-formatted-query",
+      "path": "services/api-gateway/internal/server/e2e_compose_bootstrap_test.go",
+      "reported_line": 57,
+      "source_line_from_byte_offset": 57,
+      "source_match_sha256": "6490a5f15d4ebc5d62311d2f5a9a1f7de67e8202d321615b722b1a193db6258a",
+      "severity": "WARNING",
+      "status": "false_positive_test_scope",
+      "reason": "数据库/角色名由固定前缀和本地UUID生成并经pgx.Identifier.Sanitize引用；密码为测试现场生成的固定前缀和UUID。仅操作可丢弃E2E数据库。",
+      "original_rule_path_ids": [
+        "SG-075",
+        "SG-076",
+        "SG-077"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-051",
+      "rule": "go.lang.security.audit.database.string-formatted-query.string-formatted-query",
+      "path": "services/api-gateway/internal/server/e2e_mfa_test.go",
+      "reported_line": 319,
+      "source_line_from_byte_offset": 319,
+      "source_match_sha256": "1f96671bbb882d49c9694ef4b11ed10290acb104a2afb0bd91cd483df8c12769",
+      "severity": "WARNING",
+      "status": "false_positive_test_scope",
+      "reason": "表名只由调用处固定四表白名单传入；隔离角色由本地UUID生成且pgx.Identifier.Sanitize引用，密码也由固定前缀和UUID生成。",
+      "original_rule_path_ids": [
+        "SG-078",
+        "SG-079",
+        "SG-080",
+        "SG-081"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-052",
+      "rule": "go.lang.security.audit.database.string-formatted-query.string-formatted-query",
+      "path": "services/api-gateway/internal/server/e2e_mfa_test.go",
+      "reported_line": 360,
+      "source_line_from_byte_offset": 360,
+      "source_match_sha256": "39c3b82191e23d991008fcde3ca6bfe342968400907f441ef96e4acfd2d45d54",
+      "severity": "WARNING",
+      "status": "false_positive_test_scope",
+      "reason": "表名只由调用处固定四表白名单传入；隔离角色由本地UUID生成且pgx.Identifier.Sanitize引用，密码也由固定前缀和UUID生成。",
+      "original_rule_path_ids": [
+        "SG-078",
+        "SG-079",
+        "SG-080",
+        "SG-081"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-053",
+      "rule": "go.lang.security.audit.database.string-formatted-query.string-formatted-query",
+      "path": "services/api-gateway/internal/server/e2e_mfa_test.go",
+      "reported_line": 364,
+      "source_line_from_byte_offset": 364,
+      "source_match_sha256": "24e8f9fce9e0f2990e1c40d6b532e1c105342f8fe457f69ea99e330150380607",
+      "severity": "WARNING",
+      "status": "false_positive_test_scope",
+      "reason": "表名只由调用处固定四表白名单传入；隔离角色由本地UUID生成且pgx.Identifier.Sanitize引用，密码也由固定前缀和UUID生成。",
+      "original_rule_path_ids": [
+        "SG-078",
+        "SG-079",
+        "SG-080",
+        "SG-081"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-054",
+      "rule": "go.lang.security.audit.database.string-formatted-query.string-formatted-query",
+      "path": "services/api-gateway/internal/server/e2e_mfa_test.go",
+      "reported_line": 368,
+      "source_line_from_byte_offset": 368,
+      "source_match_sha256": "c93a8fe80d9d32650df8c56d32d643ba4e8537e8325e89c613b3455551f4ad46",
+      "severity": "WARNING",
+      "status": "false_positive_test_scope",
+      "reason": "表名只由调用处固定四表白名单传入；隔离角色由本地UUID生成且pgx.Identifier.Sanitize引用，密码也由固定前缀和UUID生成。",
+      "original_rule_path_ids": [
+        "SG-078",
+        "SG-079",
+        "SG-080",
+        "SG-081"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-055",
+      "rule": "go.lang.security.audit.database.string-formatted-query.string-formatted-query",
+      "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+      "reported_line": 354,
+      "source_line_from_byte_offset": 354,
+      "source_match_sha256": "8db2669bb31d8bb7b34d57f844f5e190695b67593c897ab046d5830a1041727c",
+      "severity": "WARNING",
+      "status": "false_positive_test_scope",
+      "reason": "数据库/角色名由固定前缀和本地UUID生成并经pgx.Identifier.Sanitize引用；密码为测试现场生成的固定前缀和UUID。仅操作可丢弃E2E数据库。",
+      "original_rule_path_ids": [
+        "SG-082",
+        "SG-083",
+        "SG-084",
+        "SG-085",
+        "SG-086",
+        "SG-087"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-056",
+      "rule": "go.lang.security.audit.database.string-formatted-query.string-formatted-query",
+      "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+      "reported_line": 357,
+      "source_line_from_byte_offset": 357,
+      "source_match_sha256": "6490a5f15d4ebc5d62311d2f5a9a1f7de67e8202d321615b722b1a193db6258a",
+      "severity": "WARNING",
+      "status": "false_positive_test_scope",
+      "reason": "数据库/角色名由固定前缀和本地UUID生成并经pgx.Identifier.Sanitize引用；密码为测试现场生成的固定前缀和UUID。仅操作可丢弃E2E数据库。",
+      "original_rule_path_ids": [
+        "SG-082",
+        "SG-083",
+        "SG-084",
+        "SG-085",
+        "SG-086",
+        "SG-087"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-057",
+      "rule": "go.lang.security.audit.database.string-formatted-query.string-formatted-query",
+      "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+      "reported_line": 361,
+      "source_line_from_byte_offset": 361,
+      "source_match_sha256": "e49422fca3e5451a7784b32548e653b1609bf01dce1ecad11ab1dc951a4c2153",
+      "severity": "WARNING",
+      "status": "false_positive_test_scope",
+      "reason": "数据库/角色名由固定前缀和本地UUID生成并经pgx.Identifier.Sanitize引用；密码为测试现场生成的固定前缀和UUID。仅操作可丢弃E2E数据库。",
+      "original_rule_path_ids": [
+        "SG-082",
+        "SG-083",
+        "SG-084",
+        "SG-085",
+        "SG-086",
+        "SG-087"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-058",
+      "rule": "go.lang.security.audit.database.string-formatted-query.string-formatted-query",
+      "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+      "reported_line": 711,
+      "source_line_from_byte_offset": 711,
+      "source_match_sha256": "b1723a37899127251d02706cea7fbb4a5f58747465c31089fba335781ee28081",
+      "severity": "WARNING",
+      "status": "false_positive_test_scope",
+      "reason": "数据库/角色名由固定前缀和本地UUID生成并经pgx.Identifier.Sanitize引用；密码为测试现场生成的固定前缀和UUID。仅操作可丢弃E2E数据库。",
+      "original_rule_path_ids": [
+        "SG-082",
+        "SG-083",
+        "SG-084",
+        "SG-085",
+        "SG-086",
+        "SG-087"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-059",
+      "rule": "go.lang.security.audit.database.string-formatted-query.string-formatted-query",
+      "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+      "reported_line": 722,
+      "source_line_from_byte_offset": 722,
+      "source_match_sha256": "1d30dec1d676ed633c751e4b2390cae1da2c6ebf8a15a77c5af1ea05f7e49354",
+      "severity": "WARNING",
+      "status": "false_positive_test_scope",
+      "reason": "数据库/角色名由固定前缀和本地UUID生成并经pgx.Identifier.Sanitize引用；密码为测试现场生成的固定前缀和UUID。仅操作可丢弃E2E数据库。",
+      "original_rule_path_ids": [
+        "SG-082",
+        "SG-083",
+        "SG-084",
+        "SG-085",
+        "SG-086",
+        "SG-087"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-060",
+      "rule": "go.lang.security.audit.database.string-formatted-query.string-formatted-query",
+      "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+      "reported_line": 730,
+      "source_line_from_byte_offset": 730,
+      "source_match_sha256": "b182a6a460cb92d71f479b116f7cdf89df6b5ade8d70b63f81cc88cf2eff3be8",
+      "severity": "WARNING",
+      "status": "false_positive_test_scope",
+      "reason": "数据库/角色名由固定前缀和本地UUID生成并经pgx.Identifier.Sanitize引用；密码为测试现场生成的固定前缀和UUID。仅操作可丢弃E2E数据库。",
+      "original_rule_path_ids": [
+        "SG-082",
+        "SG-083",
+        "SG-084",
+        "SG-085",
+        "SG-086",
+        "SG-087"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-061",
+      "rule": "go.lang.security.audit.database.string-formatted-query.string-formatted-query",
+      "path": "services/api-gateway/internal/server/e2e_question_bank_import_test.go",
+      "reported_line": 166,
+      "source_line_from_byte_offset": 166,
+      "source_match_sha256": "65a70c0624652ba84873aa72439719cfdab094cf48093648a21e2d2aef443a5f",
+      "severity": "WARNING",
+      "status": "false_positive_test_scope",
+      "reason": "故障触发器名称为固定字符串，拼入的secondID来自本地question fixture的UUID；在临时E2E数据库测试局部失败/重试，不接收用户SQL片段。",
+      "original_rule_path_ids": [
+        "SG-088"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-062",
+      "rule": "go.lang.security.audit.database.string-formatted-query.string-formatted-query",
+      "path": "services/api-gateway/internal/server/e2e_question_bank_test.go",
+      "reported_line": 358,
+      "source_line_from_byte_offset": 358,
+      "source_match_sha256": "d4c0885c96e6d0ae84dc616fd2052cf1b917b924f3f4d919a41f5c6e40b6d8c2",
+      "severity": "WARNING",
+      "status": "false_positive_test_scope",
+      "reason": "qbCounts仅遍历函数内固定五表白名单，外部请求不能提供表名；仅统计隔离E2E数据库状态。",
+      "original_rule_path_ids": [
+        "SG-089"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-063",
+      "rule": "python.lang.security.deserialization.pickle.avoid-pickle",
+      "path": "services/math-verification-worker/tests/test_timeout.py",
+      "reported_line": 34,
+      "source_line_from_byte_offset": 34,
+      "source_match_sha256": "5bb9066cbff6121a3d8dafca5b1f1ea2ac1c7e029eda73bfc35892adb19de94b",
+      "severity": "WARNING",
+      "status": "false_positive_test_scope",
+      "reason": "仅pickle.dumps可信测试内存结果，断言大于管道缓冲区以覆盖spawn回归；没有pickle.loads/load读取外部数据。",
+      "original_rule_path_ids": [
+        "SG-095"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-064",
+      "rule": "dockerfile.security.last-user-is-root.last-user-is-root",
+      "path": "services/ocr-worker/Dockerfile",
+      "reported_line": 6,
+      "source_line_from_byte_offset": 6,
+      "source_match_sha256": "afa9c1eeee8b880163b1663b0fd4f677dcb9bd827fb9c1057a2cf5b691e819be",
+      "severity": "ERROR",
+      "status": "false_positive_with_partial_parsing",
+      "reason": "OCR USER root用于依赖安装，真实文件末尾USER nobody后才运行CMD。此文件PartialParsing跨越最后USER，不能把扫描解析到的root解释为最终运行身份；Docker运行身份未验收。",
+      "original_rule_path_ids": [
+        "SG-096"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    },
+    {
+      "id": "RS-065",
+      "rule": "python.lang.security.audit.hardcoded-password-default-argument.hardcoded-password-default-argument",
+      "path": "services/page-processing-worker/tests/test_main.py",
+      "reported_line": 47,
+      "source_line_from_byte_offset": 47,
+      "source_match_sha256": "a29f58f90a140c8a4c1dc63c56bc2378755d46466b14054c07a92905b6bb3a50",
+      "severity": "WARNING",
+      "status": "false_positive_test_scope",
+      "reason": "默认字符串仅在tests/test_main的_config返回给FakeClient/FakeRunner和monkeypatch；不是生产Worker密码配置。报告不复述测试值。",
+      "original_rule_path_ids": [
+        "SG-103"
+      ],
+      "new_rule_path": false,
+      "association_limit": "原编号按rule/path关联，不声称旧行号与新行号一对一映射",
+      "finding_review_complete": true,
+      "whole_file_review_status": "pending"
+    }
+  ],
+  "status_counts": {
+    "false_positive_existing_controls": 14,
+    "false_positive_test_scope": 47,
+    "trusted_local_test_tool": 2,
+    "false_positive_generation_import_after_fix": 1,
+    "false_positive_with_partial_parsing": 1
+  },
+  "disappeared_rule_path_count": 42,
+  "disappeared_breakdown": {
+    "remediated_in_this_task": 35,
+    "context_matching_difference_existing_headers_unchanged": 6,
+    "already_fixed_before_this_remediation": 1
+  },
+  "this_task_dispositions": {
+    "total": 36,
+    "no_longer_matching": 35,
+    "fixed_boundary_but_residual_generation_import_false_positive": [
+      "SG-034"
+    ]
+  },
+  "disappeared_groups": [
+    {
+      "rule": "package_managers.dependabot.dependabot-missing-cooldown.dependabot-missing-cooldown",
+      "path": ".github/dependabot.yml",
+      "count_difference": 11,
+      "original_ids": [
+        "SG-001",
+        "SG-002",
+        "SG-003",
+        "SG-004",
+        "SG-005",
+        "SG-006",
+        "SG-007",
+        "SG-008",
+        "SG-009",
+        "SG-010",
+        "SG-011"
+      ],
+      "cause": "remediated_in_this_task"
+    },
+    {
+      "rule": "python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected",
+      "path": "ai-services/grading_agent/model.py",
+      "count_difference": 3,
+      "original_ids": [
+        "SG-013",
+        "SG-014",
+        "SG-015"
+      ],
+      "cause": "remediated_in_this_task"
+    },
+    {
+      "rule": "python.lang.security.use-defused-xml-parse.use-defused-xml-parse",
+      "path": "docs/architecture/tools/build_diagrams.py",
+      "count_difference": 1,
+      "original_ids": [
+        "SG-035"
+      ],
+      "cause": "remediated_in_this_task"
+    },
+    {
+      "rule": "python.lang.security.use-defused-xml.use-defused-xml",
+      "path": "docs/architecture/tools/verify_delivery.py",
+      "count_difference": 1,
+      "original_ids": [
+        "SG-036"
+      ],
+      "cause": "remediated_in_this_task"
+    },
+    {
+      "rule": "python.lang.security.use-defused-xml-parse.use-defused-xml-parse",
+      "path": "docs/architecture/tools/verify_delivery.py",
+      "count_difference": 1,
+      "original_ids": [
+        "SG-037"
+      ],
+      "cause": "remediated_in_this_task"
+    },
+    {
+      "rule": "generic.nginx.security.header-redefinition.header-redefinition",
+      "path": "infra/docker-compose/nginx/nginx.conf",
+      "count_difference": 6,
+      "original_ids": [
+        "SG-038",
+        "SG-039",
+        "SG-040",
+        "SG-041",
+        "SG-042",
+        "SG-043"
+      ],
+      "cause": "context_matching_difference_existing_headers_unchanged"
+    },
+    {
+      "rule": "generic.nginx.security.request-host-used.request-host-used",
+      "path": "infra/docker-compose/nginx/nginx.conf",
+      "count_difference": 2,
+      "original_ids": [
+        "SG-044",
+        "SG-045"
+      ],
+      "cause": "remediated_in_this_task"
+    },
+    {
+      "rule": "generic.nginx.security.request-host-used.request-host-used",
+      "path": "infra/docker-compose/nginx/story056-e2e.conf",
+      "count_difference": 2,
+      "original_ids": [
+        "SG-047",
+        "SG-048"
+      ],
+      "cause": "remediated_in_this_task"
+    },
+    {
+      "rule": "generic.nginx.security.request-host-used.request-host-used",
+      "path": "infra/docker-compose/nginx/story060-e2e.conf",
+      "count_difference": 2,
+      "original_ids": [
+        "SG-050",
+        "SG-051"
+      ],
+      "cause": "remediated_in_this_task"
+    },
+    {
+      "rule": "dockerfile.security.missing-user.missing-user",
+      "path": "services/api-gateway/tools/story056-postgres-e2e/Dockerfile",
+      "count_difference": 1,
+      "original_ids": [
+        "SG-090"
+      ],
+      "cause": "already_fixed_before_this_remediation"
+    },
+    {
+      "rule": "dockerfile.security.missing-user-entrypoint.missing-user-entrypoint",
+      "path": "services/api-gateway/tools/story056-real-worker-e2e/Dockerfile",
+      "count_difference": 1,
+      "original_ids": [
+        "SG-091"
+      ],
+      "cause": "remediated_in_this_task"
+    },
+    {
+      "rule": "python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected",
+      "path": "services/image-quality-worker/image_quality/api.py",
+      "count_difference": 3,
+      "original_ids": [
+        "SG-092",
+        "SG-093",
+        "SG-094"
+      ],
+      "cause": "remediated_in_this_task"
+    },
+    {
+      "rule": "python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected",
+      "path": "services/ocr-worker/ocr_worker/api.py",
+      "count_difference": 2,
+      "original_ids": [
+        "SG-097",
+        "SG-098"
+      ],
+      "cause": "remediated_in_this_task"
+    },
+    {
+      "rule": "python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected",
+      "path": "services/ocr-worker/ocr_worker/math_runner.py",
+      "count_difference": 1,
+      "original_ids": [
+        "SG-099"
+      ],
+      "cause": "remediated_in_this_task"
+    },
+    {
+      "rule": "python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected",
+      "path": "services/page-processing-worker/page_processing/api.py",
+      "count_difference": 3,
+      "original_ids": [
+        "SG-100",
+        "SG-101",
+        "SG-102"
+      ],
+      "cause": "remediated_in_this_task"
+    },
+    {
+      "rule": "python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected",
+      "path": "services/subjective-grading-worker/subjective_grading_worker/api.py",
+      "count_difference": 1,
+      "original_ids": [
+        "SG-104"
+      ],
+      "cause": "remediated_in_this_task"
+    },
+    {
+      "rule": "python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected",
+      "path": "tests/e2e/story060_grading_agent.py",
+      "count_difference": 1,
+      "original_ids": [
+        "SG-105"
+      ],
+      "cause": "remediated_in_this_task"
+    }
+  ],
+  "diagnostics": [
+    {
+      "path": "services/api-gateway/tools/story056-postgres-e2e/Dockerfile",
+      "type": [
+        "PartialParsing",
+        [
+          {
+            "path": "services\\api-gateway\\tools\\story056-postgres-e2e\\Dockerfile",
+            "start": {
+              "line": 24,
+              "col": 9,
+              "offset": 0
+            },
+            "end": {
+              "line": 30,
+              "col": 11,
+              "offset": 194
+            }
+          },
+          {
+            "path": "services\\api-gateway\\tools\\story056-postgres-e2e\\Dockerfile",
+            "start": {
+              "line": 33,
+              "col": 5,
+              "offset": 0
+            },
+            "end": {
+              "line": 56,
+              "col": 58,
+              "offset": 1445
+            }
+          }
+        ]
+      ],
+      "message": "Syntax error at line services\\api-gateway\\tools\\story056-postgres-e2e\\Dockerfile:24:\n `=/usr/local/go/bin:${PATH} \\\r\n    GOTOOLCHAIN=local \\\r\n    HOME=/home/e2e \\\r\n    GOPATH=/home/e2e/go \\\r\n    GOMODCACHE=/home/e2e/go/pkg/mod \\\r\n    GOCACHE=/home/e2e/.cache/go-build \\\r\n    TMPDIR` was unexpected"
+    },
+    {
+      "path": "services/api-gateway/tools/story056-real-worker-e2e/Dockerfile",
+      "type": [
+        "PartialParsing",
+        [
+          {
+            "path": "services\\api-gateway\\tools\\story056-real-worker-e2e\\Dockerfile",
+            "start": {
+              "line": 18,
+              "col": 5,
+              "offset": 0
+            },
+            "end": {
+              "line": 25,
+              "col": 40,
+              "offset": 383
+            }
+          }
+        ]
+      ],
+      "message": "Syntax error at line services\\api-gateway\\tools\\story056-real-worker-e2e\\Dockerfile:18:\n `&& adduser -S -D -H -u 10001 -G e2e -h /home/e2e e2e \\\r\n    && mkdir -p /home/e2e \\\r\n    && chown 10001:10001 /home/e2e\r\nENV HOME=/home/e2e\r\nCOPY --from=builder /out/story056-real-worker-e2e /usr/local/bin/story056-real-worker-e2e\r\n# 客户端结果写 stdout，由宿主 runner 收集；只有 HOME 和 /tmp 需要可写。\r\nUSER 10001:10001\r\nENTRYPOINT [\"story056-real-worker-e2e\"]` was unexpected"
+    },
+    {
+      "path": "services/ocr-worker/Dockerfile",
+      "type": [
+        "PartialParsing",
+        [
+          {
+            "path": "services\\ocr-worker\\Dockerfile",
+            "start": {
+              "line": 29,
+              "col": 9,
+              "offset": 0
+            },
+            "end": {
+              "line": 76,
+              "col": 35,
+              "offset": 2262
+            }
+          }
+        ]
+      ],
+      "message": "Syntax error at line services\\ocr-worker\\Dockerfile:29:\n `paddlex --install hpi-cpu; \\\r\n      fi; \\\r\n    fi \\\r\n    && python -m pip install --index-url \"$PIP_INDEX_URL\" \"ftfy==6.3.1\" \"matplotlib>=3.9,<4\"\r\n\n# 系统库的变化频率远低于应用源码。把此步骤\n# 放在源码 COPY 前，避免修改 OCR 工作进程时使 apt 层缓存失效，\n# 从而重复下载相同的 Debian 软件包。\nRUN sed -i \\\n      -e \"s|http://deb.debian.org/debian-security|$DEBIAN_SECURITY_MIRROR|g\" \\\n      -e \"s|http://deb.debian.org/debian|$DEBIAN_MIRROR|g\" \\\n      /etc/apt/sources.list.d/debian.sources \\\n    && apt-get update \\\n    && apt-get install -y --no-install-recommends libgomp1 libgl1 libglib2.0-0 \\\n    && rm -rf /var/lib/apt/lists/*\n\n# 在大型 Paddle 和操作系统依赖层之后，\n# 再复制经常变化的共享代码和运行时代码。常规工作进程代码修改\n# 就能复用这些依赖层，无需再次下载相同的软件包。\nCOPY packages/worker-runtime-python /tmp/worker-runtime-python\nCOPY services/ocr-worker/pyproject.toml ./pyproject.toml\nCOPY services/ocr-worker/ocr_worker ./ocr_worker\n# 上方已固定 setuptools 版本，避免每次源码重建时创建两个\n# 隔离构建环境，并重复下载 setuptools。\nRUN python -m pip install --no-cache-dir --no-deps --no-build-isolation /tmp/worker-runtime-python . \\\r\n    && install -d -o nobody -g nogroup \\\r\n      /home/ocr-worker/.paddlex \\\n      /home/ocr-worker/.modelscope \\\n      /home/ocr-worker/.cache \\\n      /home/ocr-worker/.cache/huggingface \\\n      /home/ocr-worker/.config \\\n      /home/ocr-worker/.config/matplotlib\n\r\n# PaddleX 在导入 PaddleOCR 时初始化缓存。运行时用户\r\n# 有意使用非 root 账号，因此要提供稳定且可写的缓存目录。\r\n# 这些仅供运行时使用的变量放在依赖安装后，避免修改变量时\r\n# 使大型 Paddle 镜像层缓存失效。\r\nENV HOME=/home/ocr-worker\nENV PADDLE_PDX_CACHE_HOME=/home/ocr-worker/.paddlex\nENV MPLCONFIGDIR=/home/ocr-worker/.config/matplotlib\n\nUSER nobody\n\n# 在镜像中一次性生成字体索引。运行... (truncated 231 more characters)"
+    }
+  ],
+  "limits": [
+    "规则命中计数不是漏洞数量，也不是修复数量；rule/path 对比不声称每个旧行号已一对一映射",
+    "两个 E2E Dockerfile 有 PartialParsing；SG-091 警告区域覆盖最终 USER，消失不能作为运行身份保证",
+    "生产 Nginx 六条 header-redefinition 消失，但原重复响应头保留，属于匹配差异，不能计为六处漏洞修复",
+    "OCR Dockerfile PartialParsing 与 root 告警仍在；最终 USER nobody 需源代码和运行测试分别核验",
+    "Windows 定向扫描覆盖全部46目标，但不代表跨平台解析一致或全仓覆盖"
+  ]
+}

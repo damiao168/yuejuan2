@@ -1,0 +1,1696 @@
+{
+  "reviewed_at": "2026-10-11T03:45:39.600694+00:00",
+  "source_root": "D:\\tools\\audit-codeql-20261010\\source-20261011",
+  "sarif_sha256": "1d049209dfb252a3022af8738ea19adccbb0388b17d9dac8bb084a54c17ea45b",
+  "manifest_sha256": "f939ec3a24e837f45fba766fc1d614ad75d63707d8303e2f090029787506a56f",
+  "codeql_version": "2.27.2",
+  "raw_python_results_total": 55,
+  "raw_quality_results_reviewed": 54,
+  "excluded_security_rules": [
+    "py/polynomial-redos"
+  ],
+  "finding_reviews_pending": 0,
+  "confirmed_runtime_defects_in_reviewed_quality_results": 0,
+  "human_verdict_counts": {
+    "intentional_behavior": 7,
+    "low_maintenance": 8,
+    "false_positive_context": 39
+  },
+  "quality_rule_counts": {
+    "py/attribute-shadows-method": 3,
+    "py/empty-except": 5,
+    "py/implicit-string-concatenation-in-list": 4,
+    "py/unnecessary-lambda": 2,
+    "py/procedure-return-value-used": 1,
+    "py/import-and-import-from": 1,
+    "py/unused-import": 1,
+    "py/ineffectual-statement": 22,
+    "py/unused-global-variable": 15
+  },
+  "snapshot_validation": "Every alert file SHA256 matches the fixed snapshot manifest.",
+  "scope": "Each alert and listed support context reviewed; not a whole-file or whole-repository completion claim.",
+  "callback_check": {
+    "method": "AST-selected actual class definitions with fake API/type stubs",
+    "application_imported": false,
+    "network_used": false,
+    "threads_started": false,
+    "limitations": "Checks construction and one callback dispatch only; not lease/concurrency integration tests.",
+    "cases": [
+      {
+        "path": "services/subjective-grading-worker/subjective_grading_worker/runner.py",
+        "callback_remains_callable": true,
+        "bound_to_same_object_and_subclass_method": true,
+        "fake_api_calls": [
+          "heartbeat"
+        ],
+        "thread_started": false
+      },
+      {
+        "path": "services/ocr-worker/ocr_worker/runner.py",
+        "callback_remains_callable": true,
+        "bound_to_same_object_and_subclass_method": true,
+        "fake_api_calls": [
+          "heartbeat_task"
+        ],
+        "thread_started": false
+      },
+      {
+        "path": "services/page-processing-worker/page_processing/runner.py",
+        "callback_remains_callable": true,
+        "bound_to_same_object_and_subclass_method": true,
+        "fake_api_calls": [
+          "heartbeat"
+        ],
+        "thread_started": false
+      }
+    ]
+  },
+  "findings": [
+    {
+      "review_id": "CQ-PY-002",
+      "sarif_result_index_zero_based": 1,
+      "rule_id": "py/attribute-shadows-method",
+      "path": "services/subjective-grading-worker/subjective_grading_worker/runner.py",
+      "line": 67,
+      "end_line": 67,
+      "raw_level": "error",
+      "raw_problem_severity": "error",
+      "raw_message": "This method is shadowed by [attribute _send](1) in superclass [LeaseHeartbeat](2).",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "intentional_behavior",
+      "human_severity": "none",
+      "reason": "构造器先取得 self._send 的子类绑定方法，再传给父类；父类把同一 callable 存入实例 _send。确有名称遮蔽，但调用仍绑定同一对象和子类实现，不是续租回调被非 callable 覆盖。隔离构造核验三个类均派发到假 API，未启动线程。",
+      "recommendation": "可在后续维护中把父类存储字段改为 _send_callback，或补充回调注入说明，减少非直观名称遮蔽；本次无需按运行故障修复。",
+      "evidence": [
+        {
+          "path": "services/subjective-grading-worker/subjective_grading_worker/runner.py",
+          "start_line": 56,
+          "end_line": 68,
+          "snapshot_sha256": "01d9c0ed77518522ecfb01aa0553781a3ed4df695edae5f30f6734eb97bbfde0"
+        },
+        {
+          "path": "packages/worker-runtime-python/edugrade_worker_runtime/lease.py",
+          "start_line": 37,
+          "end_line": 63,
+          "snapshot_sha256": "3b836df07d1a880177a434d6e629e981029d728983473e73f506e0dce997db91"
+        },
+        {
+          "path": "packages/worker-runtime-python/edugrade_worker_runtime/lease.py",
+          "start_line": 89,
+          "end_line": 97,
+          "snapshot_sha256": "3b836df07d1a880177a434d6e629e981029d728983473e73f506e0dce997db91"
+        }
+      ],
+      "snapshot_sha256": "01d9c0ed77518522ecfb01aa0553781a3ed4df695edae5f30f6734eb97bbfde0",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-003",
+      "sarif_result_index_zero_based": 2,
+      "rule_id": "py/attribute-shadows-method",
+      "path": "services/ocr-worker/ocr_worker/runner.py",
+      "line": 363,
+      "end_line": 363,
+      "raw_level": "error",
+      "raw_problem_severity": "error",
+      "raw_message": "This method is shadowed by [attribute _send](1) in superclass [LeaseHeartbeat](2).",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "intentional_behavior",
+      "human_severity": "none",
+      "reason": "构造器先取得 self._send 的子类绑定方法，再传给父类；父类把同一 callable 存入实例 _send。确有名称遮蔽，但调用仍绑定同一对象和子类实现，不是续租回调被非 callable 覆盖。隔离构造核验三个类均派发到假 API，未启动线程。",
+      "recommendation": "可在后续维护中把父类存储字段改为 _send_callback，或补充回调注入说明，减少非直观名称遮蔽；本次无需按运行故障修复。",
+      "evidence": [
+        {
+          "path": "services/ocr-worker/ocr_worker/runner.py",
+          "start_line": 336,
+          "end_line": 385,
+          "snapshot_sha256": "a78ac6b53be30a51ba05c49d8aa05024880d18a187cf4f0d5c17574de4174cc8"
+        },
+        {
+          "path": "packages/worker-runtime-python/edugrade_worker_runtime/lease.py",
+          "start_line": 37,
+          "end_line": 63,
+          "snapshot_sha256": "3b836df07d1a880177a434d6e629e981029d728983473e73f506e0dce997db91"
+        },
+        {
+          "path": "packages/worker-runtime-python/edugrade_worker_runtime/lease.py",
+          "start_line": 89,
+          "end_line": 97,
+          "snapshot_sha256": "3b836df07d1a880177a434d6e629e981029d728983473e73f506e0dce997db91"
+        }
+      ],
+      "snapshot_sha256": "a78ac6b53be30a51ba05c49d8aa05024880d18a187cf4f0d5c17574de4174cc8",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-004",
+      "sarif_result_index_zero_based": 3,
+      "rule_id": "py/attribute-shadows-method",
+      "path": "services/page-processing-worker/page_processing/runner.py",
+      "line": 512,
+      "end_line": 512,
+      "raw_level": "error",
+      "raw_problem_severity": "error",
+      "raw_message": "This method is shadowed by [attribute _send](1) in superclass [LeaseHeartbeat](2).",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "intentional_behavior",
+      "human_severity": "none",
+      "reason": "构造器先取得 self._send 的子类绑定方法，再传给父类；父类把同一 callable 存入实例 _send。确有名称遮蔽，但调用仍绑定同一对象和子类实现，不是续租回调被非 callable 覆盖。隔离构造核验三个类均派发到假 API，未启动线程。",
+      "recommendation": "可在后续维护中把父类存储字段改为 _send_callback，或补充回调注入说明，减少非直观名称遮蔽；本次无需按运行故障修复。",
+      "evidence": [
+        {
+          "path": "services/page-processing-worker/page_processing/runner.py",
+          "start_line": 488,
+          "end_line": 521,
+          "snapshot_sha256": "32d236c9d4fa337d61ac403cd1d9b8e3a05d5f5dcbd0a1330284ad778694041e"
+        },
+        {
+          "path": "packages/worker-runtime-python/edugrade_worker_runtime/lease.py",
+          "start_line": 37,
+          "end_line": 63,
+          "snapshot_sha256": "3b836df07d1a880177a434d6e629e981029d728983473e73f506e0dce997db91"
+        },
+        {
+          "path": "packages/worker-runtime-python/edugrade_worker_runtime/lease.py",
+          "start_line": 89,
+          "end_line": 97,
+          "snapshot_sha256": "3b836df07d1a880177a434d6e629e981029d728983473e73f506e0dce997db91"
+        }
+      ],
+      "snapshot_sha256": "32d236c9d4fa337d61ac403cd1d9b8e3a05d5f5dcbd0a1330284ad778694041e",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-005",
+      "sarif_result_index_zero_based": 4,
+      "rule_id": "py/empty-except",
+      "path": "services/ocr-worker/ocr_worker/deployment_profile.py",
+      "line": 169,
+      "end_line": 169,
+      "raw_level": "note",
+      "raw_problem_severity": "recommendation",
+      "raw_message": "'except' clause does nothing but pass and there is no explanatory comment.",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "low_maintenance",
+      "human_severity": "low",
+      "reason": "/proc/cpuinfo 不可用时回退 platform.processor/unknown。这是可选硬件描述探测，不是吞掉成绩写入或权限校验异常；但 except 分支缺少解释，权限/格式错误和正常跨平台缺失无法直接区分，符合低影响可维护性告警。",
+      "recommendation": "在 except 内用简短中文说明允许忽略的探测失败和后续回退；如需诊断仅记录不含敏感值的 debug 原因，避免把缺失探测强行当成已知容量。",
+      "evidence": [
+        {
+          "path": "services/ocr-worker/ocr_worker/deployment_profile.py",
+          "start_line": 163,
+          "end_line": 171,
+          "snapshot_sha256": "a9d251fc04067ef3848472638e12d59cbe6edc240a06d037a92bceed7b5d997c"
+        }
+      ],
+      "snapshot_sha256": "a9d251fc04067ef3848472638e12d59cbe6edc240a06d037a92bceed7b5d997c",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-006",
+      "sarif_result_index_zero_based": 5,
+      "rule_id": "py/empty-except",
+      "path": "services/ocr-worker/ocr_worker/deployment_profile.py",
+      "line": 179,
+      "end_line": 179,
+      "raw_level": "note",
+      "raw_problem_severity": "recommendation",
+      "raw_message": "'except' clause does nothing but pass and there is no explanatory comment.",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "low_maintenance",
+      "human_severity": "low",
+      "reason": "cgroup v2 CPU 限额探测失败时继续尝试 v1。这是可选硬件描述探测，不是吞掉成绩写入或权限校验异常；但 except 分支缺少解释，权限/格式错误和正常跨平台缺失无法直接区分，符合低影响可维护性告警。",
+      "recommendation": "在 except 内用简短中文说明允许忽略的探测失败和后续回退；如需诊断仅记录不含敏感值的 debug 原因，避免把缺失探测强行当成已知容量。",
+      "evidence": [
+        {
+          "path": "services/ocr-worker/ocr_worker/deployment_profile.py",
+          "start_line": 174,
+          "end_line": 188,
+          "snapshot_sha256": "a9d251fc04067ef3848472638e12d59cbe6edc240a06d037a92bceed7b5d997c"
+        }
+      ],
+      "snapshot_sha256": "a9d251fc04067ef3848472638e12d59cbe6edc240a06d037a92bceed7b5d997c",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-007",
+      "sarif_result_index_zero_based": 6,
+      "rule_id": "py/empty-except",
+      "path": "services/ocr-worker/ocr_worker/deployment_profile.py",
+      "line": 186,
+      "end_line": 186,
+      "raw_level": "note",
+      "raw_problem_severity": "recommendation",
+      "raw_message": "'except' clause does nothing but pass and there is no explanatory comment.",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "low_maintenance",
+      "human_severity": "low",
+      "reason": "cgroup v1 探测失败时返回 None 表示未知限额。这是可选硬件描述探测，不是吞掉成绩写入或权限校验异常；但 except 分支缺少解释，权限/格式错误和正常跨平台缺失无法直接区分，符合低影响可维护性告警。",
+      "recommendation": "在 except 内用简短中文说明允许忽略的探测失败和后续回退；如需诊断仅记录不含敏感值的 debug 原因，避免把缺失探测强行当成已知容量。",
+      "evidence": [
+        {
+          "path": "services/ocr-worker/ocr_worker/deployment_profile.py",
+          "start_line": 174,
+          "end_line": 188,
+          "snapshot_sha256": "a9d251fc04067ef3848472638e12d59cbe6edc240a06d037a92bceed7b5d997c"
+        }
+      ],
+      "snapshot_sha256": "a9d251fc04067ef3848472638e12d59cbe6edc240a06d037a92bceed7b5d997c",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-008",
+      "sarif_result_index_zero_based": 7,
+      "rule_id": "py/empty-except",
+      "path": "services/ocr-worker/ocr_worker/deployment_profile.py",
+      "line": 200,
+      "end_line": 200,
+      "raw_level": "note",
+      "raw_problem_severity": "recommendation",
+      "raw_message": "'except' clause does nothing but pass and there is no explanatory comment.",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "low_maintenance",
+      "human_severity": "low",
+      "reason": "cgroup 内存限制不可用时继续读取 /proc/meminfo。这是可选硬件描述探测，不是吞掉成绩写入或权限校验异常；但 except 分支缺少解释，权限/格式错误和正常跨平台缺失无法直接区分，符合低影响可维护性告警。",
+      "recommendation": "在 except 内用简短中文说明允许忽略的探测失败和后续回退；如需诊断仅记录不含敏感值的 debug 原因，避免把缺失探测强行当成已知容量。",
+      "evidence": [
+        {
+          "path": "services/ocr-worker/ocr_worker/deployment_profile.py",
+          "start_line": 191,
+          "end_line": 209,
+          "snapshot_sha256": "a9d251fc04067ef3848472638e12d59cbe6edc240a06d037a92bceed7b5d997c"
+        }
+      ],
+      "snapshot_sha256": "a9d251fc04067ef3848472638e12d59cbe6edc240a06d037a92bceed7b5d997c",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-009",
+      "sarif_result_index_zero_based": 8,
+      "rule_id": "py/empty-except",
+      "path": "services/ocr-worker/ocr_worker/deployment_profile.py",
+      "line": 207,
+      "end_line": 207,
+      "raw_level": "note",
+      "raw_problem_severity": "recommendation",
+      "raw_message": "'except' clause does nothing but pass and there is no explanatory comment.",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "low_maintenance",
+      "human_severity": "low",
+      "reason": "主机内存不可读时使用其他已收集候选，全部不可用才返回 0。这是可选硬件描述探测，不是吞掉成绩写入或权限校验异常；但 except 分支缺少解释，权限/格式错误和正常跨平台缺失无法直接区分，符合低影响可维护性告警。",
+      "recommendation": "在 except 内用简短中文说明允许忽略的探测失败和后续回退；如需诊断仅记录不含敏感值的 debug 原因，避免把缺失探测强行当成已知容量。",
+      "evidence": [
+        {
+          "path": "services/ocr-worker/ocr_worker/deployment_profile.py",
+          "start_line": 191,
+          "end_line": 209,
+          "snapshot_sha256": "a9d251fc04067ef3848472638e12d59cbe6edc240a06d037a92bceed7b5d997c"
+        }
+      ],
+      "snapshot_sha256": "a9d251fc04067ef3848472638e12d59cbe6edc240a06d037a92bceed7b5d997c",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-010",
+      "sarif_result_index_zero_based": 9,
+      "rule_id": "py/implicit-string-concatenation-in-list",
+      "path": "docs/architecture/tools/build_module_catalog.py",
+      "line": 59,
+      "end_line": 61,
+      "raw_level": "warning",
+      "raw_problem_severity": "warning",
+      "raw_message": "Implicit string concatenation. Maybe missing a comma?",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "false_positive_context",
+      "human_severity": "none",
+      "reason": "相邻字符串是连续中文说明段落，首段与 Markdown 链接/后续限制说明应合成一个列表元素；逗号明确位于段落末尾。未见需要生成独立列表项的缺失逗号。",
+      "recommendation": "保留输出语义；可用括号或显式拼接表达段落边界以减少告警，不能直接在每行末尾加逗号改变文档段落。",
+      "evidence": [
+        {
+          "path": "docs/architecture/tools/build_module_catalog.py",
+          "start_line": 56,
+          "end_line": 69,
+          "snapshot_sha256": "045fc62acb69411267f3985297ba9118252916b0b758bfef58e87c9b735effa9"
+        }
+      ],
+      "snapshot_sha256": "045fc62acb69411267f3985297ba9118252916b0b758bfef58e87c9b735effa9",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-011",
+      "sarif_result_index_zero_based": 10,
+      "rule_id": "py/implicit-string-concatenation-in-list",
+      "path": "docs/architecture/tools/build_module_catalog.py",
+      "line": 62,
+      "end_line": 63,
+      "raw_level": "warning",
+      "raw_problem_severity": "warning",
+      "raw_message": "Implicit string concatenation. Maybe missing a comma?",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "false_positive_context",
+      "human_severity": "none",
+      "reason": "相邻字符串是连续中文说明段落，首段与 Markdown 链接/后续限制说明应合成一个列表元素；逗号明确位于段落末尾。未见需要生成独立列表项的缺失逗号。",
+      "recommendation": "保留输出语义；可用括号或显式拼接表达段落边界以减少告警，不能直接在每行末尾加逗号改变文档段落。",
+      "evidence": [
+        {
+          "path": "docs/architecture/tools/build_module_catalog.py",
+          "start_line": 56,
+          "end_line": 69,
+          "snapshot_sha256": "045fc62acb69411267f3985297ba9118252916b0b758bfef58e87c9b735effa9"
+        }
+      ],
+      "snapshot_sha256": "045fc62acb69411267f3985297ba9118252916b0b758bfef58e87c9b735effa9",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-012",
+      "sarif_result_index_zero_based": 11,
+      "rule_id": "py/implicit-string-concatenation-in-list",
+      "path": "docs/architecture/tools/build_module_catalog.py",
+      "line": 64,
+      "end_line": 66,
+      "raw_level": "warning",
+      "raw_problem_severity": "warning",
+      "raw_message": "Implicit string concatenation. Maybe missing a comma?",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "false_positive_context",
+      "human_severity": "none",
+      "reason": "相邻字符串是连续中文说明段落，首段与 Markdown 链接/后续限制说明应合成一个列表元素；逗号明确位于段落末尾。未见需要生成独立列表项的缺失逗号。",
+      "recommendation": "保留输出语义；可用括号或显式拼接表达段落边界以减少告警，不能直接在每行末尾加逗号改变文档段落。",
+      "evidence": [
+        {
+          "path": "docs/architecture/tools/build_module_catalog.py",
+          "start_line": 56,
+          "end_line": 69,
+          "snapshot_sha256": "045fc62acb69411267f3985297ba9118252916b0b758bfef58e87c9b735effa9"
+        }
+      ],
+      "snapshot_sha256": "045fc62acb69411267f3985297ba9118252916b0b758bfef58e87c9b735effa9",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-013",
+      "sarif_result_index_zero_based": 12,
+      "rule_id": "py/implicit-string-concatenation-in-list",
+      "path": "docs/architecture/tools/build_module_catalog.py",
+      "line": 81,
+      "end_line": 82,
+      "raw_level": "warning",
+      "raw_problem_severity": "warning",
+      "raw_message": "Implicit string concatenation. Maybe missing a comma?",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "false_positive_context",
+      "human_severity": "none",
+      "reason": "相邻字符串是连续中文说明段落，首段与 Markdown 链接/后续限制说明应合成一个列表元素；逗号明确位于段落末尾。未见需要生成独立列表项的缺失逗号。",
+      "recommendation": "保留输出语义；可用括号或显式拼接表达段落边界以减少告警，不能直接在每行末尾加逗号改变文档段落。",
+      "evidence": [
+        {
+          "path": "docs/architecture/tools/build_module_catalog.py",
+          "start_line": 80,
+          "end_line": 82,
+          "snapshot_sha256": "045fc62acb69411267f3985297ba9118252916b0b758bfef58e87c9b735effa9"
+        }
+      ],
+      "snapshot_sha256": "045fc62acb69411267f3985297ba9118252916b0b758bfef58e87c9b735effa9",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-014",
+      "sarif_result_index_zero_based": 13,
+      "rule_id": "py/unnecessary-lambda",
+      "path": "services/page-processing-worker/tests/test_main.py",
+      "line": 59,
+      "end_line": 59,
+      "raw_level": "note",
+      "raw_problem_severity": "recommendation",
+      "raw_message": "This 'lambda' is just a simple wrapper around a callable object. Use that object directly.",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "low_maintenance",
+      "human_severity": "low",
+      "reason": "测试 monkeypatch 使用无参数 lambda: _config()，只转调本文件默认配置工厂；本测试范围内没有替换 _config 的后续步骤。告警为真实但低影响的测试写法冗余，不影响阅卷运行。",
+      "recommendation": "可把这两处 lambda 换成 _config；带自定义参数的其他 lambda 不属于此结论。",
+      "evidence": [
+        {
+          "path": "services/page-processing-worker/tests/test_main.py",
+          "start_line": 47,
+          "end_line": 87,
+          "snapshot_sha256": "37a50842d349b755717519989e239261320e382b966776fe6f4d71e3e953d690"
+        }
+      ],
+      "snapshot_sha256": "37a50842d349b755717519989e239261320e382b966776fe6f4d71e3e953d690",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-015",
+      "sarif_result_index_zero_based": 14,
+      "rule_id": "py/unnecessary-lambda",
+      "path": "services/page-processing-worker/tests/test_main.py",
+      "line": 79,
+      "end_line": 79,
+      "raw_level": "note",
+      "raw_problem_severity": "recommendation",
+      "raw_message": "This 'lambda' is just a simple wrapper around a callable object. Use that object directly.",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "low_maintenance",
+      "human_severity": "low",
+      "reason": "测试 monkeypatch 使用无参数 lambda: _config()，只转调本文件默认配置工厂；本测试范围内没有替换 _config 的后续步骤。告警为真实但低影响的测试写法冗余，不影响阅卷运行。",
+      "recommendation": "可把这两处 lambda 换成 _config；带自定义参数的其他 lambda 不属于此结论。",
+      "evidence": [
+        {
+          "path": "services/page-processing-worker/tests/test_main.py",
+          "start_line": 47,
+          "end_line": 87,
+          "snapshot_sha256": "37a50842d349b755717519989e239261320e382b966776fe6f4d71e3e953d690"
+        }
+      ],
+      "snapshot_sha256": "37a50842d349b755717519989e239261320e382b966776fe6f4d71e3e953d690",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-016",
+      "sarif_result_index_zero_based": 15,
+      "rule_id": "py/procedure-return-value-used",
+      "path": "docs/architecture/tools/snapshot_workspace.py",
+      "line": 48,
+      "end_line": 48,
+      "raw_level": "warning",
+      "raw_problem_severity": "warning",
+      "raw_message": "The result of [snapshot](1) is used even though it is always None.",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "intentional_behavior",
+      "human_severity": "none",
+      "reason": "snapshot() 写基线并打印摘要，没有返回值；其 None 仅传给 sys.exit，Python 对 sys.exit(None) 使用成功退出状态。--verify 分支则保留 verify() 的 0/1 返回值。没有把 None 当作快照数据使用。",
+      "recommendation": "可让 snapshot() 显式 return 0 或分开两条 sys.exit 分支以提高清晰度；不应把此告警描述为基线校验失效。",
+      "evidence": [
+        {
+          "path": "docs/architecture/tools/snapshot_workspace.py",
+          "start_line": 22,
+          "end_line": 48,
+          "snapshot_sha256": "627d11165e0b3870bd50fd6f4c8969b27e0080ac511ffb0f058b48347503bdc5"
+        }
+      ],
+      "snapshot_sha256": "627d11165e0b3870bd50fd6f4c8969b27e0080ac511ffb0f058b48347503bdc5",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-017",
+      "sarif_result_index_zero_based": 16,
+      "rule_id": "py/import-and-import-from",
+      "path": "services/page-processing-worker/tests/test_runner_state_boundaries.py",
+      "line": 8,
+      "end_line": 8,
+      "raw_level": "note",
+      "raw_problem_severity": "recommendation",
+      "raw_message": "Module 'page_processing.runner' is imported with both 'import' and 'import from'.",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "intentional_behavior",
+      "human_severity": "none",
+      "reason": "Runner 类用于构造和类型注解，runner_module 模块对象用于 monkeypatch 其依赖函数。两种导入承担不同测试职责，不是重复执行模块或导错对象。",
+      "recommendation": "可统一通过 runner_module.Runner 引用以减少风格告警；保留双导入也不会产生已证实的运行问题。",
+      "evidence": [
+        {
+          "path": "services/page-processing-worker/tests/test_runner_state_boundaries.py",
+          "start_line": 8,
+          "end_line": 22,
+          "snapshot_sha256": "9c16039a9dcc501728f3a066e3558172abf08aa1390d4bf8efbc002356f7612d"
+        },
+        {
+          "path": "services/page-processing-worker/tests/test_runner_state_boundaries.py",
+          "start_line": 41,
+          "end_line": 55,
+          "snapshot_sha256": "9c16039a9dcc501728f3a066e3558172abf08aa1390d4bf8efbc002356f7612d"
+        },
+        {
+          "path": "services/page-processing-worker/tests/test_runner_state_boundaries.py",
+          "start_line": 97,
+          "end_line": 100,
+          "snapshot_sha256": "9c16039a9dcc501728f3a066e3558172abf08aa1390d4bf8efbc002356f7612d"
+        }
+      ],
+      "snapshot_sha256": "9c16039a9dcc501728f3a066e3558172abf08aa1390d4bf8efbc002356f7612d",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-018",
+      "sarif_result_index_zero_based": 17,
+      "rule_id": "py/unused-import",
+      "path": "docs/architecture/tools/build_database_specs.py",
+      "line": 3,
+      "end_line": 3,
+      "raw_level": "note",
+      "raw_problem_severity": "recommendation",
+      "raw_message": "Import of 're' is not used.\nImport of 'collections' is not used.",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "low_maintenance",
+      "human_severity": "low",
+      "reason": "同一 import 语句中的 re 和 collections 在固定快照文件后续均无引用。SARIF 把两项 unused import 合并成一条结果；不要计作两条漏洞。工具只生成架构文档，影响为多余依赖和可读性。",
+      "recommendation": "后续清理该语句里的 re、collections，保留实际使用的 json、hashlib；本次不修改生成工具。",
+      "evidence": [
+        {
+          "path": "docs/architecture/tools/build_database_specs.py",
+          "start_line": 1,
+          "end_line": 14,
+          "snapshot_sha256": "8cf12b2171204cda24c2bb6d84ada02ef7c185446b5c4bbbed1fa26465263339"
+        }
+      ],
+      "snapshot_sha256": "8cf12b2171204cda24c2bb6d84ada02ef7c185446b5c4bbbed1fa26465263339",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-019",
+      "sarif_result_index_zero_based": 18,
+      "rule_id": "py/ineffectual-statement",
+      "path": "services/ocr-worker/ocr_worker/engine.py",
+      "line": 25,
+      "end_line": 25,
+      "raw_level": "note",
+      "raw_problem_severity": "recommendation",
+      "raw_message": "This statement has no effect.",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "false_positive_context",
+      "human_severity": "none",
+      "reason": "命中表达式为 typing.Protocol 接口方法体的 ...，用于声明结构化接口；不是应执行副作用的业务实现遗漏。该位置所在类明确继承 Protocol。",
+      "recommendation": "保留接口声明；如配置质量门禁，可对 Protocol 方法中的省略号作精确规则例外，不要把全部空方法排除。",
+      "evidence": [
+        {
+          "path": "services/ocr-worker/ocr_worker/engine.py",
+          "start_line": 20,
+          "end_line": 28,
+          "snapshot_sha256": "b35ecf8f0bbe86fe69b191fd7c13b3f27f01b2241accd2871224646d9fb577a7"
+        }
+      ],
+      "snapshot_sha256": "b35ecf8f0bbe86fe69b191fd7c13b3f27f01b2241accd2871224646d9fb577a7",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-020",
+      "sarif_result_index_zero_based": 19,
+      "rule_id": "py/ineffectual-statement",
+      "path": "services/ocr-worker/ocr_worker/engine.py",
+      "line": 28,
+      "end_line": 28,
+      "raw_level": "note",
+      "raw_problem_severity": "recommendation",
+      "raw_message": "This statement has no effect.",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "false_positive_context",
+      "human_severity": "none",
+      "reason": "命中表达式为 typing.Protocol 接口方法体的 ...，用于声明结构化接口；不是应执行副作用的业务实现遗漏。该位置所在类明确继承 Protocol。",
+      "recommendation": "保留接口声明；如配置质量门禁，可对 Protocol 方法中的省略号作精确规则例外，不要把全部空方法排除。",
+      "evidence": [
+        {
+          "path": "services/ocr-worker/ocr_worker/engine.py",
+          "start_line": 20,
+          "end_line": 28,
+          "snapshot_sha256": "b35ecf8f0bbe86fe69b191fd7c13b3f27f01b2241accd2871224646d9fb577a7"
+        }
+      ],
+      "snapshot_sha256": "b35ecf8f0bbe86fe69b191fd7c13b3f27f01b2241accd2871224646d9fb577a7",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-021",
+      "sarif_result_index_zero_based": 20,
+      "rule_id": "py/ineffectual-statement",
+      "path": "services/ocr-worker/ocr_worker/math_layout.py",
+      "line": 18,
+      "end_line": 18,
+      "raw_level": "note",
+      "raw_problem_severity": "recommendation",
+      "raw_message": "This statement has no effect.",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "false_positive_context",
+      "human_severity": "none",
+      "reason": "命中表达式为 typing.Protocol 接口方法体的 ...，用于声明结构化接口；不是应执行副作用的业务实现遗漏。该位置所在类明确继承 Protocol。",
+      "recommendation": "保留接口声明；如配置质量门禁，可对 Protocol 方法中的省略号作精确规则例外，不要把全部空方法排除。",
+      "evidence": [
+        {
+          "path": "services/ocr-worker/ocr_worker/math_layout.py",
+          "start_line": 14,
+          "end_line": 22,
+          "snapshot_sha256": "3d05ca211492c96a33c1ad534ec9cf306a470054187cc22513c328a8432993cb"
+        }
+      ],
+      "snapshot_sha256": "3d05ca211492c96a33c1ad534ec9cf306a470054187cc22513c328a8432993cb",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-022",
+      "sarif_result_index_zero_based": 21,
+      "rule_id": "py/ineffectual-statement",
+      "path": "services/ocr-worker/ocr_worker/math_layout.py",
+      "line": 20,
+      "end_line": 20,
+      "raw_level": "note",
+      "raw_problem_severity": "recommendation",
+      "raw_message": "This statement has no effect.",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "false_positive_context",
+      "human_severity": "none",
+      "reason": "命中表达式为 typing.Protocol 接口方法体的 ...，用于声明结构化接口；不是应执行副作用的业务实现遗漏。该位置所在类明确继承 Protocol。",
+      "recommendation": "保留接口声明；如配置质量门禁，可对 Protocol 方法中的省略号作精确规则例外，不要把全部空方法排除。",
+      "evidence": [
+        {
+          "path": "services/ocr-worker/ocr_worker/math_layout.py",
+          "start_line": 14,
+          "end_line": 22,
+          "snapshot_sha256": "3d05ca211492c96a33c1ad534ec9cf306a470054187cc22513c328a8432993cb"
+        }
+      ],
+      "snapshot_sha256": "3d05ca211492c96a33c1ad534ec9cf306a470054187cc22513c328a8432993cb",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-023",
+      "sarif_result_index_zero_based": 22,
+      "rule_id": "py/ineffectual-statement",
+      "path": "services/ocr-worker/ocr_worker/math_layout.py",
+      "line": 22,
+      "end_line": 22,
+      "raw_level": "note",
+      "raw_problem_severity": "recommendation",
+      "raw_message": "This statement has no effect.",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "false_positive_context",
+      "human_severity": "none",
+      "reason": "命中表达式为 typing.Protocol 接口方法体的 ...，用于声明结构化接口；不是应执行副作用的业务实现遗漏。该位置所在类明确继承 Protocol。",
+      "recommendation": "保留接口声明；如配置质量门禁，可对 Protocol 方法中的省略号作精确规则例外，不要把全部空方法排除。",
+      "evidence": [
+        {
+          "path": "services/ocr-worker/ocr_worker/math_layout.py",
+          "start_line": 14,
+          "end_line": 22,
+          "snapshot_sha256": "3d05ca211492c96a33c1ad534ec9cf306a470054187cc22513c328a8432993cb"
+        }
+      ],
+      "snapshot_sha256": "3d05ca211492c96a33c1ad534ec9cf306a470054187cc22513c328a8432993cb",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-024",
+      "sarif_result_index_zero_based": 23,
+      "rule_id": "py/ineffectual-statement",
+      "path": "ai-services/grading_agent/provider_adapter.py",
+      "line": 13,
+      "end_line": 13,
+      "raw_level": "note",
+      "raw_problem_severity": "recommendation",
+      "raw_message": "This statement has no effect.",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "false_positive_context",
+      "human_severity": "none",
+      "reason": "命中表达式为 typing.Protocol 接口方法体的 ...，用于声明结构化接口；不是应执行副作用的业务实现遗漏。该位置所在类明确继承 Protocol。",
+      "recommendation": "保留接口声明；如配置质量门禁，可对 Protocol 方法中的省略号作精确规则例外，不要把全部空方法排除。",
+      "evidence": [
+        {
+          "path": "ai-services/grading_agent/provider_adapter.py",
+          "start_line": 8,
+          "end_line": 22,
+          "snapshot_sha256": "903a2982a49d5cee5a144ef1eeeb629baecc7c17f1f22d6c159d8aee4d847b8c"
+        }
+      ],
+      "snapshot_sha256": "903a2982a49d5cee5a144ef1eeeb629baecc7c17f1f22d6c159d8aee4d847b8c",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-025",
+      "sarif_result_index_zero_based": 24,
+      "rule_id": "py/ineffectual-statement",
+      "path": "ai-services/grading_agent/provider_adapter.py",
+      "line": 16,
+      "end_line": 16,
+      "raw_level": "note",
+      "raw_problem_severity": "recommendation",
+      "raw_message": "This statement has no effect.",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "false_positive_context",
+      "human_severity": "none",
+      "reason": "命中表达式为 typing.Protocol 接口方法体的 ...，用于声明结构化接口；不是应执行副作用的业务实现遗漏。该位置所在类明确继承 Protocol。",
+      "recommendation": "保留接口声明；如配置质量门禁，可对 Protocol 方法中的省略号作精确规则例外，不要把全部空方法排除。",
+      "evidence": [
+        {
+          "path": "ai-services/grading_agent/provider_adapter.py",
+          "start_line": 8,
+          "end_line": 22,
+          "snapshot_sha256": "903a2982a49d5cee5a144ef1eeeb629baecc7c17f1f22d6c159d8aee4d847b8c"
+        }
+      ],
+      "snapshot_sha256": "903a2982a49d5cee5a144ef1eeeb629baecc7c17f1f22d6c159d8aee4d847b8c",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-026",
+      "sarif_result_index_zero_based": 25,
+      "rule_id": "py/ineffectual-statement",
+      "path": "ai-services/grading_agent/provider_adapter.py",
+      "line": 19,
+      "end_line": 19,
+      "raw_level": "note",
+      "raw_problem_severity": "recommendation",
+      "raw_message": "This statement has no effect.",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "false_positive_context",
+      "human_severity": "none",
+      "reason": "命中表达式为 typing.Protocol 接口方法体的 ...，用于声明结构化接口；不是应执行副作用的业务实现遗漏。该位置所在类明确继承 Protocol。",
+      "recommendation": "保留接口声明；如配置质量门禁，可对 Protocol 方法中的省略号作精确规则例外，不要把全部空方法排除。",
+      "evidence": [
+        {
+          "path": "ai-services/grading_agent/provider_adapter.py",
+          "start_line": 8,
+          "end_line": 22,
+          "snapshot_sha256": "903a2982a49d5cee5a144ef1eeeb629baecc7c17f1f22d6c159d8aee4d847b8c"
+        }
+      ],
+      "snapshot_sha256": "903a2982a49d5cee5a144ef1eeeb629baecc7c17f1f22d6c159d8aee4d847b8c",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-027",
+      "sarif_result_index_zero_based": 26,
+      "rule_id": "py/ineffectual-statement",
+      "path": "ai-services/grading_agent/provider_adapter.py",
+      "line": 22,
+      "end_line": 22,
+      "raw_level": "note",
+      "raw_problem_severity": "recommendation",
+      "raw_message": "This statement has no effect.",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "false_positive_context",
+      "human_severity": "none",
+      "reason": "命中表达式为 typing.Protocol 接口方法体的 ...，用于声明结构化接口；不是应执行副作用的业务实现遗漏。该位置所在类明确继承 Protocol。",
+      "recommendation": "保留接口声明；如配置质量门禁，可对 Protocol 方法中的省略号作精确规则例外，不要把全部空方法排除。",
+      "evidence": [
+        {
+          "path": "ai-services/grading_agent/provider_adapter.py",
+          "start_line": 8,
+          "end_line": 22,
+          "snapshot_sha256": "903a2982a49d5cee5a144ef1eeeb629baecc7c17f1f22d6c159d8aee4d847b8c"
+        }
+      ],
+      "snapshot_sha256": "903a2982a49d5cee5a144ef1eeeb629baecc7c17f1f22d6c159d8aee4d847b8c",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-028",
+      "sarif_result_index_zero_based": 27,
+      "rule_id": "py/ineffectual-statement",
+      "path": "services/ocr-worker/ocr_worker/recognition_router.py",
+      "line": 76,
+      "end_line": 76,
+      "raw_level": "note",
+      "raw_problem_severity": "recommendation",
+      "raw_message": "This statement has no effect.",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "false_positive_context",
+      "human_severity": "none",
+      "reason": "命中表达式为 typing.Protocol 接口方法体的 ...，用于声明结构化接口；不是应执行副作用的业务实现遗漏。该位置所在类明确继承 Protocol。",
+      "recommendation": "保留接口声明；如配置质量门禁，可对 Protocol 方法中的省略号作精确规则例外，不要把全部空方法排除。",
+      "evidence": [
+        {
+          "path": "services/ocr-worker/ocr_worker/recognition_router.py",
+          "start_line": 72,
+          "end_line": 80,
+          "snapshot_sha256": "f5120c490011b20fa1d876d1dc450ed6b892aaa033fcce388ea4b08c9ba69ffd"
+        }
+      ],
+      "snapshot_sha256": "f5120c490011b20fa1d876d1dc450ed6b892aaa033fcce388ea4b08c9ba69ffd",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-029",
+      "sarif_result_index_zero_based": 28,
+      "rule_id": "py/ineffectual-statement",
+      "path": "services/ocr-worker/ocr_worker/recognition_router.py",
+      "line": 78,
+      "end_line": 78,
+      "raw_level": "note",
+      "raw_problem_severity": "recommendation",
+      "raw_message": "This statement has no effect.",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "false_positive_context",
+      "human_severity": "none",
+      "reason": "命中表达式为 typing.Protocol 接口方法体的 ...，用于声明结构化接口；不是应执行副作用的业务实现遗漏。该位置所在类明确继承 Protocol。",
+      "recommendation": "保留接口声明；如配置质量门禁，可对 Protocol 方法中的省略号作精确规则例外，不要把全部空方法排除。",
+      "evidence": [
+        {
+          "path": "services/ocr-worker/ocr_worker/recognition_router.py",
+          "start_line": 72,
+          "end_line": 80,
+          "snapshot_sha256": "f5120c490011b20fa1d876d1dc450ed6b892aaa033fcce388ea4b08c9ba69ffd"
+        }
+      ],
+      "snapshot_sha256": "f5120c490011b20fa1d876d1dc450ed6b892aaa033fcce388ea4b08c9ba69ffd",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-030",
+      "sarif_result_index_zero_based": 29,
+      "rule_id": "py/ineffectual-statement",
+      "path": "services/ocr-worker/ocr_worker/recognition_router.py",
+      "line": 80,
+      "end_line": 80,
+      "raw_level": "note",
+      "raw_problem_severity": "recommendation",
+      "raw_message": "This statement has no effect.",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "false_positive_context",
+      "human_severity": "none",
+      "reason": "命中表达式为 typing.Protocol 接口方法体的 ...，用于声明结构化接口；不是应执行副作用的业务实现遗漏。该位置所在类明确继承 Protocol。",
+      "recommendation": "保留接口声明；如配置质量门禁，可对 Protocol 方法中的省略号作精确规则例外，不要把全部空方法排除。",
+      "evidence": [
+        {
+          "path": "services/ocr-worker/ocr_worker/recognition_router.py",
+          "start_line": 72,
+          "end_line": 80,
+          "snapshot_sha256": "f5120c490011b20fa1d876d1dc450ed6b892aaa033fcce388ea4b08c9ba69ffd"
+        }
+      ],
+      "snapshot_sha256": "f5120c490011b20fa1d876d1dc450ed6b892aaa033fcce388ea4b08c9ba69ffd",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-031",
+      "sarif_result_index_zero_based": 30,
+      "rule_id": "py/ineffectual-statement",
+      "path": "services/page-processing-worker/page_processing/runner.py",
+      "line": 38,
+      "end_line": 38,
+      "raw_level": "note",
+      "raw_problem_severity": "recommendation",
+      "raw_message": "This statement has no effect.",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "false_positive_context",
+      "human_severity": "none",
+      "reason": "命中表达式为 typing.Protocol 接口方法体的 ...，用于声明结构化接口；不是应执行副作用的业务实现遗漏。该位置所在类明确继承 Protocol。",
+      "recommendation": "保留接口声明；如配置质量门禁，可对 Protocol 方法中的省略号作精确规则例外，不要把全部空方法排除。",
+      "evidence": [
+        {
+          "path": "services/page-processing-worker/page_processing/runner.py",
+          "start_line": 34,
+          "end_line": 44,
+          "snapshot_sha256": "32d236c9d4fa337d61ac403cd1d9b8e3a05d5f5dcbd0a1330284ad778694041e"
+        }
+      ],
+      "snapshot_sha256": "32d236c9d4fa337d61ac403cd1d9b8e3a05d5f5dcbd0a1330284ad778694041e",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-032",
+      "sarif_result_index_zero_based": 31,
+      "rule_id": "py/ineffectual-statement",
+      "path": "services/page-processing-worker/page_processing/runner.py",
+      "line": 41,
+      "end_line": 41,
+      "raw_level": "note",
+      "raw_problem_severity": "recommendation",
+      "raw_message": "This statement has no effect.",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "false_positive_context",
+      "human_severity": "none",
+      "reason": "命中表达式为 typing.Protocol 接口方法体的 ...，用于声明结构化接口；不是应执行副作用的业务实现遗漏。该位置所在类明确继承 Protocol。",
+      "recommendation": "保留接口声明；如配置质量门禁，可对 Protocol 方法中的省略号作精确规则例外，不要把全部空方法排除。",
+      "evidence": [
+        {
+          "path": "services/page-processing-worker/page_processing/runner.py",
+          "start_line": 34,
+          "end_line": 44,
+          "snapshot_sha256": "32d236c9d4fa337d61ac403cd1d9b8e3a05d5f5dcbd0a1330284ad778694041e"
+        }
+      ],
+      "snapshot_sha256": "32d236c9d4fa337d61ac403cd1d9b8e3a05d5f5dcbd0a1330284ad778694041e",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-033",
+      "sarif_result_index_zero_based": 32,
+      "rule_id": "py/ineffectual-statement",
+      "path": "services/page-processing-worker/page_processing/runner.py",
+      "line": 44,
+      "end_line": 44,
+      "raw_level": "note",
+      "raw_problem_severity": "recommendation",
+      "raw_message": "This statement has no effect.",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "false_positive_context",
+      "human_severity": "none",
+      "reason": "命中表达式为 typing.Protocol 接口方法体的 ...，用于声明结构化接口；不是应执行副作用的业务实现遗漏。该位置所在类明确继承 Protocol。",
+      "recommendation": "保留接口声明；如配置质量门禁，可对 Protocol 方法中的省略号作精确规则例外，不要把全部空方法排除。",
+      "evidence": [
+        {
+          "path": "services/page-processing-worker/page_processing/runner.py",
+          "start_line": 34,
+          "end_line": 44,
+          "snapshot_sha256": "32d236c9d4fa337d61ac403cd1d9b8e3a05d5f5dcbd0a1330284ad778694041e"
+        }
+      ],
+      "snapshot_sha256": "32d236c9d4fa337d61ac403cd1d9b8e3a05d5f5dcbd0a1330284ad778694041e",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-034",
+      "sarif_result_index_zero_based": 33,
+      "rule_id": "py/ineffectual-statement",
+      "path": "services/image-quality-worker/image_quality/runner.py",
+      "line": 16,
+      "end_line": 16,
+      "raw_level": "note",
+      "raw_problem_severity": "recommendation",
+      "raw_message": "This statement has no effect.",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "false_positive_context",
+      "human_severity": "none",
+      "reason": "命中表达式为 typing.Protocol 接口方法体的 ...，用于声明结构化接口；不是应执行副作用的业务实现遗漏。该位置所在类明确继承 Protocol。",
+      "recommendation": "保留接口声明；如配置质量门禁，可对 Protocol 方法中的省略号作精确规则例外，不要把全部空方法排除。",
+      "evidence": [
+        {
+          "path": "services/image-quality-worker/image_quality/runner.py",
+          "start_line": 14,
+          "end_line": 34,
+          "snapshot_sha256": "873b4b1aeba568ed8a2558c1f431652d3b342693779336ab18fd2bfdc8109c00"
+        }
+      ],
+      "snapshot_sha256": "873b4b1aeba568ed8a2558c1f431652d3b342693779336ab18fd2bfdc8109c00",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-035",
+      "sarif_result_index_zero_based": 34,
+      "rule_id": "py/ineffectual-statement",
+      "path": "services/image-quality-worker/image_quality/runner.py",
+      "line": 19,
+      "end_line": 19,
+      "raw_level": "note",
+      "raw_problem_severity": "recommendation",
+      "raw_message": "This statement has no effect.",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "false_positive_context",
+      "human_severity": "none",
+      "reason": "命中表达式为 typing.Protocol 接口方法体的 ...，用于声明结构化接口；不是应执行副作用的业务实现遗漏。该位置所在类明确继承 Protocol。",
+      "recommendation": "保留接口声明；如配置质量门禁，可对 Protocol 方法中的省略号作精确规则例外，不要把全部空方法排除。",
+      "evidence": [
+        {
+          "path": "services/image-quality-worker/image_quality/runner.py",
+          "start_line": 14,
+          "end_line": 34,
+          "snapshot_sha256": "873b4b1aeba568ed8a2558c1f431652d3b342693779336ab18fd2bfdc8109c00"
+        }
+      ],
+      "snapshot_sha256": "873b4b1aeba568ed8a2558c1f431652d3b342693779336ab18fd2bfdc8109c00",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-036",
+      "sarif_result_index_zero_based": 35,
+      "rule_id": "py/ineffectual-statement",
+      "path": "services/image-quality-worker/image_quality/runner.py",
+      "line": 22,
+      "end_line": 22,
+      "raw_level": "note",
+      "raw_problem_severity": "recommendation",
+      "raw_message": "This statement has no effect.",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "false_positive_context",
+      "human_severity": "none",
+      "reason": "命中表达式为 typing.Protocol 接口方法体的 ...，用于声明结构化接口；不是应执行副作用的业务实现遗漏。该位置所在类明确继承 Protocol。",
+      "recommendation": "保留接口声明；如配置质量门禁，可对 Protocol 方法中的省略号作精确规则例外，不要把全部空方法排除。",
+      "evidence": [
+        {
+          "path": "services/image-quality-worker/image_quality/runner.py",
+          "start_line": 14,
+          "end_line": 34,
+          "snapshot_sha256": "873b4b1aeba568ed8a2558c1f431652d3b342693779336ab18fd2bfdc8109c00"
+        }
+      ],
+      "snapshot_sha256": "873b4b1aeba568ed8a2558c1f431652d3b342693779336ab18fd2bfdc8109c00",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-037",
+      "sarif_result_index_zero_based": 36,
+      "rule_id": "py/ineffectual-statement",
+      "path": "services/image-quality-worker/image_quality/runner.py",
+      "line": 25,
+      "end_line": 25,
+      "raw_level": "note",
+      "raw_problem_severity": "recommendation",
+      "raw_message": "This statement has no effect.",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "false_positive_context",
+      "human_severity": "none",
+      "reason": "命中表达式为 typing.Protocol 接口方法体的 ...，用于声明结构化接口；不是应执行副作用的业务实现遗漏。该位置所在类明确继承 Protocol。",
+      "recommendation": "保留接口声明；如配置质量门禁，可对 Protocol 方法中的省略号作精确规则例外，不要把全部空方法排除。",
+      "evidence": [
+        {
+          "path": "services/image-quality-worker/image_quality/runner.py",
+          "start_line": 14,
+          "end_line": 34,
+          "snapshot_sha256": "873b4b1aeba568ed8a2558c1f431652d3b342693779336ab18fd2bfdc8109c00"
+        }
+      ],
+      "snapshot_sha256": "873b4b1aeba568ed8a2558c1f431652d3b342693779336ab18fd2bfdc8109c00",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-038",
+      "sarif_result_index_zero_based": 37,
+      "rule_id": "py/ineffectual-statement",
+      "path": "services/image-quality-worker/image_quality/runner.py",
+      "line": 28,
+      "end_line": 28,
+      "raw_level": "note",
+      "raw_problem_severity": "recommendation",
+      "raw_message": "This statement has no effect.",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "false_positive_context",
+      "human_severity": "none",
+      "reason": "命中表达式为 typing.Protocol 接口方法体的 ...，用于声明结构化接口；不是应执行副作用的业务实现遗漏。该位置所在类明确继承 Protocol。",
+      "recommendation": "保留接口声明；如配置质量门禁，可对 Protocol 方法中的省略号作精确规则例外，不要把全部空方法排除。",
+      "evidence": [
+        {
+          "path": "services/image-quality-worker/image_quality/runner.py",
+          "start_line": 14,
+          "end_line": 34,
+          "snapshot_sha256": "873b4b1aeba568ed8a2558c1f431652d3b342693779336ab18fd2bfdc8109c00"
+        }
+      ],
+      "snapshot_sha256": "873b4b1aeba568ed8a2558c1f431652d3b342693779336ab18fd2bfdc8109c00",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-039",
+      "sarif_result_index_zero_based": 38,
+      "rule_id": "py/ineffectual-statement",
+      "path": "services/image-quality-worker/image_quality/runner.py",
+      "line": 31,
+      "end_line": 31,
+      "raw_level": "note",
+      "raw_problem_severity": "recommendation",
+      "raw_message": "This statement has no effect.",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "false_positive_context",
+      "human_severity": "none",
+      "reason": "命中表达式为 typing.Protocol 接口方法体的 ...，用于声明结构化接口；不是应执行副作用的业务实现遗漏。该位置所在类明确继承 Protocol。",
+      "recommendation": "保留接口声明；如配置质量门禁，可对 Protocol 方法中的省略号作精确规则例外，不要把全部空方法排除。",
+      "evidence": [
+        {
+          "path": "services/image-quality-worker/image_quality/runner.py",
+          "start_line": 14,
+          "end_line": 34,
+          "snapshot_sha256": "873b4b1aeba568ed8a2558c1f431652d3b342693779336ab18fd2bfdc8109c00"
+        }
+      ],
+      "snapshot_sha256": "873b4b1aeba568ed8a2558c1f431652d3b342693779336ab18fd2bfdc8109c00",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-040",
+      "sarif_result_index_zero_based": 39,
+      "rule_id": "py/ineffectual-statement",
+      "path": "services/image-quality-worker/image_quality/runner.py",
+      "line": 34,
+      "end_line": 34,
+      "raw_level": "note",
+      "raw_problem_severity": "recommendation",
+      "raw_message": "This statement has no effect.",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "false_positive_context",
+      "human_severity": "none",
+      "reason": "命中表达式为 typing.Protocol 接口方法体的 ...，用于声明结构化接口；不是应执行副作用的业务实现遗漏。该位置所在类明确继承 Protocol。",
+      "recommendation": "保留接口声明；如配置质量门禁，可对 Protocol 方法中的省略号作精确规则例外，不要把全部空方法排除。",
+      "evidence": [
+        {
+          "path": "services/image-quality-worker/image_quality/runner.py",
+          "start_line": 14,
+          "end_line": 34,
+          "snapshot_sha256": "873b4b1aeba568ed8a2558c1f431652d3b342693779336ab18fd2bfdc8109c00"
+        }
+      ],
+      "snapshot_sha256": "873b4b1aeba568ed8a2558c1f431652d3b342693779336ab18fd2bfdc8109c00",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-041",
+      "sarif_result_index_zero_based": 40,
+      "rule_id": "py/unused-global-variable",
+      "path": "services/ocr-worker/ocr_worker/math_layout.py",
+      "line": 244,
+      "end_line": 244,
+      "raw_level": "note",
+      "raw_problem_severity": "recommendation",
+      "raw_message": "The global variable '_adaptive_crop_formula' is not used.",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "false_positive_context",
+      "human_severity": "none",
+      "reason": "_adaptive_crop_formula 被 paper_formula.py 实际导入并调用，也由测试引用。公开实现仍在使用，告警不是裁剪/合并算法失效。",
+      "recommendation": "有实际消费者的别名应保留或先迁移调用方；无本仓消费者的兼容别名在确认兼容期结束后才删除。",
+      "evidence": [
+        {
+          "path": "services/ocr-worker/ocr_worker/math_layout.py",
+          "start_line": 242,
+          "end_line": 247,
+          "snapshot_sha256": "3d05ca211492c96a33c1ad534ec9cf306a470054187cc22513c328a8432993cb"
+        },
+        {
+          "path": "services/ocr-worker/ocr_worker/paper_formula.py",
+          "start_line": 13,
+          "end_line": 23,
+          "snapshot_sha256": "547e2ffc4d91dd3e67d91c72a81fb833444353f88353c0593c91f0408385e2f5"
+        },
+        {
+          "path": "services/ocr-worker/ocr_worker/paper_formula.py",
+          "start_line": 188,
+          "end_line": 205,
+          "snapshot_sha256": "547e2ffc4d91dd3e67d91c72a81fb833444353f88353c0593c91f0408385e2f5"
+        },
+        {
+          "path": "services/ocr-worker/tests/test_paper_formula.py",
+          "start_line": 103,
+          "end_line": 116,
+          "snapshot_sha256": "4de4a8dbd6c813dd93a2a7886bba1d80f9e8229c5447cce3dca393b077818dfc"
+        }
+      ],
+      "snapshot_sha256": "3d05ca211492c96a33c1ad534ec9cf306a470054187cc22513c328a8432993cb",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-042",
+      "sarif_result_index_zero_based": 41,
+      "rule_id": "py/unused-global-variable",
+      "path": "services/ocr-worker/ocr_worker/math_layout.py",
+      "line": 245,
+      "end_line": 245,
+      "raw_level": "note",
+      "raw_problem_severity": "recommendation",
+      "raw_message": "The global variable '_crop_formula' is not used.",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "intentional_behavior",
+      "human_severity": "none",
+      "reason": "固定快照搜索未找到此兼容别名的实际消费者；邻近注释明确将它作为旧接口兼容别名保留。仅凭本仓库没有使用者不能证明不存在旧调用方。公开实现仍在使用，告警不是裁剪/合并算法失效。",
+      "recommendation": "有实际消费者的别名应保留或先迁移调用方；无本仓消费者的兼容别名在确认兼容期结束后才删除。",
+      "evidence": [
+        {
+          "path": "services/ocr-worker/ocr_worker/math_layout.py",
+          "start_line": 242,
+          "end_line": 247,
+          "snapshot_sha256": "3d05ca211492c96a33c1ad534ec9cf306a470054187cc22513c328a8432993cb"
+        }
+      ],
+      "snapshot_sha256": "3d05ca211492c96a33c1ad534ec9cf306a470054187cc22513c328a8432993cb",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-043",
+      "sarif_result_index_zero_based": 42,
+      "rule_id": "py/unused-global-variable",
+      "path": "services/ocr-worker/ocr_worker/math_layout.py",
+      "line": 246,
+      "end_line": 246,
+      "raw_level": "note",
+      "raw_problem_severity": "recommendation",
+      "raw_message": "The global variable '_merge_formula_boxes' is not used.",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "false_positive_context",
+      "human_severity": "none",
+      "reason": "_merge_formula_boxes 被 test_paper_formula.py 实际导入并调用。公开实现仍在使用，告警不是裁剪/合并算法失效。",
+      "recommendation": "有实际消费者的别名应保留或先迁移调用方；无本仓消费者的兼容别名在确认兼容期结束后才删除。",
+      "evidence": [
+        {
+          "path": "services/ocr-worker/ocr_worker/math_layout.py",
+          "start_line": 242,
+          "end_line": 247,
+          "snapshot_sha256": "3d05ca211492c96a33c1ad534ec9cf306a470054187cc22513c328a8432993cb"
+        },
+        {
+          "path": "services/ocr-worker/tests/test_paper_formula.py",
+          "start_line": 10,
+          "end_line": 10,
+          "snapshot_sha256": "4de4a8dbd6c813dd93a2a7886bba1d80f9e8229c5447cce3dca393b077818dfc"
+        },
+        {
+          "path": "services/ocr-worker/tests/test_paper_formula.py",
+          "start_line": 51,
+          "end_line": 57,
+          "snapshot_sha256": "4de4a8dbd6c813dd93a2a7886bba1d80f9e8229c5447cce3dca393b077818dfc"
+        }
+      ],
+      "snapshot_sha256": "3d05ca211492c96a33c1ad534ec9cf306a470054187cc22513c328a8432993cb",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-044",
+      "sarif_result_index_zero_based": 43,
+      "rule_id": "py/unused-global-variable",
+      "path": "services/ocr-worker/ocr_worker/math_layout.py",
+      "line": 247,
+      "end_line": 247,
+      "raw_level": "note",
+      "raw_problem_severity": "recommendation",
+      "raw_message": "The global variable '_intersection_area' is not used.",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "intentional_behavior",
+      "human_severity": "none",
+      "reason": "固定快照搜索未找到此兼容别名的实际消费者；邻近注释明确将它作为旧接口兼容别名保留。仅凭本仓库没有使用者不能证明不存在旧调用方。公开实现仍在使用，告警不是裁剪/合并算法失效。",
+      "recommendation": "有实际消费者的别名应保留或先迁移调用方；无本仓消费者的兼容别名在确认兼容期结束后才删除。",
+      "evidence": [
+        {
+          "path": "services/ocr-worker/ocr_worker/math_layout.py",
+          "start_line": 242,
+          "end_line": 247,
+          "snapshot_sha256": "3d05ca211492c96a33c1ad534ec9cf306a470054187cc22513c328a8432993cb"
+        }
+      ],
+      "snapshot_sha256": "3d05ca211492c96a33c1ad534ec9cf306a470054187cc22513c328a8432993cb",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-045",
+      "sarif_result_index_zero_based": 44,
+      "rule_id": "py/unused-global-variable",
+      "path": "ai-services/grading_agent/paper_compact/schema.py",
+      "line": 19,
+      "end_line": 19,
+      "raw_level": "note",
+      "raw_problem_severity": "recommendation",
+      "raw_message": "The global variable '_QUESTION_START' is not used.",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "false_positive_context",
+      "human_severity": "none",
+      "reason": "该正则常量通过同包 anchors.py/chunks.py 的显式导入被实际匹配、搜索或迭代调用。schema.py 内部没有读取不等于整个程序没有使用；删除会破坏 OCR 锚点或分块逻辑。",
+      "recommendation": "保留实际被导入的常量；可集中定义明确的共享接口或使用精确规则抑制。此质量结论不消除另一条 py/polynomial-redos 安全告警。",
+      "evidence": [
+        {
+          "path": "ai-services/grading_agent/paper_compact/schema.py",
+          "start_line": 19,
+          "end_line": 21,
+          "snapshot_sha256": "38958370509b66e456f8cf739888032635e6885256c17b76b587af342de3cdf4"
+        },
+        {
+          "path": "ai-services/grading_agent/paper_compact/anchors.py",
+          "start_line": 615,
+          "end_line": 617,
+          "snapshot_sha256": "7c0280d45533f9411587c5116bf0d46cb9a91c9614707cc801abf3dafa0b6251"
+        },
+        {
+          "path": "ai-services/grading_agent/paper_compact/chunks.py",
+          "start_line": 138,
+          "end_line": 146,
+          "snapshot_sha256": "4bef62808df13cc21c6136e6e314d6cfb6ace7ca807a257b50593c3eca33be97"
+        }
+      ],
+      "snapshot_sha256": "38958370509b66e456f8cf739888032635e6885256c17b76b587af342de3cdf4",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-046",
+      "sarif_result_index_zero_based": 45,
+      "rule_id": "py/unused-global-variable",
+      "path": "ai-services/grading_agent/paper_compact/schema.py",
+      "line": 20,
+      "end_line": 20,
+      "raw_level": "note",
+      "raw_problem_severity": "recommendation",
+      "raw_message": "The global variable '_SECTION_START' is not used.",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "false_positive_context",
+      "human_severity": "none",
+      "reason": "该正则常量通过同包 anchors.py/chunks.py 的显式导入被实际匹配、搜索或迭代调用。schema.py 内部没有读取不等于整个程序没有使用；删除会破坏 OCR 锚点或分块逻辑。",
+      "recommendation": "保留实际被导入的常量；可集中定义明确的共享接口或使用精确规则抑制。此质量结论不消除另一条 py/polynomial-redos 安全告警。",
+      "evidence": [
+        {
+          "path": "ai-services/grading_agent/paper_compact/schema.py",
+          "start_line": 20,
+          "end_line": 22,
+          "snapshot_sha256": "38958370509b66e456f8cf739888032635e6885256c17b76b587af342de3cdf4"
+        },
+        {
+          "path": "ai-services/grading_agent/paper_compact/anchors.py",
+          "start_line": 155,
+          "end_line": 170,
+          "snapshot_sha256": "7c0280d45533f9411587c5116bf0d46cb9a91c9614707cc801abf3dafa0b6251"
+        },
+        {
+          "path": "ai-services/grading_agent/paper_compact/chunks.py",
+          "start_line": 138,
+          "end_line": 146,
+          "snapshot_sha256": "4bef62808df13cc21c6136e6e314d6cfb6ace7ca807a257b50593c3eca33be97"
+        }
+      ],
+      "snapshot_sha256": "38958370509b66e456f8cf739888032635e6885256c17b76b587af342de3cdf4",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-047",
+      "sarif_result_index_zero_based": 46,
+      "rule_id": "py/unused-global-variable",
+      "path": "ai-services/grading_agent/paper_compact/schema.py",
+      "line": 24,
+      "end_line": 24,
+      "raw_level": "note",
+      "raw_problem_severity": "recommendation",
+      "raw_message": "The global variable '_QUESTION_NUMBER' is not used.",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "false_positive_context",
+      "human_severity": "none",
+      "reason": "该正则常量通过同包 anchors.py/chunks.py 的显式导入被实际匹配、搜索或迭代调用。schema.py 内部没有读取不等于整个程序没有使用；删除会破坏 OCR 锚点或分块逻辑。",
+      "recommendation": "保留实际被导入的常量；可集中定义明确的共享接口或使用精确规则抑制。此质量结论不消除另一条 py/polynomial-redos 安全告警。",
+      "evidence": [
+        {
+          "path": "ai-services/grading_agent/paper_compact/schema.py",
+          "start_line": 24,
+          "end_line": 26,
+          "snapshot_sha256": "38958370509b66e456f8cf739888032635e6885256c17b76b587af342de3cdf4"
+        },
+        {
+          "path": "ai-services/grading_agent/paper_compact/anchors.py",
+          "start_line": 159,
+          "end_line": 173,
+          "snapshot_sha256": "7c0280d45533f9411587c5116bf0d46cb9a91c9614707cc801abf3dafa0b6251"
+        },
+        {
+          "path": "ai-services/grading_agent/paper_compact/anchors.py",
+          "start_line": 237,
+          "end_line": 246,
+          "snapshot_sha256": "7c0280d45533f9411587c5116bf0d46cb9a91c9614707cc801abf3dafa0b6251"
+        }
+      ],
+      "snapshot_sha256": "38958370509b66e456f8cf739888032635e6885256c17b76b587af342de3cdf4",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-048",
+      "sarif_result_index_zero_based": 47,
+      "rule_id": "py/unused-global-variable",
+      "path": "ai-services/grading_agent/paper_compact/schema.py",
+      "line": 27,
+      "end_line": 27,
+      "raw_level": "note",
+      "raw_problem_severity": "recommendation",
+      "raw_message": "The global variable '_ANSWER_MARKER' is not used.",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "false_positive_context",
+      "human_severity": "none",
+      "reason": "该正则常量通过同包 anchors.py/chunks.py 的显式导入被实际匹配、搜索或迭代调用。schema.py 内部没有读取不等于整个程序没有使用；删除会破坏 OCR 锚点或分块逻辑。",
+      "recommendation": "保留实际被导入的常量；可集中定义明确的共享接口或使用精确规则抑制。此质量结论不消除另一条 py/polynomial-redos 安全告警。",
+      "evidence": [
+        {
+          "path": "ai-services/grading_agent/paper_compact/schema.py",
+          "start_line": 27,
+          "end_line": 29,
+          "snapshot_sha256": "38958370509b66e456f8cf739888032635e6885256c17b76b587af342de3cdf4"
+        },
+        {
+          "path": "ai-services/grading_agent/paper_compact/anchors.py",
+          "start_line": 217,
+          "end_line": 220,
+          "snapshot_sha256": "7c0280d45533f9411587c5116bf0d46cb9a91c9614707cc801abf3dafa0b6251"
+        },
+        {
+          "path": "ai-services/grading_agent/paper_compact/anchors.py",
+          "start_line": 273,
+          "end_line": 279,
+          "snapshot_sha256": "7c0280d45533f9411587c5116bf0d46cb9a91c9614707cc801abf3dafa0b6251"
+        }
+      ],
+      "snapshot_sha256": "38958370509b66e456f8cf739888032635e6885256c17b76b587af342de3cdf4",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-049",
+      "sarif_result_index_zero_based": 48,
+      "rule_id": "py/unused-global-variable",
+      "path": "ai-services/grading_agent/paper_compact/schema.py",
+      "line": 28,
+      "end_line": 28,
+      "raw_level": "note",
+      "raw_problem_severity": "recommendation",
+      "raw_message": "The global variable '_SOLUTION_MARKER' is not used.",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "false_positive_context",
+      "human_severity": "none",
+      "reason": "该正则常量通过同包 anchors.py/chunks.py 的显式导入被实际匹配、搜索或迭代调用。schema.py 内部没有读取不等于整个程序没有使用；删除会破坏 OCR 锚点或分块逻辑。",
+      "recommendation": "保留实际被导入的常量；可集中定义明确的共享接口或使用精确规则抑制。此质量结论不消除另一条 py/polynomial-redos 安全告警。",
+      "evidence": [
+        {
+          "path": "ai-services/grading_agent/paper_compact/schema.py",
+          "start_line": 28,
+          "end_line": 30,
+          "snapshot_sha256": "38958370509b66e456f8cf739888032635e6885256c17b76b587af342de3cdf4"
+        },
+        {
+          "path": "ai-services/grading_agent/paper_compact/anchors.py",
+          "start_line": 303,
+          "end_line": 311,
+          "snapshot_sha256": "7c0280d45533f9411587c5116bf0d46cb9a91c9614707cc801abf3dafa0b6251"
+        },
+        {
+          "path": "ai-services/grading_agent/paper_compact/anchors.py",
+          "start_line": 393,
+          "end_line": 399,
+          "snapshot_sha256": "7c0280d45533f9411587c5116bf0d46cb9a91c9614707cc801abf3dafa0b6251"
+        }
+      ],
+      "snapshot_sha256": "38958370509b66e456f8cf739888032635e6885256c17b76b587af342de3cdf4",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-050",
+      "sarif_result_index_zero_based": 49,
+      "rule_id": "py/unused-global-variable",
+      "path": "ai-services/grading_agent/paper_compact/schema.py",
+      "line": 29,
+      "end_line": 29,
+      "raw_level": "note",
+      "raw_problem_severity": "recommendation",
+      "raw_message": "The global variable '_OPTION' is not used.",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "false_positive_context",
+      "human_severity": "none",
+      "reason": "该正则常量通过同包 anchors.py/chunks.py 的显式导入被实际匹配、搜索或迭代调用。schema.py 内部没有读取不等于整个程序没有使用；删除会破坏 OCR 锚点或分块逻辑。",
+      "recommendation": "保留实际被导入的常量；可集中定义明确的共享接口或使用精确规则抑制。此质量结论不消除另一条 py/polynomial-redos 安全告警。",
+      "evidence": [
+        {
+          "path": "ai-services/grading_agent/paper_compact/schema.py",
+          "start_line": 29,
+          "end_line": 31,
+          "snapshot_sha256": "38958370509b66e456f8cf739888032635e6885256c17b76b587af342de3cdf4"
+        },
+        {
+          "path": "ai-services/grading_agent/paper_compact/anchors.py",
+          "start_line": 428,
+          "end_line": 436,
+          "snapshot_sha256": "7c0280d45533f9411587c5116bf0d46cb9a91c9614707cc801abf3dafa0b6251"
+        },
+        {
+          "path": "ai-services/grading_agent/paper_compact/anchors.py",
+          "start_line": 615,
+          "end_line": 617,
+          "snapshot_sha256": "7c0280d45533f9411587c5116bf0d46cb9a91c9614707cc801abf3dafa0b6251"
+        }
+      ],
+      "snapshot_sha256": "38958370509b66e456f8cf739888032635e6885256c17b76b587af342de3cdf4",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-051",
+      "sarif_result_index_zero_based": 50,
+      "rule_id": "py/unused-global-variable",
+      "path": "ai-services/grading_agent/paper_compact/schema.py",
+      "line": 30,
+      "end_line": 30,
+      "raw_level": "note",
+      "raw_problem_severity": "recommendation",
+      "raw_message": "The global variable '_PAGE_FOOTER' is not used.",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "false_positive_context",
+      "human_severity": "none",
+      "reason": "该正则常量通过同包 anchors.py/chunks.py 的显式导入被实际匹配、搜索或迭代调用。schema.py 内部没有读取不等于整个程序没有使用；删除会破坏 OCR 锚点或分块逻辑。",
+      "recommendation": "保留实际被导入的常量；可集中定义明确的共享接口或使用精确规则抑制。此质量结论不消除另一条 py/polynomial-redos 安全告警。",
+      "evidence": [
+        {
+          "path": "ai-services/grading_agent/paper_compact/schema.py",
+          "start_line": 30,
+          "end_line": 32,
+          "snapshot_sha256": "38958370509b66e456f8cf739888032635e6885256c17b76b587af342de3cdf4"
+        },
+        {
+          "path": "ai-services/grading_agent/paper_compact/anchors.py",
+          "start_line": 615,
+          "end_line": 625,
+          "snapshot_sha256": "7c0280d45533f9411587c5116bf0d46cb9a91c9614707cc801abf3dafa0b6251"
+        }
+      ],
+      "snapshot_sha256": "38958370509b66e456f8cf739888032635e6885256c17b76b587af342de3cdf4",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-052",
+      "sarif_result_index_zero_based": 51,
+      "rule_id": "py/unused-global-variable",
+      "path": "ai-services/grading_agent/paper_compact/schema.py",
+      "line": 33,
+      "end_line": 33,
+      "raw_level": "note",
+      "raw_problem_severity": "recommendation",
+      "raw_message": "The global variable '_DISTRIBUTION_MARKER' is not used.",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "false_positive_context",
+      "human_severity": "none",
+      "reason": "该正则常量通过同包 anchors.py/chunks.py 的显式导入被实际匹配、搜索或迭代调用。schema.py 内部没有读取不等于整个程序没有使用；删除会破坏 OCR 锚点或分块逻辑。",
+      "recommendation": "保留实际被导入的常量；可集中定义明确的共享接口或使用精确规则抑制。此质量结论不消除另一条 py/polynomial-redos 安全告警。",
+      "evidence": [
+        {
+          "path": "ai-services/grading_agent/paper_compact/schema.py",
+          "start_line": 33,
+          "end_line": 35,
+          "snapshot_sha256": "38958370509b66e456f8cf739888032635e6885256c17b76b587af342de3cdf4"
+        },
+        {
+          "path": "ai-services/grading_agent/paper_compact/anchors.py",
+          "start_line": 615,
+          "end_line": 625,
+          "snapshot_sha256": "7c0280d45533f9411587c5116bf0d46cb9a91c9614707cc801abf3dafa0b6251"
+        }
+      ],
+      "snapshot_sha256": "38958370509b66e456f8cf739888032635e6885256c17b76b587af342de3cdf4",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-053",
+      "sarif_result_index_zero_based": 52,
+      "rule_id": "py/unused-global-variable",
+      "path": "ai-services/grading_agent/paper_compact/schema.py",
+      "line": 36,
+      "end_line": 36,
+      "raw_level": "note",
+      "raw_problem_severity": "recommendation",
+      "raw_message": "The global variable '_REPEATED_FURNITURE_MARKER' is not used.",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "false_positive_context",
+      "human_severity": "none",
+      "reason": "该正则常量通过同包 anchors.py/chunks.py 的显式导入被实际匹配、搜索或迭代调用。schema.py 内部没有读取不等于整个程序没有使用；删除会破坏 OCR 锚点或分块逻辑。",
+      "recommendation": "保留实际被导入的常量；可集中定义明确的共享接口或使用精确规则抑制。此质量结论不消除另一条 py/polynomial-redos 安全告警。",
+      "evidence": [
+        {
+          "path": "ai-services/grading_agent/paper_compact/schema.py",
+          "start_line": 36,
+          "end_line": 38,
+          "snapshot_sha256": "38958370509b66e456f8cf739888032635e6885256c17b76b587af342de3cdf4"
+        },
+        {
+          "path": "ai-services/grading_agent/paper_compact/anchors.py",
+          "start_line": 615,
+          "end_line": 625,
+          "snapshot_sha256": "7c0280d45533f9411587c5116bf0d46cb9a91c9614707cc801abf3dafa0b6251"
+        }
+      ],
+      "snapshot_sha256": "38958370509b66e456f8cf739888032635e6885256c17b76b587af342de3cdf4",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-054",
+      "sarif_result_index_zero_based": 53,
+      "rule_id": "py/unused-global-variable",
+      "path": "docs/architecture/tools/verify_database_catalog.py",
+      "line": 62,
+      "end_line": 62,
+      "raw_level": "note",
+      "raw_problem_severity": "recommendation",
+      "raw_message": "The global variable 'columns' is not used.",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "false_positive_context",
+      "human_severity": "none",
+      "reason": "columns 在紧随其后的 FK 候选列表推导和唯一性生成器中被读取，参与字段与基数验证。不能把推导式内部引用当成全局变量从未使用。",
+      "recommendation": "保留验证逻辑；如为可读性把脚本主体封装为 main()，需确认行为相同，不能直接删除这两项赋值。",
+      "evidence": [
+        {
+          "path": "docs/architecture/tools/verify_database_catalog.py",
+          "start_line": 60,
+          "end_line": 69,
+          "snapshot_sha256": "ab605068d0e3fc47791e6412ddf70432d739a3afd601f0dad852e0319de76450"
+        }
+      ],
+      "snapshot_sha256": "ab605068d0e3fc47791e6412ddf70432d739a3afd601f0dad852e0319de76450",
+      "current_workspace_used_for_verdict": false
+    },
+    {
+      "review_id": "CQ-PY-055",
+      "sarif_result_index_zero_based": 54,
+      "rule_id": "py/unused-global-variable",
+      "path": "docs/architecture/tools/verify_database_catalog.py",
+      "line": 92,
+      "end_line": 92,
+      "raw_level": "note",
+      "raw_problem_severity": "recommendation",
+      "raw_message": "The global variable 'fk' is not used.",
+      "security_finding": false,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "false_positive_context",
+      "human_severity": "none",
+      "reason": "fk 在 any() 的生成器表达式中被读取（fk[2]/[3]/[4]/[6]），参与 SQLite 外键动作交叉核对。不能把推导式内部引用当成全局变量从未使用。",
+      "recommendation": "保留验证逻辑；如为可读性把脚本主体封装为 main()，需确认行为相同，不能直接删除这两项赋值。",
+      "evidence": [
+        {
+          "path": "docs/architecture/tools/verify_database_catalog.py",
+          "start_line": 90,
+          "end_line": 95,
+          "snapshot_sha256": "ab605068d0e3fc47791e6412ddf70432d739a3afd601f0dad852e0319de76450"
+        }
+      ],
+      "snapshot_sha256": "ab605068d0e3fc47791e6412ddf70432d739a3afd601f0dad852e0319de76450",
+      "current_workspace_used_for_verdict": false
+    }
+  ]
+}

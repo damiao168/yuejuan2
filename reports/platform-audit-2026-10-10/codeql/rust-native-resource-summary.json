@@ -1,0 +1,14 @@
+{
+  "generated_at": "2026-10-11T14:15:41+08:00",
+  "samples_file": "rust-native-resource-samples.jsonl",
+  "sample_count": 46,
+  "pid": 16268,
+  "first_sample_at": "2026-10-11T14:11:09.2840792+08:00",
+  "last_sample_at": "2026-10-11T14:14:55.6170146+08:00",
+  "sampling_interval_seconds": 5,
+  "max_sampled_private_memory_bytes": 2297270272,
+  "max_reported_peak_working_set_bytes": 2357350400,
+  "min_sampled_thread_count": 4,
+  "max_sampled_thread_count": 7,
+  "limitations": "仅监测本次 CodeQL 原生 Rust extractor 进程；其他进程与 TRAP importer/query JVM 不在其中。5 秒采样的私有内存/线程数可漏掉瞬时峰值；PeakWorkingSet 是进程提供的历史驻留峰值。RAYON_NUM_THREADS=1 不是全部线程或内存硬上限。"
+}

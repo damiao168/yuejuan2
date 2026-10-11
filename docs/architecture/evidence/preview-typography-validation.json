@@ -1,0 +1,51 @@
+{
+  "checked_at_utc": "2026-10-11T07:49:21.092Z",
+  "passed": true,
+  "deepLink": {
+    "scrollY": 0,
+    "titleTop": 156,
+    "headerBottom": 116
+  },
+  "default100": {
+    "zoom": "1",
+    "originalWidth": 2328,
+    "width": 2328,
+    "originalHeight": 1956,
+    "height": 1956,
+    "availableWidth": 1360,
+    "availableHeight": 790
+  },
+  "keep150AcrossPages": {
+    "zoom": "1.5",
+    "originalWidth": 3411,
+    "width": 5116.5,
+    "originalHeight": 2168,
+    "height": 3252,
+    "availableWidth": 1360,
+    "availableHeight": 790
+  },
+  "fit": {
+    "zoom": "fit",
+    "originalWidth": 3411,
+    "width": 1242.9375,
+    "originalHeight": 2168,
+    "height": 790,
+    "availableWidth": 1360,
+    "availableHeight": 790
+  },
+  "contact": {
+    "count": 9,
+    "headerVisible": false,
+    "heights": [
+      400,
+      400,
+      400,
+      400,
+      400,
+      400,
+      400,
+      400,
+      400
+    ]
+  }
+}

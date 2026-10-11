@@ -1,0 +1,207 @@
+{
+  "SG-001": {
+    "human_status": "hardening",
+    "human_severity": "low",
+    "human_notes": "11 个 Dependabot 更新项确实没有 cooldown；已有每周检查和人工 PR 流程。属于依赖更新缓冲策略建议，不是已确认依赖漏洞或代码执行。可评估为新版本设置缓冲期；不应延迟必要的安全更新。"
+  },
+  "SG-002": {
+    "human_status": "hardening",
+    "human_severity": "low",
+    "human_notes": "11 个 Dependabot 更新项确实没有 cooldown；已有每周检查和人工 PR 流程。属于依赖更新缓冲策略建议，不是已确认依赖漏洞或代码执行。可评估为新版本设置缓冲期；不应延迟必要的安全更新。"
+  },
+  "SG-003": {
+    "human_status": "hardening",
+    "human_severity": "low",
+    "human_notes": "11 个 Dependabot 更新项确实没有 cooldown；已有每周检查和人工 PR 流程。属于依赖更新缓冲策略建议，不是已确认依赖漏洞或代码执行。可评估为新版本设置缓冲期；不应延迟必要的安全更新。"
+  },
+  "SG-004": {
+    "human_status": "hardening",
+    "human_severity": "low",
+    "human_notes": "11 个 Dependabot 更新项确实没有 cooldown；已有每周检查和人工 PR 流程。属于依赖更新缓冲策略建议，不是已确认依赖漏洞或代码执行。可评估为新版本设置缓冲期；不应延迟必要的安全更新。"
+  },
+  "SG-005": {
+    "human_status": "hardening",
+    "human_severity": "low",
+    "human_notes": "11 个 Dependabot 更新项确实没有 cooldown；已有每周检查和人工 PR 流程。属于依赖更新缓冲策略建议，不是已确认依赖漏洞或代码执行。可评估为新版本设置缓冲期；不应延迟必要的安全更新。"
+  },
+  "SG-006": {
+    "human_status": "hardening",
+    "human_severity": "low",
+    "human_notes": "11 个 Dependabot 更新项确实没有 cooldown；已有每周检查和人工 PR 流程。属于依赖更新缓冲策略建议，不是已确认依赖漏洞或代码执行。可评估为新版本设置缓冲期；不应延迟必要的安全更新。"
+  },
+  "SG-007": {
+    "human_status": "hardening",
+    "human_severity": "low",
+    "human_notes": "11 个 Dependabot 更新项确实没有 cooldown；已有每周检查和人工 PR 流程。属于依赖更新缓冲策略建议，不是已确认依赖漏洞或代码执行。可评估为新版本设置缓冲期；不应延迟必要的安全更新。"
+  },
+  "SG-008": {
+    "human_status": "hardening",
+    "human_severity": "low",
+    "human_notes": "11 个 Dependabot 更新项确实没有 cooldown；已有每周检查和人工 PR 流程。属于依赖更新缓冲策略建议，不是已确认依赖漏洞或代码执行。可评估为新版本设置缓冲期；不应延迟必要的安全更新。"
+  },
+  "SG-009": {
+    "human_status": "hardening",
+    "human_severity": "low",
+    "human_notes": "11 个 Dependabot 更新项确实没有 cooldown；已有每周检查和人工 PR 流程。属于依赖更新缓冲策略建议，不是已确认依赖漏洞或代码执行。可评估为新版本设置缓冲期；不应延迟必要的安全更新。"
+  },
+  "SG-010": {
+    "human_status": "hardening",
+    "human_severity": "low",
+    "human_notes": "11 个 Dependabot 更新项确实没有 cooldown；已有每周检查和人工 PR 流程。属于依赖更新缓冲策略建议，不是已确认依赖漏洞或代码执行。可评估为新版本设置缓冲期；不应延迟必要的安全更新。"
+  },
+  "SG-011": {
+    "human_status": "hardening",
+    "human_severity": "low",
+    "human_notes": "11 个 Dependabot 更新项确实没有 cooldown；已有每周检查和人工 PR 流程。属于依赖更新缓冲策略建议，不是已确认依赖漏洞或代码执行。可评估为新版本设置缓冲期；不应延迟必要的安全更新。"
+  },
+  "SG-025": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "apps/web-admin/nginx.conf:14-24 的 /health location 已显式重复所有 server 安全头；17 行 Content-Type 并未造成 CSP、X-Frame-Options 等丢失。19-23 行正是修复继承边界的防护代码。"
+  },
+  "SG-026": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "apps/web-admin/nginx.conf:14-24 的 /health location 已显式重复所有 server 安全头；17 行 Content-Type 并未造成 CSP、X-Frame-Options 等丢失。19-23 行正是修复继承边界的防护代码。"
+  },
+  "SG-027": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "apps/web-admin/nginx.conf:14-24 的 /health location 已显式重复所有 server 安全头；17 行 Content-Type 并未造成 CSP、X-Frame-Options 等丢失。19-23 行正是修复继承边界的防护代码。"
+  },
+  "SG-028": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "apps/web-admin/nginx.conf:14-24 的 /health location 已显式重复所有 server 安全头；17 行 Content-Type 并未造成 CSP、X-Frame-Options 等丢失。19-23 行正是修复继承边界的防护代码。"
+  },
+  "SG-029": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "apps/web-admin/nginx.conf:14-24 的 /health location 已显式重复所有 server 安全头；17 行 Content-Type 并未造成 CSP、X-Frame-Options 等丢失。19-23 行正是修复继承边界的防护代码。"
+  },
+  "SG-030": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "apps/web-admin/nginx.conf:14-24 的 /health location 已显式重复所有 server 安全头；17 行 Content-Type 并未造成 CSP、X-Frame-Options 等丢失。19-23 行正是修复继承边界的防护代码。"
+  },
+  "SG-031": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "mfaFlow.test.ts:194-199 向 mock response 注入固定 <script> 字符串，断言 confirm 返回 uncertain 且流程关闭；这里不是脚本模板插值或 DOM 执行。同一行的三条命中属于同一负向测试。"
+  },
+  "SG-032": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "mfaFlow.test.ts:194-199 向 mock response 注入固定 <script> 字符串，断言 confirm 返回 uncertain 且流程关闭；这里不是脚本模板插值或 DOM 执行。同一行的三条命中属于同一负向测试。"
+  },
+  "SG-033": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "mfaFlow.test.ts:194-199 向 mock response 注入固定 <script> 字符串，断言 confirm 返回 uncertain 且流程关闭；这里不是脚本模板插值或 DOM 执行。同一行的三条命中属于同一负向测试。"
+  },
+  "SG-034": {
+    "human_status": "context_limited",
+    "human_severity": "low",
+    "human_notes": "build_diagrams.py:132 自行生成固定本地 drawio，134 行立即回读验证；未发现不可信上传 XML 进入此路径。不是已确认生产 XXE。若将来接受外部 XML，应限制解析资源并使用安全解析器。"
+  },
+  "SG-035": {
+    "human_status": "context_limited",
+    "human_severity": "low",
+    "human_notes": "build_diagrams.py:132 自行生成固定本地 drawio，134 行立即回读验证；未发现不可信上传 XML 进入此路径。不是已确认生产 XXE。若将来接受外部 XML，应限制解析资源并使用安全解析器。"
+  },
+  "SG-036": {
+    "human_status": "context_limited",
+    "human_severity": "low",
+    "human_notes": "verify_delivery.py:26-31 读取 EXPECTED 固定列表中的本地架构图，不接受网络请求或任意用户路径。维护者若主动导入不可信图纸仍有解析资源风险；本次没有证明生产接口存在 XXE。"
+  },
+  "SG-037": {
+    "human_status": "context_limited",
+    "human_severity": "low",
+    "human_notes": "verify_delivery.py:26-31 读取 EXPECTED 固定列表中的本地架构图，不接受网络请求或任意用户路径。维护者若主动导入不可信图纸仍有解析资源风险；本次没有证明生产接口存在 XXE。"
+  },
+  "SG-038": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "infra/docker-compose/nginx/nginx.conf:30-40 在 /health 中显式重复 server 层全部五个安全头，注释也解释 add_header 的继承边界。规则报告的是存在 add_header，而不是遗漏防护。"
+  },
+  "SG-039": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "infra/docker-compose/nginx/nginx.conf:30-40 在 /health 中显式重复 server 层全部五个安全头，注释也解释 add_header 的继承边界。规则报告的是存在 add_header，而不是遗漏防护。"
+  },
+  "SG-040": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "infra/docker-compose/nginx/nginx.conf:30-40 在 /health 中显式重复 server 层全部五个安全头，注释也解释 add_header 的继承边界。规则报告的是存在 add_header，而不是遗漏防护。"
+  },
+  "SG-041": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "infra/docker-compose/nginx/nginx.conf:30-40 在 /health 中显式重复 server 层全部五个安全头，注释也解释 add_header 的继承边界。规则报告的是存在 add_header，而不是遗漏防护。"
+  },
+  "SG-042": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "infra/docker-compose/nginx/nginx.conf:30-40 在 /health 中显式重复 server 层全部五个安全头，注释也解释 add_header 的继承边界。规则报告的是存在 add_header，而不是遗漏防护。"
+  },
+  "SG-043": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "infra/docker-compose/nginx/nginx.conf:30-40 在 /health 中显式重复 server 层全部五个安全头，注释也解释 add_header 的继承边界。规则报告的是存在 add_header，而不是遗漏防护。"
+  },
+  "SG-044": {
+    "human_status": "needs_deployment_review",
+    "human_severity": "low",
+    "human_notes": "生产 Nginx 确实把请求 $host 转给固定上游；代理目的地不是由 Host 决定。未在当前网关非测试 Go 源码中找到使用请求 Host 构造重置链接/跳转的证据。公网允许域名与入口网关配置未在本次运行验证，建议结合部署评审，不标成已确认 Host 注入漏洞。"
+  },
+  "SG-045": {
+    "human_status": "needs_deployment_review",
+    "human_severity": "low",
+    "human_notes": "生产 Nginx 确实把请求 $host 转给固定上游；代理目的地不是由 Host 决定。未在当前网关非测试 Go 源码中找到使用请求 Host 构造重置链接/跳转的证据。公网允许域名与入口网关配置未在本次运行验证，建议结合部署评审，不标成已确认 Host 注入漏洞。"
+  },
+  "SG-046": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "对应 story056/story060 E2E Nginx 的 server 块没有 add_header 安全头，/health 中只有 Content-Type，不存在规则所称覆盖上级安全头。此配置仅用于 E2E。"
+  },
+  "SG-049": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "对应 story056/story060 E2E Nginx 的 server 块没有 add_header 安全头，/health 中只有 Content-Type，不存在规则所称覆盖上级安全头。此配置仅用于 E2E。"
+  },
+  "SG-047": {
+    "human_status": "test_only",
+    "human_severity": "low",
+    "human_notes": "这些 $host 转发位于 story056/story060 E2E 配置，目的地为固定测试上游；未证实生产利用链。若复用为公网配置，需另审允许域名和 Host 消费方。"
+  },
+  "SG-048": {
+    "human_status": "test_only",
+    "human_severity": "low",
+    "human_notes": "这些 $host 转发位于 story056/story060 E2E 配置，目的地为固定测试上游；未证实生产利用链。若复用为公网配置，需另审允许域名和 Host 消费方。"
+  },
+  "SG-050": {
+    "human_status": "test_only",
+    "human_severity": "low",
+    "human_notes": "这些 $host 转发位于 story056/story060 E2E 配置，目的地为固定测试上游；未证实生产利用链。若复用为公网配置，需另审允许域名和 Host 消费方。"
+  },
+  "SG-051": {
+    "human_status": "test_only",
+    "human_severity": "low",
+    "human_notes": "这些 $host 转发位于 story056/story060 E2E 配置，目的地为固定测试上游；未证实生产利用链。若复用为公网配置，需另审允许域名和 Host 消费方。"
+  },
+  "SG-090": {
+    "human_status": "test_only",
+    "human_severity": "low",
+    "human_notes": "扫描时的 ZIP 快照内 story056-postgres-e2e/Dockerfile 最终阶段没有 USER，属于 E2E 镜像默认 root 加固项。之后核验时工作区已由其他工作改成最终 USER 10001:10001，当前问题已修；不能把扫描后的修复当作原告警误报。本次审计未修改该 Dockerfile。"
+  },
+  "SG-091": {
+    "human_status": "test_only",
+    "human_severity": "low",
+    "human_notes": "独立 story056-real-worker-e2e 测试客户端镜像最终没有 USER，使用 alpine 默认 root；Compose 仅在 e2e profile 启动它，没有公网服务入口。这是确实存在的测试镜像加固项，建议独立非 root 用户；不是已确认生产越权漏洞。"
+  },
+  "SG-096": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "OCR Dockerfile:6 的 USER root 只用于安装依赖；文件末尾已切换 USER nobody，之后 CMD python -m ocr_worker。Semgrep 同时报告此 Dockerfile 的部分解析错误，不能把解析到的最后 root 当作真实最终用户。"
+  }
+}

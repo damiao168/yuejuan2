@@ -1,0 +1,16 @@
+{
+  "files": [
+    {
+      "file": "services/api-gateway/internal/server/e2e_subjective_panel_test.go",
+      "sha256": "b33b904eb4728e4b410a44e5ce7fc838201ef2511e767b76d1a14d4217fa367f",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_subjective_panel_test.go"
+    }
+  ],
+  "issue_functions": [
+    {
+      "file": "services/api-gateway/internal/server/e2e_subjective_panel_test.go",
+      "function": "TestPostgresSubjectivePanelAndEvaluationRoundTrip"
+    }
+  ],
+  "checkpoint_relation": "after checkpoint02; requires subsequent scan"
+}

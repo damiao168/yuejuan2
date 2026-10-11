@@ -1,0 +1,25 @@
+{
+  "files": [
+    {
+      "file": "services/api-gateway/internal/server/e2e_anonymous_paper_test.go",
+      "sha256": "e306fc3f3c25976dc61c283ee63c97ae26079c8d89e049e4a51bdb96cb909c8d",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_anonymous_paper_test.go"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_core_workflow_test.go",
+      "sha256": "743bb2f8b5951b775ce0908bb22c8911e5370350d6331c7d659eb01594bc609b",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_core_workflow_test.go"
+    }
+  ],
+  "issue_functions": [
+    {
+      "file": "services/api-gateway/internal/server/e2e_anonymous_paper_test.go",
+      "function": "TestHighScorePaperShareRedactsAndRevokesWithPostgresTestDatabase"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_core_workflow_test.go",
+      "function": "TestCoreWorkflowE2EWithSyntheticMemoryStores"
+    }
+  ],
+  "checkpoint_relation": "after checkpoint02; requires subsequent scan"
+}

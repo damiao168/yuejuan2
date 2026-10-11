@@ -42,6 +42,16 @@
   flex-wrap: nowrap !important;
 }
 
+.exam-management-page .exam-filter-primary {
+  grid-template-columns: minmax(240px, 1fr) 190px 170px;
+}
+
+@media (max-width: 760px) {
+  .exam-management-page .exam-filter-primary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .exam-management-table .ant-pagination {
   margin: 18px 0 4px;
 }
@@ -75,6 +85,9 @@
 
 .responsive-record-list {
   min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
   display: flex;
   flex-direction: column;
   border-top: 1px solid var(--border);
@@ -87,16 +100,37 @@
   background: var(--surface);
 }
 
-.responsive-record[role="button"],
-.responsive-record[role="listitem"]:has(button) {
+.responsive-record-action {
+  float: right;
+  margin: 0 8px 4px;
+}
+
+.responsive-record-action,
+.responsive-table-scroll-controls button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--primary);
   cursor: pointer;
 }
 
-.responsive-record[role="button"]:focus-visible {
-  position: relative;
-  z-index: 1;
+.responsive-table-scroll-controls {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.responsive-record-action:focus-visible,
+.responsive-table-scroll-controls button:focus-visible {
   outline: 2px solid var(--primary);
-  outline-offset: -2px;
+  outline-offset: 2px;
 }
 
 .responsive-record-pagination {
@@ -172,7 +206,7 @@
 .workspace .ant-alert-description,
 .workspace .ant-typography {
   overflow-wrap: anywhere;
-  word-break: break-word;
+  word-break: normal;
 }
 
 .ant-drawer-content-wrapper,
@@ -230,19 +264,6 @@
 
 }
 
-/* The application sidebar leaves about 1174px of usable workspace at a
-   1366px laptop viewport. Stack the score workflow before its roster tables
-   are squeezed, rather than keying this layout to the viewport alone. */
-@media (max-width: 1440px) {
-  .score-workspace {
-    grid-template-columns: 1fr;
-  }
-
-  .score-actions-panel {
-    position: static;
-  }
-}
-
 @media (max-width: 1360px) {
   .metric-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -258,22 +279,14 @@
 
   .arbitration-workspace,
   .arbitration-score-compare,
-  .score-workspace,
-    .reports-grid,
-    .reports-quality-strip,
     .appeal-workspace,
     .appeal-evidence-grid,
     .appeal-result-strip,
-    .audit-filter-panel,
     .system-status-grid {
     grid-template-columns: 1fr;
   }
 
   .arbitration-decision-panel {
-    position: static;
-  }
-
-  .score-actions-panel {
     position: static;
   }
 
@@ -297,14 +310,6 @@
     order: 3;
   }
 
-  .score-summary-strip {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .reports-kpi-strip {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
   .appeal-summary-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -317,8 +322,6 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .score-summary-strip > div,
-  .reports-kpi-strip > div,
   .appeal-summary-strip > div,
   .audit-summary-strip > div,
   .system-status-summary > div {
@@ -478,7 +481,6 @@
     width: 100%;
   }
 
-  .score-summary-strip,
   .reports-kpi-strip,
   .appeal-summary-strip,
   .audit-summary-strip,

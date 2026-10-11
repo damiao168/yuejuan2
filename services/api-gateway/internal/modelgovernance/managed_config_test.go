@@ -312,7 +312,7 @@ func TestManagedConfigConnectionChangeClearsOldProbeEvidence(t *testing.T) {
 		ModelName: item.ModelName, ModelVersion: item.ModelVersion, Region: item.Region, Status: item.Status,
 	}
 
-	// Cosmetic edits keep observations attached to the same connection.
+	// 外观性编辑仍使观察关联到同一连接。
 	update.DisplayName = "Updated DeepSeek"
 	item, err = store.UpdateManagedAPIConfig(ctx, "school-a", item.ID, update)
 	if err != nil {
@@ -322,7 +322,7 @@ func TestManagedConfigConnectionChangeClearsOldProbeEvidence(t *testing.T) {
 		t.Fatalf("cosmetic edit erased valid evidence: %#v", item)
 	}
 
-	// A changed model with a failed initial quick check must not inherit old success.
+	// 变更后的模型若初始快速检查失败，不得继承旧的成功结果。
 	update.ModelName = "deepseek-reasoner"
 	update.ModelVersion = "deepseek-reasoner"
 	transient := ManagedAPIProbeResult{ProbeMode: "quick", ErrorCode: "provider_timeout", Message: "timed out"}
@@ -337,7 +337,7 @@ func TestManagedConfigConnectionChangeClearsOldProbeEvidence(t *testing.T) {
 		t.Fatalf("changed connection inherited old verification: %#v", item)
 	}
 
-	// Replacing the key without a new check leaves the connection unverified.
+	// 替换密钥而未重新检查时，连接仍为未验证。
 	update.APIKey = "rotated-secret-at-least-16"
 	update.InitialProbe = nil
 	item, err = store.UpdateManagedAPIConfig(ctx, "school-a", item.ID, update)
@@ -395,8 +395,7 @@ func TestManagedProbeRejectsResultForConfigurationChangedDuringRequest(t *testin
 		t.Fatal(err)
 	}
 	if updated.UpdatedAt.Equal(probeStartedAtRevision) {
-		// Some platforms expose a coarse wall clock. The CAS contract still rejects
-		// any revision other than the one currently stored.
+		// 部分平台的系统时钟精度较粗；CAS 约定仍拒绝与当前存储版本不一致的任何修订。
 		probeStartedAtRevision = probeStartedAtRevision.Add(-time.Second)
 	}
 	result := successfulManagedProbe()

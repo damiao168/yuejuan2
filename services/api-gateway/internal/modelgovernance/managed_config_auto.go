@@ -87,9 +87,7 @@ func (s *AutoManagedAPIConfigService) ListModels(ctx context.Context, tenantID s
 	}
 	configInput := s.configInput(tenantID, input, resolved, false)
 	configInput.APIKey = apiKey
-	// Model discovery only needs a resolved provider, endpoint and credential.
-	// Use an internal placeholder to reuse the strict config validator, then keep
-	// the externally visible connection model empty until the user selects one.
+	// 模型发现只需已解析的提供方、端点和凭据。使用内部占位值复用严格配置校验器，再将对外可见的连接模型保持为空，直到用户选择。
 	if resolved.ModelName == "" {
 		configInput.ModelName = "model-discovery"
 		configInput.ModelVersion = "model-discovery"
@@ -116,8 +114,7 @@ func (s *AutoManagedAPIConfigService) Create(ctx context.Context, tenantID, acto
 	if err != nil {
 		return ManagedAPIConfig{}, ResolvedManagedProvider{}, ManagedAPIProbeResult{}, err
 	}
-	// Resolve once: the exact credential checked by the quick probe must be
-	// encrypted into the new model even if the source rotates concurrently.
+	// 只解析一次；即使来源同时轮换，也必须将快速探测检查过的同一份凭据加密写入新模型。
 	apiKey, err := s.resolveCredential(ctx, tenantID, input, resolved)
 	if err != nil {
 		return ManagedAPIConfig{}, resolved, ManagedAPIProbeResult{}, err
@@ -130,16 +127,14 @@ func (s *AutoManagedAPIConfigService) Create(ctx context.Context, tenantID, acto
 	if !result.OK {
 		return ManagedAPIConfig{}, resolved, result, nil
 	}
-	// A newly saved credential is an active backup until it passes the explicit
-	// structure capability check. Connectivity alone must never make it current.
+	// 新保存凭据通过显式结构能力检查前，仅作为启用的备用项；仅有连通性不能使其成为当前项。
 	configInput := s.configInput(tenantID, input, resolved, false)
 	configInput.InitialProbe = &result
 	item, err := s.store.CreateManagedAPIConfig(ctx, tenantID, actorID, configInput)
 	return item, resolved, result, err
 }
 
-// A saved credential may only be reused inside the same school and against its
-// original provider endpoint. Never forward a decrypted key to a new URL.
+// 已保存凭据只能在同一学校、原提供方端点内复用；不得将解密后的密钥转发到新 URL。
 func (s *AutoManagedAPIConfigService) resolveCredential(ctx context.Context, tenantID string, input AutoManagedAPIConfigInput, resolved ResolvedManagedProvider) (string, error) {
 	sourceID := strings.TrimSpace(input.CredentialSourceID)
 	if sourceID == "" {

@@ -1,0 +1,23 @@
+[
+  {
+    "command": [
+      "npm.cmd",
+      "--workspace",
+      "apps/desktop-client",
+      "run",
+      "test",
+      "--",
+      "src/components/OfflineWorkbench.test.tsx",
+      "src/components/OfflineWorkbench.batch40.test.tsx",
+      "src/features/capture/useExamCaptureContext.test.tsx",
+      "src/features/upload/useUploadSync.test.tsx",
+      "--maxWorkers=2"
+    ],
+    "started_at": "2026-10-11T09:08:55.432230+00:00",
+    "completed_at": "2026-10-11T09:09:28.911034+00:00",
+    "duration_seconds": 33.48400000001129,
+    "exit_code": 0,
+    "log": "frontend-desktop-0.log",
+    "log_sha256": "891970db8d9d4c14cae4c170243d0515ff3164db9ffc4af3f0c40075d17da3cb"
+  }
+]

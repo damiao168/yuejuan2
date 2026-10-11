@@ -12,9 +12,7 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/httpx"
 )
 
-// RegisterRoutes deliberately omits a capture endpoint. Capture is an
-// in-process hook after review submission, because a browser must never be
-// able to claim arbitrary AI/human source IDs or score values.
+// RegisterRoutes 特意不提供采集端点。采集是复核提交后的进程内钩子，浏览器不得自行指定 AI/人工来源 ID 或分数。
 func RegisterRoutes(mux *http.ServeMux, h *Handler, requireRead, requireManage func(http.HandlerFunc) http.Handler) {
 	mux.Handle("GET /api/v1/ai-human-disagreements", requireRead(h.List))
 	mux.Handle("GET /api/v1/ai-human-disagreements/dataset", requireManage(h.Dataset))

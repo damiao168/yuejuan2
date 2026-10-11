@@ -39,8 +39,8 @@ _PADDLE_MODEL_PROFILES = {
     }
 }
 
-# A valid 320x120 RGB PNG containing large, high-contrast "OCR 123" text.
-# Readiness requires a recognized block so both detection and recognition run.
+# 有效的 320x120 RGB PNG，包含大号、高对比度的“OCR 123”文字。
+# 就绪检查要求识别出文本块，以使检测和识别都执行。
 _READINESS_PROBE_IMAGE = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAUAAAAB4CAIAAAAMrLyJAAAD0ElEQVR42u3cO0hcWQCA4assChIQhLHQwkZUIgFxCgkmcYyPJpaCTWBCII1gJWqTMo3YRVIE0YykCaksVHyBsdCAhYgQDIRUBgXBF4iPMXq2GPZu2M2m0WbD91X3nnM9xRz+metlmLwQQgT8P+V7CUDAgIABAYOAAQEDAgYEDAIGBAwIGAQMCBgQMCBgEDDw2wb85s2bZDJ59+7dZDI5Pj6eGxwZGamvr29qanr06NHW1lZusKioKJVKNTU11dfXLy0txSscHh4+efKkuLg4HhkbG7t//35dXd3c3FwURScnJ11dXalUKplMTk1N2TP4W7iGmZmZxsbGg4ODEMLBwUFjY+P8/Pzc3Fxzc/PJyUkIYXp6+uHDh7mLi4uLcwcbGxt37tyJF7l3797Lly/j2d3d3QcPHlxeXm5ubtbU1IQQBgcHh4aGQgjb29sVFRUB+Mu1Am5paVlZWYlPl5eXW1tb29vbP378GA8+e/Ysm83+GPDV1VVJSUl8wc7Ozo+zm5ub79+/DyEcHx8nEokQwv7+/vn5eQhhfn6+srLSnsHNBFxWVnZ6ehqfnp6elpWVlZeXn52d/fviONGZmZnOzs7/mo1lMpmnT5/Gp48fPy4qKlpYWLBnEPvjZu/G8/LyLi8vfzqbzWZTqdTFxcXnz58/ffr066W+fv06NDS0uLgYj7x9+7azs3N8fLylpcU/PnADD7Fu3769trYWn66trdXW1lZVVa2vr8dJp9Pp3HFBQcGHDx+Wl5cHBgYymcwvlj0+Pu7q6hodHU0kElEU9fT0fP/+PYqijo4OD7HgxgLu6+vr7+8/OjrKPUweGBjo7+/v7u5+/vz5+fl5FEXv3r3LHfyora1tdXX1Fx/j6XS6t7e3oaEhN3J0dDQxMRFF0crKSnV1tT2D2LVuodvb2799+9bc3FxYWJjNZnt6enL3t1++fEkmk4lEorS09NWrV//4q+rq6o2Njaurq/z8n7x9ZDKZ2dnZvb29169f37p1a3Jy8sWLF+l0enh4uKCgYGxszJ5BLM8Pu4NvYgECBgQMAgYEDAgYEDAIGBAwIGAQMCBgQMCAgEHAgIABAQMCBgEDAgYEDAIGBAwIGBAwCBgQMCBgQMAgYEDAgIBBwICAAQEDAgYBAwIGBAwCBgQMCBgQMAgYEDAgYEDAIGBAwICAQcCAgAEBAwIGAQMCBgQMCBgEDAgYEDAIGBAwIGBAwCBgQMCAgAEBg4ABAQMCBgEDAgYEDAgYBAwIGBAwCBgQMCBgQMAgYEDAgIABAYOAAQEDAgYBAwIGBAwIGH5nfwJra5FFuOxszQAAAABJRU5ErkJggg=="
 )
@@ -117,8 +117,8 @@ class PaddleOCREngine:
         return self._recognize(image_bytes)
 
     def recognize_region(self, image_bytes: bytes) -> list[OCRBlock]:
-        # Small answer crops must retain Paddle's original min-side upscaling.
-        # A page-oriented max-side cap can otherwise reduce small-character hits.
+        # 小尺寸答案裁剪必须保留 Paddle 原有的按最短边放大行为。
+        # 否则面向整页的最长边限制可能降低小字的识别命中率。
         return self._recognize(image_bytes, text_det_limit_type="min", text_det_limit_side_len=64)
 
     def _recognize(
@@ -190,13 +190,19 @@ def _parse_paddle_result(raw: object) -> list[OCRBlock]:
             continue
         if not isinstance(page, list):
             continue
-        for item in page:
-            if not isinstance(item, list) or len(item) < 2:
-                continue
-            bbox = _bbox_from_points(item[0])
-            text, confidence = _text_confidence(item[1])
-            if text:
-                blocks.append(OCRBlock(text=text, bbox=bbox, confidence=confidence))
+        blocks.extend(_parse_paddle_legacy_page(page))
+    return blocks
+
+
+def _parse_paddle_legacy_page(page: list[object]) -> list[OCRBlock]:
+    blocks: list[OCRBlock] = []
+    for item in page:
+        if not isinstance(item, list) or len(item) < 2:
+            continue
+        bbox = _bbox_from_points(item[0])
+        text, confidence = _text_confidence(item[1])
+        if text:
+            blocks.append(OCRBlock(text=text, bbox=bbox, confidence=confidence))
     return blocks
 
 
@@ -271,6 +277,11 @@ def _parse_paddle3_page(page: dict[str, object]) -> list[OCRBlock]:
             if isinstance(value, dict):
                 blocks.extend(_parse_paddle3_page(value))
         return blocks
+    return _parse_paddle3_texts(texts, scores, polys)
+
+
+def _parse_paddle3_texts(texts: list[object], scores: object, polys: object) -> list[OCRBlock]:
+    # 缺少几何仍保留识别文本；默认零框不表示有效位置。
     if not isinstance(scores, list):
         scores = [0.0] * len(texts)
     if not isinstance(polys, list):

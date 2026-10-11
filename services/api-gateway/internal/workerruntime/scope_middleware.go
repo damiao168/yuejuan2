@@ -103,21 +103,8 @@ func TaskScope(store Store) func(http.Handler) http.Handler {
 				return
 			}
 
-			taskID := strings.TrimSpace(r.Header.Get(TaskIDHeader))
-			leaseToken := strings.TrimSpace(r.Header.Get(TaskLeaseHeader))
-			workerService := strings.TrimSpace(r.Header.Get(WorkerServiceHeader))
-			workerInstanceID := strings.TrimSpace(r.Header.Get(WorkerInstanceIDHeader))
-			if taskID == "" || leaseToken == "" || workerService == "" || workerInstanceID == "" {
-				httpx.Error(w, r, http.StatusForbidden, "worker_scope_forbidden", "a current worker task capability is required")
-				return
-			}
-			if pathTaskID := strings.TrimSpace(r.PathValue("taskId")); pathTaskID != "" && pathTaskID != taskID {
-				httpx.Error(w, r, http.StatusForbidden, "worker_scope_forbidden", "worker task capability does not match the requested task")
-				return
-			}
-			task, err := store.AuthorizeLease(r.Context(), taskID, leaseToken, workerService, workerInstanceID, time.Now().UTC())
-			if err != nil {
-				httpx.Error(w, r, http.StatusForbidden, "worker_scope_forbidden", "worker task capability is invalid or expired")
+			task, ok := authorizeTaskRequest(w, r, store)
+			if !ok {
 				return
 			}
 			if !workerIdentityAllowsTask(user, task) {
@@ -127,6 +114,7 @@ func TaskScope(store Store) func(http.Handler) http.Handler {
 
 			scope := taskAccessScope(task)
 			if user.TenantID != task.TenantID {
+				// 目标租户来自持久任务；原租户的用户 ID 和代码不能进入目标租户上下文。
 				user.ID = ""
 				user.TenantCode = ""
 			}
@@ -136,6 +124,28 @@ func TaskScope(store Store) func(http.Handler) http.Handler {
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
+}
+
+// 先核对请求中的当前租约；已认证服务的队列白名单由 TaskScope 在成功后检查。
+func authorizeTaskRequest(w http.ResponseWriter, r *http.Request, store Store) (Task, bool) {
+	taskID := strings.TrimSpace(r.Header.Get(TaskIDHeader))
+	leaseToken := strings.TrimSpace(r.Header.Get(TaskLeaseHeader))
+	workerService := strings.TrimSpace(r.Header.Get(WorkerServiceHeader))
+	workerInstanceID := strings.TrimSpace(r.Header.Get(WorkerInstanceIDHeader))
+	if taskID == "" || leaseToken == "" || workerService == "" || workerInstanceID == "" {
+		httpx.Error(w, r, http.StatusForbidden, "worker_scope_forbidden", "a current worker task capability is required")
+		return Task{}, false
+	}
+	if pathTaskID := strings.TrimSpace(r.PathValue("taskId")); pathTaskID != "" && pathTaskID != taskID {
+		httpx.Error(w, r, http.StatusForbidden, "worker_scope_forbidden", "worker task capability does not match the requested task")
+		return Task{}, false
+	}
+	task, err := store.AuthorizeLease(r.Context(), taskID, leaseToken, workerService, workerInstanceID, time.Now().UTC())
+	if err != nil {
+		httpx.Error(w, r, http.StatusForbidden, "worker_scope_forbidden", "worker task capability is invalid or expired")
+		return Task{}, false
+	}
+	return task, true
 }
 
 func taskAccessScope(task Task) auth.AccessScope {
@@ -193,21 +203,27 @@ func collectTaskScopeValue(scope *auth.AccessScope, key string, raw any) {
 func payloadContains(value any, key string, expected string) bool {
 	switch typed := value.(type) {
 	case map[string]any:
-		for itemKey, nested := range typed {
-			if strings.EqualFold(strings.TrimSpace(itemKey), key) {
-				if text, ok := nested.(string); ok && strings.TrimSpace(text) == expected {
-					return true
-				}
-			}
-			if payloadContains(nested, key, expected) {
-				return true
-			}
-		}
+		return payloadMapContains(typed, key, expected)
 	case []any:
 		for _, nested := range typed {
 			if payloadContains(nested, key, expected) {
 				return true
 			}
+		}
+	}
+	return false
+}
+
+func payloadMapContains(value map[string]any, key, expected string) bool {
+	// 资源值只接受去空格后的字符串精确匹配；非字符串仍可作为嵌套 payload 继续查找。
+	for itemKey, nested := range value {
+		if strings.EqualFold(strings.TrimSpace(itemKey), key) {
+			if text, ok := nested.(string); ok && strings.TrimSpace(text) == expected {
+				return true
+			}
+		}
+		if payloadContains(nested, key, expected) {
+			return true
 		}
 	}
 	return false

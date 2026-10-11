@@ -63,7 +63,8 @@ def test_routes_regions_and_fails_closed():
     assert router.recognize("mathematics", RegionKind.TEXT, b"image").text_blocks[0].text == "所以"
     assert router.recognize("mathematics", RegionKind.FORMULA, b"image").formula.canonical_latex == "x=2"
     diagram = router.recognize("mathematics", RegionKind.DIAGRAM, b"image")
-    assert diagram.preserve_image_evidence and diagram.requires_human_review
+    assert diagram.preserve_image_evidence
+    assert diagram.requires_human_review
     assert router.recognize("mathematics", RegionKind.UNKNOWN, b"image").requires_human_review
 
 
@@ -83,7 +84,8 @@ def test_humanities_never_invoke_formula_model():
     for subject in ("chinese", "english", "history", "ethics_politics", "geography", "biology"):
         result = router.recognize(subject, RegionKind.FORMULA, b"image")
         assert result.reason_code == "formula_not_enabled_for_subject"
-        assert result.preserve_image_evidence and result.requires_human_review
+        assert result.preserve_image_evidence
+        assert result.requires_human_review
 
 
 def test_mixed_route_runs_full_ocr_and_batched_formula_rois_without_duplicate_text():
@@ -115,7 +117,8 @@ def test_mixed_route_preserves_text_and_fails_closed_without_layout_detector():
         "physics", RegionKind.MIXED, png(),
     )
     assert result.text_blocks[0].text == "所以"
-    assert result.requires_human_review and result.preserve_image_evidence
+    assert result.requires_human_review
+    assert result.preserve_image_evidence
     assert result.reason_code == "formula_layout_detector_unavailable"
 
 
@@ -137,5 +140,6 @@ def test_formula_engine_deduplicates_batch_and_reuses_lru_cache():
     engine._predict_uncached = predict
     first = engine.recognize_formulas([b"same", b"same", b"different"], batch_size=4)
     second = engine.recognize_formulas([b"same"], batch_size=4)
-    assert len(first) == 3 and len(second) == 1
+    assert len(first) == 3
+    assert len(second) == 1
     assert calls == [(2, 4)]

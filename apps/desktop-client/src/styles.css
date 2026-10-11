@@ -438,10 +438,27 @@ select {
   background: var(--surface-soft);
 }
 
-.answer-preview img {
-  max-width: 100%;
-  max-height: 420px;
-  object-fit: contain;
+.answer-document-viewer { width: 100%; }
+.answer-document-tools { padding: 10px; }
+.answer-document-viewport {
+  height: 560px;
+  overflow: auto;
+  cursor: grab;
+  touch-action: none;
+}
+.answer-document-canvas { position: relative; margin-inline: auto; }
+.answer-document-viewport img {
+  position: absolute;
+  display: block;
+  max-width: none;
+  max-height: none;
+  height: auto;
+  transform-origin: center;
+}
+.answer-document-viewport iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
 }
 
 .package-view pre {
@@ -700,4 +717,7 @@ select {
   .log-row p {
     grid-column: auto;
   }
+}
+.selected-review-task > td {
+  background: #eaf3ff !important;
 }

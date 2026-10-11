@@ -25,11 +25,11 @@ export function SubjectToolPanel({
   context,
   secondOpinionVisible,
   onRevealSecondOpinion
-}: {
+}: Readonly<{
   context: ReviewTaskContext;
   secondOpinionVisible: boolean;
   onRevealSecondOpinion: () => void;
-}) {
+}>) {
   const tool = subjectToolDescriptor(context);
   const needsReveal = requiresExplicitSecondOpinion(context) && !secondOpinionVisible;
   return (

@@ -14,9 +14,8 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/qualitydashboard"
 )
 
-// DashboardReader is intentionally aggregate-only. The release service never
-// receives Gold answers, grader observations, candidate text, or other
-// sensitive quality data from the dashboard.
+// DashboardReader 只提供聚合数据。
+// 发布服务不会从仪表盘接收 Gold 答案、阅卷观察、候选文本或其他敏感质量数据。
 type DashboardReader interface {
 	Get(context.Context, string, string) (qualitydashboard.Dashboard, error)
 }
@@ -59,7 +58,11 @@ func (s *PostgresStore) Create(ctx context.Context, tenantID, examID, actorID st
 	if err != nil {
 		return Release{}, err
 	}
-	release, err := s.insertReleaseTx(ctx, tx, tenantID, examID, actorID, version, input.Source, input.Reason, input.IdempotencyKey, input.VisibilityPolicy, input.AppealWindow, "")
+	release, err := s.insertReleaseTx(ctx, tx, Release{
+		TenantID: tenantID, ExamID: examID, CreatedBy: actorID, Version: version,
+		Source: input.Source, Reason: input.Reason, IdempotencyKey: input.IdempotencyKey,
+		VisibilityPolicy: input.VisibilityPolicy, AppealWindow: input.AppealWindow,
+	})
 	if err != nil {
 		return Release{}, err
 	}
@@ -96,14 +99,17 @@ func (s *PostgresStore) CreateRollback(ctx context.Context, tenantID, examID, ac
 	if source.ExamID != examID || source.Status != StatusPublished {
 		return Release{}, ErrInvalidTransition
 	}
-	// Historical releases may carry a high-score sharing policy. Do not
-	// propagate it into a new release while anonymous assets are unavailable.
+	// 历史发布可能携带高分答卷分享策略。匿名资源不可用时，不能将该策略传播到新发布。
 	source.VisibilityPolicy.ShowHighScorePaper = false
 	version, err := s.nextVersionTx(ctx, tx, tenantID, examID)
 	if err != nil {
 		return Release{}, err
 	}
-	release, err := s.insertReleaseTx(ctx, tx, tenantID, examID, actorID, version, SourceRollback, input.Reason, input.IdempotencyKey, source.VisibilityPolicy, source.AppealWindow, source.ID)
+	release, err := s.insertReleaseTx(ctx, tx, Release{
+		TenantID: tenantID, ExamID: examID, CreatedBy: actorID, Version: version,
+		Source: SourceRollback, Reason: input.Reason, IdempotencyKey: input.IdempotencyKey,
+		VisibilityPolicy: source.VisibilityPolicy, AppealWindow: source.AppealWindow, SourceReleaseID: source.ID,
+	})
 	if err != nil {
 		return Release{}, err
 	}
@@ -127,10 +133,8 @@ FROM score_release_question WHERE tenant_id = $1 AND release_id = $2::uuid
 	return release, nil
 }
 
-// CreateFromRegrade copies a published source snapshot under the exam lock,
-// applies only the reviewed plan's question replacements in memory, then
-// writes a new draft. It intentionally never joins current final_grade or
-// submission_grade, so later mutable activity cannot leak into the release.
+// CreateFromRegrade 在考试锁内复制已发布来源快照，仅在内存中应用已复核计划的题目替换项，再写入新草稿。
+// 它不连接当前 final_grade 或 submission_grade，避免后续可变活动混入发布。
 func (s *PostgresStore) CreateFromRegrade(ctx context.Context, tenantID, examID, actorID string, input CreateRegradeInput) (Release, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -167,7 +171,11 @@ func (s *PostgresStore) CreateFromRegrade(ctx context.Context, tenantID, examID,
 	if err != nil {
 		return Release{}, err
 	}
-	release, err := s.insertReleaseTx(ctx, tx, tenantID, examID, actorID, version, SourceRegrade, input.Reason, input.IdempotencyKey, source.VisibilityPolicy, source.AppealWindow, source.ID)
+	release, err := s.insertReleaseTx(ctx, tx, Release{
+		TenantID: tenantID, ExamID: examID, CreatedBy: actorID, Version: version,
+		Source: SourceRegrade, Reason: input.Reason, IdempotencyKey: input.IdempotencyKey,
+		VisibilityPolicy: source.VisibilityPolicy, AppealWindow: source.AppealWindow, SourceReleaseID: source.ID,
+	})
 	if err != nil {
 		return Release{}, err
 	}
@@ -279,9 +287,8 @@ func (s *PostgresStore) Publish(ctx context.Context, tenantID, id, actorID strin
 			return Release{}, ErrAnonymousPaperUnavailable
 		}
 	}
-	// Refresh the cross-service aggregate only after the exam advisory lock is
-	// held. Score writers use the same lock, so the gate and publication cannot
-	// race a normal score-finalisation transition.
+	// 取得考试咨询锁后才刷新跨服务聚合。成绩写入器使用同一锁，
+	// 因此门禁与发布不会和正常成绩最终确认转换发生竞争。
 	dashboardIssues, err := s.dashboardIssues(ctx, tenantID, release.ExamID)
 	if err != nil {
 		return Release{}, err
@@ -344,92 +351,145 @@ func (s *PostgresStore) StudentResult(ctx context.Context, tenantID, examID, stu
 	if err != nil {
 		return StudentResult{}, err
 	}
-	for _, item := range detail.Items {
-		if item.StudentID != studentID {
-			continue
-		}
-		result := StudentResult{ExamID: examID, ReleaseID: detail.Release.ID, ReleaseVersion: detail.Release.Version, TotalScore: item.TotalScore, MaxScore: item.MaxScore, OverallTotalScore: item.TotalScore, OverallMaxScore: item.MaxScore, ScoreRate: scoreRate(item.TotalScore, item.MaxScore),
-			AppealWindow: appealView(detail.Release.AppealWindow, s.now().UTC())}
-		if overallScore, overallMax, overallErr := s.studentSessionTotal(ctx, tenantID, examID, studentID); overallErr != nil {
-			return StudentResult{}, overallErr
-		} else if overallMax > 0 {
-			result.OverallTotalScore, result.OverallMaxScore = overallScore, overallMax
-		}
-		var exam StudentExam
-		if err := s.db.QueryRowContext(ctx, `SELECT name, subject, exam_type FROM exam WHERE tenant_id=$1 AND id=$2::uuid AND deleted_at IS NULL`, tenantID, examID).Scan(&exam.Name, &exam.Subject, &exam.ExamType); err != nil && !errors.Is(err, sql.ErrNoRows) {
-			return StudentResult{}, err
-		} else if err == nil {
-			exam.PublishedAt = *detail.Release.PublishedAt
-			result.Exam = &exam
-		}
-		result.Reference = buildStudentReference(detail.Items, item.TotalScore, detail.Release.VisibilityPolicy)
-		if detail.Release.VisibilityPolicy.ShowCohortStatistics {
-			result.SubjectBalance, err = s.studentSubjectBalance(ctx, tenantID, examID, studentID)
-			if err != nil {
-				return StudentResult{}, err
-			}
-		}
-		if detail.Release.VisibilityPolicy.ShowExactRank {
-			result.Rankings, err = s.studentRankings(ctx, tenantID, examID, detail.Release.ID, studentID, item.TotalScore)
-			if err != nil {
-				return StudentResult{}, err
-			}
-		}
-		if !detail.Release.VisibilityPolicy.ShowQuestionScores {
-			return result, nil
-		}
-		detail.Questions, err = s.questions(ctx, tenantID, detail.Release.ID, item.SubmissionID)
-		if err != nil {
-			return StudentResult{}, err
-		}
-		presentation, pages, err := s.studentPaperPresentation(ctx, tenantID, item.SubmissionID)
-		if err != nil {
-			return StudentResult{}, err
-		}
-		result.PaperPages = pages
-		questionStats := map[string]*StudentQuestionReference{}
-		if detail.Release.VisibilityPolicy.ShowQuestionStatistics {
-			questionStats, err = s.studentQuestionStatistics(ctx, tenantID, examID, detail.Release.ID, studentID)
-			if err != nil {
-				return StudentResult{}, err
-			}
-		}
-		// Peer paper images are withheld until a verified anonymous asset exists.
-		result.Questions = []StudentQuestion{}
-		for _, question := range detail.Questions {
-			if question.SubmissionID != item.SubmissionID {
-				continue
-			}
-			viewPolicy := detail.Release.VisibilityPolicy
-			viewPolicy.ShowQuestionStatistics = false // PostgreSQL already computed scoped statistics above.
-			view := studentQuestionView(question, nil, viewPolicy)
-			if result.Exam != nil {
-				view.Subject = result.Exam.Subject
-			}
-			if item, ok := presentation[question.QuestionID]; ok {
-				view.PageNo, view.SubmissionPageID, view.AnswerGeometry = item.PageNo, item.SubmissionPageID, item.Geometry
-			}
-			if stat, ok := questionStats[question.QuestionID]; ok {
-				view.Cohort = stat
-			}
-			if detail.Release.VisibilityPolicy.ShowFeedback {
-				view.Feedback = question.Explanation.Feedback
-			}
-			if detail.Release.VisibilityPolicy.ShowRubricSummary {
-				view.RubricSummary = append([]string(nil), question.Explanation.RubricSummary...)
-			}
-			result.Questions = append(result.Questions, view)
-		}
-		sort.Slice(result.Questions, func(i, j int) bool { return result.Questions[i].QuestionNo < result.Questions[j].QuestionNo })
-		if detail.Release.VisibilityPolicy.ShowHighScorePaper {
-			result.HighScorePaper, err = s.studentHighScorePaper(ctx, tenantID, detail.Release.ID)
-			if err != nil {
-				return StudentResult{}, err
-			}
-		}
+	item, ok := findStudentReleaseItem(detail.Items, studentID)
+	if !ok {
+		return StudentResult{}, ErrNotFound
+	}
+	result := StudentResult{ExamID: examID, ReleaseID: detail.Release.ID, ReleaseVersion: detail.Release.Version, TotalScore: item.TotalScore, MaxScore: item.MaxScore, OverallTotalScore: item.TotalScore, OverallMaxScore: item.MaxScore, ScoreRate: scoreRate(item.TotalScore, item.MaxScore),
+		AppealWindow: appealView(detail.Release.AppealWindow, s.now().UTC())}
+	if err := s.populateStudentResultSession(ctx, tenantID, studentID, detail.Release, &result); err != nil {
+		return StudentResult{}, err
+	}
+	result.Reference = buildStudentReference(detail.Items, item.TotalScore, detail.Release.VisibilityPolicy)
+	if err := s.populateStudentResultCohort(ctx, tenantID, studentID, detail.Release.VisibilityPolicy, &result); err != nil {
+		return StudentResult{}, err
+	}
+	// 隐藏题目时连题目、答卷定位和优秀答卷都不读取；Questions 保持 nil，与可见空数组区分。
+	if !detail.Release.VisibilityPolicy.ShowQuestionScores {
 		return result, nil
 	}
-	return StudentResult{}, ErrNotFound
+	if err := s.populateStudentResultQuestions(ctx, tenantID, studentID, detail.Release, item.SubmissionID, &result); err != nil {
+		return StudentResult{}, err
+	}
+	return result, nil
+}
+
+func findStudentReleaseItem(items []ReleaseItem, studentID string) (ReleaseItem, bool) {
+	for _, item := range items {
+		if item.StudentID == studentID {
+			return item, true
+		}
+	}
+	return ReleaseItem{}, false
+}
+
+// 主科汇总和公开发布时间沿用已读取的冻结发布，不能为补充展示再解析一次当前发布指针。
+func (s *PostgresStore) populateStudentResultSession(ctx context.Context, tenantID, studentID string, release Release, result *StudentResult) error {
+	summary, overallScore, overallMax, err := s.studentSessionSummary(ctx, tenantID, result.ExamID, studentID, result.ReleaseID)
+	if err != nil {
+		return err
+	}
+	if overallMax > 0 {
+		result.OverallTotalScore, result.OverallMaxScore = overallScore, overallMax
+		result.SessionSummary = summary
+	}
+	var exam StudentExam
+	err = s.db.QueryRowContext(ctx, `SELECT name, subject, exam_type FROM exam WHERE tenant_id=$1 AND id=$2::uuid AND deleted_at IS NULL`, tenantID, result.ExamID).Scan(&exam.Name, &exam.Subject, &exam.ExamType)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	exam.PublishedAt = *release.PublishedAt
+	result.Exam = &exam
+	return nil
+}
+
+func (s *PostgresStore) populateStudentResultCohort(ctx context.Context, tenantID, studentID string, policy VisibilityPolicy, result *StudentResult) error {
+	var err error
+	if policy.ShowCohortStatistics {
+		result.SubjectBalance, err = s.studentSubjectBalance(ctx, tenantID, result.ExamID, studentID)
+		if err != nil {
+			return err
+		}
+	}
+	if !policy.ShowExactRank {
+		result.Rankings = &StudentRankings{ClassUnavailableReason: "not_public", GradeUnavailableReason: "not_public"}
+		return nil
+	}
+	result.Rankings, err = s.studentRankings(ctx, tenantID, result.ExamID, result.ReleaseID, studentID, result.TotalScore)
+	return err
+}
+
+// 调用方已通过题目可见性检查；题目和统计继续绑定同一 release 和本人的 submission。
+func (s *PostgresStore) populateStudentResultQuestions(ctx context.Context, tenantID, studentID string, release Release, submissionID string, result *StudentResult) error {
+	questions, err := s.questions(ctx, tenantID, release.ID, submissionID)
+	if err != nil {
+		return err
+	}
+	presentation, pages, err := s.studentPaperPresentation(ctx, tenantID, submissionID)
+	if err != nil {
+		return err
+	}
+	result.PaperPages = pages
+	questionStats := map[string]*StudentQuestionReference{}
+	if release.VisibilityPolicy.ShowQuestionStatistics {
+		questionStats, err = s.studentQuestionStatistics(ctx, tenantID, result.ExamID, release.ID, studentID)
+		if err != nil {
+			return err
+		}
+	}
+	result.Questions = postgresStudentQuestions(questions, submissionID, release.VisibilityPolicy, result.Exam, presentation, questionStats)
+	if release.VisibilityPolicy.ShowHighScorePaper {
+		// 只有存在经过核验的匿名资源后，才提供同学答卷图像。
+		result.HighScorePaper, err = s.studentHighScorePaper(ctx, tenantID, release.ID)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func postgresStudentQuestions(questions []ReleaseQuestion, submissionID string, policy VisibilityPolicy, exam *StudentExam, presentation map[string]studentQuestionPresentation, stats map[string]*StudentQuestionReference) []StudentQuestion {
+	result := []StudentQuestion{}
+	for _, question := range questions {
+		if question.SubmissionID != submissionID {
+			continue
+		}
+		result = append(result, postgresStudentQuestion(question, policy, exam, presentation, stats))
+	}
+	sort.Slice(result, func(i, j int) bool { return result[i].QuestionNo < result[j].QuestionNo })
+	return result
+}
+
+func postgresStudentQuestion(question ReleaseQuestion, policy VisibilityPolicy, exam *StudentExam, presentation map[string]studentQuestionPresentation, stats map[string]*StudentQuestionReference) StudentQuestion {
+	viewPolicy := policy
+	viewPolicy.ShowQuestionStatistics = false // PostgreSQL 已按冻结考生范围和隐私阈值计算统计，不从题目列表重算。
+	view := studentQuestionView(question, nil, viewPolicy)
+	if exam != nil {
+		view.Subject = exam.Subject
+	}
+	if item, ok := presentation[question.QuestionID]; ok {
+		view.PageNo, view.SubmissionPageID, view.AnswerGeometry = item.PageNo, item.SubmissionPageID, item.Geometry
+	}
+	if stat, ok := stats[question.QuestionID]; ok {
+		view.Cohort = stat
+	}
+	view.CohortUnavailableReason = "not_public"
+	if policy.ShowQuestionStatistics {
+		view.CohortUnavailableReason = "small_cohort"
+		if view.Cohort != nil {
+			view.CohortUnavailableReason = ""
+		}
+	}
+	if policy.ShowFeedback {
+		view.Feedback = question.Explanation.Feedback
+	}
+	if policy.ShowRubricSummary {
+		view.RubricSummary = append([]string(nil), question.Explanation.RubricSummary...)
+	}
+	return view
 }
 
 type studentQuestionPresentation struct {
@@ -460,9 +520,11 @@ FROM population p CROSS JOIN target t
 		return nil, nil
 	}
 	if out.ClassSize < privacyMinCohortSize {
+		out.ClassUnavailableReason = "small_cohort"
 		out.ClassRank, out.ClassSize = 0, 0
 	}
 	if out.GradeSize < privacyMinCohortSize {
+		out.GradeUnavailableReason = "small_cohort"
 		out.GradeRank, out.GradeSize = 0, 0
 	}
 	return &out, err
@@ -562,14 +624,17 @@ FROM facts f CROSS JOIN target t GROUP BY f.question_id
 		var id string
 		var ref StudentQuestionReference
 		var classSize int
-		var classMean, schoolMean, median float64
+		var classMean sql.NullFloat64
+		var schoolMean, median float64
 		if err := rows.Scan(&id, &ref.SampleSize, &classSize, &classMean, &schoolMean, &median, &ref.MeanScoreRate, &ref.FullScoreRate, &ref.ZeroScoreRate); err != nil {
 			return nil, err
 		}
 		if ref.SampleSize >= privacyMinCohortSize {
 			ref.SchoolMeanScore, ref.MedianScore = &schoolMean, &median
-			if classSize >= privacyMinCohortSize {
-				ref.ClassMeanScore = &classMean
+			if classSize >= privacyMinCohortSize && classMean.Valid {
+				ref.ClassMeanScore = &classMean.Float64
+			} else {
+				ref.ClassUnavailableReason = "small_cohort"
 			}
 			out[id] = &ref
 		}
@@ -616,9 +681,13 @@ ORDER BY seg.question_id,seg.updated_at DESC,seg.id DESC
 	return out, pages, rows.Err()
 }
 
-func (s *PostgresStore) StudentQuestion(ctx context.Context, tenantID, examID, studentID, questionID string) (StudentQuestion, error) {
+func (s *PostgresStore) StudentQuestion(ctx context.Context, tenantID, examID, studentID, questionID string, expectedReleaseID ...string) (StudentQuestion, error) {
 	result, err := s.StudentResult(ctx, tenantID, examID, studentID)
 	if err != nil {
+		return StudentQuestion{}, err
+	}
+	// 比较本次实际读取的不可变发布，而不是另外预读当前指针；发布恰好切换时不能拼接新题目和旧申请。
+	if err := requireStudentRelease(result.ReleaseID, expectedReleaseID); err != nil {
 		return StudentQuestion{}, err
 	}
 	if !result.QuestionsIsVisible() {
@@ -632,10 +701,10 @@ func (s *PostgresStore) StudentQuestion(ctx context.Context, tenantID, examID, s
 	return StudentQuestion{}, ErrNotFound
 }
 
-func (s *PostgresStore) StudentQuestionImage(ctx context.Context, tenantID, examID, studentID, questionID string) (StudentQuestionImageSource, error) {
+func (s *PostgresStore) StudentQuestionImage(ctx context.Context, tenantID, examID, studentID, questionID string, expectedReleaseID ...string) (StudentQuestionImageSource, error) {
 	var source StudentQuestionImageSource
 	err := s.db.QueryRowContext(ctx, `
-SELECT answer_segment.id::text
+SELECT answer_segment.id::text, release.id::text
 FROM score_release_current current_release
 JOIN score_release release
   ON release.tenant_id = current_release.tenant_id
@@ -660,17 +729,21 @@ WHERE current_release.tenant_id = $1
   AND COALESCE((release.visibility_policy ->> 'show_question_scores')::boolean, false)
 ORDER BY answer_segment.updated_at DESC, answer_segment.id
 LIMIT 1
-`, tenantID, examID, studentID, questionID).Scan(&source.AnswerSegmentID)
+`, tenantID, examID, studentID, questionID).Scan(&source.AnswerSegmentID, &source.ReleaseID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return StudentQuestionImageSource{}, ErrNotFound
 	}
 	if err != nil {
 		return StudentQuestionImageSource{}, err
 	}
+	// 图片来源与发布 ID 由同一条查询取得，比较后才交给资源读取器。
+	if err := requireStudentRelease(source.ReleaseID, expectedReleaseID); err != nil {
+		return StudentQuestionImageSource{}, err
+	}
 	return source, nil
 }
 
-func (s *PostgresStore) StudentPaperPageImage(ctx context.Context, tenantID, examID, studentID, questionID string, highScore bool) (StudentQuestionImageSource, error) {
+func (s *PostgresStore) StudentPaperPageImage(ctx context.Context, tenantID, examID, studentID, questionID string, highScore bool, expectedReleaseID ...string) (StudentQuestionImageSource, error) {
 	if highScore {
 		var source StudentQuestionImageSource
 		err := s.db.QueryRowContext(ctx, `
@@ -697,12 +770,18 @@ ORDER BY seg.updated_at DESC,seg.id DESC LIMIT 1
 		if errors.Is(err, sql.ErrNoRows) {
 			return StudentQuestionImageSource{}, ErrNotFound
 		}
-		return source, err
+		if err != nil {
+			return StudentQuestionImageSource{}, err
+		}
+		if err := requireStudentRelease(source.ReleaseID, expectedReleaseID); err != nil {
+			return StudentQuestionImageSource{}, err
+		}
+		return source, nil
 	}
 	// 整页图片同样以发布题目清单为范围；仅有答题分段不能证明题目已发布。
 	var source StudentQuestionImageSource
 	err := s.db.QueryRowContext(ctx, `
-SELECT seg.id::text FROM score_release_current current_release
+SELECT seg.id::text, release.id::text FROM score_release_current current_release
   JOIN score_release release ON release.tenant_id=current_release.tenant_id AND release.id=current_release.release_id AND release.status='published'
 JOIN score_release_item item ON item.tenant_id=release.tenant_id AND item.release_id=release.id AND item.student_id=$3::uuid
 JOIN score_release_question release_question
@@ -714,11 +793,17 @@ JOIN answer_segment seg ON seg.tenant_id=item.tenant_id AND seg.submission_id=it
 WHERE current_release.tenant_id=$1::uuid AND current_release.exam_id=$2::uuid
   AND COALESCE((release.visibility_policy->>'show_question_scores')::boolean,false)
 ORDER BY seg.updated_at DESC,seg.id DESC LIMIT 1
-`, tenantID, examID, studentID, questionID).Scan(&source.AnswerSegmentID)
+`, tenantID, examID, studentID, questionID).Scan(&source.AnswerSegmentID, &source.ReleaseID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return StudentQuestionImageSource{}, ErrNotFound
 	}
-	return source, err
+	if err != nil {
+		return StudentQuestionImageSource{}, err
+	}
+	if err := requireStudentRelease(source.ReleaseID, expectedReleaseID); err != nil {
+		return StudentQuestionImageSource{}, err
+	}
+	return source, nil
 }
 
 func (s *PostgresStore) currentFactsTx(ctx context.Context, tx *sql.Tx, tenantID, examID string) ([]SubmissionFact, error) {
@@ -820,19 +905,21 @@ func displayAnswer(value string) string {
 	return value
 }
 
-func (s *PostgresStore) insertReleaseTx(ctx context.Context, tx *sql.Tx, tenantID, examID, actorID string, version int, source, reason, idempotencyKey string, visibility VisibilityPolicy, window AppealWindow, sourceReleaseID string) (Release, error) {
-	visibilityJSON, err := json.Marshal(visibility)
+// insertReleaseTx 只使用草稿创建事实；状态、ID 和时间以数据库返回值为准。
+// 成绩快照由调用方在同一事务写入，任何一步失败都会一起回滚。
+func (s *PostgresStore) insertReleaseTx(ctx context.Context, tx *sql.Tx, draft Release) (Release, error) {
+	visibilityJSON, err := json.Marshal(draft.VisibilityPolicy)
 	if err != nil {
 		return Release{}, err
 	}
-	windowJSON, err := json.Marshal(window)
+	windowJSON, err := json.Marshal(draft.AppealWindow)
 	if err != nil {
 		return Release{}, err
 	}
 	row := tx.QueryRowContext(ctx, `
 INSERT INTO score_release (tenant_id, exam_id, version, source, reason, idempotency_key, visibility_policy, appeal_window, source_release_id, created_by)
 VALUES ($1, $2::uuid, $3, $4, $5, $6, $7::jsonb, $8::jsonb, NULLIF($9, '')::uuid, $10::uuid)
-RETURNING `+releaseReturning, tenantID, examID, version, source, reason, idempotencyKey, string(visibilityJSON), string(windowJSON), sourceReleaseID, actorID)
+RETURNING `+releaseReturning, draft.TenantID, draft.ExamID, draft.Version, draft.Source, draft.Reason, draft.IdempotencyKey, string(visibilityJSON), string(windowJSON), draft.SourceReleaseID, draft.CreatedBy)
 	return scanRelease(row)
 }
 
@@ -1020,8 +1107,7 @@ func applyRegradeChanges(facts []SubmissionFact, input CreateRegradeInput) bool 
 				return false
 			}
 			question.Score, question.SourceType, question.SourceID = change.Score, "single_review", change.ReviewedGradeID
-			// The reviewed regrade plan has no approved student feedback. The
-			// source release's explanation belongs to the old score.
+			// 已复核重评计划没有获批的学生反馈。来源发布的说明属于旧分数。
 			question.Explanation.Feedback = ""
 			question.Explanation.RubricSummary = nil
 			matched++
@@ -1117,6 +1203,10 @@ func (s *PostgresStore) dashboardIssues(ctx context.Context, tenantID, examID st
 		return nil, nil
 	}
 	dashboard, err := s.dashboard.Get(ctx, tenantID, examID)
+	// 尚未配置题目的考试没有质量看板；这是发布阻断项，不能让正常的空数据变成接口 500。
+	if errors.Is(err, qualitydashboard.ErrNotFound) {
+		return []GateIssue{{Code: "quality_questions_missing", Message: "考试尚未配置题目，请先完成小题与分值配置。", Blocking: true, Count: 1, ActionRoute: "questions"}}, nil
+	}
 	if err != nil {
 		return nil, fmt.Errorf("release quality dashboard: %w", err)
 	}
@@ -1129,10 +1219,8 @@ func (s *PostgresStore) dashboardIssues(ctx context.Context, tenantID, examID st
 		issues = append(issues, GateIssue{Code: finding.Code, Message: finding.Reason, Blocking: true, Count: 1, ActionRoute: "quality"})
 	}
 	for _, finding := range dashboard.Warnings {
-		// Incomplete backmark is explicitly a release blocker. Other warnings
-		// remain visible for routine low-risk exams. R3 is intentionally
-		// fail-closed for the Gold/calibration/Seed evidence chain; a warning
-		// there is not a releaseable quality state.
+		// 未完成的回评明确阻断发布。其他警告在常规低风险考试中仍保持可见。
+		// R3 对 Gold、校准和 Seed 证据链采取保守拒绝；此处有警告并不表示质量状态可发布。
 		blocking := finding.Code == "backmark_pending" || (riskByQuestion[finding.QuestionID] == "R3" && r3EvidenceRequired(finding.Code))
 		issues = append(issues, GateIssue{Code: finding.Code, Message: finding.Reason, Blocking: blocking, Count: 1, ActionRoute: "quality"})
 	}

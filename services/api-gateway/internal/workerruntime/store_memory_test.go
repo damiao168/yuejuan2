@@ -64,31 +64,7 @@ func TestClaimHeartbeatAndComplete(t *testing.T) {
 		t.Fatalf("heartbeat progress was not persisted: %#v", running.Progress)
 	}
 
-	completed, err := store.Complete(context.Background(), runtimeTenantID, task.ID, workerruntime.CompleteInput{
-		LeaseToken: claimed[0].LeaseToken, ResultSchemaVersion: "image-quality-result.v1", Result: map[string]any{"quality_status": "passed"}, DurationMS: 1200,
-	})
-	if err != nil || completed.Status != workerruntime.StatusSucceeded || completed.CompletedAt == nil {
-		t.Fatalf("complete task: %v %#v", err, completed)
-	}
-	if completed.Revision <= running.Revision {
-		t.Fatalf("completion must advance task revision: running=%d completed=%d", running.Revision, completed.Revision)
-	}
-
-	duplicate, err := store.Complete(context.Background(), runtimeTenantID, task.ID, workerruntime.CompleteInput{
-		LeaseToken: claimed[0].LeaseToken, ResultSchemaVersion: "image-quality-result.v1", Result: map[string]any{"quality_status": "passed"}, DurationMS: 1200,
-	})
-	if err != nil || duplicate.Status != workerruntime.StatusSucceeded {
-		t.Fatalf("duplicate complete should be idempotent: %v %#v", err, duplicate)
-	}
-	if duplicate.Revision != completed.Revision {
-		t.Fatalf("idempotent completion must not advance revision: completed=%d duplicate=%d", completed.Revision, duplicate.Revision)
-	}
-	_, err = store.Complete(context.Background(), runtimeTenantID, task.ID, workerruntime.CompleteInput{
-		LeaseToken: "stale-token", ResultSchemaVersion: "image-quality-result.v1", Result: map[string]any{"quality_status": "passed"}, DurationMS: 1200,
-	})
-	if !errors.Is(err, workerruntime.ErrLeaseMismatch) {
-		t.Fatalf("duplicate complete with a stale token must be rejected, got %v", err)
-	}
+	assertWorkerCompletionAndDuplicateLease(t, store, task, claimed[0], running)
 }
 
 func TestRetryAndDeadLetter(t *testing.T) {
@@ -401,3 +377,33 @@ func imageQualityTaskInput() workerruntime.CreateTaskInput {
 }
 
 var _ = time.Second
+
+// 完成后原租约可幂等重放；过期令牌必须失败且不得推进版本。
+func assertWorkerCompletionAndDuplicateLease(t *testing.T, store *workerruntime.MemoryStore, task workerruntime.Task, claimed workerruntime.Task, running workerruntime.Task) {
+	t.Helper()
+	completed, err := store.Complete(context.Background(), runtimeTenantID, task.ID, workerruntime.CompleteInput{
+		LeaseToken: claimed.LeaseToken, ResultSchemaVersion: "image-quality-result.v1", Result: map[string]any{"quality_status": "passed"}, DurationMS: 1200,
+	})
+	if err != nil || completed.Status != workerruntime.StatusSucceeded || completed.CompletedAt == nil {
+		t.Fatalf("complete task: %v %#v", err, completed)
+	}
+	if completed.Revision <= running.Revision {
+		t.Fatalf("completion must advance task revision: running=%d completed=%d", running.Revision, completed.Revision)
+	}
+
+	duplicate, err := store.Complete(context.Background(), runtimeTenantID, task.ID, workerruntime.CompleteInput{
+		LeaseToken: claimed.LeaseToken, ResultSchemaVersion: "image-quality-result.v1", Result: map[string]any{"quality_status": "passed"}, DurationMS: 1200,
+	})
+	if err != nil || duplicate.Status != workerruntime.StatusSucceeded {
+		t.Fatalf("duplicate complete should be idempotent: %v %#v", err, duplicate)
+	}
+	if duplicate.Revision != completed.Revision {
+		t.Fatalf("idempotent completion must not advance revision: completed=%d duplicate=%d", completed.Revision, duplicate.Revision)
+	}
+	_, err = store.Complete(context.Background(), runtimeTenantID, task.ID, workerruntime.CompleteInput{
+		LeaseToken: "stale-token", ResultSchemaVersion: "image-quality-result.v1", Result: map[string]any{"quality_status": "passed"}, DurationMS: 1200,
+	})
+	if !errors.Is(err, workerruntime.ErrLeaseMismatch) {
+		t.Fatalf("duplicate complete with a stale token must be rejected, got %v", err)
+	}
+}

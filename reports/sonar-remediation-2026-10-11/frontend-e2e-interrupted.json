@@ -1,0 +1,12 @@
+{
+  "result": "interrupted",
+  "recorded_at": "2026-10-11T09:22:20.968423+00:00",
+  "started_at": "2026-10-11T09:08:54Z",
+  "owned_process_root": 42740,
+  "requested_specs": 9,
+  "requested_tests": 47,
+  "reason": "root 协调资源窗口前，核对命令后只终止自己的 frontend_validate.py e2e 进程和后代",
+  "log": "frontend-e2e-0.log",
+  "log_sha256": "0b1df922461c3b33df1930154470b27fdf9ebe408c2eb3fe0ab2f2cfc8d8a63e",
+  "remaining": "串行重跑，先检查 390x844 截图差异；不能计为通过"
+}

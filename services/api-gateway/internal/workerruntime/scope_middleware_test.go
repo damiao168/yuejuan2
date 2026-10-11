@@ -37,7 +37,7 @@ func TestTaskScopeDerivesTenantAndRejectsCallerSelectedResource(t *testing.T) {
 	})))
 
 	req := taskRequest(task, "ocr-1")
-	// The legacy caller-selected tenant header must have no authority.
+	// 旧版由调用方选择的租户请求头不能具有任何授权效力。
 	req.Header.Set("X-EduGrade-Tenant-ID", "attacker-tenant")
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)

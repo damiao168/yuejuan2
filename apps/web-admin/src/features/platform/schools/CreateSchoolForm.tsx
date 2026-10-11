@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { App, Button, Form, Input, Space } from "antd";
 import { useQueryClient } from "@tanstack/react-query";
 import { createTenant, type Tenant } from "../../../api/org";
 import { validateNewPassword } from "../../../auth/loginSecurity";
 import { onboardingQueryKey } from "../../onboarding/queries";
 import { isStepUpCancelledError, useStepUp } from "../../../auth/stepUpContext";
+import { getUserErrorMessage } from "../../../api/client";
+import type { SchoolDelivery } from "./SchoolCreatedReceipt";
 
 export interface CreateSchoolValues {
   name: string;
@@ -14,17 +16,20 @@ export interface CreateSchoolValues {
   admin_password: string;
 }
 
-export function CreateSchoolForm({ compact = false, submitLabel = "创建", onCreated, onCancel }: {
+export function CreateSchoolForm({ compact = false, submitLabel = "创建", onCreated, onCancel, onSavingChange }: Readonly<{
   compact?: boolean;
   submitLabel?: string;
-  onCreated: (tenant: Tenant) => Promise<void> | void;
+  onCreated: (tenant: Tenant, delivery: SchoolDelivery) => Promise<void> | void;
   onCancel?: () => void;
-}) {
+  onSavingChange?: (saving: boolean) => void;
+}>) {
   const { message } = App.useApp();
   const { runWithStepUp } = useStepUp();
   const queryClient = useQueryClient();
   const [form] = Form.useForm<CreateSchoolValues>();
   const [saving, setSaving] = useState(false);
+  useEffect(() => { onSavingChange?.(saving); }, [onSavingChange, saving]);
+  useEffect(() => () => onSavingChange?.(false), [onSavingChange]);
 
   const submit = async (values: CreateSchoolValues) => {
     setSaving(true);
@@ -41,16 +46,18 @@ export function CreateSchoolForm({ compact = false, submitLabel = "创建", onCr
       form.resetFields();
       message.success("学校已创建");
       void queryClient.invalidateQueries({ queryKey: onboardingQueryKey });
-      await onCreated(response.tenant);
+      // 创建已成功，列表刷新失败不能提示再次创建；回执保留非秘密的交接资料。
+      try { await onCreated(response.tenant, { tenant: response.tenant, adminUsername: values.admin_username.trim(), adminDisplayName: values.admin_display_name.trim() }); }
+      catch { message.warning("学校已创建，列表暂未刷新，请保留交接资料并稍后刷新"); }
     } catch (error) {
-      if (!isStepUpCancelledError(error)) message.error("学校创建失败，请检查学校代码是否重复");
+      if (!isStepUpCancelledError(error)) message.error(getUserErrorMessage(error, "学校创建失败，请稍后重试"));
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <Form form={form} className={compact ? "create-school-form compact" : "create-school-form"} layout="vertical" requiredMark={false} onFinish={(values) => void submit(values)}>
+    <Form form={form} disabled={saving} className={compact ? "create-school-form compact" : "create-school-form"} layout="vertical" requiredMark={false} onFinish={(values) => void submit(values)}>
       <div className={compact ? "create-school-grid" : undefined}>
         <Form.Item name="name" label="学校名称" rules={[{ required: true, message: "请输入学校名称" }]}><Input maxLength={128} autoFocus /></Form.Item>
         <Form.Item name="code" label="学校代码" extra="用于登录，例如 fuzhou-no1" rules={[{ required: true, message: "请输入学校代码" }, { pattern: /^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$/, message: "使用 3–64 位小写字母、数字或连字符" }]}><Input maxLength={64} /></Form.Item>

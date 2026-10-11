@@ -191,7 +191,7 @@ func scoringRuleMatchesQuestion(ruleType string, config map[string]any, question
 		maximum, ok := floatValue(raw)
 		return ok && !math.IsNaN(maximum) && !math.IsInf(maximum, 0) && math.Abs(maximum-score) <= 1e-6
 	}
-	// Legacy authored rules use the question score rather than a copied maximum.
+	// 旧版编写的规则使用题目分值，不使用复制的最大分值。
 	return true
 }
 
@@ -237,24 +237,26 @@ func validateRuleConfig(ruleType string, config map[string]any) error {
 	if !allowed[ruleType] {
 		return ErrInvalidInput
 	}
-	if ruleType == "multiple_choice" {
-		for _, key := range []string{"score_per_correct_option", "wrong_option_penalty", "minimum_score"} {
-			if value, ok := config[key]; ok {
-				number, ok := floatValue(value)
-				if !ok || math.IsNaN(number) || math.IsInf(number, 0) || number < 0 {
-					return ErrInvalidInput
-				}
-			}
-		}
+	var keys []string
+	switch ruleType {
+	case "multiple_choice":
+		keys = []string{"score_per_correct_option", "wrong_option_penalty", "minimum_score"}
+	case "numeric":
+		keys = []string{"absolute", "relative"}
 	}
-	if ruleType == "numeric" {
-		for _, key := range []string{"absolute", "relative"} {
-			if value, ok := config[key]; ok {
-				number, ok := floatValue(value)
-				if !ok || math.IsNaN(number) || math.IsInf(number, 0) || number < 0 {
-					return ErrInvalidInput
-				}
-			}
+	return validateRuleNumericOptions(config, keys)
+}
+
+func validateRuleNumericOptions(config map[string]any, keys []string) error {
+	// 只检查题型已有的数值选项；缺省键和额外字段不在这里新增约束。
+	for _, key := range keys {
+		value, present := config[key]
+		if !present {
+			continue
+		}
+		number, ok := floatValue(value)
+		if !ok || math.IsNaN(number) || math.IsInf(number, 0) || number < 0 {
+			return ErrInvalidInput
 		}
 	}
 	return nil

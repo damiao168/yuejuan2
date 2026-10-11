@@ -6,44 +6,59 @@ import (
 	"time"
 )
 
-// PublishedQuestionAppeal is a separately versioned appeal record.  The
-// older Appeal model is retained for backwards-compatible operational data,
-// while this record is intentionally anchored to a Score Release snapshot.
-// Nothing in this type names a mutable final grade as the authoritative score.
+// PublishedQuestionAppeal 是独立版本化的申诉记录。
+// 旧 Appeal 模型保留以兼容历史业务数据，此记录则绑定 Score Release 快照；该类型不将可变最终成绩作为权威分数。
 type PublishedQuestionAppeal struct {
-	ID                   string         `json:"id"`
-	TenantID             string         `json:"tenant_id"`
-	ExamID               string         `json:"exam_id"`
-	StudentID            string         `json:"student_id,omitempty"`
-	SubmissionID         string         `json:"submission_id"`
-	SourceReleaseID      string         `json:"source_release_id"`
-	SourceReleaseVersion int            `json:"source_release_version"`
-	QuestionID           string         `json:"question_id"`
-	QuestionNo           string         `json:"question_no"`
-	SourceFinalGradeID   string         `json:"-"`
-	SourceScore          float64        `json:"source_score"`
-	SourceMaxScore       float64        `json:"source_max_score"`
-	ReasonCode           string         `json:"reason_code"`
-	Reason               string         `json:"reason"`
-	SelectedRegion       map[string]any `json:"selected_region,omitempty"`
-	Status               string         `json:"status"`
-	AssignedTo           string         `json:"assigned_to,omitempty"`
-	Decision             string         `json:"decision,omitempty"`
-	PublicResponse       string         `json:"public_response,omitempty"`
-	PrivateNote          string         `json:"-"`
-	RegradeJobID         string         `json:"regrade_job_id,omitempty"`
-	NewReleaseID         string         `json:"new_release_id,omitempty"`
-	CreatedBy            string         `json:"created_by,omitempty"`
-	DecidedBy            string         `json:"decided_by,omitempty"`
-	DecidedAt            *time.Time     `json:"decided_at,omitempty"`
-	CreatedAt            time.Time      `json:"created_at"`
-	UpdatedAt            time.Time      `json:"updated_at"`
-	Revision             int64          `json:"revision"`
+	ID       string `json:"id"`
+	TenantID string `json:"tenant_id"`
+	ExamID   string `json:"exam_id"`
+	// 仅在教职工已获授权的任务投影中补充当前考试摘要；不参与冻结成绩或申诉版本校验。
+	ExamName             string                       `json:"exam_name,omitempty"`
+	ExamSubject          string                       `json:"exam_subject,omitempty"`
+	StudentID            string                       `json:"student_id,omitempty"`
+	SubmissionID         string                       `json:"submission_id"`
+	SourceReleaseID      string                       `json:"source_release_id"`
+	SourceReleaseVersion int                          `json:"source_release_version"`
+	QuestionID           string                       `json:"question_id"`
+	QuestionNo           string                       `json:"question_no"`
+	SourceFinalGradeID   string                       `json:"-"`
+	SourceScore          float64                      `json:"source_score"`
+	SourceMaxScore       float64                      `json:"source_max_score"`
+	ReasonCode           string                       `json:"reason_code"`
+	Reason               string                       `json:"reason"`
+	SelectedRegion       map[string]any               `json:"selected_region,omitempty"`
+	Status               string                       `json:"status"`
+	AssignedTo           string                       `json:"assigned_to,omitempty"`
+	ReviewOpinion        *QuestionAppealReviewOpinion `json:"review_opinion,omitempty"`
+	Decision             string                       `json:"decision,omitempty"`
+	PublicResponse       string                       `json:"public_response,omitempty"`
+	PrivateNote          string                       `json:"-"`
+	RegradeJobID         string                       `json:"regrade_job_id,omitempty"`
+	NewReleaseID         string                       `json:"new_release_id,omitempty"`
+	// 版本来自关联的已发布成绩；仅学生公开投影使用，不能据此推断它仍是当前生效版本。
+	NewReleaseVersion int        `json:"-"`
+	ReviewedScore     *float64   `json:"-"`
+	ReviewedMaxScore  *float64   `json:"-"`
+	CreatedBy         string     `json:"created_by,omitempty"`
+	DecidedBy         string     `json:"decided_by,omitempty"`
+	DecidedAt         *time.Time `json:"decided_at,omitempty"`
+	CreatedAt         time.Time  `json:"created_at"`
+	UpdatedAt         time.Time  `json:"updated_at"`
+	Revision          int64      `json:"revision"`
 }
 
-// StudentQuestionAppeal is deliberately narrower than PublishedQuestionAppeal
-// so a student cannot receive staff identity, private discussion or regrade
-// implementation details while checking the outcome.
+type QuestionAppealExamSummary struct {
+	Name    string
+	Subject string
+}
+
+// QuestionAppealExamSummaryReader 只读取已授权申请所指向的考试名称与学科，不返回目录、班级或学生身份。
+// 调用者必须先检查申请的租户及分派权限，不能使用请求中的任意考试编号调用它。
+type QuestionAppealExamSummaryReader interface {
+	ReadQuestionAppealExamSummary(context.Context, string, string) (QuestionAppealExamSummary, error)
+}
+
+// StudentQuestionAppeal 比 PublishedQuestionAppeal 的字段更少，使学生查询结果时无法获得教职工身份、私有讨论或重评实现细节。
 type StudentQuestionAppeal struct {
 	ID                   string         `json:"id"`
 	ExamID               string         `json:"exam_id"`
@@ -60,6 +75,9 @@ type StudentQuestionAppeal struct {
 	Decision             string         `json:"decision,omitempty"`
 	PublicResponse       string         `json:"public_response,omitempty"`
 	NewReleaseID         string         `json:"new_release_id,omitempty"`
+	NewReleaseVersion    int            `json:"new_release_version,omitempty"`
+	ReviewedScore        *float64       `json:"reviewed_score,omitempty"`
+	ReviewedMaxScore     *float64       `json:"reviewed_max_score,omitempty"`
 	CreatedAt            time.Time      `json:"created_at"`
 	UpdatedAt            time.Time      `json:"updated_at"`
 }
@@ -73,9 +91,7 @@ type PublishedQuestionAppealEvent struct {
 	CreatedAt time.Time      `json:"created_at"`
 }
 
-// QuestionAppealReleaseVersion is a staff-facing audit summary. It exposes
-// the release history for the same exam without exposing another student's
-// score facts.
+// QuestionAppealReleaseVersion 是面向教职工的审计摘要，提供同一考试的发布历史，不暴露其他学生的分数事实。
 type QuestionAppealReleaseVersion struct {
 	ID          string     `json:"id"`
 	Version     int        `json:"version"`
@@ -85,9 +101,8 @@ type QuestionAppealReleaseVersion struct {
 	PublishedAt *time.Time `json:"published_at,omitempty"`
 }
 
-// PublishedQuestionAppealContext is the staff work surface for one immutable
-// appeal. AnswerSegmentID is intentionally private and is only used by the
-// image proxy after staff authorization.
+// PublishedQuestionAppealContext 提供单条不可变申诉的教职工工作上下文。
+// AnswerSegmentID 保持私有，仅由图片代理在教职工授权后使用。
 type PublishedQuestionAppealContext struct {
 	Appeal           PublishedQuestionAppeal        `json:"appeal"`
 	SourceType       string                         `json:"source_type"`
@@ -111,9 +126,22 @@ type StartQuestionAppealReviewInput struct {
 	ExpectedRevision int64  `json:"expected_revision"`
 }
 
-// DecideQuestionAppealInput contains no score field by design.  An upheld
-// appeal can only open a governed regrade, which is then materialised as a
-// later Score Release by the release workflow.
+// QuestionAppealReviewOpinion 只记录独立教师的建议；不给学生公开，也不能替代管理员裁决或已发布成绩。
+type QuestionAppealReviewOpinion struct {
+	Opinion        string    `json:"opinion"`
+	SuggestedScore *float64  `json:"suggested_score,omitempty"`
+	Explanation    string    `json:"explanation"`
+	SubmittedAt    time.Time `json:"submitted_at"`
+}
+
+type SubmitQuestionAppealReviewOpinionInput struct {
+	Opinion          string   `json:"opinion"`
+	SuggestedScore   *float64 `json:"suggested_score,omitempty"`
+	Explanation      string   `json:"explanation"`
+	ExpectedRevision int64    `json:"expected_revision"`
+}
+
+// DecideQuestionAppealInput 刻意不包含分数字段。申诉成立时只能发起受治理的重评，再由发布工作流具化为后续 Score Release。
 type DecideQuestionAppealInput struct {
 	Decision         string `json:"decision"`
 	PublicResponse   string `json:"public_response"`
@@ -161,14 +189,14 @@ var (
 	ErrResolutionRelease  = errors.New("appeal resolution release is invalid")
 )
 
-// PublishedQuestionAppealStore owns only immutable-release appeal evidence.
-// It must never update score, human_grade or final_grade rows.
+// PublishedQuestionAppealStore 只负责不可变发布的申诉证据，不得更新 score、human_grade 或 final_grade 记录。
 type PublishedQuestionAppealStore interface {
 	CreatePublishedQuestionAppeal(context.Context, string, string, string, CreatePublishedQuestionAppealInput) (PublishedQuestionAppeal, error)
 	GetPublishedQuestionAppeal(context.Context, string, string) (PublishedQuestionAppeal, error)
 	GetPublishedQuestionAppealContext(context.Context, string, string) (PublishedQuestionAppealContext, error)
 	ListPublishedQuestionAppeals(context.Context, string, QuestionAppealFilter) ([]PublishedQuestionAppeal, error)
 	StartPublishedQuestionAppealReview(context.Context, string, string, string, StartQuestionAppealReviewInput) (PublishedQuestionAppeal, error)
+	SubmitPublishedQuestionAppealReviewOpinion(context.Context, string, string, string, SubmitQuestionAppealReviewOpinionInput) (PublishedQuestionAppeal, error)
 	DecidePublishedQuestionAppeal(context.Context, string, string, string, DecideQuestionAppealInput) (PublishedQuestionAppeal, error)
 	ResolvePublishedQuestionAppeal(context.Context, string, string, string, ResolveQuestionAppealInput) (PublishedQuestionAppeal, error)
 	ListPublishedQuestionAppealEvents(context.Context, string, string) ([]PublishedQuestionAppealEvent, error)

@@ -242,6 +242,70 @@ test("roster and adjudicator independence fail closed", () => {
   assert.throws(() => finalizeAdjudications({ state: tampered, roster, datasetSha256: dataset.sha256, rosterSha256, submissions: [], policy }), /non-independent adjudicator/);
 });
 
+test("roster validation keeps worker errors in field order", () => {
+  const invalidWorker = {
+    worker_id: "!", roles: ["teacher", "teacher", "unknown"], active: "yes",
+    subjects: ["astrology"], grade_levels: []
+  };
+  assert.deepEqual(validateAnnotationRoster({
+    synthetic: true,
+    schema_version: "invalid",
+    workers: [invalidWorker, { ...roster.workers[0], worker_id: "!" }]
+  }).errors, [
+    "unsupported annotation roster schema_version",
+    "workers[0].worker_id must be pseudonymous",
+    "workers[0].roles is invalid",
+    "workers[0].roles contains duplicates",
+    "workers[0].active must be boolean",
+    "workers[0].subjects contains an unsupported subject",
+    "workers[0].grade_levels must be non-empty",
+    "workers[1].worker_id must be pseudonymous",
+    "duplicate worker_id: !"
+  ]);
+  assert.deepEqual(validateAnnotationRoster({ synthetic: true, schema_version: "invalid", workers: [] }).errors, [
+    "unsupported annotation roster schema_version", "workers must be non-empty"
+  ]);
+});
+
+test("teacher merge accumulates ownership errors before skipping unknown or duplicate assignments", () => {
+  const records = samples(1).map((sample) => ({ ...sample, synthetic: true }));
+  const dataset = datasetFor(records);
+  const { plan } = buildBlindAnnotationPlan({ samples: records, roster, dataset, rosterSha256, planId: "workflow-plan-v1" });
+  const submissions = submissionsFor(plan, records, "none");
+  submissions[0].plan_id = "other-plan";
+  submissions[0].authenticated_actor_id = "other-teacher";
+  submissions[1].label.label_id = submissions[0].label.label_id;
+  submissions.push({ assignment_id: "unknown" }, submissions[0]);
+  assert.throws(() => mergeTeacherSubmissions({
+    plan, samples: records, roster, datasetSha256: dataset.sha256, rosterSha256, submissions, policy
+  }), (error) => {
+    assert.equal(error.message, `teacher submission merge failed: submissions[0] identity does not match assignment; submissions[0] actor or labeler does not own assignment; duplicate label_id: ${submissions[0].label.label_id}; submissions[2].assignment_id is unknown; duplicate submission for ${submissions[0].assignment_id}`);
+    return true;
+  });
+});
+
+test("teacher pending status takes priority and adjudication checks source labels before missing submissions", () => {
+  const records = samples(3).map((sample) => ({ ...sample, synthetic: true }));
+  const dataset = datasetFor(records);
+  const { plan } = buildBlindAnnotationPlan({ samples: records, roster, dataset, rosterSha256, planId: "workflow-plan-v1" });
+  const merge = (submissions) => mergeTeacherSubmissions({
+    plan, samples: records, roster, datasetSha256: dataset.sha256, rosterSha256, submissions, policy
+  }).state;
+  const partial = merge(submissionsFor(plan, records).slice(1));
+  assert.equal(partial.state, "teacher_pending");
+  assert.equal(partial.pending_adjudication_bundles.length, 1);
+  assert.equal(merge(submissionsFor(plan, records, "none")).state, "complete");
+
+  const state = merge(submissionsFor(plan, records));
+  const finalize = (current) => finalizeAdjudications({
+    state: current, roster, datasetSha256: dataset.sha256, rosterSha256, submissions: [], policy
+  });
+  assert.throws(() => finalize(state), /adjudication finalization failed: 1 adjudication submissions are missing/);
+  const tampered = structuredClone(state);
+  tampered.adjudication_assignments[0].source_label_ids = ["other-label"];
+  assert.throws(() => finalize(tampered), /source labels do not match bundle/);
+});
+
 test("annotation workflow CLI verifies packet hashes and completes the file protocol", () => {
   const root = ".downloads/annotation-workflow-cli-test";
   mkdirSync(root, { recursive: true });

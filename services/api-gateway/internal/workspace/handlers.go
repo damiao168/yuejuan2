@@ -14,7 +14,12 @@ type Handler struct {
 }
 
 func NewHandler(deps Dependencies) *Handler {
-	return &Handler{service: NewService(deps)}
+	return NewHandlerWithService(NewService(deps))
+}
+
+// NewHandlerWithService 让工作区接口与学校助手共用同一读服务，避免两条入口的阶段和阻塞规则不一致。
+func NewHandlerWithService(service *Service) *Handler {
+	return &Handler{service: service}
 }
 
 // 先确认登录和访问范围，再把越权考试伪装成 404，避免泄露考试是否存在。

@@ -42,9 +42,8 @@ func (h *Handler) deviceToken(r *http.Request) string {
 		return ""
 	}
 	value := strings.TrimSpace(cookie.Value)
-	// Current tokens contain 256 bits encoded as 43 base64url characters. The
-	// relaxed upper bound allows a future format prefix without permitting an
-	// attacker-controlled Cookie header to become an unbounded lookup key.
+	// 当前令牌含 256 位，编码为 43 个 base64url 字符。
+	// 较宽松的上限为未来格式前缀留出空间，同时避免攻击者控制的 Cookie 请求头成为无上限的查询键。
 	if len(value) < 32 || len(value) > 128 {
 		return ""
 	}

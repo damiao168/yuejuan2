@@ -1,0 +1,8 @@
+{
+  "taskId": "14bfcea9-251b-472e-bc01-1ece81c736f0",
+  "projectId": "2bb938e2-4c1a-469c-89c9-bf89d9d2cbbf",
+  "submitted_at": "2026-10-11T12:08:10.583917+08:00",
+  "official_api": "POST /api/ce/submit",
+  "local_url": "http://127.0.0.1:19000",
+  "archive_sha256": "224793c52cf5476eafdaf51c052befbfab3493d33ba56d6111f26f5836545307"
+}

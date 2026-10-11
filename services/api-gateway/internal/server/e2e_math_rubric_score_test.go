@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -22,8 +23,8 @@ func (s *mathScoringAssignment) HasActiveAssignment(_ context.Context, _, _, _ s
 	return s.allowed, nil
 }
 
-// Real production source/handler queries in an isolated database. This is not
-// a full authentication, migration-upgrade or teacher final-submit E2E.
+// 在隔离数据库中使用真实生产来源和 handler 查询。
+// 此测试不覆盖完整认证、迁移升级或教师最终提交端到端流程。
 func TestPostgresMathRubricScoreUsesOnlyFrozenExamRubric(t *testing.T) {
 	dsn := os.Getenv("EDUGRADE_E2E_DATABASE_URL")
 	if dsn == "" {
@@ -60,23 +61,10 @@ CREATE TABLE math_understanding_correction(
 		return raw
 	}
 	cropHash := strings.Repeat("a", 64)
-	// A minimal legacy-shaped fixture omits ID/version; normal production
-	// snapshots include them. Snapshot identity/hash must still bind this case.
+	// 最小旧版结构夹具省略 ID/version，正常生产快照则包含它们。
+	// 这种情况下仍须通过快照身份和哈希绑定。
 	frozen := paper.Rubric{Status: "locked", MaxScore: 2, Points: []paper.RubricPoint{{ID: "P1", Score: 2, Description: "final result", EvidenceRequirements: []paper.EvidenceRequirement{{Type: "final_result", Target: "x=2"}}}}}
-	for _, seed := range []struct {
-		query string
-		args  []any
-	}{
-		{`INSERT INTO exam(id,tenant_id) VALUES($1,$2)`, []any{exam, tenant}},
-		{`INSERT INTO question(id,tenant_id,exam_id) VALUES($1,$2,$3)`, []any{question, tenant, exam}},
-		{`INSERT INTO answer_segment(id,tenant_id,question_id,crop_sha256) VALUES($1,$2,$3,$4)`, []any{segment, tenant, question, cropHash}},
-		{`INSERT INTO exam_question_snapshot(id,tenant_id,exam_id,question_id,profile_snapshot_json,rubric_snapshot_json) VALUES($1,$2,$3,$4,'{"subject_code":"mathematics"}',$5)`, []any{snapshot, tenant, exam, question, encode(frozen)}},
-		{`INSERT INTO question_rubric(id,tenant_id,question_id,points) VALUES($1,$2,$3,'[{"id":"P1","score":999}]')`, []any{uuid.NewString(), tenant, question}},
-	} {
-		if _, err = db.ExecContext(ctx, seed.query, seed.args...); err != nil {
-			t.Fatal(err)
-		}
-	}
+	seedFrozenMathRubricRows(t, ctx, db, mathRubricSnapshotIdentity{Tenant: tenant, Exam: exam, Question: question, Segment: segment, Snapshot: snapshot, CropHash: cropHash}, frozen, encode)
 	contract := mathunderstanding.CreateArtifactInput{
 		SubjectCode: "mathematics", AnswerSegmentID: segment, ExamQuestionSnapshotID: snapshot, InputHash: "sha256:" + cropHash, EngineVersion: "fixture-v1",
 		Blocks:        []mathunderstanding.MathAnswerBlock{{ID: "b1", Kind: "formula", Status: "active", BoundingBox: mathunderstanding.BoundingBox{X: .1, Y: .1, Width: .5, Height: .2}, RecognitionEngine: "fixture", RecognitionVersion: "v1", RecognitionConfidence: .9, StructureConfidence: .9, SourceImageHash: "sha256:" + cropHash}},
@@ -110,10 +98,28 @@ VALUES($1,$2,'mathematics',$3,$4,2,$5,'fixture-v1',true,'verified',$6,$7,'[]',$8
 		return result
 	}
 	first := assertScore(get(tenant))
-	if first.VerifiedScore != 2 || first.SuggestedScore == nil || *first.SuggestedScore != 2 || first.RubricSnapshotHash == "" || first.RubricVersion != first.RubricSnapshotHash || !first.RequiresHumanReview {
-		t.Fatalf("mutable rubric used or authority expanded: %#v", first)
-	}
-	if _, err = db.ExecContext(ctx, `UPDATE question_rubric SET points='[{"id":"P1","score":12345}]'`); err != nil {
+	assertFrozenRubricPreviewAuthority(t, first)
+	preview := mathRubricPreviewScenario{Tenant: tenant, Segment: segment, Artifact: artifact, Actor: actor,
+		Contract: contract, Lookup: lookup, Get: get, AssertScore: assertScore, First: first}
+	e2eAssertLiveRubricAndScopeFenced(t, ctx, db, store, preview)
+	e2eAssertPendingMathCorrectionHasNoGradeWrites(t, ctx, db, corrections, preview)
+}
+
+type mathRubricPreviewScenario struct {
+	Tenant, Segment, Artifact, Actor string
+	Contract                         mathunderstanding.CreateArtifactInput
+	Lookup                           *mathScoringAssignment
+	Get                              func(string) *httptest.ResponseRecorder
+	AssertScore                      func(*httptest.ResponseRecorder) mathunderstanding.RubricScore
+	First                            mathunderstanding.RubricScore
+}
+
+// 活动量规变化不得影响冻结得分；跨租户、未派发及错误快照身份仍分别拒绝。
+func e2eAssertLiveRubricAndScopeFenced(t *testing.T, ctx context.Context, db *sql.DB, store *mathunderstanding.PostgresStore, preview mathRubricPreviewScenario) {
+	t.Helper()
+	tenant, segment, lookup, get, assertScore, first := preview.Tenant, preview.Segment, preview.Lookup, preview.Get, preview.AssertScore, preview.First
+
+	if _, err := db.ExecContext(ctx, `UPDATE question_rubric SET points='[{"id":"P1","score":12345}]'`); err != nil {
 		t.Fatal(err)
 	}
 	second := assertScore(get(tenant))
@@ -128,10 +134,17 @@ VALUES($1,$2,'mathematics',$3,$4,2,$5,'fixture-v1',true,'verified',$6,$7,'[]',$8
 		t.Fatalf("unassigned preview: %d", w.Code)
 	}
 	lookup.allowed = true
-	if _, err = store.LoadFrozenRubric(ctx, tenant, segment, uuid.NewString()); !errors.Is(err, mathunderstanding.ErrNotFound) {
+	if _, err := store.LoadFrozenRubric(ctx, tenant, segment, uuid.NewString()); !errors.Is(err, mathunderstanding.ErrNotFound) {
 		t.Fatalf("foreign snapshot accepted: %v", err)
 	}
-	_, err = corrections.CreateCorrection(ctx, tenant, artifact, actor, mathunderstanding.CreateCorrectionInput{ExpectedArtifactVersion: 2, Operations: []mathunderstanding.CorrectionOperation{{Type: "move_step", TargetID: "s1"}}, CorrectedContract: contract})
+}
+
+// 未验证的新人工修订不能复用旧验证得分；预览整个过程中不得写入 AI 或最终成绩链。
+func e2eAssertPendingMathCorrectionHasNoGradeWrites(t *testing.T, ctx context.Context, db *sql.DB, corrections *mathunderstanding.PostgresCorrectionStore, preview mathRubricPreviewScenario) {
+	t.Helper()
+	tenant, artifact, actor, contract, get, assertScore := preview.Tenant, preview.Artifact, preview.Actor, preview.Contract, preview.Get, preview.AssertScore
+
+	_, err := corrections.CreateCorrection(ctx, tenant, artifact, actor, mathunderstanding.CreateCorrectionInput{ExpectedArtifactVersion: 2, Operations: []mathunderstanding.CorrectionOperation{{Type: "move_step", TargetID: "s1"}}, CorrectedContract: contract})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -142,5 +155,38 @@ VALUES($1,$2,'mathematics',$3,$4,2,$5,'fixture-v1',true,'verified',$6,$7,'[]',$8
 	var writes int
 	if err = db.QueryRowContext(ctx, `SELECT (SELECT count(*) FROM ai_grade)+(SELECT count(*) FROM final_grade)`).Scan(&writes); err != nil || writes != 0 {
 		t.Fatalf("preview wrote grading chain: %d %v", writes, err)
+	}
+
+}
+
+type mathRubricSnapshotIdentity struct {
+	Tenant, Exam, Question, Segment, Snapshot, CropHash string
+}
+
+// 同时保存冻结量规与故意错误的活动量规，后续预览才能区分两种来源。
+func seedFrozenMathRubricRows(t *testing.T, ctx context.Context, db *sql.DB, identity mathRubricSnapshotIdentity, frozen paper.Rubric, encode func(any) []byte) {
+	t.Helper()
+	tenant, exam, question, segment, snapshot, cropHash := identity.Tenant, identity.Exam, identity.Question, identity.Segment, identity.Snapshot, identity.CropHash
+	for _, seed := range []struct {
+		query string
+		args  []any
+	}{
+		{`INSERT INTO exam(id,tenant_id) VALUES($1,$2)`, []any{exam, tenant}},
+		{`INSERT INTO question(id,tenant_id,exam_id) VALUES($1,$2,$3)`, []any{question, tenant, exam}},
+		{`INSERT INTO answer_segment(id,tenant_id,question_id,crop_sha256) VALUES($1,$2,$3,$4)`, []any{segment, tenant, question, cropHash}},
+		{`INSERT INTO exam_question_snapshot(id,tenant_id,exam_id,question_id,profile_snapshot_json,rubric_snapshot_json) VALUES($1,$2,$3,$4,'{"subject_code":"mathematics"}',$5)`, []any{snapshot, tenant, exam, question, encode(frozen)}},
+		{`INSERT INTO question_rubric(id,tenant_id,question_id,points) VALUES($1,$2,$3,'[{"id":"P1","score":999}]')`, []any{uuid.NewString(), tenant, question}},
+	} {
+		if _, err := db.ExecContext(ctx, seed.query, seed.args...); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+// 预览仍只是人工复核建议：成绩、快照哈希与版本必须全部来自冻结量规。
+func assertFrozenRubricPreviewAuthority(t *testing.T, preview mathunderstanding.RubricScore) {
+	t.Helper()
+	if preview.VerifiedScore != 2 || preview.SuggestedScore == nil || *preview.SuggestedScore != 2 || preview.RubricSnapshotHash == "" || preview.RubricVersion != preview.RubricSnapshotHash || !preview.RequiresHumanReview {
+		t.Fatalf("mutable rubric used or authority expanded: %#v", preview)
 	}
 }

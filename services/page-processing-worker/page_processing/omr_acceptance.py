@@ -43,7 +43,7 @@ def build_synthetic_acceptance_cases() -> list[SyntheticOMRCase]:
                 mark_style=mark_style,
             ))
 
-    # Clear, deterministic selections across all objective question families.
+    # 覆盖所有客观题类型的清晰、确定选择。
     for index in range(30):
         add(1, "single_choice", (("A", "B", "C")[index % 3],), False, False, "clear")
     for index in range(12):
@@ -52,7 +52,7 @@ def build_synthetic_acceptance_cases() -> list[SyntheticOMRCase]:
     for index in range(18):
         add(1, "multiple_choice", multiple_answers[index % len(multiple_answers)], True, False, "clear")
 
-    # Risk cases must route to humans rather than becoming automatic zeroes.
+    # 有风险的情况必须交由人工处理，不能自动判为零分。
     add(15, "single_choice", (), False, True, "blank")
     add(10, "single_choice", ("A", "C"), False, True, "clear")
     for index in range(15):
@@ -76,13 +76,13 @@ def render_synthetic_case(case: SyntheticOMRCase) -> bytes:
         if region["label"] not in case.marked:
             continue
         if case.mark_style == "light":
-            # The inner square is intentionally between the ambiguous and marked thresholds.
+            # 内方块刻意设置在模糊阈值与已填涂阈值之间。
             draw.rectangle((x + 11, y + 11, x + 18, y + 18), fill="black")
         else:
             draw.ellipse((x + 6, y + 6, x + width - 6, y + height - 6), fill="black")
 
-    # Add deterministic low-level scan noise outside answer interiors so the
-    # acceptance path is not only a byte-for-byte duplicate of one image.
+    # 在答案内部以外添加确定的低强度扫描噪声，
+    # 避免验收流程只处理与单张图像字节完全相同的副本。
     pixels = np.asarray(image).copy()
     seed = sum(ord(char) for char in case.sample_id)
     rng = np.random.default_rng(seed)

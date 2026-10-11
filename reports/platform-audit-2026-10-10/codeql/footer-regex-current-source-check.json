@@ -1,0 +1,18 @@
+{
+  "checked_at": "2026-10-11T12:15:19.6574776+08:00",
+  "scope": "Only the two source files for the reviewed Python footer regex; other files are not implied current",
+  "files": [
+    {
+      "path": "ai-services/grading_agent/paper_compact/anchors.py",
+      "baseline_sha256": "7c0280d45533f9411587c5116bf0d46cb9a91c9614707cc801abf3dafa0b6251",
+      "current_sha256": "7c0280d45533f9411587c5116bf0d46cb9a91c9614707cc801abf3dafa0b6251",
+      "matches_snapshot": true
+    },
+    {
+      "path": "ai-services/grading_agent/paper_compact/schema.py",
+      "baseline_sha256": "38958370509b66e456f8cf739888032635e6885256c17b76b587af342de3cdf4",
+      "current_sha256": "38958370509b66e456f8cf739888032635e6885256c17b76b587af342de3cdf4",
+      "matches_snapshot": true
+    }
+  ]
+}

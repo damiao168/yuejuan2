@@ -35,20 +35,7 @@ func (s *MemoryStore) Begin(_ context.Context, input BeginInput) (Record, bool, 
 		if expired && (existing.record.State == "completed" || !input.AllowTakeover) {
 			delete(s.records, key)
 		} else {
-			if existing.record.RequestHash != input.RequestHash {
-				return Record{}, false, ErrKeyConflict
-			}
-			if existing.record.State == "processing" {
-				if input.AllowTakeover && !input.StaleBefore.IsZero() && existing.updatedAt.Before(input.StaleBefore) {
-					existing.updatedAt = time.Now().UTC()
-					existing.record.UpdatedAt = existing.updatedAt
-					existing.expiresAt = input.ExpiresAt
-					s.records[key] = existing
-					return cloneRecord(existing.record), true, nil
-				}
-				return Record{}, false, ErrInProgress
-			}
-			return cloneRecord(existing.record), false, nil
+			return s.resumeRecordLocked(key, existing, input)
 		}
 	}
 	record := Record{State: "processing", RequestHash: input.RequestHash, RequestBody: append([]byte(nil), input.RequestBody...)}
@@ -56,6 +43,24 @@ func (s *MemoryStore) Begin(_ context.Context, input BeginInput) (Record, bool, 
 	record.UpdatedAt = now
 	s.records[key] = memoryEntry{record: record, expiresAt: input.ExpiresAt, updatedAt: now}
 	return record, true, nil
+}
+
+func (s *MemoryStore) resumeRecordLocked(key string, existing memoryEntry, input BeginInput) (Record, bool, error) {
+	// 调用方持有原锁；先核对指纹，再判断是否能接管，接管不能替换最初保存的请求体。
+	if existing.record.RequestHash != input.RequestHash {
+		return Record{}, false, ErrKeyConflict
+	}
+	if existing.record.State == "processing" {
+		if input.AllowTakeover && !input.StaleBefore.IsZero() && existing.updatedAt.Before(input.StaleBefore) {
+			existing.updatedAt = time.Now().UTC()
+			existing.record.UpdatedAt = existing.updatedAt
+			existing.expiresAt = input.ExpiresAt
+			s.records[key] = existing
+			return cloneRecord(existing.record), true, nil
+		}
+		return Record{}, false, ErrInProgress
+	}
+	return cloneRecord(existing.record), false, nil
 }
 
 func (s *MemoryStore) Complete(_ context.Context, input BeginInput, status int, headers map[string]string, body []byte) error {

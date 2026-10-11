@@ -1,0 +1,58 @@
+{
+  "calls_updated": {
+    "e2eArbitrationAndExportCommands": 1,
+    "createReconciliationAsset": 2,
+    "qbRequest": 35,
+    "e2eCreateStory056Question": 3,
+    "e2eAssertStory056Run": 7,
+    "e2eCompleteStory056HumanReviews": 1,
+    "e2eStory056CalibrationResultPayload": 2
+  },
+  "backups": [
+    {
+      "file": "services/api-gateway/internal/server/e2e_business_command_test.go",
+      "sha256": "3628336be913f4237e5a56c5bbab84960e14ad306b86c2297d618116f95a252d",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_business_command_test.go"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_file_reconciliation_test.go",
+      "sha256": "3c62a7bb58e3ebea5b039b18dc14da1ec0d4d2c9aac9a703edb9378d3365b5a3",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_file_reconciliation_test.go"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_postgres_test.go",
+      "sha256": "8714cb21ec147a9aee97c922c80e03ad020af15f2302d6f684c7781d094503a0",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_postgres_test.go"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_question_bank_import_test.go",
+      "sha256": "d5f7756150d5784e28eba49db0e51b5ad59e17b9691cc5af3b4e2262cd7c689e",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_question_bank_import_test.go"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_question_bank_metadata_acl_search_test.go",
+      "sha256": "da3d785b18e17d6100323aadd3e414eae851dac5b4868418aaac9ce857d98a9c",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_question_bank_metadata_acl_search_test.go"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_question_bank_publication_test.go",
+      "sha256": "a860ad10f4ae2dca940b486c918fb4441bc6f420b13b15966d9b82957aff7891",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_question_bank_publication_test.go"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_question_bank_test.go",
+      "sha256": "a579dc5783afbf6de6f8b5394c829a73330db2969ba745bdb53c7f4c5c6ce56b",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_question_bank_test.go"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_story056_calibration_test.go",
+      "sha256": "9fc052a0a209ae660ae2e46715d2e44bf6546ff1eceae2ad967dc34401cfbc17",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_story056_calibration_test.go"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_story056_test.go",
+      "sha256": "c33d9cefd514f362085e5b746c0d1e209ca096903e85a35d270861e40da0862c",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_story056_test.go"
+    }
+  ]
+}

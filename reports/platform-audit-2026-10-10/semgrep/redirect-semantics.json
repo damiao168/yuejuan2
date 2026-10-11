@@ -1,0 +1,9 @@
+{
+  "python_version": "3.11.9",
+  "network_used": false,
+  "application_started": false,
+  "cross_origin_url_accepted": true,
+  "authorization_header_preserved": true,
+  "worker_lease_header_preserved": true,
+  "scope": "标准库 HTTPRedirectHandler 行为核验；未证明生产网关存在可利用的重定向路由。"
+}

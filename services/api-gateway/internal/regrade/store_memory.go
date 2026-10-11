@@ -2,6 +2,7 @@ package regrade
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"sync"
@@ -10,9 +11,8 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/paper"
 )
 
-// MemoryStore mirrors the immutability boundary used in production: release
-// source facts are seeded independently and regrade candidates only live in
-// this store's items. It is useful for focused workflow and handler tests.
+// MemoryStore 对应生产环境的不可变边界：来源发布事实独立预置，重评候选只存在于此存储的条目中。
+// 它用于聚焦的流程和 handler 测试。
 type MemoryStore struct {
 	mu          sync.Mutex
 	now         func() time.Time
@@ -35,9 +35,8 @@ type memoryRelease struct {
 	Items     map[string][]SourceItem
 }
 
-// MemoryGraderEvidence is a test-only stand-in for the isolated production
-// answer-evidence projection. It is keyed by submission ID and never contains
-// a source-release score or prior review facts.
+// MemoryGraderEvidence 是生产环境隔离答案证据投影的测试替代。
+// 它以提交 ID 为键，绝不包含来源发布分数或之前的复核事实。
 type MemoryGraderEvidence struct {
 	Question        GraderQuestion
 	FrozenRubric    paper.Rubric
@@ -60,9 +59,8 @@ func (s *MemoryStore) SeedGraderEvidence(submissionID string, value MemoryGrader
 	s.evidence[submissionID] = value
 }
 
-// SeedPublishedRelease supplies an immutable source snapshot. Tests can seed a
-// non-current historic published release, while Preview also reports the
-// current release for an operator to understand the impact.
+// SeedPublishedRelease 提供不可变来源快照。
+// 测试可预置非当前的历史已发布版本，Preview 同时报告当前发布，帮助操作人员理解影响。
 func (s *MemoryStore) SeedPublishedRelease(tenantID, examID, releaseID string, version int, current bool, byQuestion map[string][]SourceItem) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -126,8 +124,7 @@ func (s *MemoryStore) Create(ctx context.Context, tenantID, examID, questionID, 
 	if id := s.idempotency[key]; id != "" {
 		return cloneJob(s.jobs[id]), cloneItems(s.items[id]), nil
 	}
-	// Repeat the frozen-source check; callers must never turn a stale preview
-	// into a job containing different current final facts.
+	// 再次检查冻结来源；调用方绝不能将过时预览变成包含不同当前最终事实的作业。
 	fresh, err := s.sourceItemsLocked(tenantID, examID, questionID, input.SourceReleaseID, input.Selector)
 	if err != nil {
 		return Job{}, nil, err
@@ -137,7 +134,7 @@ func (s *MemoryStore) Create(ctx context.Context, tenantID, examID, questionID, 
 	}
 	if len(sources) > 0 {
 		fresh = sources
-	} // service already acquired source snapshot; all are release facts.
+	} // 服务已取得来源快照；这里全部是发布事实。
 	now := s.now().UTC()
 	job := Job{ID: s.nextIDLocked("regrade-job"), TenantID: tenantID, ExamID: examID, QuestionID: questionID, SourceReleaseID: input.SourceReleaseID,
 		ReasonCode: input.ReasonCode, ReasonText: input.ReasonText, Strategy: input.Strategy, Selector: cloneSelector(input.Selector), NewRubricSnapshotID: input.NewRubricSnapshotID,
@@ -199,18 +196,57 @@ func (s *MemoryStore) GetGraderContext(_ context.Context, tenantID, itemID, grad
 	if item.AssignedTo != graderID || item.ClaimedBy != graderID || item.Status != ItemClaimed || (job.Status != StatusRunning && job.Status != StatusDiffReview) {
 		return GraderContext{}, ErrAssignmentForbidden
 	}
+	return s.materialContextLocked(item)
+}
+
+func (s *MemoryStore) materialContextLocked(item Item) (GraderContext, error) {
 	evidence, ok := s.evidence[item.SubmissionID]
 	if !ok || evidence.AnswerSegmentID == "" {
 		return GraderContext{}, ErrNotFound
 	}
-	question := evidence.Question
-	question.KnowledgePoints = append([]string(nil), question.KnowledgePoints...)
-	rubric := evidence.FrozenRubric
-	rubric.Points = append([]paper.RubricPoint(nil), rubric.Points...)
+	// 材料含嵌套条件和解析步骤，深拷贝避免读者修改返回对象污染后续任务标准。
+	raw, err := json.Marshal(evidence)
+	if err != nil {
+		return GraderContext{}, err
+	}
+	var frozen MemoryGraderEvidence
+	if err := json.Unmarshal(raw, &frozen); err != nil {
+		return GraderContext{}, err
+	}
+	question, rubric := frozen.Question, frozen.FrozenRubric
 	return GraderContext{
 		Item: workItem(item), ExpectedRevision: item.Revision, Question: question, FrozenRubric: rubric,
 		Answer: GraderAnswer{RawAnswer: evidence.RawAnswer, OCRText: evidence.OCRText, SegmentStatus: evidence.SegmentStatus, SegmentImageURL: "/api/v1/regrade-items/" + item.ID + "/segment-image"},
 	}, nil
+}
+
+func (s *MemoryStore) GetReviewContext(_ context.Context, tenantID, itemID string) (ReviewContext, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	jobID, index, err := s.itemIndexLocked(tenantID, itemID)
+	if err != nil {
+		return ReviewContext{}, err
+	}
+	item, job := s.items[jobID][index], s.jobs[jobID]
+	if item.Status != ItemAwaitingReview || (job.Status != StatusRunning && job.Status != StatusDiffReview) {
+		return ReviewContext{}, ErrStateConflict
+	}
+	value, err := s.materialContextLocked(item)
+	if err != nil {
+		return ReviewContext{}, err
+	}
+	value.Answer.SegmentImageURL = "/api/v1/regrade-items/" + item.ID + "/review-segment-image"
+	return ReviewContext{Item: cloneItem(item), Context: value}, nil
+}
+
+func (s *MemoryStore) GetReviewSegmentID(ctx context.Context, tenantID, itemID string) (string, error) {
+	value, err := s.GetReviewContext(ctx, tenantID, itemID)
+	if err != nil {
+		return "", err
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.evidence[value.Item.SubmissionID].AnswerSegmentID, nil
 }
 
 func (s *MemoryStore) GetSegmentID(_ context.Context, tenantID, itemID, graderID string) (string, error) {

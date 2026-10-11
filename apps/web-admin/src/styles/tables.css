@@ -1,5 +1,5 @@
-/* Normal modules share one document scroll. Nested data regions hand wheel
-   scrolling back to the page when their own boundary is reached. */
+/* 普通模块共用文档滚动；嵌套数据区域到达自身边界时，
+   将滚轮滚动交还给页面。 */
 .workspace:not(.immersive-workspace) .ant-table-body,
 .workspace:not(.immersive-workspace) .ant-table-content,
 .workspace:not(.immersive-workspace) .ant-list,

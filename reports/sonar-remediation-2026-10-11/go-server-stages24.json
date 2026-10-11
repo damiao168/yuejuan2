@@ -1,0 +1,52 @@
+{
+  "files": [
+    {
+      "file": "services/api-gateway/internal/server/e2e_worker_runtime_reliability_test.go",
+      "sha256": "378ca4a4f410cd63bdc3b955cd55385829cb20ae71a75026f2255248557ed6ea",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_worker_runtime_reliability_test.go"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_worker_runtime_reliability_test.go",
+      "sha256": "6509a5d33e5c84b19dc4b1970b314f3b9e683d6901c0d42c2caee1b02f64d544",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_worker_runtime_reliability_test.go"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_worker_runtime_reliability_test.go",
+      "sha256": "3038017ca90ee4bd9e8b4b901c6e31e15ecaff6bef346b49440b9ebca5357b7a",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_worker_runtime_reliability_test.go"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_worker_runtime_reliability_test.go",
+      "sha256": "08f3291e0111437d7ca09d3c4b07b41e89c65dd995debaa3abb8670c309d0cef",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_worker_runtime_reliability_test.go"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_worker_runtime_reliability_test.go",
+      "sha256": "3b238d04a97418e77e5a0105169cd1598f72ce40ed3f3f1464f7d6981c2384e7",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_worker_runtime_reliability_test.go"
+    }
+  ],
+  "issue_functions": [
+    {
+      "file": "services/api-gateway/internal/server/e2e_worker_runtime_reliability_test.go",
+      "function": "TestWorkerRuntimeReliabilityWithPostgresTestDatabase"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_worker_runtime_reliability_test.go",
+      "function": "e2eAssertExhaustedRuntimeDeadLetter"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_worker_runtime_reliability_test.go",
+      "function": "e2eAssertRuntimeTransactionOwnership"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_worker_runtime_reliability_test.go",
+      "function": "e2eAssertRuntimeStaleLeaseRace"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_worker_runtime_reliability_test.go",
+      "function": "e2eAssertOCRStartIdempotency"
+    }
+  ],
+  "checkpoint_relation": "after checkpoint02; requires subsequent scan"
+}

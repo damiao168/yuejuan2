@@ -19,11 +19,11 @@ use super::crypto::{
     restore_scoped_master_key,
 };
 
-/// Assign the quarantined v1 store to the currently leased account.
+/// 将隔离的 v1 存储归属到当前持有租约的账号。
 ///
-/// No legacy path is ever opened by normal queue/draft commands. This explicit
-/// command moves it under the current account's v2 scope and copies the legacy
-/// encryption key into that account's distinct Credential Manager entry.
+/// 普通队列和草稿命令不会打开旧版路径。只有这个显式命令
+/// 会将旧存储移到当前账号的 v2 作用域，并把旧版加密密钥
+/// 复制到该账号独立的凭据管理器条目中。
 #[cfg(windows)]
 pub fn claim_legacy_store(app: AppHandle) -> Result<(), String> {
     let data_dir = app
@@ -154,10 +154,10 @@ fn move_legacy_store_with_commit(
         return Err(error);
     }
     if had_target {
-        // The target was proven to contain no queue, asset, draft, spool, or
-        // unknown files before it was moved to this private backup path.
-        // Claim has already committed at this point. A failed cleanup must
-        // not cause the caller to restore the old key over the claimed data.
+        // 目标移到这个私有备份路径前，已确认其中没有队列、资产、
+        // 草稿、暂存文件或未知文件。
+        // 此时认领已经提交。清理失败不能让调用方
+        // 将旧密钥恢复到已认领的数据上。
         let _ = fs::remove_dir_all(&backup);
     }
     Ok(())

@@ -72,7 +72,7 @@ describe("durable session leases", () => {
     expect(await listDurableScanQueue(b)).toEqual([]);
     const otherServer = await bindDurableSession("https://other.test", "tenant", "A");
     expect(await listDurableScanQueue(otherServer)).toEqual([]);
-    await clearDurableSession(); // a restarted app has no usable native lease
+    await clearDurableSession(); // 应用重启后没有可用的原生租约。
     const newA = await bindDurableSession("https://school.test", "tenant", "A");
     expect(newA).not.toBe(oldA);
     expect((await listDurableScanQueue(newA)).map((item) => item.id)).toEqual(["A-private-queue"]);

@@ -3,9 +3,11 @@ mod connection;
 mod crypto;
 mod drafts;
 mod paths;
+pub mod offline_access;
 mod queue;
 mod schema;
 mod spool;
+pub mod storage;
 mod types;
 
 use tauri::AppHandle;
@@ -22,7 +24,7 @@ pub use drafts::{
     update_durable_draft_status,
 };
 pub use queue::{
-    archive_durable_scan_queue_items, list_durable_scan_queue, persist_durable_scan_queue_item,
+    archive_durable_scan_queue_items, list_durable_scan_queue, persist_durable_scan_queue_item, remove_unstarted_scan_queue_item,
 };
 pub use spool::{
     begin_spool_local_asset, complete_spool_local_asset, read_durable_local_asset,
@@ -250,10 +252,10 @@ mod tests {
 
     #[test]
     fn recovery_keeps_a_500_page_spool_and_the_interrupted_page_checkpoint() {
-        // This is a station-store fixture, rather than a scanner test.  It
-        // models a process kill after page 173 has been accepted through a
-        // remote upload offset but before the desktop can continue the batch.
-        // The encrypted queue is the durable source of truth on restart.
+        // 这是站点存储的测试数据，不是扫描器测试。它模拟
+        // 第 173 页已通过远端上传偏移确认接收后，
+        // 桌面端继续处理批次前进程被终止的情况。
+        // 重启时以加密队列作为持久化事实来源。
         let conn = Connection::open_in_memory().expect("in-memory SQLite");
         initialize_schema(&conn).expect("schema");
         let key = [29_u8; 32];
@@ -282,6 +284,8 @@ mod tests {
                 exam_id: Some("exam-500".to_string()),
                 exam_name: None,
                 capture_batch_id: Some("batch-500".to_string()),
+                capture_batch_name: None,
+                capture_batch_created_at: None,
                 submission_id: None,
                 page_no: Some(page_no),
                 file_name: Some(format!("answer-page-{page_no}.pdf")),
@@ -294,8 +298,8 @@ mod tests {
                 local_asset_id: Some(id.clone()),
                 idempotency_key: Some(format!("stable-page-{page_no}")),
                 retry_count: Some(0),
-                // Page 173 was confirmed remotely to this exact boundary
-                // before the simulated kill.  It must survive recovery.
+                // 模拟终止前，远端已确认第 173 页到这个准确边界；
+                // 恢复后必须保留该边界。
                 confirmed_offset: (page_no == 173).then_some(1_730_000),
                 remote_upload_id: (page_no == 173).then_some("remote-page-173".to_string()),
             };
@@ -512,8 +516,9 @@ mod tests {
         );
         clear_scope().expect("restart clears in-memory lease");
         assert!(with_session(&lease_other_server, || Ok(())).is_err());
-        let lease_a_after_restart =
-            bind_scope("https://example.test/api", &tenant, &actor_a).expect("return A");
+        let expired_lease = super::paths::bind_scope_with_expiry("https://example.test/api", &tenant, &actor_a, Some(chrono::Utc::now() - chrono::Duration::seconds(1))).expect("expired lease");
+        assert!(with_session(&expired_lease, || Ok(())).is_err(), "expiry is checked before local data access");
+        let lease_a_after_restart = super::paths::bind_scope_with_expiry("https://example.test/api", &tenant, &actor_a, Some(chrono::Utc::now() + chrono::Duration::hours(1))).expect("offline return A");
         assert_ne!(lease_a, lease_a_after_restart);
         assert!(with_session(&lease_a, || Ok(())).is_err());
         assert!(with_session(&lease_a_after_restart, || Ok(())).is_ok());

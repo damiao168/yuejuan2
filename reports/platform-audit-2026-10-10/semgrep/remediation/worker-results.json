@@ -1,0 +1,101 @@
+{
+  "findings": [
+    {
+      "ids": [
+        "SG-092",
+        "SG-093",
+        "SG-094"
+      ],
+      "status": "fixed",
+      "files": [
+        "services/image-quality-worker/image_quality/api.py"
+      ],
+      "change": "请求级 opener 拒绝所有自动跳转，关闭被拒绝响应；保留初始同源校验、令牌/租约、限额、超时与错误映射。"
+    },
+    {
+      "ids": [
+        "SG-097",
+        "SG-098"
+      ],
+      "status": "fixed",
+      "files": [
+        "services/ocr-worker/ocr_worker/api.py"
+      ],
+      "change": "下载和 JSON 入口拒绝所有自动跳转，关闭被拒绝响应，保留现有认证与能力边界。"
+    },
+    {
+      "ids": [
+        "SG-099"
+      ],
+      "status": "fixed",
+      "files": [
+        "services/ocr-worker/ocr_worker/math_runner.py"
+      ],
+      "change": "数学验证复用同包拒绝跳转入口，内部令牌只发送到初始服务，原有 422/超时语义保留。"
+    },
+    {
+      "ids": [
+        "SG-100",
+        "SG-101",
+        "SG-102"
+      ],
+      "status": "fixed",
+      "files": [
+        "services/page-processing-worker/page_processing/api.py"
+      ],
+      "change": "下载、上传和 JSON 入口拒绝所有自动跳转并释放原响应，保留普通 409 幂等回读与 Retry-After。"
+    },
+    {
+      "ids": [
+        "SG-104"
+      ],
+      "status": "fixed",
+      "files": [
+        "services/subjective-grading-worker/subjective_grading_worker/api.py"
+      ],
+      "change": "主观题服务请求拒绝所有自动跳转并关闭原响应，保留会话与任务租约头。"
+    }
+  ],
+  "validation": [
+    {
+      "command": "python -m pytest -q services/ocr-worker/tests",
+      "result": "358 passed, 68 subtests passed（子代理首轮，随后原响应关闭增量由根代理复测）",
+      "exit_code": 0
+    },
+    {
+      "command": "python -m pytest -q services/subjective-grading-worker/tests",
+      "result": "22 passed（子代理首轮）",
+      "exit_code": 0
+    },
+    {
+      "command": "python -m pytest -q services/image-quality-worker/tests",
+      "result": "84 passed（独立重跑，见 worker-image-quality-pytest.log）",
+      "exit_code": 0
+    },
+    {
+      "command": "python -m pytest -q services/page-processing-worker/tests",
+      "result": "163 passed（根代理重跑；先前并行时一个 OpenCV 分配失败，单项及顺序全套均通过）",
+      "exit_code": 0
+    },
+    {
+      "command": "python -m pytest -q --import-mode=importlib services/image-quality-worker/tests/test_redirect_boundaries_semgrep.py services/ocr-worker/tests/test_redirect_boundaries_semgrep.py services/page-processing-worker/tests/test_redirect_boundaries_semgrep.py services/subjective-grading-worker/tests/test_redirect_boundaries_semgrep.py docs/architecture/tools/test_xml_security.py services/image-quality-worker/tests/test_api.py services/ocr-worker/tests/test_api.py services/ocr-worker/tests/test_api_batch51.py services/ocr-worker/tests/test_math_client_tls_batch54.py services/ocr-worker/tests/test_symbolic_runner.py services/page-processing-worker/tests/test_api.py services/page-processing-worker/tests/test_api_batch31.py services/subjective-grading-worker/tests/test_api_integration.py",
+      "result": "237 passed in 5.30s；在原响应关闭修正后执行。含 131 个跳转/正常/过期租约用例、20 个关闭响应参数用例、12 个 XML 用例及 74 个已有网络/TLS/错误处理用例。",
+      "exit_code": 0,
+      "environment": {
+        "PYTHONPATH": "docs/architecture/tools"
+      }
+    },
+    {
+      "command": "python -m ruff check ai-services/grading_agent/model.py tests/e2e/story060_grading_agent.py services/image-quality-worker/image_quality/api.py services/ocr-worker/ocr_worker/api.py services/ocr-worker/ocr_worker/math_runner.py services/page-processing-worker/page_processing/api.py services/subjective-grading-worker/subjective_grading_worker/api.py docs/architecture/tools/build_diagrams.py docs/architecture/tools/verify_delivery.py ai-services/tests/test_model_transport_security.py services/image-quality-worker/tests/test_redirect_boundaries_semgrep.py services/ocr-worker/tests/test_redirect_boundaries_semgrep.py services/page-processing-worker/tests/test_redirect_boundaries_semgrep.py services/subjective-grading-worker/tests/test_redirect_boundaries_semgrep.py docs/architecture/tools/test_xml_security.py",
+      "result": "All checks passed",
+      "exit_code": 0
+    }
+  ],
+  "review": "独立增量复核见 review-results.json。发现的被拒绝响应未关闭问题已修正；并非全仓或全部关联文件全文复审。",
+  "limitations": [
+    "双 origin 服务使用回环端口和合成令牌/租约，不是真实网关租约到期集成验证。",
+    "过期租约用例只证明传输层保留服务端 403，不把结果转为成功或重放到其他目标。",
+    "本次未启动真实 Worker Docker Compose 拓扑或访问生产服务。",
+    "部署地址若依赖跳转，须将配置改成最终授权地址。"
+  ]
+}

@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest";
 import { defaultExamWorkspaceSection } from "./defaultExamWorkspaceRoute";
 
 describe("defaultExamWorkspaceSection", () => {
-  it.each([["draft", "settings"], ["configured", "settings"], ["ready", "settings"], ["collecting", "capture"], ["grading", "grading"], ["reviewing", "grading"], ["published", "overview"]])("routes %s exams to %s", (status, expected) => {
-    expect(defaultExamWorkspaceSection(status)).toBe(expected);
+  it.each([
+    ["draft", "students"], ["configured", "students"],
+    ["ready", "capture"], ["preparation_confirmed", "capture"], ["collecting", "capture"], ["processing", "capture"],
+    ["grading", "grading"], ["reviewing", "grading"],
+    ["finalized", "scores"], ["published", "scores"], ["archived", "scores"],
+    ["future_status", "students"]
+  ])("opens the next working section for %s exams", (status, section) => {
+    expect(defaultExamWorkspaceSection(status)).toBe(section);
   });
 });

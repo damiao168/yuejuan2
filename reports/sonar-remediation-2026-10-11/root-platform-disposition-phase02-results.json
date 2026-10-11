@@ -1,0 +1,1365 @@
+{
+  "started_at": "2026-10-11T18:38:22.569067+08:00",
+  "project": "yuejuan-local-workspace-20261010",
+  "checkpoint_analysis_id": "5686bdb3-be93-4c4f-b4e6-79c47031022d",
+  "no_rule_or_scope_change": true,
+  "records": [
+    {
+      "key": "7f939914-9bb6-4005-80a0-4c2efe12eedb",
+      "file": "ai-services/grading_agent/server.py",
+      "source_sha256": "62c2b234657f1f29d444968d8ce815647f820b1b8c7b3eb7d6a6db6d617c637e",
+      "before": {
+        "key": "7f939914-9bb6-4005-80a0-4c2efe12eedb",
+        "rule": "python:S5332",
+        "severity": "MINOR",
+        "component": "yuejuan-local-workspace-20261010:ai-services/grading_agent/server.py",
+        "project": "yuejuan-local-workspace-20261010",
+        "line": 291,
+        "hash": "7de2214f85430c116ae9949ea2b2a4c1",
+        "textRange": {
+          "startLine": 291,
+          "endLine": 291,
+          "startOffset": 8,
+          "endOffset": 30
+        },
+        "flows": [],
+        "status": "OPEN",
+        "message": "Using HTTP protocol is insecure. Use HTTPS instead.",
+        "effort": "30min",
+        "debt": "30min",
+        "author": "",
+        "tags": [
+          "cwe",
+          "former-hotspot"
+        ],
+        "transitions": [
+          "accept",
+          "falsepositive",
+          "confirm",
+          "resolve",
+          "wontfix"
+        ],
+        "actions": [
+          "set_type",
+          "set_tags",
+          "comment",
+          "set_severity",
+          "assign"
+        ],
+        "comments": [],
+        "creationDate": "2026-10-11T11:43:02+0800",
+        "updateDate": "2026-10-11T11:43:02+0800",
+        "type": "VULNERABILITY",
+        "scope": "MAIN",
+        "quickFixAvailable": false,
+        "messageFormattings": [],
+        "codeVariants": [],
+        "cleanCodeAttribute": "COMPLETE",
+        "cleanCodeAttributeCategory": "INTENTIONAL",
+        "impacts": [
+          {
+            "softwareQuality": "SECURITY",
+            "severity": "LOW"
+          }
+        ],
+        "issueStatus": "OPEN",
+        "prioritizedRule": false,
+        "fromSonarQubeUpdate": false,
+        "internalTags": [],
+        "linkedTicketStatus": "NOT_LINKED"
+      },
+      "transition": "falsepositive",
+      "reason": "告警命中 ThreadingHTTPServer 构造/继承，但该监听 socket 在处理请求前由服务端 TLS 上下文包装。调用链中的默认拒绝策略和真实握手负例已验证。 生产/缺省/未知环境在绑定前要求成对证书，最低TLS1.2；开发HTTP仅明确环境、真实bool授权和字面IPv4回环。",
+      "comment_result": {
+        "issue": {
+          "key": "7f939914-9bb6-4005-80a0-4c2efe12eedb",
+          "rule": "python:S5332",
+          "severity": "MINOR",
+          "component": "yuejuan-local-workspace-20261010:ai-services/grading_agent/server.py",
+          "project": "yuejuan-local-workspace-20261010",
+          "line": 291,
+          "hash": "7de2214f85430c116ae9949ea2b2a4c1",
+          "textRange": {
+            "startLine": 291,
+            "endLine": 291,
+            "startOffset": 8,
+            "endOffset": 30
+          },
+          "flows": [],
+          "status": "OPEN",
+          "message": "Using HTTP protocol is insecure. Use HTTPS instead.",
+          "effort": "30min",
+          "debt": "30min",
+          "author": "",
+          "tags": [
+            "cwe",
+            "former-hotspot"
+          ],
+          "transitions": [
+            "accept",
+            "falsepositive",
+            "confirm",
+            "resolve",
+            "wontfix"
+          ],
+          "actions": [
+            "set_type",
+            "set_tags",
+            "comment",
+            "set_severity",
+            "assign"
+          ],
+          "comments": [
+            {
+              "key": "02593e79-7926-4907-8b68-775c6f52d1c1",
+              "login": "admin",
+              "htmlText": "本地逐项复核：告警命中 ThreadingHTTPServer 构造/继承，但该监听 socket 在处理请求前由服务端 TLS 上下文包装。调用链中的默认拒绝策略和真实握手负例已验证。 生产/缺省/未知环境在绑定前要求成对证书，最低TLS1.2；开发HTTP仅明确环境、真实bool授权和字面IPv4回环。<br/>源码 SHA256：62c2b234657f1f29d444968d8ce815647f820b1b8c7b3eb7d6a6db6d617c637e<br/>扫描分析：5686bdb3-be93-4c4f-b4e6-79c47031022d<br/>复核记录：reports/sonar-remediation-2026-10-11/root-platform-disposition-phase02-plan.json。当前源码SHA与完整复扫checkpoint02一致；真实TLS握手测试exit0，无skip；不修改生产监听行为。",
+              "markdown": "本地逐项复核：告警命中 ThreadingHTTPServer 构造/继承，但该监听 socket 在处理请求前由服务端 TLS 上下文包装。调用链中的默认拒绝策略和真实握手负例已验证。 生产/缺省/未知环境在绑定前要求成对证书，最低TLS1.2；开发HTTP仅明确环境、真实bool授权和字面IPv4回环。\n源码 SHA256：62c2b234657f1f29d444968d8ce815647f820b1b8c7b3eb7d6a6db6d617c637e\n扫描分析：5686bdb3-be93-4c4f-b4e6-79c47031022d\n复核记录：reports/sonar-remediation-2026-10-11/root-platform-disposition-phase02-plan.json。当前源码SHA与完整复扫checkpoint02一致；真实TLS握手测试exit0，无skip；不修改生产监听行为。",
+              "updatable": true,
+              "createdAt": "2026-10-11T18:38:24+0800"
+            }
+          ],
+          "creationDate": "2026-10-11T11:43:02+0800",
+          "updateDate": "2026-10-11T18:38:24+0800",
+          "type": "VULNERABILITY",
+          "scope": "MAIN",
+          "quickFixAvailable": false,
+          "messageFormattings": [],
+          "codeVariants": [],
+          "cleanCodeAttribute": "COMPLETE",
+          "cleanCodeAttributeCategory": "INTENTIONAL",
+          "impacts": [
+            {
+              "softwareQuality": "SECURITY",
+              "severity": "LOW"
+            }
+          ],
+          "issueStatus": "OPEN",
+          "prioritizedRule": false,
+          "fromSonarQubeUpdate": false,
+          "internalTags": [],
+          "linkedTicketStatus": "NOT_LINKED"
+        },
+        "components": [
+          {
+            "key": "yuejuan-local-workspace-20261010:ai-services/grading_agent/server.py",
+            "enabled": true,
+            "qualifier": "FIL",
+            "name": "server.py",
+            "longName": "ai-services/grading_agent/server.py",
+            "path": "ai-services/grading_agent/server.py"
+          },
+          {
+            "key": "yuejuan-local-workspace-20261010",
+            "enabled": true,
+            "qualifier": "TRK",
+            "name": "yuejuan current local workspace 2026-10-10",
+            "longName": "yuejuan current local workspace 2026-10-10"
+          }
+        ],
+        "rules": [
+          {
+            "key": "python:S5332",
+            "name": "Clear-text protocols should not be used",
+            "lang": "py",
+            "status": "READY",
+            "langName": "Python"
+          }
+        ],
+        "users": [
+          {
+            "login": "admin",
+            "name": "Administrator",
+            "active": true
+          }
+        ]
+      },
+      "transition_result": {
+        "issue": {
+          "key": "7f939914-9bb6-4005-80a0-4c2efe12eedb",
+          "rule": "python:S5332",
+          "severity": "MINOR",
+          "component": "yuejuan-local-workspace-20261010:ai-services/grading_agent/server.py",
+          "project": "yuejuan-local-workspace-20261010",
+          "line": 291,
+          "hash": "7de2214f85430c116ae9949ea2b2a4c1",
+          "textRange": {
+            "startLine": 291,
+            "endLine": 291,
+            "startOffset": 8,
+            "endOffset": 30
+          },
+          "flows": [],
+          "resolution": "FALSE-POSITIVE",
+          "status": "RESOLVED",
+          "message": "Using HTTP protocol is insecure. Use HTTPS instead.",
+          "effort": "30min",
+          "debt": "30min",
+          "author": "",
+          "tags": [
+            "cwe",
+            "former-hotspot"
+          ],
+          "transitions": [
+            "reopen"
+          ],
+          "actions": [
+            "set_tags",
+            "comment"
+          ],
+          "comments": [
+            {
+              "key": "02593e79-7926-4907-8b68-775c6f52d1c1",
+              "login": "admin",
+              "htmlText": "本地逐项复核：告警命中 ThreadingHTTPServer 构造/继承，但该监听 socket 在处理请求前由服务端 TLS 上下文包装。调用链中的默认拒绝策略和真实握手负例已验证。 生产/缺省/未知环境在绑定前要求成对证书，最低TLS1.2；开发HTTP仅明确环境、真实bool授权和字面IPv4回环。<br/>源码 SHA256：62c2b234657f1f29d444968d8ce815647f820b1b8c7b3eb7d6a6db6d617c637e<br/>扫描分析：5686bdb3-be93-4c4f-b4e6-79c47031022d<br/>复核记录：reports/sonar-remediation-2026-10-11/root-platform-disposition-phase02-plan.json。当前源码SHA与完整复扫checkpoint02一致；真实TLS握手测试exit0，无skip；不修改生产监听行为。",
+              "markdown": "本地逐项复核：告警命中 ThreadingHTTPServer 构造/继承，但该监听 socket 在处理请求前由服务端 TLS 上下文包装。调用链中的默认拒绝策略和真实握手负例已验证。 生产/缺省/未知环境在绑定前要求成对证书，最低TLS1.2；开发HTTP仅明确环境、真实bool授权和字面IPv4回环。\n源码 SHA256：62c2b234657f1f29d444968d8ce815647f820b1b8c7b3eb7d6a6db6d617c637e\n扫描分析：5686bdb3-be93-4c4f-b4e6-79c47031022d\n复核记录：reports/sonar-remediation-2026-10-11/root-platform-disposition-phase02-plan.json。当前源码SHA与完整复扫checkpoint02一致；真实TLS握手测试exit0，无skip；不修改生产监听行为。",
+              "updatable": true,
+              "createdAt": "2026-10-11T18:38:24+0800"
+            }
+          ],
+          "creationDate": "2026-10-11T11:43:02+0800",
+          "updateDate": "2026-10-11T18:38:26+0800",
+          "type": "VULNERABILITY",
+          "scope": "MAIN",
+          "quickFixAvailable": false,
+          "messageFormattings": [],
+          "codeVariants": [],
+          "cleanCodeAttribute": "COMPLETE",
+          "cleanCodeAttributeCategory": "INTENTIONAL",
+          "impacts": [
+            {
+              "softwareQuality": "SECURITY",
+              "severity": "LOW"
+            }
+          ],
+          "issueStatus": "FALSE_POSITIVE",
+          "prioritizedRule": false,
+          "fromSonarQubeUpdate": false,
+          "internalTags": [],
+          "linkedTicketStatus": "NOT_LINKED"
+        },
+        "components": [
+          {
+            "key": "yuejuan-local-workspace-20261010:ai-services/grading_agent/server.py",
+            "enabled": true,
+            "qualifier": "FIL",
+            "name": "server.py",
+            "longName": "ai-services/grading_agent/server.py",
+            "path": "ai-services/grading_agent/server.py"
+          },
+          {
+            "key": "yuejuan-local-workspace-20261010",
+            "enabled": true,
+            "qualifier": "TRK",
+            "name": "yuejuan current local workspace 2026-10-10",
+            "longName": "yuejuan current local workspace 2026-10-10"
+          }
+        ],
+        "rules": [
+          {
+            "key": "python:S5332",
+            "name": "Clear-text protocols should not be used",
+            "lang": "py",
+            "status": "READY",
+            "langName": "Python"
+          }
+        ],
+        "users": [
+          {
+            "login": "admin",
+            "name": "Administrator",
+            "active": true
+          }
+        ]
+      },
+      "after": [
+        {
+          "key": "7f939914-9bb6-4005-80a0-4c2efe12eedb",
+          "rule": "python:S5332",
+          "severity": "MINOR",
+          "component": "yuejuan-local-workspace-20261010:ai-services/grading_agent/server.py",
+          "project": "yuejuan-local-workspace-20261010",
+          "line": 291,
+          "hash": "7de2214f85430c116ae9949ea2b2a4c1",
+          "textRange": {
+            "startLine": 291,
+            "endLine": 291,
+            "startOffset": 8,
+            "endOffset": 30
+          },
+          "flows": [],
+          "resolution": "FALSE-POSITIVE",
+          "status": "RESOLVED",
+          "message": "Using HTTP protocol is insecure. Use HTTPS instead.",
+          "effort": "30min",
+          "debt": "30min",
+          "author": "",
+          "tags": [
+            "cwe",
+            "former-hotspot"
+          ],
+          "transitions": [
+            "reopen"
+          ],
+          "actions": [
+            "set_tags",
+            "comment"
+          ],
+          "comments": [
+            {
+              "key": "02593e79-7926-4907-8b68-775c6f52d1c1",
+              "login": "admin",
+              "htmlText": "本地逐项复核：告警命中 ThreadingHTTPServer 构造/继承，但该监听 socket 在处理请求前由服务端 TLS 上下文包装。调用链中的默认拒绝策略和真实握手负例已验证。 生产/缺省/未知环境在绑定前要求成对证书，最低TLS1.2；开发HTTP仅明确环境、真实bool授权和字面IPv4回环。<br/>源码 SHA256：62c2b234657f1f29d444968d8ce815647f820b1b8c7b3eb7d6a6db6d617c637e<br/>扫描分析：5686bdb3-be93-4c4f-b4e6-79c47031022d<br/>复核记录：reports/sonar-remediation-2026-10-11/root-platform-disposition-phase02-plan.json。当前源码SHA与完整复扫checkpoint02一致；真实TLS握手测试exit0，无skip；不修改生产监听行为。",
+              "markdown": "本地逐项复核：告警命中 ThreadingHTTPServer 构造/继承，但该监听 socket 在处理请求前由服务端 TLS 上下文包装。调用链中的默认拒绝策略和真实握手负例已验证。 生产/缺省/未知环境在绑定前要求成对证书，最低TLS1.2；开发HTTP仅明确环境、真实bool授权和字面IPv4回环。\n源码 SHA256：62c2b234657f1f29d444968d8ce815647f820b1b8c7b3eb7d6a6db6d617c637e\n扫描分析：5686bdb3-be93-4c4f-b4e6-79c47031022d\n复核记录：reports/sonar-remediation-2026-10-11/root-platform-disposition-phase02-plan.json。当前源码SHA与完整复扫checkpoint02一致；真实TLS握手测试exit0，无skip；不修改生产监听行为。",
+              "updatable": true,
+              "createdAt": "2026-10-11T18:38:24+0800"
+            }
+          ],
+          "creationDate": "2026-10-11T11:43:02+0800",
+          "updateDate": "2026-10-11T18:38:26+0800",
+          "type": "VULNERABILITY",
+          "scope": "MAIN",
+          "quickFixAvailable": false,
+          "messageFormattings": [],
+          "codeVariants": [],
+          "cleanCodeAttribute": "COMPLETE",
+          "cleanCodeAttributeCategory": "INTENTIONAL",
+          "impacts": [
+            {
+              "softwareQuality": "SECURITY",
+              "severity": "LOW"
+            }
+          ],
+          "issueStatus": "FALSE_POSITIVE",
+          "prioritizedRule": false,
+          "fromSonarQubeUpdate": false,
+          "internalTags": [],
+          "linkedTicketStatus": "NOT_LINKED"
+        }
+      ],
+      "status": "platform_disposition_verified"
+    },
+    {
+      "key": "0cb24e71-bce5-4ed4-b2c5-ca9aac275754",
+      "file": "services/math-verification-worker/math_verification_worker/server.py",
+      "source_sha256": "d9d6a02c89cea615738f507e3462e185e4c9992537acdb6b93ce28427f9a4f1f",
+      "before": {
+        "key": "0cb24e71-bce5-4ed4-b2c5-ca9aac275754",
+        "rule": "python:S5332",
+        "severity": "MINOR",
+        "component": "yuejuan-local-workspace-20261010:services/math-verification-worker/math_verification_worker/server.py",
+        "project": "yuejuan-local-workspace-20261010",
+        "line": 186,
+        "hash": "7de2214f85430c116ae9949ea2b2a4c1",
+        "textRange": {
+          "startLine": 186,
+          "endLine": 186,
+          "startOffset": 8,
+          "endOffset": 30
+        },
+        "flows": [],
+        "status": "OPEN",
+        "message": "Using HTTP protocol is insecure. Use HTTPS instead.",
+        "effort": "30min",
+        "debt": "30min",
+        "author": "",
+        "tags": [
+          "cwe",
+          "former-hotspot"
+        ],
+        "transitions": [
+          "accept",
+          "falsepositive",
+          "confirm",
+          "resolve",
+          "wontfix"
+        ],
+        "actions": [
+          "set_type",
+          "set_tags",
+          "comment",
+          "set_severity",
+          "assign"
+        ],
+        "comments": [],
+        "creationDate": "2026-10-11T11:43:02+0800",
+        "updateDate": "2026-10-11T11:43:02+0800",
+        "type": "VULNERABILITY",
+        "scope": "MAIN",
+        "quickFixAvailable": false,
+        "messageFormattings": [],
+        "codeVariants": [],
+        "cleanCodeAttribute": "COMPLETE",
+        "cleanCodeAttributeCategory": "INTENTIONAL",
+        "impacts": [
+          {
+            "softwareQuality": "SECURITY",
+            "severity": "LOW"
+          }
+        ],
+        "issueStatus": "OPEN",
+        "prioritizedRule": false,
+        "fromSonarQubeUpdate": false,
+        "internalTags": [],
+        "linkedTicketStatus": "NOT_LINKED"
+      },
+      "transition": "falsepositive",
+      "reason": "告警命中 ThreadingHTTPServer 构造/继承，但该监听 socket 在处理请求前由服务端 TLS 上下文包装。调用链中的默认拒绝策略和真实握手负例已验证。 生产/缺省/未知环境在绑定前要求成对证书，最低TLS1.2；开发HTTP仅明确环境、真实bool授权和字面IPv4回环。",
+      "comment_result": {
+        "issue": {
+          "key": "0cb24e71-bce5-4ed4-b2c5-ca9aac275754",
+          "rule": "python:S5332",
+          "severity": "MINOR",
+          "component": "yuejuan-local-workspace-20261010:services/math-verification-worker/math_verification_worker/server.py",
+          "project": "yuejuan-local-workspace-20261010",
+          "line": 186,
+          "hash": "7de2214f85430c116ae9949ea2b2a4c1",
+          "textRange": {
+            "startLine": 186,
+            "endLine": 186,
+            "startOffset": 8,
+            "endOffset": 30
+          },
+          "flows": [],
+          "status": "OPEN",
+          "message": "Using HTTP protocol is insecure. Use HTTPS instead.",
+          "effort": "30min",
+          "debt": "30min",
+          "author": "",
+          "tags": [
+            "cwe",
+            "former-hotspot"
+          ],
+          "transitions": [
+            "accept",
+            "falsepositive",
+            "confirm",
+            "resolve",
+            "wontfix"
+          ],
+          "actions": [
+            "set_type",
+            "set_tags",
+            "comment",
+            "set_severity",
+            "assign"
+          ],
+          "comments": [
+            {
+              "key": "f7c08d1b-de5b-4c4a-933d-cffb9c222e5d",
+              "login": "admin",
+              "htmlText": "本地逐项复核：告警命中 ThreadingHTTPServer 构造/继承，但该监听 socket 在处理请求前由服务端 TLS 上下文包装。调用链中的默认拒绝策略和真实握手负例已验证。 生产/缺省/未知环境在绑定前要求成对证书，最低TLS1.2；开发HTTP仅明确环境、真实bool授权和字面IPv4回环。<br/>源码 SHA256：d9d6a02c89cea615738f507e3462e185e4c9992537acdb6b93ce28427f9a4f1f<br/>扫描分析：5686bdb3-be93-4c4f-b4e6-79c47031022d<br/>复核记录：reports/sonar-remediation-2026-10-11/root-platform-disposition-phase02-plan.json。当前源码SHA与完整复扫checkpoint02一致；真实TLS握手测试exit0，无skip；不修改生产监听行为。",
+              "markdown": "本地逐项复核：告警命中 ThreadingHTTPServer 构造/继承，但该监听 socket 在处理请求前由服务端 TLS 上下文包装。调用链中的默认拒绝策略和真实握手负例已验证。 生产/缺省/未知环境在绑定前要求成对证书，最低TLS1.2；开发HTTP仅明确环境、真实bool授权和字面IPv4回环。\n源码 SHA256：d9d6a02c89cea615738f507e3462e185e4c9992537acdb6b93ce28427f9a4f1f\n扫描分析：5686bdb3-be93-4c4f-b4e6-79c47031022d\n复核记录：reports/sonar-remediation-2026-10-11/root-platform-disposition-phase02-plan.json。当前源码SHA与完整复扫checkpoint02一致；真实TLS握手测试exit0，无skip；不修改生产监听行为。",
+              "updatable": true,
+              "createdAt": "2026-10-11T18:38:31+0800"
+            }
+          ],
+          "creationDate": "2026-10-11T11:43:02+0800",
+          "updateDate": "2026-10-11T18:38:31+0800",
+          "type": "VULNERABILITY",
+          "scope": "MAIN",
+          "quickFixAvailable": false,
+          "messageFormattings": [],
+          "codeVariants": [],
+          "cleanCodeAttribute": "COMPLETE",
+          "cleanCodeAttributeCategory": "INTENTIONAL",
+          "impacts": [
+            {
+              "softwareQuality": "SECURITY",
+              "severity": "LOW"
+            }
+          ],
+          "issueStatus": "OPEN",
+          "prioritizedRule": false,
+          "fromSonarQubeUpdate": false,
+          "internalTags": [],
+          "linkedTicketStatus": "NOT_LINKED"
+        },
+        "components": [
+          {
+            "key": "yuejuan-local-workspace-20261010:services/math-verification-worker/math_verification_worker/server.py",
+            "enabled": true,
+            "qualifier": "FIL",
+            "name": "server.py",
+            "longName": "services/math-verification-worker/math_verification_worker/server.py",
+            "path": "services/math-verification-worker/math_verification_worker/server.py"
+          },
+          {
+            "key": "yuejuan-local-workspace-20261010",
+            "enabled": true,
+            "qualifier": "TRK",
+            "name": "yuejuan current local workspace 2026-10-10",
+            "longName": "yuejuan current local workspace 2026-10-10"
+          }
+        ],
+        "rules": [
+          {
+            "key": "python:S5332",
+            "name": "Clear-text protocols should not be used",
+            "lang": "py",
+            "status": "READY",
+            "langName": "Python"
+          }
+        ],
+        "users": [
+          {
+            "login": "admin",
+            "name": "Administrator",
+            "active": true
+          }
+        ]
+      },
+      "transition_result": {
+        "issue": {
+          "key": "0cb24e71-bce5-4ed4-b2c5-ca9aac275754",
+          "rule": "python:S5332",
+          "severity": "MINOR",
+          "component": "yuejuan-local-workspace-20261010:services/math-verification-worker/math_verification_worker/server.py",
+          "project": "yuejuan-local-workspace-20261010",
+          "line": 186,
+          "hash": "7de2214f85430c116ae9949ea2b2a4c1",
+          "textRange": {
+            "startLine": 186,
+            "endLine": 186,
+            "startOffset": 8,
+            "endOffset": 30
+          },
+          "flows": [],
+          "resolution": "FALSE-POSITIVE",
+          "status": "RESOLVED",
+          "message": "Using HTTP protocol is insecure. Use HTTPS instead.",
+          "effort": "30min",
+          "debt": "30min",
+          "author": "",
+          "tags": [
+            "cwe",
+            "former-hotspot"
+          ],
+          "transitions": [
+            "reopen"
+          ],
+          "actions": [
+            "set_tags",
+            "comment"
+          ],
+          "comments": [
+            {
+              "key": "f7c08d1b-de5b-4c4a-933d-cffb9c222e5d",
+              "login": "admin",
+              "htmlText": "本地逐项复核：告警命中 ThreadingHTTPServer 构造/继承，但该监听 socket 在处理请求前由服务端 TLS 上下文包装。调用链中的默认拒绝策略和真实握手负例已验证。 生产/缺省/未知环境在绑定前要求成对证书，最低TLS1.2；开发HTTP仅明确环境、真实bool授权和字面IPv4回环。<br/>源码 SHA256：d9d6a02c89cea615738f507e3462e185e4c9992537acdb6b93ce28427f9a4f1f<br/>扫描分析：5686bdb3-be93-4c4f-b4e6-79c47031022d<br/>复核记录：reports/sonar-remediation-2026-10-11/root-platform-disposition-phase02-plan.json。当前源码SHA与完整复扫checkpoint02一致；真实TLS握手测试exit0，无skip；不修改生产监听行为。",
+              "markdown": "本地逐项复核：告警命中 ThreadingHTTPServer 构造/继承，但该监听 socket 在处理请求前由服务端 TLS 上下文包装。调用链中的默认拒绝策略和真实握手负例已验证。 生产/缺省/未知环境在绑定前要求成对证书，最低TLS1.2；开发HTTP仅明确环境、真实bool授权和字面IPv4回环。\n源码 SHA256：d9d6a02c89cea615738f507e3462e185e4c9992537acdb6b93ce28427f9a4f1f\n扫描分析：5686bdb3-be93-4c4f-b4e6-79c47031022d\n复核记录：reports/sonar-remediation-2026-10-11/root-platform-disposition-phase02-plan.json。当前源码SHA与完整复扫checkpoint02一致；真实TLS握手测试exit0，无skip；不修改生产监听行为。",
+              "updatable": true,
+              "createdAt": "2026-10-11T18:38:31+0800"
+            }
+          ],
+          "creationDate": "2026-10-11T11:43:02+0800",
+          "updateDate": "2026-10-11T18:38:33+0800",
+          "type": "VULNERABILITY",
+          "scope": "MAIN",
+          "quickFixAvailable": false,
+          "messageFormattings": [],
+          "codeVariants": [],
+          "cleanCodeAttribute": "COMPLETE",
+          "cleanCodeAttributeCategory": "INTENTIONAL",
+          "impacts": [
+            {
+              "softwareQuality": "SECURITY",
+              "severity": "LOW"
+            }
+          ],
+          "issueStatus": "FALSE_POSITIVE",
+          "prioritizedRule": false,
+          "fromSonarQubeUpdate": false,
+          "internalTags": [],
+          "linkedTicketStatus": "NOT_LINKED"
+        },
+        "components": [
+          {
+            "key": "yuejuan-local-workspace-20261010:services/math-verification-worker/math_verification_worker/server.py",
+            "enabled": true,
+            "qualifier": "FIL",
+            "name": "server.py",
+            "longName": "services/math-verification-worker/math_verification_worker/server.py",
+            "path": "services/math-verification-worker/math_verification_worker/server.py"
+          },
+          {
+            "key": "yuejuan-local-workspace-20261010",
+            "enabled": true,
+            "qualifier": "TRK",
+            "name": "yuejuan current local workspace 2026-10-10",
+            "longName": "yuejuan current local workspace 2026-10-10"
+          }
+        ],
+        "rules": [
+          {
+            "key": "python:S5332",
+            "name": "Clear-text protocols should not be used",
+            "lang": "py",
+            "status": "READY",
+            "langName": "Python"
+          }
+        ],
+        "users": [
+          {
+            "login": "admin",
+            "name": "Administrator",
+            "active": true
+          }
+        ]
+      },
+      "after": [
+        {
+          "key": "0cb24e71-bce5-4ed4-b2c5-ca9aac275754",
+          "rule": "python:S5332",
+          "severity": "MINOR",
+          "component": "yuejuan-local-workspace-20261010:services/math-verification-worker/math_verification_worker/server.py",
+          "project": "yuejuan-local-workspace-20261010",
+          "line": 186,
+          "hash": "7de2214f85430c116ae9949ea2b2a4c1",
+          "textRange": {
+            "startLine": 186,
+            "endLine": 186,
+            "startOffset": 8,
+            "endOffset": 30
+          },
+          "flows": [],
+          "resolution": "FALSE-POSITIVE",
+          "status": "RESOLVED",
+          "message": "Using HTTP protocol is insecure. Use HTTPS instead.",
+          "effort": "30min",
+          "debt": "30min",
+          "author": "",
+          "tags": [
+            "cwe",
+            "former-hotspot"
+          ],
+          "transitions": [
+            "reopen"
+          ],
+          "actions": [
+            "set_tags",
+            "comment"
+          ],
+          "comments": [
+            {
+              "key": "f7c08d1b-de5b-4c4a-933d-cffb9c222e5d",
+              "login": "admin",
+              "htmlText": "本地逐项复核：告警命中 ThreadingHTTPServer 构造/继承，但该监听 socket 在处理请求前由服务端 TLS 上下文包装。调用链中的默认拒绝策略和真实握手负例已验证。 生产/缺省/未知环境在绑定前要求成对证书，最低TLS1.2；开发HTTP仅明确环境、真实bool授权和字面IPv4回环。<br/>源码 SHA256：d9d6a02c89cea615738f507e3462e185e4c9992537acdb6b93ce28427f9a4f1f<br/>扫描分析：5686bdb3-be93-4c4f-b4e6-79c47031022d<br/>复核记录：reports/sonar-remediation-2026-10-11/root-platform-disposition-phase02-plan.json。当前源码SHA与完整复扫checkpoint02一致；真实TLS握手测试exit0，无skip；不修改生产监听行为。",
+              "markdown": "本地逐项复核：告警命中 ThreadingHTTPServer 构造/继承，但该监听 socket 在处理请求前由服务端 TLS 上下文包装。调用链中的默认拒绝策略和真实握手负例已验证。 生产/缺省/未知环境在绑定前要求成对证书，最低TLS1.2；开发HTTP仅明确环境、真实bool授权和字面IPv4回环。\n源码 SHA256：d9d6a02c89cea615738f507e3462e185e4c9992537acdb6b93ce28427f9a4f1f\n扫描分析：5686bdb3-be93-4c4f-b4e6-79c47031022d\n复核记录：reports/sonar-remediation-2026-10-11/root-platform-disposition-phase02-plan.json。当前源码SHA与完整复扫checkpoint02一致；真实TLS握手测试exit0，无skip；不修改生产监听行为。",
+              "updatable": true,
+              "createdAt": "2026-10-11T18:38:31+0800"
+            }
+          ],
+          "creationDate": "2026-10-11T11:43:02+0800",
+          "updateDate": "2026-10-11T18:38:33+0800",
+          "type": "VULNERABILITY",
+          "scope": "MAIN",
+          "quickFixAvailable": false,
+          "messageFormattings": [],
+          "codeVariants": [],
+          "cleanCodeAttribute": "COMPLETE",
+          "cleanCodeAttributeCategory": "INTENTIONAL",
+          "impacts": [
+            {
+              "softwareQuality": "SECURITY",
+              "severity": "LOW"
+            }
+          ],
+          "issueStatus": "FALSE_POSITIVE",
+          "prioritizedRule": false,
+          "fromSonarQubeUpdate": false,
+          "internalTags": [],
+          "linkedTicketStatus": "NOT_LINKED"
+        }
+      ],
+      "status": "platform_disposition_verified"
+    },
+    {
+      "key": "ae9bde8c-38e1-458d-9216-cdd5998fc7d5",
+      "file": "docs/architecture/tools/render_native.js",
+      "source_sha256": "85e0b8d9604713f3506c56758a3af02977ef66e35bc66ff7d3136e129eefac65",
+      "before": {
+        "key": "ae9bde8c-38e1-458d-9216-cdd5998fc7d5",
+        "rule": "javascript:S7721",
+        "severity": "MAJOR",
+        "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/render_native.js",
+        "project": "yuejuan-local-workspace-20261010",
+        "line": 62,
+        "hash": "6372981c1e70fe46821123b54cc6c7ef",
+        "textRange": {
+          "startLine": 62,
+          "endLine": 62,
+          "startOffset": 8,
+          "endOffset": 34
+        },
+        "flows": [],
+        "status": "OPEN",
+        "message": "Move function 'crossesHorizontal' to the outer scope.",
+        "effort": "5min",
+        "debt": "5min",
+        "author": "",
+        "tags": [
+          "performance",
+          "optimization",
+          "editable-source",
+          "javascript"
+        ],
+        "transitions": [
+          "accept",
+          "falsepositive",
+          "confirm",
+          "resolve",
+          "wontfix"
+        ],
+        "actions": [
+          "set_type",
+          "set_tags",
+          "comment",
+          "set_severity",
+          "assign"
+        ],
+        "comments": [],
+        "creationDate": "2026-10-11T18:01:26+0800",
+        "updateDate": "2026-10-11T18:01:26+0800",
+        "type": "CODE_SMELL",
+        "scope": "MAIN",
+        "quickFixAvailable": false,
+        "messageFormattings": [],
+        "codeVariants": [],
+        "cleanCodeAttribute": "EFFICIENT",
+        "cleanCodeAttributeCategory": "INTENTIONAL",
+        "impacts": [
+          {
+            "softwareQuality": "MAINTAINABILITY",
+            "severity": "MEDIUM"
+          }
+        ],
+        "issueStatus": "OPEN",
+        "prioritizedRule": false,
+        "fromSonarQubeUpdate": false,
+        "internalTags": [],
+        "linkedTicketStatus": "NOT_LINKED"
+      },
+      "transition": "falsepositive",
+      "reason": "几何判定函数处于 page.evaluate 的浏览器回调内。Playwright 将该回调序列化到浏览器执行，外部Node闭包不会一并序列化；提升到文件或外部循环作用域会令浏览器缺少这两个函数。当前位置已是该浏览器执行单元内可用的最高作用域。",
+      "comment_result": {
+        "issue": {
+          "key": "ae9bde8c-38e1-458d-9216-cdd5998fc7d5",
+          "rule": "javascript:S7721",
+          "severity": "MAJOR",
+          "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/render_native.js",
+          "project": "yuejuan-local-workspace-20261010",
+          "line": 62,
+          "hash": "6372981c1e70fe46821123b54cc6c7ef",
+          "textRange": {
+            "startLine": 62,
+            "endLine": 62,
+            "startOffset": 8,
+            "endOffset": 34
+          },
+          "flows": [],
+          "status": "OPEN",
+          "message": "Move function 'crossesHorizontal' to the outer scope.",
+          "effort": "5min",
+          "debt": "5min",
+          "author": "",
+          "tags": [
+            "performance",
+            "optimization",
+            "editable-source",
+            "javascript"
+          ],
+          "transitions": [
+            "accept",
+            "falsepositive",
+            "confirm",
+            "resolve",
+            "wontfix"
+          ],
+          "actions": [
+            "set_type",
+            "set_tags",
+            "comment",
+            "set_severity",
+            "assign"
+          ],
+          "comments": [
+            {
+              "key": "37d9f2c2-1cfb-4b1b-a457-7a24c97158eb",
+              "login": "admin",
+              "htmlText": "本地逐项复核：几何判定函数处于 page.evaluate 的浏览器回调内。Playwright 将该回调序列化到浏览器执行，外部Node闭包不会一并序列化；提升到文件或外部循环作用域会令浏览器缺少这两个函数。当前位置已是该浏览器执行单元内可用的最高作用域。<br/>源码 SHA256：85e0b8d9604713f3506c56758a3af02977ef66e35bc66ff7d3136e129eefac65<br/>扫描分析：5686bdb3-be93-4c4f-b4e6-79c47031022d<br/>复核记录：reports/sonar-remediation-2026-10-11/root-platform-disposition-phase02-plan.json。保留作用域边界，未转成箭头函数躲避规则、未禁用S7721、未排除文件。",
+              "markdown": "本地逐项复核：几何判定函数处于 page.evaluate 的浏览器回调内。Playwright 将该回调序列化到浏览器执行，外部Node闭包不会一并序列化；提升到文件或外部循环作用域会令浏览器缺少这两个函数。当前位置已是该浏览器执行单元内可用的最高作用域。\n源码 SHA256：85e0b8d9604713f3506c56758a3af02977ef66e35bc66ff7d3136e129eefac65\n扫描分析：5686bdb3-be93-4c4f-b4e6-79c47031022d\n复核记录：reports/sonar-remediation-2026-10-11/root-platform-disposition-phase02-plan.json。保留作用域边界，未转成箭头函数躲避规则、未禁用S7721、未排除文件。",
+              "updatable": true,
+              "createdAt": "2026-10-11T18:38:36+0800"
+            }
+          ],
+          "creationDate": "2026-10-11T18:01:26+0800",
+          "updateDate": "2026-10-11T18:38:36+0800",
+          "type": "CODE_SMELL",
+          "scope": "MAIN",
+          "quickFixAvailable": false,
+          "messageFormattings": [],
+          "codeVariants": [],
+          "cleanCodeAttribute": "EFFICIENT",
+          "cleanCodeAttributeCategory": "INTENTIONAL",
+          "impacts": [
+            {
+              "softwareQuality": "MAINTAINABILITY",
+              "severity": "MEDIUM"
+            }
+          ],
+          "issueStatus": "OPEN",
+          "prioritizedRule": false,
+          "fromSonarQubeUpdate": false,
+          "internalTags": [],
+          "linkedTicketStatus": "NOT_LINKED"
+        },
+        "components": [
+          {
+            "key": "yuejuan-local-workspace-20261010:docs/architecture/tools/render_native.js",
+            "enabled": true,
+            "qualifier": "FIL",
+            "name": "render_native.js",
+            "longName": "docs/architecture/tools/render_native.js",
+            "path": "docs/architecture/tools/render_native.js"
+          },
+          {
+            "key": "yuejuan-local-workspace-20261010",
+            "enabled": true,
+            "qualifier": "TRK",
+            "name": "yuejuan current local workspace 2026-10-10",
+            "longName": "yuejuan current local workspace 2026-10-10"
+          }
+        ],
+        "rules": [
+          {
+            "key": "javascript:S7721",
+            "name": "Functions should be moved to the highest possible scope",
+            "lang": "js",
+            "status": "READY",
+            "langName": "JavaScript"
+          }
+        ],
+        "users": [
+          {
+            "login": "admin",
+            "name": "Administrator",
+            "active": true
+          }
+        ]
+      },
+      "transition_result": {
+        "issue": {
+          "key": "ae9bde8c-38e1-458d-9216-cdd5998fc7d5",
+          "rule": "javascript:S7721",
+          "severity": "MAJOR",
+          "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/render_native.js",
+          "project": "yuejuan-local-workspace-20261010",
+          "line": 62,
+          "hash": "6372981c1e70fe46821123b54cc6c7ef",
+          "textRange": {
+            "startLine": 62,
+            "endLine": 62,
+            "startOffset": 8,
+            "endOffset": 34
+          },
+          "flows": [],
+          "resolution": "FALSE-POSITIVE",
+          "status": "RESOLVED",
+          "message": "Move function 'crossesHorizontal' to the outer scope.",
+          "effort": "5min",
+          "debt": "5min",
+          "author": "",
+          "tags": [
+            "performance",
+            "optimization",
+            "editable-source",
+            "javascript"
+          ],
+          "transitions": [
+            "reopen"
+          ],
+          "actions": [
+            "set_tags",
+            "comment"
+          ],
+          "comments": [
+            {
+              "key": "37d9f2c2-1cfb-4b1b-a457-7a24c97158eb",
+              "login": "admin",
+              "htmlText": "本地逐项复核：几何判定函数处于 page.evaluate 的浏览器回调内。Playwright 将该回调序列化到浏览器执行，外部Node闭包不会一并序列化；提升到文件或外部循环作用域会令浏览器缺少这两个函数。当前位置已是该浏览器执行单元内可用的最高作用域。<br/>源码 SHA256：85e0b8d9604713f3506c56758a3af02977ef66e35bc66ff7d3136e129eefac65<br/>扫描分析：5686bdb3-be93-4c4f-b4e6-79c47031022d<br/>复核记录：reports/sonar-remediation-2026-10-11/root-platform-disposition-phase02-plan.json。保留作用域边界，未转成箭头函数躲避规则、未禁用S7721、未排除文件。",
+              "markdown": "本地逐项复核：几何判定函数处于 page.evaluate 的浏览器回调内。Playwright 将该回调序列化到浏览器执行，外部Node闭包不会一并序列化；提升到文件或外部循环作用域会令浏览器缺少这两个函数。当前位置已是该浏览器执行单元内可用的最高作用域。\n源码 SHA256：85e0b8d9604713f3506c56758a3af02977ef66e35bc66ff7d3136e129eefac65\n扫描分析：5686bdb3-be93-4c4f-b4e6-79c47031022d\n复核记录：reports/sonar-remediation-2026-10-11/root-platform-disposition-phase02-plan.json。保留作用域边界，未转成箭头函数躲避规则、未禁用S7721、未排除文件。",
+              "updatable": true,
+              "createdAt": "2026-10-11T18:38:36+0800"
+            }
+          ],
+          "creationDate": "2026-10-11T18:01:26+0800",
+          "updateDate": "2026-10-11T18:38:37+0800",
+          "type": "CODE_SMELL",
+          "scope": "MAIN",
+          "quickFixAvailable": false,
+          "messageFormattings": [],
+          "codeVariants": [],
+          "cleanCodeAttribute": "EFFICIENT",
+          "cleanCodeAttributeCategory": "INTENTIONAL",
+          "impacts": [
+            {
+              "softwareQuality": "MAINTAINABILITY",
+              "severity": "MEDIUM"
+            }
+          ],
+          "issueStatus": "FALSE_POSITIVE",
+          "prioritizedRule": false,
+          "fromSonarQubeUpdate": false,
+          "internalTags": [],
+          "linkedTicketStatus": "NOT_LINKED"
+        },
+        "components": [
+          {
+            "key": "yuejuan-local-workspace-20261010:docs/architecture/tools/render_native.js",
+            "enabled": true,
+            "qualifier": "FIL",
+            "name": "render_native.js",
+            "longName": "docs/architecture/tools/render_native.js",
+            "path": "docs/architecture/tools/render_native.js"
+          },
+          {
+            "key": "yuejuan-local-workspace-20261010",
+            "enabled": true,
+            "qualifier": "TRK",
+            "name": "yuejuan current local workspace 2026-10-10",
+            "longName": "yuejuan current local workspace 2026-10-10"
+          }
+        ],
+        "rules": [
+          {
+            "key": "javascript:S7721",
+            "name": "Functions should be moved to the highest possible scope",
+            "lang": "js",
+            "status": "READY",
+            "langName": "JavaScript"
+          }
+        ],
+        "users": [
+          {
+            "login": "admin",
+            "name": "Administrator",
+            "active": true
+          }
+        ]
+      },
+      "after": [
+        {
+          "key": "ae9bde8c-38e1-458d-9216-cdd5998fc7d5",
+          "rule": "javascript:S7721",
+          "severity": "MAJOR",
+          "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/render_native.js",
+          "project": "yuejuan-local-workspace-20261010",
+          "line": 62,
+          "hash": "6372981c1e70fe46821123b54cc6c7ef",
+          "textRange": {
+            "startLine": 62,
+            "endLine": 62,
+            "startOffset": 8,
+            "endOffset": 34
+          },
+          "flows": [],
+          "resolution": "FALSE-POSITIVE",
+          "status": "RESOLVED",
+          "message": "Move function 'crossesHorizontal' to the outer scope.",
+          "effort": "5min",
+          "debt": "5min",
+          "author": "",
+          "tags": [
+            "performance",
+            "optimization",
+            "editable-source",
+            "javascript"
+          ],
+          "transitions": [
+            "reopen"
+          ],
+          "actions": [
+            "set_tags",
+            "comment"
+          ],
+          "comments": [
+            {
+              "key": "37d9f2c2-1cfb-4b1b-a457-7a24c97158eb",
+              "login": "admin",
+              "htmlText": "本地逐项复核：几何判定函数处于 page.evaluate 的浏览器回调内。Playwright 将该回调序列化到浏览器执行，外部Node闭包不会一并序列化；提升到文件或外部循环作用域会令浏览器缺少这两个函数。当前位置已是该浏览器执行单元内可用的最高作用域。<br/>源码 SHA256：85e0b8d9604713f3506c56758a3af02977ef66e35bc66ff7d3136e129eefac65<br/>扫描分析：5686bdb3-be93-4c4f-b4e6-79c47031022d<br/>复核记录：reports/sonar-remediation-2026-10-11/root-platform-disposition-phase02-plan.json。保留作用域边界，未转成箭头函数躲避规则、未禁用S7721、未排除文件。",
+              "markdown": "本地逐项复核：几何判定函数处于 page.evaluate 的浏览器回调内。Playwright 将该回调序列化到浏览器执行，外部Node闭包不会一并序列化；提升到文件或外部循环作用域会令浏览器缺少这两个函数。当前位置已是该浏览器执行单元内可用的最高作用域。\n源码 SHA256：85e0b8d9604713f3506c56758a3af02977ef66e35bc66ff7d3136e129eefac65\n扫描分析：5686bdb3-be93-4c4f-b4e6-79c47031022d\n复核记录：reports/sonar-remediation-2026-10-11/root-platform-disposition-phase02-plan.json。保留作用域边界，未转成箭头函数躲避规则、未禁用S7721、未排除文件。",
+              "updatable": true,
+              "createdAt": "2026-10-11T18:38:36+0800"
+            }
+          ],
+          "creationDate": "2026-10-11T18:01:26+0800",
+          "updateDate": "2026-10-11T18:38:37+0800",
+          "type": "CODE_SMELL",
+          "scope": "MAIN",
+          "quickFixAvailable": false,
+          "messageFormattings": [],
+          "codeVariants": [],
+          "cleanCodeAttribute": "EFFICIENT",
+          "cleanCodeAttributeCategory": "INTENTIONAL",
+          "impacts": [
+            {
+              "softwareQuality": "MAINTAINABILITY",
+              "severity": "MEDIUM"
+            }
+          ],
+          "issueStatus": "FALSE_POSITIVE",
+          "prioritizedRule": false,
+          "fromSonarQubeUpdate": false,
+          "internalTags": [],
+          "linkedTicketStatus": "NOT_LINKED"
+        }
+      ],
+      "status": "platform_disposition_verified"
+    },
+    {
+      "key": "90763f53-5107-4902-9ea6-e4c6b6d7607e",
+      "file": "docs/architecture/tools/render_native.js",
+      "source_sha256": "85e0b8d9604713f3506c56758a3af02977ef66e35bc66ff7d3136e129eefac65",
+      "before": {
+        "key": "90763f53-5107-4902-9ea6-e4c6b6d7607e",
+        "rule": "javascript:S7721",
+        "severity": "MAJOR",
+        "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/render_native.js",
+        "project": "yuejuan-local-workspace-20261010",
+        "line": 66,
+        "hash": "d517284ee3fc1d01f985e00699a2fe64",
+        "textRange": {
+          "startLine": 66,
+          "endLine": 66,
+          "startOffset": 8,
+          "endOffset": 32
+        },
+        "flows": [],
+        "status": "OPEN",
+        "message": "Move function 'crossesVertical' to the outer scope.",
+        "effort": "5min",
+        "debt": "5min",
+        "author": "",
+        "tags": [
+          "performance",
+          "optimization",
+          "editable-source",
+          "javascript"
+        ],
+        "transitions": [
+          "accept",
+          "falsepositive",
+          "confirm",
+          "resolve",
+          "wontfix"
+        ],
+        "actions": [
+          "set_type",
+          "set_tags",
+          "comment",
+          "set_severity",
+          "assign"
+        ],
+        "comments": [],
+        "creationDate": "2026-10-11T18:01:26+0800",
+        "updateDate": "2026-10-11T18:01:26+0800",
+        "type": "CODE_SMELL",
+        "scope": "MAIN",
+        "quickFixAvailable": false,
+        "messageFormattings": [],
+        "codeVariants": [],
+        "cleanCodeAttribute": "EFFICIENT",
+        "cleanCodeAttributeCategory": "INTENTIONAL",
+        "impacts": [
+          {
+            "softwareQuality": "MAINTAINABILITY",
+            "severity": "MEDIUM"
+          }
+        ],
+        "issueStatus": "OPEN",
+        "prioritizedRule": false,
+        "fromSonarQubeUpdate": false,
+        "internalTags": [],
+        "linkedTicketStatus": "NOT_LINKED"
+      },
+      "transition": "falsepositive",
+      "reason": "几何判定函数处于 page.evaluate 的浏览器回调内。Playwright 将该回调序列化到浏览器执行，外部Node闭包不会一并序列化；提升到文件或外部循环作用域会令浏览器缺少这两个函数。当前位置已是该浏览器执行单元内可用的最高作用域。",
+      "comment_result": {
+        "issue": {
+          "key": "90763f53-5107-4902-9ea6-e4c6b6d7607e",
+          "rule": "javascript:S7721",
+          "severity": "MAJOR",
+          "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/render_native.js",
+          "project": "yuejuan-local-workspace-20261010",
+          "line": 66,
+          "hash": "d517284ee3fc1d01f985e00699a2fe64",
+          "textRange": {
+            "startLine": 66,
+            "endLine": 66,
+            "startOffset": 8,
+            "endOffset": 32
+          },
+          "flows": [],
+          "status": "OPEN",
+          "message": "Move function 'crossesVertical' to the outer scope.",
+          "effort": "5min",
+          "debt": "5min",
+          "author": "",
+          "tags": [
+            "performance",
+            "optimization",
+            "editable-source",
+            "javascript"
+          ],
+          "transitions": [
+            "accept",
+            "falsepositive",
+            "confirm",
+            "resolve",
+            "wontfix"
+          ],
+          "actions": [
+            "set_type",
+            "set_tags",
+            "comment",
+            "set_severity",
+            "assign"
+          ],
+          "comments": [
+            {
+              "key": "88e92fb8-c3a7-4526-b07e-e97ebc28cfd0",
+              "login": "admin",
+              "htmlText": "本地逐项复核：几何判定函数处于 page.evaluate 的浏览器回调内。Playwright 将该回调序列化到浏览器执行，外部Node闭包不会一并序列化；提升到文件或外部循环作用域会令浏览器缺少这两个函数。当前位置已是该浏览器执行单元内可用的最高作用域。<br/>源码 SHA256：85e0b8d9604713f3506c56758a3af02977ef66e35bc66ff7d3136e129eefac65<br/>扫描分析：5686bdb3-be93-4c4f-b4e6-79c47031022d<br/>复核记录：reports/sonar-remediation-2026-10-11/root-platform-disposition-phase02-plan.json。保留作用域边界，未转成箭头函数躲避规则、未禁用S7721、未排除文件。",
+              "markdown": "本地逐项复核：几何判定函数处于 page.evaluate 的浏览器回调内。Playwright 将该回调序列化到浏览器执行，外部Node闭包不会一并序列化；提升到文件或外部循环作用域会令浏览器缺少这两个函数。当前位置已是该浏览器执行单元内可用的最高作用域。\n源码 SHA256：85e0b8d9604713f3506c56758a3af02977ef66e35bc66ff7d3136e129eefac65\n扫描分析：5686bdb3-be93-4c4f-b4e6-79c47031022d\n复核记录：reports/sonar-remediation-2026-10-11/root-platform-disposition-phase02-plan.json。保留作用域边界，未转成箭头函数躲避规则、未禁用S7721、未排除文件。",
+              "updatable": true,
+              "createdAt": "2026-10-11T18:38:39+0800"
+            }
+          ],
+          "creationDate": "2026-10-11T18:01:26+0800",
+          "updateDate": "2026-10-11T18:38:39+0800",
+          "type": "CODE_SMELL",
+          "scope": "MAIN",
+          "quickFixAvailable": false,
+          "messageFormattings": [],
+          "codeVariants": [],
+          "cleanCodeAttribute": "EFFICIENT",
+          "cleanCodeAttributeCategory": "INTENTIONAL",
+          "impacts": [
+            {
+              "softwareQuality": "MAINTAINABILITY",
+              "severity": "MEDIUM"
+            }
+          ],
+          "issueStatus": "OPEN",
+          "prioritizedRule": false,
+          "fromSonarQubeUpdate": false,
+          "internalTags": [],
+          "linkedTicketStatus": "NOT_LINKED"
+        },
+        "components": [
+          {
+            "key": "yuejuan-local-workspace-20261010:docs/architecture/tools/render_native.js",
+            "enabled": true,
+            "qualifier": "FIL",
+            "name": "render_native.js",
+            "longName": "docs/architecture/tools/render_native.js",
+            "path": "docs/architecture/tools/render_native.js"
+          },
+          {
+            "key": "yuejuan-local-workspace-20261010",
+            "enabled": true,
+            "qualifier": "TRK",
+            "name": "yuejuan current local workspace 2026-10-10",
+            "longName": "yuejuan current local workspace 2026-10-10"
+          }
+        ],
+        "rules": [
+          {
+            "key": "javascript:S7721",
+            "name": "Functions should be moved to the highest possible scope",
+            "lang": "js",
+            "status": "READY",
+            "langName": "JavaScript"
+          }
+        ],
+        "users": [
+          {
+            "login": "admin",
+            "name": "Administrator",
+            "active": true
+          }
+        ]
+      },
+      "transition_result": {
+        "issue": {
+          "key": "90763f53-5107-4902-9ea6-e4c6b6d7607e",
+          "rule": "javascript:S7721",
+          "severity": "MAJOR",
+          "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/render_native.js",
+          "project": "yuejuan-local-workspace-20261010",
+          "line": 66,
+          "hash": "d517284ee3fc1d01f985e00699a2fe64",
+          "textRange": {
+            "startLine": 66,
+            "endLine": 66,
+            "startOffset": 8,
+            "endOffset": 32
+          },
+          "flows": [],
+          "resolution": "FALSE-POSITIVE",
+          "status": "RESOLVED",
+          "message": "Move function 'crossesVertical' to the outer scope.",
+          "effort": "5min",
+          "debt": "5min",
+          "author": "",
+          "tags": [
+            "performance",
+            "optimization",
+            "editable-source",
+            "javascript"
+          ],
+          "transitions": [
+            "reopen"
+          ],
+          "actions": [
+            "set_tags",
+            "comment"
+          ],
+          "comments": [
+            {
+              "key": "88e92fb8-c3a7-4526-b07e-e97ebc28cfd0",
+              "login": "admin",
+              "htmlText": "本地逐项复核：几何判定函数处于 page.evaluate 的浏览器回调内。Playwright 将该回调序列化到浏览器执行，外部Node闭包不会一并序列化；提升到文件或外部循环作用域会令浏览器缺少这两个函数。当前位置已是该浏览器执行单元内可用的最高作用域。<br/>源码 SHA256：85e0b8d9604713f3506c56758a3af02977ef66e35bc66ff7d3136e129eefac65<br/>扫描分析：5686bdb3-be93-4c4f-b4e6-79c47031022d<br/>复核记录：reports/sonar-remediation-2026-10-11/root-platform-disposition-phase02-plan.json。保留作用域边界，未转成箭头函数躲避规则、未禁用S7721、未排除文件。",
+              "markdown": "本地逐项复核：几何判定函数处于 page.evaluate 的浏览器回调内。Playwright 将该回调序列化到浏览器执行，外部Node闭包不会一并序列化；提升到文件或外部循环作用域会令浏览器缺少这两个函数。当前位置已是该浏览器执行单元内可用的最高作用域。\n源码 SHA256：85e0b8d9604713f3506c56758a3af02977ef66e35bc66ff7d3136e129eefac65\n扫描分析：5686bdb3-be93-4c4f-b4e6-79c47031022d\n复核记录：reports/sonar-remediation-2026-10-11/root-platform-disposition-phase02-plan.json。保留作用域边界，未转成箭头函数躲避规则、未禁用S7721、未排除文件。",
+              "updatable": true,
+              "createdAt": "2026-10-11T18:38:39+0800"
+            }
+          ],
+          "creationDate": "2026-10-11T18:01:26+0800",
+          "updateDate": "2026-10-11T18:38:40+0800",
+          "type": "CODE_SMELL",
+          "scope": "MAIN",
+          "quickFixAvailable": false,
+          "messageFormattings": [],
+          "codeVariants": [],
+          "cleanCodeAttribute": "EFFICIENT",
+          "cleanCodeAttributeCategory": "INTENTIONAL",
+          "impacts": [
+            {
+              "softwareQuality": "MAINTAINABILITY",
+              "severity": "MEDIUM"
+            }
+          ],
+          "issueStatus": "FALSE_POSITIVE",
+          "prioritizedRule": false,
+          "fromSonarQubeUpdate": false,
+          "internalTags": [],
+          "linkedTicketStatus": "NOT_LINKED"
+        },
+        "components": [
+          {
+            "key": "yuejuan-local-workspace-20261010:docs/architecture/tools/render_native.js",
+            "enabled": true,
+            "qualifier": "FIL",
+            "name": "render_native.js",
+            "longName": "docs/architecture/tools/render_native.js",
+            "path": "docs/architecture/tools/render_native.js"
+          },
+          {
+            "key": "yuejuan-local-workspace-20261010",
+            "enabled": true,
+            "qualifier": "TRK",
+            "name": "yuejuan current local workspace 2026-10-10",
+            "longName": "yuejuan current local workspace 2026-10-10"
+          }
+        ],
+        "rules": [
+          {
+            "key": "javascript:S7721",
+            "name": "Functions should be moved to the highest possible scope",
+            "lang": "js",
+            "status": "READY",
+            "langName": "JavaScript"
+          }
+        ],
+        "users": [
+          {
+            "login": "admin",
+            "name": "Administrator",
+            "active": true
+          }
+        ]
+      },
+      "after": [
+        {
+          "key": "90763f53-5107-4902-9ea6-e4c6b6d7607e",
+          "rule": "javascript:S7721",
+          "severity": "MAJOR",
+          "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/render_native.js",
+          "project": "yuejuan-local-workspace-20261010",
+          "line": 66,
+          "hash": "d517284ee3fc1d01f985e00699a2fe64",
+          "textRange": {
+            "startLine": 66,
+            "endLine": 66,
+            "startOffset": 8,
+            "endOffset": 32
+          },
+          "flows": [],
+          "resolution": "FALSE-POSITIVE",
+          "status": "RESOLVED",
+          "message": "Move function 'crossesVertical' to the outer scope.",
+          "effort": "5min",
+          "debt": "5min",
+          "author": "",
+          "tags": [
+            "performance",
+            "optimization",
+            "editable-source",
+            "javascript"
+          ],
+          "transitions": [
+            "reopen"
+          ],
+          "actions": [
+            "set_tags",
+            "comment"
+          ],
+          "comments": [
+            {
+              "key": "88e92fb8-c3a7-4526-b07e-e97ebc28cfd0",
+              "login": "admin",
+              "htmlText": "本地逐项复核：几何判定函数处于 page.evaluate 的浏览器回调内。Playwright 将该回调序列化到浏览器执行，外部Node闭包不会一并序列化；提升到文件或外部循环作用域会令浏览器缺少这两个函数。当前位置已是该浏览器执行单元内可用的最高作用域。<br/>源码 SHA256：85e0b8d9604713f3506c56758a3af02977ef66e35bc66ff7d3136e129eefac65<br/>扫描分析：5686bdb3-be93-4c4f-b4e6-79c47031022d<br/>复核记录：reports/sonar-remediation-2026-10-11/root-platform-disposition-phase02-plan.json。保留作用域边界，未转成箭头函数躲避规则、未禁用S7721、未排除文件。",
+              "markdown": "本地逐项复核：几何判定函数处于 page.evaluate 的浏览器回调内。Playwright 将该回调序列化到浏览器执行，外部Node闭包不会一并序列化；提升到文件或外部循环作用域会令浏览器缺少这两个函数。当前位置已是该浏览器执行单元内可用的最高作用域。\n源码 SHA256：85e0b8d9604713f3506c56758a3af02977ef66e35bc66ff7d3136e129eefac65\n扫描分析：5686bdb3-be93-4c4f-b4e6-79c47031022d\n复核记录：reports/sonar-remediation-2026-10-11/root-platform-disposition-phase02-plan.json。保留作用域边界，未转成箭头函数躲避规则、未禁用S7721、未排除文件。",
+              "updatable": true,
+              "createdAt": "2026-10-11T18:38:39+0800"
+            }
+          ],
+          "creationDate": "2026-10-11T18:01:26+0800",
+          "updateDate": "2026-10-11T18:38:40+0800",
+          "type": "CODE_SMELL",
+          "scope": "MAIN",
+          "quickFixAvailable": false,
+          "messageFormattings": [],
+          "codeVariants": [],
+          "cleanCodeAttribute": "EFFICIENT",
+          "cleanCodeAttributeCategory": "INTENTIONAL",
+          "impacts": [
+            {
+              "softwareQuality": "MAINTAINABILITY",
+              "severity": "MEDIUM"
+            }
+          ],
+          "issueStatus": "FALSE_POSITIVE",
+          "prioritizedRule": false,
+          "fromSonarQubeUpdate": false,
+          "internalTags": [],
+          "linkedTicketStatus": "NOT_LINKED"
+        }
+      ],
+      "status": "platform_disposition_verified"
+    }
+  ],
+  "completed_at": "2026-10-11T18:38:42.544828+08:00"
+}

@@ -42,6 +42,34 @@ func TestE2EPostgresQuestionBankMetadataACLSearch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	env := questionBankE2EEnvironment{ctx: ctx, db: db, store: store, scope: owner, router: router, token: token}
+	actors := questionBankMetadataActors{manager: manager, author: author, publisher: publisher}
+	definition := createQuestionBankMetadataDefinitions(t, env, bank)
+	access := assertQuestionBankMetadataVersionAndACL(t, env, bank, actors, definition)
+	assetID := assertQuestionBankMetadataSearchAndAsset(t, env, bank, actors, definition, schoolID)
+	acl := assertQuestionBankMetadataRevocation(t, env, bank, actors, access, assetID)
+	assertQuestionBankMetadataRetirementAndHistory(t, env, bank, actors, acl, definition.second)
+
+}
+
+type questionBankMetadataActors struct{ manager, author, publisher auth.AccessScope }
+type questionBankMetadataDefinition struct {
+	fields        []questionbank.MetadataFieldDefinition
+	taxonomies    []questionbank.TaxonomyDefinition
+	first, second questionbank.ItemResult
+	oldHash       string
+}
+type questionBankMetadataAccess struct {
+	acl     questionbank.ACLDocument
+	derived questionbank.Version
+}
+
+func createQuestionBankMetadataDefinitions(t *testing.T, env questionBankE2EEnvironment, bank questionbank.Bank) questionBankMetadataDefinition {
+	t.Helper()
+	ctx := env.ctx
+	store := env.store
+	owner := env.scope
+	var err error
 	min, max, maxLength := 1.0, 5.0, 40
 	fields := []questionbank.MetadataFieldDefinition{
 		{Key: "curriculum", Label: "课程", Type: "enum", Required: true, Options: []questionbank.MetadataOption{{Value: "national", Label: "国家课程", Active: true}, {Value: "local", Label: "地方课程", Active: true}}},
@@ -74,12 +102,33 @@ func TestE2EPostgresQuestionBankMetadataACLSearch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	return questionBankMetadataDefinition{fields: fields, taxonomies: taxonomies, first: first, second: second, oldHash: oldHash}
+
+}
+
+func assertQuestionBankMetadataVersionAndACL(t *testing.T, env questionBankE2EEnvironment, bank questionbank.Bank, actors questionBankMetadataActors, definition questionBankMetadataDefinition) questionBankMetadataAccess {
+	t.Helper()
+	ctx := env.ctx
+	store := env.store
+	router := env.router
+	token := env.token
+	owner := env.scope
+	manager := actors.manager
+	author := actors.author
+	managerID := actors.manager.ActorID
+	authorID := actors.author.ActorID
+	publisherID := actors.publisher.ActorID
+	fields := definition.fields
+	taxonomies := definition.taxonomies
+	first := definition.first
+	oldHash := definition.oldHash
 	current, err := store.GetBank(ctx, owner, bank.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
 	fields = append(fields, questionbank.MetadataFieldDefinition{Key: "term", Label: "学期", Type: "enum", Required: true, Options: []questionbank.MetadataOption{{Value: "first", Label: "第一学期", Active: true}}})
-	schema, err = store.UpdateMetadataSchema(commandreceipt.WithID(ctx, "069c-schema-v3"), owner, bank.ID, questionbank.UpdateMetadataSchemaInput{ExpectedRevision: current.Revision, Fields: fields, Taxonomies: taxonomies})
+	schema, err := store.UpdateMetadataSchema(commandreceipt.WithID(ctx, "069c-schema-v3"), owner, bank.ID, questionbank.UpdateMetadataSchemaInput{ExpectedRevision: current.Revision, Fields: fields, Taxonomies: taxonomies})
 	if err != nil || schema.Version != 3 {
 		t.Fatalf("schema v3: %+v %v", schema, err)
 	}
@@ -108,7 +157,7 @@ func TestE2EPostgresQuestionBankMetadataACLSearch(t *testing.T) {
 	if err != nil || derived.SchemaVersion != 3 {
 		t.Fatalf("derived version: %+v %v", derived, err)
 	}
-	invalidSubmit := qbRequest(t, router, http.MethodPost, "/api/v1/question-bank/versions/"+derived.ID+"/submit-review", token, "069c-invalid-submit", qbJSON(t, questionbank.ReviewInput{ExpectedRevision: derived.Revision, BundleHash: derived.BundleHash}), 400)
+	invalidSubmit := qbRequest(t, router, questionBankRequest{Method: http.MethodPost, Path: "/api/v1/question-bank/versions/" + derived.ID + "/submit-review", Token: token, Key: "069c-invalid-submit", Body: qbJSON(t, questionbank.ReviewInput{ExpectedRevision: derived.Revision, BundleHash: derived.BundleHash}), Want: 400})
 	if invalidSubmit["field_errors"].(map[string]any)["custom_metadata.term"] == nil {
 		t.Fatalf("publish validation lacks field path: %#v", invalidSubmit)
 	}
@@ -117,6 +166,21 @@ func TestE2EPostgresQuestionBankMetadataACLSearch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	return questionBankMetadataAccess{acl: acl, derived: derived}
+
+}
+
+func assertQuestionBankMetadataSearchAndAsset(t *testing.T, env questionBankE2EEnvironment, bank questionbank.Bank, actors questionBankMetadataActors, definition questionBankMetadataDefinition, schoolID string) string {
+	t.Helper()
+	ctx := env.ctx
+	db := env.db
+	store := env.store
+	owner := env.scope
+	tenantID := env.scope.TenantID
+	ownerID := env.scope.ActorID
+	publisher := actors.publisher
+	first := definition.first
 	page, err := store.SearchItems(ctx, owner, questionbank.SearchFilter{BankID: bank.ID, SubjectCode: "mathematics", KnowledgePoint: "kp.algebra", QuestionType: "short_answer", WorkflowStatus: "draft", DifficultyBand: "medium", IntendedUse: "exam", MetadataKey: "curriculum", MetadataValue: "national", Mode: "all", Sort: "item_code_asc", Limit: 1})
 	if err != nil || page.Total != 2 || len(page.Items) != 1 || page.Items[0].Item.ItemCode != "M-001" {
 		t.Fatalf("search page one: %+v %v", page, err)
@@ -137,6 +201,23 @@ func TestE2EPostgresQuestionBankMetadataACLSearch(t *testing.T) {
 	if _, err = files.NewPostgresStore(db).GetScoped(ctx, publisher, assetID); err != nil {
 		t.Fatalf("authorized asset: %v", err)
 	}
+
+	return assetID
+
+}
+
+func assertQuestionBankMetadataRevocation(t *testing.T, env questionBankE2EEnvironment, bank questionbank.Bank, actors questionBankMetadataActors, access questionBankMetadataAccess, assetID string) questionbank.ACLDocument {
+	t.Helper()
+	ctx := env.ctx
+	db := env.db
+	store := env.store
+	manager := actors.manager
+	author := actors.author
+	publisher := actors.publisher
+	managerID := actors.manager.ActorID
+	acl := access.acl
+	derived := access.derived
+	var err error
 	acl, err = store.UpdateACL(commandreceipt.WithID(ctx, "069c-revoke"), manager, bank.ID, questionbank.UpdateACLInput{ExpectedRevision: acl.Revision, Groups: []questionbank.ACLGroup{{Name: "Managers", Preset: "Manager", MemberIDs: []string{managerID}}}})
 	if err != nil {
 		t.Fatal(err)
@@ -147,11 +228,27 @@ func TestE2EPostgresQuestionBankMetadataACLSearch(t *testing.T) {
 	if _, err = files.NewPostgresStore(db).GetScoped(ctx, publisher, assetID); !errors.Is(err, files.ErrForbidden) {
 		t.Fatalf("asset revocation not immediate: %v", err)
 	}
-	page, err = store.SearchItems(ctx, publisher, questionbank.SearchFilter{BankID: bank.ID, Mode: "all", Limit: 20})
+	page, err := store.SearchItems(ctx, publisher, questionbank.SearchFilter{BankID: bank.ID, Mode: "all", Limit: 20})
 	if err != nil || page.Total != 0 {
 		t.Fatalf("revoked search leaked count: %+v %v", page, err)
 	}
-	acl, err = store.UpdateACL(commandreceipt.WithID(ctx, "069c-regrant"), manager, bank.ID, questionbank.UpdateACLInput{ExpectedRevision: acl.Revision, Bindings: []questionbank.ACLBinding{{UserID: publisherID, Preset: "Publisher"}}, Groups: []questionbank.ACLGroup{{Name: "Managers", Preset: "Manager", MemberIDs: []string{managerID}}}})
+
+	return acl
+
+}
+
+func assertQuestionBankMetadataRetirementAndHistory(t *testing.T, env questionBankE2EEnvironment, bank questionbank.Bank, actors questionBankMetadataActors, acl questionbank.ACLDocument, second questionbank.ItemResult) {
+	t.Helper()
+	ctx := env.ctx
+	db := env.db
+	store := env.store
+	tenantID := env.scope.TenantID
+	manager := actors.manager
+	publisher := actors.publisher
+	managerID := actors.manager.ActorID
+	publisherID := actors.publisher.ActorID
+	var err error
+	_, err = store.UpdateACL(commandreceipt.WithID(ctx, "069c-regrant"), manager, bank.ID, questionbank.UpdateACLInput{ExpectedRevision: acl.Revision, Bindings: []questionbank.ACLBinding{{UserID: publisherID, Preset: "Publisher"}}, Groups: []questionbank.ACLGroup{{Name: "Managers", Preset: "Manager", MemberIDs: []string{managerID}}}})
 	if err != nil {
 		t.Fatal(err)
 	}

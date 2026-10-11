@@ -10,7 +10,7 @@ test("资料优先创建允许空试卷结构并直接进入资料配置", async
     await route.fallback();
   });
 
-  await page.goto("/#/admin/exams/new", { waitUntil: "networkidle" });
+  await page.goto("/#/admin/exams/new", { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: "你准备怎样开始？" })).toBeVisible({ timeout: 30_000 });
   await expect(page.locator(".ant-steps")).toHaveCount(0);
 
@@ -32,7 +32,7 @@ test("资料优先创建允许空试卷结构并直接进入资料配置", async
 test("考试方案通过抽屉带入科目结构", async ({ page }) => {
   test.setTimeout(90_000);
   await installApiMocks(page, { role: "school_admin", initiallyAuthenticated: true });
-  await page.goto("/#/admin/exams/new", { waitUntil: "networkidle" });
+  await page.goto("/#/admin/exams/new", { waitUntil: "domcontentloaded" });
   await expect(page.locator(".exam-composer")).toBeVisible({ timeout: 30_000 });
   await page.getByRole("button", { name: /使用考试方案/ }).click();
   await expect(page.getByRole("dialog", { name: "选择考试方案" })).toBeVisible();

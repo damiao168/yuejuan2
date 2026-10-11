@@ -13,6 +13,13 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /out/story056-real-worker-
 
 FROM ${API_RUNTIME_IMAGE}
 
-RUN apk add --no-cache ca-certificates
+RUN apk add --no-cache ca-certificates \
+    && addgroup -S -g 10001 e2e \
+    && adduser -S -D -H -u 10001 -G e2e -h /home/e2e e2e \
+    && mkdir -p /home/e2e \
+    && chown 10001:10001 /home/e2e
+ENV HOME=/home/e2e
 COPY --from=builder /out/story056-real-worker-e2e /usr/local/bin/story056-real-worker-e2e
+# 客户端结果写 stdout，由宿主 runner 收集；只有 HOME 和 /tmp 需要可写。
+USER 10001:10001
 ENTRYPOINT ["story056-real-worker-e2e"]

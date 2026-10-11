@@ -148,7 +148,8 @@ export async function exportLearningReport(examId: string) {
     value => {
       // 命令恢复回执里的文件是 Base64；还原成与首次 Blob 下载相同的返回形状。
       const result = value as { Content: string; ContentType: string; Filename: string; Watermark: string };
-      const bytes = Uint8Array.from(atob(result.Content), character => character.charCodeAt(0));
+      // atob 的每个字符都是一个字节，不涉及 UTF-16 代理对合并。
+      const bytes = Uint8Array.from(atob(result.Content), character => character.codePointAt(0) ?? 0);
       return { blob: new Blob([bytes], { type: result.ContentType }), contentType: result.ContentType, filename: result.Filename, watermark: result.Watermark };
     });
 }

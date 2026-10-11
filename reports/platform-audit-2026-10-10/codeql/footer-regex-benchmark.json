@@ -1,0 +1,43 @@
+{
+  "synthetic": true,
+  "snapshot_schema_sha256": "38958370509b66e456f8cf739888032635e6885256c17b76b587af342de3cdf4",
+  "python_version": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+  "pattern_source": "D:\\tools\\audit-codeql-20261010\\source-20261011\\ai-services\\grading_agent\\paper_compact\\schema.py",
+  "results": [
+    {
+      "padding": 256,
+      "input_chars": 260,
+      "matched": false,
+      "seconds": 0.0024181999906431884
+    },
+    {
+      "padding": 512,
+      "input_chars": 516,
+      "matched": false,
+      "seconds": 0.009718200002680533
+    },
+    {
+      "padding": 1024,
+      "input_chars": 1028,
+      "matched": false,
+      "seconds": 0.041388700003153645
+    },
+    {
+      "padding": 2048,
+      "input_chars": 2052,
+      "matched": false,
+      "seconds": 0.13492300000507385
+    },
+    {
+      "padding": 4096,
+      "input_chars": 4100,
+      "matched": false,
+      "seconds": 0.6755484000022989
+    },
+    {
+      "padding": 8192,
+      "timeout_seconds": 2
+    }
+  ],
+  "scope": "Single original compiled regex on synthetic strings, no production request or full pipeline exercised"
+}

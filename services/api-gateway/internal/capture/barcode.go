@@ -25,18 +25,14 @@ type BarcodeClaims struct {
 	TemplateContentHash string `json:"template_content_hash"`
 	PageNo              int    `json:"page_no"`
 	Nonce               string `json:"nonce"`
-	// Version 2 claims bind a printed sheet to a student before scanning, so
-	// submission ownership comes from cryptographic identity instead of page
-	// counting. StudentID is the student row UUID, never a school number, so
-	// the barcode carries no directly identifying text. SheetSerial identifies
-	// one physical printed sheet; the same serial observed across different
-	// submissions signals a duplicate print or a scan mix-up and must go to
-	// manual review instead of silent assignment.
+	// 第 2 版声明在扫描前将印刷答题纸绑定到学生，使提交归属来自加密身份而非页数统计。
+	// StudentID 是学生记录 UUID，不是学号，因此条码不含可直接识别身份的文本。SheetSerial 标识一张实体答题纸；
+	// 不同提交出现同一序列号时，表示重复印刷或扫描混淆，必须转人工复核，不能静默分配。
 	StudentID   string `json:"student_id,omitempty"`
 	SheetSerial string `json:"sheet_serial,omitempty"`
 }
 
-// boundToStudent reports whether the claims carry student identity (version 2).
+// boundToStudent 判断声明是否包含学生身份（第 2 版）。
 func (c BarcodeClaims) boundToStudent() bool {
 	return c.StudentID != "" || c.SheetSerial != ""
 }
@@ -47,9 +43,7 @@ type BarcodeKeyring struct {
 }
 
 func (k BarcodeKeyring) Sign(claims BarcodeClaims) (string, error) {
-	// The claims payload is printed on physical sheets and cannot be recalled,
-	// so the version is derived from content: template-level page barcodes stay
-	// on the frozen version-1 layout, student-bound sheets use version 2.
+	// 声明载荷已印在实体答题纸上，无法收回，因此版本根据内容派生：模板级页面条码保持冻结的第 1 版布局，绑定学生的答题纸使用第 2 版。
 	if claims.boundToStudent() {
 		claims.Version = 2
 	} else {
@@ -129,8 +123,7 @@ func validateBarcodeClaims(claims BarcodeClaims) error {
 	}
 	switch claims.Version {
 	case 1:
-		// Template-level barcodes must not smuggle student identity outside the
-		// signed field set of their version.
+		// 模板级条码不得在其版本的签名字段集合之外夹带学生身份。
 		if claims.boundToStudent() {
 			return fmt.Errorf("%w: claims_invalid", ErrBarcodeInvalid)
 		}

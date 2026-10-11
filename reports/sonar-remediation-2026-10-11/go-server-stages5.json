@@ -1,0 +1,24 @@
+{
+  "files": [
+    {
+      "file": "services/api-gateway/internal/server/e2e_business_command_test.go",
+      "sha256": "f9abcbedc451fa80dfa58c2de81c9843e629c6fbcd4130d64456e48898745acf",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_business_command_test.go"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_business_command_test.go",
+      "sha256": "704dfeb9bdee1b96f4c59900f06966a2d738f48b261aeaf6bbceb045b032fc61",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_business_command_test.go"
+    }
+  ],
+  "issue_functions": [
+    {
+      "file": "services/api-gateway/internal/server/e2e_business_command_test.go",
+      "function": "e2eInterruptedBusinessCommandRecovery"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_business_command_test.go",
+      "function": "e2eBusinessCommandRecoveryStates"
+    }
+  ]
+}

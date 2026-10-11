@@ -20,9 +20,8 @@ func (s *PostgresStore) QueuePaperImportOCR(ctx context.Context, tenantID string
 	return s.QueuePaperImportDecode(ctx, tenantID, job, actorID, assets, nil)
 }
 
-// QueuePaperImportDecode renders source files into page images. The legacy
-// QueuePaperImportOCR name remains as a compatibility wrapper, but newly
-// dispatched imports do not schedule text or formula OCR after this stage.
+// QueuePaperImportDecode 将来源文件渲染为页面图像。
+// 旧名称 QueuePaperImportOCR 保留为兼容包装，但新分发的导入在此阶段后不调度文本或公式 OCR。
 func (s *PostgresStore) QueuePaperImportDecode(ctx context.Context, tenantID string, job PaperImportJob, actorID string, assets []PaperImportOCRAsset, baseDocuments []PaperImportParseDocument) error {
 	if len(assets) == 0 {
 		return ErrInvalidInput
@@ -149,32 +148,8 @@ func queuePaperImportParseInTx(ctx context.Context, tx *sql.Tx, tenantID string,
 	if err = lockPaperImportTasksInTx(ctx, tx, tenantID, job.ID); err != nil {
 		return err
 	}
-	sources := make(map[string]PaperImportSource, len(current.Sources))
-	for _, source := range current.Sources {
-		sources[source.ID] = source
-	}
-	seen := make(map[string]bool, len(input.Documents))
-	for _, document := range input.Documents {
-		source, ok := sources[document.SourceID]
-		if !ok || seen[document.SourceID] || source.FileAssetID != document.FileAssetID || source.DocumentIndex != document.DocumentIndex || strings.TrimSpace(document.Content) == "" {
-			return ErrInvalidInput
-		}
-		seen[document.SourceID] = true
-	}
-	if len(seen) != len(sources) {
-		return ErrInvalidInput
-	}
-	seenPages := make(map[string]bool, len(input.Pages))
-	for _, page := range input.Pages {
-		source, ok := sources[page.SourceID]
-		pageKey := fmt.Sprintf("%s:%d", page.SourceID, page.PageNo)
-		if !ok || source.DocumentIndex != page.DocumentIndex || page.PageNo <= 0 || strings.TrimSpace(page.FileAssetID) == "" || seenPages[pageKey] {
-			return ErrInvalidInput
-		}
-		if digest := strings.ToLower(strings.TrimSpace(page.SHA256)); digest != "" && !regexp.MustCompile(`^[0-9a-f]{64}$`).MatchString(digest) {
-			return ErrInvalidInput
-		}
-		seenPages[pageKey] = true
+	if err = validatePaperImportParseSources(current.Sources, input); err != nil {
+		return err
 	}
 	documents, err := json.Marshal(input.Documents)
 	if err != nil {
@@ -244,6 +219,38 @@ WHERE prior.tenant_id=$1 AND prior.source_type='paper_import_parse'
 	return err
 }
 
+// 当前来源在事务内完成锁定后才核对解析输入；文档必须覆盖全部来源，页面按来源和页号去重。
+func validatePaperImportParseSources(current []PaperImportSource, input PaperImportParseRequest) error {
+	sources := make(map[string]PaperImportSource, len(current))
+	for _, source := range current {
+		sources[source.ID] = source
+	}
+	seen := make(map[string]bool, len(input.Documents))
+	for _, document := range input.Documents {
+		source, ok := sources[document.SourceID]
+		if !ok || seen[document.SourceID] || source.FileAssetID != document.FileAssetID || source.DocumentIndex != document.DocumentIndex || strings.TrimSpace(document.Content) == "" {
+			return ErrInvalidInput
+		}
+		seen[document.SourceID] = true
+	}
+	if len(seen) != len(sources) {
+		return ErrInvalidInput
+	}
+	seenPages := make(map[string]bool, len(input.Pages))
+	for _, page := range input.Pages {
+		source, ok := sources[page.SourceID]
+		pageKey := fmt.Sprintf("%s:%d", page.SourceID, page.PageNo)
+		if !ok || source.DocumentIndex != page.DocumentIndex || page.PageNo <= 0 || strings.TrimSpace(page.FileAssetID) == "" || seenPages[pageKey] {
+			return ErrInvalidInput
+		}
+		if digest := strings.ToLower(strings.TrimSpace(page.SHA256)); digest != "" && !regexp.MustCompile(`^[0-9a-f]{64}$`).MatchString(digest) {
+			return ErrInvalidInput
+		}
+		seenPages[pageKey] = true
+	}
+	return nil
+}
+
 func (s *PostgresStore) CompletePaperImportDecode(ctx context.Context, tenantID, importID string, input PaperImportDecodeResult) error {
 	if input.TaskID == "" || input.LeaseToken == "" || len(input.Pages) == 0 {
 		return ErrInvalidInput
@@ -257,7 +264,7 @@ func (s *PostgresStore) CompletePaperImportDecode(ctx context.Context, tenantID,
 	if err != nil {
 		return err
 	}
-	if err = validatePaperImportStageBinding(ctx, tx, tenantID, input.TaskID, runID, generation, "layout", "paper_import_job", importID); err != nil {
+	if err = validatePaperImportStageBinding(ctx, tx, tenantID, input.TaskID, runID, generation, paperImportTaskStage{taskType: "layout", sourceType: "paper_import_job", sourceID: importID}); err != nil {
 		return err
 	}
 	var taskPayloadJSON []byte
@@ -306,35 +313,14 @@ func buildDecodedVisualParseInput(job PaperImportJob, baseDocuments []PaperImpor
 	for _, source := range job.Sources {
 		sources[source.ID] = source
 	}
-	baseBySource := make(map[string]PaperImportParseDocument, len(baseDocuments))
-	for _, document := range baseDocuments {
-		source, ok := sources[document.SourceID]
-		if !ok || source.FileAssetID != document.FileAssetID || source.DocumentIndex != document.DocumentIndex || strings.TrimSpace(document.Content) == "" {
-			return PaperImportParseRequest{}, ErrInvalidInput
-		}
-		if _, duplicate := baseBySource[document.SourceID]; duplicate {
-			return PaperImportParseRequest{}, ErrInvalidInput
-		}
-		baseBySource[document.SourceID] = document
+	baseBySource, err := indexDecodedBaseDocuments(sources, baseDocuments)
+	if err != nil {
+		return PaperImportParseRequest{}, err
 	}
-	pagesBySource := make(map[string]int, len(pages))
-	seenPages := make(map[string]bool, len(pages))
-	orderedPages := append([]PaperImportDecodedPage(nil), pages...)
-	for _, page := range orderedPages {
-		source, ok := sources[page.SourceID]
-		identity := fmt.Sprintf("%s:%d", page.SourceID, page.PageNo)
-		if !ok || source.DocumentIndex != page.DocumentIndex || page.PageNo <= 0 || strings.TrimSpace(page.FileAssetID) == "" || seenPages[identity] {
-			return PaperImportParseRequest{}, ErrInvalidInput
-		}
-		seenPages[identity] = true
-		pagesBySource[page.SourceID]++
+	orderedPages, pagesBySource, err := orderDecodedVisualPages(sources, pages)
+	if err != nil {
+		return PaperImportParseRequest{}, err
 	}
-	sort.SliceStable(orderedPages, func(i, j int) bool {
-		if orderedPages[i].DocumentIndex == orderedPages[j].DocumentIndex {
-			return orderedPages[i].PageNo < orderedPages[j].PageNo
-		}
-		return orderedPages[i].DocumentIndex < orderedPages[j].DocumentIndex
-	})
 	orderedSources := append([]PaperImportSource(nil), job.Sources...)
 	sort.SliceStable(orderedSources, func(i, j int) bool { return orderedSources[i].DocumentIndex < orderedSources[j].DocumentIndex })
 	documents := make([]PaperImportParseDocument, 0, len(orderedSources))
@@ -352,6 +338,44 @@ func buildDecodedVisualParseInput(job PaperImportJob, baseDocuments []PaperImpor
 	return PaperImportParseRequest{Documents: documents, Pages: orderedPages}, nil
 }
 
+func indexDecodedBaseDocuments(sources map[string]PaperImportSource, documents []PaperImportParseDocument) (map[string]PaperImportParseDocument, error) {
+	indexed := make(map[string]PaperImportParseDocument, len(documents))
+	for _, document := range documents {
+		source, ok := sources[document.SourceID]
+		if !ok || source.FileAssetID != document.FileAssetID || source.DocumentIndex != document.DocumentIndex || strings.TrimSpace(document.Content) == "" {
+			return nil, ErrInvalidInput
+		}
+		if _, duplicate := indexed[document.SourceID]; duplicate {
+			return nil, ErrInvalidInput
+		}
+		indexed[document.SourceID] = document
+	}
+	return indexed, nil
+}
+
+func orderDecodedVisualPages(sources map[string]PaperImportSource, pages []PaperImportDecodedPage) ([]PaperImportDecodedPage, map[string]int, error) {
+	counts := make(map[string]int, len(pages))
+	seen := make(map[string]bool, len(pages))
+	// 先复制再稳定排序，避免完成回执中原有页面顺序被组装步骤改动。
+	ordered := append([]PaperImportDecodedPage(nil), pages...)
+	for _, page := range ordered {
+		source, ok := sources[page.SourceID]
+		identity := fmt.Sprintf("%s:%d", page.SourceID, page.PageNo)
+		if !ok || source.DocumentIndex != page.DocumentIndex || page.PageNo <= 0 || strings.TrimSpace(page.FileAssetID) == "" || seen[identity] {
+			return nil, nil, ErrInvalidInput
+		}
+		seen[identity] = true
+		counts[page.SourceID]++
+	}
+	sort.SliceStable(ordered, func(i, j int) bool {
+		if ordered[i].DocumentIndex == ordered[j].DocumentIndex {
+			return ordered[i].PageNo < ordered[j].PageNo
+		}
+		return ordered[i].DocumentIndex < ordered[j].DocumentIndex
+	})
+	return ordered, counts, nil
+}
+
 func (s *PostgresStore) CompletePaperImportOCR(ctx context.Context, tenantID, importID string, input PaperImportOCRResult, parseInput PaperImportParseRequest) error {
 	if input.TaskID == "" || input.LeaseToken == "" || len(input.Blocks) == 0 || len(parseInput.Documents) == 0 {
 		return ErrInvalidInput
@@ -365,7 +389,7 @@ func (s *PostgresStore) CompletePaperImportOCR(ctx context.Context, tenantID, im
 	if err != nil {
 		return err
 	}
-	if err = validatePaperImportStageBinding(ctx, tx, tenantID, input.TaskID, runID, generation, "ocr", "paper_import_job", importID); err != nil {
+	if err = validatePaperImportStageBinding(ctx, tx, tenantID, input.TaskID, runID, generation, paperImportTaskStage{taskType: "ocr", sourceType: "paper_import_job", sourceID: importID}); err != nil {
 		return err
 	}
 	var policyJSON []byte
@@ -443,7 +467,7 @@ func (s *PostgresStore) CompletePaperImportFormula(ctx context.Context, tenantID
 	if err != nil {
 		return err
 	}
-	if err = validatePaperImportStageBinding(ctx, tx, tenantID, input.TaskID, runID, generation, "paper_formula", "paper_import_job", importID); err != nil {
+	if err = validatePaperImportStageBinding(ctx, tx, tenantID, input.TaskID, runID, generation, paperImportTaskStage{taskType: "paper_formula", sourceType: "paper_import_job", sourceID: importID}); err != nil {
 		return err
 	}
 	if _, err = workerruntime.CompleteTaskInTx(ctx, tx, tenantID, input.TaskID, workerruntime.CompleteInput{LeaseToken: input.LeaseToken, ResultSchemaVersion: "paper-import-formula-result-v2", Result: mapFromJSON(input), DurationMS: input.DurationMS}); err != nil {
@@ -493,61 +517,7 @@ func (s *PostgresStore) CompletePaperImportFormula(ctx context.Context, tenantID
 func mergePaperFormulaResult(input PaperImportParseRequest, regions []PaperImportFormulaRegion) PaperImportParseRequest {
 	for documentIndex := range input.Documents {
 		document := &input.Documents[documentIndex]
-		for _, region := range regions {
-			if region.SourceID != document.SourceID || region.DocumentIndex != document.DocumentIndex {
-				continue
-			}
-			if region.Status != "accepted" || strings.TrimSpace(region.SelectedLatex) == "" {
-				input.ExtraIssues = append(input.ExtraIssues, PaperImportIssue{Code: "FORMULA_REVIEW_REQUIRED", Severity: "warning", Certainty: "confirmed", Message: fmt.Sprintf("第 %d 页有数学公式需要人工核对", region.PageNo), SourceRefs: []PaperImportSourceRef{{SourceID: document.SourceID, FileAssetID: document.FileAssetID, DocumentIndex: document.DocumentIndex, PageNo: region.PageNo, BlockID: region.RegionID, BBox: region.BBox}}, ResolutionHint: "请对照原图核对公式"})
-				continue
-			}
-			formulaBlock := PaperImportOCRBlock{SourceID: region.SourceID, DocumentIndex: region.DocumentIndex, BlockID: region.RegionID, PageNo: region.PageNo, Text: "\\(" + region.SelectedLatex + "\\)", BBox: region.BBox, Confidence: selectedFormulaConfidence(region), Kind: "formula", CanonicalLatex: region.SelectedLatex, Engine: "paddle-formula", EngineVersion: region.SelectedModel, ReviewStatus: "accepted", Segments: []PaperImportContentSegment{{Kind: "formula", Latex: region.SelectedLatex, BBox: region.BBox, SourceBlockID: region.RegionID}}}
-			kept := make([]PaperImportOCRBlock, 0, len(document.Blocks)+1)
-			insertAt := -1
-			mergedInline := false
-			for _, block := range document.Blocks {
-				if block.PageNo == region.PageNo && paperBBoxOverlap(block.BBox, region.BBox) {
-					if paperFormulaReplacementSafe(block, region) {
-						if insertAt < 0 {
-							insertAt = len(kept)
-						}
-						continue
-					}
-					if !mergedInline {
-						if mixed, ok := mergeInlineFormulaSegment(block, region); ok {
-							if mixed.ReviewStatus == "review_required" {
-								input.ExtraIssues = append(input.ExtraIssues, formulaMergeReviewIssue(*document, region))
-							}
-							kept = append(kept, mixed)
-							mergedInline = true
-							continue
-						}
-						if mixed, ok := mergeInlineFormulaByGeometry(block, region); ok {
-							input.ExtraIssues = append(input.ExtraIssues, formulaMergeReviewIssue(*document, region))
-							kept = append(kept, mixed)
-							mergedInline = true
-							continue
-						}
-					}
-					if insertAt < 0 {
-						insertAt = len(kept) + 1
-					}
-				}
-				kept = append(kept, block)
-			}
-			if mergedInline {
-				document.Blocks = kept
-				continue
-			}
-			if insertAt < 0 {
-				insertAt = paperFormulaGeometryInsertAt(kept, region)
-			}
-			insertAt = max(0, min(insertAt, len(kept)))
-			kept = append(kept, PaperImportOCRBlock{})
-			copy(kept[insertAt+1:], kept[insertAt:])
-			kept[insertAt] = formulaBlock
-			document.Blocks = kept
-		}
+		input.ExtraIssues = append(input.ExtraIssues, mergePaperFormulaDocument(document, regions)...)
 		sortPaperImportOCRBlocks(document.Blocks)
 		parts := make([]string, 0, len(document.Blocks))
 		for _, block := range document.Blocks {
@@ -560,6 +530,86 @@ func mergePaperFormulaResult(input PaperImportParseRequest, regions []PaperImpor
 	return input
 }
 
+func mergePaperFormulaDocument(document *PaperImportParseDocument, regions []PaperImportFormulaRegion) []PaperImportIssue {
+	var issues []PaperImportIssue
+	for _, region := range regions {
+		if region.SourceID != document.SourceID || region.DocumentIndex != document.DocumentIndex {
+			continue
+		}
+		if region.Status != "accepted" || strings.TrimSpace(region.SelectedLatex) == "" {
+			issues = append(issues, PaperImportIssue{Code: "FORMULA_REVIEW_REQUIRED", Severity: "warning", Certainty: "confirmed", Message: fmt.Sprintf("第 %d 页有数学公式需要人工核对", region.PageNo), SourceRefs: []PaperImportSourceRef{{SourceID: document.SourceID, FileAssetID: document.FileAssetID, DocumentIndex: document.DocumentIndex, PageNo: region.PageNo, BlockID: region.RegionID, BBox: region.BBox}}, ResolutionHint: "请对照原图核对公式"})
+			continue
+		}
+		blocks, review := mergeAcceptedPaperFormulaRegion(document.Blocks, region)
+		if review {
+			issues = append(issues, formulaMergeReviewIssue(*document, region))
+		}
+		document.Blocks = blocks
+	}
+	return issues
+}
+
+type paperFormulaBlockMerge struct {
+	kept           []PaperImportOCRBlock
+	insertAt       int
+	mergedInline   bool
+	reviewRequired bool
+}
+
+func mergeAcceptedPaperFormulaRegion(blocks []PaperImportOCRBlock, region PaperImportFormulaRegion) ([]PaperImportOCRBlock, bool) {
+	formulaBlock := PaperImportOCRBlock{SourceID: region.SourceID, DocumentIndex: region.DocumentIndex, BlockID: region.RegionID, PageNo: region.PageNo, Text: "\\(" + region.SelectedLatex + "\\)", BBox: region.BBox, Confidence: selectedFormulaConfidence(region), Kind: "formula", CanonicalLatex: region.SelectedLatex, Engine: "paddle-formula", EngineVersion: region.SelectedModel, ReviewStatus: "accepted", Segments: []PaperImportContentSegment{{Kind: "formula", Latex: region.SelectedLatex, BBox: region.BBox, SourceBlockID: region.RegionID}}}
+	merge := paperFormulaBlockMerge{kept: make([]PaperImportOCRBlock, 0, len(blocks)+1), insertAt: -1}
+	for _, block := range blocks {
+		merge.appendBlock(block, region)
+	}
+	if merge.mergedInline {
+		return merge.kept, merge.reviewRequired
+	}
+	if merge.insertAt < 0 {
+		merge.insertAt = paperFormulaGeometryInsertAt(merge.kept, region)
+	}
+	insertAt := max(0, min(merge.insertAt, len(merge.kept)))
+	merge.kept = append(merge.kept, PaperImportOCRBlock{})
+	copy(merge.kept[insertAt+1:], merge.kept[insertAt:])
+	merge.kept[insertAt] = formulaBlock
+	return merge.kept, merge.reviewRequired
+}
+
+// 一个区域最多内联到一块正文；其余重叠块仍按原顺序保留或删除，插入位置也按该顺序确定。
+func (m *paperFormulaBlockMerge) appendBlock(block PaperImportOCRBlock, region PaperImportFormulaRegion) {
+	if block.PageNo != region.PageNo || !paperBBoxOverlap(block.BBox, region.BBox) {
+		m.kept = append(m.kept, block)
+		return
+	}
+	if paperFormulaReplacementSafe(block, region) {
+		if m.insertAt < 0 {
+			m.insertAt = len(m.kept)
+		}
+		return
+	}
+	if !m.mergedInline {
+		if mixed, ok, review := mergeOverlappingPaperFormulaBlock(block, region); ok {
+			m.kept = append(m.kept, mixed)
+			m.mergedInline, m.reviewRequired = true, review
+			return
+		}
+	}
+	if m.insertAt < 0 {
+		m.insertAt = len(m.kept) + 1
+	}
+	m.kept = append(m.kept, block)
+}
+
+func mergeOverlappingPaperFormulaBlock(block PaperImportOCRBlock, region PaperImportFormulaRegion) (PaperImportOCRBlock, bool, bool) {
+	if mixed, ok := mergeInlineFormulaSegment(block, region); ok {
+		return mixed, true, mixed.ReviewStatus == "review_required"
+	}
+	if mixed, ok := mergeInlineFormulaByGeometry(block, region); ok {
+		return mixed, true, true
+	}
+	return block, false, false
+}
+
 func validPaperFormulaResult(documents []PaperImportParseDocument, regions []PaperImportFormulaRegion) bool {
 	documentKeys := map[string]bool{}
 	for _, document := range documents {
@@ -568,42 +618,66 @@ func validPaperFormulaResult(documents []PaperImportParseDocument, regions []Pap
 	seen := map[string]bool{}
 	for _, region := range regions {
 		key := fmt.Sprintf("%s:%d:%d:%s", region.SourceID, region.DocumentIndex, region.PageNo, region.RegionID)
-		validValidationVersion := region.ValidationVersion == "latex-structure-render-v1" || region.ValidationVersion == "latex-structure-render-v2"
-		if seen[key] || !documentKeys[fmt.Sprintf("%s:%d", region.SourceID, region.DocumentIndex)] || region.PageNo <= 0 || region.RegionID == "" || len(region.BBox) != 4 || region.DetectorModel != "PP-DocLayout_plus-L" || !finiteUnit(region.DetectorConfidence) || !finiteUnit(region.EdgeInkRatio) || len(region.CropSHA256) != 64 || (region.Status != "accepted" && region.Status != "review_required") || len(region.Candidates) > 2 || region.RecropCount < 0 || region.RecropCount > 8 || !validValidationVersion {
-			return false
-		}
-		if region.Status == "accepted" && (!region.CropComplete || len(region.Candidates) == 0) {
+		if seen[key] || !documentKeys[fmt.Sprintf("%s:%d", region.SourceID, region.DocumentIndex)] || !validPaperFormulaRegion(region) {
 			return false
 		}
 		seen[key] = true
-		for index, value := range region.BBox {
-			if !math.IsNaN(value) && !math.IsInf(value, 0) && ((index < 2 && value >= 0) || (index >= 2 && value > 0)) {
-				continue
-			}
-			return false
-		}
-		models := map[string]bool{}
-		selectedMatches := false
-		for _, candidate := range region.Candidates {
-			if models[candidate.ModelVersion] || (candidate.ModelVersion != "PP-FormulaNet_plus-M" && candidate.ModelVersion != "PP-FormulaNet_plus-L") || !finiteUnit(candidate.Confidence) || (candidate.RenderSimilarity != nil && !finiteUnit(*candidate.RenderSimilarity)) {
-				return false
-			}
-			if candidate.ValidationAction != "accept" && candidate.ValidationAction != "retry_l" && candidate.ValidationAction != "review" && candidate.ValidationAction != "recrop" {
-				return false
-			}
-			if candidate.Valid != (candidate.SyntaxValid && candidate.StructureValid && candidate.ValidationAction == "accept") {
-				return false
-			}
-			models[candidate.ModelVersion] = true
-			if candidate.ModelVersion == region.SelectedModel && candidate.CanonicalLatex == region.SelectedLatex && candidate.Valid {
-				selectedMatches = true
-			}
-		}
-		if region.Status == "accepted" && (!selectedMatches || strings.TrimSpace(region.SelectedLatex) == "") {
-			return false
-		}
 	}
 	return true
+}
+
+func validPaperFormulaRegion(region PaperImportFormulaRegion) bool {
+	validValidationVersion := region.ValidationVersion == "latex-structure-render-v1" || region.ValidationVersion == "latex-structure-render-v2"
+	if region.PageNo <= 0 || region.RegionID == "" || len(region.BBox) != 4 || region.DetectorModel != "PP-DocLayout_plus-L" || !finiteUnit(region.DetectorConfidence) || !finiteUnit(region.EdgeInkRatio) || len(region.CropSHA256) != 64 || (region.Status != "accepted" && region.Status != "review_required") || len(region.Candidates) > 2 || region.RecropCount < 0 || region.RecropCount > 8 || !validValidationVersion {
+		return false
+	}
+	if region.Status == "accepted" && (!region.CropComplete || len(region.Candidates) == 0) {
+		return false
+	}
+	if !validPaperFormulaBBox(region.BBox) {
+		return false
+	}
+	selectedMatches, valid := validPaperFormulaCandidates(region)
+	if !valid {
+		return false
+	}
+	// 待核对区域允许没有模型候选；已接受区域必须选中一条校验通过的同模型、同 LaTeX 证据。
+	return region.Status != "accepted" || (selectedMatches && strings.TrimSpace(region.SelectedLatex) != "")
+}
+
+func validPaperFormulaBBox(box []float64) bool {
+	for index, value := range box {
+		if !math.IsNaN(value) && !math.IsInf(value, 0) && ((index < 2 && value >= 0) || (index >= 2 && value > 0)) {
+			continue
+		}
+		return false
+	}
+	return true
+}
+
+func validPaperFormulaCandidates(region PaperImportFormulaRegion) (bool, bool) {
+	models := map[string]bool{}
+	selectedMatches := false
+	for _, candidate := range region.Candidates {
+		if models[candidate.ModelVersion] || !validPaperFormulaCandidate(candidate) {
+			return false, false
+		}
+		models[candidate.ModelVersion] = true
+		if candidate.ModelVersion == region.SelectedModel && candidate.CanonicalLatex == region.SelectedLatex && candidate.Valid {
+			selectedMatches = true
+		}
+	}
+	return selectedMatches, true
+}
+
+func validPaperFormulaCandidate(candidate PaperImportFormulaCandidate) bool {
+	if (candidate.ModelVersion != "PP-FormulaNet_plus-M" && candidate.ModelVersion != "PP-FormulaNet_plus-L") || !finiteUnit(candidate.Confidence) || (candidate.RenderSimilarity != nil && !finiteUnit(*candidate.RenderSimilarity)) {
+		return false
+	}
+	if candidate.ValidationAction != "accept" && candidate.ValidationAction != "retry_l" && candidate.ValidationAction != "review" && candidate.ValidationAction != "recrop" {
+		return false
+	}
+	return candidate.Valid == (candidate.SyntaxValid && candidate.StructureValid && candidate.ValidationAction == "accept")
 }
 
 func finiteUnit(value float64) bool {
@@ -613,11 +687,9 @@ func finiteUnit(value float64) bool {
 func selectedFormulaConfidence(region PaperImportFormulaRegion) float64 {
 	for _, candidate := range region.Candidates {
 		if candidate.ModelVersion == region.SelectedModel {
-			// Current Paddle FormulaRecognition builds do not always expose a
-			// recognition score. Treat that zero as unavailable rather than as
-			// certain failure, but never replace it with the detector score alone:
-			// render-back similarity is the only recognition-level evidence we
-			// have in that case.
+			// 当前 Paddle FormulaRecognition 构建不一定提供识别分数。
+			// 将此时的零视为不可用，而非确定失败，但也绝不能仅用检测器分数替代：
+			// 这种情况下，重新渲染后的相似度是唯一的识别级证据。
 			if candidate.Confidence > 0 {
 				return min(region.DetectorConfidence, candidate.Confidence)
 			}
@@ -725,8 +797,7 @@ func replaceInlineFormulaRange(block PaperImportOCRBlock, region PaperImportForm
 	if sourceStart < 0 || sourceEnd <= sourceStart || sourceEnd > len(block.Text) {
 		return block, false
 	}
-	// Never replace a substring inside an already inserted formula. A second
-	// ROI must not create nested math delimiters or mutate prior evidence.
+	// 绝不能替换已插入公式内部的子串。第二个 ROI 不能创建嵌套数学分隔符或改动之前的证据。
 	if strings.Count(block.Text[:sourceStart], "\\(") > strings.Count(block.Text[:sourceStart], "\\)") || strings.Contains(block.Text[sourceStart:sourceEnd], "\\(") || strings.Contains(block.Text[sourceStart:sourceEnd], "\\)") {
 		return block, false
 	}
@@ -746,12 +817,9 @@ func replaceInlineFormulaRange(block PaperImportOCRBlock, region PaperImportForm
 }
 
 func mergeInlineFormulaByGeometry(block PaperImportOCRBlock, region PaperImportFormulaRegion) (PaperImportOCRBlock, bool) {
-	// Paddle text OCR returns line boxes, while the formula detector returns a
-	// sub-line ROI. When OCR has already lost a superscript or vertical bar,
-	// textual matching cannot find the formula. Use the trusted horizontal ROI
-	// to replace only that part of the line. Do not repeat this approximation on
-	// an already mixed block because inserted LaTeX no longer has the source
-	// line's character geometry.
+	// Paddle 文本 OCR 返回行级框，而公式检测器返回行内 ROI。
+	// OCR 已丢失上标或竖线时，文本匹配无法找到公式，因此使用可信水平 ROI 只替换该行的对应部分。
+	// 已混合的块不再重复这种近似处理，因为插入的 LaTeX 已不具备原始行的字符几何关系。
 	if block.Kind == "mixed" || block.Kind == "formula" || strings.TrimSpace(block.Text) == "" {
 		return block, false
 	}
@@ -870,17 +938,11 @@ func approximateFormulaRange(value, formula string) (int, int, bool) {
 	bestDistance, bestStart, bestEnd := maxEdits+1, -1, -1
 	for start := range searchable {
 		for length := minLength; length <= maxLength && start+length <= len(searchable); length++ {
-			containsProse := false
-			for _, char := range searchable[start : start+length] {
-				if unicode.In(char, unicode.Han) || char == '\\' {
-					containsProse = true
-					break
-				}
-			}
-			if containsProse {
+			if formulaRangeContainsProse(searchable[start : start+length]) {
 				continue
 			}
 			distance := formulaEditDistance(searchable[start:start+length], target, bestDistance)
+			// 距离相同仍保留先找到的范围，避免同一文本出现多个近似片段时改变定位顺序。
 			if distance < bestDistance {
 				bestDistance, bestStart, bestEnd = distance, start, start+length
 			}
@@ -890,6 +952,16 @@ func approximateFormulaRange(value, formula string) (int, int, bool) {
 		return 0, 0, false
 	}
 	return starts[bestStart], ends[bestEnd-1], true
+}
+
+// 近似匹配不能跨过中文正文或已插入的 LaTeX 分隔符。
+func formulaRangeContainsProse(chars []rune) bool {
+	for _, char := range chars {
+		if unicode.In(char, unicode.Han) || char == '\\' {
+			return true
+		}
+	}
+	return false
 }
 
 func normalizeFormulaSearchRunesWithOffsets(value string) ([]rune, []int, []int) {
@@ -1045,18 +1117,9 @@ WHERE input.tenant_id=$1 AND input.id=$2::uuid AND input.protocol_version=2`, te
 		return PaperImportRunBinding{}, ErrInvalidInput
 	}
 	if binding.CommandType == "add_sources" && len(previousSnapshot) > 0 {
-		var previousSources []PaperImportSource
-		if json.Unmarshal(previousSnapshot, &previousSources) != nil {
-			return PaperImportRunBinding{}, ErrInvalidInput
-		}
-		previousIDs := make(map[string]bool, len(previousSources))
-		for _, source := range previousSources {
-			previousIDs[source.ID] = true
-		}
-		for _, document := range binding.Input.Documents {
-			if !previousIDs[document.SourceID] {
-				binding.NewSourceIDs = append(binding.NewSourceIDs, document.SourceID)
-			}
+		binding.NewSourceIDs, err = paperImportNewSourceIDs(binding.Input.Documents, previousSnapshot)
+		if err != nil {
+			return PaperImportRunBinding{}, err
 		}
 	}
 	serialized, err := json.Marshal(binding.Input)
@@ -1064,6 +1127,24 @@ WHERE input.tenant_id=$1 AND input.id=$2::uuid AND input.protocol_version=2`, te
 		return PaperImportRunBinding{}, ErrConflict
 	}
 	return binding, nil
+}
+
+func paperImportNewSourceIDs(documents []PaperImportParseDocument, snapshot []byte) ([]string, error) {
+	var previous []PaperImportSource
+	if json.Unmarshal(snapshot, &previous) != nil {
+		return nil, ErrInvalidInput
+	}
+	previousIDs := make(map[string]bool, len(previous))
+	for _, source := range previous {
+		previousIDs[source.ID] = true
+	}
+	var added []string
+	for _, document := range documents {
+		if !previousIDs[document.SourceID] {
+			added = append(added, document.SourceID)
+		}
+	}
+	return added, nil
 }
 
 func (s *PostgresStore) FailPaperImportRuntime(ctx context.Context, tenantID, importID string, input PaperImportRuntimeFailure) error {

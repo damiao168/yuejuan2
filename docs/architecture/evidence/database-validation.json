@@ -1,0 +1,27 @@
+{
+  "passed": true,
+  "errors": [],
+  "postgreSQL": {
+    "method": "源码静态交叉核对",
+    "live_database_checked": false,
+    "migration_count": 183,
+    "dynamic_tenant_foreign_keys_checked": 117
+  },
+  "sqlite": {
+    "method": "sqlite3内存执行schema及PRAGMA交叉核对",
+    "persistent_database_modified": false,
+    "tables": 8,
+    "columns": 64,
+    "foreign_keys": 5,
+    "explicit_indexes": 1
+  },
+  "diagram": {
+    "pages": 29,
+    "distinct_tables_covered": 206
+  },
+  "limits": [
+    "不证明PostgreSQL迁移可实际执行，不证明部署数据库与源码一致",
+    "不替代触发器、存量回填、应用权限和并发行为的人工审读",
+    "FK连线核对不证明图纸视觉可读性，需另行渲染"
+  ]
+}

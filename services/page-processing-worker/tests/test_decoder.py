@@ -55,17 +55,20 @@ def test_rejects_tiff_frame_and_total_pixel_limits_before_materializing_all_page
     source = io.BytesIO()
     frames = [Image.new("L", (100, 100), color=index * 20) for index in range(3)]
     frames[0].save(source, format="TIFF", save_all=True, append_images=frames[1:])
-    with pytest.raises(DecodeError, match="image_frame_limit_exceeded"):
-        decode_document(source.getvalue(), "image/tiff", max_pages=2)
-    with pytest.raises(DecodeError, match="document_pixel_limit_exceeded"):
-        decode_document(source.getvalue(), "image/tiff", max_total_pixels=20_000)
+    source_bytes = source.getvalue()
+    with pytest.raises(DecodeError, match='image_frame_limit_exceeded'):
+        decode_document(source_bytes, 'image/tiff', max_pages=2)
+    source_bytes = source.getvalue()
+    with pytest.raises(DecodeError, match='document_pixel_limit_exceeded'):
+        decode_document(source_bytes, 'image/tiff', max_total_pixels=20000)
 
 
 def test_reports_stable_error_for_truncated_tiff() -> None:
     source = io.BytesIO()
     Image.new("RGB", (100, 100), "white").save(source, format="TIFF")
-    with pytest.raises(DecodeError, match="invalid_tiff"):
-        decode_document(source.getvalue()[:64], "image/tiff")
+    source_bytes = source.getvalue()
+    with pytest.raises(DecodeError, match='invalid_tiff'):
+        decode_document(source_bytes[:64], 'image/tiff')
 
 
 def test_decodes_pdf_pages() -> None:
@@ -86,8 +89,9 @@ def test_rejects_limits_and_invalid_input() -> None:
         decode_document(b"not-an-image", "image/png")
     source = io.BytesIO()
     Image.new("RGB", (200, 200), "white").save(source, format="PNG")
-    with pytest.raises(DecodeError, match="page_pixel_limit_exceeded"):
-        decode_document(source.getvalue(), "image/png", max_page_pixels=100)
+    source_bytes = source.getvalue()
+    with pytest.raises(DecodeError, match='page_pixel_limit_exceeded'):
+        decode_document(source_bytes, 'image/png', max_page_pixels=100)
 
 
 def test_rejects_unsafe_render_configuration_and_pdf_size_before_rendering() -> None:
@@ -97,7 +101,9 @@ def test_rejects_unsafe_render_configuration_and_pdf_size_before_rendering() -> 
     document.save(source)
     document.close()
 
-    with pytest.raises(DecodeError, match="render_dpi_out_of_range"):
-        decode_document(source.getvalue(), "application/pdf", render_dpi=10_000)
-    with pytest.raises(DecodeError, match="page_pixel_limit_exceeded"):
-        decode_document(source.getvalue(), "application/pdf", render_dpi=72, max_page_pixels=100)
+    source_bytes = source.getvalue()
+    with pytest.raises(DecodeError, match='render_dpi_out_of_range'):
+        decode_document(source_bytes, 'application/pdf', render_dpi=10000)
+    source_bytes = source.getvalue()
+    with pytest.raises(DecodeError, match='page_pixel_limit_exceeded'):
+        decode_document(source_bytes, 'application/pdf', render_dpi=72, max_page_pixels=100)

@@ -1,0 +1,1389 @@
+{
+  "schema_version": 2,
+  "recorded_at_utc": "2026-10-11T08:36:15.688036+00:00",
+  "review_stage": "final_report_narratives_after_owner_stop_before_root_machine_validation",
+  "scope": "Read-only final result/scope narrative review of named primary reports plus human-review and independent-review appendices. Read saved successful logs/SARIF/JSON/CSV for count consistency. No tests, scans, compilations or remote project queries were executed, no shared reports or business source edited.",
+  "prior_review": {
+    "recorded_at_utc": "2026-10-11T07:53:22.808635+00:00",
+    "completed_at_utc": "2026-10-11T07:55:02.617969+00:00",
+    "stage": "before_final_rust_rescan_delivery",
+    "issues_count": 0,
+    "relative_links_checked": 19,
+    "earlier_attachment_sha256": "0e3e49c652d15c6d36e9905a30c39a94ba8cc98876aabdecc2e9a93e48e70fcf"
+  },
+  "reports": [
+    {
+      "path": "README.md",
+      "sha256": "41a2c4379b52805b08262063dfdb431b4a1b6db40da52c611b3be76a3a1e1ffa",
+      "lines": 85,
+      "review_scope": "Result/scope narrative and local relative Markdown-link targets; not a complete source-code rereview",
+      "unchanged_during_final_review": true
+    },
+    {
+      "path": "actions/report.md",
+      "sha256": "383c1ce97530ab0ae233224843c697d81c41c1ec8188435f13d3bad761e78802",
+      "lines": 38,
+      "review_scope": "Result/scope narrative and local relative Markdown-link targets; not a complete source-code rereview",
+      "unchanged_during_final_review": true
+    },
+    {
+      "path": "coverage/report.md",
+      "sha256": "4a8df0391ab62afd16d316940f90d703db1f9eda0712f8d741ab8a006239bd47",
+      "lines": 79,
+      "review_scope": "Result/scope narrative and local relative Markdown-link targets; not a complete source-code rereview",
+      "unchanged_during_final_review": true
+    },
+    {
+      "path": "sonar/REPORT.md",
+      "sha256": "4a14133a67449fdd94adc23f6270d0fb3c35e74145d7c393b37152926f9bd9e4",
+      "lines": 387,
+      "review_scope": "Result/scope narrative and local relative Markdown-link targets; not a complete source-code rereview",
+      "unchanged_during_final_review": true
+    },
+    {
+      "path": "semgrep/REPORT.md",
+      "sha256": "147b6f2a5d0eeb6fddfc0cdec0ca83ca73d8ff5d5dee895b6fbaf04e315869ad",
+      "lines": 315,
+      "review_scope": "Result/scope narrative and local relative Markdown-link targets; not a complete source-code rereview",
+      "unchanged_during_final_review": true
+    },
+    {
+      "path": "codeql/README.md",
+      "sha256": "70bbd7636f1ce5a9785b40a73d299738404a494d9e9ec702ab379a24f77c57a1",
+      "lines": 103,
+      "review_scope": "Result/scope narrative and local relative Markdown-link targets; not a complete source-code rereview",
+      "unchanged_during_final_review": true
+    },
+    {
+      "path": "codeql/python-quality-review.md",
+      "sha256": "040533ba57295269184fa4f7906c257625f1913d0563066d5e6d42c48a09facf",
+      "lines": 108,
+      "review_scope": "Result/scope narrative and local relative Markdown-link targets; not a complete source-code rereview",
+      "unchanged_during_final_review": true
+    },
+    {
+      "path": "codeql/javascript-finding-review.md",
+      "sha256": "5b9a72d75ba23d7549c265e999b6db186d9f1e92830544a0386a5ea718ee2086",
+      "lines": 186,
+      "review_scope": "Result/scope narrative and local relative Markdown-link targets; not a complete source-code rereview",
+      "unchanged_during_final_review": true
+    },
+    {
+      "path": "codeql/go-finding-review.md",
+      "sha256": "aab1368a318476a0ab460bf83c98489e86632a9afc527b8550f152432044871a",
+      "lines": 314,
+      "review_scope": "Result/scope narrative and local relative Markdown-link targets; not a complete source-code rereview",
+      "unchanged_during_final_review": true
+    },
+    {
+      "path": "codeql/rust-finding-review.md",
+      "sha256": "9b76e35e7dd9d8a1efb6262011300871b1eadc57cc5341061b69cf763f5d0ac4",
+      "lines": 38,
+      "review_scope": "Result/scope narrative and local relative Markdown-link targets; not a complete source-code rereview",
+      "unchanged_during_final_review": true
+    },
+    {
+      "path": "codeql/security-review.md",
+      "sha256": "27a338e8946efc1d1cde19756b1bf3632bc362f835d14a7df53b3dcc27b760c9",
+      "lines": 58,
+      "review_scope": "Result/scope narrative and local relative Markdown-link targets; not a complete source-code rereview",
+      "unchanged_during_final_review": true
+    },
+    {
+      "path": "sonar/finding-review.md",
+      "sha256": "2aec6bcedf36a27080d1c4d1317aea1865dc48acb3ae56fc3150997bc8cbe4e5",
+      "lines": 283,
+      "review_scope": "Result/scope narrative and local relative Markdown-link targets; not a complete source-code rereview",
+      "unchanged_during_final_review": true
+    },
+    {
+      "path": "final-independent-review.md",
+      "sha256": "b555159d2231000f4aff6d7c56d71c941d7ac1187669fa4c7a1bb60f166c60a7",
+      "lines": 131,
+      "review_scope": "Result/scope narrative and local relative Markdown-link targets; not a complete source-code rereview",
+      "unchanged_during_final_review": true
+    }
+  ],
+  "local_markdown_links": [
+    {
+      "report": "README.md",
+      "line": 17,
+      "target": "sonar/REPORT.md",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/sonar/REPORT.md",
+      "exists": true
+    },
+    {
+      "report": "README.md",
+      "line": 18,
+      "target": "semgrep/REPORT.md",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/semgrep/REPORT.md",
+      "exists": true
+    },
+    {
+      "report": "README.md",
+      "line": 19,
+      "target": "codeql/README.md",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/codeql/README.md",
+      "exists": true
+    },
+    {
+      "report": "README.md",
+      "line": 20,
+      "target": "actions/report.md",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/actions/report.md",
+      "exists": true
+    },
+    {
+      "report": "README.md",
+      "line": 21,
+      "target": "coverage/report.md",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/coverage/report.md",
+      "exists": true
+    },
+    {
+      "report": "README.md",
+      "line": 27,
+      "target": "sonar/issues.csv",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/sonar/issues.csv",
+      "exists": true
+    },
+    {
+      "report": "README.md",
+      "line": 27,
+      "target": "semgrep/findings.csv",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/semgrep/findings.csv",
+      "exists": true
+    },
+    {
+      "report": "README.md",
+      "line": 27,
+      "target": "codeql/alerts.csv",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/codeql/alerts.csv",
+      "exists": true
+    },
+    {
+      "report": "README.md",
+      "line": 39,
+      "target": "coverage/report.md",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/coverage/report.md",
+      "exists": true
+    },
+    {
+      "report": "README.md",
+      "line": 47,
+      "target": "delivery-workspace-drift-final.json",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/delivery-workspace-drift-final.json",
+      "exists": true
+    },
+    {
+      "report": "README.md",
+      "line": 51,
+      "target": "architecture-appendix.md",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/architecture-appendix.md",
+      "exists": true
+    },
+    {
+      "report": "README.md",
+      "line": 55,
+      "target": "codeql/security-review.md",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/codeql/security-review.md",
+      "exists": true
+    },
+    {
+      "report": "README.md",
+      "line": 61,
+      "target": "codeql/python-quality-review.md",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/codeql/python-quality-review.md",
+      "exists": true
+    },
+    {
+      "report": "README.md",
+      "line": 63,
+      "target": "sonar/finding-review.md",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/sonar/finding-review.md",
+      "exists": true
+    },
+    {
+      "report": "README.md",
+      "line": 65,
+      "target": "codeql/javascript-finding-review.md",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/codeql/javascript-finding-review.md",
+      "exists": true
+    },
+    {
+      "report": "README.md",
+      "line": 67,
+      "target": "codeql/go-finding-review.md",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/codeql/go-finding-review.md",
+      "exists": true
+    },
+    {
+      "report": "README.md",
+      "line": 69,
+      "target": "codeql/rust-finding-review.md",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/codeql/rust-finding-review.md",
+      "exists": true
+    },
+    {
+      "report": "README.md",
+      "line": 71,
+      "target": "codeql/rust-context-source-verification.json",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/codeql/rust-context-source-verification.json",
+      "exists": true
+    },
+    {
+      "report": "sonar/REPORT.md",
+      "line": 385,
+      "target": "complexity-context-review.md",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/sonar/complexity-context-review.md",
+      "exists": true
+    },
+    {
+      "report": "sonar/REPORT.md",
+      "line": 387,
+      "target": "finding-review.md",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/sonar/finding-review.md",
+      "exists": true
+    },
+    {
+      "report": "sonar/REPORT.md",
+      "line": 387,
+      "target": "finding-review.json",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/sonar/finding-review.json",
+      "exists": true
+    },
+    {
+      "report": "codeql/README.md",
+      "line": 17,
+      "target": "python-quality-review.md",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/codeql/python-quality-review.md",
+      "exists": true
+    },
+    {
+      "report": "codeql/README.md",
+      "line": 17,
+      "target": "security-review.md",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/codeql/security-review.md",
+      "exists": true
+    },
+    {
+      "report": "codeql/README.md",
+      "line": 19,
+      "target": "javascript-finding-review.md",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/codeql/javascript-finding-review.md",
+      "exists": true
+    },
+    {
+      "report": "codeql/README.md",
+      "line": 21,
+      "target": "go-finding-review.md",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/codeql/go-finding-review.md",
+      "exists": true
+    },
+    {
+      "report": "codeql/README.md",
+      "line": 27,
+      "target": "rust-finding-review.md",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/codeql/rust-finding-review.md",
+      "exists": true
+    },
+    {
+      "report": "codeql/README.md",
+      "line": 76,
+      "target": "rust-resource-control-research.md",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/codeql/rust-resource-control-research.md",
+      "exists": true
+    },
+    {
+      "report": "codeql/README.md",
+      "line": 79,
+      "target": "rust-query-resource-research.md",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/codeql/rust-query-resource-research.md",
+      "exists": true
+    },
+    {
+      "report": "codeql/javascript-finding-review.md",
+      "line": 3,
+      "target": "javascript.sarif",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/codeql/javascript.sarif",
+      "exists": true
+    },
+    {
+      "report": "codeql/javascript-finding-review.md",
+      "line": 30,
+      "target": "javascript-finding-review.json",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/codeql/javascript-finding-review.json",
+      "exists": true
+    },
+    {
+      "report": "codeql/javascript-finding-review.md",
+      "line": 42,
+      "target": "javascript-finding-review.json",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/codeql/javascript-finding-review.json",
+      "exists": true
+    },
+    {
+      "report": "codeql/javascript-finding-review.md",
+      "line": 54,
+      "target": "javascript-finding-review.json",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/codeql/javascript-finding-review.json",
+      "exists": true
+    },
+    {
+      "report": "codeql/javascript-finding-review.md",
+      "line": 66,
+      "target": "javascript-finding-review.json",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/codeql/javascript-finding-review.json",
+      "exists": true
+    },
+    {
+      "report": "codeql/javascript-finding-review.md",
+      "line": 78,
+      "target": "javascript-finding-review.json",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/codeql/javascript-finding-review.json",
+      "exists": true
+    },
+    {
+      "report": "codeql/javascript-finding-review.md",
+      "line": 90,
+      "target": "javascript-finding-review.json",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/codeql/javascript-finding-review.json",
+      "exists": true
+    },
+    {
+      "report": "codeql/javascript-finding-review.md",
+      "line": 102,
+      "target": "javascript-finding-review.json",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/codeql/javascript-finding-review.json",
+      "exists": true
+    },
+    {
+      "report": "codeql/javascript-finding-review.md",
+      "line": 114,
+      "target": "javascript-finding-review.json",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/codeql/javascript-finding-review.json",
+      "exists": true
+    },
+    {
+      "report": "codeql/javascript-finding-review.md",
+      "line": 126,
+      "target": "javascript-finding-review.json",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/codeql/javascript-finding-review.json",
+      "exists": true
+    },
+    {
+      "report": "codeql/javascript-finding-review.md",
+      "line": 138,
+      "target": "javascript-finding-review.json",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/codeql/javascript-finding-review.json",
+      "exists": true
+    },
+    {
+      "report": "codeql/javascript-finding-review.md",
+      "line": 150,
+      "target": "javascript-finding-review.json",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/codeql/javascript-finding-review.json",
+      "exists": true
+    },
+    {
+      "report": "codeql/javascript-finding-review.md",
+      "line": 162,
+      "target": "javascript-finding-review.json",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/codeql/javascript-finding-review.json",
+      "exists": true
+    },
+    {
+      "report": "codeql/javascript-finding-review.md",
+      "line": 174,
+      "target": "javascript-finding-review.json",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/codeql/javascript-finding-review.json",
+      "exists": true
+    },
+    {
+      "report": "codeql/javascript-finding-review.md",
+      "line": 186,
+      "target": "javascript-finding-review.json",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/codeql/javascript-finding-review.json",
+      "exists": true
+    },
+    {
+      "report": "codeql/go-finding-review.md",
+      "line": 3,
+      "target": "README.md",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/codeql/README.md",
+      "exists": true
+    },
+    {
+      "report": "codeql/go-finding-review.md",
+      "line": 11,
+      "target": "go-finding-review.json",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/codeql/go-finding-review.json",
+      "exists": true
+    },
+    {
+      "report": "codeql/rust-finding-review.md",
+      "line": 7,
+      "target": "rust-root-finding-review-part.json",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/codeql/rust-root-finding-review-part.json",
+      "exists": true
+    },
+    {
+      "report": "codeql/rust-finding-review.md",
+      "line": 7,
+      "target": "rust-review-test-scope.json",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/codeql/rust-review-test-scope.json",
+      "exists": true
+    },
+    {
+      "report": "codeql/rust-finding-review.md",
+      "line": 38,
+      "target": "rust-finding-review.json",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/codeql/rust-finding-review.json",
+      "exists": true
+    },
+    {
+      "report": "codeql/rust-finding-review.md",
+      "line": 38,
+      "target": "rust-attempt3.sarif",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/codeql/rust-attempt3.sarif",
+      "exists": true
+    },
+    {
+      "report": "codeql/rust-finding-review.md",
+      "line": 38,
+      "target": "rust-attempt3-finding-review.json",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/codeql/rust-attempt3-finding-review.json",
+      "exists": true
+    },
+    {
+      "report": "codeql/rust-finding-review.md",
+      "line": 38,
+      "target": "rust-attempt3-finding-review.md",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/codeql/rust-attempt3-finding-review.md",
+      "exists": true
+    },
+    {
+      "report": "codeql/security-review.md",
+      "line": 54,
+      "target": "python-quality-review.md",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/codeql/python-quality-review.md",
+      "exists": true
+    },
+    {
+      "report": "sonar/finding-review.md",
+      "line": 3,
+      "target": "issues.json",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/sonar/issues.json",
+      "exists": true
+    },
+    {
+      "report": "sonar/finding-review.md",
+      "line": 15,
+      "target": "review-sources",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/sonar/review-sources",
+      "exists": true
+    },
+    {
+      "report": "sonar/finding-review.md",
+      "line": 15,
+      "target": "review-source-manifest.json",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/sonar/review-source-manifest.json",
+      "exists": true
+    },
+    {
+      "report": "sonar/finding-review.md",
+      "line": 31,
+      "target": "finding-review.json",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/sonar/finding-review.json",
+      "exists": true
+    },
+    {
+      "report": "sonar/finding-review.md",
+      "line": 43,
+      "target": "finding-review.json",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/sonar/finding-review.json",
+      "exists": true
+    },
+    {
+      "report": "sonar/finding-review.md",
+      "line": 55,
+      "target": "finding-review.json",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/sonar/finding-review.json",
+      "exists": true
+    },
+    {
+      "report": "sonar/finding-review.md",
+      "line": 67,
+      "target": "finding-review.json",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/sonar/finding-review.json",
+      "exists": true
+    },
+    {
+      "report": "sonar/finding-review.md",
+      "line": 79,
+      "target": "finding-review.json",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/sonar/finding-review.json",
+      "exists": true
+    },
+    {
+      "report": "sonar/finding-review.md",
+      "line": 91,
+      "target": "finding-review.json",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/sonar/finding-review.json",
+      "exists": true
+    },
+    {
+      "report": "sonar/finding-review.md",
+      "line": 103,
+      "target": "finding-review.json",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/sonar/finding-review.json",
+      "exists": true
+    },
+    {
+      "report": "sonar/finding-review.md",
+      "line": 115,
+      "target": "finding-review.json",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/sonar/finding-review.json",
+      "exists": true
+    },
+    {
+      "report": "sonar/finding-review.md",
+      "line": 127,
+      "target": "finding-review.json",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/sonar/finding-review.json",
+      "exists": true
+    },
+    {
+      "report": "sonar/finding-review.md",
+      "line": 139,
+      "target": "finding-review.json",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/sonar/finding-review.json",
+      "exists": true
+    },
+    {
+      "report": "sonar/finding-review.md",
+      "line": 151,
+      "target": "finding-review.json",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/sonar/finding-review.json",
+      "exists": true
+    },
+    {
+      "report": "sonar/finding-review.md",
+      "line": 163,
+      "target": "finding-review.json",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/sonar/finding-review.json",
+      "exists": true
+    },
+    {
+      "report": "sonar/finding-review.md",
+      "line": 175,
+      "target": "finding-review.json",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/sonar/finding-review.json",
+      "exists": true
+    },
+    {
+      "report": "sonar/finding-review.md",
+      "line": 187,
+      "target": "finding-review.json",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/sonar/finding-review.json",
+      "exists": true
+    },
+    {
+      "report": "sonar/finding-review.md",
+      "line": 199,
+      "target": "finding-review.json",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/sonar/finding-review.json",
+      "exists": true
+    },
+    {
+      "report": "sonar/finding-review.md",
+      "line": 211,
+      "target": "finding-review.json",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/sonar/finding-review.json",
+      "exists": true
+    },
+    {
+      "report": "sonar/finding-review.md",
+      "line": 223,
+      "target": "finding-review.json",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/sonar/finding-review.json",
+      "exists": true
+    },
+    {
+      "report": "sonar/finding-review.md",
+      "line": 235,
+      "target": "finding-review.json",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/sonar/finding-review.json",
+      "exists": true
+    },
+    {
+      "report": "sonar/finding-review.md",
+      "line": 247,
+      "target": "finding-review.json",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/sonar/finding-review.json",
+      "exists": true
+    },
+    {
+      "report": "sonar/finding-review.md",
+      "line": 259,
+      "target": "finding-review.json",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/sonar/finding-review.json",
+      "exists": true
+    },
+    {
+      "report": "sonar/finding-review.md",
+      "line": 271,
+      "target": "finding-review.json",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/sonar/finding-review.json",
+      "exists": true
+    },
+    {
+      "report": "sonar/finding-review.md",
+      "line": 283,
+      "target": "finding-review.json",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/sonar/finding-review.json",
+      "exists": true
+    },
+    {
+      "report": "final-independent-review.md",
+      "line": 11,
+      "target": "sonar/REPORT.md",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/sonar/REPORT.md",
+      "exists": true
+    },
+    {
+      "report": "final-independent-review.md",
+      "line": 12,
+      "target": "semgrep/REPORT.md",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/semgrep/REPORT.md",
+      "exists": true
+    },
+    {
+      "report": "final-independent-review.md",
+      "line": 13,
+      "target": "actions/report.md",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/actions/report.md",
+      "exists": true
+    },
+    {
+      "report": "final-independent-review.md",
+      "line": 14,
+      "target": "coverage/report.md",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/coverage/report.md",
+      "exists": true
+    },
+    {
+      "report": "final-independent-review.md",
+      "line": 77,
+      "target": "coverage/report.md",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/coverage/report.md",
+      "exists": true
+    }
+  ],
+  "actions_source_hash_checks": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "execution_sha256": "0080fdb3fd7ff33c24b3c48e51374687cde7a8b8694b7b7ce8bc32bf74e53e47",
+      "current_sha256": "0080fdb3fd7ff33c24b3c48e51374687cde7a8b8694b7b7ce8bc32bf74e53e47",
+      "unchanged": true
+    },
+    {
+      "path": ".github/workflows/release-images.yml",
+      "execution_sha256": "936608db58d1a739fc01d89f3f7d5b267f9895ce62d58f44377e76ca8311e4d5",
+      "current_sha256": "936608db58d1a739fc01d89f3f7d5b267f9895ce62d58f44377e76ca8311e4d5",
+      "unchanged": true
+    },
+    {
+      "path": ".github/workflows/workflow-lint.yml",
+      "execution_sha256": "78b11344eb52021a60246e3d74d80fd376986d2650ab6bc8c273e738cc760e58",
+      "current_sha256": "78b11344eb52021a60246e3d74d80fd376986d2650ab6bc8c273e738cc760e58",
+      "unchanged": true
+    }
+  ],
+  "issues": [],
+  "conclusion": "No material inaccurate final result claim, count mismatch or missing local relative Markdown target found. Final Rust rescan and review are bound to the successful new-context database and final SARIF; scope and extraction limits remain explicit. This is a narrative consistency review, not a new source scan or full-file manual review.",
+  "rust_final_rescan_status": "complete; final41-query analyze exit0 at16:20:55 with new context; no longer pending",
+  "checks": [
+    {
+      "topic": "Cloud platform execution boundary",
+      "status": "pass",
+      "evidence": [
+        {
+          "path": "README.md",
+          "lines": [
+            3,
+            19,
+            20,
+            21,
+            35
+          ]
+        },
+        {
+          "path": "actions/report.md",
+          "lines": [
+            3,
+            16,
+            30,
+            38
+          ]
+        },
+        {
+          "path": "coverage/report.md",
+          "lines": [
+            3,
+            5,
+            62,
+            79
+          ]
+        },
+        {
+          "path": "sonar/REPORT.md",
+          "lines": [
+            7
+          ]
+        },
+        {
+          "path": "semgrep/REPORT.md",
+          "lines": [
+            18,
+            28,
+            36
+          ]
+        },
+        {
+          "path": "codeql/README.md",
+          "lines": [
+            3,
+            66
+          ]
+        }
+      ],
+      "observation": "Local Sonar server and official local engines remain distinct from hosted platforms. No remote GitHub project scan, Actions run, Codecov processing or cloud upload is claimed."
+    },
+    {
+      "topic": "Snapshot versions, original and final scans",
+      "status": "pass",
+      "evidence": [
+        {
+          "path": "README.md",
+          "lines": [
+            7,
+            9,
+            11,
+            29,
+            37,
+            43,
+            45,
+            47,
+            69,
+            71,
+            73
+          ]
+        },
+        {
+          "path": "coverage/report.md",
+          "lines": [
+            25,
+            27,
+            66,
+            68
+          ]
+        },
+        {
+          "path": "sonar/REPORT.md",
+          "lines": [
+            7,
+            296,
+            298,
+            330,
+            362
+          ]
+        },
+        {
+          "path": "semgrep/REPORT.md",
+          "lines": [
+            15,
+            19,
+            21,
+            85,
+            291
+          ]
+        },
+        {
+          "path": "codeql/README.md",
+          "lines": [
+            23,
+            25,
+            27,
+            29,
+            31,
+            38,
+            40,
+            41,
+            42,
+            46,
+            62,
+            79
+          ]
+        }
+      ],
+      "observation": "Live Sonar scan, frozen other-language scans, six-package mixed fixtures and final Rust original2514+ICO+four generated schemas are qualified. Original vs resumed results are not duplicate-counted. Latest28-file drift is a dated comparison, not an all-platform latest rescan."
+    },
+    {
+      "topic": "Candidates and human reviews",
+      "status": "pass",
+      "evidence": [
+        {
+          "path": "README.md",
+          "lines": [
+            17,
+            18,
+            25,
+            31,
+            61,
+            63,
+            65,
+            67,
+            69,
+            73
+          ]
+        },
+        {
+          "path": "sonar/REPORT.md",
+          "lines": [
+            37,
+            39,
+            54,
+            66,
+            387
+          ]
+        },
+        {
+          "path": "semgrep/REPORT.md",
+          "lines": [
+            5,
+            7,
+            34,
+            36,
+            64,
+            100,
+            247,
+            271
+          ]
+        },
+        {
+          "path": "codeql/README.md",
+          "lines": [
+            17,
+            19,
+            21,
+            27,
+            29,
+            46,
+            60,
+            62
+          ]
+        }
+      ],
+      "observation": "Original severity and candidate totals are not promoted to confirmed production vulnerabilities. All106 CodeQL candidate contexts have final human verdicts, while source files and2201 Sonar candidates remain pending. Critical9.8 Rust test literals are expressly identified as11 intentional test behaviors."
+    },
+    {
+      "topic": "Six-package coverage and existing gate replay",
+      "status": "pass",
+      "evidence": [
+        {
+          "path": "README.md",
+          "lines": [
+            21,
+            37,
+            39,
+            82,
+            83
+          ]
+        },
+        {
+          "path": "coverage/report.md",
+          "lines": [
+            21,
+            25,
+            27,
+            41,
+            50,
+            52,
+            56,
+            58,
+            60,
+            62,
+            68
+          ]
+        }
+      ],
+      "observation": "Weighted8383/16945 is limited to six Go packages. releasegate176/426 below41.4 is the only failed floor; successful tests/cover exit0 and replayed existing gate exit1 remain separate. Saved output/status injection, disabled real DB/AI, absent race and unexecuted other-language tests are stated."
+    },
+    {
+      "topic": "Final CodeQL execution and triage counts",
+      "status": "pass",
+      "evidence": [
+        {
+          "path": "README.md",
+          "lines": [
+            19,
+            61,
+            65,
+            67,
+            69,
+            71,
+            73
+          ]
+        },
+        {
+          "path": "codeql/README.md",
+          "lines": [
+            11,
+            12,
+            13,
+            14,
+            15,
+            27,
+            29,
+            62
+          ]
+        },
+        {
+          "path": "codeql/summary.json"
+        }
+      ],
+      "observation": "Read final five SARIFs and saved successful analyze logs:174+203+59+41+28=505 Evaluation done records,55+14+23+14+0=106 results. Review JSON per-finding counters equal each summary counter and aggregated106 verdicts. Final Rust SHA is322d47e65455d5a6c04bc29428cfbb7d94409c0761a34cb1943162931d2c8423,14 raw result objects and330 flow steps equal archived first valid scan."
+    },
+    {
+      "topic": "Final Rust extraction limitations",
+      "status": "pass",
+      "evidence": [
+        {
+          "path": "README.md",
+          "lines": [
+            69,
+            71,
+            73
+          ]
+        },
+        {
+          "path": "codeql/README.md",
+          "lines": [
+            25,
+            27,
+            29,
+            31,
+            42
+          ]
+        },
+        {
+          "path": "codeql/rust-finding-review.md",
+          "lines": [
+            3,
+            5,
+            7,
+            34,
+            36,
+            38
+          ]
+        }
+      ],
+      "observation": "Current16 extracted/0 errors/28 warnings/0 unextracted/0 unresolved macros,2 with-errors including warnings and14 without-error are distinct. Improved macro context does not erase SQL CRLF warnings or imply complete semantics. Cargo check exit0 is not a Rust test execution."
+    },
+    {
+      "topic": "Independent review historical and final cutoffs",
+      "status": "pass",
+      "evidence": [
+        {
+          "path": "final-independent-review.md",
+          "lines": [
+            3,
+            5,
+            58,
+            77,
+            82,
+            84,
+            101,
+            103,
+            105,
+            109,
+            111,
+            113,
+            115,
+            131
+          ]
+        }
+      ],
+      "observation": "13:40 old coverage and13:59 pre-Rust statements are explicitly historical;16:33 final section supersedes their current-state limitations without pretending the future final machine validator has already run."
+    },
+    {
+      "topic": "Relative Markdown links",
+      "status": "pass",
+      "checked": 82,
+      "missing": 0,
+      "observation": "All relative local Markdown links in13 reviewed reports exist; external URLs, drive-absolute source links and inline backtick references are excluded from this count."
+    },
+    {
+      "topic": "Current workflow bytes vs saved actionlint input",
+      "status": "pass",
+      "observation": "All three current local workflow SHA256 values equal the saved actionlint execution input; no rerun was performed."
+    }
+  ],
+  "corroboration": {
+    "codeql": {
+      "languages": {
+        "python": {
+          "selected_queries": 174,
+          "actual_evaluation_done_lines_in_saved_log": 174,
+          "raw_results": 55,
+          "raw_flow_location_steps": 350,
+          "create_exit_code": 0,
+          "analyze_exit_code": 0,
+          "analyze_finished": "2026-10-11T11:31:42+08:00",
+          "database": "D:\\tools\\audit-codeql-20261010\\databases\\python-20261011",
+          "source_root": "D:\\tools\\audit-codeql-20261010\\source-20261011",
+          "sarif_sha256": "1d049209dfb252a3022af8738ea19adccbb0388b17d9dac8bb084a54c17ea45b",
+          "analyze_log_sha256": "414a5f8a77595d1ff3177e2968f4c36b1deef44c02d485218e7c5f84190edbee",
+          "human_verdicts": {
+            "intentional_behavior": 7,
+            "low_maintenance": 8,
+            "false_positive_context": 39
+          }
+        },
+        "javascript": {
+          "selected_queries": 203,
+          "actual_evaluation_done_lines_in_saved_log": 203,
+          "raw_results": 14,
+          "raw_flow_location_steps": 0,
+          "create_exit_code": 0,
+          "analyze_exit_code": 0,
+          "analyze_finished": "2026-10-11T12:26:15+08:00",
+          "database": "D:\\tools\\audit-codeql-20261010\\databases\\javascript-20261011-context",
+          "source_root": "D:\\tools\\audit-codeql-20261010\\source-20261011",
+          "sarif_sha256": "f0543c1d15f9cb8a13153c0a454c6b51d80d40ad610224da102ba1484f61a0f1",
+          "analyze_log_sha256": "31ec1aa5aba1b1ce905b030eb25e46e640a2bb549f1d1cfc5f65b2feccbf6e1a",
+          "human_verdicts": {
+            "conditional_local_hardening": 4,
+            "low_maintenance": 5,
+            "intentional_behavior": 3,
+            "false_positive_context": 2
+          }
+        },
+        "go": {
+          "selected_queries": 59,
+          "actual_evaluation_done_lines_in_saved_log": 59,
+          "raw_results": 23,
+          "raw_flow_location_steps": 551,
+          "create_exit_code": 0,
+          "analyze_exit_code": 0,
+          "analyze_finished": "2026-10-11T13:28:30+08:00",
+          "database": "D:\\tools\\audit-codeql-20261010\\databases\\go-20261011",
+          "source_root": "D:\\tools\\audit-codeql-20261010\\source-20261011",
+          "sarif_sha256": "8146976c6190873c2e5ca65046b469853d99bab5a489b0e0d6c6259a637b72de",
+          "analyze_log_sha256": "c705225d5e9a74e7bacdbdcaf4ba521a9400770dd86ff7eaeac50569fdd22b3f",
+          "human_verdicts": {
+            "false_positive_context": 14,
+            "low_hardening": 1,
+            "intentional_test_behavior": 1,
+            "conditional_deployment_review": 1,
+            "low_maintenance": 6
+          }
+        },
+        "rust": {
+          "selected_queries": 41,
+          "actual_evaluation_done_lines_in_saved_log": 41,
+          "raw_results": 14,
+          "raw_flow_location_steps": 330,
+          "create_exit_code": 0,
+          "analyze_exit_code": 0,
+          "analyze_finished": "2026-10-11T16:20:55+08:00",
+          "database": "D:\\tools\\audit-codeql-20261010\\databases\\rust-20261011-context",
+          "source_root": "D:\\tools\\audit-codeql-20261010\\source-rust-context-20261011",
+          "sarif_sha256": "322d47e65455d5a6c04bc29428cfbb7d94409c0761a34cb1943162931d2c8423",
+          "analyze_log_sha256": "f38cab795d2cd15e1e01241d33f467e93f2c8bf4496132dde5f0c90f751c2a23",
+          "human_verdicts": {
+            "false_positive_context": 3,
+            "intentional_test_behavior": 11
+          }
+        },
+        "actions": {
+          "selected_queries": 28,
+          "actual_evaluation_done_lines_in_saved_log": 28,
+          "raw_results": 0,
+          "raw_flow_location_steps": 0,
+          "create_exit_code": 0,
+          "analyze_exit_code": 0,
+          "analyze_finished": "2026-10-11T11:32:19+08:00",
+          "database": "D:\\tools\\audit-codeql-20261010\\databases\\actions-20261011-process-policy",
+          "source_root": "D:\\tools\\audit-codeql-20261010\\source-20261011",
+          "sarif_sha256": "141bea17d7ff8726a909d753381a38db6a5b9654620055de839ee403e9495e6d",
+          "analyze_log_sha256": "4e30647cb952eb1bef379a52ffd138555dbe18b2dda35ad1f9a9f0d5766ccfeb",
+          "human_verdicts": {}
+        }
+      },
+      "completed_language_count": 5,
+      "selected_queries": 505,
+      "actual_logged_evaluation_completions": 505,
+      "raw_results_total": 106,
+      "alert_csv_rows": 106,
+      "all_candidate_context_reviews_pending": 0,
+      "combined_human_verdicts": {
+        "confirmed_cpu_amplification_conditional": 1,
+        "intentional_behavior": 10,
+        "low_maintenance": 19,
+        "false_positive_context": 58,
+        "conditional_local_hardening": 4,
+        "low_hardening": 1,
+        "intentional_test_behavior": 12,
+        "conditional_deployment_review": 1
+      },
+      "rust_original_and_final_complete_result_objects_equal": true,
+      "rust_diagnostics": {
+        "ExtractedFiles": 16,
+        "ExtractionErrors": 0,
+        "ExtractionWarnings": 28,
+        "UnextractedElements": 0,
+        "UnresolvedMacroCalls": 0,
+        "NumberOfFilesExtractedWithErrors": 2,
+        "NumberOfSuccessfullyExtractedFiles": 14
+      }
+    },
+    "actionlint": {
+      "record": "actions/execution.json",
+      "exit_code": 0,
+      "diagnostics": false,
+      "started": "2026-10-11T11:26:29.891817+08:00",
+      "ended": "2026-10-11T11:26:33.408029+08:00"
+    },
+    "semgrep": {
+      "raw_results": 105,
+      "raw_errors": 16,
+      "error_types": {
+        "PartialParsing": 16
+      },
+      "raw_severity": {
+        "MEDIUM": 11,
+        "WARNING": 87,
+        "ERROR": 7
+      },
+      "human_status": {
+        "hardening": 11,
+        "false_positive": 68,
+        "needs_review": 13,
+        "context_limited": 4,
+        "needs_deployment_review": 2,
+        "test_only": 7
+      },
+      "human_risk": {
+        "low": 24,
+        "None": 68,
+        "medium": 13
+      }
+    },
+    "sonar": {
+      "compute_engine_status": "SUCCESS",
+      "scanner_standard_publish_success": false,
+      "quality_gate": {
+        "status": "OK",
+        "conditions": [],
+        "ignoredConditions": false,
+        "caycStatus": "compliant"
+      },
+      "issue_count": 2223,
+      "hotspot_count": 0,
+      "by_type": {
+        "CODE_SMELL": 560,
+        "VULNERABILITY": 10,
+        "BUG": 1653
+      },
+      "reviewed_alerts": 22,
+      "finding_reviews_pending": 2201,
+      "metrics": {
+        "ncloc": "227136",
+        "duplicated_lines_density": "1.5",
+        "sqale_index": "6898",
+        "sqale_rating": "1.0",
+        "reliability_rating": "4.0",
+        "security_rating": "3.0",
+        "coverage": "0.0"
+      }
+    },
+    "coverage": {
+      "codecov_platform_executed": false,
+      "cloud_upload": false,
+      "total_covered_statements": 8383,
+      "total_statements": 16945,
+      "weighted_total_percent": 49.47182059604603,
+      "test_process_exit_code": 0,
+      "cover_tool_exit_code": 0,
+      "existing_repository_gate": {
+        "started_at": "2026-10-11T13:55:45.681168+08:00",
+        "status": "failed",
+        "command": [
+          "D:\\node.js\\node.EXE",
+          "D:\\project\\yuejuan\\reports\\platform-audit-2026-10-10\\coverage\\replay_local_coverage_gate.mjs",
+          "D:\\tools\\audit-codeql-20261010\\coverage-source-20261011\\scripts\\ci\\check-go-coverage.mjs",
+          "D:\\project\\yuejuan\\reports\\platform-audit-2026-10-10\\coverage\\go-test-resume.log",
+          "D:\\project\\yuejuan\\reports\\platform-audit-2026-10-10\\coverage\\go-test-resume-execution.json"
+        ],
+        "cwd": "D:\\tools\\audit-codeql-20261010\\coverage-source-20261011",
+        "environment": {
+          "GOTOOLCHAIN": "local",
+          "GOPROXY": "off",
+          "GOSUMDB": "off",
+          "GOMAXPROCS": "2",
+          "EDUGRADE_GO_EXECUTABLE": "D:\\tools\\go\\bin\\go.EXE"
+        },
+        "cleared_environment_variable_names": [
+          "GH_PAGER"
+        ],
+        "go_version": "go version go1.26.4 windows/amd64",
+        "node_version": "v24.14.0",
+        "script_sha256": "df8909bbfdfc3b8049e003d982d63a3f71022c7de0b438bf93e8337674855a26",
+        "trusted_executable_helper_sha256": "ced88f2d565af2e592c064a17c422da6a5248e4e21b29d2eba2b2b3650fdf97c",
+        "wrapper_sha256": "ebef9b95d816ab56a2e8f0e7c5ab82a03e6cc6f1eb730a82907b07bc38ea27ff",
+        "test_log_sha256": "0ec6c444763d191a01d244e130f9858ce453152ce34f0dd2cc52d867fa92ad61",
+        "test_execution_sha256": "45fd589cb92866fca113f759f93ed232f3fb87081f7f661c82afc3bacf5d2fa4",
+        "floor_config_sha256": "48df74dc1c4ca3206a3da7864c77b77804b4c88e7dea04b419ac8df832db0521",
+        "floor_source": "D:\\project\\yuejuan\\contracts\\testing\\coverage-floor.json",
+        "source_snapshot": "Original CodeQL source plus separately recorded local fixture context",
+        "execution_mode": "existing_main_with_injected_saved_successful_test_stdout_and_status",
+        "new_go_tests_executed": false,
+        "comparison_semantics": "Existing gate parses Go stdout percentages rounded to one decimal; exact profile comparison is reported separately",
+        "cloud_platform_executed": false,
+        "cloud_upload": false,
+        "exit_code": 1,
+        "completed_at": "2026-10-11T13:55:48.749733+08:00",
+        "duration_seconds": 0.438
+      },
+      "source_identity": "Independent copy of original CodeQL snapshot plus seven current-workspace JSON contract fixtures; mixed snapshot, not identical to the original CodeQL scan scope",
+      "additional_fixtures_count": 7,
+      "unchanged_six_package_go_files": 255,
+      "real_service_tests_disabled": [
+        "TestAuthorizationContractPostgres",
+        "TestStudentSessionProjectionWithPostgres",
+        "TestHTTPAdapterRealLocalAgent"
+      ]
+    },
+    "final_workspace_drift": {
+      "checked_at": "2026-10-11T16:22:55.677109+08:00",
+      "manifest_files": 2502,
+      "changed_count": 28,
+      "missing_count": 0,
+      "unchanged_count": 2474,
+      "new_files_enumerated": false,
+      "direct_footer_files": [
+        {
+          "path": "ai-services/grading_agent/paper_compact/anchors.py",
+          "snapshot_sha256": "7c0280d45533f9411587c5116bf0d46cb9a91c9614707cc801abf3dafa0b6251",
+          "current_sha256": "7c0280d45533f9411587c5116bf0d46cb9a91c9614707cc801abf3dafa0b6251",
+          "matches_snapshot": true
+        },
+        {
+          "path": "ai-services/grading_agent/paper_compact/schema.py",
+          "snapshot_sha256": "38958370509b66e456f8cf739888032635e6885256c17b76b587af342de3cdf4",
+          "current_sha256": "38958370509b66e456f8cf739888032635e6885256c17b76b587af342de3cdf4",
+          "matches_snapshot": true
+        }
+      ]
+    }
+  },
+  "supporting_files": [
+    {
+      "path": "actions/execution.json",
+      "sha256": "a8e43b0c6a15318c00c333c09e45c16ad4f2726401104b741caf967f37d73d2c"
+    },
+    {
+      "path": "coverage/coverage-summary.json",
+      "sha256": "a5ea47c081db9a0116f0b3ee4c5e56d5830b2ee6c88b81226f41fae50fc25cbb"
+    },
+    {
+      "path": "coverage/local-gate-execution.json",
+      "sha256": "1a6b4cc441ca8d2f316c1f6978ca7d57fb616d1b136b3174c889492e4090367d"
+    },
+    {
+      "path": "sonar/summary.json",
+      "sha256": "61eaae8e6e135affa162da81a7175fb70c75e4f187f8fca1030e358ee95815ba"
+    },
+    {
+      "path": "sonar/finding-review.json",
+      "sha256": "6db2859a40cf1b408081b100915a8333fdc717c5bbf52485d977566508e0a58b"
+    },
+    {
+      "path": "semgrep/scan-metadata.json",
+      "sha256": "fb689d65e1a82fe549f79c34d62e890855da93cf84eb0830f12cbbb566cd5f0f"
+    },
+    {
+      "path": "semgrep/semgrep-raw.json",
+      "sha256": "ad3a22fa95b615562fb44122965fc1d46288518a8a79a322c3f3329226a1ab9e"
+    },
+    {
+      "path": "semgrep/findings-triage.json",
+      "sha256": "b9f4111b62fb4ddb09aee91fbbd3e095b7922eada3c7929ccb2c70d151406d03"
+    },
+    {
+      "path": "source-manifest-resume-2026-10-11.csv",
+      "sha256": "f939ec3a24e837f45fba766fc1d614ad75d63707d8303e2f090029787506a56f"
+    },
+    {
+      "path": "resume-source-diff.json",
+      "sha256": "134bda097efe75d77fdd196f93e54bbb0eef1f444c95aabc78cc16b17183be70"
+    },
+    {
+      "path": "delivery-workspace-drift-final.json",
+      "sha256": "a0794af1cf662037df6f6d745c7fe17b574beeebbf98f34d29d9c7d7544749a8"
+    },
+    {
+      "path": "codeql/summary.json",
+      "sha256": "933392af9d4a4806014749e90801bec27f67645532df58e3f6ee85edafd189d3"
+    },
+    {
+      "path": "codeql/alerts.csv",
+      "sha256": "cd7a95b8f5e9de0be0ba70e2316eee0612ac1db74b71f39814b2e941694f22c7"
+    },
+    {
+      "path": "codeql/python-quality-review.json",
+      "sha256": "5aab3e9c515fc662af5617d77161f328b01eba0ce84af88bfd1107238ae214cc"
+    },
+    {
+      "path": "codeql/javascript-finding-review.json",
+      "sha256": "5af1861481957ddd0250c8903b8f06475d1d15d9d30633c2b682a444d7d1ef02"
+    },
+    {
+      "path": "codeql/go-finding-review.json",
+      "sha256": "cc3208c6675fa5f3590689886894825529a8c4b986c931dfb0d4d76781f7b479"
+    },
+    {
+      "path": "codeql/rust-finding-review.json",
+      "sha256": "891fefd96be477ff0c88ca4db29bb90accbd5a56e86e2a1508adfd2766073a4b"
+    },
+    {
+      "path": "codeql/rust-context-source-verification.json",
+      "sha256": "c3a50b34b8aa9c838b20f462414ff3b8dec7aaad76e65aa0915922b4297db221"
+    },
+    {
+      "path": "codeql/rust-context-after-scan-verification.json",
+      "sha256": "a51f2fa261314f6eb239a3bfbb2893463814c927f96a210a945cc78c94c1d346"
+    },
+    {
+      "path": "codeql/rust-diagnostic-query-summary.json",
+      "sha256": "f15899bc9a196cbd5a3b79bb9d4757ec67802a3bbeebe86aae4e85717547a12a"
+    },
+    {
+      "path": "codeql/rust-extraction-diagnostics.json",
+      "sha256": "20d16051ad9c4465a4a7c1497adadb52217ca401d541a06d30af5fcc73ce5a18"
+    }
+  ],
+  "report_owners_stop_notices_received": [
+    "rust_final final README/summary/CSV/diagnostics/source attachments stopped",
+    "delivery_review_final final Rust review JSON/MD and independent-review appendix stopped"
+  ],
+  "no_further_audit_artifact_writes_after_this_review": true,
+  "root_finalization_pending": {
+    "formal_verify_delivery": "Not run by this reviewer. Parent will execute verify_delivery.py after agent writes stop.",
+    "root_README_and_validation_append": "Parent may append machine validation results to the root README after this recorded narrative cutoff. The README hash here identifies the text actually reviewed at this cutoff, not a promise that a later append is unchanged.",
+    "final_manifest": "Parent will refresh the final attachment hash manifest after its last README/validation writes.",
+    "machine_check_counts": "No future machine validation pass or check count is asserted by this narrative review."
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "findingsComplete": true,
+  "candidateCount": 106,
+  "candidatePending": 0,
+  "currentFindingHashesValid": true,
+  "changedFileCount": 31,
+  "diffCheckExitCode": 0,
+  "newCodeqlScanExecuted": false,
+  "postgresIntegrationCasesSkipped": 2
+}

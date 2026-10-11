@@ -1,0 +1,410 @@
+{
+  "verified_at": "2026-10-11T15:56:56.665669+08:00",
+  "verification_scope": "原始执行证据与派生统计的一致性；不代表所有项目质量、覆盖率或架构门禁通过。",
+  "checks": [
+    {
+      "check": "semgrep_execution",
+      "passed": true,
+      "detail": "Official engine exit status"
+    },
+    {
+      "check": "semgrep_count",
+      "passed": true,
+      "detail": 105
+    },
+    {
+      "check": "semgrep_verdict_count",
+      "passed": true,
+      "detail": {
+        "hardening": 11,
+        "false_positive": 68,
+        "needs_review": 13,
+        "context_limited": 4,
+        "needs_deployment_review": 2,
+        "test_only": 7
+      }
+    },
+    {
+      "check": "semgrep_parse_limits",
+      "passed": true,
+      "detail": 16
+    },
+    {
+      "check": "codeql_language_set",
+      "passed": true,
+      "detail": [
+        "actions",
+        "go",
+        "javascript",
+        "python",
+        "rust"
+      ]
+    },
+    {
+      "check": "codeql_planned_languages_completed",
+      "passed": false,
+      "detail": {
+        "completed": 4,
+        "planned": 5
+      }
+    },
+    {
+      "check": "codeql_python_analysis_completed",
+      "passed": true,
+      "detail": "analyzed"
+    },
+    {
+      "check": "codeql_python_query_scope",
+      "passed": true,
+      "detail": 174
+    },
+    {
+      "check": "codeql_python_execution",
+      "passed": true,
+      "detail": "Create and analyze exit status plus SARIF invocation"
+    },
+    {
+      "check": "codeql_python_count",
+      "passed": true,
+      "detail": 55
+    },
+    {
+      "check": "codeql_python_review_source",
+      "passed": true,
+      "detail": "Review references the delivered SARIF hash"
+    },
+    {
+      "check": "codeql_python_review_alignment",
+      "passed": true,
+      "detail": 54
+    },
+    {
+      "check": "codeql_python_review_locations",
+      "passed": true,
+      "detail": "Paths and start lines match the original SARIF"
+    },
+    {
+      "check": "codeql_python_review_snapshot_hashes",
+      "passed": true,
+      "detail": "Reviewed primary alert files match the fixed manifest"
+    },
+    {
+      "check": "codeql_python_review_scope",
+      "passed": true,
+      "detail": {
+        "reviewed": 54,
+        "expected": 54
+      }
+    },
+    {
+      "check": "codeql_python_review_counts",
+      "passed": true,
+      "detail": {
+        "intentional_behavior": 7,
+        "low_maintenance": 8,
+        "false_positive_context": 39
+      }
+    },
+    {
+      "check": "codeql_javascript_analysis_completed",
+      "passed": true,
+      "detail": "analyzed"
+    },
+    {
+      "check": "codeql_javascript_query_scope",
+      "passed": true,
+      "detail": 203
+    },
+    {
+      "check": "codeql_javascript_execution",
+      "passed": true,
+      "detail": "Create and analyze exit status plus SARIF invocation"
+    },
+    {
+      "check": "codeql_javascript_count",
+      "passed": true,
+      "detail": 14
+    },
+    {
+      "check": "codeql_javascript_review_source",
+      "passed": true,
+      "detail": "Review references the delivered SARIF hash"
+    },
+    {
+      "check": "codeql_javascript_review_alignment",
+      "passed": true,
+      "detail": 14
+    },
+    {
+      "check": "codeql_javascript_review_locations",
+      "passed": true,
+      "detail": "Paths and start lines match the original SARIF"
+    },
+    {
+      "check": "codeql_javascript_review_snapshot_hashes",
+      "passed": true,
+      "detail": "Reviewed primary alert files match the fixed manifest"
+    },
+    {
+      "check": "codeql_javascript_review_scope",
+      "passed": true,
+      "detail": {
+        "reviewed": 14,
+        "expected": 14
+      }
+    },
+    {
+      "check": "codeql_javascript_review_counts",
+      "passed": true,
+      "detail": {
+        "conditional_local_hardening": 4,
+        "low_maintenance": 5,
+        "intentional_behavior": 3,
+        "false_positive_context": 2
+      }
+    },
+    {
+      "check": "codeql_go_analysis_completed",
+      "passed": true,
+      "detail": "analyzed"
+    },
+    {
+      "check": "codeql_go_query_scope",
+      "passed": true,
+      "detail": 59
+    },
+    {
+      "check": "codeql_go_execution",
+      "passed": true,
+      "detail": "Create and analyze exit status plus SARIF invocation"
+    },
+    {
+      "check": "codeql_go_count",
+      "passed": true,
+      "detail": 23
+    },
+    {
+      "check": "codeql_go_review_source",
+      "passed": true,
+      "detail": "Review references the delivered SARIF hash"
+    },
+    {
+      "check": "codeql_go_review_alignment",
+      "passed": true,
+      "detail": 23
+    },
+    {
+      "check": "codeql_go_review_locations",
+      "passed": true,
+      "detail": "Paths and start lines match the original SARIF"
+    },
+    {
+      "check": "codeql_go_review_snapshot_hashes",
+      "passed": true,
+      "detail": "Reviewed primary alert files match the fixed manifest"
+    },
+    {
+      "check": "codeql_go_review_scope",
+      "passed": true,
+      "detail": {
+        "reviewed": 23,
+        "expected": 23
+      }
+    },
+    {
+      "check": "codeql_go_review_counts",
+      "passed": true,
+      "detail": {
+        "false_positive_context": 14,
+        "low_hardening": 1,
+        "intentional_test_behavior": 1,
+        "conditional_deployment_review": 1,
+        "low_maintenance": 6
+      }
+    },
+    {
+      "check": "codeql_rust_analysis_completed",
+      "passed": false,
+      "detail": "analysis_failed"
+    },
+    {
+      "check": "codeql_actions_analysis_completed",
+      "passed": true,
+      "detail": "analyzed"
+    },
+    {
+      "check": "codeql_actions_query_scope",
+      "passed": true,
+      "detail": 28
+    },
+    {
+      "check": "codeql_actions_execution",
+      "passed": true,
+      "detail": "Create and analyze exit status plus SARIF invocation"
+    },
+    {
+      "check": "codeql_actions_count",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "check": "codeql_total",
+      "passed": true,
+      "detail": 92
+    },
+    {
+      "check": "codeql_snapshot_integrity",
+      "passed": true,
+      "detail": "2026-10-11T15:03:44+08:00"
+    },
+    {
+      "check": "codeql_snapshot_manifest",
+      "passed": true,
+      "detail": "f939ec3a24e837f45fba766fc1d614ad75d63707d8303e2f090029787506a56f"
+    },
+    {
+      "check": "codeql_rust_final_context_selected",
+      "passed": true,
+      "detail": "Final Rust database uses the asset-complete independent source copy"
+    },
+    {
+      "check": "codeql_rust_original_context_preserved",
+      "passed": true,
+      "detail": "All 2502 maintenance files and 12 build context files retain the original bytes"
+    },
+    {
+      "check": "codeql_rust_context_file_hashes",
+      "passed": true,
+      "detail": {
+        "original_files": 2514,
+        "local_assets": 1,
+        "generated_build_context": 4
+      }
+    },
+    {
+      "check": "codeql_rust_maintenance_snapshot_matches",
+      "passed": true,
+      "detail": "The final Rust copy retains every fixed maintenance source hash"
+    },
+    {
+      "check": "codeql_rust_offline_context_compile",
+      "passed": true,
+      "detail": "Actual offline locked Cargo check succeeds; this is not application execution or a Rust test run"
+    },
+    {
+      "check": "sonar_platform_processing",
+      "passed": true,
+      "detail": "SUCCESS"
+    },
+    {
+      "check": "sonar_issue_export",
+      "passed": true,
+      "detail": 2223
+    },
+    {
+      "check": "sonar_unique_issues",
+      "passed": true,
+      "detail": "Unique issue keys"
+    },
+    {
+      "check": "sonar_hotspot_export",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "check": "sonar_recovery_is_explicit",
+      "passed": true,
+      "detail": "Interrupted Scanner publish and successful platform processing are recorded separately"
+    },
+    {
+      "check": "sonar_review_alignment",
+      "passed": true,
+      "detail": 22
+    },
+    {
+      "check": "sonar_review_scope",
+      "passed": true,
+      "detail": {
+        "reviewed": 22,
+        "pending": 2201
+      }
+    },
+    {
+      "check": "local_actionlint_execution",
+      "passed": true,
+      "detail": "Local static check only; GitHub Actions platform not run"
+    },
+    {
+      "check": "coverage_local_execution",
+      "passed": true,
+      "detail": "Six local Go packages plus official coverage tool"
+    },
+    {
+      "check": "coverage_cloud_limits",
+      "passed": true,
+      "detail": "No cloud upload or run"
+    },
+    {
+      "check": "coverage_profile_hash",
+      "passed": true,
+      "detail": "Completed profile, separate from old interrupted header"
+    },
+    {
+      "check": "coverage_profile_records",
+      "passed": true,
+      "detail": 11105
+    },
+    {
+      "check": "coverage_package_statements",
+      "passed": true,
+      "detail": {
+        "auth": [
+          2576,
+          4253
+        ],
+        "subjective": [
+          2133,
+          3248
+        ],
+        "modelgovernance": [
+          2252,
+          3761
+        ],
+        "scorerelease": [
+          735,
+          1694
+        ],
+        "releasegate": [
+          176,
+          426
+        ],
+        "capture": [
+          511,
+          3563
+        ]
+      }
+    },
+    {
+      "check": "coverage_weighted_total",
+      "passed": true,
+      "detail": {
+        "covered": 8383,
+        "statements": 16945
+      }
+    },
+    {
+      "check": "coverage_floor_result_is_explicit",
+      "passed": true,
+      "detail": {
+        "failed_packages": [
+          "releasegate"
+        ],
+        "local_gate_exit": 1
+      }
+    }
+  ],
+  "passed": false,
+  "cloud_actions_run": false,
+  "codecov_upload": false,
+  "phase": "preflight_not_final_delivery"
+}

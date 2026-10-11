@@ -1,0 +1,8 @@
+{
+  "saved_at": "2026-10-11T19:32:14.350795+08:00",
+  "source_path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+  "backup_path": "D:/tools/sonar-remediation-20261011/root-go-final-02-baseline/services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+  "sha256": "2f62dba38f567106e5701c0ede4812b83a026f170a8658cf8248a3cd3e9db04f",
+  "original_workspace_baseline_preserved": true,
+  "reason": "root handed over latest checkpoint03 source; save current owner changes before final two issue edits"
+}

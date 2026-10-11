@@ -1,0 +1,34 @@
+{
+  "files": [
+    {
+      "file": "services/api-gateway/internal/server/e2e_anonymous_paper_test.go",
+      "sha256": "36040ca4de3148f4e3dac091f761ce859e9edd9d344353f3f5b426ce12b2912f",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_anonymous_paper_test.go"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_math_rubric_score_test.go",
+      "sha256": "43c19f66a19d1abbe85e9690df303b38e65d31af9627932f76f6611280b53097",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_math_rubric_score_test.go"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+      "sha256": "e65730cd9a0692966f595a8acae01080e578932aa616ebb3ede6f1e1de30b370",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_reliability_command_test.go"
+    }
+  ],
+  "issue_functions": [
+    {
+      "file": "services/api-gateway/internal/server/e2e_anonymous_paper_test.go",
+      "function": "TestHighScorePaperShareRedactsAndRevokesWithPostgresTestDatabase"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_math_rubric_score_test.go",
+      "function": "TestPostgresMathRubricScoreUsesOnlyFrozenExamRubric"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+      "function": "TestReliabilityMigrationFrom000122PostgresTestDatabase"
+    }
+  ],
+  "checkpoint_relation": "after checkpoint02; requires subsequent scan"
+}

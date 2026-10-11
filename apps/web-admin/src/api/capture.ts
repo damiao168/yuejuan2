@@ -62,7 +62,8 @@ export interface CaptureBatchDetail {
 
 export interface ImageQualityIssue {
   code: string;
-  severity: "warning" | "review" | "failed" | string;
+  // 质量规则可新增级别；保留响应原值，不在传输层替换成既有级别。
+  severity: string;
   metric?: string;
   observed?: unknown;
   threshold?: unknown;
@@ -123,6 +124,7 @@ export interface MatchingSubmission {
 export interface MatchingQueue {
   batch_id: string; exam_id: string; submissions: MatchingSubmission[]; candidates: StudentCandidate[];
 }
+export function findCaptureTargets(examId: string, submissionId: string, studentId: string) { return apiClient.request<{ targets: { batch_id: string; submission_id: string; page_id: string; candidate_no: string }[] }>(`/api/v1/exams/${encodeURIComponent(examId)}/capture-targets${buildQueryString({submission_id:submissionId,student_id:studentId})}`); }
 export interface ProcessingBlocker { page_id: string; page_no: number; registration_run_id?: string; stage: string; code: string; action: string; }
 export interface ProcessingSummary { submission_id: string; total_pages: number; ready_pages: number; blocked_pages: number; pending_pages: number; can_complete: boolean; blockers: ProcessingBlocker[]; }
 export interface NormalizedPoint { x: number; y: number; }

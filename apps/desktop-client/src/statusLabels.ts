@@ -18,6 +18,23 @@ export const offlineSyncStatusLabels: Record<OfflineDraftEnvelope["syncStatus"],
   conflict: "存在冲突"
 };
 
+// 任务状态与上传/考试状态分开解释；已提交仍可能等待后续复核，不等于考试完成或成绩发布。
+export const reviewTaskStates: Record<string, { label: string; detail: string; canGrade: boolean }> = {
+  pending: { label: "待分配", detail: "尚未分配给阅卷教师", canGrade: false },
+  assigned: { label: "已分配", detail: "可打开任务开始阅卷", canGrade: true },
+  in_progress: { label: "阅卷中", detail: "可继续填写并提交人工评分", canGrade: true },
+  returned: { label: "已退回", detail: "请核对退回原因后重新阅卷", canGrade: true },
+  submitted: { label: "已提交", detail: "人工评分已提交，等待后续处理", canGrade: false },
+  completed: { label: "已完成", detail: "该阅卷任务已完成", canGrade: false },
+  cancelled: { label: "已取消", detail: "任务已取消，不能继续提交", canGrade: false },
+  withdrawn: { label: "已撤回", detail: "任务已撤回，请刷新任务列表", canGrade: false },
+  revoked: { label: "已撤回", detail: "任务已撤回，请刷新任务列表", canGrade: false }
+};
+
+export function reviewTaskState(status: string) {
+  return reviewTaskStates[status] ?? { label: "状态待核对", detail: "客户端无法识别该任务状态，请刷新或联系学校管理员", canGrade: false };
+}
+
 export const genericStatusLabels: Record<string, string> = {
   draft: "草稿",
   planned: "待处理",

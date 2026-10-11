@@ -134,8 +134,7 @@ type Store interface {
 	Delete(ctx context.Context, tenantID string, id string) (FileAsset, error)
 }
 
-// LifecycleStore is implemented by production stores. The base Store remains
-// available to trusted internal fixtures that create already-persisted assets.
+// LifecycleStore 由生产存储实现；基础 Store 保留给可创建已持久化资源的可信内部夹具。
 type LifecycleStore interface {
 	Store
 	ValidateCreateScope(ctx context.Context, scope auth.AccessScope, input CreateAssetInput) error
@@ -148,8 +147,7 @@ type LifecycleStore interface {
 	MarkDeleteFailed(ctx context.Context, tenantID string, id string, expectedRevision int64, detail string) (FileAsset, error)
 }
 
-// MissingObjectRecovery restores an asset quarantined by reconciliation after
-// its object has been re-uploaded and verified at the original storage key.
+// MissingObjectRecovery 在对象重新上传到原存储键并验证后，恢复因核对而被隔离的资源。
 type MissingObjectRecovery interface {
 	RecoverMissing(context.Context, string, string, int64) (FileAsset, error)
 }

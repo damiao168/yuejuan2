@@ -1,5 +1,6 @@
 import { Modal } from "antd";
-import type { Dispatch, MutableRefObject, SetStateAction } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import type { Dispatch, RefObject, SetStateAction } from "react";
 import { removeReviewDraftFallback, loadReviewDraftFallback, saveReviewDraftFallback } from "../../../../auth/reviewDraftFallback";
 import { type RubricPoint } from "../../../../api/papers";
 import {
@@ -8,14 +9,14 @@ import {
   type AiGrade,
   type ReviewTask
 } from "../../../../api/review";
-import { appQueryClient } from "../../../../query/client";
-import { reviewTaskContextKeys } from "../../../../query/reviewTaskContext";
+import { isReviewTaskContextScopeCurrent, reviewTaskContextKeys, type ReviewTaskContextScope } from "../../../../query/reviewTaskContext";
 import type { GoldPaperNominationCandidate } from "../../../gold-papers";
 import { createDraftSnapshot, createInitialDraft, fallbackSnapshot, formatError, serverDraftSnapshot } from "../gradingWorkbench.model";
 import { loadTaskContext } from "../gradingTaskContext";
 import type { DraftFallbackSnapshot, DraftSaveStatus, ScoreDraft, ViewerMode, WorkbenchContext, PrefetchedTaskBundle } from "../gradingWorkbench.types";
 import type { DraftConflictResolution } from "../draftConflict";
 import { mathSuggestionState } from "../mathWorkbenchEvidence";
+import { aiPointAdoption } from "../aiAdoption";
 import type { TaskDraftSaveQueue } from "./taskDraftSaveQueue";
 import type { useExamScoring } from "./useExamScoring";
 import type { useGradingScoreShortcuts } from "./useGradingScoreShortcuts";
@@ -31,6 +32,8 @@ interface WorkbenchNotifications {
 }
 
 export interface UseGradingReviewActionsOptions {
+  queryScope: ReviewTaskContextScope;
+  isCurrentScope: () => boolean;
   ctx: WorkbenchContext | null;
   setCtx: StateSetter<WorkbenchContext | null>;
   draft: ScoreDraft;
@@ -73,22 +76,24 @@ export interface UseGradingReviewActionsOptions {
   setResolvingConflict: StateSetter<boolean>;
   setGoldPaperCandidate: StateSetter<GoldPaperNominationCandidate | null>;
   setMathRequesting: StateSetter<boolean>;
-  contextRequestRef: MutableRefObject<number>;
-  activeTask: MutableRefObject<string>;
-  activeUserId: MutableRefObject<string>;
-  liveDraft: MutableRefObject<ScoreDraft>;
-  mathActionLock: MutableRefObject<boolean>;
-  conflictedDrafts: MutableRefObject<Set<string>>;
-  draftSaves: MutableRefObject<TaskDraftSaveQueue>;
-  lastSavedDraft: MutableRefObject<string>;
-  conflictServerContext: MutableRefObject<WorkbenchContext | null>;
-  prefetchedTaskRef: MutableRefObject<Map<string, Promise<PrefetchedTaskBundle>>>;
-  pendingNextRef: MutableRefObject<string | null>;
-  suppressAutoSelectRef: MutableRefObject<boolean>;
+  contextRequestRef: RefObject<number>;
+  activeTask: RefObject<string>;
+  activeUserId: RefObject<string>;
+  liveDraft: RefObject<ScoreDraft>;
+  mathActionLock: RefObject<boolean>;
+  conflictedDrafts: RefObject<Set<string>>;
+  draftSaves: RefObject<TaskDraftSaveQueue>;
+  lastSavedDraft: RefObject<string>;
+  conflictServerContext: RefObject<WorkbenchContext | null>;
+  prefetchedTaskRef: RefObject<Map<string, Promise<PrefetchedTaskBundle>>>;
+  pendingNextRef: RefObject<string | null>;
+  suppressAutoSelectRef: RefObject<boolean>;
   notify: WorkbenchNotifications;
 }
 
 export function useGradingReviewActions({
+  queryScope,
+  isCurrentScope,
   ctx,
   setCtx,
   draft,
@@ -145,7 +150,11 @@ export function useGradingReviewActions({
   suppressAutoSelectRef,
   notify
 }: UseGradingReviewActionsOptions) {
+  const queryClient = useQueryClient();
+  // 同一账号切换考试或原图权限也会更换作用域；同考试内切任务仍允许更新原任务的提交结果。
+  const isCurrentSession = () => isCurrentScope() && activeUserId.current === currentUserId && isReviewTaskContextScopeCurrent(queryScope);
   const submitGrade = async (nominateAsGold = false) => {
+    if (!isCurrentSession()) return;
     if (!ctx) {
       notify.error("请先选择任务");
       return;
@@ -162,6 +171,7 @@ export function useGradingReviewActions({
     await runAction(
       "submit",
       async () => {
+        if (!isCurrentSession()) return;
         const submittedTaskId = ctx.task.id;
         const nextTaskId = nextTask?.id ?? "";
         const selections = Object.entries(draft.rubricSelections)
@@ -176,10 +186,10 @@ export function useGradingReviewActions({
           student_feedback: draft.studentFeedback,
           reason: draft.reason || "教师复核完成"
         });
+        // 查询缓存和任务队列属于当前阅卷作用域；迟到响应不能清掉或改写新考试的状态。
+        if (!isCurrentSession()) return;
         removeReviewDraftFallback(currentUserId, submittedTaskId);
-        // 查询缓存和任务队列属于当前登录会话；旧账号的迟到响应不能清掉或改写新账号的状态。
-        if (activeUserId.current !== currentUserId) return;
-        appQueryClient.removeQueries({ queryKey: reviewTaskContextKeys.detail(submittedTaskId) });
+        queryClient.removeQueries({ queryKey: reviewTaskContextKeys.task(queryScope, submittedTaskId) });
         prefetchedTaskRef.current.delete(submittedTaskId);
         setTasks((current) => current.map((task) => task.id === submittedTaskId ? { ...task, status: "submitted" } : task));
 
@@ -217,9 +227,9 @@ export function useGradingReviewActions({
           lastSavedDraft.current = "";
         }
         await refreshTaskAggregate();
-        if (activeUserId.current !== currentUserId) return;
+        if (!isCurrentSession()) return;
         await examScoring.loadSummary();
-        if (stillActive && activeUserId.current === currentUserId && !activeTask.current && !nextTaskId && !canManageTasks && !hasMoreTasks) {
+        if (stillActive && isCurrentSession() && !activeTask.current && !nextTaskId && !canManageTasks && !hasMoreTasks) {
           notify.info("当前没有更多已分配给你的阅卷任务");
         }
       },
@@ -228,21 +238,42 @@ export function useGradingReviewActions({
   };
 
   const markDispute = async () => {
-    if (!ctx) {
+    if (!isCurrentSession() || !ctx) {
       return;
     }
     const reason = draft.disputeReason.trim() || "教师标记争议，需要重新评阅";
     await runAction(
       "return",
       async () => {
+        if (!isCurrentSession()) return;
         await returnReviewTask(ctx.task.id, reason, ctx.task.revision);
+        if (!isCurrentSession()) return;
         await refreshCurrent();
       },
       "已标记争议并退回重评"
     );
   };
 
+  // 只同步填入分数草稿；数学路径必须先完成证据和本地评分快照核对。
+  const applyAiScore = (grade: AiGrade) => {
+    scoreShortcuts.rememberCurrent();
+    const selections = aiPointAdoption(grade, rubricPoints, ctx?.question?.rubric?.version);
+    // 只采纳分数；学生反馈与内部备注必须由教师从独立入口审读后采用。
+    setDraft((current) => {
+      let adoption: Partial<Pick<ScoreDraft, "rubricSelections" | "reason">> = {};
+      if (selections) {
+        adoption = { rubricSelections: selections, reason: "" };
+      } else if (rubricPoints.length) {
+        adoption = { reason: `教师采用 AI 总分建议 ${grade.suggested_score} 分；未自动匹配冻结评分点，需人工核对。` };
+      }
+      return { ...current, score: grade.suggested_score, ...adoption };
+    });
+    notify.info(selections ? `已填入建议分 ${grade.suggested_score} 分及 ${rubricPoints.length} 个同版评分点；反馈未改变。`
+      : `仅填入建议分 ${grade.suggested_score} 分；评分点和反馈未改变，请核对评分依据。`);
+  };
+
   const adoptAiScore = async () => {
+    if (!isCurrentSession() || activeTask.current !== ctx?.task.id) return;
     if (!selectedGrade) {
       notify.warning("当前任务没有 AI 建议分");
       return;
@@ -255,40 +286,46 @@ export function useGradingReviewActions({
       notify.warning("当前建议未通过版本核对，请按原图人工判定或刷新证据。");
       return;
     }
-    if (subjectCode === "mathematics") {
-      if (mathActionLock.current) return;
-      const taskId = selectedTaskId;
-      // 刷新证据期间教师仍可修改草稿；采纳建议前要同时确认任务、证据版本和本地评分快照仍未变化。
-      const before = JSON.stringify({ score: draft.score, selections: draft.rubricSelections });
-      mathActionLock.current = true;
-      setMathRequesting(true);
-      try {
-        const evidence = await math.refresh();
-        if (activeTask.current !== taskId) return;
-        if (!evidence || !mathSuggestionState(selectedGrade, evidence, math.dirty).current) {
-          notify.warning("数学证据或图片已更新，旧建议不可采纳。");
-          return;
-        }
-        if (before !== JSON.stringify({ score: liveDraft.current.score, selections: liveDraft.current.rubricSelections })) {
-          notify.warning("评分草稿已变化，请再次确认后采纳。");
-          return;
-        }
-      } finally {
-        mathActionLock.current = false;
-        if (activeTask.current === taskId) setMathRequesting(false);
-      }
+    if (subjectCode !== "mathematics") {
+      applyAiScore(selectedGrade);
+      return;
     }
-    scoreShortcuts.rememberCurrent();
-    setDraft((current) => ({
-      ...current,
-      score: selectedGrade.suggested_score,
-      studentFeedback: current.studentFeedback || selectedGrade.student_feedback || "",
-      privateNote: current.privateNote || selectedGrade.teacher_note || ""
+    if (mathActionLock.current) return;
+    const taskId = selectedTaskId;
+    // 刷新证据期间教师仍可修改草稿；采纳建议前要同时确认任务、证据版本和本地评分快照仍未变化。
+    const before = JSON.stringify({ score: draft.score, selections: draft.rubricSelections });
+    mathActionLock.current = true;
+    setMathRequesting(true);
+    try {
+      const evidence = await math.refresh();
+      if (activeTask.current !== taskId || !isCurrentSession()) return;
+      if (!evidence || !mathSuggestionState(selectedGrade, evidence, math.dirty).current) {
+        notify.warning("数学证据或图片已更新，旧建议不可采纳。");
+        return;
+      }
+      if (before !== JSON.stringify({ score: liveDraft.current.score, selections: liveDraft.current.rubricSelections })) {
+        notify.warning("评分草稿已变化，请再次确认后采纳。");
+        return;
+      }
+    } finally {
+      if (isCurrentSession()) mathActionLock.current = false;
+      if (activeTask.current === taskId && isCurrentSession()) setMathRequesting(false);
+    }
+    applyAiScore(selectedGrade);
+  };
+
+  const adoptAiFeedback = () => {
+    if (!isCurrentSession() || activeTask.current !== ctx?.task.id || !selectedGrade || !canEditDraft || !canAdoptAiScore) return;
+    // 该入口由展示全文的确认框调用，不把模型文字随分数一起默默提交。
+    setDraft((current) => ({ ...current,
+      studentFeedback: selectedGrade.student_feedback ?? current.studentFeedback,
+      privateNote: selectedGrade.teacher_note ?? current.privateNote
     }));
+    notify.info("AI 反馈已作为可编辑草稿填入，请在提交前审读学生可见文字。");
   };
 
   const openDraftConflict = async () => {
-    if (!ctx || activeTask.current !== ctx.task.id) return;
+    if (!isCurrentSession() || activeTask.current !== ctx?.task.id) return;
     const taskId = ctx.task.id;
     const userId = currentUserId;
     const initial = createInitialDraft(ctx);
@@ -297,10 +334,11 @@ export function useGradingReviewActions({
       ?? createDraftSnapshot(draft, viewerMode, scale, rotation, offset, autoFit);
     setResolvingConflict(true);
     try {
-      appQueryClient.removeQueries({ queryKey: reviewTaskContextKeys.detail(taskId) });
+      if (!isCurrentSession()) return;
+      queryClient.removeQueries({ queryKey: reviewTaskContextKeys.task(queryScope, taskId) });
       prefetchedTaskRef.current.delete(taskId);
-      const latestContext = await loadTaskContext(taskId, canViewOriginalImage);
-      if (activeTask.current !== taskId || activeUserId.current !== userId) return;
+      const latestContext = await loadTaskContext(queryClient, queryScope, taskId);
+      if (activeTask.current !== taskId || activeUserId.current !== userId || !isCurrentSession()) return;
       const server = serverDraftSnapshot(
         createInitialDraft(latestContext),
         latestContext.task.assigned_to === userId ? latestContext.reviewContext.draft : null,
@@ -309,15 +347,16 @@ export function useGradingReviewActions({
       conflictServerContext.current = latestContext;
       setDraftConflict({ taskId, serverRevision: server.revision, local, server: server.snapshot });
     } catch (currentError) {
-      if (activeTask.current === taskId && activeUserId.current === userId) {
+      if (activeTask.current === taskId && activeUserId.current === userId && isCurrentSession()) {
         notify.error(formatError(currentError));
       }
     } finally {
-      if (activeTask.current === taskId && activeUserId.current === userId) setResolvingConflict(false);
+      if (activeTask.current === taskId && activeUserId.current === userId && isCurrentSession()) setResolvingConflict(false);
     }
   };
 
   const applyDraftConflict = (merged: DraftFallbackSnapshot) => {
+    if (!isCurrentSession()) return;
     const conflict = draftConflict;
     const latestContext = conflictServerContext.current;
     if (!conflict || !latestContext || conflict.taskId !== activeTask.current || latestContext.task.id !== conflict.taskId) return;
@@ -341,7 +380,7 @@ export function useGradingReviewActions({
   };
 
   const confirmReturnTask = (asException: boolean) => {
-    if (!canReturn || !canEditDraft || !ctx) return;
+    if (!isCurrentSession() || !canReturn || !canEditDraft || !ctx) return;
     Modal.confirm({
       title: asException ? "标记异常并退回重评？" : "退回重新评阅？",
       content: asException
@@ -354,5 +393,5 @@ export function useGradingReviewActions({
     });
   };
 
-  return { submitGrade, markDispute, adoptAiScore, openDraftConflict, applyDraftConflict, confirmReturnTask };
+  return { submitGrade, markDispute, adoptAiScore, adoptAiFeedback, openDraftConflict, applyDraftConflict, confirmReturnTask };
 }

@@ -17,14 +17,11 @@ import (
 const (
 	printPageWidthMM  = 210.0
 	printPageHeightMM = 297.0
-	// Synchronous HTTP rendering is intentionally bounded. Larger issuance
-	// runs must be split into print batches or moved to an async artifact job.
+	// 同步 HTTP 渲染有明确规模上限；更大的签发任务必须拆成打印批次，或移至异步产物任务。
 	maxPrintPackagePages = 10000
 )
 
-// RenderStudentPrintPackage derives printable pages exclusively from the
-// immutable print ledger. No student name or school number is placed in the
-// PDF or QR payload.
+// RenderStudentPrintPackage 仅从不可变打印台账派生可打印页面；PDF 和 QR 载荷中都不放入学生姓名或学号。
 func RenderStudentPrintPackage(pkg StudentPrintPackage) ([]byte, string, error) {
 	if pkg.PrintBatchID == "" || pkg.ExamID == "" || pkg.TemplateID == "" || len(pkg.Sheets) == 0 {
 		return nil, "", ErrInvalidInput
@@ -141,6 +138,7 @@ func drawQRCode(pdf *gofpdf.Fpdf, bitmap [][]bool, x, y, size float64) {
 	pdf.SetFillColor(0, 0, 0)
 	for rowIndex, row := range bitmap {
 		runStart := -1
+		// len(row) 是冲刷末尾黑段的哨兵；短路条件保证该位置和空行都不读取 bitmap。
 		for columnIndex := 0; columnIndex <= len(row); columnIndex++ {
 			dark := columnIndex < len(row) && row[columnIndex]
 			if dark && runStart < 0 {

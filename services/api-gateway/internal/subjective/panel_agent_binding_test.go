@@ -44,7 +44,7 @@ func TestResolvePanelAgentsFailsClosedForRevokedOrMismatchedConnections(t *testi
 			changed := copyConnections["config-c"]
 			mutation.edit(&changed.Config)
 			copyConnections["config-c"] = changed
-			_, err := ResolvePanelAgents(context.Background(), "tenant-1", "senior", "mathematics", "structured_steps", roles, copyConnections, factory, .85)
+			_, err := ResolvePanelAgents(context.Background(), "tenant-1", "senior", "mathematics", "structured_steps", PanelAgentRuntime{Roles: roles, Connections: copyConnections, Factory: factory}, .85)
 			if !errors.Is(err, ErrPanelConfiguration) {
 				t.Fatalf("unsafe connection was accepted: %v", err)
 			}
@@ -86,7 +86,7 @@ func TestResolvePanelAgentsUsesThreeGovernedConnectionsAndStrongerArbiter(t *tes
 		seen[binding.AgentRole] = true
 		return &panelTestAdapter{supported: map[string]bool{"p1": true}, confidence: .95}, nil
 	}
-	agents, err := ResolvePanelAgents(context.Background(), "tenant-1", "senior", "mathematics", "structured_steps", roles, connections, factory, .85)
+	agents, err := ResolvePanelAgents(context.Background(), "tenant-1", "senior", "mathematics", "structured_steps", PanelAgentRuntime{Roles: roles, Connections: connections, Factory: factory}, .85)
 	if err != nil || len(seen) != 3 || agents.Arbiter.Policy.ModelVersion != "model-c" || agents.Arbiter.StrengthRank != 2 {
 		t.Fatalf("governed panel agents were not resolved: %#v seen=%#v err=%v", agents, seen, err)
 	}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Exam } from "../../api/exams";
-import { groupExams, selectedGroupExam } from "./examGroups";
+import { groupExams } from "./examGroups";
 
 function exam(id: string, subject: string, sessionId = ""): Exam {
   return {
@@ -21,12 +21,4 @@ describe("exam groups", () => {
     expect(grouped[1].id).toBe("legacy");
   });
 
-  it("selects the requested subject when a subject filter is active", () => {
-    const group = groupExams([exam("math", "math", "session"), exam("physics", "physics", "session")])[0];
-    expect(selectedGroupExam(group, undefined, "physics").id).toBe("physics");
-    expect(selectedGroupExam(group, "math", "").id).toBe("math");
-    expect(selectedGroupExam(group, "math", "physics").id).toBe("math");
-    group.exams[1].status = "published";
-    expect(selectedGroupExam(group, undefined, "", "published").id).toBe("physics");
-  });
 });

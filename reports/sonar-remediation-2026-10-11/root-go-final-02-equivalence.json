@@ -1,0 +1,18 @@
+{
+  "same_test_counts": true,
+  "same_test_identities_and_results": true,
+  "same_complete_business_proofs": true,
+  "proof_count": 46,
+  "test_counts": {
+    "pass": 58
+  },
+  "baseline_overlay_only": true,
+  "original_diagnostics_and_business_inputs_retained": true,
+  "source_sha256": "5ba735ccad0358c046add3e2b402634c55d6c3be30b492d675e8e7576c9c519c",
+  "evidence": [
+    "root-go-final-02-baseline-result.json",
+    "root-go-final-02-current-result.json",
+    "root-go-final-02-static-review.json"
+  ],
+  "sonar_confirmation": "pending root checkpoint04"
+}

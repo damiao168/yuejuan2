@@ -16,7 +16,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-# Allow invocation from the repository root without requiring an editable install.
+# 允许从仓库根目录调用，无需以可编辑模式安装。
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from ocr_worker.engine import PaddleOCREngine
 
@@ -57,17 +57,17 @@ def _bundle_hash(items: list[dict[str, Any]]) -> str:
 
 
 def _rss_bytes() -> int | None:
-    # OS high-water RSS includes transient inference allocations between pages.
+    # 操作系统的 RSS 峰值包含页面间推理产生的临时分配。
     try:
         import resource
         value = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
         return int(value * (1 if sys.platform == "darwin" else 1024))
-    except Exception:  # noqa: BLE001 - RSS probing is best effort.
+    except Exception:  # noqa: BLE001 - 尽力探测 RSS，失败可忽略。
         try:
             import psutil  # type: ignore
             info = psutil.Process().memory_info()
             return int(info.peak_wset) if hasattr(info, "peak_wset") else None
-        except Exception:  # noqa: BLE001 - RSS probing is best effort.
+        except Exception:  # noqa: BLE001 - 尽力探测 RSS，失败可忽略。
             return None
 
 
@@ -87,21 +87,23 @@ def _load_manifest(manifest: Path | None, sample_dir: Path | None) -> list[dict[
         rows = payload.get("samples", payload) if isinstance(payload, dict) else payload
         if not isinstance(rows, list):
             raise ValueError("manifest must contain a samples array")
-        result = []
-        for row in rows:
-            if isinstance(row, str):
-                row = {"path": row}
-            if not isinstance(row, dict) or not isinstance(row.get("path"), str):
-                raise ValueError("manifest sample requires path")  # noqa: TRY004
-            item = dict(row)
-            item["path"] = str((manifest.parent / item["path"]).resolve())
-            result.append(item)
+        result = [_manifest_sample(row, manifest.parent) for row in rows]
     elif sample_dir:
         result = [{"path": str(path)} for path in sorted(sample_dir.rglob("*")) if path.suffix.lower() in {".png", ".jpg", ".jpeg", ".tif", ".tiff"}]
     else:
         raise ValueError("provide --manifest or --sample-dir")
     result.sort(key=lambda row: Path(row["path"]).as_posix())
     return result
+
+
+def _manifest_sample(row: Any, parent: Path) -> dict[str, Any]:
+    if isinstance(row, str):
+        row = {"path": row}
+    if not isinstance(row, dict) or not isinstance(row.get("path"), str):
+        raise ValueError("manifest sample requires path")  # noqa: TRY004
+    item = dict(row)
+    item["path"] = str((parent / item["path"]).resolve())
+    return item
 
 
 def _load_roi_dataset(dataset_dir: Path) -> list[dict[str, Any]]:
@@ -140,17 +142,10 @@ def _crop_normalized(image: Any, bbox: dict[str, Any]) -> bytes:
     return output.getvalue()
 
 
-def run(args: argparse.Namespace) -> dict[str, Any]:
-    items = _load_roi_dataset(args.roi_dataset) if args.roi_dataset else _load_manifest(args.manifest, args.sample_dir)
-    if args.count < 0:
-        raise ValueError("sample count must be non-negative")
-    if args.count:
-        items = items[: args.count]
-    if len(items) < 1:
-        raise ValueError("sample bundle is empty")
-    # local-baseline-v1 is intentionally a compatibility profile matching the
-    # pre-optimization engine: plain CPU/MKLDNN off, orientation on, and the
-    # legacy recognition settings. All later runs must be compared to it.
+def _configure_legacy_baseline(args: argparse.Namespace, items: list[dict[str, Any]]) -> None:
+    # local-baseline-v1 刻意作为兼容配置，匹配
+    # 优化前的引擎：普通 CPU 执行、关闭 MKLDNN、开启方向识别，
+    # 并采用旧识别设置。后续所有运行都必须与它比较。
     if args.run_id == "local-baseline-v1":
         if args.roi_dataset or any(item.get("regions") for item in items):
             raise ValueError("local-baseline-v1 requires full-page input without ROI")
@@ -161,21 +156,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         args.text_recognition_batch_size = 1
         args.text_det_limit_side_len = 0
         args.text_det_limit_type = None
-    engine_type = LegacyBaselineEngine if args.run_id == "local-baseline-v1" else PaddleOCREngine
-    engine = engine_type(
-        device="cpu", model_version=args.model_version, cpu_threads=args.cpu_threads,
-        enable_mkldnn=args.enable_mkldnn, enable_hpi=args.enable_hpi,
-        use_textline_orientation=args.use_textline_orientation,
-        text_det_limit_type=args.text_det_limit_type,
-        text_det_limit_side_len=args.text_det_limit_side_len or None,
-        text_recognition_batch_size=args.text_recognition_batch_size,
-    )
-    if args.run_id == "local-baseline-v1":
-        # Do not misreport the CLI thread candidate as the legacy implicit value.
-        engine.cpu_threads = None
-    # 就绪检查和随后五轮预热不计入页面计时，报告主要反映热运行耗时。
-    engine.initialize()
-    warmup = [items[index % len(items)] for index in range(5)]
+
+
+def _warmup_engine(engine: Any, warmup: list[dict[str, Any]]) -> None:
     for item in warmup:
         if item.get("regions"):
             from PIL import Image
@@ -186,57 +169,117 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                     engine.recognize_region(_crop_normalized(image, region["bbox"]))
         else:
             engine.recognize(Path(item["path"]).read_bytes())
+
+
+class _BenchmarkCounters:
+    # 页面中途失败也保留已处理区域的累计指标，不能按整页成功才统一入账。
+    def __init__(self) -> None:
+        self.failures = 0
+        self.cer_errors = 0
+        self.cer_total = 0
+        self.wer_errors = 0
+        self.wer_total = 0
+        self.expected_count = 0
+        self.region_count = 0
+        self.region_hits = 0
+        self.blank_regions = 0
+        self.blank_false_positives = 0
+        self.review_triggers = 0
+        self.result_block_count = 0
+
+
+def _record_text_quality(actual: str, expected: str, counters: _BenchmarkCounters) -> None:
+    counters.cer_errors += _edit_distance(list(actual), list(expected))
+    counters.cer_total += max(1, len(expected))
+    actual_words, expected_words = actual.split(), expected.split()
+    counters.wer_errors += _edit_distance(actual_words, expected_words)
+    counters.wer_total += max(1, len(expected_words))
+
+
+def _measure_benchmark_region(engine: Any, image: Any, region: dict[str, Any], counters: _BenchmarkCounters) -> None:
+    blocks = engine.recognize_region(_crop_normalized(image, region["bbox"]))
+    counters.result_block_count += len(blocks)
+    counters.region_count += 1
+    actual = "".join(block.text for block in blocks)
+    expected = region["text"]
+    if actual:
+        counters.region_hits += 1
+    if not expected:
+        counters.blank_regions += 1
+        counters.blank_false_positives += int(bool(actual))
+    counters.expected_count += 1
+    _record_text_quality(actual, expected, counters)
+    counters.review_triggers += int(not blocks or any(block.confidence < 0.8 for block in blocks))
+
+
+def _measure_benchmark_page(engine: Any, item: dict[str, Any], counters: _BenchmarkCounters) -> None:
+    if item.get("regions"):
+        from PIL import Image
+
+        with Image.open(item["path"]) as image:
+            image.load()
+            for region in item["regions"]:
+                _measure_benchmark_region(engine, image, region, counters)
+    else:
+        blocks = engine.recognize(Path(item["path"]).read_bytes())
+        counters.result_block_count += len(blocks)
+        expected = item.get("text")
+        if isinstance(expected, str):
+            counters.expected_count += 1
+            actual = "".join(block.text for block in blocks)
+            _record_text_quality(actual, expected, counters)
+
+
+def run(args: argparse.Namespace) -> dict[str, Any]:
+    items = _load_roi_dataset(args.roi_dataset) if args.roi_dataset else _load_manifest(args.manifest, args.sample_dir)
+    if args.count < 0:
+        raise ValueError("sample count must be non-negative")
+    if args.count:
+        items = items[: args.count]
+    if len(items) < 1:
+        raise ValueError("sample bundle is empty")
+    _configure_legacy_baseline(args, items)
+    engine_type = LegacyBaselineEngine if args.run_id == "local-baseline-v1" else PaddleOCREngine
+    engine = engine_type(
+        device="cpu", model_version=args.model_version, cpu_threads=args.cpu_threads,
+        enable_mkldnn=args.enable_mkldnn, enable_hpi=args.enable_hpi,
+        use_textline_orientation=args.use_textline_orientation,
+        text_det_limit_type=args.text_det_limit_type,
+        text_det_limit_side_len=args.text_det_limit_side_len or None,
+        text_recognition_batch_size=args.text_recognition_batch_size,
+    )
+    if args.run_id == "local-baseline-v1":
+        # 不要把 CLI 的候选线程数误报为旧版隐式值。
+        engine.cpu_threads = None
+    # 就绪检查和随后五轮预热不计入页面计时，报告主要反映热运行耗时。
+    engine.initialize()
+    warmup = [items[index % len(items)] for index in range(5)]
+    _warmup_engine(engine, warmup)
     durations: list[float] = []
-    failures = 0
-    cer_errors = cer_total = wer_errors = wer_total = 0
-    expected_count = 0
-    region_count = region_hits = blank_regions = blank_false_positives = review_triggers = 0
-    result_block_count = 0
+    counters = _BenchmarkCounters()
     peak_rss = _rss_bytes()
     for item in items:
         started = time.perf_counter()
         try:
-            if item.get("regions"):
-                from PIL import Image
-
-                with Image.open(item["path"]) as image:
-                    image.load()
-                    for region in item["regions"]:
-                        blocks = engine.recognize_region(_crop_normalized(image, region["bbox"]))
-                        result_block_count += len(blocks)
-                        region_count += 1
-                        actual = "".join(block.text for block in blocks)
-                        expected = region["text"]
-                        if actual:
-                            region_hits += 1
-                        if not expected:
-                            blank_regions += 1
-                            blank_false_positives += int(bool(actual))
-                        expected_count += 1
-                        cer_errors += _edit_distance(list(actual), list(expected))
-                        cer_total += max(1, len(expected))
-                        actual_words, expected_words = actual.split(), expected.split()
-                        wer_errors += _edit_distance(actual_words, expected_words)
-                        wer_total += max(1, len(expected_words))
-                        review_triggers += int(not blocks or any(block.confidence < 0.8 for block in blocks))
-            else:
-                blocks = engine.recognize(Path(item["path"]).read_bytes())
-                result_block_count += len(blocks)
-                expected = item.get("text")
-                if isinstance(expected, str):
-                    expected_count += 1
-                    actual = "".join(block.text for block in blocks)
-                    cer_errors += _edit_distance(list(actual), list(expected))
-                    cer_total += max(1, len(expected))
-                    actual_words, expected_words = actual.split(), expected.split()
-                    wer_errors += _edit_distance(actual_words, expected_words)
-                    wer_total += max(1, len(expected_words))
-        except Exception:  # noqa: BLE001 - benchmark records failures instead of aborting the run.
-            failures += 1
+            _measure_benchmark_page(engine, item, counters)
+        except Exception:  # noqa: BLE001 - 基准测试记录失败，不中止运行。
+            counters.failures += 1
         durations.append((time.perf_counter() - started) * 1000)
         current_rss = _rss_bytes()
         if current_rss is not None:
             peak_rss = max(peak_rss or current_rss, current_rss)
+    return _benchmark_summary(args, engine, items, warmup, durations, peak_rss, counters)
+
+
+def _benchmark_summary(
+    args: argparse.Namespace,
+    engine: Any,
+    items: list[dict[str, Any]],
+    warmup: list[dict[str, Any]],
+    durations: list[float],
+    peak_rss: int | None,
+    counters: _BenchmarkCounters,
+) -> dict[str, Any]:
     summary: dict[str, Any] = {
         "run_id": args.run_id,
         "model_version": engine.model_version,
@@ -276,10 +319,11 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "pages_per_minute": 60000 / statistics.fmean(durations) if durations and statistics.fmean(durations) else 0,
         "task_average_duration_ms": statistics.fmean(durations),
         "process_peak_rss_bytes": peak_rss,
-        "failure_rate": failures / len(items),
-        "result_block_count": result_block_count,
-        "region_count": region_count,
-        "quality": {"CER": cer_errors / cer_total if expected_count else None, "WER": wer_errors / wer_total if expected_count else None, "region_hit_rate": region_hits / region_count if region_count else None, "bbox_iou": None, "page_success_rate": 1 - failures / len(items), "blank_false_positive_rate": blank_false_positives / blank_regions if blank_regions else None, "low_confidence_recall": None, "review_trigger_rate": review_triggers / region_count if region_count else None},
+        "failure_rate": counters.failures / len(items),
+        "result_block_count": counters.result_block_count,
+        "region_count": counters.region_count,
+        # 没有标注答案时不报告 CER/WER，空缺的质量证据不能当作通过。
+        "quality": {"CER": counters.cer_errors / counters.cer_total if counters.expected_count else None, "WER": counters.wer_errors / counters.wer_total if counters.expected_count else None, "region_hit_rate": counters.region_hits / counters.region_count if counters.region_count else None, "bbox_iou": None, "page_success_rate": 1 - counters.failures / len(items), "blank_false_positive_rate": counters.blank_false_positives / counters.blank_regions if counters.blank_regions else None, "low_confidence_recall": None, "review_trigger_rate": counters.review_triggers / counters.region_count if counters.region_count else None},
     }
     return summary
 

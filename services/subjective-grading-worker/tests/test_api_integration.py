@@ -29,7 +29,7 @@ class _Response:
 def test_execute_uses_the_long_running_request_budget() -> None:
     client = EduGradeClient("http://127.0.0.1:8080", "demo", "worker", "secret", execute_timeout=810)
 
-    with patch("subjective_grading_worker.api.request.urlopen", return_value=_Response()) as urlopen:
+    with patch("subjective_grading_worker.api._open_request", return_value=_Response()) as urlopen:
         client.execute("run-1", "task-1", "lease-1")
 
     assert urlopen.call_args.kwargs["timeout"] == 810
@@ -73,8 +73,8 @@ class _Handler(BaseHTTPRequestHandler):
 
 
 # 本地 HTTP 服务器验证登录、认领、心跳、执行及结果写回的协议顺序，不衡量模型质量。
-def test_worker_protocol_smoke_from_login_to_persisted_result(tmp_path):
-    _Handler.requests = []
+def test_worker_protocol_smoke_from_login_to_persisted_result(tmp_path, monkeypatch):
+    monkeypatch.setattr(_Handler, "requests", [])
     server = ThreadingHTTPServer(("127.0.0.1", 0), _Handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()

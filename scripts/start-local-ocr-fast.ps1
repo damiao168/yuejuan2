@@ -23,6 +23,6 @@ if ($Build) {
 }
 $composeArguments += @("postgres", "redis", "minio", "api-gateway", "ocr-worker")
 
-# Keep the control plane up, but run one OCR worker and omit the heavy math worker.
+# 保持控制服务运行，但只运行一个 OCR 工作进程，省略占用较大的数学工作进程。
 & docker @composeArguments
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

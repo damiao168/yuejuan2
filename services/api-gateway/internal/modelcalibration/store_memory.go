@@ -91,7 +91,7 @@ func (s *MemoryStore) ListEvidence(_ context.Context, tenantID, calibrationID st
 	return append([]CalibrationEvidence(nil), s.evidence[key]...), nil
 }
 
-func (s *MemoryStore) Complete(_ context.Context, tenantID, calibrationID string, expectedN int, artifact Artifact, uri, digest string, at time.Time) (Calibration, error) {
+func (s *MemoryStore) Complete(_ context.Context, tenantID, calibrationID string, expectedN int, artifact Artifact, reference ArtifactReference, at time.Time) (Calibration, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	key := itemKey(tenantID, calibrationID)
@@ -106,7 +106,7 @@ func (s *MemoryStore) Complete(_ context.Context, tenantID, calibrationID string
 		return Calibration{}, ErrConflict
 	}
 	completed := at.UTC()
-	item.Status, item.CalibrationN, item.Artifact, item.ArtifactURI, item.ArtifactSHA256, item.CompletedAt = StatusCompleted, expectedN, cloneArtifact(artifact), uri, digest, &completed
+	item.Status, item.CalibrationN, item.Artifact, item.ArtifactURI, item.ArtifactSHA256, item.CompletedAt = StatusCompleted, expectedN, cloneArtifact(artifact), reference.URI, reference.SHA256, &completed
 	s.calibrations[key] = cloneCalibration(item)
 	return cloneCalibration(item), nil
 }

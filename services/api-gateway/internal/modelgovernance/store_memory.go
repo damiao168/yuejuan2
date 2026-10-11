@@ -300,9 +300,6 @@ func (s *MemoryStore) UpdatePolicy(_ context.Context, tenantID string, _ string,
 	if !ok {
 		current = DefaultTenantPolicy()
 		current.ID = uuid.NewString()
-		current.TenantID = tenantID
-		current.PolicyKey = "default"
-		current.Status = "active"
 		current.Version = 1
 	}
 	if current.Version != input.ExpectedVersion {
@@ -340,7 +337,7 @@ func (s *MemoryStore) ListSandboxApprovals(_ context.Context, tenantID string) (
 	return out, nil
 }
 
-// 审批创建在同一把锁内检查托管配置或旧版部署，保证同一租户和目标不会出现两个未撤销审批。
+// CreateSandboxApproval 在同一把锁内检查库存、重复审批并写入；过期但未撤销的审批仍阻止再次创建。
 func (s *MemoryStore) CreateSandboxApproval(
 	_ context.Context,
 	tenantID string,
@@ -354,29 +351,34 @@ func (s *MemoryStore) CreateSandboxApproval(
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if input.ModelConfigID != "" {
-		config, ok := s.managedConfigs[input.ModelConfigID]
-		if !ok || config.TenantID != tenantID || config.Status != "active" ||
-			config.ProviderKey != "aliyun" || config.Region != input.ApprovedRegion {
-			return SandboxApproval{}, ErrNotFound
-		}
-		for _, item := range s.approvals {
-			if item.TenantID == tenantID && item.ModelConfigID == config.ID && item.RevokedAt == nil {
-				return SandboxApproval{}, ErrConflict
-			}
-		}
-		item := SandboxApproval{
-			ID: uuid.NewString(), TenantID: tenantID, ModelConfigID: config.ID,
-			ProviderKey: config.ProviderKey, ModelName: config.ModelName, ModelVersion: config.ModelVersion,
-			Protocol: input.Protocol, ApprovalReference: strings.TrimSpace(input.ApprovalReference),
-			ApprovedRegion: strings.TrimSpace(input.ApprovedRegion), SandboxAccount: input.SandboxAccount,
-			ContractReviewed: input.ContractReviewed, RetentionReviewed: input.RetentionReviewed,
-			DataResidencyReviewed: input.DataResidencyReviewed, PricingReviewed: input.PricingReviewed,
-			SyntheticDataOnly: input.SyntheticDataOnly, ImageExportReviewed: input.ImageExportReviewed,
-			ExpiresAt: input.ExpiresAt.UTC(), CreatedAt: now,
-		}
-		s.approvals[item.ID] = item
-		return item, nil
+		return s.createManagedSandboxApprovalLocked(tenantID, input, now)
 	}
+	return s.createLegacySandboxApprovalLocked(tenantID, input, now)
+}
+
+// 调用方须持有写锁，库存检查、未撤销审批检查和新审批写入不能分开解锁。
+func (s *MemoryStore) createManagedSandboxApprovalLocked(tenantID string, input SandboxApprovalInput, now time.Time) (SandboxApproval, error) {
+	config, ok := s.managedConfigs[input.ModelConfigID]
+	if !ok || config.TenantID != tenantID || config.Status != "active" ||
+		config.ProviderKey != "aliyun" || config.Region != input.ApprovedRegion {
+		return SandboxApproval{}, ErrNotFound
+	}
+	for _, item := range s.approvals {
+		if item.TenantID == tenantID && item.ModelConfigID == config.ID && item.RevokedAt == nil {
+			return SandboxApproval{}, ErrConflict
+		}
+	}
+	item := sandboxApprovalFromInput(tenantID, input, now)
+	item.ModelConfigID = config.ID
+	item.ProviderKey = config.ProviderKey
+	item.ModelName = config.ModelName
+	item.ModelVersion = config.ModelVersion
+	s.approvals[item.ID] = item
+	return item, nil
+}
+
+// 调用方须持有写锁；旧版部署还要关联同租户的原供应商，并匹配两者的审批区域。
+func (s *MemoryStore) createLegacySandboxApprovalLocked(tenantID string, input SandboxApprovalInput, now time.Time) (SandboxApproval, error) {
 	provider, ok := s.providers[input.ProviderID]
 	if !ok || provider.TenantID != tenantID ||
 		provider.Kind != ProviderExternal ||
@@ -397,13 +399,19 @@ func (s *MemoryStore) CreateSandboxApproval(
 			return SandboxApproval{}, ErrConflict
 		}
 	}
-	item := SandboxApproval{
+	item := sandboxApprovalFromInput(tenantID, input, now)
+	item.ProviderID = provider.ID
+	item.DeploymentID = deployment.ID
+	item.ProviderKey = provider.Key
+	item.DeploymentKey = deployment.Key
+	s.approvals[item.ID] = item
+	return item, nil
+}
+
+func sandboxApprovalFromInput(tenantID string, input SandboxApprovalInput, now time.Time) SandboxApproval {
+	return SandboxApproval{
 		ID:                    uuid.NewString(),
 		TenantID:              tenantID,
-		ProviderID:            provider.ID,
-		DeploymentID:          deployment.ID,
-		ProviderKey:           provider.Key,
-		DeploymentKey:         deployment.Key,
 		Protocol:              input.Protocol,
 		ApprovalReference:     strings.TrimSpace(input.ApprovalReference),
 		ApprovedRegion:        strings.TrimSpace(input.ApprovedRegion),
@@ -417,8 +425,6 @@ func (s *MemoryStore) CreateSandboxApproval(
 		ExpiresAt:             input.ExpiresAt.UTC(),
 		CreatedAt:             now,
 	}
-	s.approvals[item.ID] = item
-	return item, nil
 }
 
 func (s *MemoryStore) RevokeSandboxApproval(
@@ -540,46 +546,23 @@ func (s *MemoryStore) AddEvaluationCandidate(
 	if ValidateEvaluationCandidateInput(input, run) != nil {
 		return EvaluationCandidate{}, ErrInvalidEvaluation
 	}
-	var deployment Deployment
-	var managed ManagedAPIConfig
-	if input.ModelConfigID != "" {
-		managed, ok = s.managedConfigs[input.ModelConfigID]
-		if !ok || managed.TenantID != tenantID || managed.Status != "active" ||
-			managed.LastCapabilityStatus != "success" ||
-			managed.LastCapabilityVersion != "structured-json-v3" || run.Modality != "text" {
-			return EvaluationCandidate{}, ErrNotFound
-		}
-	} else {
-		deployment, ok = s.deployments[input.DeploymentID]
-		if !ok || deployment.TenantID != tenantID || !contains(deployment.Modalities, run.Modality) {
-			return EvaluationCandidate{}, ErrNotFound
-		}
+	target, err := s.evaluationCandidateTargetLocked(tenantID, run, input)
+	if err != nil {
+		return EvaluationCandidate{}, err
 	}
-	for _, item := range s.candidates {
-		if item.TenantID == tenantID && item.RunID == runID &&
-			((input.ModelConfigID != "" && item.ModelConfigID == input.ModelConfigID) ||
-				(input.DeploymentID != "" && item.DeploymentID == input.DeploymentID)) {
-			return EvaluationCandidate{}, ErrConflict
-		}
-	}
-	modelName := deployment.ModelName
-	modelVersion := deployment.ModelVersion
-	providerKey := deployment.ProviderKey
-	if input.ModelConfigID != "" {
-		modelName = managed.ModelName
-		modelVersion = managed.ModelVersion
-		providerKey = managed.ProviderKey
+	if s.evaluationCandidateExistsLocked(tenantID, runID, input) {
+		return EvaluationCandidate{}, ErrConflict
 	}
 	item := PopulateEvaluationMetrics(EvaluationCandidate{
 		ID:                     uuid.NewString(),
 		TenantID:               tenantID,
 		RunID:                  runID,
-		DeploymentID:           deployment.ID,
-		ModelConfigID:          managed.ID,
-		ProviderKey:            providerKey,
-		DeploymentKey:          deployment.Key,
-		ModelName:              modelName,
-		ModelVersion:           modelVersion,
+		DeploymentID:           target.DeploymentID,
+		ModelConfigID:          target.ModelConfigID,
+		ProviderKey:            target.ProviderKey,
+		DeploymentKey:          target.DeploymentKey,
+		ModelName:              target.ModelName,
+		ModelVersion:           target.ModelVersion,
 		PromptVersion:          strings.TrimSpace(input.PromptVersion),
 		RubricVersion:          strings.TrimSpace(input.RubricVersion),
 		EvaluatedSamples:       input.EvaluatedSamples,
@@ -595,6 +578,55 @@ func (s *MemoryStore) AddEvaluationCandidate(
 	})
 	s.candidates[item.ID] = item
 	return item, nil
+}
+
+// 调用方须持有写锁；身份从当前同租户库存复制，后续评测和晋级使用此快照，不随库存更新。
+func (s *MemoryStore) evaluationCandidateTargetLocked(tenantID string, run EvaluationRun, input EvaluationCandidateInput) (EvaluationCandidate, error) {
+	var deployment Deployment
+	var managed ManagedAPIConfig
+	var ok bool
+	if input.ModelConfigID != "" {
+		managed, ok = s.managedConfigs[input.ModelConfigID]
+		if !ok || managed.TenantID != tenantID || managed.Status != "active" ||
+			managed.LastCapabilityStatus != "success" ||
+			managed.LastCapabilityVersion != "structured-json-v3" || run.Modality != "text" {
+			return EvaluationCandidate{}, ErrNotFound
+		}
+	} else {
+		deployment, ok = s.deployments[input.DeploymentID]
+		if !ok || deployment.TenantID != tenantID || !contains(deployment.Modalities, run.Modality) {
+			return EvaluationCandidate{}, ErrNotFound
+		}
+	}
+	modelName := deployment.ModelName
+	modelVersion := deployment.ModelVersion
+	providerKey := deployment.ProviderKey
+	if input.ModelConfigID != "" {
+		modelName = managed.ModelName
+		modelVersion = managed.ModelVersion
+		providerKey = managed.ProviderKey
+	}
+	return EvaluationCandidate{
+		DeploymentID: deployment.ID, ModelConfigID: managed.ID,
+		ProviderKey: providerKey, DeploymentKey: deployment.Key,
+		ModelName: modelName, ModelVersion: modelVersion,
+	}, nil
+}
+
+// 调用方须持有锁；重复检查仍按请求的目标 ID 匹配，不能改成快照中的库存 ID。
+func (s *MemoryStore) evaluationCandidateExistsLocked(tenantID string, runID string, input EvaluationCandidateInput) bool {
+	for _, item := range s.candidates {
+		if item.TenantID == tenantID && item.RunID == runID &&
+			evaluationCandidateMatchesTarget(item, input.ModelConfigID, input.DeploymentID) {
+			return true
+		}
+	}
+	return false
+}
+
+func evaluationCandidateMatchesTarget(item EvaluationCandidate, modelConfigID string, deploymentID string) bool {
+	return (modelConfigID != "" && item.ModelConfigID == modelConfigID) ||
+		(deploymentID != "" && item.DeploymentID == deploymentID)
 }
 
 func (s *MemoryStore) CompleteEvaluationRun(
@@ -731,38 +763,12 @@ func (s *MemoryStore) CreateModelApproval(
 		run.EvidenceClass != EvaluationEvidenceAuthorizedFrozenSet {
 		return ModelApproval{}, ErrInvalidPromotion
 	}
-	var candidate EvaluationCandidate
-	found := false
-	for _, item := range s.candidates {
-		if item.TenantID == tenantID &&
-			item.RunID == run.ID &&
-			((input.ModelConfigID != "" && item.ModelConfigID == input.ModelConfigID) ||
-				(input.DeploymentID != "" && item.DeploymentID == input.DeploymentID)) {
-			candidate = item
-			found = true
-			break
-		}
-	}
+	candidate, found := s.modelApprovalCandidateLocked(tenantID, run.ID, input)
 	if !found {
 		return ModelApproval{}, ErrNotFound
 	}
-	for _, item := range s.modelApprovals {
-		if item.TenantID == tenantID && item.DecisionReference == input.DecisionReference {
-			return ModelApproval{}, ErrConflict
-		}
-		if item.TenantID == tenantID &&
-			item.ModelConfigID == candidate.ModelConfigID &&
-			item.DeploymentID == candidate.DeploymentID &&
-			item.ModelVersion == candidate.ModelVersion &&
-			item.PromptVersion == candidate.PromptVersion &&
-			item.RubricVersion == candidate.RubricVersion &&
-			item.Subject == run.Subject &&
-			item.Grade == run.Grade &&
-			item.QuestionType == run.QuestionType &&
-			item.Modality == run.Modality &&
-			item.IsActive(now) {
-			return ModelApproval{}, ErrConflict
-		}
+	if s.modelApprovalConflictsLocked(tenantID, run, candidate, input, now) {
+		return ModelApproval{}, ErrConflict
 	}
 	item := ModelApproval{
 		ID:                    uuid.NewString(),
@@ -792,6 +798,43 @@ func (s *MemoryStore) CreateModelApproval(
 	}
 	s.modelApprovals[item.ID] = item
 	return item, nil
+}
+
+// 调用方须持有锁；保持原 map 遍历的首个匹配候选，不从当前库存补写模型版本。
+func (s *MemoryStore) modelApprovalCandidateLocked(tenantID string, runID string, input ModelApprovalInput) (EvaluationCandidate, bool) {
+	for _, item := range s.candidates {
+		if item.TenantID == tenantID && item.RunID == runID &&
+			evaluationCandidateMatchesTarget(item, input.ModelConfigID, input.DeploymentID) {
+			return item, true
+		}
+	}
+	return EvaluationCandidate{}, false
+}
+
+// 调用方须持有写锁并在同一临界区写入；先按原请求值检查决策编号，再排斥同版本作用域的有效审批。
+func (s *MemoryStore) modelApprovalConflictsLocked(tenantID string, run EvaluationRun, candidate EvaluationCandidate, input ModelApprovalInput, now time.Time) bool {
+	for _, item := range s.modelApprovals {
+		if item.TenantID == tenantID && item.DecisionReference == input.DecisionReference {
+			return true
+		}
+		if item.TenantID == tenantID && modelApprovalMatchesEvaluation(item, run, candidate, now) {
+			return true
+		}
+	}
+	return false
+}
+
+func modelApprovalMatchesEvaluation(item ModelApproval, run EvaluationRun, candidate EvaluationCandidate, now time.Time) bool {
+	return item.ModelConfigID == candidate.ModelConfigID &&
+		item.DeploymentID == candidate.DeploymentID &&
+		item.ModelVersion == candidate.ModelVersion &&
+		item.PromptVersion == candidate.PromptVersion &&
+		item.RubricVersion == candidate.RubricVersion &&
+		item.Subject == run.Subject &&
+		item.Grade == run.Grade &&
+		item.QuestionType == run.QuestionType &&
+		item.Modality == run.Modality &&
+		item.IsActive(now)
 }
 
 func (s *MemoryStore) RevokeModelApproval(

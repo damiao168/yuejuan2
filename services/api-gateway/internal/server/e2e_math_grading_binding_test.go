@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"os"
 	"testing"
@@ -14,8 +15,8 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
-// Production stores and the full migration chain, with synthetic storage
-// fixtures only. This does not exercise math eligibility or a real model.
+// 使用生产存储和完整迁移链，存储夹具均为合成数据。
+// 此测试不覆盖数学准入资格或真实模型。
 func TestPostgresMathGradingBindingsRoundTripAndRejectWrongVersion(t *testing.T) {
 	dsn := os.Getenv("EDUGRADE_E2E_DATABASE_URL")
 	if dsn == "" {
@@ -43,8 +44,7 @@ WHERE sub.exam_id=$1::uuid AND seg.id<>$2::uuid LIMIT 1`, fixture.ExamID, segmen
 	}
 	artifacts := mathunderstanding.NewPostgresStore(db)
 	artifact, err := artifacts.CreateArtifact(ctx, fixture.TenantID, mathunderstanding.CreateArtifactInput{
-		// The shared fixture is a frozen physics exam; the artifact store
-		// requires that same subject even for this storage-only binding test.
+		// 共享夹具是一场冻结的物理考试；即使这里只测试存储绑定，产物存储也要求相同学科。
 		SubjectCode: "physics", AnswerSegmentID: segmentID, ExamQuestionSnapshotID: snapshotID, InputHash: "sha256:synthetic-binding", EngineVersion: "fixture-v1",
 		Blocks: []mathunderstanding.MathAnswerBlock{{ID: "b1", Kind: "text", Status: "active", BoundingBox: mathunderstanding.BoundingBox{X: .1, Y: .1, Width: .5, Height: .2},
 			RecognitionEngine: "fixture", RecognitionVersion: "v1", SourceImageHash: "sha256:synthetic-binding", RecognitionConfidence: .9, StructureConfidence: .9}},
@@ -82,8 +82,28 @@ WHERE sub.exam_id=$1::uuid AND seg.id<>$2::uuid LIMIT 1`, fixture.ExamID, segmen
 	if err != nil || readGrade.ID != grade.ID || readGrade.MathArtifactID != artifact.ID || readGrade.MathArtifactVersion != artifact.Version || readGrade.MathCorrectionRevision != 3 || readGrade.MathScoringVersion != subjective.MathScoringVersionV1 {
 		t.Fatalf("grade bindings not round-tripped: %#v %v", readGrade, err)
 	}
-	// The assigned-task read projection must retain every math binding, not
-	// silently turn a persisted v2 suggestion into unbound legacy UI material.
+	binding := mathGradingBindingContext{DB: db, Store: store, Fixture: fixture}
+	e2eAssertMathBindingReviewHistory(t, ctx, binding, gradeInput, grade, suffix)
+	e2eAssertMathBindingBatchRecovery(t, ctx, binding, input, suffix)
+	for _, scenario := range []string{"wrong_version", "wrong_segment", "missing_artifact", "incomplete_binding"} {
+		t.Run(scenario, func(t *testing.T) {
+			e2eAssertRejectedMathBinding(t, ctx, binding, input, gradeInput, otherSegmentID, scenario)
+		})
+	}
+}
+
+type mathGradingBindingContext struct {
+	DB      *sql.DB
+	Store   *subjective.PostgresStore
+	Fixture story056AcceptanceFixture
+}
+
+// 指定复核任务的历史投影仍保留完整数学身份、修订号和最新到最旧的次序。
+func e2eAssertMathBindingReviewHistory(t *testing.T, ctx context.Context, binding mathGradingBindingContext, gradeInput, grade subjective.Grade, suffix string) {
+	t.Helper()
+	db, store, fixture := binding.DB, binding.Store, binding.Fixture
+	segmentID := gradeInput.AnswerSegmentID
+	// 已分配任务的读取投影必须保留全部数学绑定，不能把持久化的 v2 建议静默变为无绑定的旧版 UI 材料。
 	second := gradeInput
 	second.AdapterRequestID, second.RunID = "history-"+suffix, ""
 	second.MathCorrectionRevision = 4
@@ -101,11 +121,18 @@ WHERE sub.exam_id=$1::uuid AND seg.id<>$2::uuid LIMIT 1`, fixture.ExamID, segmen
 		t.Fatalf("task history missing: %#v %v", taskContext.AISecondOpinion, err)
 	}
 	history := taskContext.AISecondOpinion.History
-	if history[0]["id"] != newer.ID || history[1]["id"] != grade.ID || history[0]["math_artifact_id"] != artifact.ID || history[0]["math_artifact_version"] != float64(artifact.Version) || history[0]["math_correction_revision"] != float64(4) || history[0]["math_scoring_version"] != subjective.MathScoringVersionV1 {
+	if history[0]["id"] != newer.ID || history[1]["id"] != grade.ID || history[0]["math_artifact_id"] != gradeInput.MathArtifactID || history[0]["math_artifact_version"] != float64(gradeInput.MathArtifactVersion) || history[0]["math_correction_revision"] != float64(4) || history[0]["math_scoring_version"] != subjective.MathScoringVersionV1 {
 		t.Fatalf("task history lost math bindings/order: %#v", history)
 	}
-	// Recover a pre-existing batch run without substituting today's evidence
-	// revision or scorer. This exercises the production SELECT/scan fallback.
+}
+
+// 重排批次时使用原运行冻结的绑定，不能替换为更高修订号或未来评分器。
+func e2eAssertMathBindingBatchRecovery(t *testing.T, ctx context.Context, binding mathGradingBindingContext, input subjective.CreateRunInput, suffix string) {
+	t.Helper()
+	store, fixture := binding.Store, binding.Fixture
+	segmentID := input.AnswerSegmentID
+	// 恢复已有批次运行，不替换为当前证据修订号或评分器。
+	// 此测试覆盖生产 SELECT/扫描回退路径。
 	batch, err := store.CreateBatch(ctx, fixture.TenantID, fixture.AdminID, subjective.CreateBatchInput{IdempotencyKey: "math-batch-" + suffix, SegmentIDs: []string{segmentID}})
 	if err != nil {
 		t.Fatal(err)
@@ -128,39 +155,41 @@ WHERE sub.exam_id=$1::uuid AND seg.id<>$2::uuid LIMIT 1`, fixture.ExamID, segmen
 	if err != nil || len(loadedPlan.Runs) != 1 || loadedPlan.Runs[0] != frozenRun {
 		t.Fatalf("batch plan binding not round-tripped: %#v %v", loadedPlan, err)
 	}
-	for _, scenario := range []string{"wrong_version", "wrong_segment", "missing_artifact", "incomplete_binding"} {
-		t.Run(scenario, func(t *testing.T) {
-			badRun, badGrade := input, gradeInput
-			badRun.RequestID, badGrade.AdapterRequestID = uuid.NewString(), uuid.NewString()
-			runConstraint, gradeConstraint := "fk_subjective_run_math_artifact", "fk_ai_grade_math_artifact"
-			switch scenario {
-			case "wrong_version":
-				badRun.MathArtifactVersion++
-				badGrade.MathArtifactVersion++
-			case "wrong_segment":
-				badRun.AnswerSegmentID, badGrade.AnswerSegmentID = otherSegmentID, otherSegmentID
-			case "missing_artifact":
-				badRun.MathArtifactID, badGrade.MathArtifactID = uuid.NewString(), uuid.NewString()
-			case "incomplete_binding":
-				badRun.MathScoringVersion, badGrade.MathScoringVersion = "", ""
-				runConstraint, gradeConstraint = "chk_subjective_run_math_binding", "chk_ai_grade_math_binding"
-			}
-			if _, err := store.GetOrCreateRun(ctx, fixture.TenantID, fixture.AdminID, badRun); err != nil {
-				var pgErr *pgconn.PgError
-				if !errors.As(err, &pgErr) || pgErr.ConstraintName != runConstraint {
-					t.Fatalf("run failed for a different reason than binding: %v", err)
-				}
-			} else {
-				t.Fatal("invalid run binding was accepted")
-			}
-			if _, err := store.CreateGrade(ctx, fixture.TenantID, fixture.AdminID, badGrade); err != nil {
-				var pgErr *pgconn.PgError
-				if !errors.As(err, &pgErr) || pgErr.ConstraintName != gradeConstraint {
-					t.Fatalf("grade failed for a different reason than binding: %v", err)
-				}
-			} else {
-				t.Fatal("invalid grade binding was accepted")
-			}
-		})
+}
+
+// 错误版本、错误答案、缺失产物和不完整绑定分别核对对应数据库约束，不能只断言任意错误。
+func e2eAssertRejectedMathBinding(t *testing.T, ctx context.Context, binding mathGradingBindingContext, input subjective.CreateRunInput, gradeInput subjective.Grade, otherSegmentID, scenario string) {
+	t.Helper()
+	store, fixture := binding.Store, binding.Fixture
+	badRun, badGrade := input, gradeInput
+	badRun.RequestID, badGrade.AdapterRequestID = uuid.NewString(), uuid.NewString()
+	runConstraint, gradeConstraint := "fk_subjective_run_math_artifact", "fk_ai_grade_math_artifact"
+	switch scenario {
+	case "wrong_version":
+		badRun.MathArtifactVersion++
+		badGrade.MathArtifactVersion++
+	case "wrong_segment":
+		badRun.AnswerSegmentID, badGrade.AnswerSegmentID = otherSegmentID, otherSegmentID
+	case "missing_artifact":
+		badRun.MathArtifactID, badGrade.MathArtifactID = uuid.NewString(), uuid.NewString()
+	case "incomplete_binding":
+		badRun.MathScoringVersion, badGrade.MathScoringVersion = "", ""
+		runConstraint, gradeConstraint = "chk_subjective_run_math_binding", "chk_ai_grade_math_binding"
+	}
+	if _, err := store.GetOrCreateRun(ctx, fixture.TenantID, fixture.AdminID, badRun); err != nil {
+		var pgErr *pgconn.PgError
+		if !errors.As(err, &pgErr) || pgErr.ConstraintName != runConstraint {
+			t.Fatalf("run failed for a different reason than binding: %v", err)
+		}
+	} else {
+		t.Fatal("invalid run binding was accepted")
+	}
+	if _, err := store.CreateGrade(ctx, fixture.TenantID, fixture.AdminID, badGrade); err != nil {
+		var pgErr *pgconn.PgError
+		if !errors.As(err, &pgErr) || pgErr.ConstraintName != gradeConstraint {
+			t.Fatalf("grade failed for a different reason than binding: %v", err)
+		}
+	} else {
+		t.Fatal("invalid grade binding was accepted")
 	}
 }

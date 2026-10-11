@@ -10,6 +10,26 @@ export function loadModelCandidates(path = DEFAULT_MODEL_CANDIDATES) {
   return JSON.parse(readFileSync(path, "utf8"));
 }
 
+function validateModelCandidate(candidate, label, ids, errors) {
+  if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) {
+    errors.push(`${label} must be an object`);
+    return;
+  }
+  if (!candidate.candidate_id) errors.push(`${label}.candidate_id is required`);
+  if (ids.has(candidate.candidate_id)) errors.push(`duplicate candidate_id: ${candidate.candidate_id}`);
+  ids.add(candidate.candidate_id);
+  // 前缀检查沿用原正则的字符串转换，不新增 URL 类型限制或来源可信保证。
+  if (!`${candidate.url ?? ""}`.startsWith("https://")) errors.push(`${label}.url must use https`);
+  if (!Number.isInteger(candidate.expected_bytes) || candidate.expected_bytes <= 0) errors.push(`${label}.expected_bytes must be positive`);
+  if (!/^[a-f0-9]{64}$/.test(candidate.expected_sha256 ?? "")) errors.push(`${label}.expected_sha256 is required`);
+  // 解析规范化相对路径后再判定范围；下载目标约定在 lab 内，不能只查字符串前缀。
+  const modelPath = resolve(LAB_ROOT, candidate.model_path ?? "");
+  const rel = relative(LAB_ROOT, modelPath);
+  if (!candidate.model_path || isAbsolute(candidate.model_path) || rel.startsWith("..") || isAbsolute(rel)) {
+    errors.push(`${label}.model_path must stay inside lab`);
+  }
+}
+
 export function validateModelCandidates(registry) {
   const errors = [];
   if (registry?.schema_version !== "model-candidates-v1") errors.push("unsupported model candidate schema_version");
@@ -17,22 +37,7 @@ export function validateModelCandidates(registry) {
   const ids = new Set();
   for (const [index, candidate] of registry.candidates.entries()) {
     const label = `candidates[${index}]`;
-    if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) {
-      errors.push(`${label} must be an object`);
-      continue;
-    }
-    if (!candidate.candidate_id) errors.push(`${label}.candidate_id is required`);
-    if (ids.has(candidate.candidate_id)) errors.push(`duplicate candidate_id: ${candidate.candidate_id}`);
-    ids.add(candidate.candidate_id);
-    if (!/^https:\/\//.test(candidate.url ?? "")) errors.push(`${label}.url must use https`);
-    if (!Number.isInteger(candidate.expected_bytes) || candidate.expected_bytes <= 0) errors.push(`${label}.expected_bytes must be positive`);
-    if (!/^[a-f0-9]{64}$/.test(candidate.expected_sha256 ?? "")) errors.push(`${label}.expected_sha256 is required`);
-    // 解析规范化相对路径后再判定范围；下载目标约定在 lab 内，不能只查字符串前缀。
-    const modelPath = resolve(LAB_ROOT, candidate.model_path ?? "");
-    const rel = relative(LAB_ROOT, modelPath);
-    if (!candidate.model_path || isAbsolute(candidate.model_path) || rel.startsWith("..") || isAbsolute(rel)) {
-      errors.push(`${label}.model_path must stay inside lab`);
-    }
+    validateModelCandidate(candidate, label, ids, errors);
   }
   return { valid: errors.length === 0, errors };
 }

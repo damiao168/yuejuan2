@@ -78,6 +78,7 @@ func (h *Handler) CreateManagedUser(w http.ResponseWriter, r *http.Request) {
 	input.EmployeeNo = strings.TrimSpace(input.EmployeeNo)
 	input.DisplayName = strings.TrimSpace(input.DisplayName)
 	input.RoleCode = strings.TrimSpace(input.RoleCode)
+	input.RoleCodes = uniqueSortedIDs(input.RoleCodes)
 	input.SchoolID = strings.TrimSpace(input.SchoolID)
 	input.ClassIDs = uniqueSortedIDs(input.ClassIDs)
 	if input.Phone != "" {
@@ -89,7 +90,7 @@ func (h *Handler) CreateManagedUser(w http.ResponseWriter, r *http.Request) {
 		input.Phone = normalizedPhone
 	}
 	invited := input.Password == ""
-	if input.DisplayName == "" || input.RoleCode == "" || (invited && input.Phone == "" && input.EmployeeNo == "") || (!invited && input.Username == "") {
+	if input.DisplayName == "" || (input.RoleCode == "" && len(input.RoleCodes) == 0) || (invited && input.Phone == "" && input.EmployeeNo == "") || (!invited && input.Username == "") {
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_request", "display_name, role_code and a login identity are required")
 		return
 	}
@@ -130,28 +131,13 @@ func (h *Handler) CreateManagedUser(w http.ResponseWriter, r *http.Request) {
 	}
 	created, err := h.store.CreateManagedUser(r.Context(), actor, actorScope, input, passwordHash)
 	if err != nil {
-		switch {
-		case errors.Is(err, ErrUsernameExists):
-			httpx.Error(w, r, http.StatusConflict, "username_exists", "username already exists")
-		case errors.Is(err, ErrIdentityExists):
-			httpx.Error(w, r, http.StatusConflict, "identity_exists", "phone or employee number is already in use")
-		case errors.Is(err, ErrRoleNotFound):
-			httpx.Error(w, r, http.StatusBadRequest, "role_not_assignable", "role is not assignable in the current organization")
-		case errors.Is(err, ErrRoleAssignment):
-			httpx.Error(w, r, http.StatusForbidden, "role_assignment_forbidden", "current identity cannot assign this role")
-		case errors.Is(err, ErrOrganizationScope):
-			httpx.Error(w, r, http.StatusForbidden, "organization_scope_forbidden", "organization binding is outside the current data access scope")
-		case errors.Is(err, ErrInvalidRoleBinding):
-			httpx.Error(w, r, http.StatusBadRequest, "invalid_role_binding", "role organization binding is invalid")
-		default:
-			httpx.Error(w, r, http.StatusInternalServerError, "user_create_failed", "failed to create user")
-		}
+		writeManagedUserCreateError(w, r, err)
 		return
 	}
 	RecordAudit(r.Context(), h.store, AuditEvent{
 		TenantID: actor.TenantID, ActorID: actor.ID, Action: "auth.user_created",
 		TargetType: "user", TargetID: created.ID,
-		AfterValue: map[string]any{"username": created.Username, "display_name": created.DisplayName, "phone": created.PhoneMasked, "employee_no": created.EmployeeNo, "role_code": input.RoleCode, "school_id": created.SchoolID, "class_ids": input.ClassIDs, "status": created.Status},
+		AfterValue: map[string]any{"username": created.Username, "display_name": created.DisplayName, "phone": created.PhoneMasked, "employee_no": created.EmployeeNo, "role_codes": created.Roles, "school_id": created.SchoolID, "class_ids": input.ClassIDs, "status": created.Status},
 		Reason:     "create organization user", IPAddress: h.remoteIP(r), UserAgent: r.UserAgent(), RequestID: logger.RequestID(r.Context()),
 	})
 	response := map[string]any{"user": created}
@@ -162,6 +148,25 @@ func (h *Handler) CreateManagedUser(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	httpx.JSON(w, http.StatusCreated, response)
+}
+
+func writeManagedUserCreateError(w http.ResponseWriter, r *http.Request, err error) {
+	switch {
+	case errors.Is(err, ErrUsernameExists):
+		httpx.Error(w, r, http.StatusConflict, "username_exists", "username already exists")
+	case errors.Is(err, ErrIdentityExists):
+		httpx.Error(w, r, http.StatusConflict, "identity_exists", "phone or employee number is already in use")
+	case errors.Is(err, ErrRoleNotFound):
+		httpx.Error(w, r, http.StatusBadRequest, "role_not_assignable", "role is not assignable in the current organization")
+	case errors.Is(err, ErrRoleAssignment):
+		httpx.Error(w, r, http.StatusForbidden, "role_assignment_forbidden", "current identity cannot assign this role")
+	case errors.Is(err, ErrOrganizationScope):
+		httpx.Error(w, r, http.StatusForbidden, "organization_scope_forbidden", "organization binding is outside the current data access scope")
+	case errors.Is(err, ErrInvalidRoleBinding):
+		httpx.Error(w, r, http.StatusBadRequest, "invalid_role_binding", "role organization binding is invalid")
+	default:
+		httpx.Error(w, r, http.StatusInternalServerError, "user_create_failed", "failed to create user")
+	}
 }
 
 func generatedManagedUsername(tenantID, phone, employeeNo string) string {

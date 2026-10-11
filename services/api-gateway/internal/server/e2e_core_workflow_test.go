@@ -68,6 +68,28 @@ func TestCoreWorkflowE2EWithSyntheticMemoryStores(t *testing.T) {
 
 	e2eExpectStatus(t, fixture.router, http.MethodPost, "/api/v1/tenants", adminToken, `{"name":"Synthetic E2E Tenant","code":"synthetic-e2e"}`, http.StatusForbidden)
 
+	actors := memoryWorkflowActors{Admin: adminToken, Teacher: teacherToken, Student: studentToken, OtherStudent: otherStudentToken}
+	exam := e2ePrepareMemoryWorkflowExam(t, fixture, adminToken)
+	answer := e2eCollectMemoryWorkflowAnswer(t, fixture, adminToken, exam.ExamID)
+	aiGradeID := e2eReviewMemoryWorkflowEvidence(t, fixture, actors, exam, answer)
+	e2ePublishAndAppealMemoryWorkflow(t, fixture, actors, exam, answer, aiGradeID)
+}
+
+type memoryWorkflowActors struct {
+	Admin, Teacher, Student, OtherStudent string
+}
+
+type memoryWorkflowExam struct {
+	ExamID, PaperID, QuestionID, RubricID string
+}
+
+type memoryWorkflowAnswer struct {
+	SubmissionID, PageID, AnswerFileID, AnswerText, SegmentID string
+}
+
+// 内存夹具需要显式设置试卷总分，再保存题目与量规；纸卷配置校验仍走原 API。
+func e2ePrepareMemoryWorkflowExam(t *testing.T, fixture *e2eMemoryFixture, adminToken string) memoryWorkflowExam {
+	t.Helper()
 	school := e2ePostJSON(t, fixture.router, http.MethodPost, "/api/v1/schools", adminToken, `{"name":"Synthetic Academy","code":"SYN-E2E"}`, http.StatusCreated)["school"].(map[string]any)
 	schoolID := e2eString(t, school, "id")
 	grade := e2ePostJSON(t, fixture.router, http.MethodPost, "/api/v1/grades", adminToken, `{"school_id":"`+schoolID+`","name":"Synthetic Grade 10","level_no":10,"academic_year":"2026"}`, http.StatusCreated)["grade"].(map[string]any)
@@ -104,6 +126,12 @@ func TestCoreWorkflowE2EWithSyntheticMemoryStores(t *testing.T) {
 		t.Fatalf("paper config should be valid: %#v", validateResp)
 	}
 
+	return memoryWorkflowExam{ExamID: examID, PaperID: paperID, QuestionID: questionID, RubricID: rubricID}
+}
+
+// 采集质量先通过，才领取 OCR Runtime 租约、回传低置信结果并生成答题片段。
+func e2eCollectMemoryWorkflowAnswer(t *testing.T, fixture *e2eMemoryFixture, adminToken, examID string) memoryWorkflowAnswer {
+	t.Helper()
 	answerFileID := e2eUploadSyntheticPDF(t, fixture.router, adminToken, "synthetic-answer.pdf", "%PDF-1.4\n% synthetic answer sheet\n")
 	submissionResp := e2ePostJSON(t, fixture.router, http.MethodPost, "/api/v1/exams/"+examID+"/submissions", adminToken, `{"student_id":"`+e2eStudentID+`","candidate_no":"SYN-001","source_type":"pdf_upload","expected_page_count":1}`, http.StatusCreated)["submission"].(map[string]any)
 	submissionID := e2eString(t, submissionResp, "id")
@@ -170,6 +198,15 @@ func TestCoreWorkflowE2EWithSyntheticMemoryStores(t *testing.T) {
 		t.Fatalf("segment should be generated: %#v", segmentResp)
 	}
 
+	return memoryWorkflowAnswer{SubmissionID: submissionID, PageID: pageID, AnswerFileID: answerFileID, AnswerText: answerText, SegmentID: segmentID}
+}
+
+// 模拟模型与低置信证据不能自动发布；先保留未完成复核门禁，再由指定教师提交合法分数。
+func e2eReviewMemoryWorkflowEvidence(t *testing.T, fixture *e2eMemoryFixture, actors memoryWorkflowActors, exam memoryWorkflowExam, answer memoryWorkflowAnswer) string {
+	t.Helper()
+	adminToken, teacherToken := actors.Admin, actors.Teacher
+	examID, paperID, questionID, rubricID := exam.ExamID, exam.PaperID, exam.QuestionID, exam.RubricID
+	submissionID, pageID, answerText, segmentID := answer.SubmissionID, answer.PageID, answer.AnswerText, answer.SegmentID
 	question := paper.Question{
 		ID:           questionID,
 		TenantID:     e2eTenantID,
@@ -274,6 +311,15 @@ func TestCoreWorkflowE2EWithSyntheticMemoryStores(t *testing.T) {
 		t.Fatalf("human grade should be submitted with score 4: %#v", submittedReview)
 	}
 
+	return aiGradeID
+}
+
+// 人工成绩确认后才发布；随后验证学生自有成绩、同伴隔离、申诉调整及整条审计链。
+func e2ePublishAndAppealMemoryWorkflow(t *testing.T, fixture *e2eMemoryFixture, actors memoryWorkflowActors, exam memoryWorkflowExam, answer memoryWorkflowAnswer, aiGradeID string) {
+	t.Helper()
+	adminToken, teacherToken, studentToken, otherStudentToken := actors.Admin, actors.Teacher, actors.Student, actors.OtherStudent
+	examID, questionID := exam.ExamID, exam.QuestionID
+	submissionID, answerText, segmentID := answer.SubmissionID, answer.AnswerText, answer.SegmentID
 	fixture.scoreStore.AddSegment(score.SegmentSeed{ExamID: examID, SubmissionID: submissionID, StudentID: e2eStudentID, AnonymousCode: "SYN-001", AnswerSegmentID: segmentID, QuestionID: questionID, QuestionNo: "Q1", MaxScore: 5})
 	fixture.scoreStore.AddHumanGrade(score.GradeSeed{AnswerSegmentID: segmentID, Score: 4, MaxScore: 5})
 	finalized := e2ePostJSON(t, fixture.router, http.MethodPost, "/api/v1/exams/"+examID+"/finalize", adminToken, `{}`, http.StatusCreated)

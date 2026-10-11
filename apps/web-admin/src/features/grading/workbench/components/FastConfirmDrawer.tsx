@@ -1,19 +1,37 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Alert, Button, Checkbox, Drawer, Empty, Spin } from "antd";
-import type { ReviewTask } from "../../../../api/review";
+import type { GradeEvidence, ReviewTask } from "../../../../api/review";
 import { downloadReviewWorkspaceImage, submitHumanGrade } from "../../../../api/review";
 import { getSafeUserText } from "../../../../api/client";
-import { appQueryClient } from "../../../../query/client";
-import { reviewTaskContextKeys } from "../../../../query/reviewTaskContext";
+import { isReviewTaskContextScopeCurrent, reviewTaskContextKeys, useReviewTaskContextScope } from "../../../../query/reviewTaskContext";
 import { loadTaskContext } from "../gradingTaskContext";
 import type { WorkbenchContext } from "../gradingWorkbench.types";
 import { fastConfirmCandidate, type FastConfirmCandidate } from "../fastConfirm";
 
 type Item = { context: WorkbenchContext; candidate: FastConfirmCandidate };
 
-export function FastConfirmDrawer({ tasks, examId, currentUserId, onTasksChanged, onScoringChanged }: {
+function fastConfirmResultMessage(completed: number, selected: number) {
+  if (completed === selected) return `已由教师确认 ${completed} 份；提交后进入质检，不会直接发布成绩。`;
+  return `已确认 ${completed} / ${selected} 份；其余任务可能已变化，请刷新并重新核对。`;
+}
+
+function evidenceEntries(values: readonly GradeEvidence[]) {
+  // 证据没有独立 id；只读列表按显示文本和该文本的出现次数区分，重复证据仍逐条保留。
+  const occurrences = new Map<string, number>();
+  return values.map((value) => {
+    const text = getSafeUserText(value.answer_text || value.rule || value.type, "请在完整工作台核对证据");
+    const occurrence = occurrences.get(text) ?? 0;
+    occurrences.set(text, occurrence + 1);
+    return { key: `${text}:${occurrence}`, text };
+  });
+}
+
+export function FastConfirmDrawer({ tasks, examId, currentUserId, onTasksChanged, onScoringChanged }: Readonly<{
   tasks: ReviewTask[]; examId: string; currentUserId: string; onTasksChanged: () => Promise<void>; onScoringChanged: () => Promise<void>;
-}) {
+}>) {
+  const queryClient = useQueryClient();
+  const queryScope = useReviewTaskContextScope(examId, false);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -25,22 +43,32 @@ export function FastConfirmDrawer({ tasks, examId, currentUserId, onTasksChanged
   const [previewLoading, setPreviewLoading] = useState(false);
   const [issue, setIssue] = useState("");
   const previewRequest = useRef(0);
+  const submitLock = useRef(false);
   useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
+  useEffect(() => {
+    previewRequest.current++;
+    submitLock.current = false;
+    setOpen(false); setItems([]); setInspected([]); setActiveId(""); setPreviewUrl("");
+    setPreviewReady(false); setPreviewLoading(false); setLoading(false); setSubmitting(false); setIssue("");
+    // 切考试或离开页面使旧批次失效；已发出的提交仍由服务端和命令回执确认。
+    return () => { previewRequest.current++; };
+  }, [queryScope]);
 
   const load = async () => {
-    previewRequest.current++;
+    const request = ++previewRequest.current;
     setLoading(true); setIssue(""); setInspected([]); setActiveId(""); setPreviewUrl(""); setPreviewReady(false); setPreviewLoading(false);
     try {
       const assigned = tasks.filter((task) => task.exam_id === examId && task.assigned_to === currentUserId && ["assigned", "in_progress", "returned"].includes(task.status)).slice(0, 20);
       const results = await Promise.allSettled(assigned.map(async (task) => {
-        appQueryClient.removeQueries({ queryKey: reviewTaskContextKeys.detail(task.id) });
-        const context = await loadTaskContext(task.id, false);
+        queryClient.removeQueries({ queryKey: reviewTaskContextKeys.task(queryScope, task.id) });
+        const context = await loadTaskContext(queryClient, queryScope, task.id);
         const candidate = fastConfirmCandidate(context, currentUserId);
         return candidate ? { context, candidate } : null;
       }));
+      if (request !== previewRequest.current || !isReviewTaskContextScopeCurrent(queryScope)) return;
       setItems(results.flatMap((result) => result.status === "fulfilled" && result.value ? [result.value] : []));
       if (results.some((result) => result.status === "rejected")) setIssue("部分任务加载失败，请刷新后再核对；失败任务未加入快捷确认。 ");
-    } finally { setLoading(false); }
+    } finally { if (request === previewRequest.current && isReviewTaskContextScopeCurrent(queryScope)) setLoading(false); }
   };
 
   const inspect = async (item: Item) => {
@@ -48,43 +76,81 @@ export function FastConfirmDrawer({ tasks, examId, currentUserId, onTasksChanged
     setIssue(""); setActiveId(item.context.task.id); setPreviewUrl(""); setPreviewReady(false); setPreviewLoading(true);
     try {
       const file = await downloadReviewWorkspaceImage(item.context.segmentImageUrl);
-      if (request !== previewRequest.current) return;
+      if (request !== previewRequest.current || !isReviewTaskContextScopeCurrent(queryScope)) return;
       if (!file.contentType.startsWith("image/")) throw new Error("not previewable");
       setPreviewUrl(URL.createObjectURL(file.blob));
-    } catch { if (request === previewRequest.current) { setInspected((current) => current.filter((id) => id !== item.context.task.id)); setIssue("题块原图加载失败，当前任务不能快捷确认。请进入完整阅卷工作台。"); } }
-    finally { if (request === previewRequest.current) setPreviewLoading(false); }
+    } catch { if (request === previewRequest.current && isReviewTaskContextScopeCurrent(queryScope)) { setInspected((current) => current.filter((id) => id !== item.context.task.id)); setIssue("题块原图加载失败，当前任务不能快捷确认。请进入完整阅卷工作台。"); } }
+    finally { if (request === previewRequest.current && isReviewTaskContextScopeCurrent(queryScope)) setPreviewLoading(false); }
   };
 
   const submit = async () => {
     const selected = items.filter((item) => inspected.includes(item.context.task.id));
-    if (!selected.length) return;
+    if (!selected.length || submitLock.current || !isReviewTaskContextScopeCurrent(queryScope)) return;
+    const request = ++previewRequest.current;
+    const isCurrent = () => request === previewRequest.current && isReviewTaskContextScopeCurrent(queryScope);
+    submitLock.current = true;
     setSubmitting(true); setIssue("");
     let completed = 0;
     const completedIds: string[] = [];
     try {
       for (const item of selected) {
+        if (!isCurrent()) return;
         try {
-          appQueryClient.removeQueries({ queryKey: reviewTaskContextKeys.detail(item.context.task.id) });
-          const fresh = await loadTaskContext(item.context.task.id, false);
+          queryClient.removeQueries({ queryKey: reviewTaskContextKeys.task(queryScope, item.context.task.id) });
+          const fresh = await loadTaskContext(queryClient, queryScope, item.context.task.id);
+          if (!isCurrent()) return;
           const candidate = fastConfirmCandidate(fresh, currentUserId);
           // 教师核对的是当时那份图像与建议；任务版本或建议改变后必须重新核对，不能沿用勾选。
-          if (!candidate || candidate.grade.id !== item.candidate.grade.id || fresh.task.revision !== item.context.task.revision) throw new Error("任务或 AI 建议已更新");
+          if (candidate?.grade.id !== item.candidate.grade.id || fresh.task.revision !== item.context.task.revision) throw new Error("任务或 AI 建议已更新");
           await submitHumanGrade(item.context.task.id, {
             expected_revision: fresh.reviewContext.expected_revision,
             score: candidate.score,
             rubric_selections: [], comments: "已核对原图、建议分与证据后快捷确认",
             private_note: "", student_feedback: "", reason: "AI_FAST_CONFIRM 教师明确确认"
           });
+          if (!isCurrent()) return;
           completed++;
           completedIds.push(item.context.task.id);
-        } catch { /* Each submission is independent; keep other reviewed items actionable. */ }
+        } catch { /* 每次提交相互独立；其他已复核条目仍应保持可操作。 */ }
       }
+      // 批次中账号变化后不再提交后续任务，也不刷新新账号的列表。
+      if (!isCurrent()) return;
       await Promise.allSettled([onTasksChanged(), onScoringChanged()]);
+      if (!isCurrent()) return;
       setItems((current) => current.filter((item) => !completedIds.includes(item.context.task.id)));
       setInspected([]); setActiveId(""); setPreviewUrl(""); setPreviewReady(false); setPreviewLoading(false);
-      setIssue(completed === selected.length ? `已由教师确认 ${completed} 份；提交后进入质检，不会直接发布成绩。` : `已确认 ${completed} / ${selected.length} 份；其余任务可能已变化，请刷新并重新核对。`);
-    } finally { setSubmitting(false); }
+      setIssue(fastConfirmResultMessage(completed, selected.length));
+    } finally { if (isCurrent()) { submitLock.current = false; setSubmitting(false); } }
   };
+
+  let candidateContent: ReactNode;
+  if (loading) candidateContent = <Spin />;
+  else if (items.length === 0) candidateContent = <Empty description="当前队列前 20 份没有符合快捷确认条件的任务" />;
+  else {
+    candidateContent = <>
+      <div className="fast-confirm-summary"><strong>符合条件 {items.length} 份</strong><span>已核对 {inspected.length} 份</span><span>未勾选的任务不会提交</span></div>
+      <div className="fast-confirm-list">
+        {items.map((item) => <div key={item.context.task.id} className="fast-confirm-item">
+          <div className="fast-confirm-item-row">
+            <strong>{item.context.task.question_no} · 匿名卷 {getSafeUserText(item.context.task.anonymous_code, "—")}</strong>
+            <span>建议 {item.candidate.score} / {item.candidate.grade.max_score} · 置信度 {Math.round(item.candidate.grade.confidence * 100)}%</span>
+            <Button size="small" disabled={submitting} loading={previewLoading && activeId === item.context.task.id} onClick={() => void inspect(item)}>核对原图与证据</Button>
+            <span>{inspected.includes(item.context.task.id) ? "已核对" : "待核对"}</span>
+          </div>
+          {activeId === item.context.task.id && previewUrl ? <div className="fast-confirm-preview">
+            <img src={previewUrl} alt="待核对的学生答题原图" onLoad={() => setPreviewReady(true)} onError={() => { setPreviewReady(false); setInspected((current) => current.filter((id) => id !== item.context.task.id)); setIssue("原图无法显示，请在完整工作台处理该任务。"); }} style={{ maxWidth: "100%", maxHeight: 380, objectFit: "contain" }} />
+            <div className="fast-confirm-evidence">
+              <strong>本份建议分：{item.candidate.score} / {item.candidate.grade.max_score}</strong>
+              <span>置信度 {Math.round(item.candidate.grade.confidence * 100)}% · 准入阈值 {Math.round(item.candidate.threshold * 100)}%</span>
+              <ul>{evidenceEntries(item.candidate.grade.evidence).map((entry) => <li key={entry.key}>{entry.text}</li>)}</ul>
+              <Checkbox disabled={!previewReady || submitting} checked={inspected.includes(item.context.task.id)} onChange={(event) => setInspected((current) => event.target.checked ? [...new Set([...current, item.context.task.id])] : current.filter((id) => id !== item.context.task.id))}>已核对原图、证据并确认此分数</Checkbox>
+            </div>
+          </div> : null}
+        </div>)}
+      </div>
+      <Button type="primary" disabled={!inspected.length} loading={submitting} onClick={() => void submit()}>提交已核对的 {inspected.length} 份</Button>
+    </>;
+  }
 
   return <>
     <div className="fast-confirm-entry">
@@ -96,29 +162,7 @@ export function FastConfirmDrawer({ tasks, examId, currentUserId, onTasksChanged
       <ol className="fast-confirm-steps"><li>选择一份并查看原图</li><li>核对建议分与证据</li><li>逐份勾选后提交</li></ol>
       <Button size="small" disabled={loading || submitting} onClick={() => void load()}>刷新候选任务</Button>
       {issue ? <Alert showIcon type={issue.startsWith("已") ? "success" : "warning"} message={issue} /> : null}
-      {loading ? <Spin /> : items.length === 0 ? <Empty description="当前队列前 20 份没有符合快捷确认条件的任务" /> : <>
-        <div className="fast-confirm-summary"><strong>符合条件 {items.length} 份</strong><span>已核对 {inspected.length} 份</span><span>未勾选的任务不会提交</span></div>
-        <div className="fast-confirm-list">
-          {items.map((item) => <div key={item.context.task.id} className="fast-confirm-item">
-            <div className="fast-confirm-item-row">
-              <strong>{item.context.task.question_no} · 匿名卷 {getSafeUserText(item.context.task.anonymous_code, "—")}</strong>
-              <span>建议 {item.candidate.score} / {item.candidate.grade.max_score} · 置信度 {Math.round(item.candidate.grade.confidence * 100)}%</span>
-              <Button size="small" disabled={submitting} loading={previewLoading && activeId === item.context.task.id} onClick={() => void inspect(item)}>核对原图与证据</Button>
-              <span>{inspected.includes(item.context.task.id) ? "已核对" : "待核对"}</span>
-            </div>
-            {activeId === item.context.task.id && previewUrl ? <div className="fast-confirm-preview">
-              <img src={previewUrl} alt="待核对的学生答题原图" onLoad={() => setPreviewReady(true)} onError={() => { setPreviewReady(false); setInspected((current) => current.filter((id) => id !== item.context.task.id)); setIssue("原图无法显示，请在完整工作台处理该任务。"); }} style={{ maxWidth: "100%", maxHeight: 380, objectFit: "contain" }} />
-              <div className="fast-confirm-evidence">
-                <strong>本份建议分：{item.candidate.score} / {item.candidate.grade.max_score}</strong>
-                <span>置信度 {Math.round(item.candidate.grade.confidence * 100)}% · 准入阈值 {Math.round(item.candidate.threshold * 100)}%</span>
-                <ul>{item.candidate.grade.evidence.map((evidence, index) => <li key={index}>{getSafeUserText(evidence.answer_text || evidence.rule || evidence.type, "请在完整工作台核对证据")}</li>)}</ul>
-                <Checkbox disabled={!previewReady || submitting} checked={inspected.includes(item.context.task.id)} onChange={(event) => setInspected((current) => event.target.checked ? [...new Set([...current, item.context.task.id])] : current.filter((id) => id !== item.context.task.id))}>已核对原图、证据并确认此分数</Checkbox>
-              </div>
-            </div> : null}
-          </div>)}
-        </div>
-        <Button type="primary" disabled={!inspected.length} loading={submitting} onClick={() => void submit()}>提交已核对的 {inspected.length} 份</Button>
-      </>}
+      {candidateContent}
     </Drawer>
   </>;
 }

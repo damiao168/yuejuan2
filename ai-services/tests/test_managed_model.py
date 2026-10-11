@@ -1,3 +1,4 @@
+import copy
 import json
 import socket
 import unittest
@@ -101,12 +102,56 @@ class ManagedPaperModelTests(unittest.TestCase):
         self.assertEqual(body["thinking"], {"type": "disabled"})
         self.assertEqual(body["reasoning_effort"], "none")
 
+    def test_schema_prefix_preserves_caller_messages_and_visual_part_references(self):
+        schema = {"type": "object", "required": ["ok"]}
+        instruction = "Return a JSON object matching this schema: " + json.dumps(
+            schema, ensure_ascii=False, separators=(",", ":")
+        )
+        visual_message = {"role": "user", "content": [
+            {"type": "text", "text": "exam"},
+            {"type": "image_url", "image_url": {"url": "data:image/png;base64,cG5n"}},
+        ]}
+        for with_system in (False, True):
+            with self.subTest(with_system=with_system):
+                messages = ([{"role": "system", "content": "stable prefix"}]
+                            if with_system else []) + [visual_message]
+                original = copy.deepcopy(messages)
+                model = paper_model(self.app, {"managed_model": config()})
+                with patch("grading_agent.managed_model.public_json_transport", return_value={
+                    "choices": [{"message": {"content": '{"ok":true}'}}]
+                }) as send:
+                    model.request_structured("prefix", messages, schema, "paper")
+                body = send.call_args.args[1]
+                self.assertFalse(body["stream"])
+                self.assertNotIn("seed", body)
+                self.assertEqual(messages, original)
+                self.assertIsNot(body["messages"], messages)
+                self.assertIs(body["messages"][-1], visual_message)
+                self.assertEqual(body["messages"][0]["content"],
+                                 "stable prefix\n" + instruction if with_system else instruction)
+                if with_system:
+                    self.assertIsNot(body["messages"][0], messages[0])
+
+    # 原闭包在请求时读取同一个配置对象；提取 transport 后不能悄悄变成配置快照。
+    def test_compatible_transport_keeps_request_configuration_reference(self):
+        managed_config = config()
+        model = paper_model(self.app, {"managed_model": managed_config})
+        managed_config["model_name"] = "deepseek-fixture"
+        with patch("grading_agent.managed_model.public_json_transport", return_value={
+            "choices": [{"message": {"content": '{}'}}]
+        }) as send:
+            model.request_structured("reference", [], {"type": "object"}, "paper")
+        body = send.call_args.args[1]
+        self.assertEqual(body["model"], "school-a")
+        self.assertEqual(body["thinking"], {"type": "disabled"})
+
     def test_invalid_managed_config_never_falls_back_to_local_model(self):
         for changes in [{"base_url": "http://example.test"}, {"adapter_type": "unsupported"},
                         {"base_url": "https://user:pass@example.test"}, {"api_key": ""},
                         {"adapter_type": "dashscope_native"}]:
+            managed_config = config()
             with self.subTest(changes=changes), self.assertRaises(AgentError):
-                paper_model(self.app, {"managed_model": {**config(), **changes}})
+                paper_model(self.app, {'managed_model': {**managed_config, **changes}})
 
     def test_native_adapter_uses_native_generation_protocol(self):
         native = {**config(), "adapter_type": "dashscope_native", "base_url": "https://dashscope.aliyuncs.com/api/v1"}

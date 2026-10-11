@@ -14,14 +14,22 @@ import (
 
 	"edugrade-enterprise/services/api-gateway/internal/assessment"
 	"edugrade-enterprise/services/api-gateway/internal/goldpaper"
+	"edugrade-enterprise/services/api-gateway/internal/paper"
+	"edugrade-enterprise/services/api-gateway/internal/taskmaterials"
 
 	"github.com/google/uuid"
 )
 
 type Service struct {
-	store Store
-	gold  goldpaper.ActiveApprovedReader
-	now   func() time.Time
+	store     Store
+	gold      goldpaper.ActiveApprovedReader
+	now       func() time.Time
+	questions taskmaterials.QuestionReader
+}
+
+func (s *Service) WithQuestionSource(source taskmaterials.QuestionReader) *Service {
+	s.questions = source
+	return s
 }
 
 func NewService(store Store, gold goldpaper.ActiveApprovedReader) *Service {
@@ -64,8 +72,34 @@ func (s *Service) CreateSession(ctx context.Context, tenantID, examID, questionI
 }
 
 func (s *Service) GetSession(ctx context.Context, tenantID, sessionID string) (Session, error) {
-	session, _, _, _, err := s.store.GetSession(ctx, tenantID, sessionID)
-	return session, err
+	session, _, references, _, err := s.store.GetSession(ctx, tenantID, sessionID)
+	if err != nil {
+		return Session{}, err
+	}
+	return s.withSessionMaterials(ctx, tenantID, session, references)
+}
+
+func (s *Service) withSessionMaterials(ctx context.Context, tenantID string, session Session, references []goldReference) (Session, error) {
+	if s.questions == nil {
+		return session, nil
+	}
+	for index := range session.Samples {
+		sample := &session.Samples[index]
+		if sample.Question != nil {
+			continue
+		}
+		reference := sessionGoldReference(references, sample.GoldPaperID)
+		if reference == nil || reference.GoldVersion != sample.GoldVersion {
+			return Session{}, ErrConflict
+		}
+		// 旧会话只补自身清单冻结的题目材料；不重新选当前标准卷，也不向公共响应复制内部参考分。
+		question, err := s.questions.QuestionForSnapshot(ctx, tenantID, session.ExamID, session.QuestionID, reference.SnapshotID)
+		if err != nil {
+			return Session{}, err
+		}
+		sample.Question = &question
+	}
+	return session, nil
 }
 
 func (s *Service) SubmitAttempt(ctx context.Context, tenantID, sessionID string, input SubmitAttemptInput) (Attempt, Session, *Qualification, error) {
@@ -80,13 +114,7 @@ func (s *Service) SubmitAttempt(ctx context.Context, tenantID, sessionID string,
 	if session.Status != SessionInProgress {
 		return Attempt{}, Session{}, nil, ErrConflict
 	}
-	var reference *goldReference
-	for i := range references {
-		if references[i].GoldPaperID == input.GoldPaperID {
-			reference = &references[i]
-			break
-		}
-	}
+	reference := sessionGoldReference(references, input.GoldPaperID)
 	if reference == nil {
 		return Attempt{}, Session{}, nil, ErrSampleNotInSession
 	}
@@ -116,16 +144,25 @@ func (s *Service) SubmitAttempt(ctx context.Context, tenantID, sessionID string,
 	if err != nil {
 		return Attempt{}, Session{}, nil, err
 	}
-	// Reload after insert so concurrent submissions cannot leave a fully
-	// answered session in_progress because each request observed stale counts.
+	// 插入后重新加载，避免并发提交各自读取过时计数，导致已全部作答的会话仍停留在 in_progress。
 	session, policy, references, attempts, err = s.store.GetSession(ctx, tenantID, sessionID)
 	if err != nil {
 		return Attempt{}, Session{}, nil, err
 	}
 	if len(attempts) < len(references) {
-		return attempt, session, nil, nil
+		session, err = s.withSessionMaterials(ctx, tenantID, session, references)
+		return attempt, session, nil, err
 	}
 	return s.finishSession(ctx, tenantID, session, policy, attempts, attempt)
+}
+
+func sessionGoldReference(references []goldReference, goldPaperID string) *goldReference {
+	for i := range references {
+		if references[i].GoldPaperID == goldPaperID {
+			return &references[i]
+		}
+	}
+	return nil
 }
 
 // 最后一份样本提交后统一计算指标，并由 Store 原子写入会话终态和资格记录。
@@ -184,10 +221,8 @@ func (s *Service) RequireQualification(ctx context.Context, tenantID, examID, qu
 	return nil
 }
 
-// SuspendForQualityIncident is the narrow A11 bridge. It invalidates only the
-// one grader/question qualification identified by a critical quality incident;
-// it never changes the grader's permissions or qualifications on other items.
-// A missing qualification is already unable to claim work, so it is harmless.
+// SuspendForQualityIncident 是连接 A11 的有限接口，只使严重质量事件指定的阅卷者和题目资格失效，不改变该阅卷者的权限或其他条目的资格。
+// 资格缺失时本就不能领取任务，因此无需额外处理。
 func (s *Service) SuspendForQualityIncident(ctx context.Context, tenantID, examID, questionID, graderID, _ string) error {
 	qualification, err := s.GetQualification(ctx, tenantID, examID, questionID, graderID)
 	if err == ErrNotFound {
@@ -215,11 +250,11 @@ func (s *Service) currentReferences(ctx context.Context, tenantID, examID, quest
 			if version.Version != item.ActiveVersion || version.ApprovedAt == nil || math.Abs(version.MaxScore-policy.MaxScore) > 1e-9 {
 				continue
 			}
-			references = append(references, goldReference{GoldSample: GoldSample{GoldPaperID: item.ID,
-				GoldVersion: version.Version, SubmissionID: item.SubmissionID, AnswerImageURL: item.AnswerImageURL,
-				MaxScore: version.MaxScore, RubricSnapshot: cloneObject(version.RubricSnapshot)},
-				SnapshotID: version.ExamQuestionSnapshotID, RiskTier: item.RiskTier, ReferenceScore: version.ReferenceScore,
-				ExpectedCriteria: cloneObject(version.TraitScores)})
+			reference, readErr := s.referenceForGoldVersion(ctx, tenantID, examID, questionID, item, version)
+			if readErr != nil {
+				return nil, "", readErr
+			}
+			references = append(references, reference)
 		}
 	}
 	if len(references) < policy.MinimumSamples {
@@ -236,6 +271,24 @@ func (s *Service) currentReferences(ctx context.Context, tenantID, examID, quest
 		digest.Write([]byte{0})
 	}
 	return references, hex.EncodeToString(digest.Sum(nil)), nil
+}
+
+// 只构造已筛选版本的冻结参考；题目材料读取失败时交由调用方立即停止，不能跳过样本后再判数量。
+func (s *Service) referenceForGoldVersion(ctx context.Context, tenantID, examID, questionID string, item goldpaper.GoldPaper, version goldpaper.Version) (goldReference, error) {
+	var question *paper.Question
+	if s.questions != nil {
+		value, err := s.questions.QuestionForSnapshot(ctx, tenantID, examID, questionID, version.ExamQuestionSnapshotID)
+		if err != nil {
+			return goldReference{}, err
+		}
+		question = &value
+	}
+	return goldReference{GoldSample: GoldSample{GoldPaperID: item.ID,
+		Question:    question,
+		GoldVersion: version.Version, SubmissionID: item.SubmissionID, AnswerImageURL: item.AnswerImageURL,
+		MaxScore: version.MaxScore, RubricSnapshot: cloneObject(version.RubricSnapshot)},
+		SnapshotID: version.ExamQuestionSnapshotID, RiskTier: item.RiskTier, ReferenceScore: version.ReferenceScore,
+		ExpectedCriteria: cloneObject(version.TraitScores)}, nil
 }
 
 func validPolicyInput(input PutPolicyInput) bool {
@@ -255,6 +308,12 @@ func publicSamples(refs []goldReference) []GoldSample {
 	for i := range refs {
 		out[i] = refs[i].GoldSample
 		out[i].RubricSnapshot = cloneObject(refs[i].RubricSnapshot)
+		if refs[i].Question != nil {
+			// 返回的盲评题目与内部样本分开复制，客户端投影不能修改冻结标准。
+			raw, _ := json.Marshal(refs[i].Question)
+			out[i].Question = &paper.Question{}
+			_ = json.Unmarshal(raw, out[i].Question)
+		}
 	}
 	return out
 }

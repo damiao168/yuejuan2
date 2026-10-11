@@ -32,9 +32,8 @@ type Context struct {
 	AutomationResult   *AutomationResult               `json:"automation_result,omitempty"`
 }
 
-// AutomationResult exposes only the task-scoped recognition and rule-grading
-// facts a reviewer needs to resolve an exception. It deliberately omits model
-// administration data and any student identity beyond the task's anonymous code.
+// AutomationResult 只公开复核人员解决异常所需的任务作用域内识别与规则评分事实。
+// 它省略模型管理数据，以及任务匿名码之外的学生身份。
 type AutomationResult struct {
 	Source           string   `json:"source,omitempty"`
 	RecognizedAnswer string   `json:"recognized_answer,omitempty"`
@@ -51,6 +50,8 @@ type ReviewTask struct {
 	ID              string     `json:"id"`
 	TenantID        string     `json:"tenant_id"`
 	ExamID          string     `json:"exam_id"`
+	ExamName        string     `json:"exam_name,omitempty"`
+	Subject         string     `json:"subject,omitempty"`
 	QuestionID      string     `json:"question_id"`
 	QuestionNo      string     `json:"question_no"`
 	AnswerSegmentID string     `json:"answer_segment_id"`
@@ -200,13 +201,16 @@ type ListFilter struct {
 	Status          string
 	AssignedTo      string
 	ExamID          string
+	QuestionID      string
+	Subject         string
+	Q               string
+	Unassigned      bool
 	Limit           int
 	CursorPriority  int
 	CursorCreatedAt time.Time
 	CursorID        string
-	// Scope fields are populated by HTTP handlers from the server-derived
-	// authentication scope.  They are intentionally plain values so the
-	// review package remains independent of the auth package.
+	// Scope 字段由 HTTP handler 根据服务器生成的认证作用域填充。
+	// 它们使用普通值，使 review 包保持独立于 auth 包。
 	ScopeMode      string
 	ScopeActorID   string
 	ScopeSchoolIDs []string
@@ -214,9 +218,8 @@ type ListFilter struct {
 	ScopeTaskIDs   []string
 }
 
-// TaskAggregate describes the complete filtered queue. It is calculated with
-// the same tenant, authorization and query filters as ListTasks, but ignores
-// pagination so a client never mistakes the current page for the whole queue.
+// TaskAggregate 描述完整的过滤后队列。它与 ListTasks 使用相同的租户、授权和查询过滤条件，
+// 但忽略分页，避免客户端把当前页误认为整个队列。
 type TaskAggregate struct {
 	TotalCount     int                     `json:"total_count"`
 	CompletedCount int                     `json:"completed_count"`
@@ -295,8 +298,7 @@ type DoubleMarkSession struct {
 type DoubleMarkSessionFilter struct {
 	Status          string
 	AnswerSegmentID string
-	// ExamID and QuestionID keep aggregate consumers from reading every
-	// double-mark session in a tenant and filtering in application memory.
+	// ExamID 和 QuestionID 避免聚合消费方读取租户全部双评会话后再在应用内存中筛选。
 	ExamID     string
 	QuestionID string
 }
@@ -349,9 +351,12 @@ type ArbitrationTask struct {
 }
 
 type ReviewContext struct {
-	RawAnswer    string         `json:"raw_answer,omitempty"`
-	OCRText      string         `json:"ocr_text,omitempty"`
-	AISuggestion map[string]any `json:"ai_suggestion,omitempty"`
+	// 仲裁标准只来自本任务的冻结材料，读取权限仍由仲裁任务分配关系校验。
+	Question     *paper.Question `json:"question,omitempty"`
+	Rubric       *paper.Rubric   `json:"rubric,omitempty"`
+	RawAnswer    string          `json:"raw_answer,omitempty"`
+	OCRText      string          `json:"ocr_text,omitempty"`
+	AISuggestion map[string]any  `json:"ai_suggestion,omitempty"`
 }
 
 type ArbitrationFilter struct {

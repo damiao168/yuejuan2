@@ -1,0 +1,47 @@
+[
+  {
+    "command": [
+      "npm.cmd",
+      "--workspace",
+      "apps/desktop-client",
+      "run",
+      "typecheck"
+    ],
+    "started_at": "2026-10-11T09:10:20.754687+00:00",
+    "completed_at": "2026-10-11T09:10:48.023565+00:00",
+    "duration_seconds": 27.264999999999418,
+    "exit_code": 134,
+    "log": "frontend-types-0.log",
+    "log_sha256": "27e4ca733dd9ecf102048214c920edf2f3c6791afdd97aa720fb9964e071fd80"
+  },
+  {
+    "command": [
+      "npm.cmd",
+      "--workspace",
+      "apps/student-portal",
+      "run",
+      "typecheck"
+    ],
+    "started_at": "2026-10-11T09:10:48.059543+00:00",
+    "completed_at": "2026-10-11T09:11:09.935740+00:00",
+    "duration_seconds": 21.875,
+    "exit_code": 0,
+    "log": "frontend-types-1.log",
+    "log_sha256": "e64d30df5509e800aec5dd31307490952dcb05dc5d29bd467c0d0876a51a553e"
+  },
+  {
+    "command": [
+      "npm.cmd",
+      "--workspace",
+      "apps/web-admin",
+      "run",
+      "typecheck"
+    ],
+    "started_at": "2026-10-11T09:11:09.951970+00:00",
+    "completed_at": "2026-10-11T09:11:36.242956+00:00",
+    "duration_seconds": 26.297000000005937,
+    "exit_code": 134,
+    "log": "frontend-types-2.log",
+    "log_sha256": "66cd5b443a5e25f06756c005bae7490888a69b031a3e12f7c1acbaeaa8017a10"
+  }
+]

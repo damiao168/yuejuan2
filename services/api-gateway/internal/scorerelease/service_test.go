@@ -253,7 +253,7 @@ func TestStudentTableFieldsStayHiddenAndSmallCohortsSuppressStatistics(t *testin
 	if result.Reference == nil || result.Reference.StatisticsAvailable || result.Reference.UnavailableReason != "small_cohort" {
 		t.Fatalf("small cohort should expose only an unavailable marker: %#v", result.Reference)
 	}
-	if result.Rankings != nil || result.Questions[0].Cohort != nil {
+	if result.Rankings == nil || result.Rankings.ClassRank != 0 || result.Rankings.GradeRank != 0 || result.Rankings.ClassUnavailableReason != "small_cohort" || result.Questions[0].Cohort != nil {
 		t.Fatalf("small cohort leaked exact rank or question statistics: rankings=%#v question=%#v", result.Rankings, result.Questions[0])
 	}
 }
@@ -339,6 +339,98 @@ func TestLegacyHighScorePolicyNeverSharesPeerPaper(t *testing.T) {
 	})
 	if err != nil || regrade.VisibilityPolicy.ShowHighScorePaper {
 		t.Fatalf("regrade propagated unsafe setting: %+v %v", regrade, err)
+	}
+}
+
+func TestAppealWindowRequiresVisibleQuestionScores(t *testing.T) {
+	for _, tc := range []struct {
+		name          string
+		appealEnabled bool
+		showQuestions bool
+		wantInvalid   bool
+	}{
+		{name: "enabled window with hidden questions", appealEnabled: true, wantInvalid: true},
+		{name: "enabled window with visible questions", appealEnabled: true, showQuestions: true},
+		{name: "disabled window with hidden questions"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			store := NewMemoryStore()
+			store.SeedFacts(exam, []SubmissionFact{fixtureFact(4)})
+			service := NewService(store)
+			release, err := service.Create(context.Background(), tenant, exam, actor, CreateInput{
+				Reason: "reviewed visibility policy", IdempotencyKey: "appeal-visibility-key",
+				VisibilityPolicy: VisibilityPolicy{ShowQuestionScores: tc.showQuestions},
+				AppealWindow:     AppealWindow{Enabled: tc.appealEnabled},
+			})
+			if tc.wantInvalid {
+				if !errors.Is(err, ErrInvalidInput) {
+					t.Fatalf("create incompatible policy: %v", err)
+				}
+				if releases, listErr := service.List(context.Background(), tenant, exam); listErr != nil || len(releases) != 0 {
+					t.Fatalf("invalid policy created draft: %+v %v", releases, listErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("create compatible policy: %v", err)
+			}
+			if _, err := service.Publish(context.Background(), tenant, release.ID, actor); err != nil {
+				t.Fatalf("publish compatible policy: %v", err)
+			}
+		})
+	}
+}
+
+func TestPublishRejectsHistoricalDraftWithIncompatibleAppealPolicyAndPreservesPublishedRetry(t *testing.T) {
+	ctx := context.Background()
+	store := NewMemoryStore()
+	store.SeedFacts(exam, []SubmissionFact{fixtureFact(4)})
+	service := NewService(store)
+	// 绕过服务校验具化升级前保存的草稿，冻结策略只能在正式发布前被阻断。
+	legacy, err := store.Create(ctx, tenant, exam, actor, CreateInput{
+		Source: SourceInitial, Reason: "historical total-only release", IdempotencyKey: "appeal-legacy-policy",
+		AppealWindow: AppealWindow{Enabled: true},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := service.Publish(ctx, tenant, legacy.ID, actor); !errors.Is(err, ErrInvalidInput) {
+		t.Fatalf("publish incompatible historical draft: %v", err)
+	}
+	if detail, err := service.Get(ctx, tenant, legacy.ID); err != nil || detail.Release.Status != StatusDraft || detail.Release.PublishedAt != nil {
+		t.Fatalf("rejected draft was changed: %+v %v", detail.Release, err)
+	}
+	published, err := store.Publish(ctx, tenant, legacy.ID, actor)
+	if err != nil {
+		t.Fatal(err)
+	}
+	retry, err := service.Publish(ctx, tenant, legacy.ID, "manager-2")
+	if err != nil || retry.ID != published.ID || retry.Version != published.Version || retry.PublishedBy != published.PublishedBy || !retry.PublishedAt.Equal(*published.PublishedAt) {
+		t.Fatalf("historical published retry changed immutable facts: %+v %v", retry, err)
+	}
+	for _, create := range []struct {
+		name string
+		fn   func() (Release, error)
+	}{
+		{name: "rollback draft", fn: func() (Release, error) {
+			return service.CreateRollback(ctx, tenant, exam, actor, RollbackInput{SourceReleaseID: published.ID, Reason: "restore historical version", IdempotencyKey: "appeal-legacy-rollback"})
+		}},
+		{name: "regrade draft", fn: func() (Release, error) {
+			return service.CreateFromRegrade(ctx, tenant, exam, actor, CreateRegradeInput{
+				SourceReleaseID: published.ID, QuestionID: "question-1", Reason: "reviewed correction", IdempotencyKey: "appeal-legacy-regrade",
+				Changes: []RegradeChange{{SubmissionID: "submission-1", QuestionID: "question-1", Score: 3, MaxScore: 5}},
+			})
+		}},
+	} {
+		t.Run(create.name, func(t *testing.T) {
+			draft, err := create.fn()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := service.Publish(ctx, tenant, draft.ID, actor); !errors.Is(err, ErrInvalidInput) {
+				t.Fatalf("publish inherited incompatible policy: %v", err)
+			}
+		})
 	}
 }
 

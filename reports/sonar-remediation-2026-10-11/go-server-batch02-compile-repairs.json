@@ -1,0 +1,26 @@
+[
+  {
+    "file": "services/api-gateway/internal/server/e2e_paper_import_reconciliation_test.go",
+    "function": "e2eRacePaperHumanReviewAndSuccessor"
+  },
+  {
+    "file": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "function": "e2eAssertActualClientCommandResources"
+  },
+  {
+    "file": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "function": "e2eFailPreparationAttempt"
+  },
+  {
+    "file": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "function": "e2eAssertPreparationExhaustionRollback"
+  },
+  {
+    "file": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "function": "e2eAssertFinalAbandonedRuntimeRecovery"
+  },
+  {
+    "file": "services/api-gateway/internal/server/e2e_review_recovery_test.go",
+    "function": "e2eFindRepairQualityException"
+  }
+]

@@ -1,6 +1,5 @@
-// Package scorerelease owns the immutable public score boundary.  It does not
-// recalculate grades: it snapshots already-confirmed final facts, applies a
-// server-side release gate, and exposes a deliberately student-safe view.
+// Package scorerelease 管理不可变的公开成绩边界。
+// 它不重新计算成绩，而是为已确认的最终事实建立快照、应用服务器端发布门禁，并公开面向学生的受限视图。
 package scorerelease
 
 import (
@@ -16,6 +15,7 @@ var (
 	ErrGateBlocked               = errors.New("score release gate is blocked")
 	ErrForbidden                 = errors.New("score release access forbidden")
 	ErrStaleSource               = errors.New("score release source is no longer current")
+	ErrStudentReleaseChanged     = errors.New("student published release changed")
 	ErrAnonymousPaperUnavailable = errors.New("anonymous high-score paper is unavailable")
 )
 
@@ -30,9 +30,7 @@ const (
 	SourceMigration = "migration"
 )
 
-// AppealWindow is materialised with a release so that a later policy edit
-// cannot silently change the period in which a student may question that
-// specific published score.
+// AppealWindow 随发布实例化，避免后续策略编辑静默改变学生对该次已发布分数提出疑问的期限。
 type AppealWindow struct {
 	Enabled            bool       `json:"enabled"`
 	OpensAt            *time.Time `json:"opens_at,omitempty"`
@@ -40,8 +38,7 @@ type AppealWindow struct {
 	AllowedReasonCodes []string   `json:"allowed_reason_codes,omitempty"`
 }
 
-// VisibilityPolicy is intentionally small. More granular A21 policy can be
-// added without exposing internal scoring data from this package.
+// VisibilityPolicy 保持精简，可添加更细的 A21 策略，而不从本包暴露内部评分数据。
 type VisibilityPolicy struct {
 	ShowQuestionScores     bool `json:"show_question_scores"`
 	ShowFeedback           bool `json:"show_feedback"`
@@ -181,9 +178,8 @@ type RollbackInput struct {
 	IdempotencyKey  string `json:"idempotency_key"`
 }
 
-// RegradeChange is a reviewed, frozen correction for one question fact in a
-// previously published release. It deliberately contains no current
-// final-grade lookup: the source release remains the sole population source.
+// RegradeChange 是对之前已发布版本中一条题目事实的已复核、冻结修正。
+// 它不查询当前最终成绩；来源发布仍是群体的唯一来源。
 type RegradeChange struct {
 	SubmissionID    string  `json:"submission_id"`
 	QuestionID      string  `json:"question_id"`
@@ -200,8 +196,7 @@ type CreateRegradeInput struct {
 	Changes         []RegradeChange `json:"changes"`
 }
 
-// StudentResult deliberately has no final-grade IDs, source IDs, reviewer
-// identities, quality warnings, model prompts, raw AI output or private notes.
+// StudentResult 不包含最终成绩 ID、来源 ID、复核人员身份、质量警告、模型提示词、原始 AI 输出或私有笔记。
 type StudentResult struct {
 	ExamID            string                  `json:"exam_id"`
 	ReleaseID         string                  `json:"release_id"`
@@ -217,12 +212,12 @@ type StudentResult struct {
 	PaperPages        []StudentPaperPage      `json:"paper_pages,omitempty"`
 	HighScorePaper    *StudentHighScorePaper  `json:"high_score_paper,omitempty"`
 	SubjectBalance    []StudentSubjectBalance `json:"subject_balance,omitempty"`
+	SessionSummary    *StudentSessionSummary  `json:"session_summary,omitempty"`
 	Questions         []StudentQuestion       `json:"questions,omitempty"`
 	AppealWindow      StudentAppealView       `json:"appeal_window"`
 }
 
-// StudentExam is public context for a released result. PublishedAt is taken
-// from the immutable release, not from the mutable exam record.
+// StudentExam 是已发布结果的公开上下文。PublishedAt 取自不可变发布，不取自可变考试记录。
 type StudentExam struct {
 	Name        string    `json:"name"`
 	Subject     string    `json:"subject"`
@@ -230,8 +225,8 @@ type StudentExam struct {
 	PublishedAt time.Time `json:"published_at"`
 }
 
-// StudentReference contains aggregate facts only. No peer score or identity
-// ever crosses the student boundary. Small cohorts return availability=false.
+// StudentReference 只包含聚合事实。任何同学分数或身份都不能越过学生边界。
+// 小群体返回 availability=false。
 type StudentReference struct {
 	Scope               string   `json:"scope"`
 	SampleSize          int      `json:"sample_size"`
@@ -248,10 +243,32 @@ type StudentReference struct {
 }
 
 type StudentRankings struct {
-	ClassRank int `json:"class_rank"`
-	ClassSize int `json:"class_size"`
-	GradeRank int `json:"grade_rank"`
-	GradeSize int `json:"grade_size"`
+	ClassRank              int    `json:"class_rank"`
+	ClassSize              int    `json:"class_size"`
+	GradeRank              int    `json:"grade_rank"`
+	GradeSize              int    `json:"grade_size"`
+	ClassUnavailableReason string `json:"class_unavailable_reason,omitempty"`
+	GradeUnavailableReason string `json:"grade_unavailable_reason,omitempty"`
+}
+
+// StudentSessionSummary 仅列出本人在考次中已冻结的应考科目；未发布科目不带分数字段。
+type StudentSessionSummary struct {
+	PublishedCount int                     `json:"published_count"`
+	ExpectedCount  int                     `json:"expected_count"`
+	Subjects       []StudentSessionSubject `json:"subjects"`
+}
+type StudentSessionSubject struct {
+	ExamID              string     `json:"exam_id"`
+	Subject             string     `json:"subject"`
+	Name                string     `json:"name"`
+	Status              string     `json:"status"`
+	Score               *float64   `json:"score,omitempty"`
+	MaxScore            *float64   `json:"max_score,omitempty"`
+	PublishedAt         *time.Time `json:"published_at,omitempty"`
+	StatisticsAvailable bool       `json:"statistics_available"`
+	StatisticsReason    string     `json:"statistics_reason,omitempty"`
+	MeanScoreRate       *float64   `json:"mean_score_rate,omitempty"`
+	SampleSize          int        `json:"sample_size,omitempty"`
 }
 
 type StudentSubjectBalance struct {
@@ -285,33 +302,35 @@ type StudentPaperScoreMark struct {
 }
 
 type StudentQuestion struct {
-	QuestionID       string                    `json:"question_id"`
-	QuestionNo       string                    `json:"question_no"`
-	Subject          string                    `json:"subject,omitempty"`
-	QuestionType     string                    `json:"question_type,omitempty"`
-	Stem             string                    `json:"stem,omitempty"`
-	Score            float64                   `json:"score"`
-	MaxScore         float64                   `json:"max_score"`
-	ScoreRate        float64                   `json:"score_rate"`
-	KnowledgePoints  []string                  `json:"knowledge_points,omitempty"`
-	Cohort           *StudentQuestionReference `json:"cohort,omitempty"`
-	CorrectAnswer    string                    `json:"correct_answer,omitempty"`
-	ActualAnswer     string                    `json:"actual_answer,omitempty"`
-	PageNo           int                       `json:"page_no,omitempty"`
-	SubmissionPageID string                    `json:"submission_page_id,omitempty"`
-	AnswerGeometry   *StudentImageGeometry     `json:"answer_geometry,omitempty"`
-	Feedback         string                    `json:"feedback,omitempty"`
-	RubricSummary    []string                  `json:"rubric_summary,omitempty"`
+	QuestionID              string                    `json:"question_id"`
+	QuestionNo              string                    `json:"question_no"`
+	Subject                 string                    `json:"subject,omitempty"`
+	QuestionType            string                    `json:"question_type,omitempty"`
+	Stem                    string                    `json:"stem,omitempty"`
+	Score                   float64                   `json:"score"`
+	MaxScore                float64                   `json:"max_score"`
+	ScoreRate               float64                   `json:"score_rate"`
+	KnowledgePoints         []string                  `json:"knowledge_points,omitempty"`
+	Cohort                  *StudentQuestionReference `json:"cohort,omitempty"`
+	CohortUnavailableReason string                    `json:"cohort_unavailable_reason,omitempty"`
+	CorrectAnswer           string                    `json:"correct_answer,omitempty"`
+	ActualAnswer            string                    `json:"actual_answer,omitempty"`
+	PageNo                  int                       `json:"page_no,omitempty"`
+	SubmissionPageID        string                    `json:"submission_page_id,omitempty"`
+	AnswerGeometry          *StudentImageGeometry     `json:"answer_geometry,omitempty"`
+	Feedback                string                    `json:"feedback,omitempty"`
+	RubricSummary           []string                  `json:"rubric_summary,omitempty"`
 }
 
 type StudentQuestionReference struct {
-	SampleSize      int      `json:"sample_size"`
-	MeanScoreRate   float64  `json:"mean_score_rate"`
-	FullScoreRate   float64  `json:"full_score_rate"`
-	ZeroScoreRate   float64  `json:"zero_score_rate"`
-	ClassMeanScore  *float64 `json:"class_mean_score,omitempty"`
-	SchoolMeanScore *float64 `json:"school_mean_score,omitempty"`
-	MedianScore     *float64 `json:"median_score,omitempty"`
+	ClassUnavailableReason string   `json:"class_unavailable_reason,omitempty"`
+	SampleSize             int      `json:"sample_size"`
+	MeanScoreRate          float64  `json:"mean_score_rate"`
+	FullScoreRate          float64  `json:"full_score_rate"`
+	ZeroScoreRate          float64  `json:"zero_score_rate"`
+	ClassMeanScore         *float64 `json:"class_mean_score,omitempty"`
+	SchoolMeanScore        *float64 `json:"school_mean_score,omitempty"`
+	MedianScore            *float64 `json:"median_score,omitempty"`
 }
 
 type StudentImageGeometry struct {
@@ -332,6 +351,8 @@ type StudentQuestionImageSource struct {
 
 type StudentAppealView struct {
 	Open               bool       `json:"open"`
+	State              string     `json:"state"`
+	OpensAt            *time.Time `json:"opens_at,omitempty"`
 	ClosesAt           *time.Time `json:"closes_at,omitempty"`
 	AllowedReasonCodes []string   `json:"allowed_reason_codes,omitempty"`
 }
@@ -347,7 +368,7 @@ type Store interface {
 	Publish(context.Context, string, string, string) (Release, error)
 	CurrentPublished(context.Context, string, string) (Detail, error)
 	StudentResult(context.Context, string, string, string) (StudentResult, error)
-	StudentQuestion(context.Context, string, string, string, string) (StudentQuestion, error)
-	StudentQuestionImage(context.Context, string, string, string, string) (StudentQuestionImageSource, error)
-	StudentPaperPageImage(context.Context, string, string, string, string, bool) (StudentQuestionImageSource, error)
+	StudentQuestion(context.Context, string, string, string, string, ...string) (StudentQuestion, error)
+	StudentQuestionImage(context.Context, string, string, string, string, ...string) (StudentQuestionImageSource, error)
+	StudentPaperPageImage(context.Context, string, string, string, string, bool, ...string) (StudentQuestionImageSource, error)
 }

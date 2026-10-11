@@ -28,8 +28,7 @@ var (
 	ErrPanelPolicyRequired = errors.New("approved subjective panel policy is required")
 )
 
-// PanelDecisionConfig is frozen with every panel so later calibration cannot
-// rewrite why an answer was sent to arbitration or human review.
+// PanelDecisionConfig 随每次评审组运行冻结，避免后续校准改写答案转交仲裁或人工复核的原因。
 type PanelDecisionConfig struct {
 	PolicyVersion               string   `json:"policy_version"`
 	ScoreGapThreshold           float64  `json:"score_gap_threshold"`

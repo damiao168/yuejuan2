@@ -61,18 +61,7 @@ func assertMemoryMFANotificationFacts(t *testing.T, store *MemoryStore, expected
 			t.Fatal("incorrect or duplicated pending security fact")
 		}
 		seen[change.EventID] = true
-		matchingAudits := 0
-		for _, audit := range store.audits {
-			if audit.AfterValue["event_id"] == change.EventID {
-				matchingAudits++
-				if audit.Action != change.EventType || audit.ActorID != change.SubjectUserID || audit.TenantID != change.TenantID || !audit.CreatedAt.Equal(change.OccurredAt) {
-					t.Fatal("audit and notification fact disagree")
-				}
-			}
-		}
-		if matchingAudits != 1 {
-			t.Fatal("fact missing its single atomic audit")
-		}
+		assertMFASecurityFactHasSingleMatchingAudit(t, store.audits, change)
 		payload, err := json.Marshal(change)
 		if err != nil {
 			t.Fatal(err)
@@ -221,5 +210,22 @@ func TestMFASecurityAuditMetadataCannotEnterNotificationPayload(t *testing.T) {
 	payload, _ := json.Marshal(store.mfaNotificationIntents[0].Change)
 	if strings.Contains(string(payload), "203.0.113.42") || strings.Contains(string(payload), audit.UserAgent) {
 		t.Fatal("raw audit metadata leaked into notification")
+	}
+}
+
+// 调用方仍持有内存存储读锁；通知与审计必须来自同一次安全变更，不能在这里重新取锁。
+func assertMFASecurityFactHasSingleMatchingAudit(t *testing.T, audits []AuditRecord, change MFASecurityChange) {
+	t.Helper()
+	matchingAudits := 0
+	for _, audit := range audits {
+		if audit.AfterValue["event_id"] == change.EventID {
+			matchingAudits++
+			if audit.Action != change.EventType || audit.ActorID != change.SubjectUserID || audit.TenantID != change.TenantID || !audit.CreatedAt.Equal(change.OccurredAt) {
+				t.Fatal("audit and notification fact disagree")
+			}
+		}
+	}
+	if matchingAudits != 1 {
+		t.Fatal("fact missing its single atomic audit")
 	}
 }

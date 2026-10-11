@@ -1,0 +1,28 @@
+{
+  "started": "2026-10-11T11:26:29.891817+08:00",
+  "ended": "2026-10-11T11:26:33.408029+08:00",
+  "exit_code": 0,
+  "diagnostics": false,
+  "command": [
+    "docker",
+    "run",
+    "--rm",
+    "--network",
+    "none",
+    "--read-only",
+    "--cpus",
+    "1",
+    "--memory",
+    "256m",
+    "-v",
+    "D:\\project\\yuejuan:/repo:ro",
+    "-w",
+    "/repo",
+    "rhysd/actionlint:1.7.7"
+  ],
+  "local_files_sha256": {
+    ".github/workflows/ci.yml": "0080fdb3fd7ff33c24b3c48e51374687cde7a8b8694b7b7ce8bc32bf74e53e47",
+    ".github/workflows/release-images.yml": "936608db58d1a739fc01d89f3f7d5b267f9895ce62d58f44377e76ca8311e4d5",
+    ".github/workflows/workflow-lint.yml": "78b11344eb52021a60246e3d74d80fd376986d2650ab6bc8c273e738cc760e58"
+  }
+}

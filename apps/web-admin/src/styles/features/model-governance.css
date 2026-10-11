@@ -1,5 +1,5 @@
-/* Model governance is an operational surface: one calm canvas, a compact
-   status band, and drawers for mutations that require deliberate review. */
+/* 模型治理采用统一操作界面：简洁画布、紧凑状态栏，
+   需要仔细复核的变更放在抽屉中。 */
 .model-governance-shell {
   display: flex;
   flex-direction: column;

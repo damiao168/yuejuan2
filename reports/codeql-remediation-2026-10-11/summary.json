@@ -1,0 +1,1766 @@
+{
+  "scope": "原报告的全部106条候选在当前工作区逐条修复或核验；不代表全仓人工审读或新一轮CodeQL扫描。",
+  "originalEvidenceModified": false,
+  "newCodeqlScanExecuted": false,
+  "originalCount": 106,
+  "statusCounts": {
+    "fixed": 30,
+    "false_positive": 58,
+    "intentional": 18
+  },
+  "languages": {
+    "python": {
+      "originalCount": 55,
+      "originalSarifSha256": "1d049209dfb252a3022af8738ea19adccbb0388b17d9dac8bb084a54c17ea45b",
+      "statusCounts": {
+        "fixed": 12,
+        "false_positive": 39,
+        "intentional": 4
+      },
+      "tests": [
+        {
+          "command": "python -m pytest ai-services/tests/test_paper_footer_security.py ai-services/tests/test_paper_compact.py ai-services/tests/test_paper_compact_markers_batch34.py ai-services/tests/test_paper_parser.py ai-services/tests/test_paper_input.py -q --tb=short",
+          "pythonPath": [
+            "ai-services",
+            "packages/worker-runtime-python"
+          ],
+          "exitCode": 0,
+          "result": "93 passed, 2 subtests passed"
+        },
+        {
+          "command": "python -m pytest services/page-processing-worker/tests/test_main.py services/page-processing-worker/tests/test_runner_heartbeat.py services/page-processing-worker/tests/test_runner_state_boundaries.py -q --tb=short",
+          "pythonPath": [
+            "services/page-processing-worker",
+            "packages/worker-runtime-python"
+          ],
+          "exitCode": 0,
+          "result": "47 passed"
+        },
+        {
+          "command": "python -m pytest services/ocr-worker/tests/test_runner.py services/ocr-worker/tests/test_api_batch51.py services/ocr-worker/tests/test_formula_calibration.py services/ocr-worker/tests/test_paper_formula.py -q --tb=short",
+          "pythonPath": [
+            "services/ocr-worker",
+            "packages/worker-runtime-python"
+          ],
+          "exitCode": 0,
+          "result": "72 passed, 5 subtests passed"
+        },
+        {
+          "command": "python -m pytest services/subjective-grading-worker/tests/test_worker.py services/subjective-grading-worker/tests/test_api_integration.py -q --tb=short",
+          "pythonPath": [
+            "services/subjective-grading-worker",
+            "packages/worker-runtime-python"
+          ],
+          "exitCode": 0,
+          "result": "7 passed"
+        },
+        {
+          "command": "python -m pytest services/ocr-worker/tests/test_config.py services/ocr-worker/tests/test_startup_batch36.py -q --tb=short",
+          "pythonPath": [
+            "services/ocr-worker",
+            "packages/worker-runtime-python"
+          ],
+          "exitCode": 0,
+          "result": "41 passed, 46 subtests passed"
+        },
+        {
+          "command": "compile() all seven changed Python files; reconstruct deployment_profile.py baseline bytes without the five new comments and compare SHA256/AST",
+          "exitCode": 0,
+          "result": "7 files compile; deployment_profile baseline SHA256 reconstructed; AST unchanged"
+        },
+        {
+          "command": "Current _PAGE_FOOTER and _is_page_furniture synthetic benchmark, 512 through 700000 internal whitespace characters",
+          "exitCode": 0,
+          "result": "700000 chars: regex about 0.00350 s; furniture about 0.02196 s; all failing suffixes rejected and retained",
+          "artifact": "python-footer-benchmark.json"
+        },
+        {
+          "command": "Reverse only the six files' task-specific edits in memory and compare SHA256 with source-before.csv; validate all 55 resultIndex values/current source hashes; git diff --check for all seven changed Python files",
+          "exitCode": 0,
+          "result": "All six existing-file baseline hashes reconstructed exactly; indices 0..54 complete and unique; current source hashes valid; diff check passed"
+        }
+      ],
+      "report": "python-remediation.json"
+    },
+    "javascript": {
+      "originalCount": 14,
+      "originalSarifSha256": "f0543c1d15f9cb8a13153c0a454c6b51d80d40ad610224da102ba1484f61a0f1",
+      "statusCounts": {
+        "fixed": 10,
+        "intentional": 2,
+        "false_positive": 2
+      },
+      "tests": [
+        {
+          "command": "node --test --test-concurrency=1 scripts/ci/generated-files-race.test.mjs scripts/ci/contract-gates.test.mjs scripts/ci/openapi-sdk.batch20.test.mjs scripts/ci/architecture-audit-tools.test.mjs",
+          "status": "passed",
+          "tests": 25
+        },
+        {
+          "command": "cd lab; node --test --test-concurrency=1 tests/helpers.test.js tests/rubric.test.js tests/evidence-verifier.test.js tests/schema.test.js",
+          "status": "passed",
+          "tests": 37
+        },
+        {
+          "command": "npm --workspace apps/web-admin run check:production-routes",
+          "status": "passed",
+          "detail": "初次检查命中既有陈旧 return trimmed 断言；同步修正断言并以 11 个现有地址测试验证后通过。"
+        },
+        {
+          "command": "npm --workspace apps/web-admin run test:production-contracts",
+          "status": "passed",
+          "tests": 17
+        },
+        {
+          "command": "cd apps/web-admin; npm exec -- vitest run src/pages/PanelModelBindingsSection.test.tsx src/features/grading/workbench/hooks/useGradingKeyboard.test.tsx --maxWorkers=1 --minWorkers=1 --no-file-parallelism",
+          "status": "passed",
+          "tests": 14
+        },
+        {
+          "command": "cd apps/web-admin; npm exec -- vitest run src/api/client.baseUrl.batch49.test.ts --maxWorkers=1 --minWorkers=1 --no-file-parallelism",
+          "status": "passed",
+          "tests": 11
+        },
+        {
+          "command": "npm exec -- biome lint apps/web-admin/src/pages/PanelModelBindingsSection.tsx apps/web-admin/src/features/grading/workbench/hooks/useGradingKeyboard.test.tsx",
+          "status": "passed"
+        },
+        {
+          "command": "npm run typecheck --workspace apps/web-admin",
+          "status": "passed"
+        },
+        {
+          "command": "read-only generateClient/generateTypes/buildRouteCoverage comparison",
+          "status": "passed",
+          "detail": "只读比较实际 SDK 和 route-coverage 产物与当前源契约生成结果，未写入生成物。"
+        },
+        {
+          "command": "git diff --check -- <JavaScript touched files>",
+          "status": "passed"
+        }
+      ],
+      "report": "javascript-remediation.json"
+    },
+    "go": {
+      "originalCount": 23,
+      "originalSarifSha256": "8146976c6190873c2e5ca65046b469853d99bab5a489b0e0d6c6259a637b72de",
+      "statusCounts": {
+        "false_positive": 14,
+        "fixed": 8,
+        "intentional": 1
+      },
+      "tests": [
+        {
+          "command": "go test -p 1 ./internal/mathunderstanding ./internal/modelgovernance ./internal/questionbank",
+          "status": "passed",
+          "exitCode": 0,
+          "log": "go-tests.log"
+        },
+        {
+          "command": "go test -p 1 ./internal/server -run 'TestE2EPostgres(UXHistoricalACLAndActualMemberResponsibilities|QuestionBankMetadataACLSearch)$' -v",
+          "status": "compiled_cases_skipped",
+          "exitCode": 0,
+          "passed": 0,
+          "skipped": 2,
+          "reason": "未配置专用隔离PostgreSQL测试库；测试按已有约定跳过，未调用生产数据库。",
+          "log": "go-server-tests-attempt2.log"
+        }
+      ],
+      "report": "go-remediation.json"
+    },
+    "rust": {
+      "originalCount": 14,
+      "originalSarifSha256": "322d47e65455d5a6c04bc29428cfbb7d94409c0761a34cb1943162931d2c8423",
+      "statusCounts": {
+        "false_positive": 3,
+        "intentional": 11
+      },
+      "tests": [
+        {
+          "command": "cargo test --offline --locked --lib --all-features --jobs 1 -- --test-threads=1",
+          "status": "passed",
+          "exitCode": 0,
+          "passed": 31,
+          "log": "rust-tests.log"
+        },
+        {
+          "command": "cargo test --offline --locked --lib --all-features --jobs 1 -- --test-threads=1",
+          "status": "environment_failure_then_retried",
+          "exitCode": 101,
+          "reason": "主机页面文件不足，serde元数据mmap报os error1455；保持源码和系统设置不变重试成功。",
+          "log": "rust-tests-attempt1.log"
+        }
+      ],
+      "report": "rust-remediation.json"
+    },
+    "actions": {
+      "originalCount": 0,
+      "originalSarifSha256": "141bea17d7ff8726a909d753381a38db6a5b9654620055de839ee403e9495e6d",
+      "statusCounts": {},
+      "tests": [],
+      "report": "actions-remediation.json"
+    }
+  },
+  "changedFiles": [
+    {
+      "path": "ai-services/grading_agent/paper_compact/anchors.py",
+      "beforeSha256": "7c0280d45533f9411587c5116bf0d46cb9a91c9614707cc801abf3dafa0b6251",
+      "afterSha256": "36db7a4c18e24dc71efeac97fc4e24f15b1beae43d355898a8569134009f12bb",
+      "newFile": false
+    },
+    {
+      "path": "ai-services/grading_agent/paper_compact/schema.py",
+      "beforeSha256": "38958370509b66e456f8cf739888032635e6885256c17b76b587af342de3cdf4",
+      "afterSha256": "edfdd17af6faca659af5fdc42122a15c05ce323d9e23762b967cb17c602e2792",
+      "newFile": false
+    },
+    {
+      "path": "ai-services/tests/test_paper_footer_security.py",
+      "beforeSha256": null,
+      "afterSha256": "54aa6bce424f3ceeeeee6016bf00c6de3cbefe9b121567442a621409a227d2c8",
+      "newFile": true
+    },
+    {
+      "path": "apps/web-admin/scripts/check-production-routes.mjs",
+      "beforeSha256": "469c5dce5e57dcd1d917b160d4bbf40e9d59fb6eb57cb19d3f150a4a46a1ccf9",
+      "afterSha256": "3f6a5db9c86c12792d8a5976ef47e2fcd16bc9b9b124348fbc30fd580266b336",
+      "newFile": false
+    },
+    {
+      "path": "apps/web-admin/src/pages/PanelModelBindingsSection.tsx",
+      "beforeSha256": "a6ce3383703de544a469a4e71c7bb692df2d77003e16a0c2f22cc0ce6be66c0a",
+      "afterSha256": "30efb4dd5f6b88c95ab13bdd4a2e30fcea31bf374ecbf66eadb6d6d5bc713f9c",
+      "newFile": false
+    },
+    {
+      "path": "docs/architecture/tools/build_database_specs.py",
+      "beforeSha256": "099963037ea5b46da6a4f2aa99d879735924325e76e16a5917d47f320522e801",
+      "afterSha256": "2f482ab0be6bb609707ca412a472616ff35c5dbd91495882a5a820b9623588c5",
+      "newFile": false
+    },
+    {
+      "path": "docs/architecture/tools/capture_preview_qa.js",
+      "beforeSha256": "0606fe358d6e5a275781c02942c3207afb845616b21bf5f1d42dfbb419527eb1",
+      "afterSha256": "47a3ce999f9b5b93993006ef6685d3c6670471ae66e1e667833d346891888496",
+      "newFile": false
+    },
+    {
+      "path": "docs/architecture/tools/render_native.js",
+      "beforeSha256": "0be6b4dbde9ebc8d7150140d5ae66a3aa755bd3376b43ed51ea13524dc43668a",
+      "afterSha256": "85e0b8d9604713f3506c56758a3af02977ef66e35bc66ff7d3136e129eefac65",
+      "newFile": false
+    },
+    {
+      "path": "lab/tests/helpers.js",
+      "beforeSha256": "1a5ef501acbc7bcd8896b744da3f7eb070df78dbac03e51c94e573a220c4594e",
+      "afterSha256": "61db9ad11975f120aca8dc75e5b008e8acb5b536b3721eb0ec7406b80d98d4a4",
+      "newFile": false
+    },
+    {
+      "path": "lab/tests/helpers.test.js",
+      "beforeSha256": null,
+      "afterSha256": "57a66570a922d58c6b50a44b95643a9848645871ccc338fa076484e4d5322cdc",
+      "newFile": true
+    },
+    {
+      "path": "packages/worker-runtime-python/edugrade_worker_runtime/lease.py",
+      "beforeSha256": "3b836df07d1a880177a434d6e629e981029d728983473e73f506e0dce997db91",
+      "afterSha256": "891c1f8ac6f86e99febaf1facd94aa562873ed6a1dd39b70365a7a3ece7873f4",
+      "newFile": false
+    },
+    {
+      "path": "scripts/ci/check-generated-contracts.mjs",
+      "beforeSha256": "ef97c30e3604fead0c39f9cb8c0ddfa34395219b0990cb07e282569eeeac5381",
+      "afterSha256": "c92657ae2164be451b088d625fe6bf9c92a10e21f772fad4984931bc884cf4fc",
+      "newFile": false
+    },
+    {
+      "path": "scripts/ci/generated-files-race.test.mjs",
+      "beforeSha256": null,
+      "afterSha256": "f687081cff2893beb7b9ac991ab5d3e44d9da5ddb1db2749229eb158fc71de53",
+      "newFile": true
+    },
+    {
+      "path": "scripts/lib/openapi-sdk.mjs",
+      "beforeSha256": "059bffebe15e3aaa8a0129aff8575ed047142adccf7c96376b6dc9a5ab3823db",
+      "afterSha256": "5b0d95558e5074f0d4686995d7819851d949ec1e60d5a8ab8a4ddf99f77d620a",
+      "newFile": false
+    },
+    {
+      "path": "scripts/update-api-route-coverage.mjs",
+      "beforeSha256": "46157193d9dd449115e17f670c1de9baf7881739d6712ed8e64d03ec065fae1f",
+      "afterSha256": "f6b1ef5bdf4f59e06a49e84b15a96684080acbd5d228b8a0985129055d5dabff",
+      "newFile": false
+    },
+    {
+      "path": "services/api-gateway/internal/auth/token.go",
+      "beforeSha256": "de0be9f08eebb837f2543b675a2327b310d146405cfbcea4c68be30725ec7988",
+      "afterSha256": "d6204fdbd6daea40f4e38739bdf790607769b6250c817afc8142f2c00db06a68",
+      "newFile": false
+    },
+    {
+      "path": "services/api-gateway/internal/capture/print_package_pdf.go",
+      "beforeSha256": "7ae67b0ab0415e34a35066c28dce40fe7583feac2025afec4c828641efd8f67b",
+      "afterSha256": "d989ee3525d57fccdb2f9fa4b97c3fe54873501e38f9376d9cf764b6ff23a8b8",
+      "newFile": false
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/handlers.go",
+      "beforeSha256": "34b804d67eacd03f6f8f2a0c63250a62d6735a01521eff562b9a3f3c1a79d4ab",
+      "afterSha256": "41f3889aa7b1db7e1b35245447dfecdb2fb69b40db8069558858300f8db542e2",
+      "newFile": false
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/types.go",
+      "beforeSha256": "9bc0493063f755dfff84cf3b1a93077435fb4a6531243a195e6951f24ef901a6",
+      "afterSha256": "e786b38efd41c831315753971eb86d1aa08922fe676549a1db13d823984fb6f0",
+      "newFile": false
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/verification_budget_test.go",
+      "beforeSha256": null,
+      "afterSha256": "8458ff0172e5ef3fbca4df4b9441e1ecbed178ee27468045a3dc48bbf98cdafb",
+      "newFile": true
+    },
+    {
+      "path": "services/api-gateway/internal/minioadapter/client_test.go",
+      "beforeSha256": "a94ea4453cbee7d344976a6a4927ab14e6eb9a038c9a41f268073203b715aa2f",
+      "afterSha256": "9e333c376e444762ff5e182af2571590c488054640dc8f77c7013b614fcb0282",
+      "newFile": false
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/managed_config_probe.go",
+      "beforeSha256": "0aa82bba41c2aef97d1dcb8950ad7392172e944b9b1b977a6285600e7b1c6550",
+      "afterSha256": "adad77306802937f01e9d8808c9735259e05beb69b3fb70ca0e80ba6aeb88420",
+      "newFile": false
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/managed_config_probe_network.go",
+      "beforeSha256": null,
+      "afterSha256": "bec3b3e0bcc6a4827f45f26a67aa4909fcc4d88b4e1b44510e4dda4f3acf60f1",
+      "newFile": true
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/managed_config_probe_network_test.go",
+      "beforeSha256": null,
+      "afterSha256": "3c7ea05e9ebd274cc1c79842614b1128f2ceceaa559dc625d68136f086e3c206",
+      "newFile": true
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/store_memory.go",
+      "beforeSha256": "564c76c3bbc38d95a7dfacf9201b9477b1e12e5be088a8575ce8f3a19a4d0771",
+      "afterSha256": "57ed3cbda05d86ccfa67ffc0bb9419bd9c98e256e3dd41fe709d05820f3058ef",
+      "newFile": false
+    },
+    {
+      "path": "services/api-gateway/internal/questionbank/metadata_acl_search_test.go",
+      "beforeSha256": "1a2ab6c46cb094289b3d5a6c06e8fe5365e1cd14682dd1cca5a71c46c159cc97",
+      "afterSha256": "c178be804f715135d98163c436bd628c2a7259998fac8737461f9267607db04f",
+      "newFile": false
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_question_bank_acl_ux_test.go",
+      "beforeSha256": "4c3bf3ae247c679875a481fa1da5dadd913b54ce68b5911aa5c709bc2d478b09",
+      "afterSha256": "a8525c7dce00f699091b6117e2612c51a4ec72edba3a25efc395fb66497c1729",
+      "newFile": false
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_question_bank_metadata_acl_search_test.go",
+      "beforeSha256": "1d75a910530b9e6effadd4ad879d3f5c144e24bb375e3d8872804087de746672",
+      "afterSha256": "5f07c7dbe1bb2ff64bda6eec72efa5eb62e4bbf2c00fbcf977cfe0175a08d23e",
+      "newFile": false
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_scoring_command_test.go",
+      "beforeSha256": "09e3d0b89b8d51ff88440516470389e51fd1daea15767316bf9b6513ebeb792b",
+      "afterSha256": "9f0788701c366459f54d0519a79428e7f3396bbe8366b4feb4b19a69e08e74e4",
+      "newFile": false
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/deployment_profile.py",
+      "beforeSha256": "a9d251fc04067ef3848472638e12d59cbe6edc240a06d037a92bceed7b5d997c",
+      "afterSha256": "fa609c2c542c30c75b855f3a94b10827220de79282da547da29e2a53e1c50b95",
+      "newFile": false
+    },
+    {
+      "path": "services/page-processing-worker/tests/test_main.py",
+      "beforeSha256": "37a50842d349b755717519989e239261320e382b966776fe6f4d71e3e953d690",
+      "afterSha256": "56f964b4de901c3b84701ed0fa98ad0ed7c72987d0e1f274243d15116a039100",
+      "newFile": false
+    }
+  ],
+  "findings": [
+    {
+      "language": "python",
+      "resultIndex": 0,
+      "reviewId": "CQ-PY-001",
+      "ruleId": "py/polynomial-redos",
+      "path": "ai-services/grading_agent/paper_compact/anchors.py",
+      "originalLine": 619,
+      "changedFiles": [
+        "ai-services/grading_agent/paper_compact/schema.py",
+        "ai-services/grading_agent/paper_compact/anchors.py",
+        "ai-services/tests/test_paper_footer_security.py"
+      ],
+      "status": "fixed",
+      "reason": "页脚候选在去掉首尾空白后先验证 80 字符上限；正则使用占有量词并把可选标点后的空白放入该分支，避免重复分配长空白。超长候选不按单页强页脚规则排除，原有跨页重复页边规则仍适用，不截断 OCR 证据；合法中文页码组合、候选边界与长失败输入均有回归验证。",
+      "currentSourceSha256": "36db7a4c18e24dc71efeac97fc4e24f15b1beae43d355898a8569134009f12bb",
+      "baselineSourceSha256": "7c0280d45533f9411587c5116bf0d46cb9a91c9614707cc801abf3dafa0b6251"
+    },
+    {
+      "language": "python",
+      "resultIndex": 1,
+      "reviewId": "CQ-PY-002",
+      "ruleId": "py/attribute-shadows-method",
+      "path": "services/subjective-grading-worker/subjective_grading_worker/runner.py",
+      "originalLine": 67,
+      "changedFiles": [
+        "packages/worker-runtime-python/edugrade_worker_runtime/lease.py"
+      ],
+      "status": "fixed",
+      "reason": "共享 LeaseHeartbeat 将回调存储字段改为 _send_callback，构造和后台续租都使用该字段，不再覆盖主观阅卷子类的 _send 方法；现有主观阅卷测试通过。",
+      "currentSourceSha256": "01d9c0ed77518522ecfb01aa0553781a3ed4df695edae5f30f6734eb97bbfde0",
+      "baselineSourceSha256": "01d9c0ed77518522ecfb01aa0553781a3ed4df695edae5f30f6734eb97bbfde0"
+    },
+    {
+      "language": "python",
+      "resultIndex": 2,
+      "reviewId": "CQ-PY-003",
+      "ruleId": "py/attribute-shadows-method",
+      "path": "services/ocr-worker/ocr_worker/runner.py",
+      "originalLine": 363,
+      "changedFiles": [
+        "packages/worker-runtime-python/edugrade_worker_runtime/lease.py"
+      ],
+      "status": "fixed",
+      "reason": "共享 LeaseHeartbeat 将回调存储字段改为 _send_callback，不再覆盖 OCR 子类的 _send 方法；现有测试验证进度事件序号、命名参数以及处理过程中的续租。",
+      "currentSourceSha256": "a78ac6b53be30a51ba05c49d8aa05024880d18a187cf4f0d5c17574de4174cc8",
+      "baselineSourceSha256": "a78ac6b53be30a51ba05c49d8aa05024880d18a187cf4f0d5c17574de4174cc8"
+    },
+    {
+      "language": "python",
+      "resultIndex": 3,
+      "reviewId": "CQ-PY-004",
+      "ruleId": "py/attribute-shadows-method",
+      "path": "services/page-processing-worker/page_processing/runner.py",
+      "originalLine": 512,
+      "changedFiles": [
+        "packages/worker-runtime-python/edugrade_worker_runtime/lease.py"
+      ],
+      "status": "fixed",
+      "reason": "共享 LeaseHeartbeat 将回调存储字段改为 _send_callback，不再覆盖页面处理子类的 _send 方法；现有测试验证同步首发、后台续租、立即/延迟进度与续租失败边界。",
+      "currentSourceSha256": "32d236c9d4fa337d61ac403cd1d9b8e3a05d5f5dcbd0a1330284ad778694041e",
+      "baselineSourceSha256": "32d236c9d4fa337d61ac403cd1d9b8e3a05d5f5dcbd0a1330284ad778694041e"
+    },
+    {
+      "language": "python",
+      "resultIndex": 4,
+      "reviewId": "CQ-PY-005",
+      "ruleId": "py/empty-except",
+      "path": "services/ocr-worker/ocr_worker/deployment_profile.py",
+      "originalLine": 169,
+      "changedFiles": [
+        "services/ocr-worker/ocr_worker/deployment_profile.py"
+      ],
+      "status": "fixed",
+      "reason": "补充 /proc/cpuinfo 不可读时回退 platform.processor 或 unknown 的中文边界说明。",
+      "currentSourceSha256": "fa609c2c542c30c75b855f3a94b10827220de79282da547da29e2a53e1c50b95",
+      "baselineSourceSha256": "a9d251fc04067ef3848472638e12d59cbe6edc240a06d037a92bceed7b5d997c"
+    },
+    {
+      "language": "python",
+      "resultIndex": 5,
+      "reviewId": "CQ-PY-006",
+      "ruleId": "py/empty-except",
+      "path": "services/ocr-worker/ocr_worker/deployment_profile.py",
+      "originalLine": 179,
+      "changedFiles": [
+        "services/ocr-worker/ocr_worker/deployment_profile.py"
+      ],
+      "status": "fixed",
+      "reason": "补充 cgroup v2 文件缺失、格式错误或零周期时继续尝试 v1 的中文边界说明，不把探测失败当作已知限额。",
+      "currentSourceSha256": "fa609c2c542c30c75b855f3a94b10827220de79282da547da29e2a53e1c50b95",
+      "baselineSourceSha256": "a9d251fc04067ef3848472638e12d59cbe6edc240a06d037a92bceed7b5d997c"
+    },
+    {
+      "language": "python",
+      "resultIndex": 6,
+      "reviewId": "CQ-PY-007",
+      "ruleId": "py/empty-except",
+      "path": "services/ocr-worker/ocr_worker/deployment_profile.py",
+      "originalLine": 186,
+      "changedFiles": [
+        "services/ocr-worker/ocr_worker/deployment_profile.py"
+      ],
+      "status": "fixed",
+      "reason": "补充 cgroup v1 也不可用时返回 None 表示未知 CPU 限额的中文边界说明。",
+      "currentSourceSha256": "fa609c2c542c30c75b855f3a94b10827220de79282da547da29e2a53e1c50b95",
+      "baselineSourceSha256": "a9d251fc04067ef3848472638e12d59cbe6edc240a06d037a92bceed7b5d997c"
+    },
+    {
+      "language": "python",
+      "resultIndex": 7,
+      "reviewId": "CQ-PY-008",
+      "ruleId": "py/empty-except",
+      "path": "services/ocr-worker/ocr_worker/deployment_profile.py",
+      "originalLine": 200,
+      "changedFiles": [
+        "services/ocr-worker/ocr_worker/deployment_profile.py"
+      ],
+      "status": "fixed",
+      "reason": "补充某种 cgroup 内存文件不可用时继续其他来源且只采纳有效上限的中文边界说明。",
+      "currentSourceSha256": "fa609c2c542c30c75b855f3a94b10827220de79282da547da29e2a53e1c50b95",
+      "baselineSourceSha256": "a9d251fc04067ef3848472638e12d59cbe6edc240a06d037a92bceed7b5d997c"
+    },
+    {
+      "language": "python",
+      "resultIndex": 8,
+      "reviewId": "CQ-PY-009",
+      "ruleId": "py/empty-except",
+      "path": "services/ocr-worker/ocr_worker/deployment_profile.py",
+      "originalLine": 207,
+      "changedFiles": [
+        "services/ocr-worker/ocr_worker/deployment_profile.py"
+      ],
+      "status": "fixed",
+      "reason": "补充 /proc/meminfo 不可读时保留其他有效来源、没有有效来源以 0 表示未知的中文边界说明。",
+      "currentSourceSha256": "fa609c2c542c30c75b855f3a94b10827220de79282da547da29e2a53e1c50b95",
+      "baselineSourceSha256": "a9d251fc04067ef3848472638e12d59cbe6edc240a06d037a92bceed7b5d997c"
+    },
+    {
+      "language": "python",
+      "resultIndex": 9,
+      "reviewId": "CQ-PY-010",
+      "ruleId": "py/implicit-string-concatenation-in-list",
+      "path": "docs/architecture/tools/build_module_catalog.py",
+      "originalLine": 59,
+      "changedFiles": [],
+      "status": "false_positive",
+      "reason": "相邻字符串是连续中文说明段落，首段与 Markdown 链接/后续限制说明应合成一个列表元素；逗号明确位于段落末尾。未见需要生成独立列表项的缺失逗号。 已重新核对当前源码与相关引用，保留该接口或实际使用逻辑。",
+      "currentSourceSha256": "c2df3ce00834b3274ec9cd7d07267154ac926f6cd3f58a6c5c34def7bf44dea8",
+      "baselineSourceSha256": "c2df3ce00834b3274ec9cd7d07267154ac926f6cd3f58a6c5c34def7bf44dea8"
+    },
+    {
+      "language": "python",
+      "resultIndex": 10,
+      "reviewId": "CQ-PY-011",
+      "ruleId": "py/implicit-string-concatenation-in-list",
+      "path": "docs/architecture/tools/build_module_catalog.py",
+      "originalLine": 62,
+      "changedFiles": [],
+      "status": "false_positive",
+      "reason": "相邻字符串是连续中文说明段落，首段与 Markdown 链接/后续限制说明应合成一个列表元素；逗号明确位于段落末尾。未见需要生成独立列表项的缺失逗号。 已重新核对当前源码与相关引用，保留该接口或实际使用逻辑。",
+      "currentSourceSha256": "c2df3ce00834b3274ec9cd7d07267154ac926f6cd3f58a6c5c34def7bf44dea8",
+      "baselineSourceSha256": "c2df3ce00834b3274ec9cd7d07267154ac926f6cd3f58a6c5c34def7bf44dea8"
+    },
+    {
+      "language": "python",
+      "resultIndex": 11,
+      "reviewId": "CQ-PY-012",
+      "ruleId": "py/implicit-string-concatenation-in-list",
+      "path": "docs/architecture/tools/build_module_catalog.py",
+      "originalLine": 64,
+      "changedFiles": [],
+      "status": "false_positive",
+      "reason": "相邻字符串是连续中文说明段落，首段与 Markdown 链接/后续限制说明应合成一个列表元素；逗号明确位于段落末尾。未见需要生成独立列表项的缺失逗号。 已重新核对当前源码与相关引用，保留该接口或实际使用逻辑。",
+      "currentSourceSha256": "c2df3ce00834b3274ec9cd7d07267154ac926f6cd3f58a6c5c34def7bf44dea8",
+      "baselineSourceSha256": "c2df3ce00834b3274ec9cd7d07267154ac926f6cd3f58a6c5c34def7bf44dea8"
+    },
+    {
+      "language": "python",
+      "resultIndex": 12,
+      "reviewId": "CQ-PY-013",
+      "ruleId": "py/implicit-string-concatenation-in-list",
+      "path": "docs/architecture/tools/build_module_catalog.py",
+      "originalLine": 81,
+      "changedFiles": [],
+      "status": "false_positive",
+      "reason": "相邻字符串是连续中文说明段落，首段与 Markdown 链接/后续限制说明应合成一个列表元素；逗号明确位于段落末尾。未见需要生成独立列表项的缺失逗号。 已重新核对当前源码与相关引用，保留该接口或实际使用逻辑。",
+      "currentSourceSha256": "c2df3ce00834b3274ec9cd7d07267154ac926f6cd3f58a6c5c34def7bf44dea8",
+      "baselineSourceSha256": "c2df3ce00834b3274ec9cd7d07267154ac926f6cd3f58a6c5c34def7bf44dea8"
+    },
+    {
+      "language": "python",
+      "resultIndex": 13,
+      "reviewId": "CQ-PY-014",
+      "ruleId": "py/unnecessary-lambda",
+      "path": "services/page-processing-worker/tests/test_main.py",
+      "originalLine": 59,
+      "changedFiles": [
+        "services/page-processing-worker/tests/test_main.py"
+      ],
+      "status": "fixed",
+      "reason": "测试将无参数转发 lambda 替换为 _config callable，保留一次模式的配置构造时机和行为。",
+      "currentSourceSha256": "56f964b4de901c3b84701ed0fa98ad0ed7c72987d0e1f274243d15116a039100",
+      "baselineSourceSha256": "37a50842d349b755717519989e239261320e382b966776fe6f4d71e3e953d690"
+    },
+    {
+      "language": "python",
+      "resultIndex": 14,
+      "reviewId": "CQ-PY-015",
+      "ruleId": "py/unnecessary-lambda",
+      "path": "services/page-processing-worker/tests/test_main.py",
+      "originalLine": 79,
+      "changedFiles": [
+        "services/page-processing-worker/tests/test_main.py"
+      ],
+      "status": "fixed",
+      "reason": "测试将无参数转发 lambda 替换为 _config callable，保留长期模式的配置构造时机和行为。",
+      "currentSourceSha256": "56f964b4de901c3b84701ed0fa98ad0ed7c72987d0e1f274243d15116a039100",
+      "baselineSourceSha256": "37a50842d349b755717519989e239261320e382b966776fe6f4d71e3e953d690"
+    },
+    {
+      "language": "python",
+      "resultIndex": 15,
+      "reviewId": "CQ-PY-016",
+      "ruleId": "py/procedure-return-value-used",
+      "path": "docs/architecture/tools/snapshot_workspace.py",
+      "originalLine": 48,
+      "changedFiles": [],
+      "status": "intentional",
+      "reason": "snapshot() 通过文件写入与 stdout 输出交付结果，返回 None；sys.exit(None) 在成功时退出 0，verify() 则返回 0/1。此处没有把过程返回值当业务数据使用，保留命令行契约。",
+      "currentSourceSha256": "627d11165e0b3870bd50fd6f4c8969b27e0080ac511ffb0f058b48347503bdc5",
+      "baselineSourceSha256": "627d11165e0b3870bd50fd6f4c8969b27e0080ac511ffb0f058b48347503bdc5"
+    },
+    {
+      "language": "python",
+      "resultIndex": 16,
+      "reviewId": "CQ-PY-017",
+      "ruleId": "py/import-and-import-from",
+      "path": "services/page-processing-worker/tests/test_runner_state_boundaries.py",
+      "originalLine": 8,
+      "changedFiles": [],
+      "status": "intentional",
+      "reason": "runner_module 用于 monkeypatch 模块级依赖，Runner 名称用于构造对象。两种导入分别服务不同用途，现有页面处理相关测试通过，保留测试写法。",
+      "currentSourceSha256": "1a69eb1daef356b9c57e1d1f1105306efbf8b95fa4832cf24c6c8e5ff613821a",
+      "baselineSourceSha256": "1a69eb1daef356b9c57e1d1f1105306efbf8b95fa4832cf24c6c8e5ff613821a"
+    },
+    {
+      "language": "python",
+      "resultIndex": 17,
+      "reviewId": "CQ-PY-018",
+      "ruleId": "py/unused-import",
+      "path": "docs/architecture/tools/build_database_specs.py",
+      "originalLine": 3,
+      "changedFiles": [
+        "docs/architecture/tools/build_database_specs.py"
+      ],
+      "status": "fixed",
+      "reason": "build_database_specs.py 移除未使用的 re 与 collections 导入，保留 json、hashlib 以及现有生成行为；已验证语法，未运行会改写架构证据的生成器。",
+      "currentSourceSha256": "2f482ab0be6bb609707ca412a472616ff35c5dbd91495882a5a820b9623588c5",
+      "baselineSourceSha256": "099963037ea5b46da6a4f2aa99d879735924325e76e16a5917d47f320522e801"
+    },
+    {
+      "language": "python",
+      "resultIndex": 18,
+      "reviewId": "CQ-PY-019",
+      "ruleId": "py/ineffectual-statement",
+      "path": "services/ocr-worker/ocr_worker/engine.py",
+      "originalLine": 25,
+      "changedFiles": [],
+      "status": "false_positive",
+      "reason": "命中表达式为 typing.Protocol 接口方法体的 ...，用于声明结构化接口；不是应执行副作用的业务实现遗漏。该位置所在类明确继承 Protocol。 已重新核对当前源码与相关引用，保留该接口或实际使用逻辑。",
+      "currentSourceSha256": "b35ecf8f0bbe86fe69b191fd7c13b3f27f01b2241accd2871224646d9fb577a7",
+      "baselineSourceSha256": "b35ecf8f0bbe86fe69b191fd7c13b3f27f01b2241accd2871224646d9fb577a7"
+    },
+    {
+      "language": "python",
+      "resultIndex": 19,
+      "reviewId": "CQ-PY-020",
+      "ruleId": "py/ineffectual-statement",
+      "path": "services/ocr-worker/ocr_worker/engine.py",
+      "originalLine": 28,
+      "changedFiles": [],
+      "status": "false_positive",
+      "reason": "命中表达式为 typing.Protocol 接口方法体的 ...，用于声明结构化接口；不是应执行副作用的业务实现遗漏。该位置所在类明确继承 Protocol。 已重新核对当前源码与相关引用，保留该接口或实际使用逻辑。",
+      "currentSourceSha256": "b35ecf8f0bbe86fe69b191fd7c13b3f27f01b2241accd2871224646d9fb577a7",
+      "baselineSourceSha256": "b35ecf8f0bbe86fe69b191fd7c13b3f27f01b2241accd2871224646d9fb577a7"
+    },
+    {
+      "language": "python",
+      "resultIndex": 20,
+      "reviewId": "CQ-PY-021",
+      "ruleId": "py/ineffectual-statement",
+      "path": "services/ocr-worker/ocr_worker/math_layout.py",
+      "originalLine": 18,
+      "changedFiles": [],
+      "status": "false_positive",
+      "reason": "命中表达式为 typing.Protocol 接口方法体的 ...，用于声明结构化接口；不是应执行副作用的业务实现遗漏。该位置所在类明确继承 Protocol。 已重新核对当前源码与相关引用，保留该接口或实际使用逻辑。",
+      "currentSourceSha256": "3d05ca211492c96a33c1ad534ec9cf306a470054187cc22513c328a8432993cb",
+      "baselineSourceSha256": "3d05ca211492c96a33c1ad534ec9cf306a470054187cc22513c328a8432993cb"
+    },
+    {
+      "language": "python",
+      "resultIndex": 21,
+      "reviewId": "CQ-PY-022",
+      "ruleId": "py/ineffectual-statement",
+      "path": "services/ocr-worker/ocr_worker/math_layout.py",
+      "originalLine": 20,
+      "changedFiles": [],
+      "status": "false_positive",
+      "reason": "命中表达式为 typing.Protocol 接口方法体的 ...，用于声明结构化接口；不是应执行副作用的业务实现遗漏。该位置所在类明确继承 Protocol。 已重新核对当前源码与相关引用，保留该接口或实际使用逻辑。",
+      "currentSourceSha256": "3d05ca211492c96a33c1ad534ec9cf306a470054187cc22513c328a8432993cb",
+      "baselineSourceSha256": "3d05ca211492c96a33c1ad534ec9cf306a470054187cc22513c328a8432993cb"
+    },
+    {
+      "language": "python",
+      "resultIndex": 22,
+      "reviewId": "CQ-PY-023",
+      "ruleId": "py/ineffectual-statement",
+      "path": "services/ocr-worker/ocr_worker/math_layout.py",
+      "originalLine": 22,
+      "changedFiles": [],
+      "status": "false_positive",
+      "reason": "命中表达式为 typing.Protocol 接口方法体的 ...，用于声明结构化接口；不是应执行副作用的业务实现遗漏。该位置所在类明确继承 Protocol。 已重新核对当前源码与相关引用，保留该接口或实际使用逻辑。",
+      "currentSourceSha256": "3d05ca211492c96a33c1ad534ec9cf306a470054187cc22513c328a8432993cb",
+      "baselineSourceSha256": "3d05ca211492c96a33c1ad534ec9cf306a470054187cc22513c328a8432993cb"
+    },
+    {
+      "language": "python",
+      "resultIndex": 23,
+      "reviewId": "CQ-PY-024",
+      "ruleId": "py/ineffectual-statement",
+      "path": "ai-services/grading_agent/provider_adapter.py",
+      "originalLine": 13,
+      "changedFiles": [],
+      "status": "false_positive",
+      "reason": "命中表达式为 typing.Protocol 接口方法体的 ...，用于声明结构化接口；不是应执行副作用的业务实现遗漏。该位置所在类明确继承 Protocol。 已重新核对当前源码与相关引用，保留该接口或实际使用逻辑。",
+      "currentSourceSha256": "903a2982a49d5cee5a144ef1eeeb629baecc7c17f1f22d6c159d8aee4d847b8c",
+      "baselineSourceSha256": "903a2982a49d5cee5a144ef1eeeb629baecc7c17f1f22d6c159d8aee4d847b8c"
+    },
+    {
+      "language": "python",
+      "resultIndex": 24,
+      "reviewId": "CQ-PY-025",
+      "ruleId": "py/ineffectual-statement",
+      "path": "ai-services/grading_agent/provider_adapter.py",
+      "originalLine": 16,
+      "changedFiles": [],
+      "status": "false_positive",
+      "reason": "命中表达式为 typing.Protocol 接口方法体的 ...，用于声明结构化接口；不是应执行副作用的业务实现遗漏。该位置所在类明确继承 Protocol。 已重新核对当前源码与相关引用，保留该接口或实际使用逻辑。",
+      "currentSourceSha256": "903a2982a49d5cee5a144ef1eeeb629baecc7c17f1f22d6c159d8aee4d847b8c",
+      "baselineSourceSha256": "903a2982a49d5cee5a144ef1eeeb629baecc7c17f1f22d6c159d8aee4d847b8c"
+    },
+    {
+      "language": "python",
+      "resultIndex": 25,
+      "reviewId": "CQ-PY-026",
+      "ruleId": "py/ineffectual-statement",
+      "path": "ai-services/grading_agent/provider_adapter.py",
+      "originalLine": 19,
+      "changedFiles": [],
+      "status": "false_positive",
+      "reason": "命中表达式为 typing.Protocol 接口方法体的 ...，用于声明结构化接口；不是应执行副作用的业务实现遗漏。该位置所在类明确继承 Protocol。 已重新核对当前源码与相关引用，保留该接口或实际使用逻辑。",
+      "currentSourceSha256": "903a2982a49d5cee5a144ef1eeeb629baecc7c17f1f22d6c159d8aee4d847b8c",
+      "baselineSourceSha256": "903a2982a49d5cee5a144ef1eeeb629baecc7c17f1f22d6c159d8aee4d847b8c"
+    },
+    {
+      "language": "python",
+      "resultIndex": 26,
+      "reviewId": "CQ-PY-027",
+      "ruleId": "py/ineffectual-statement",
+      "path": "ai-services/grading_agent/provider_adapter.py",
+      "originalLine": 22,
+      "changedFiles": [],
+      "status": "false_positive",
+      "reason": "命中表达式为 typing.Protocol 接口方法体的 ...，用于声明结构化接口；不是应执行副作用的业务实现遗漏。该位置所在类明确继承 Protocol。 已重新核对当前源码与相关引用，保留该接口或实际使用逻辑。",
+      "currentSourceSha256": "903a2982a49d5cee5a144ef1eeeb629baecc7c17f1f22d6c159d8aee4d847b8c",
+      "baselineSourceSha256": "903a2982a49d5cee5a144ef1eeeb629baecc7c17f1f22d6c159d8aee4d847b8c"
+    },
+    {
+      "language": "python",
+      "resultIndex": 27,
+      "reviewId": "CQ-PY-028",
+      "ruleId": "py/ineffectual-statement",
+      "path": "services/ocr-worker/ocr_worker/recognition_router.py",
+      "originalLine": 76,
+      "changedFiles": [],
+      "status": "false_positive",
+      "reason": "命中表达式为 typing.Protocol 接口方法体的 ...，用于声明结构化接口；不是应执行副作用的业务实现遗漏。该位置所在类明确继承 Protocol。 已重新核对当前源码与相关引用，保留该接口或实际使用逻辑。",
+      "currentSourceSha256": "f5120c490011b20fa1d876d1dc450ed6b892aaa033fcce388ea4b08c9ba69ffd",
+      "baselineSourceSha256": "f5120c490011b20fa1d876d1dc450ed6b892aaa033fcce388ea4b08c9ba69ffd"
+    },
+    {
+      "language": "python",
+      "resultIndex": 28,
+      "reviewId": "CQ-PY-029",
+      "ruleId": "py/ineffectual-statement",
+      "path": "services/ocr-worker/ocr_worker/recognition_router.py",
+      "originalLine": 78,
+      "changedFiles": [],
+      "status": "false_positive",
+      "reason": "命中表达式为 typing.Protocol 接口方法体的 ...，用于声明结构化接口；不是应执行副作用的业务实现遗漏。该位置所在类明确继承 Protocol。 已重新核对当前源码与相关引用，保留该接口或实际使用逻辑。",
+      "currentSourceSha256": "f5120c490011b20fa1d876d1dc450ed6b892aaa033fcce388ea4b08c9ba69ffd",
+      "baselineSourceSha256": "f5120c490011b20fa1d876d1dc450ed6b892aaa033fcce388ea4b08c9ba69ffd"
+    },
+    {
+      "language": "python",
+      "resultIndex": 29,
+      "reviewId": "CQ-PY-030",
+      "ruleId": "py/ineffectual-statement",
+      "path": "services/ocr-worker/ocr_worker/recognition_router.py",
+      "originalLine": 80,
+      "changedFiles": [],
+      "status": "false_positive",
+      "reason": "命中表达式为 typing.Protocol 接口方法体的 ...，用于声明结构化接口；不是应执行副作用的业务实现遗漏。该位置所在类明确继承 Protocol。 已重新核对当前源码与相关引用，保留该接口或实际使用逻辑。",
+      "currentSourceSha256": "f5120c490011b20fa1d876d1dc450ed6b892aaa033fcce388ea4b08c9ba69ffd",
+      "baselineSourceSha256": "f5120c490011b20fa1d876d1dc450ed6b892aaa033fcce388ea4b08c9ba69ffd"
+    },
+    {
+      "language": "python",
+      "resultIndex": 30,
+      "reviewId": "CQ-PY-031",
+      "ruleId": "py/ineffectual-statement",
+      "path": "services/page-processing-worker/page_processing/runner.py",
+      "originalLine": 38,
+      "changedFiles": [],
+      "status": "false_positive",
+      "reason": "命中表达式为 typing.Protocol 接口方法体的 ...，用于声明结构化接口；不是应执行副作用的业务实现遗漏。该位置所在类明确继承 Protocol。 已重新核对当前源码与相关引用，保留该接口或实际使用逻辑。",
+      "currentSourceSha256": "32d236c9d4fa337d61ac403cd1d9b8e3a05d5f5dcbd0a1330284ad778694041e",
+      "baselineSourceSha256": "32d236c9d4fa337d61ac403cd1d9b8e3a05d5f5dcbd0a1330284ad778694041e"
+    },
+    {
+      "language": "python",
+      "resultIndex": 31,
+      "reviewId": "CQ-PY-032",
+      "ruleId": "py/ineffectual-statement",
+      "path": "services/page-processing-worker/page_processing/runner.py",
+      "originalLine": 41,
+      "changedFiles": [],
+      "status": "false_positive",
+      "reason": "命中表达式为 typing.Protocol 接口方法体的 ...，用于声明结构化接口；不是应执行副作用的业务实现遗漏。该位置所在类明确继承 Protocol。 已重新核对当前源码与相关引用，保留该接口或实际使用逻辑。",
+      "currentSourceSha256": "32d236c9d4fa337d61ac403cd1d9b8e3a05d5f5dcbd0a1330284ad778694041e",
+      "baselineSourceSha256": "32d236c9d4fa337d61ac403cd1d9b8e3a05d5f5dcbd0a1330284ad778694041e"
+    },
+    {
+      "language": "python",
+      "resultIndex": 32,
+      "reviewId": "CQ-PY-033",
+      "ruleId": "py/ineffectual-statement",
+      "path": "services/page-processing-worker/page_processing/runner.py",
+      "originalLine": 44,
+      "changedFiles": [],
+      "status": "false_positive",
+      "reason": "命中表达式为 typing.Protocol 接口方法体的 ...，用于声明结构化接口；不是应执行副作用的业务实现遗漏。该位置所在类明确继承 Protocol。 已重新核对当前源码与相关引用，保留该接口或实际使用逻辑。",
+      "currentSourceSha256": "32d236c9d4fa337d61ac403cd1d9b8e3a05d5f5dcbd0a1330284ad778694041e",
+      "baselineSourceSha256": "32d236c9d4fa337d61ac403cd1d9b8e3a05d5f5dcbd0a1330284ad778694041e"
+    },
+    {
+      "language": "python",
+      "resultIndex": 33,
+      "reviewId": "CQ-PY-034",
+      "ruleId": "py/ineffectual-statement",
+      "path": "services/image-quality-worker/image_quality/runner.py",
+      "originalLine": 16,
+      "changedFiles": [],
+      "status": "false_positive",
+      "reason": "命中表达式为 typing.Protocol 接口方法体的 ...，用于声明结构化接口；不是应执行副作用的业务实现遗漏。该位置所在类明确继承 Protocol。 已重新核对当前源码与相关引用，保留该接口或实际使用逻辑。",
+      "currentSourceSha256": "873b4b1aeba568ed8a2558c1f431652d3b342693779336ab18fd2bfdc8109c00",
+      "baselineSourceSha256": "873b4b1aeba568ed8a2558c1f431652d3b342693779336ab18fd2bfdc8109c00"
+    },
+    {
+      "language": "python",
+      "resultIndex": 34,
+      "reviewId": "CQ-PY-035",
+      "ruleId": "py/ineffectual-statement",
+      "path": "services/image-quality-worker/image_quality/runner.py",
+      "originalLine": 19,
+      "changedFiles": [],
+      "status": "false_positive",
+      "reason": "命中表达式为 typing.Protocol 接口方法体的 ...，用于声明结构化接口；不是应执行副作用的业务实现遗漏。该位置所在类明确继承 Protocol。 已重新核对当前源码与相关引用，保留该接口或实际使用逻辑。",
+      "currentSourceSha256": "873b4b1aeba568ed8a2558c1f431652d3b342693779336ab18fd2bfdc8109c00",
+      "baselineSourceSha256": "873b4b1aeba568ed8a2558c1f431652d3b342693779336ab18fd2bfdc8109c00"
+    },
+    {
+      "language": "python",
+      "resultIndex": 35,
+      "reviewId": "CQ-PY-036",
+      "ruleId": "py/ineffectual-statement",
+      "path": "services/image-quality-worker/image_quality/runner.py",
+      "originalLine": 22,
+      "changedFiles": [],
+      "status": "false_positive",
+      "reason": "命中表达式为 typing.Protocol 接口方法体的 ...，用于声明结构化接口；不是应执行副作用的业务实现遗漏。该位置所在类明确继承 Protocol。 已重新核对当前源码与相关引用，保留该接口或实际使用逻辑。",
+      "currentSourceSha256": "873b4b1aeba568ed8a2558c1f431652d3b342693779336ab18fd2bfdc8109c00",
+      "baselineSourceSha256": "873b4b1aeba568ed8a2558c1f431652d3b342693779336ab18fd2bfdc8109c00"
+    },
+    {
+      "language": "python",
+      "resultIndex": 36,
+      "reviewId": "CQ-PY-037",
+      "ruleId": "py/ineffectual-statement",
+      "path": "services/image-quality-worker/image_quality/runner.py",
+      "originalLine": 25,
+      "changedFiles": [],
+      "status": "false_positive",
+      "reason": "命中表达式为 typing.Protocol 接口方法体的 ...，用于声明结构化接口；不是应执行副作用的业务实现遗漏。该位置所在类明确继承 Protocol。 已重新核对当前源码与相关引用，保留该接口或实际使用逻辑。",
+      "currentSourceSha256": "873b4b1aeba568ed8a2558c1f431652d3b342693779336ab18fd2bfdc8109c00",
+      "baselineSourceSha256": "873b4b1aeba568ed8a2558c1f431652d3b342693779336ab18fd2bfdc8109c00"
+    },
+    {
+      "language": "python",
+      "resultIndex": 37,
+      "reviewId": "CQ-PY-038",
+      "ruleId": "py/ineffectual-statement",
+      "path": "services/image-quality-worker/image_quality/runner.py",
+      "originalLine": 28,
+      "changedFiles": [],
+      "status": "false_positive",
+      "reason": "命中表达式为 typing.Protocol 接口方法体的 ...，用于声明结构化接口；不是应执行副作用的业务实现遗漏。该位置所在类明确继承 Protocol。 已重新核对当前源码与相关引用，保留该接口或实际使用逻辑。",
+      "currentSourceSha256": "873b4b1aeba568ed8a2558c1f431652d3b342693779336ab18fd2bfdc8109c00",
+      "baselineSourceSha256": "873b4b1aeba568ed8a2558c1f431652d3b342693779336ab18fd2bfdc8109c00"
+    },
+    {
+      "language": "python",
+      "resultIndex": 38,
+      "reviewId": "CQ-PY-039",
+      "ruleId": "py/ineffectual-statement",
+      "path": "services/image-quality-worker/image_quality/runner.py",
+      "originalLine": 31,
+      "changedFiles": [],
+      "status": "false_positive",
+      "reason": "命中表达式为 typing.Protocol 接口方法体的 ...，用于声明结构化接口；不是应执行副作用的业务实现遗漏。该位置所在类明确继承 Protocol。 已重新核对当前源码与相关引用，保留该接口或实际使用逻辑。",
+      "currentSourceSha256": "873b4b1aeba568ed8a2558c1f431652d3b342693779336ab18fd2bfdc8109c00",
+      "baselineSourceSha256": "873b4b1aeba568ed8a2558c1f431652d3b342693779336ab18fd2bfdc8109c00"
+    },
+    {
+      "language": "python",
+      "resultIndex": 39,
+      "reviewId": "CQ-PY-040",
+      "ruleId": "py/ineffectual-statement",
+      "path": "services/image-quality-worker/image_quality/runner.py",
+      "originalLine": 34,
+      "changedFiles": [],
+      "status": "false_positive",
+      "reason": "命中表达式为 typing.Protocol 接口方法体的 ...，用于声明结构化接口；不是应执行副作用的业务实现遗漏。该位置所在类明确继承 Protocol。 已重新核对当前源码与相关引用，保留该接口或实际使用逻辑。",
+      "currentSourceSha256": "873b4b1aeba568ed8a2558c1f431652d3b342693779336ab18fd2bfdc8109c00",
+      "baselineSourceSha256": "873b4b1aeba568ed8a2558c1f431652d3b342693779336ab18fd2bfdc8109c00"
+    },
+    {
+      "language": "python",
+      "resultIndex": 40,
+      "reviewId": "CQ-PY-041",
+      "ruleId": "py/unused-global-variable",
+      "path": "services/ocr-worker/ocr_worker/math_layout.py",
+      "originalLine": 244,
+      "changedFiles": [],
+      "status": "false_positive",
+      "reason": "_adaptive_crop_formula 被 paper_formula.py 实际导入并调用，也由测试引用。公开实现仍在使用，告警不是裁剪/合并算法失效。 已重新核对当前源码与相关引用，保留该接口或实际使用逻辑。",
+      "currentSourceSha256": "3d05ca211492c96a33c1ad534ec9cf306a470054187cc22513c328a8432993cb",
+      "baselineSourceSha256": "3d05ca211492c96a33c1ad534ec9cf306a470054187cc22513c328a8432993cb"
+    },
+    {
+      "language": "python",
+      "resultIndex": 41,
+      "reviewId": "CQ-PY-042",
+      "ruleId": "py/unused-global-variable",
+      "path": "services/ocr-worker/ocr_worker/math_layout.py",
+      "originalLine": 245,
+      "changedFiles": [],
+      "status": "intentional",
+      "reason": "_crop_formula = crop_formula 属于旧接口兼容别名。当前工作区搜索未找到本仓消费者，附近注释要求新代码使用公开名称；没有兼容期结束的依据，保留可导入接口。",
+      "currentSourceSha256": "3d05ca211492c96a33c1ad534ec9cf306a470054187cc22513c328a8432993cb",
+      "baselineSourceSha256": "3d05ca211492c96a33c1ad534ec9cf306a470054187cc22513c328a8432993cb"
+    },
+    {
+      "language": "python",
+      "resultIndex": 42,
+      "reviewId": "CQ-PY-043",
+      "ruleId": "py/unused-global-variable",
+      "path": "services/ocr-worker/ocr_worker/math_layout.py",
+      "originalLine": 246,
+      "changedFiles": [],
+      "status": "false_positive",
+      "reason": "_merge_formula_boxes 被 test_paper_formula.py 实际导入并调用。公开实现仍在使用，告警不是裁剪/合并算法失效。 已重新核对当前源码与相关引用，保留该接口或实际使用逻辑。",
+      "currentSourceSha256": "3d05ca211492c96a33c1ad534ec9cf306a470054187cc22513c328a8432993cb",
+      "baselineSourceSha256": "3d05ca211492c96a33c1ad534ec9cf306a470054187cc22513c328a8432993cb"
+    },
+    {
+      "language": "python",
+      "resultIndex": 43,
+      "reviewId": "CQ-PY-044",
+      "ruleId": "py/unused-global-variable",
+      "path": "services/ocr-worker/ocr_worker/math_layout.py",
+      "originalLine": 247,
+      "changedFiles": [],
+      "status": "intentional",
+      "reason": "_intersection_area = intersection_area 属于旧接口兼容别名。当前工作区搜索未找到本仓消费者，附近注释要求新代码使用公开名称；没有兼容期结束的依据，保留可导入接口。",
+      "currentSourceSha256": "3d05ca211492c96a33c1ad534ec9cf306a470054187cc22513c328a8432993cb",
+      "baselineSourceSha256": "3d05ca211492c96a33c1ad534ec9cf306a470054187cc22513c328a8432993cb"
+    },
+    {
+      "language": "python",
+      "resultIndex": 44,
+      "reviewId": "CQ-PY-045",
+      "ruleId": "py/unused-global-variable",
+      "path": "ai-services/grading_agent/paper_compact/schema.py",
+      "originalLine": 19,
+      "changedFiles": [],
+      "status": "false_positive",
+      "reason": "该正则常量通过同包 anchors.py/chunks.py 的显式导入被实际匹配、搜索或迭代调用。schema.py 内部没有读取不等于整个程序没有使用；删除会破坏 OCR 锚点或分块逻辑。 已重新核对当前源码与相关引用，保留该接口或实际使用逻辑。",
+      "currentSourceSha256": "edfdd17af6faca659af5fdc42122a15c05ce323d9e23762b967cb17c602e2792",
+      "baselineSourceSha256": "38958370509b66e456f8cf739888032635e6885256c17b76b587af342de3cdf4"
+    },
+    {
+      "language": "python",
+      "resultIndex": 45,
+      "reviewId": "CQ-PY-046",
+      "ruleId": "py/unused-global-variable",
+      "path": "ai-services/grading_agent/paper_compact/schema.py",
+      "originalLine": 20,
+      "changedFiles": [],
+      "status": "false_positive",
+      "reason": "该正则常量通过同包 anchors.py/chunks.py 的显式导入被实际匹配、搜索或迭代调用。schema.py 内部没有读取不等于整个程序没有使用；删除会破坏 OCR 锚点或分块逻辑。 已重新核对当前源码与相关引用，保留该接口或实际使用逻辑。",
+      "currentSourceSha256": "edfdd17af6faca659af5fdc42122a15c05ce323d9e23762b967cb17c602e2792",
+      "baselineSourceSha256": "38958370509b66e456f8cf739888032635e6885256c17b76b587af342de3cdf4"
+    },
+    {
+      "language": "python",
+      "resultIndex": 46,
+      "reviewId": "CQ-PY-047",
+      "ruleId": "py/unused-global-variable",
+      "path": "ai-services/grading_agent/paper_compact/schema.py",
+      "originalLine": 24,
+      "changedFiles": [],
+      "status": "false_positive",
+      "reason": "该正则常量通过同包 anchors.py/chunks.py 的显式导入被实际匹配、搜索或迭代调用。schema.py 内部没有读取不等于整个程序没有使用；删除会破坏 OCR 锚点或分块逻辑。 已重新核对当前源码与相关引用，保留该接口或实际使用逻辑。",
+      "currentSourceSha256": "edfdd17af6faca659af5fdc42122a15c05ce323d9e23762b967cb17c602e2792",
+      "baselineSourceSha256": "38958370509b66e456f8cf739888032635e6885256c17b76b587af342de3cdf4"
+    },
+    {
+      "language": "python",
+      "resultIndex": 47,
+      "reviewId": "CQ-PY-048",
+      "ruleId": "py/unused-global-variable",
+      "path": "ai-services/grading_agent/paper_compact/schema.py",
+      "originalLine": 27,
+      "changedFiles": [],
+      "status": "false_positive",
+      "reason": "该正则常量通过同包 anchors.py/chunks.py 的显式导入被实际匹配、搜索或迭代调用。schema.py 内部没有读取不等于整个程序没有使用；删除会破坏 OCR 锚点或分块逻辑。 已重新核对当前源码与相关引用，保留该接口或实际使用逻辑。",
+      "currentSourceSha256": "edfdd17af6faca659af5fdc42122a15c05ce323d9e23762b967cb17c602e2792",
+      "baselineSourceSha256": "38958370509b66e456f8cf739888032635e6885256c17b76b587af342de3cdf4"
+    },
+    {
+      "language": "python",
+      "resultIndex": 48,
+      "reviewId": "CQ-PY-049",
+      "ruleId": "py/unused-global-variable",
+      "path": "ai-services/grading_agent/paper_compact/schema.py",
+      "originalLine": 28,
+      "changedFiles": [],
+      "status": "false_positive",
+      "reason": "该正则常量通过同包 anchors.py/chunks.py 的显式导入被实际匹配、搜索或迭代调用。schema.py 内部没有读取不等于整个程序没有使用；删除会破坏 OCR 锚点或分块逻辑。 已重新核对当前源码与相关引用，保留该接口或实际使用逻辑。",
+      "currentSourceSha256": "edfdd17af6faca659af5fdc42122a15c05ce323d9e23762b967cb17c602e2792",
+      "baselineSourceSha256": "38958370509b66e456f8cf739888032635e6885256c17b76b587af342de3cdf4"
+    },
+    {
+      "language": "python",
+      "resultIndex": 49,
+      "reviewId": "CQ-PY-050",
+      "ruleId": "py/unused-global-variable",
+      "path": "ai-services/grading_agent/paper_compact/schema.py",
+      "originalLine": 29,
+      "changedFiles": [],
+      "status": "false_positive",
+      "reason": "该正则常量通过同包 anchors.py/chunks.py 的显式导入被实际匹配、搜索或迭代调用。schema.py 内部没有读取不等于整个程序没有使用；删除会破坏 OCR 锚点或分块逻辑。 已重新核对当前源码与相关引用，保留该接口或实际使用逻辑。",
+      "currentSourceSha256": "edfdd17af6faca659af5fdc42122a15c05ce323d9e23762b967cb17c602e2792",
+      "baselineSourceSha256": "38958370509b66e456f8cf739888032635e6885256c17b76b587af342de3cdf4"
+    },
+    {
+      "language": "python",
+      "resultIndex": 50,
+      "reviewId": "CQ-PY-051",
+      "ruleId": "py/unused-global-variable",
+      "path": "ai-services/grading_agent/paper_compact/schema.py",
+      "originalLine": 30,
+      "changedFiles": [],
+      "status": "false_positive",
+      "reason": "该正则常量通过同包 anchors.py/chunks.py 的显式导入被实际匹配、搜索或迭代调用。schema.py 内部没有读取不等于整个程序没有使用；删除会破坏 OCR 锚点或分块逻辑。 已重新核对当前源码与相关引用，保留该接口或实际使用逻辑。",
+      "currentSourceSha256": "edfdd17af6faca659af5fdc42122a15c05ce323d9e23762b967cb17c602e2792",
+      "baselineSourceSha256": "38958370509b66e456f8cf739888032635e6885256c17b76b587af342de3cdf4"
+    },
+    {
+      "language": "python",
+      "resultIndex": 51,
+      "reviewId": "CQ-PY-052",
+      "ruleId": "py/unused-global-variable",
+      "path": "ai-services/grading_agent/paper_compact/schema.py",
+      "originalLine": 33,
+      "changedFiles": [],
+      "status": "false_positive",
+      "reason": "该正则常量通过同包 anchors.py/chunks.py 的显式导入被实际匹配、搜索或迭代调用。schema.py 内部没有读取不等于整个程序没有使用；删除会破坏 OCR 锚点或分块逻辑。 已重新核对当前源码与相关引用，保留该接口或实际使用逻辑。",
+      "currentSourceSha256": "edfdd17af6faca659af5fdc42122a15c05ce323d9e23762b967cb17c602e2792",
+      "baselineSourceSha256": "38958370509b66e456f8cf739888032635e6885256c17b76b587af342de3cdf4"
+    },
+    {
+      "language": "python",
+      "resultIndex": 52,
+      "reviewId": "CQ-PY-053",
+      "ruleId": "py/unused-global-variable",
+      "path": "ai-services/grading_agent/paper_compact/schema.py",
+      "originalLine": 36,
+      "changedFiles": [],
+      "status": "false_positive",
+      "reason": "该正则常量通过同包 anchors.py/chunks.py 的显式导入被实际匹配、搜索或迭代调用。schema.py 内部没有读取不等于整个程序没有使用；删除会破坏 OCR 锚点或分块逻辑。 已重新核对当前源码与相关引用，保留该接口或实际使用逻辑。",
+      "currentSourceSha256": "edfdd17af6faca659af5fdc42122a15c05ce323d9e23762b967cb17c602e2792",
+      "baselineSourceSha256": "38958370509b66e456f8cf739888032635e6885256c17b76b587af342de3cdf4"
+    },
+    {
+      "language": "python",
+      "resultIndex": 53,
+      "reviewId": "CQ-PY-054",
+      "ruleId": "py/unused-global-variable",
+      "path": "docs/architecture/tools/verify_database_catalog.py",
+      "originalLine": 62,
+      "changedFiles": [],
+      "status": "false_positive",
+      "reason": "columns 在紧随其后的 FK 候选列表推导和唯一性生成器中被读取，参与字段与基数验证。不能把推导式内部引用当成全局变量从未使用。 已重新核对当前源码与相关引用，保留该接口或实际使用逻辑。",
+      "currentSourceSha256": "ab605068d0e3fc47791e6412ddf70432d739a3afd601f0dad852e0319de76450",
+      "baselineSourceSha256": "ab605068d0e3fc47791e6412ddf70432d739a3afd601f0dad852e0319de76450"
+    },
+    {
+      "language": "python",
+      "resultIndex": 54,
+      "reviewId": "CQ-PY-055",
+      "ruleId": "py/unused-global-variable",
+      "path": "docs/architecture/tools/verify_database_catalog.py",
+      "originalLine": 92,
+      "changedFiles": [],
+      "status": "false_positive",
+      "reason": "fk 在 any() 的生成器表达式中被读取（fk[2]/[3]/[4]/[6]），参与 SQLite 外键动作交叉核对。不能把推导式内部引用当成全局变量从未使用。 已重新核对当前源码与相关引用，保留该接口或实际使用逻辑。",
+      "currentSourceSha256": "ab605068d0e3fc47791e6412ddf70432d739a3afd601f0dad852e0319de76450",
+      "baselineSourceSha256": "ab605068d0e3fc47791e6412ddf70432d739a3afd601f0dad852e0319de76450"
+    },
+    {
+      "language": "javascript",
+      "resultIndex": 0,
+      "reviewId": "CQ-JS-001",
+      "ruleId": "js/file-system-race",
+      "path": "scripts/ci/check-generated-contracts.mjs",
+      "status": "fixed",
+      "reason": "删除 existsSync/statSync 后按路径读取的窗口。目录直接 opendir 并使用已打开句柄枚举；文件打开后 fstat 和 readFileSync 使用同一描述符。缺失产物继续由快照差异门禁处理，权限及读取错误传播并关闭句柄。真实打开后替换路径回归确认读取原文件。",
+      "changedFiles": [
+        "scripts/ci/check-generated-contracts.mjs",
+        "scripts/ci/generated-files-race.test.mjs"
+      ]
+    },
+    {
+      "language": "javascript",
+      "resultIndex": 1,
+      "reviewId": "CQ-JS-002",
+      "ruleId": "js/file-system-race",
+      "path": "scripts/lib/openapi-sdk.mjs",
+      "status": "fixed",
+      "reason": "已有产物直接以 r+ 对应标志打开，类型检查、内容比较、定位写入和截断使用同一描述符；不再根据 existsSync 重新按路径打开。写后身份核对拒绝路径替换，保留 Windows 兼容与文件权限；只读且内容未变的产物仍可通过，变化时传播写权限错误。",
+      "changedFiles": [
+        "scripts/lib/openapi-sdk.mjs",
+        "scripts/ci/generated-files-race.test.mjs"
+      ]
+    },
+    {
+      "language": "javascript",
+      "resultIndex": 2,
+      "reviewId": "CQ-JS-003",
+      "ruleId": "js/file-system-race",
+      "path": "scripts/lib/openapi-sdk.mjs",
+      "status": "fixed",
+      "reason": "缺失产物使用 wx+ 排他创建；另一进程先创建导致 EEXIST 时有界重试打开现有文件，不直接 w 截断竞争者产物。空内容首次创建返回 true。UTF-8 定位写、短写、尾部截断和失败关闭均有回归。",
+      "changedFiles": [
+        "scripts/lib/openapi-sdk.mjs",
+        "scripts/ci/generated-files-race.test.mjs"
+      ]
+    },
+    {
+      "language": "javascript",
+      "resultIndex": 3,
+      "reviewId": "CQ-JS-004",
+      "ruleId": "js/file-system-race",
+      "path": "scripts/update-api-route-coverage.mjs",
+      "status": "fixed",
+      "reason": "路由覆盖写入复用修复后的 writeIfChanged，删除 existsSync/readFileSync 后 writeFileSync 的路径检查窗口。临时合成目录回归覆盖首次生成、未变不写、更新截断、真实路径替换报错和写失败传播。",
+      "changedFiles": [
+        "scripts/update-api-route-coverage.mjs",
+        "scripts/lib/openapi-sdk.mjs",
+        "scripts/ci/generated-files-race.test.mjs"
+      ]
+    },
+    {
+      "language": "javascript",
+      "resultIndex": 4,
+      "reviewId": "CQ-JS-005",
+      "ruleId": "js/unused-local-variable",
+      "path": "apps/web-admin/scripts/check-production-routes.mjs",
+      "status": "fixed",
+      "reason": "删除未参与断言的 examWorkspace 源码读取。生产路由相关的真实接线断言和契约回归继续通过；同时修正该脚本已过时的 normalizeBaseUrl return trimmed 写法断言，明确检查空默认地址和保留空值，已有 11 个地址行为回归通过。",
+      "changedFiles": [
+        "apps/web-admin/scripts/check-production-routes.mjs"
+      ]
+    },
+    {
+      "language": "javascript",
+      "resultIndex": 5,
+      "reviewId": "CQ-JS-006",
+      "ruleId": "js/unused-local-variable",
+      "path": "apps/web-admin/scripts/check-production-routes.mjs",
+      "status": "fixed",
+      "reason": "删除没有消费者的全 src 递归读取 allUiSource；保留实际供断言使用的 gradingFeature 扫描和 sourceFiles 函数。",
+      "changedFiles": [
+        "apps/web-admin/scripts/check-production-routes.mjs"
+      ]
+    },
+    {
+      "language": "javascript",
+      "resultIndex": 6,
+      "reviewId": "CQ-JS-007",
+      "ruleId": "js/duplicate-property",
+      "path": "lab/tests/helpers.js",
+      "status": "fixed",
+      "reason": "原重复 rubric 的末尾覆盖确有空值回退用途。本次字面量只声明一次 rubric，覆盖后恢复选定量规，保留 null/undefined 回退及原有字段顺序，补中文边界注释。新增合成夹具回归确认默认及自定义量规、版本/满分默认值、显式无效字段覆盖语义均保留。",
+      "changedFiles": [
+        "lab/tests/helpers.js",
+        "lab/tests/helpers.test.js"
+      ]
+    },
+    {
+      "language": "javascript",
+      "resultIndex": 7,
+      "reviewId": "CQ-JS-008",
+      "ruleId": "js/useless-expression",
+      "path": "docs/architecture/tools/capture_preview_qa.js",
+      "status": "intentional",
+      "reason": "该文件是 playwright-cli run-code 接收的 async(page) 函数表达式输入，runner 取得函数值后注入 page 执行；不是独立 Node 入口。保留运行输入并补明确说明，不能自调用缺少 page 的函数。用途依据原逐条复核与现有架构维护文档。",
+      "changedFiles": [
+        "docs/architecture/tools/capture_preview_qa.js"
+      ]
+    },
+    {
+      "language": "javascript",
+      "resultIndex": 8,
+      "reviewId": "CQ-JS-009",
+      "ruleId": "js/useless-expression",
+      "path": "docs/architecture/tools/render_native.js",
+      "status": "intentional",
+      "reason": "docs/architecture/DIAGRAM_MAINTENANCE.md 与 evidence/acceptance-report.md 明确记载 playwright-cli run-code tools/render_native.js。现有 architecture-audit-tools 回归以 vm 获取函数并注入 page 后执行；本次验证通过。补 runner 用途注释，保留函数表达式语义。",
+      "changedFiles": [
+        "docs/architecture/tools/render_native.js"
+      ]
+    },
+    {
+      "language": "javascript",
+      "resultIndex": 9,
+      "reviewId": "CQ-JS-010",
+      "ruleId": "js/superfluous-trailing-arguments",
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useGradingKeyboard.test.tsx",
+      "status": "false_positive",
+      "reason": "StorageEvent(type, StorageEventInit) 为标准 DOM 构造器；本地 TypeScript lib.dom.d.ts 声明同样接收这两个参数。原 SARIF relatedLocation 指向 CodeQL externs/web/webstorage.js 的旧零参数模型。保留 storage + key:null 模拟清空存储事件，相关 4 个快捷键回归及类型检查通过。",
+      "changedFiles": []
+    },
+    {
+      "language": "javascript",
+      "resultIndex": 10,
+      "reviewId": "CQ-JS-011",
+      "ruleId": "js/superfluous-trailing-arguments",
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useGradingKeyboard.test.tsx",
+      "status": "false_positive",
+      "reason": "第二个参数的 key 模拟另一标签页关闭快捷键；符合本地 DOM 类型声明。CodeQL 旧零参数 extern 导致误报，删除参数会破坏跨标签页偏好变更回归；原测试及参数保留并验证通过。",
+      "changedFiles": []
+    },
+    {
+      "language": "javascript",
+      "resultIndex": 11,
+      "reviewId": "CQ-JS-012",
+      "ruleId": "js/trivial-conditional",
+      "path": "apps/web-admin/src/pages/PanelModelBindingsSection.tsx",
+      "status": "fixed",
+      "reason": "移除字段校验中的重复 !tenantID || loadingConfigs，二者已在同一同步回调入口拒绝且中间无 await。保留租户、loadingRef、savingRef、冲突及绑定就绪边界和所有模型/版本/能力字段检查；10 个绑定状态回归通过。",
+      "changedFiles": [
+        "apps/web-admin/src/pages/PanelModelBindingsSection.tsx"
+      ]
+    },
+    {
+      "language": "javascript",
+      "resultIndex": 12,
+      "reviewId": "CQ-JS-013",
+      "ruleId": "js/trivial-conditional",
+      "path": "apps/web-admin/src/pages/PanelModelBindingsSection.tsx",
+      "status": "fixed",
+      "reason": "删除第二处恒 false 的 !tenantID，保存入口的租户 guard 保留。",
+      "changedFiles": [
+        "apps/web-admin/src/pages/PanelModelBindingsSection.tsx"
+      ]
+    },
+    {
+      "language": "javascript",
+      "resultIndex": 13,
+      "reviewId": "CQ-JS-014",
+      "ruleId": "js/trivial-conditional",
+      "path": "apps/web-admin/src/pages/PanelModelBindingsSection.tsx",
+      "status": "fixed",
+      "reason": "删除第二处恒 false 的 loadingConfigs，入口 loadingConfigs 与同步 loadingRef 检查均保留；刷新同一事件轮中保存被拒绝的既有回归通过。",
+      "changedFiles": [
+        "apps/web-admin/src/pages/PanelModelBindingsSection.tsx"
+      ]
+    },
+    {
+      "language": "go",
+      "resultIndex": 0,
+      "ruleId": "go/unsafe-quoting",
+      "path": "services/api-gateway/internal/modelgovernance/managed_config_probe_http_test.go",
+      "status": "false_positive",
+      "reason": "test.content 的 json.Marshal 返回完整且已转义的 JSON 字符串 token，模板在 content 冒号后直接拼入 token，没有额外包引号。finishReason 来自本例三个固定字段 stop/length，其他源码路径不是本条 source。此处有意测试非法/截断的内层模型回答；外层响应仍正确 JSON 编码。",
+      "changedFiles": [],
+      "currentSha256": "9b70a95056ad98ba69e35f536fb2dd1c12231eb57844440410ee87932ce113c9",
+      "currentContextReviewed": true
+    },
+    {
+      "language": "go",
+      "resultIndex": 1,
+      "ruleId": "go/unsafe-quoting",
+      "path": "services/api-gateway/internal/paper/handlers_test.go",
+      "status": "false_positive",
+      "reason": "告警数据是 float64 score 经 json.Marshal 产生的数值 JSON token，直接拼在 score/max_score 键的冒号后，变量两侧没有再包字符串引号。数字不能包含可突破引号的双引号；不是将带用户字符的 JSON 字符串再嵌进引号。测试 helper 忽略非有限数的 Marshal 错误会使该特殊夹具 JSON 无效，但不会形成本条所报的引号逃逸。",
+      "changedFiles": [],
+      "currentSha256": "2f5c8775029058b7a6e86b1b6a219fa80a29d0ee8ec9f6d7b7a0873ff15aca92",
+      "currentContextReviewed": true
+    },
+    {
+      "language": "go",
+      "resultIndex": 2,
+      "ruleId": "go/unsafe-quoting",
+      "path": "services/api-gateway/internal/paper/handlers_test.go",
+      "status": "false_positive",
+      "reason": "告警数据是 float64 score 经 json.Marshal 产生的数值 JSON token，直接拼在 score/max_score 键的冒号后，变量两侧没有再包字符串引号。数字不能包含可突破引号的双引号；不是将带用户字符的 JSON 字符串再嵌进引号。测试 helper 忽略非有限数的 Marshal 错误会使该特殊夹具 JSON 无效，但不会形成本条所报的引号逃逸。",
+      "changedFiles": [],
+      "currentSha256": "2f5c8775029058b7a6e86b1b6a219fa80a29d0ee8ec9f6d7b7a0873ff15aca92",
+      "currentContextReviewed": true
+    },
+    {
+      "language": "go",
+      "resultIndex": 3,
+      "ruleId": "go/unsafe-quoting",
+      "path": "services/api-gateway/internal/paper/handlers_test.go",
+      "status": "false_positive",
+      "reason": "告警数据是 float64 score 经 json.Marshal 产生的数值 JSON token，直接拼在 score/max_score 键的冒号后，变量两侧没有再包字符串引号。数字不能包含可突破引号的双引号；不是将带用户字符的 JSON 字符串再嵌进引号。测试 helper 忽略非有限数的 Marshal 错误会使该特殊夹具 JSON 无效，但不会形成本条所报的引号逃逸。",
+      "changedFiles": [],
+      "currentSha256": "2f5c8775029058b7a6e86b1b6a219fa80a29d0ee8ec9f6d7b7a0873ff15aca92",
+      "currentContextReviewed": true
+    },
+    {
+      "language": "go",
+      "resultIndex": 4,
+      "ruleId": "go/unsafe-quoting",
+      "path": "services/api-gateway/internal/paper/handlers_test.go",
+      "status": "false_positive",
+      "reason": "告警数据是 float64 score 经 json.Marshal 产生的数值 JSON token，直接拼在 score/max_score 键的冒号后，变量两侧没有再包字符串引号。数字不能包含可突破引号的双引号；不是将带用户字符的 JSON 字符串再嵌进引号。测试 helper 忽略非有限数的 Marshal 错误会使该特殊夹具 JSON 无效，但不会形成本条所报的引号逃逸。",
+      "changedFiles": [],
+      "currentSha256": "2f5c8775029058b7a6e86b1b6a219fa80a29d0ee8ec9f6d7b7a0873ff15aca92",
+      "currentContextReviewed": true
+    },
+    {
+      "language": "go",
+      "resultIndex": 5,
+      "ruleId": "go/unsafe-quoting",
+      "path": "services/api-gateway/internal/server/e2e_question_bank_import_test.go",
+      "status": "false_positive",
+      "reason": "qbJSON 检查 json.Marshal 错误后返回完整 JSON token。该告警参数 v.DefaultScore 在类型中为 float64，模板把结果直接放在 total_score 冒号后，不是放进双引号字符串。因此不是引号逃逸；同一模板其他 fixture ID 拼接未包含在本条数据流判断内，不能以本条误报推断整个模板适用于任意外部输入。",
+      "changedFiles": [],
+      "currentSha256": "dd90a2dd55eede5c0ad9f1c955e5897aab85d6afa6f07f26af7fe62f570bb6ba",
+      "currentContextReviewed": true
+    },
+    {
+      "language": "go",
+      "resultIndex": 6,
+      "ruleId": "go/allocation-size-overflow",
+      "path": "services/api-gateway/internal/mathunderstanding/handlers.go",
+      "status": "fixed",
+      "reason": "已有验证记录与合并后验证记录均限制为4096条，新增符号验证仍限制为1..2048条。容量相加前先按保留的syntax数量用减法检查预算，旧符号验证在重复修订时被替换。超预算契约在深拷贝之前拒绝；验证覆盖数量上限、语法疑点保留、整批替换及输入不被改写。",
+      "changedFiles": [
+        "services/api-gateway/internal/mathunderstanding/handlers.go",
+        "services/api-gateway/internal/mathunderstanding/types.go",
+        "services/api-gateway/internal/mathunderstanding/verification_budget_test.go"
+      ],
+      "currentSha256": "41f3889aa7b1db7e1b35245447dfecdb2fb69b40db8069558858300f8db542e2",
+      "currentContextReviewed": true
+    },
+    {
+      "language": "go",
+      "resultIndex": 7,
+      "ruleId": "go/insecure-tls",
+      "path": "services/api-gateway/internal/minioadapter/client_test.go",
+      "status": "intentional",
+      "reason": "TestNewClientRejectsTLSBeforeVersion12 有意构造最大 TLS1.1 的 httptest 服务，断言真实 NewClient 客户端在发送 HTTP 前拒绝该服务；生产 MinIO NewClient 的 cfg.UseSSL 分支设置 TLSClientConfig.MinVersion = TLS1.2。不是业务客户端允许 TLS1.1，也不是只按 _test.go 文件名排除。",
+      "changedFiles": [
+        "services/api-gateway/internal/minioadapter/client_test.go"
+      ],
+      "currentSha256": "9e333c376e444762ff5e182af2571590c488054640dc8f77c7013b614fcb0282",
+      "currentContextReviewed": true
+    },
+    {
+      "language": "go",
+      "resultIndex": 8,
+      "ruleId": "go/weak-sensitive-data-hashing",
+      "path": "services/api-gateway/internal/auth/login_limiter_redis.go",
+      "status": "false_positive",
+      "reason": "SHA256 输入是账号/来源/配对限流桶的键，而非密码。LoginAttempt 只有租户、标识、IP 和服务端解析的 AccountID；Redis 的哈希只是稳定索引。不能把这个用法视作低熵密码存储，也不能把无密钥 SHA256 当作不可猜测的匿名化。",
+      "changedFiles": [],
+      "currentSha256": "dedb2b542e57db315a36b0d4705ba31d40e55d28b77bb0cf937265ae161a88ae",
+      "currentContextReviewed": true
+    },
+    {
+      "language": "go",
+      "resultIndex": 9,
+      "ruleId": "go/weak-sensitive-data-hashing",
+      "path": "services/api-gateway/internal/auth/token.go",
+      "status": "false_positive",
+      "reason": "HashToken 存储高熵随机令牌的摘要：NewToken 使用 crypto/rand 生成 32 字节，MFA 恢复码另为 16 字节随机数。激活/恢复流程明确将 input.Token 与 input.Password 分开。密码由 HashPassword 的带随机盐 Argon2id 处理，不能将 token 的快速摘要归为弱密码哈希；本条不评估全部认证流程。",
+      "changedFiles": [
+        "services/api-gateway/internal/auth/token.go"
+      ],
+      "currentSha256": "d6204fdbd6daea40f4e38739bdf790607769b6250c817afc8142f2c00db06a68",
+      "currentContextReviewed": true
+    },
+    {
+      "language": "go",
+      "resultIndex": 10,
+      "ruleId": "go/uncontrolled-allocation-size",
+      "path": "services/api-gateway/internal/mathunderstanding/pilot_store.go",
+      "status": "false_positive",
+      "reason": "ListPilotGates 在 make 前把 limit<=0 或 limit>500 改为100；有效分配容量最多500。本告警忽略了同函数中的上限归一化。",
+      "changedFiles": [],
+      "currentSha256": "5e8b9d7abbc76e201f5faf8791dc3d6755de888cfc5fa746f6c1d040b4e7d867",
+      "currentContextReviewed": true
+    },
+    {
+      "language": "go",
+      "resultIndex": 11,
+      "ruleId": "go/uncontrolled-allocation-size",
+      "path": "services/api-gateway/internal/processing/store_postgres.go",
+      "status": "false_positive",
+      "reason": "ListExceptions 在 SQL 和 make 前把 Limit<=0 或 Limit>100 改为25，容量最多100，查询多取一行仍最多101。实际输入不是无界分配。",
+      "changedFiles": [],
+      "currentSha256": "97ada29c843c7987a5c532e44689b1fcec1b4142056301618a9228c3d2fe9a6d",
+      "currentContextReviewed": true
+    },
+    {
+      "language": "go",
+      "resultIndex": 12,
+      "ruleId": "go/uncontrolled-allocation-size",
+      "path": "services/api-gateway/internal/workerruntime/store_memory.go",
+      "status": "false_positive",
+      "reason": "MemoryStore.claim 先调用 normalizeClaimInput，Limit<=0 或>100 被改为1；归一化返回值覆盖 input，之后才分配容量。因此这条告警中的 input.Limit 已有上限。",
+      "changedFiles": [],
+      "currentSha256": "b833cebeb06b700a2596fb778530cdc16de58ab372c1f0764f8ab7044543df91",
+      "currentContextReviewed": true
+    },
+    {
+      "language": "go",
+      "resultIndex": 13,
+      "ruleId": "go/uncontrolled-allocation-size",
+      "path": "services/api-gateway/internal/workerruntime/store_postgres.go",
+      "status": "false_positive",
+      "reason": "PostgresStore.claim 同样先覆盖 input 为 normalizeClaimInput 的返回值，Limit 处于1..100；SQL LIMIT 与 make 的容量都使用该值。跨租户模式没有绕开这一步。本条只核验分配边界，不证明全部跨租户权限正确。",
+      "changedFiles": [],
+      "currentSha256": "b260e8af94233c4dfdee875cfff15452cf85aa5fd0b0d9ed4f91a386ea85e5dc",
+      "currentContextReviewed": true
+    },
+    {
+      "language": "go",
+      "resultIndex": 14,
+      "ruleId": "go/request-forgery",
+      "path": "services/api-gateway/internal/modelgovernance/managed_config_probe.go",
+      "status": "fixed",
+      "reason": "已将探测地址判断移至独立模块，拒绝IANA特殊用途网段、共享地址、文档/基准地址和IPv6转换前缀；IPv4映射地址先Unmap后核验，IPv6只允许2000::/3并排除其中特殊段。保留HTTPS、全DNS回答检查、数字IP拨号、禁重定向及默认TLS验证；混合特殊地址在任何拨号前拒绝。未连接部署网络，不将代码修复等同于验证实际路由或防火墙。",
+      "changedFiles": [
+        "services/api-gateway/internal/modelgovernance/managed_config_probe.go",
+        "services/api-gateway/internal/modelgovernance/managed_config_probe_network.go",
+        "services/api-gateway/internal/modelgovernance/managed_config_probe_network_test.go"
+      ],
+      "currentSha256": "adad77306802937f01e9d8808c9735259e05beb69b3fb70ca0e80ba6aeb88420",
+      "currentContextReviewed": true
+    },
+    {
+      "language": "go",
+      "resultIndex": 15,
+      "ruleId": "go/log-injection",
+      "path": "services/api-gateway/internal/schoolassistant/service.go",
+      "status": "false_positive",
+      "reason": "传入日志的是独立 slog 属性 request_id；进入 preparedQuery 前 validateRequest 会 TrimSpace 并用 uuid.Parse 拒绝无效请求标识。攻击者的任意换行文字不能沿本告警路径进入此日志字段。不能从此推断所有其他日志字段也已审查。",
+      "changedFiles": [],
+      "currentSha256": "b418da1dc91932e30d6ab957f4d331cd1c61defe3868e6a154ea74e0359f6d5b",
+      "currentContextReviewed": true
+    },
+    {
+      "language": "go",
+      "resultIndex": 16,
+      "ruleId": "go/index-out-of-bounds",
+      "path": "services/api-gateway/internal/capture/print_package_pdf.go",
+      "status": "false_positive",
+      "reason": "drawQRCode 故意让 columnIndex 到 len(row) 的哨兵位，以冲刷最后一段黑色模块。唯一 row[columnIndex] 读取位于 `columnIndex < len(row) && row[columnIndex]` 右侧，Go && 短路保证哨兵位不会执行读取；range 提供实际行，列索引从0递增。后续只用列差计算绘图矩形，无第二次 bitmap 索引；外层空 bitmap 也已提前返回。不需依赖 qrcode.Bitmap 保证方阵才能排除这条越界，空行同样不读取。",
+      "changedFiles": [
+        "services/api-gateway/internal/capture/print_package_pdf.go"
+      ],
+      "currentSha256": "d989ee3525d57fccdb2f9fa4b97c3fe54873501e38f9376d9cf764b6ff23a8b8",
+      "currentContextReviewed": true
+    },
+    {
+      "language": "go",
+      "resultIndex": 17,
+      "ruleId": "go/useless-assignment-to-field",
+      "path": "services/api-gateway/internal/modelgovernance/store_memory.go",
+      "status": "fixed",
+      "reason": "移除首次UpdatePolicy中未被读取的current.TenantID赋值；最终policy.TenantID和租户映射键保持不变。",
+      "changedFiles": [
+        "services/api-gateway/internal/modelgovernance/store_memory.go"
+      ],
+      "currentSha256": "57ed3cbda05d86ccfa67ffc0bb9419bd9c98e256e3dd41fe709d05820f3058ef",
+      "currentContextReviewed": true
+    },
+    {
+      "language": "go",
+      "resultIndex": 18,
+      "ruleId": "go/useless-assignment-to-field",
+      "path": "services/api-gateway/internal/modelgovernance/store_memory.go",
+      "status": "fixed",
+      "reason": "移除首次UpdatePolicy中未被读取的current.PolicyKey赋值；最终policy.PolicyKey仍设为default。",
+      "changedFiles": [
+        "services/api-gateway/internal/modelgovernance/store_memory.go"
+      ],
+      "currentSha256": "57ed3cbda05d86ccfa67ffc0bb9419bd9c98e256e3dd41fe709d05820f3058ef",
+      "currentContextReviewed": true
+    },
+    {
+      "language": "go",
+      "resultIndex": 19,
+      "ruleId": "go/useless-assignment-to-field",
+      "path": "services/api-gateway/internal/modelgovernance/store_memory.go",
+      "status": "fixed",
+      "reason": "移除首次UpdatePolicy中未被读取的current.Status赋值；最终policy.Status、版本检查与保存流程保持不变。",
+      "changedFiles": [
+        "services/api-gateway/internal/modelgovernance/store_memory.go"
+      ],
+      "currentSha256": "57ed3cbda05d86ccfa67ffc0bb9419bd9c98e256e3dd41fe709d05820f3058ef",
+      "currentContextReviewed": true
+    },
+    {
+      "language": "go",
+      "resultIndex": 20,
+      "ruleId": "go/useless-assignment-to-local",
+      "path": "services/api-gateway/internal/questionbank/metadata_acl_search_test.go",
+      "status": "fixed",
+      "reason": "撤权UpdateACL的未使用对象返回值改接到_，保留旧doc.Revision实参、错误检查和撤权后查询断言。",
+      "changedFiles": [
+        "services/api-gateway/internal/questionbank/metadata_acl_search_test.go"
+      ],
+      "currentSha256": "c178be804f715135d98163c436bd628c2a7259998fac8737461f9267607db04f",
+      "currentContextReviewed": true
+    },
+    {
+      "language": "go",
+      "resultIndex": 21,
+      "ruleId": "go/useless-assignment-to-local",
+      "path": "services/api-gateway/internal/server/e2e_question_bank_acl_ux_test.go",
+      "status": "fixed",
+      "reason": "末次UpdateACL的未使用对象返回值改接到_，保留旧updated.Revision实参及直接授权/组权限数据库断言。",
+      "changedFiles": [
+        "services/api-gateway/internal/server/e2e_question_bank_acl_ux_test.go"
+      ],
+      "currentSha256": "a8525c7dce00f699091b6117e2612c51a4ec72edba3a25efc395fb66497c1729",
+      "currentContextReviewed": true
+    },
+    {
+      "language": "go",
+      "resultIndex": 22,
+      "ruleId": "go/useless-assignment-to-local",
+      "path": "services/api-gateway/internal/server/e2e_question_bank_metadata_acl_search_test.go",
+      "status": "fixed",
+      "reason": "再授权UpdateACL的未使用对象返回值改接到_，保留旧acl.Revision实参、再授权动作与后续权限/审计检查。",
+      "changedFiles": [
+        "services/api-gateway/internal/server/e2e_question_bank_metadata_acl_search_test.go"
+      ],
+      "currentSha256": "5f07c7dbe1bb2ff64bda6eec72efa5eb62e4bbf2c00fbcf977cfe0175a08d23e",
+      "currentContextReviewed": true
+    },
+    {
+      "language": "rust",
+      "resultIndex": 0,
+      "ruleId": "rust/hard-coded-cryptographic-value",
+      "path": "apps/desktop-client/src-tauri/src/durable_store/paths.rs",
+      "status": "false_positive",
+      "reason": "paths.rs:105 的 true 是 durable_data_exists 返回的布尔存在标志，crypto.rs:168 只把它用作已有密文时拒绝生成新密钥的分支条件；该分支 return Err。实际返回密钥来自凭据管理器已保存的32字节值，或 OsRng 填满的新32字节数组。原始 codeFlow 的 bool guard -> master_key 返回值关联是保守流摘要，不存在 bool 转为 AES key 的实现。",
+      "changedFiles": [],
+      "currentSha256": "18d6cd3ad7c0df27444117953ed996e7532e1f07331cd4c56e57f92998c796a6",
+      "snapshotSha256": "18d6cd3ad7c0df27444117953ed996e7532e1f07331cd4c56e57f92998c796a6",
+      "unchangedSinceTaskBaseline": true,
+      "currentContextReviewed": true
+    },
+    {
+      "language": "rust",
+      "resultIndex": 1,
+      "ruleId": "rust/hard-coded-cryptographic-value",
+      "path": "apps/desktop-client/src-tauri/src/durable_store/claim.rs",
+      "status": "intentional",
+      "reason": "固定正确 key [7_u8;32] 用于新 UUID 临时 legacy SQLite 库里的合成 JSON 密文，整个测试模块被 cfg(test) 包围。 已读实际 #[cfg(test)] mod tests 的起止边界；正常非 test 构建排除整个模块。测试调用生产 crypto/storage helper 不会把测试常量变成生产入口。",
+      "changedFiles": [],
+      "currentSha256": "ef254596635799104d520b25d386f4cdb7421879dad79f952dd169cb90af2876",
+      "snapshotSha256": "ef254596635799104d520b25d386f4cdb7421879dad79f952dd169cb90af2876",
+      "unchangedSinceTaskBaseline": true,
+      "currentContextReviewed": true
+    },
+    {
+      "language": "rust",
+      "resultIndex": 2,
+      "ruleId": "rust/hard-coded-cryptographic-value",
+      "path": "apps/desktop-client/src-tauri/src/durable_store/claim.rs",
+      "status": "intentional",
+      "reason": "同一测试用正确固定 key [7_u8;32] 验证前面生成的合成 legacy 密文成功，整个调用在 cfg(test) 模块。 已读实际 #[cfg(test)] mod tests 的起止边界；正常非 test 构建排除整个模块。测试调用生产 crypto/storage helper 不会把测试常量变成生产入口。",
+      "changedFiles": [],
+      "currentSha256": "ef254596635799104d520b25d386f4cdb7421879dad79f952dd169cb90af2876",
+      "snapshotSha256": "ef254596635799104d520b25d386f4cdb7421879dad79f952dd169cb90af2876",
+      "unchangedSinceTaskBaseline": true,
+      "currentContextReviewed": true
+    },
+    {
+      "language": "rust",
+      "resultIndex": 3,
+      "ruleId": "rust/hard-coded-cryptographic-value",
+      "path": "apps/desktop-client/src-tauri/src/durable_store/claim.rs",
+      "status": "intentional",
+      "reason": "错误 key [8_u8;32] 是解密失败和文件保留断言的负例，不是生产加密密钥。 已读实际 #[cfg(test)] mod tests 的起止边界；正常非 test 构建排除整个模块。测试调用生产 crypto/storage helper 不会把测试常量变成生产入口。",
+      "changedFiles": [],
+      "currentSha256": "ef254596635799104d520b25d386f4cdb7421879dad79f952dd169cb90af2876",
+      "snapshotSha256": "ef254596635799104d520b25d386f4cdb7421879dad79f952dd169cb90af2876",
+      "unchangedSinceTaskBaseline": true,
+      "currentContextReviewed": true
+    },
+    {
+      "language": "rust",
+      "resultIndex": 4,
+      "ruleId": "rust/hard-coded-cryptographic-value",
+      "path": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+      "status": "false_positive",
+      "reason": "crypto.rs:127 的全零12字节数组只用于分配 nonce 缓冲区。第128行立即 OsRng.fill_bytes(&mut nonce)，第130行后才送入 AES-GCM；锁定 rand_core 0.6.4 的 OsRng.fill_bytes 在随机源失败时 panic，不存在继续使用全零缓冲区的回退路径。未执行系统随机源故障注入或完整Rust测试。",
+      "changedFiles": [],
+      "currentSha256": "8fdadd2b87d65a01f913540db8864a62eb37d2c6c71d93dbf26d177befd8cb35",
+      "snapshotSha256": "8fdadd2b87d65a01f913540db8864a62eb37d2c6c71d93dbf26d177befd8cb35",
+      "unchangedSinceTaskBaseline": true,
+      "currentContextReviewed": true
+    },
+    {
+      "language": "rust",
+      "resultIndex": 5,
+      "ruleId": "rust/hard-coded-cryptographic-value",
+      "path": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+      "status": "false_positive",
+      "reason": "crypto.rs:171 的全零32字节数组只用于分配新密钥缓冲区；第172行 OsRng.fill_bytes 后才写入 Windows Credential Manager 并返回。已有本地密文而密钥丢失时前一分支返回错误，不会新建替代密钥。凭据管理器读取成功的另一分支使用已保存值；随机源失败时 fill_bytes panic，不会返回初始化全零值。",
+      "changedFiles": [],
+      "currentSha256": "8fdadd2b87d65a01f913540db8864a62eb37d2c6c71d93dbf26d177befd8cb35",
+      "snapshotSha256": "8fdadd2b87d65a01f913540db8864a62eb37d2c6c71d93dbf26d177befd8cb35",
+      "unchangedSinceTaskBaseline": true,
+      "currentContextReviewed": true
+    },
+    {
+      "language": "rust",
+      "resultIndex": 6,
+      "ruleId": "rust/hard-coded-cryptographic-value",
+      "path": "apps/desktop-client/src-tauri/src/durable_store/drafts.rs",
+      "status": "intentional",
+      "reason": "KEY=[37;32] 是 cfg(test) 模块私有夹具常量，insert helper 只在本模块测试中加密内存 SQLite 的合成草稿。 已读实际 #[cfg(test)] mod tests 的起止边界；正常非 test 构建排除整个模块。测试调用生产 crypto/storage helper 不会把测试常量变成生产入口。",
+      "changedFiles": [],
+      "currentSha256": "8da95099ce829d112c8a09442c516c0c12f67144f2a18f703780a190371c3a3f",
+      "snapshotSha256": "8da95099ce829d112c8a09442c516c0c12f67144f2a18f703780a190371c3a3f",
+      "unchangedSinceTaskBaseline": true,
+      "currentContextReviewed": true
+    },
+    {
+      "language": "rust",
+      "resultIndex": 7,
+      "ruleId": "rust/hard-coded-cryptographic-value",
+      "path": "apps/desktop-client/src-tauri/src/durable_store/drafts.rs",
+      "status": "intentional",
+      "reason": "错误 key [88;32] 有意触发清理失败，断言两条过期草稿都保留；调用只在 cfg(test) 测试中。 已读实际 #[cfg(test)] mod tests 的起止边界；正常非 test 构建排除整个模块。测试调用生产 crypto/storage helper 不会把测试常量变成生产入口。",
+      "changedFiles": [],
+      "currentSha256": "8da95099ce829d112c8a09442c516c0c12f67144f2a18f703780a190371c3a3f",
+      "snapshotSha256": "8da95099ce829d112c8a09442c516c0c12f67144f2a18f703780a190371c3a3f",
+      "unchangedSinceTaskBaseline": true,
+      "currentContextReviewed": true
+    },
+    {
+      "language": "rust",
+      "resultIndex": 8,
+      "ruleId": "rust/hard-coded-cryptographic-value",
+      "path": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+      "status": "intentional",
+      "reason": "固定 key [7_u8;32] 只为合成草稿的 AES-GCM 回环测试提供可重现密钥；caller 是 cfg(test) 模块中的 test。 已读实际 #[cfg(test)] mod tests 的起止边界；正常非 test 构建排除整个模块。测试调用生产 crypto/storage helper 不会把测试常量变成生产入口。",
+      "changedFiles": [],
+      "currentSha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969",
+      "snapshotSha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969",
+      "unchangedSinceTaskBaseline": true,
+      "currentContextReviewed": true
+    },
+    {
+      "language": "rust",
+      "resultIndex": 9,
+      "ruleId": "rust/hard-coded-cryptographic-value",
+      "path": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+      "status": "intentional",
+      "reason": "错误 key [8_u8;32] 有意验证同一合成密文用错误密钥解密失败；caller 是 cfg(test) 测试。 已读实际 #[cfg(test)] mod tests 的起止边界；正常非 test 构建排除整个模块。测试调用生产 crypto/storage helper 不会把测试常量变成生产入口。",
+      "changedFiles": [],
+      "currentSha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969",
+      "snapshotSha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969",
+      "unchangedSinceTaskBaseline": true,
+      "currentContextReviewed": true
+    },
+    {
+      "language": "rust",
+      "resultIndex": 10,
+      "ruleId": "rust/hard-coded-cryptographic-value",
+      "path": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+      "status": "intentional",
+      "reason": "固定 key [17_u8;32] 只用于 UUID 临时目录/内存 SQLite 的分块暂存、顺序与内容校验测试。 已读实际 #[cfg(test)] mod tests 的起止边界；正常非 test 构建排除整个模块。测试调用生产 crypto/storage helper 不会把测试常量变成生产入口。",
+      "changedFiles": [],
+      "currentSha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969",
+      "snapshotSha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969",
+      "unchangedSinceTaskBaseline": true,
+      "currentContextReviewed": true
+    },
+    {
+      "language": "rust",
+      "resultIndex": 11,
+      "ruleId": "rust/hard-coded-cryptographic-value",
+      "path": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+      "status": "intentional",
+      "reason": "固定 key [29_u8;32] 只用于内存 SQLite 中500页合成暂存与第173页中断恢复场景。 已读实际 #[cfg(test)] mod tests 的起止边界；正常非 test 构建排除整个模块。测试调用生产 crypto/storage helper 不会把测试常量变成生产入口。",
+      "changedFiles": [],
+      "currentSha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969",
+      "snapshotSha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969",
+      "unchangedSinceTaskBaseline": true,
+      "currentContextReviewed": true
+    },
+    {
+      "language": "rust",
+      "resultIndex": 12,
+      "ruleId": "rust/hard-coded-cryptographic-value",
+      "path": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+      "status": "intentional",
+      "reason": "固定 key [43_u8;32] 只用于 UUID 临时 A/B 账号与独立 SQLite 的隔离断言，不是生产账号密钥配置。 已读实际 #[cfg(test)] mod tests 的起止边界；正常非 test 构建排除整个模块。测试调用生产 crypto/storage helper 不会把测试常量变成生产入口。",
+      "changedFiles": [],
+      "currentSha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969",
+      "snapshotSha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969",
+      "unchangedSinceTaskBaseline": true,
+      "currentContextReviewed": true
+    },
+    {
+      "language": "rust",
+      "resultIndex": 13,
+      "ruleId": "rust/hard-coded-cryptographic-value",
+      "path": "apps/desktop-client/src-tauri/src/durable_store/storage.rs",
+      "status": "intentional",
+      "reason": "[61_u8;32] 是 cfg(test) 私有 fixture 返回的合成数据密钥，只由同测试模块调用。 已读实际 #[cfg(test)] mod tests 的起止边界；正常非 test 构建排除整个模块。测试调用生产 crypto/storage helper 不会把测试常量变成生产入口。",
+      "changedFiles": [],
+      "currentSha256": "2ab93840f2a3f14b5abb01a09f192d1f19f73bf9f9281f2dd34debbd41107ba8",
+      "snapshotSha256": "2ab93840f2a3f14b5abb01a09f192d1f19f73bf9f9281f2dd34debbd41107ba8",
+      "unchangedSinceTaskBaseline": true,
+      "currentContextReviewed": true
+    }
+  ]
+}

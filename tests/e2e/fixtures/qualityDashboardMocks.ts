@@ -84,7 +84,7 @@ export async function installQualityDashboardMocks(page: Page, policyStatus: See
     }
     if (path === "/api/v1/backmark-batches/batch-1") {
       state.summaryFilters.push(url.searchParams.get("status") ?? "");
-      // An unloaded/empty detail page must not hide a nonzero batch count.
+      // 详情页尚未加载或为空时，不能隐藏非零的批次数量。
       return json(route, { backmark: { batch, items: [], diff_histogram: [], regrade_required_count: 8, pending_count: 0, completed_count: 120 }, next_cursor: "items-page-2", has_more: true } satisfies BackmarkSummaryResponse);
     }
     if (path.endsWith("/score-releases")) return json(route, { score_releases: [], next_cursor: "", has_more: false });

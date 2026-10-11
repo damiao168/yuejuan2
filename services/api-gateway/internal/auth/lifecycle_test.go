@@ -154,34 +154,7 @@ func TestRecoveryCannotCrossSchoolOrRecoverPrivilegedAccount(t *testing.T) {
 func TestRecoveryGrantIsInvalidAfterPasswordChangeOrDisable(t *testing.T) {
 	for _, mutation := range []string{"password-change", "disable-and-enable"} {
 		t.Run(mutation, func(t *testing.T) {
-			store, actor, scope := lifecycleFixture(t)
-			user, err := store.CreateManagedUser(context.Background(), actor, scope, CreateManagedUserInput{
-				Username: "teacher", DisplayName: "Teacher", RoleCode: "teacher", SchoolID: "school-1",
-			}, "old-hash")
-			if err != nil {
-				t.Fatal(err)
-			}
-			hash := HashToken("pending-recovery")
-			if _, err := store.CreateRecovery(context.Background(), actor, scope, user.ID, hash, time.Now().Add(time.Hour)); err != nil {
-				t.Fatal(err)
-			}
-			if mutation == "password-change" {
-				if updated, _, err := store.UpdatePasswordAndRevokeSessions(context.Background(), actor.TenantID, user.ID, "old-hash", "changed-hash"); err != nil || !updated {
-					t.Fatalf("password change failed: updated=%v err=%v", updated, err)
-				}
-			} else {
-				for _, status := range []string{"disabled", "active"} {
-					if _, _, err := store.UpdateManagedUserStatus(context.Background(), actor, scope, user.ID, status); err != nil {
-						t.Fatal(err)
-					}
-				}
-			}
-			if _, err := store.FindRecovery(context.Background(), hash, time.Now()); !errors.Is(err, ErrRecoveryInvalid) {
-				t.Fatalf("pending grant must expire after %s: %v", mutation, err)
-			}
-			if _, err := store.CompleteRecovery(context.Background(), hash, "unauthorized-hash", time.Now()); !errors.Is(err, ErrRecoveryInvalid) {
-				t.Fatalf("pending grant must not replace credentials after %s: %v", mutation, err)
-			}
+			assertRecoveryGrantInvalidatedByAccountMutation(t, mutation)
 		})
 	}
 }
@@ -283,6 +256,44 @@ func TestLoginCannotBypassAccountLimitBySwitchingIdentifierAliases(t *testing.T)
 		handler.Login(rec, req)
 		if rec.Code != want || len(rec.Result().Cookies()) != 0 {
 			t.Fatalf("alias %s must not bypass the account guard: status=%d body=%s", identifier, rec.Code, rec.Body.String())
+		}
+	}
+}
+
+// 恢复链接发放后才修改账户安全版本；恢复预览和真正换密都必须拒绝该旧链接。
+func assertRecoveryGrantInvalidatedByAccountMutation(t *testing.T, mutation string) {
+	t.Helper()
+	store, actor, scope := lifecycleFixture(t)
+	user, err := store.CreateManagedUser(context.Background(), actor, scope, CreateManagedUserInput{
+		Username: "teacher", DisplayName: "Teacher", RoleCode: "teacher", SchoolID: "school-1",
+	}, "old-hash")
+	if err != nil {
+		t.Fatal(err)
+	}
+	hash := HashToken("pending-recovery")
+	if _, err := store.CreateRecovery(context.Background(), actor, scope, user.ID, hash, time.Now().Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	mutateRecoveryAccountSecurity(t, store, actor, scope, user.ID, mutation)
+	if _, err := store.FindRecovery(context.Background(), hash, time.Now()); !errors.Is(err, ErrRecoveryInvalid) {
+		t.Fatalf("pending grant must expire after %s: %v", mutation, err)
+	}
+	if _, err := store.CompleteRecovery(context.Background(), hash, "unauthorized-hash", time.Now()); !errors.Is(err, ErrRecoveryInvalid) {
+		t.Fatalf("pending grant must not replace credentials after %s: %v", mutation, err)
+	}
+}
+
+func mutateRecoveryAccountSecurity(t *testing.T, store *MemoryStore, actor User, scope AccessScope, userID, mutation string) {
+	t.Helper()
+	if mutation == "password-change" {
+		if updated, _, err := store.UpdatePasswordAndRevokeSessions(context.Background(), actor.TenantID, userID, "old-hash", "changed-hash"); err != nil || !updated {
+			t.Fatalf("password change failed: updated=%v err=%v", updated, err)
+		}
+	} else {
+		for _, status := range []string{"disabled", "active"} {
+			if _, _, err := store.UpdateManagedUserStatus(context.Background(), actor, scope, userID, status); err != nil {
+				t.Fatal(err)
+			}
 		}
 	}
 }

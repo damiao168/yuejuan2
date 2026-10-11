@@ -1,0 +1,6185 @@
+{
+  "node_title_range": [
+    40,
+    72
+  ],
+  "body": 32,
+  "entity_title": 34,
+  "entity_fields": 26,
+  "nodes": [
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "feature-overview",
+      "node": "system",
+      "title_size": 43,
+      "body_size": 32,
+      "width": 467,
+      "height": 76
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "feature-overview",
+      "node": "F01",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 533,
+      "height": 111
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "feature-overview",
+      "node": "F02",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 533,
+      "height": 111
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "feature-overview",
+      "node": "F03",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 533,
+      "height": 111
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "feature-overview",
+      "node": "F04",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 461,
+      "height": 111
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "feature-overview",
+      "node": "F05",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 749,
+      "height": 111
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "feature-overview",
+      "node": "F06",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 711,
+      "height": 111
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "feature-overview",
+      "node": "F07",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 776,
+      "height": 111
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "feature-overview",
+      "node": "F08",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 749,
+      "height": 111
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "feature-overview",
+      "node": "F09",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 821,
+      "height": 111
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "feature-overview",
+      "node": "F10",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 749,
+      "height": 111
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f01",
+      "node": "F01",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 184,
+      "height": 157
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f01",
+      "node": "F01.01",
+      "title_size": 40,
+      "body_size": 32,
+      "width": 449,
+      "height": 72
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f01",
+      "node": "F01.01.features",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 832,
+      "height": 198
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f01",
+      "node": "F01.02",
+      "title_size": 49,
+      "body_size": 32,
+      "width": 445,
+      "height": 83
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f01",
+      "node": "F01.02.features",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 816,
+      "height": 198
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f01",
+      "node": "F01.03",
+      "title_size": 40,
+      "body_size": 32,
+      "width": 529,
+      "height": 72
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f01",
+      "node": "F01.03.features",
+      "title_size": 69,
+      "body_size": 32,
+      "width": 921,
+      "height": 194
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f01",
+      "node": "F01-boundary",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 888,
+      "height": 111
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f02",
+      "node": "F02",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 184,
+      "height": 157
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f02",
+      "node": "F02.01",
+      "title_size": 56,
+      "body_size": 32,
+      "width": 452,
+      "height": 92
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f02",
+      "node": "F02.01.features",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 744,
+      "height": 198
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f02",
+      "node": "F02.02",
+      "title_size": 49,
+      "body_size": 32,
+      "width": 445,
+      "height": 83
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f02",
+      "node": "F02.02.features",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 888,
+      "height": 198
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f02",
+      "node": "F02.03",
+      "title_size": 56,
+      "body_size": 32,
+      "width": 452,
+      "height": 92
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f02",
+      "node": "F02.03.features",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 731,
+      "height": 198
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f02",
+      "node": "F02-boundary",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 936,
+      "height": 111
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f03",
+      "node": "F03",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 184,
+      "height": 157
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f03",
+      "node": "F03.01",
+      "title_size": 40,
+      "body_size": 32,
+      "width": 449,
+      "height": 72
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f03",
+      "node": "F03.01.features",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 816,
+      "height": 198
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f03",
+      "node": "F03.02",
+      "title_size": 44,
+      "body_size": 32,
+      "width": 447,
+      "height": 77
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f03",
+      "node": "F03.02.features",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 888,
+      "height": 198
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f03",
+      "node": "F03.03",
+      "title_size": 40,
+      "body_size": 32,
+      "width": 449,
+      "height": 72
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f03",
+      "node": "F03.03.features",
+      "title_size": 69,
+      "body_size": 32,
+      "width": 921,
+      "height": 194
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f03",
+      "node": "F03-boundary",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 697,
+      "height": 157
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f04",
+      "node": "F04",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 152,
+      "height": 157
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f04",
+      "node": "F04.01",
+      "title_size": 49,
+      "body_size": 32,
+      "width": 445,
+      "height": 83
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f04",
+      "node": "F04.01.features",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 820,
+      "height": 198
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f04",
+      "node": "F04.02",
+      "title_size": 40,
+      "body_size": 32,
+      "width": 449,
+      "height": 72
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f04",
+      "node": "F04.02.features",
+      "title_size": 69,
+      "body_size": 32,
+      "width": 921,
+      "height": 194
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f04",
+      "node": "F04.03",
+      "title_size": 49,
+      "body_size": 32,
+      "width": 445,
+      "height": 83
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f04",
+      "node": "F04.03.features",
+      "title_size": 71,
+      "body_size": 32,
+      "width": 914,
+      "height": 196
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f04",
+      "node": "F04-boundary",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 816,
+      "height": 111
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f05",
+      "node": "F05",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 280,
+      "height": 157
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f05",
+      "node": "F05.01",
+      "title_size": 40,
+      "body_size": 32,
+      "width": 449,
+      "height": 72
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f05",
+      "node": "F05.01.features",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 919,
+      "height": 198
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f05",
+      "node": "F05.02",
+      "title_size": 40,
+      "body_size": 32,
+      "width": 449,
+      "height": 72
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f05",
+      "node": "F05.02.features",
+      "title_size": 71,
+      "body_size": 32,
+      "width": 916,
+      "height": 196
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f05",
+      "node": "F05.03",
+      "title_size": 40,
+      "body_size": 32,
+      "width": 529,
+      "height": 72
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f05",
+      "node": "F05.03.features",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 922,
+      "height": 198
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f05",
+      "node": "F05-boundary",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 969,
+      "height": 111
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f06",
+      "node": "F06",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 261,
+      "height": 157
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f06",
+      "node": "F06.01",
+      "title_size": 53,
+      "body_size": 32,
+      "width": 455,
+      "height": 88
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f06",
+      "node": "F06.01.features",
+      "title_size": 70,
+      "body_size": 32,
+      "width": 919,
+      "height": 195
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f06",
+      "node": "F06.02",
+      "title_size": 40,
+      "body_size": 32,
+      "width": 449,
+      "height": 72
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f06",
+      "node": "F06.02.features",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 888,
+      "height": 198
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f06",
+      "node": "F06.03",
+      "title_size": 40,
+      "body_size": 32,
+      "width": 449,
+      "height": 72
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f06",
+      "node": "F06.03.features",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 888,
+      "height": 198
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f06",
+      "node": "F06-boundary",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 875,
+      "height": 111
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f07",
+      "node": "F07",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 289,
+      "height": 157
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f07",
+      "node": "F07.01",
+      "title_size": 41,
+      "body_size": 32,
+      "width": 445,
+      "height": 74
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f07",
+      "node": "F07.01.features",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 910,
+      "height": 198
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f07",
+      "node": "F07.02",
+      "title_size": 40,
+      "body_size": 32,
+      "width": 449,
+      "height": 72
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f07",
+      "node": "F07.02.features",
+      "title_size": 64,
+      "body_size": 32,
+      "width": 920,
+      "height": 188
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f07",
+      "node": "F07.03",
+      "title_size": 40,
+      "body_size": 32,
+      "width": 555,
+      "height": 72
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f07",
+      "node": "F07.03.features",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 830,
+      "height": 198
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f07",
+      "node": "F07-boundary",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 707,
+      "height": 157
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f08",
+      "node": "F08",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 280,
+      "height": 157
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f08",
+      "node": "F08.01",
+      "title_size": 40,
+      "body_size": 32,
+      "width": 449,
+      "height": 72
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f08",
+      "node": "F08.01.features",
+      "title_size": 69,
+      "body_size": 32,
+      "width": 921,
+      "height": 194
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f08",
+      "node": "F08.02",
+      "title_size": 49,
+      "body_size": 32,
+      "width": 445,
+      "height": 83
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f08",
+      "node": "F08.02.features",
+      "title_size": 66,
+      "body_size": 32,
+      "width": 909,
+      "height": 190
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f08",
+      "node": "F08.03",
+      "title_size": 65,
+      "body_size": 32,
+      "width": 453,
+      "height": 102
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f08",
+      "node": "F08.03.features",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 888,
+      "height": 198
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f08",
+      "node": "F08-boundary",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 672,
+      "height": 157
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f09",
+      "node": "F09",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 312,
+      "height": 157
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f09",
+      "node": "F09.01",
+      "title_size": 40,
+      "body_size": 32,
+      "width": 449,
+      "height": 72
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f09",
+      "node": "F09.01.features",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 890,
+      "height": 198
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f09",
+      "node": "F09.02",
+      "title_size": 44,
+      "body_size": 32,
+      "width": 447,
+      "height": 77
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f09",
+      "node": "F09.02.features",
+      "title_size": 70,
+      "body_size": 32,
+      "width": 916,
+      "height": 195
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f09",
+      "node": "F09.03",
+      "title_size": 40,
+      "body_size": 32,
+      "width": 529,
+      "height": 72
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f09",
+      "node": "F09.03.features",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 788,
+      "height": 198
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f09",
+      "node": "F09-boundary",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 1002,
+      "height": 111
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f10",
+      "node": "F10",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 280,
+      "height": 157
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f10",
+      "node": "F10.01",
+      "title_size": 49,
+      "body_size": 32,
+      "width": 445,
+      "height": 83
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f10",
+      "node": "F10.01.features",
+      "title_size": 64,
+      "body_size": 32,
+      "width": 923,
+      "height": 228
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f10",
+      "node": "F10.02",
+      "title_size": 56,
+      "body_size": 32,
+      "width": 452,
+      "height": 92
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f10",
+      "node": "F10.02.features",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 888,
+      "height": 198
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f10",
+      "node": "F10.03",
+      "title_size": 40,
+      "body_size": 32,
+      "width": 449,
+      "height": 72
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f10",
+      "node": "F10.03.features",
+      "title_size": 69,
+      "body_size": 32,
+      "width": 921,
+      "height": 194
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "f10",
+      "node": "F10-boundary",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 744,
+      "height": 157
+    },
+    {
+      "file": "02-system-architecture.drawio",
+      "page": "logical",
+      "node": "web",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 460,
+      "height": 157
+    },
+    {
+      "file": "02-system-architecture.drawio",
+      "page": "logical",
+      "node": "student",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 312,
+      "height": 157
+    },
+    {
+      "file": "02-system-architecture.drawio",
+      "page": "logical",
+      "node": "desktop",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 384,
+      "height": 157
+    },
+    {
+      "file": "02-system-architecture.drawio",
+      "page": "logical",
+      "node": "sdk",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 339,
+      "height": 111
+    },
+    {
+      "file": "02-system-architecture.drawio",
+      "page": "logical",
+      "node": "api",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 272,
+      "height": 157
+    },
+    {
+      "file": "02-system-architecture.drawio",
+      "page": "logical",
+      "node": "identity",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 384,
+      "height": 111
+    },
+    {
+      "file": "02-system-architecture.drawio",
+      "page": "logical",
+      "node": "prepare",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 384,
+      "height": 111
+    },
+    {
+      "file": "02-system-architecture.drawio",
+      "page": "logical",
+      "node": "capture",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 384,
+      "height": 111
+    },
+    {
+      "file": "02-system-architecture.drawio",
+      "page": "logical",
+      "node": "grading",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 384,
+      "height": 111
+    },
+    {
+      "file": "02-system-architecture.drawio",
+      "page": "logical",
+      "node": "stores",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 382,
+      "height": 111
+    },
+    {
+      "file": "02-system-architecture.drawio",
+      "page": "logical",
+      "node": "compute",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 487,
+      "height": 111
+    },
+    {
+      "file": "02-system-architecture.drawio",
+      "page": "logical",
+      "node": "db",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 446,
+      "height": 157
+    },
+    {
+      "file": "02-system-architecture.drawio",
+      "page": "logical",
+      "node": "object",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 280,
+      "height": 157
+    },
+    {
+      "file": "02-system-architecture.drawio",
+      "page": "logical",
+      "node": "redis",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 221,
+      "height": 157
+    },
+    {
+      "file": "02-system-architecture.drawio",
+      "page": "runtime",
+      "node": "go",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 435,
+      "height": 111
+    },
+    {
+      "file": "02-system-architecture.drawio",
+      "page": "runtime",
+      "node": "runtime",
+      "title_size": 68,
+      "body_size": 32,
+      "width": 591,
+      "height": 152
+    },
+    {
+      "file": "02-system-architecture.drawio",
+      "page": "runtime",
+      "node": "workers",
+      "title_size": 65,
+      "body_size": 32,
+      "width": 555,
+      "height": 102
+    },
+    {
+      "file": "02-system-architecture.drawio",
+      "page": "runtime",
+      "node": "image",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 312,
+      "height": 157
+    },
+    {
+      "file": "02-system-architecture.drawio",
+      "page": "runtime",
+      "node": "goai",
+      "title_size": 71,
+      "body_size": 32,
+      "width": 526,
+      "height": 110
+    },
+    {
+      "file": "02-system-architecture.drawio",
+      "page": "runtime",
+      "node": "agent",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 549,
+      "height": 111
+    },
+    {
+      "file": "02-system-architecture.drawio",
+      "page": "runtime",
+      "node": "models",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 532,
+      "height": 111
+    },
+    {
+      "file": "02-system-architecture.drawio",
+      "page": "runtime",
+      "node": "govern",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 312,
+      "height": 111
+    },
+    {
+      "file": "02-system-architecture.drawio",
+      "page": "runtime",
+      "node": "panel",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 456,
+      "height": 157
+    },
+    {
+      "file": "02-system-architecture.drawio",
+      "page": "runtime",
+      "node": "maintenance",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 312,
+      "height": 111
+    },
+    {
+      "file": "02-system-architecture.drawio",
+      "page": "runtime",
+      "node": "partialinfra",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 641,
+      "height": 157
+    },
+    {
+      "file": "03-module-dependencies.drawio",
+      "page": "overview",
+      "node": "server",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 249,
+      "height": 157
+    },
+    {
+      "file": "03-module-dependencies.drawio",
+      "page": "overview",
+      "node": "auth",
+      "title_size": 69,
+      "body_size": 32,
+      "width": 639,
+      "height": 107
+    },
+    {
+      "file": "03-module-dependencies.drawio",
+      "page": "overview",
+      "node": "db",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 379,
+      "height": 111
+    },
+    {
+      "file": "03-module-dependencies.drawio",
+      "page": "overview",
+      "node": "web",
+      "title_size": 63,
+      "body_size": 32,
+      "width": 559,
+      "height": 100
+    },
+    {
+      "file": "03-module-dependencies.drawio",
+      "page": "overview",
+      "node": "sdk",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 174,
+      "height": 111
+    },
+    {
+      "file": "03-module-dependencies.drawio",
+      "page": "overview",
+      "node": "workers",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 574,
+      "height": 111
+    },
+    {
+      "file": "03-module-dependencies.drawio",
+      "page": "overview",
+      "node": "debt",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 312,
+      "height": 157
+    },
+    {
+      "file": "03-module-dependencies.drawio",
+      "page": "overview",
+      "node": "constraints",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 603,
+      "height": 157
+    },
+    {
+      "file": "03-module-dependencies.drawio",
+      "page": "prepare",
+      "node": "capture",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 301,
+      "height": 111
+    },
+    {
+      "file": "03-module-dependencies.drawio",
+      "page": "prepare",
+      "node": "ocr",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 139,
+      "height": 111
+    },
+    {
+      "file": "03-module-dependencies.drawio",
+      "page": "prepare",
+      "node": "paper",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 235,
+      "height": 111
+    },
+    {
+      "file": "03-module-dependencies.drawio",
+      "page": "prepare",
+      "node": "processing",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 417,
+      "height": 111
+    },
+    {
+      "file": "03-module-dependencies.drawio",
+      "page": "prepare",
+      "node": "exam",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 221,
+      "height": 111
+    },
+    {
+      "file": "03-module-dependencies.drawio",
+      "page": "prepare",
+      "node": "submission",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 434,
+      "height": 111
+    },
+    {
+      "file": "03-module-dependencies.drawio",
+      "page": "prepare",
+      "node": "files",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 173,
+      "height": 111
+    },
+    {
+      "file": "03-module-dependencies.drawio",
+      "page": "prepare",
+      "node": "workerruntime",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 568,
+      "height": 111
+    },
+    {
+      "file": "03-module-dependencies.drawio",
+      "page": "prepare",
+      "node": "scope",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 312,
+      "height": 111
+    },
+    {
+      "file": "03-module-dependencies.drawio",
+      "page": "ai",
+      "node": "subjective",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 391,
+      "height": 111
+    },
+    {
+      "file": "03-module-dependencies.drawio",
+      "page": "ai",
+      "node": "modelgovernance",
+      "title_size": 51,
+      "body_size": 32,
+      "width": 487,
+      "height": 86
+    },
+    {
+      "file": "03-module-dependencies.drawio",
+      "page": "ai",
+      "node": "review",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 263,
+      "height": 111
+    },
+    {
+      "file": "03-module-dependencies.drawio",
+      "page": "ai",
+      "node": "mathunderstanding",
+      "title_size": 64,
+      "body_size": 32,
+      "width": 664,
+      "height": 101
+    },
+    {
+      "file": "03-module-dependencies.drawio",
+      "page": "ai",
+      "node": "grading",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 309,
+      "height": 111
+    },
+    {
+      "file": "03-module-dependencies.drawio",
+      "page": "ai",
+      "node": "paper",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 235,
+      "height": 111
+    },
+    {
+      "file": "03-module-dependencies.drawio",
+      "page": "ai",
+      "node": "segment",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 340,
+      "height": 111
+    },
+    {
+      "file": "03-module-dependencies.drawio",
+      "page": "ai",
+      "node": "assessment",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 442,
+      "height": 111
+    },
+    {
+      "file": "03-module-dependencies.drawio",
+      "page": "ai",
+      "node": "scope",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 312,
+      "height": 111
+    },
+    {
+      "file": "03-module-dependencies.drawio",
+      "page": "release",
+      "node": "schoolassistant",
+      "title_size": 60,
+      "body_size": 32,
+      "width": 487,
+      "height": 96
+    },
+    {
+      "file": "03-module-dependencies.drawio",
+      "page": "release",
+      "node": "releasegate",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 442,
+      "height": 111
+    },
+    {
+      "file": "03-module-dependencies.drawio",
+      "page": "release",
+      "node": "scorerelease",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 473,
+      "height": 111
+    },
+    {
+      "file": "03-module-dependencies.drawio",
+      "page": "release",
+      "node": "exam",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 221,
+      "height": 111
+    },
+    {
+      "file": "03-module-dependencies.drawio",
+      "page": "release",
+      "node": "workspace",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 411,
+      "height": 111
+    },
+    {
+      "file": "03-module-dependencies.drawio",
+      "page": "release",
+      "node": "qualitydashboard",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 662,
+      "height": 111
+    },
+    {
+      "file": "03-module-dependencies.drawio",
+      "page": "release",
+      "node": "files",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 173,
+      "height": 111
+    },
+    {
+      "file": "03-module-dependencies.drawio",
+      "page": "release",
+      "node": "scope",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 312,
+      "height": 111
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "global",
+      "node": "school",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 268
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "global",
+      "node": "exam",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "global",
+      "node": "exam_paper",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "global",
+      "node": "question",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "global",
+      "node": "student",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "global",
+      "node": "submission",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 399
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "global",
+      "node": "submission_page",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "global",
+      "node": "answer_segment",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "global",
+      "node": "rubric_version",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 301
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "global",
+      "node": "scoring_run",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "global",
+      "node": "question_grade",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "global",
+      "node": "review_task",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 432
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "global",
+      "node": "subjective_grading_panel",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 399
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "global",
+      "node": "subjective_grading_run",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 399
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "global",
+      "node": "ai_grade",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 399
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "global",
+      "node": "human_grade",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 301
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "global",
+      "node": "final_grade",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 301
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "global",
+      "node": "score_release",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "global",
+      "node": "score_release_item",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "global",
+      "node": "score_release_question",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "cardinality",
+      "node": "relation_0_app_user",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 1065,
+      "height": 301
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "cardinality",
+      "node": "relation_0_user_role",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 1065,
+      "height": 235
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "cardinality",
+      "node": "relation_0_role",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 1065,
+      "height": 202
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "cardinality",
+      "node": "relation_1_role",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 1065,
+      "height": 202
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "cardinality",
+      "node": "relation_1_role_permission",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 1065,
+      "height": 235
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "cardinality",
+      "node": "relation_1_permission",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 1065,
+      "height": 202
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "cardinality",
+      "node": "relation_2_app_user",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 1065,
+      "height": 301
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "cardinality",
+      "node": "relation_2_teacher_class",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 1065,
+      "height": 268
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "cardinality",
+      "node": "relation_2_school_class",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 1065,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "cardinality",
+      "node": "relation_3_exam",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 1065,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "cardinality",
+      "node": "relation_3_exam_class",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 1065,
+      "height": 268
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "cardinality",
+      "node": "relation_3_school_class",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 1065,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "cardinality",
+      "node": "relation_4_exam",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 1065,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "cardinality",
+      "node": "relation_4_score_release_current",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 1065,
+      "height": 202
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "cardinality",
+      "node": "relation_4_score_release",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 1065,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "cardinality",
+      "node": "relation_5_local_asset",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 1065,
+      "height": 170
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "cardinality",
+      "node": "relation_5_upload_session",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 1065,
+      "height": 104
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "auth",
+      "node": "tenant",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 235
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "auth",
+      "node": "app_user",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "auth",
+      "node": "role",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 202
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "auth",
+      "node": "permission",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 202
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "auth",
+      "node": "user_role",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 235
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "auth",
+      "node": "role_permission",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 235
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "auth",
+      "node": "auth_session",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 235
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "auth",
+      "node": "audit_log",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 235
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "identity",
+      "node": "auth_activation",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 268
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "identity",
+      "node": "auth_recovery",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 301
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "identity",
+      "node": "auth_trusted_device",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 268
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "identity",
+      "node": "auth_risk_event",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 235
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "identity",
+      "node": "auth_totp",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 202
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "identity",
+      "node": "auth_mfa_recovery_code",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 202
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "identity",
+      "node": "auth_mfa_challenge",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 235
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "identity",
+      "node": "auth_security_notification_intent",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 235
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "identity",
+      "node": "wechat_identity",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 235
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "identity",
+      "node": "auth_wechat_login_challenge",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "org",
+      "node": "school",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 268
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "org",
+      "node": "grade",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "org",
+      "node": "school_class",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "org",
+      "node": "student",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "org",
+      "node": "teacher_class",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 268
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "org",
+      "node": "academic_year",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "org",
+      "node": "grade_cohort",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 235
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "org",
+      "node": "student_enrollment",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "exam",
+      "node": "exam_session",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "exam",
+      "node": "exam",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "exam",
+      "node": "exam_class",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 268
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "exam",
+      "node": "exam_candidate_snapshot",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 301
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "exam",
+      "node": "exam_blueprint_section",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 268
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "exam",
+      "node": "exam_template",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 399
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "exam",
+      "node": "exam_template_subject",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 235
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "exam",
+      "node": "exam_template_section",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 235
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "exam",
+      "node": "exam_student_attendance",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "exam",
+      "node": "exam_readiness_snapshot",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 268
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "paper",
+      "node": "exam_paper",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "paper",
+      "node": "question",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "paper",
+      "node": "question_answer_key",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 301
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "paper",
+      "node": "rubric_version",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 301
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "paper",
+      "node": "question_rubric",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 301
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "paper",
+      "node": "question_solution",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "import",
+      "node": "paper_import_job",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "import",
+      "node": "paper_import_source",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 268
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "import",
+      "node": "paper_import_parse_input",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 301
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "import",
+      "node": "paper_import_formula_input",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "import",
+      "node": "paper_import_run",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "capture",
+      "node": "capture_batch",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 399
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "capture",
+      "node": "capture_file",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "capture",
+      "node": "capture_page",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 399
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "capture",
+      "node": "capture_operation",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 202
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "capture",
+      "node": "submission",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 399
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "capture",
+      "node": "submission_page",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "capture",
+      "node": "capture_upload_session",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 399
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "capture",
+      "node": "capture_upload_chunk",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 170
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "capture",
+      "node": "scanner_profile",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 268
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "registration",
+      "node": "submission_page_quality_run",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "registration",
+      "node": "page_registration_run",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 301
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "registration",
+      "node": "page_registration_correction",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 399
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "registration",
+      "node": "page_template_match_run",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "registration",
+      "node": "answer_sheet_template",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 399
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "registration",
+      "node": "exam_answer_sheet_template_binding",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "registration",
+      "node": "omr_calibration_session",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 432
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "registration",
+      "node": "omr_calibration_case",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "print",
+      "node": "answer_sheet_print_batch",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 301
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "print",
+      "node": "answer_sheet_print_sheet",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "print",
+      "node": "answer_sheet_print_page",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 202
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "runtime",
+      "node": "orchestration_run",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 235
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "runtime",
+      "node": "agent_task",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 268
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "runtime",
+      "node": "agent_job",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 235
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "runtime",
+      "node": "agent_worker_task",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 399
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "runtime",
+      "node": "agent_worker_task_attempt",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 268
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "runtime",
+      "node": "agent_worker_heartbeat",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 202
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "runtime",
+      "node": "ocr_task",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 301
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "runtime",
+      "node": "ocr_result",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 268
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "runtime",
+      "node": "submission_page_processing_state",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 268
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "runtime",
+      "node": "operational_exception",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "runtime",
+      "node": "processing_projection_cursor",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 202
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "objective",
+      "node": "answer_segment",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "objective",
+      "node": "answer_segment_answer",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 235
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "objective",
+      "node": "scoring_rule",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 399
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "objective",
+      "node": "scoring_run",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "objective",
+      "node": "answer_candidate",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "objective",
+      "node": "omr_run",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "objective",
+      "node": "question_grade",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "review",
+      "node": "review_task",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 432
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "review",
+      "node": "human_grade",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 301
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "review",
+      "node": "review_draft",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "review",
+      "node": "double_mark_policy",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 301
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "review",
+      "node": "double_mark_session",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 301
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "review",
+      "node": "arbitration_task",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "review",
+      "node": "final_grade",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 301
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "review",
+      "node": "submission_grade",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "review",
+      "node": "review_annotation",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "review",
+      "node": "review_comment_template",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "subjective",
+      "node": "ai_grade",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 399
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "subjective",
+      "node": "subjective_grading_run",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 399
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "subjective",
+      "node": "subjective_grading_batch",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "subjective",
+      "node": "subjective_grading_panel",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 399
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "subjective",
+      "node": "subjective_panel_policy",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "subjective",
+      "node": "grading_panel_evaluation_observation",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 235
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "subjective",
+      "node": "subjective_batch_enqueue_plan",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 170
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "model",
+      "node": "model_provider",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 235
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "model",
+      "node": "model_deployment",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "model",
+      "node": "managed_model_api_config",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 301
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "model",
+      "node": "model_role_binding",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 399
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "model",
+      "node": "tenant_model_policy",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 268
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "model",
+      "node": "tenant_model_policy_model",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 235
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "model",
+      "node": "model_call_fact",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "model",
+      "node": "model_sandbox_approval",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 301
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "model",
+      "node": "model_evaluation_run",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "model",
+      "node": "model_evaluation_candidate",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 399
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "model",
+      "node": "model_approval",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 432
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "platform",
+      "node": "model_usage_event",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 268
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "platform",
+      "node": "model_usage_daily",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 170
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "platform",
+      "node": "platform_school_metrics",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 170
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "platform",
+      "node": "platform_school_model_role",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 137
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "platform",
+      "node": "activity_event",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 301
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "assessment",
+      "node": "subject_profile",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 301
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "assessment",
+      "node": "question_archetype",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 104
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "assessment",
+      "node": "question_assessment_config",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "assessment",
+      "node": "exam_question_snapshot",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "assessment",
+      "node": "scoring_evidence",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 301
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "calibration",
+      "node": "grading_gold_paper",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "calibration",
+      "node": "grading_gold_paper_version",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "calibration",
+      "node": "grader_calibration_policy",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 268
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "calibration",
+      "node": "grader_calibration_session",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "calibration",
+      "node": "grader_calibration_attempt",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 301
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "calibration",
+      "node": "grader_question_qualification",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "group",
+      "node": "answer_group",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 301
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "group",
+      "node": "answer_group_member",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 235
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "group",
+      "node": "answer_group_sample_review",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 268
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "group",
+      "node": "answer_group_decision",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "group",
+      "node": "answer_group_automation_candidate",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 399
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "quality",
+      "node": "seed_sampling_policy",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "quality",
+      "node": "seed_sampling_cursor",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 202
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "quality",
+      "node": "seed_task",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "quality",
+      "node": "seed_observation",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "quality",
+      "node": "grader_quality_window",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "quality",
+      "node": "grading_quality_incident",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 399
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "quality",
+      "node": "backmark_batch",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "quality",
+      "node": "backmark_item",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "quality",
+      "node": "backmark_grade",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 268
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "evaluation",
+      "node": "ai_eligibility_policy",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 301
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "evaluation",
+      "node": "ai_eligibility_decision",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 235
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "evaluation",
+      "node": "grading_evaluation_run",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 301
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "evaluation",
+      "node": "grading_evaluation_observation",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 235
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "evaluation",
+      "node": "grading_evaluation_slice_metric",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 235
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "evaluation",
+      "node": "grading_evaluation_response_difficulty",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 235
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "evaluation",
+      "node": "model_calibration",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 399
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "evaluation",
+      "node": "model_calibration_evidence",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 301
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "evaluation",
+      "node": "model_score_candidate",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 235
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "evaluation",
+      "node": "ai_human_disagreement",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "release",
+      "node": "score_release",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "release",
+      "node": "score_release_current",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 202
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "release",
+      "node": "score_release_item",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "release",
+      "node": "score_release_question",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "release",
+      "node": "score_release_anonymous_page",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "release",
+      "node": "release_gate_policy",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "release",
+      "node": "release_gate_evidence",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 268
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "release",
+      "node": "release_gate_waiver_request",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 235
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "release",
+      "node": "release_gate_waiver_decision",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 268
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "release",
+      "node": "report",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 301
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "appeal",
+      "node": "regrade_job",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "appeal",
+      "node": "regrade_item",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "appeal",
+      "node": "regrade_event",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 268
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "appeal",
+      "node": "question_appeal",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "appeal",
+      "node": "question_appeal_event",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 235
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "appeal",
+      "node": "appeal",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "appeal",
+      "node": "score_adjustment",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 268
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "math",
+      "node": "math_understanding_artifact",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 399
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "math",
+      "node": "math_understanding_correction",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "math",
+      "node": "math_pilot_gate_evaluation",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 202
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "bank",
+      "node": "question_bank",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "bank",
+      "node": "question_bank_acl",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 235
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "bank",
+      "node": "question_bank_item",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "bank",
+      "node": "question_bank_item_version",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "bank",
+      "node": "question_bank_review",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 202
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "bank",
+      "node": "question_bank_answer_version",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 202
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "bank",
+      "node": "question_bank_rubric_version",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 202
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "bank",
+      "node": "question_bank_item_asset",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 235
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "bankmeta",
+      "node": "question_bank_rubric_template",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 137
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "bankmeta",
+      "node": "question_bank_rubric_template_version",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 202
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "bankmeta",
+      "node": "question_bank_metadata_schema",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 202
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "bankmeta",
+      "node": "question_bank_item_metadata",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 235
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "bankmeta",
+      "node": "question_bank_group",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 268
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "bankmeta",
+      "node": "question_bank_group_member",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 202
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "bankmeta",
+      "node": "question_bank_group_acl",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 235
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "bankmeta",
+      "node": "question_bank_import",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "reliability",
+      "node": "file_asset",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 399
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "reliability",
+      "node": "file_reconciliation_run",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 170
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "reliability",
+      "node": "file_reconciliation_finding",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 235
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "reliability",
+      "node": "event_outbox",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 202
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "reliability",
+      "node": "idempotency_record",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 301
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "reliability",
+      "node": "business_command_receipt",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 170
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "reliability",
+      "node": "exam_management_command",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 170
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "reliability",
+      "node": "exam_archive_guarded_table",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 104
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "reliability",
+      "node": "schema_migration",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 104
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "sqlite",
+      "node": "local_asset",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 170
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "sqlite",
+      "node": "scan_batch_local",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 137
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "sqlite",
+      "node": "upload_session",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 104
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "sqlite",
+      "node": "upload_chunk",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 170
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "sqlite",
+      "node": "local_asset_ingest",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 137
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "sqlite",
+      "node": "local_asset_chunk",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 170
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "sqlite",
+      "node": "sync_event",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 235
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "sqlite",
+      "node": "draft",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 104
+    },
+    {
+      "file": "05-business-workflow.drawio",
+      "page": "intake",
+      "node": "create",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 312,
+      "height": 111
+    },
+    {
+      "file": "05-business-workflow.drawio",
+      "page": "intake",
+      "node": "configure",
+      "title_size": 52,
+      "body_size": 32,
+      "width": 550,
+      "height": 87
+    },
+    {
+      "file": "05-business-workflow.drawio",
+      "page": "intake",
+      "node": "ready",
+      "title_size": 55,
+      "body_size": 32,
+      "width": 551,
+      "height": 90
+    },
+    {
+      "file": "05-business-workflow.drawio",
+      "page": "intake",
+      "node": "capture",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 312,
+      "height": 111
+    },
+    {
+      "file": "05-business-workflow.drawio",
+      "page": "intake",
+      "node": "decode",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 384,
+      "height": 111
+    },
+    {
+      "file": "05-business-workflow.drawio",
+      "page": "intake",
+      "node": "quality",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 312,
+      "height": 111
+    },
+    {
+      "file": "05-business-workflow.drawio",
+      "page": "intake",
+      "node": "quality_result",
+      "title_size": 70,
+      "body_size": 32,
+      "width": 555,
+      "height": 152
+    },
+    {
+      "file": "05-business-workflow.drawio",
+      "page": "intake",
+      "node": "review_quality",
+      "title_size": 58,
+      "body_size": 32,
+      "width": 549,
+      "height": 94
+    },
+    {
+      "file": "05-business-workflow.drawio",
+      "page": "intake",
+      "node": "template",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 456,
+      "height": 111
+    },
+    {
+      "file": "05-business-workflow.drawio",
+      "page": "intake",
+      "node": "registration",
+      "title_size": 69,
+      "body_size": 32,
+      "width": 559,
+      "height": 107
+    },
+    {
+      "file": "05-business-workflow.drawio",
+      "page": "intake",
+      "node": "segments",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 312,
+      "height": 111
+    },
+    {
+      "file": "05-business-workflow.drawio",
+      "page": "intake",
+      "node": "recognize",
+      "title_size": 46,
+      "body_size": 32,
+      "width": 557,
+      "height": 80
+    },
+    {
+      "file": "05-business-workflow.drawio",
+      "page": "intake",
+      "node": "next",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 312,
+      "height": 111
+    },
+    {
+      "file": "05-business-workflow.drawio",
+      "page": "grading_release",
+      "node": "start",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 312,
+      "height": 111
+    },
+    {
+      "file": "05-business-workflow.drawio",
+      "page": "grading_release",
+      "node": "mode",
+      "title_size": 40,
+      "body_size": 32,
+      "width": 652,
+      "height": 97
+    },
+    {
+      "file": "05-business-workflow.drawio",
+      "page": "grading_release",
+      "node": "human",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 312,
+      "height": 157
+    },
+    {
+      "file": "05-business-workflow.drawio",
+      "page": "grading_release",
+      "node": "rule",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 456,
+      "height": 157
+    },
+    {
+      "file": "05-business-workflow.drawio",
+      "page": "grading_release",
+      "node": "omr",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 456,
+      "height": 157
+    },
+    {
+      "file": "05-business-workflow.drawio",
+      "page": "grading_release",
+      "node": "ai_assist",
+      "title_size": 40,
+      "body_size": 32,
+      "width": 646,
+      "height": 119
+    },
+    {
+      "file": "05-business-workflow.drawio",
+      "page": "grading_release",
+      "node": "confirm_rule",
+      "title_size": 50,
+      "body_size": 32,
+      "width": 555,
+      "height": 115
+    },
+    {
+      "file": "05-business-workflow.drawio",
+      "page": "grading_release",
+      "node": "review",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 312,
+      "height": 111
+    },
+    {
+      "file": "05-business-workflow.drawio",
+      "page": "grading_release",
+      "node": "ai_optional",
+      "title_size": 69,
+      "body_size": 32,
+      "width": 555,
+      "height": 107
+    },
+    {
+      "file": "05-business-workflow.drawio",
+      "page": "grading_release",
+      "node": "finalize",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 312,
+      "height": 111
+    },
+    {
+      "file": "05-business-workflow.drawio",
+      "page": "grading_release",
+      "node": "confirm",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 312,
+      "height": 111
+    },
+    {
+      "file": "05-business-workflow.drawio",
+      "page": "grading_release",
+      "node": "release",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 528,
+      "height": 111
+    },
+    {
+      "file": "05-business-workflow.drawio",
+      "page": "grading_release",
+      "node": "student",
+      "title_size": 66,
+      "body_size": 32,
+      "width": 552,
+      "height": 104
+    },
+    {
+      "file": "05-business-workflow.drawio",
+      "page": "publication_paths",
+      "node": "old_route",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 384,
+      "height": 111
+    },
+    {
+      "file": "05-business-workflow.drawio",
+      "page": "publication_paths",
+      "node": "old_gate",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 384,
+      "height": 111
+    },
+    {
+      "file": "05-business-workflow.drawio",
+      "page": "publication_paths",
+      "node": "old_publish",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 456,
+      "height": 111
+    },
+    {
+      "file": "05-business-workflow.drawio",
+      "page": "publication_paths",
+      "node": "old_student",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 528,
+      "height": 111
+    },
+    {
+      "file": "05-business-workflow.drawio",
+      "page": "publication_paths",
+      "node": "new_route",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 456,
+      "height": 111
+    },
+    {
+      "file": "05-business-workflow.drawio",
+      "page": "publication_paths",
+      "node": "new_gate",
+      "title_size": 47,
+      "body_size": 32,
+      "width": 547,
+      "height": 81
+    },
+    {
+      "file": "05-business-workflow.drawio",
+      "page": "publication_paths",
+      "node": "new_publish",
+      "title_size": 46,
+      "body_size": 32,
+      "width": 558,
+      "height": 80
+    },
+    {
+      "file": "05-business-workflow.drawio",
+      "page": "publication_paths",
+      "node": "new_student",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 528,
+      "height": 111
+    },
+    {
+      "file": "05-business-workflow.drawio",
+      "page": "publication_paths",
+      "node": "gap",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 888,
+      "height": 111
+    },
+    {
+      "file": "05-business-workflow.drawio",
+      "page": "publication_paths",
+      "node": "split",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 960,
+      "height": 111
+    },
+    {
+      "file": "06-image-template-pipeline.drawio",
+      "page": "template_routing",
+      "node": "upload",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 312,
+      "height": 111
+    },
+    {
+      "file": "06-image-template-pipeline.drawio",
+      "page": "template_routing",
+      "node": "decode",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 532,
+      "height": 111
+    },
+    {
+      "file": "06-image-template-pipeline.drawio",
+      "page": "template_routing",
+      "node": "quality",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 312,
+      "height": 111
+    },
+    {
+      "file": "06-image-template-pipeline.drawio",
+      "page": "template_routing",
+      "node": "q",
+      "title_size": 70,
+      "body_size": 32,
+      "width": 555,
+      "height": 152
+    },
+    {
+      "file": "06-image-template-pipeline.drawio",
+      "page": "template_routing",
+      "node": "blocked",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 312,
+      "height": 111
+    },
+    {
+      "file": "06-image-template-pipeline.drawio",
+      "page": "template_routing",
+      "node": "controlled",
+      "title_size": 40,
+      "body_size": 32,
+      "width": 570,
+      "height": 97
+    },
+    {
+      "file": "06-image-template-pipeline.drawio",
+      "page": "template_routing",
+      "node": "bound",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 312,
+      "height": 111
+    },
+    {
+      "file": "06-image-template-pipeline.drawio",
+      "page": "template_routing",
+      "node": "candidates",
+      "title_size": 66,
+      "body_size": 32,
+      "width": 552,
+      "height": 104
+    },
+    {
+      "file": "06-image-template-pipeline.drawio",
+      "page": "template_routing",
+      "node": "score",
+      "title_size": 48,
+      "body_size": 32,
+      "width": 559,
+      "height": 112
+    },
+    {
+      "file": "06-image-template-pipeline.drawio",
+      "page": "template_routing",
+      "node": "match",
+      "title_size": 70,
+      "body_size": 32,
+      "width": 556,
+      "height": 108
+    },
+    {
+      "file": "06-image-template-pipeline.drawio",
+      "page": "template_routing",
+      "node": "unknown",
+      "title_size": 65,
+      "body_size": 32,
+      "width": 552,
+      "height": 102
+    },
+    {
+      "file": "06-image-template-pipeline.drawio",
+      "page": "template_routing",
+      "node": "next",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 312,
+      "height": 111
+    },
+    {
+      "file": "06-image-template-pipeline.drawio",
+      "page": "template_routing",
+      "node": "missing",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 969,
+      "height": 111
+    },
+    {
+      "file": "06-image-template-pipeline.drawio",
+      "page": "registration_crops",
+      "node": "input",
+      "title_size": 64,
+      "body_size": 32,
+      "width": 559,
+      "height": 101
+    },
+    {
+      "file": "06-image-template-pipeline.drawio",
+      "page": "registration_crops",
+      "node": "guard",
+      "title_size": 50,
+      "body_size": 32,
+      "width": 555,
+      "height": 115
+    },
+    {
+      "file": "06-image-template-pipeline.drawio",
+      "page": "registration_crops",
+      "node": "fallback",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 456,
+      "height": 157
+    },
+    {
+      "file": "06-image-template-pipeline.drawio",
+      "page": "registration_crops",
+      "node": "cv",
+      "title_size": 43,
+      "body_size": 32,
+      "width": 553,
+      "height": 76
+    },
+    {
+      "file": "06-image-template-pipeline.drawio",
+      "page": "registration_crops",
+      "node": "safe",
+      "title_size": 70,
+      "body_size": 32,
+      "width": 555,
+      "height": 152
+    },
+    {
+      "file": "06-image-template-pipeline.drawio",
+      "page": "registration_crops",
+      "node": "terminal",
+      "title_size": 70,
+      "body_size": 32,
+      "width": 556,
+      "height": 108
+    },
+    {
+      "file": "06-image-template-pipeline.drawio",
+      "page": "registration_crops",
+      "node": "crop",
+      "title_size": 54,
+      "body_size": 32,
+      "width": 550,
+      "height": 89
+    },
+    {
+      "file": "06-image-template-pipeline.drawio",
+      "page": "registration_crops",
+      "node": "persist",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 456,
+      "height": 111
+    },
+    {
+      "file": "06-image-template-pipeline.drawio",
+      "page": "registration_crops",
+      "node": "runtime",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 497,
+      "height": 157
+    },
+    {
+      "file": "06-image-template-pipeline.drawio",
+      "page": "registration_crops",
+      "node": "confirm",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 312,
+      "height": 111
+    },
+    {
+      "file": "06-image-template-pipeline.drawio",
+      "page": "registration_crops",
+      "node": "manual",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 312,
+      "height": 111
+    },
+    {
+      "file": "06-image-template-pipeline.drawio",
+      "page": "registration_crops",
+      "node": "apply",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 388,
+      "height": 111
+    },
+    {
+      "file": "06-image-template-pipeline.drawio",
+      "page": "blank_boundaries",
+      "node": "page_input",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 312,
+      "height": 111
+    },
+    {
+      "file": "06-image-template-pipeline.drawio",
+      "page": "blank_boundaries",
+      "node": "page_detect",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 456,
+      "height": 111
+    },
+    {
+      "file": "06-image-template-pipeline.drawio",
+      "page": "blank_boundaries",
+      "node": "page_review",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 312,
+      "height": 111
+    },
+    {
+      "file": "06-image-template-pipeline.drawio",
+      "page": "blank_boundaries",
+      "node": "omr_input",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 322,
+      "height": 111
+    },
+    {
+      "file": "06-image-template-pipeline.drawio",
+      "page": "blank_boundaries",
+      "node": "omr_detect",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 456,
+      "height": 111
+    },
+    {
+      "file": "06-image-template-pipeline.drawio",
+      "page": "blank_boundaries",
+      "node": "omr_review",
+      "title_size": 62,
+      "body_size": 32,
+      "width": 556,
+      "height": 99
+    },
+    {
+      "file": "06-image-template-pipeline.drawio",
+      "page": "blank_boundaries",
+      "node": "ocr_input",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 346,
+      "height": 111
+    },
+    {
+      "file": "06-image-template-pipeline.drawio",
+      "page": "blank_boundaries",
+      "node": "ocr_detect",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 312,
+      "height": 111
+    },
+    {
+      "file": "06-image-template-pipeline.drawio",
+      "page": "blank_boundaries",
+      "node": "ocr_review",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 312,
+      "height": 111
+    },
+    {
+      "file": "06-image-template-pipeline.drawio",
+      "page": "blank_boundaries",
+      "node": "gap",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 960,
+      "height": 111
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "actual_entry",
+      "node": "entry",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 487,
+      "height": 111
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "actual_entry",
+      "node": "worker",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 532,
+      "height": 111
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "actual_entry",
+      "node": "prepare",
+      "title_size": 52,
+      "body_size": 32,
+      "width": 550,
+      "height": 87
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "actual_entry",
+      "node": "gate",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 502,
+      "height": 155
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "actual_entry",
+      "node": "abstain",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 460,
+      "height": 111
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "actual_entry",
+      "node": "input",
+      "title_size": 52,
+      "body_size": 32,
+      "width": 550,
+      "height": 87
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "actual_entry",
+      "node": "adapter",
+      "title_size": 57,
+      "body_size": 32,
+      "width": 557,
+      "height": 93
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "actual_entry",
+      "node": "agent",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 549,
+      "height": 111
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "actual_entry",
+      "node": "settle",
+      "title_size": 66,
+      "body_size": 32,
+      "width": 557,
+      "height": 104
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "actual_entry",
+      "node": "complete",
+      "title_size": 58,
+      "body_size": 32,
+      "width": 549,
+      "height": 94
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "actual_entry",
+      "node": "human",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 312,
+      "height": 111
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "actual_entry",
+      "node": "missing",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 408,
+      "height": 157
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "actual_entry",
+      "node": "version",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 745,
+      "height": 111
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "panel_kernel",
+      "node": "policy",
+      "title_size": 64,
+      "body_size": 32,
+      "width": 558,
+      "height": 101
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "panel_kernel",
+      "node": "panel",
+      "title_size": 65,
+      "body_size": 32,
+      "width": 552,
+      "height": 102
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "panel_kernel",
+      "node": "a",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 387,
+      "height": 111
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "panel_kernel",
+      "node": "b",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 382,
+      "height": 111
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "panel_kernel",
+      "node": "derive",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 384,
+      "height": 111
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "panel_kernel",
+      "node": "compare",
+      "title_size": 49,
+      "body_size": 32,
+      "width": 561,
+      "height": 114
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "panel_kernel",
+      "node": "consensus",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 408,
+      "height": 111
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "panel_kernel",
+      "node": "c",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 309,
+      "height": 111
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "panel_kernel",
+      "node": "safe",
+      "title_size": 44,
+      "body_size": 32,
+      "width": 556,
+      "height": 104
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "panel_kernel",
+      "node": "human",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 456,
+      "height": 111
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "panel_kernel",
+      "node": "resolved",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 402,
+      "height": 111
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "panel_kernel",
+      "node": "boundary",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 384,
+      "height": 157
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "failure_cost",
+      "node": "request",
+      "title_size": 66,
+      "body_size": 32,
+      "width": 557,
+      "height": 104
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "failure_cost",
+      "node": "cache",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 312,
+      "height": 111
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "failure_cost",
+      "node": "session",
+      "title_size": 66,
+      "body_size": 32,
+      "width": 557,
+      "height": 150
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "failure_cost",
+      "node": "retry",
+      "title_size": 44,
+      "body_size": 32,
+      "width": 555,
+      "height": 77
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "failure_cost",
+      "node": "go_retry",
+      "title_size": 61,
+      "body_size": 32,
+      "width": 558,
+      "height": 144
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "failure_cost",
+      "node": "worker_retry",
+      "title_size": 66,
+      "body_size": 32,
+      "width": 555,
+      "height": 104
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "failure_cost",
+      "node": "usage",
+      "title_size": 65,
+      "body_size": 32,
+      "width": 556,
+      "height": 149
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "failure_cost",
+      "node": "gap",
+      "title_size": 48,
+      "body_size": 32,
+      "width": 552,
+      "height": 82
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "failure_cost",
+      "node": "panel_gap",
+      "title_size": 41,
+      "body_size": 32,
+      "width": 557,
+      "height": 74
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "multimodal_math",
+      "node": "v1",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 419,
+      "height": 111
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "multimodal_math",
+      "node": "v2_entry",
+      "title_size": 68,
+      "body_size": 32,
+      "width": 553,
+      "height": 106
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "multimodal_math",
+      "node": "crop",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 456,
+      "height": 111
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "multimodal_math",
+      "node": "build",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 532,
+      "height": 111
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "multimodal_math",
+      "node": "app",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 352,
+      "height": 111
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "multimodal_math",
+      "node": "messages",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 384,
+      "height": 111
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "multimodal_math",
+      "node": "local",
+      "title_size": 47,
+      "body_size": 32,
+      "width": 544,
+      "height": 81
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "multimodal_math",
+      "node": "native",
+      "title_size": 54,
+      "body_size": 32,
+      "width": 554,
+      "height": 136
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "multimodal_math",
+      "node": "candidate",
+      "title_size": 66,
+      "body_size": 32,
+      "width": 557,
+      "height": 104
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "multimodal_math",
+      "node": "settle",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 528,
+      "height": 111
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "multimodal_math",
+      "node": "human",
+      "title_size": 55,
+      "body_size": 32,
+      "width": 554,
+      "height": 90
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "multimodal_math",
+      "node": "empty",
+      "title_size": 62,
+      "body_size": 32,
+      "width": 550,
+      "height": 99
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "api-overview",
+      "node": "web",
+      "title_size": 52,
+      "body_size": 32,
+      "width": 423,
+      "height": 87
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "api-overview",
+      "node": "student",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 312,
+      "height": 111
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "api-overview",
+      "node": "desktop",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 384,
+      "height": 111
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "api-overview",
+      "node": "transport",
+      "title_size": 62,
+      "body_size": 32,
+      "width": 469,
+      "height": 99
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "api-overview",
+      "node": "mux",
+      "title_size": 70,
+      "body_size": 32,
+      "width": 455,
+      "height": 108
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "api-overview",
+      "node": "business",
+      "title_size": 48,
+      "body_size": 32,
+      "width": 421,
+      "height": 82
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "api-overview",
+      "node": "auth",
+      "title_size": 48,
+      "body_size": 32,
+      "width": 456,
+      "height": 82
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "api-overview",
+      "node": "persistence",
+      "title_size": 62,
+      "body_size": 32,
+      "width": 425,
+      "height": 99
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "api-overview",
+      "node": "worker",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 449,
+      "height": 111
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "api-overview",
+      "node": "catalog",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 528,
+      "height": 111
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "api-overview",
+      "node": "health",
+      "title_size": 50,
+      "body_size": 32,
+      "width": 421,
+      "height": 84
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "identity-org",
+      "node": "row0-page",
+      "title_size": 53,
+      "body_size": 32,
+      "width": 403,
+      "height": 175
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "identity-org",
+      "node": "row0-api",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 384,
+      "height": 198
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "identity-org",
+      "node": "row0-handler",
+      "title_size": 66,
+      "body_size": 32,
+      "width": 452,
+      "height": 150
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "identity-org",
+      "node": "row0-data",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 440,
+      "height": 157
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "identity-org",
+      "node": "row1-page",
+      "title_size": 41,
+      "body_size": 32,
+      "width": 395,
+      "height": 120
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "identity-org",
+      "node": "row1-api",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 547,
+      "height": 198
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "identity-org",
+      "node": "row1-handler",
+      "title_size": 61,
+      "body_size": 32,
+      "width": 451,
+      "height": 144
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "identity-org",
+      "node": "row1-data",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 456,
+      "height": 157
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "identity-org",
+      "node": "row2-page",
+      "title_size": 40,
+      "body_size": 32,
+      "width": 470,
+      "height": 159
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "identity-org",
+      "node": "row2-api",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 312,
+      "height": 198
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "identity-org",
+      "node": "row2-handler",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 452,
+      "height": 157
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "identity-org",
+      "node": "row2-data",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 472,
+      "height": 157
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "identity-org",
+      "node": "row3-page",
+      "title_size": 46,
+      "body_size": 32,
+      "width": 403,
+      "height": 166
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "identity-org",
+      "node": "row3-api",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 528,
+      "height": 198
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "identity-org",
+      "node": "row3-handler",
+      "title_size": 66,
+      "body_size": 32,
+      "width": 455,
+      "height": 190
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "identity-org",
+      "node": "row3-data",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 415,
+      "height": 157
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "exam-paper",
+      "node": "row0-page",
+      "title_size": 40,
+      "body_size": 32,
+      "width": 430,
+      "height": 72
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "exam-paper",
+      "node": "row0-api",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 384,
+      "height": 198
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "exam-paper",
+      "node": "row0-handler",
+      "title_size": 64,
+      "body_size": 32,
+      "width": 455,
+      "height": 188
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "exam-paper",
+      "node": "row0-data",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 472,
+      "height": 157
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "exam-paper",
+      "node": "row1-page",
+      "title_size": 44,
+      "body_size": 32,
+      "width": 402,
+      "height": 77
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "exam-paper",
+      "node": "row1-api",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 592,
+      "height": 238
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "exam-paper",
+      "node": "row1-handler",
+      "title_size": 61,
+      "body_size": 32,
+      "width": 451,
+      "height": 144
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "exam-paper",
+      "node": "row1-data",
+      "title_size": 65,
+      "body_size": 32,
+      "width": 483,
+      "height": 149
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "exam-paper",
+      "node": "row2-page",
+      "title_size": 53,
+      "body_size": 32,
+      "width": 399,
+      "height": 134
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "exam-paper",
+      "node": "row2-api",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 592,
+      "height": 238
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "exam-paper",
+      "node": "row2-handler",
+      "title_size": 62,
+      "body_size": 32,
+      "width": 452,
+      "height": 145
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "exam-paper",
+      "node": "row2-data",
+      "title_size": 65,
+      "body_size": 32,
+      "width": 488,
+      "height": 189
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "exam-paper",
+      "node": "row3-page",
+      "title_size": 41,
+      "body_size": 32,
+      "width": 403,
+      "height": 201
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "exam-paper",
+      "node": "row3-api",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 592,
+      "height": 278
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "exam-paper",
+      "node": "row3-handler",
+      "title_size": 62,
+      "body_size": 32,
+      "width": 455,
+      "height": 186
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "exam-paper",
+      "node": "row3-data",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 464,
+      "height": 157
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "capture-ocr",
+      "node": "row0-page",
+      "title_size": 40,
+      "body_size": 32,
+      "width": 507,
+      "height": 72
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "capture-ocr",
+      "node": "row0-api",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 592,
+      "height": 238
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "capture-ocr",
+      "node": "row0-handler",
+      "title_size": 53,
+      "body_size": 32,
+      "width": 455,
+      "height": 175
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "capture-ocr",
+      "node": "row0-data",
+      "title_size": 46,
+      "body_size": 32,
+      "width": 488,
+      "height": 126
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "capture-ocr",
+      "node": "row1-page",
+      "title_size": 40,
+      "body_size": 32,
+      "width": 510,
+      "height": 72
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "capture-ocr",
+      "node": "row1-api",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 592,
+      "height": 278
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "capture-ocr",
+      "node": "row1-handler",
+      "title_size": 47,
+      "body_size": 32,
+      "width": 450,
+      "height": 127
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "capture-ocr",
+      "node": "row1-data",
+      "title_size": 45,
+      "body_size": 32,
+      "width": 478,
+      "height": 125
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "capture-ocr",
+      "node": "row2-page",
+      "title_size": 40,
+      "body_size": 32,
+      "width": 407,
+      "height": 119
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "capture-ocr",
+      "node": "row2-api",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 535,
+      "height": 238
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "capture-ocr",
+      "node": "row2-handler",
+      "title_size": 59,
+      "body_size": 32,
+      "width": 453,
+      "height": 142
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "capture-ocr",
+      "node": "row2-data",
+      "title_size": 43,
+      "body_size": 32,
+      "width": 488,
+      "height": 163
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "capture-ocr",
+      "node": "row3-page",
+      "title_size": 53,
+      "body_size": 32,
+      "width": 399,
+      "height": 88
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "capture-ocr",
+      "node": "row3-api",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 592,
+      "height": 238
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "capture-ocr",
+      "node": "row3-handler",
+      "title_size": 60,
+      "body_size": 32,
+      "width": 448,
+      "height": 143
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "capture-ocr",
+      "node": "row3-data",
+      "title_size": 40,
+      "body_size": 32,
+      "width": 510,
+      "height": 119
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "grading-release",
+      "node": "row0-page",
+      "title_size": 40,
+      "body_size": 32,
+      "width": 427,
+      "height": 72
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "grading-release",
+      "node": "row0-api",
+      "title_size": 65,
+      "body_size": 32,
+      "width": 592,
+      "height": 229
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "grading-release",
+      "node": "row0-handler",
+      "title_size": 53,
+      "body_size": 32,
+      "width": 452,
+      "height": 134
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "grading-release",
+      "node": "row0-data",
+      "title_size": 40,
+      "body_size": 32,
+      "width": 565,
+      "height": 119
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "grading-release",
+      "node": "row1-page",
+      "title_size": 53,
+      "body_size": 32,
+      "width": 399,
+      "height": 88
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "grading-release",
+      "node": "row1-api",
+      "title_size": 63,
+      "body_size": 32,
+      "width": 591,
+      "height": 187
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "grading-release",
+      "node": "row1-handler",
+      "title_size": 56,
+      "body_size": 32,
+      "width": 455,
+      "height": 178
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "grading-release",
+      "node": "row1-data",
+      "title_size": 40,
+      "body_size": 32,
+      "width": 576,
+      "height": 119
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "grading-release",
+      "node": "row2-page",
+      "title_size": 40,
+      "body_size": 32,
+      "width": 510,
+      "height": 72
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "grading-release",
+      "node": "row2-api",
+      "title_size": 63,
+      "body_size": 32,
+      "width": 591,
+      "height": 187
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "grading-release",
+      "node": "row2-handler",
+      "title_size": 52,
+      "body_size": 32,
+      "width": 455,
+      "height": 174
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "grading-release",
+      "node": "row2-data",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 488,
+      "height": 198
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "grading-release",
+      "node": "row3-page",
+      "title_size": 40,
+      "body_size": 32,
+      "width": 510,
+      "height": 72
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "grading-release",
+      "node": "row3-api",
+      "title_size": 63,
+      "body_size": 32,
+      "width": 592,
+      "height": 227
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "grading-release",
+      "node": "row3-handler",
+      "title_size": 40,
+      "body_size": 32,
+      "width": 467,
+      "height": 119
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "grading-release",
+      "node": "row3-data",
+      "title_size": 51,
+      "body_size": 32,
+      "width": 486,
+      "height": 132
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "governance-chat",
+      "node": "row0-page",
+      "title_size": 40,
+      "body_size": 32,
+      "width": 467,
+      "height": 72
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "governance-chat",
+      "node": "row0-api",
+      "title_size": 60,
+      "body_size": 32,
+      "width": 592,
+      "height": 223
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "governance-chat",
+      "node": "row0-handler",
+      "title_size": 71,
+      "body_size": 32,
+      "width": 450,
+      "height": 156
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "governance-chat",
+      "node": "row0-data",
+      "title_size": 40,
+      "body_size": 32,
+      "width": 534,
+      "height": 119
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "governance-chat",
+      "node": "row1-page",
+      "title_size": 40,
+      "body_size": 32,
+      "width": 457,
+      "height": 72
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "governance-chat",
+      "node": "row1-api",
+      "title_size": 56,
+      "body_size": 32,
+      "width": 584,
+      "height": 178
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "governance-chat",
+      "node": "row1-handler",
+      "title_size": 47,
+      "body_size": 32,
+      "width": 450,
+      "height": 127
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "governance-chat",
+      "node": "row1-data",
+      "title_size": 40,
+      "body_size": 32,
+      "width": 558,
+      "height": 119
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "governance-chat",
+      "node": "row2-page",
+      "title_size": 40,
+      "body_size": 32,
+      "width": 485,
+      "height": 72
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "governance-chat",
+      "node": "row2-api",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 482,
+      "height": 238
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "governance-chat",
+      "node": "row2-handler",
+      "title_size": 42,
+      "body_size": 32,
+      "width": 452,
+      "height": 121
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "governance-chat",
+      "node": "row2-data",
+      "title_size": 40,
+      "body_size": 32,
+      "width": 544,
+      "height": 119
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "governance-chat",
+      "node": "row3-page",
+      "title_size": 49,
+      "body_size": 32,
+      "width": 397,
+      "height": 83
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "governance-chat",
+      "node": "row3-api",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 592,
+      "height": 278
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "governance-chat",
+      "node": "row3-handler",
+      "title_size": 46,
+      "body_size": 32,
+      "width": 455,
+      "height": 166
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "governance-chat",
+      "node": "row3-data",
+      "title_size": 40,
+      "body_size": 32,
+      "width": 481,
+      "height": 119
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "files-workers",
+      "node": "browser",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 168,
+      "height": 111
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "files-workers",
+      "node": "upload",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 312,
+      "height": 111
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "files-workers",
+      "node": "metadata",
+      "title_size": 64,
+      "body_size": 32,
+      "width": 454,
+      "height": 101
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "files-workers",
+      "node": "objects",
+      "title_size": 67,
+      "body_size": 32,
+      "width": 454,
+      "height": 105
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "files-workers",
+      "node": "intake",
+      "title_size": 53,
+      "body_size": 32,
+      "width": 452,
+      "height": 88
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "files-workers",
+      "node": "runtime",
+      "title_size": 65,
+      "body_size": 32,
+      "width": 450,
+      "height": 102
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "files-workers",
+      "node": "scope",
+      "title_size": 47,
+      "body_size": 32,
+      "width": 450,
+      "height": 81
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "files-workers",
+      "node": "worker",
+      "title_size": 71,
+      "body_size": 32,
+      "width": 453,
+      "height": 110
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "files-workers",
+      "node": "download",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 312,
+      "height": 111
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "files-workers",
+      "node": "preview",
+      "title_size": 56,
+      "body_size": 32,
+      "width": 454,
+      "height": 92
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "files-workers",
+      "node": "local",
+      "title_size": 54,
+      "body_size": 32,
+      "width": 447,
+      "height": 136
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "files-workers",
+      "node": "boundary",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 672,
+      "height": 157
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "auth-order",
+      "node": "request",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 168,
+      "height": 111
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "auth-order",
+      "node": "session",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 168,
+      "height": 111
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "auth-order",
+      "node": "generic",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 412,
+      "height": 111
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "auth-order",
+      "node": "cache",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 384,
+      "height": 111
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "auth-order",
+      "node": "resource",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 312,
+      "height": 111
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "auth-order",
+      "node": "permission",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 312,
+      "height": 111
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "auth-order",
+      "node": "strict",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 412,
+      "height": 157
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "auth-order",
+      "node": "qbank",
+      "title_size": 58,
+      "body_size": 32,
+      "width": 453,
+      "height": 94
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "auth-order",
+      "node": "mfa",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 800,
+      "height": 111
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "auth-order",
+      "node": "worker",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 678,
+      "height": 111
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "auth-order",
+      "node": "risk",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 960,
+      "height": 111
+    },
+    {
+      "file": "09-task-state-machine.drawio",
+      "page": "runtime",
+      "node": "queued",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 298,
+      "height": 111
+    },
+    {
+      "file": "09-task-state-machine.drawio",
+      "page": "runtime",
+      "node": "leased",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 255,
+      "height": 111
+    },
+    {
+      "file": "09-task-state-machine.drawio",
+      "page": "runtime",
+      "node": "running",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 312,
+      "height": 111
+    },
+    {
+      "file": "09-task-state-machine.drawio",
+      "page": "runtime",
+      "node": "success",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 403,
+      "height": 111
+    },
+    {
+      "file": "09-task-state-machine.drawio",
+      "page": "runtime",
+      "node": "retry",
+      "title_size": 40,
+      "body_size": 32,
+      "width": 570,
+      "height": 97
+    },
+    {
+      "file": "09-task-state-machine.drawio",
+      "page": "runtime",
+      "node": "failed",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 227,
+      "height": 111
+    },
+    {
+      "file": "09-task-state-machine.drawio",
+      "page": "runtime",
+      "node": "dead",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 432,
+      "height": 111
+    },
+    {
+      "file": "09-task-state-machine.drawio",
+      "page": "runtime",
+      "node": "expired",
+      "title_size": 44,
+      "body_size": 32,
+      "width": 548,
+      "height": 77
+    },
+    {
+      "file": "09-task-state-machine.drawio",
+      "page": "runtime",
+      "node": "cancel",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 361,
+      "height": 111
+    },
+    {
+      "file": "09-task-state-machine.drawio",
+      "page": "runtime",
+      "node": "manual",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 507,
+      "height": 111
+    },
+    {
+      "file": "09-task-state-machine.drawio",
+      "page": "runtime",
+      "node": "boundary",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 456,
+      "height": 157
+    },
+    {
+      "file": "09-task-state-machine.drawio",
+      "page": "business_states",
+      "node": "start",
+      "title_size": 65,
+      "body_size": 32,
+      "width": 555,
+      "height": 102
+    },
+    {
+      "file": "09-task-state-machine.drawio",
+      "page": "business_states",
+      "node": "processing",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 417,
+      "height": 111
+    },
+    {
+      "file": "09-task-state-machine.drawio",
+      "page": "business_states",
+      "node": "review",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 510,
+      "height": 111
+    },
+    {
+      "file": "09-task-state-machine.drawio",
+      "page": "business_states",
+      "node": "failed",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 227,
+      "height": 111
+    },
+    {
+      "file": "09-task-state-machine.drawio",
+      "page": "business_states",
+      "node": "done",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 410,
+      "height": 111
+    },
+    {
+      "file": "09-task-state-machine.drawio",
+      "page": "business_states",
+      "node": "cancelling",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 387,
+      "height": 111
+    },
+    {
+      "file": "09-task-state-machine.drawio",
+      "page": "business_states",
+      "node": "cancelled",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 361,
+      "height": 111
+    },
+    {
+      "file": "09-task-state-machine.drawio",
+      "page": "business_states",
+      "node": "first",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 312,
+      "height": 111
+    },
+    {
+      "file": "09-task-state-machine.drawio",
+      "page": "business_states",
+      "node": "diff",
+      "title_size": 50,
+      "body_size": 32,
+      "width": 555,
+      "height": 115
+    },
+    {
+      "file": "09-task-state-machine.drawio",
+      "page": "business_states",
+      "node": "auto",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 530,
+      "height": 111
+    },
+    {
+      "file": "09-task-state-machine.drawio",
+      "page": "business_states",
+      "node": "arb",
+      "title_size": 60,
+      "body_size": 32,
+      "width": 554,
+      "height": 96
+    },
+    {
+      "file": "09-task-state-machine.drawio",
+      "page": "business_states",
+      "node": "notice",
+      "title_size": 45,
+      "body_size": 32,
+      "width": 551,
+      "height": 78
+    },
+    {
+      "file": "09-task-state-machine.drawio",
+      "page": "commit_boundaries",
+      "node": "quality",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 456,
+      "height": 111
+    },
+    {
+      "file": "09-task-state-machine.drawio",
+      "page": "commit_boundaries",
+      "node": "match",
+      "title_size": 66,
+      "body_size": 32,
+      "width": 552,
+      "height": 104
+    },
+    {
+      "file": "09-task-state-machine.drawio",
+      "page": "commit_boundaries",
+      "node": "ocr",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 469,
+      "height": 111
+    },
+    {
+      "file": "09-task-state-machine.drawio",
+      "page": "commit_boundaries",
+      "node": "reg_write",
+      "title_size": 53,
+      "body_size": 32,
+      "width": 554,
+      "height": 88
+    },
+    {
+      "file": "09-task-state-machine.drawio",
+      "page": "commit_boundaries",
+      "node": "reg_finish",
+      "title_size": 70,
+      "body_size": 32,
+      "width": 554,
+      "height": 108
+    },
+    {
+      "file": "09-task-state-machine.drawio",
+      "page": "commit_boundaries",
+      "node": "reg_effect",
+      "title_size": 48,
+      "body_size": 32,
+      "width": 552,
+      "height": 82
+    },
+    {
+      "file": "09-task-state-machine.drawio",
+      "page": "commit_boundaries",
+      "node": "ai_grade",
+      "title_size": 41,
+      "body_size": 32,
+      "width": 557,
+      "height": 74
+    },
+    {
+      "file": "09-task-state-machine.drawio",
+      "page": "commit_boundaries",
+      "node": "ai_run",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 386,
+      "height": 111
+    },
+    {
+      "file": "09-task-state-machine.drawio",
+      "page": "commit_boundaries",
+      "node": "ai_effect",
+      "title_size": 53,
+      "body_size": 32,
+      "width": 554,
+      "height": 88
+    },
+    {
+      "file": "09-task-state-machine.drawio",
+      "page": "commit_boundaries",
+      "node": "panel_state",
+      "title_size": 54,
+      "body_size": 32,
+      "width": 550,
+      "height": 89
+    },
+    {
+      "file": "09-task-state-machine.drawio",
+      "page": "commit_boundaries",
+      "node": "panel_replay",
+      "title_size": 66,
+      "body_size": 32,
+      "width": 557,
+      "height": 104
+    },
+    {
+      "file": "09-task-state-machine.drawio",
+      "page": "commit_boundaries",
+      "node": "panel_effect",
+      "title_size": 48,
+      "body_size": 32,
+      "width": 552,
+      "height": 82
+    },
+    {
+      "file": "10-security-deployment.drawio",
+      "page": "authorization",
+      "node": "human",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 824,
+      "height": 157
+    },
+    {
+      "file": "10-security-deployment.drawio",
+      "page": "authorization",
+      "node": "service",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 968,
+      "height": 157
+    },
+    {
+      "file": "10-security-deployment.drawio",
+      "page": "authorization",
+      "node": "auth",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 532,
+      "height": 111
+    },
+    {
+      "file": "10-security-deployment.drawio",
+      "page": "authorization",
+      "node": "idem",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 456,
+      "height": 111
+    },
+    {
+      "file": "10-security-deployment.drawio",
+      "page": "authorization",
+      "node": "resource",
+      "title_size": 61,
+      "body_size": 32,
+      "width": 577,
+      "height": 98
+    },
+    {
+      "file": "10-security-deployment.drawio",
+      "page": "authorization",
+      "node": "recent",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 380,
+      "height": 157
+    },
+    {
+      "file": "10-security-deployment.drawio",
+      "page": "authorization",
+      "node": "task",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 680,
+      "height": 111
+    },
+    {
+      "file": "10-security-deployment.drawio",
+      "page": "authorization",
+      "node": "rls",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 796,
+      "height": 111
+    },
+    {
+      "file": "10-security-deployment.drawio",
+      "page": "authorization",
+      "node": "boundary",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 888,
+      "height": 157
+    },
+    {
+      "file": "10-security-deployment.drawio",
+      "page": "credential",
+      "node": "admin",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 456,
+      "height": 111
+    },
+    {
+      "file": "10-security-deployment.drawio",
+      "page": "credential",
+      "node": "cipher",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 370,
+      "height": 157
+    },
+    {
+      "file": "10-security-deployment.drawio",
+      "page": "credential",
+      "node": "store",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 291,
+      "height": 111
+    },
+    {
+      "file": "10-security-deployment.drawio",
+      "page": "credential",
+      "node": "resolve",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 312,
+      "height": 111
+    },
+    {
+      "file": "10-security-deployment.drawio",
+      "page": "credential",
+      "node": "go",
+      "title_size": 58,
+      "body_size": 32,
+      "width": 554,
+      "height": 94
+    },
+    {
+      "file": "10-security-deployment.drawio",
+      "page": "credential",
+      "node": "external",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 532,
+      "height": 111
+    },
+    {
+      "file": "10-security-deployment.drawio",
+      "page": "credential",
+      "node": "session",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 617,
+      "height": 157
+    },
+    {
+      "file": "10-security-deployment.drawio",
+      "page": "credential",
+      "node": "protect",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 645,
+      "height": 111
+    },
+    {
+      "file": "10-security-deployment.drawio",
+      "page": "deployment",
+      "node": "client",
+      "title_size": 67,
+      "body_size": 32,
+      "width": 565,
+      "height": 105
+    },
+    {
+      "file": "10-security-deployment.drawio",
+      "page": "deployment",
+      "node": "nginx",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 408,
+      "height": 111
+    },
+    {
+      "file": "10-security-deployment.drawio",
+      "page": "deployment",
+      "node": "web",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 500,
+      "height": 111
+    },
+    {
+      "file": "10-security-deployment.drawio",
+      "page": "deployment",
+      "node": "api",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 437,
+      "height": 111
+    },
+    {
+      "file": "10-security-deployment.drawio",
+      "page": "deployment",
+      "node": "data",
+      "title_size": 40,
+      "body_size": 32,
+      "width": 588,
+      "height": 72
+    },
+    {
+      "file": "10-security-deployment.drawio",
+      "page": "deployment",
+      "node": "workers",
+      "title_size": 71,
+      "body_size": 32,
+      "width": 567,
+      "height": 156
+    },
+    {
+      "file": "10-security-deployment.drawio",
+      "page": "deployment",
+      "node": "agent",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 549,
+      "height": 157
+    },
+    {
+      "file": "10-security-deployment.drawio",
+      "page": "deployment",
+      "node": "model",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 532,
+      "height": 111
+    },
+    {
+      "file": "10-security-deployment.drawio",
+      "page": "deployment",
+      "node": "ops",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 608,
+      "height": 111
+    },
+    {
+      "file": "10-security-deployment.drawio",
+      "page": "deployment",
+      "node": "observe",
+      "title_size": 72,
+      "body_size": 32,
+      "width": 827,
+      "height": 157
+    }
+  ]
+}

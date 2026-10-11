@@ -9,6 +9,24 @@ from urllib.parse import urlsplit
 from edugrade_worker_runtime import ResponseValidationError, read_json_response
 
 
+class _RejectRedirects(request.HTTPRedirectHandler):
+    def http_error_302(self, req, fp, code, msg, headers):
+        # 初始目标校验不覆盖跳转；同源跳转也拒绝，避免令牌、租约或登录正文被再次转发。
+        # 尚未进入调用方的 with；先释放原连接，避免异常链长期保留响应套接字。
+        fp.close()
+        raise error.HTTPError(req.full_url, code, "redirects are not allowed", headers, None)
+
+    http_error_301 = http_error_302
+    http_error_303 = http_error_302
+    http_error_307 = http_error_302
+    http_error_308 = http_error_302
+
+
+def _open_request(req: request.Request, *, timeout: float) -> Any:
+    # 独立 opener 不修改进程全局设置；HTTPS 仍使用标准库的默认证书验证。
+    return request.build_opener(_RejectRedirects()).open(req, timeout=timeout)
+
+
 class APIError(RuntimeError):
     def __init__(self, message: str, *, status_code: int | None = None) -> None:
         super().__init__(message)
@@ -91,7 +109,7 @@ class EduGradeClient:
                 headers.update(_task_capability_headers(self.current_task))
         req = request.Request(url, data=json.dumps(payload).encode(), headers=headers, method=method)
         try:
-            with request.urlopen(req, timeout=timeout) as response:
+            with _open_request(req, timeout=timeout) as response:
                 return json.loads(read_json_response(response).decode() or "{}")
         except error.HTTPError as exc:
             if exc.code == 401:

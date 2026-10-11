@@ -1,0 +1,16 @@
+{
+  "files": [
+    {
+      "file": "services/api-gateway/internal/server/e2e_review_recovery_test.go",
+      "sha256": "3e070508bc8ac6a66688ab2175e74072bb8aa98082524da9a69501095a57eed8",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_review_recovery_test.go"
+    }
+  ],
+  "issue_functions": [
+    {
+      "file": "services/api-gateway/internal/server/e2e_review_recovery_test.go",
+      "function": "TestReviewRepairsRecoveryWithPostgresTestDatabase"
+    }
+  ],
+  "checkpoint_relation": "after checkpoint02; requires subsequent scan"
+}

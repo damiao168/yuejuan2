@@ -1,0 +1,489 @@
+{
+  "review_date": "2026-10-10",
+  "checked_at": "2026-10-10T15:12:25.5713958Z",
+  "review_scope": "末次当前源码的四个指定文件；调用定位的依赖和未读测试不计入本组完成数。",
+  "manually_reviewed_primary_files": 4,
+  "primary_hashes_stable": true,
+  "preservation_snapshot_changed_original_files_observed": 36,
+  "preservation_snapshot_is_live_current_count": false,
+  "diagram_01_08_fact_change_required": false,
+  "existing_pipeline_boundary_change_required": false,
+  "tests_executed": false,
+  "modified_business_files": false,
+  "source_change_author_attribution": "not_determined",
+  "files": [
+    {
+      "file": "apps/desktop-client/src/components/OfflineWorkbench.tsx",
+      "baseline_source_sha256": "46a9f90fa66920198c4c0bf4a7647bf12c9d87a8feaa6a18a6516349e2010b6d",
+      "source_sha256": "5c41e3e4d4ee974e8a49bc5c04a7204c168fb69347fd313d2c9674f531fedfa6",
+      "line_count": 1132,
+      "reviewed_source_sha256": "5c41e3e4d4ee974e8a49bc5c04a7204c168fb69347fd313d2c9674f531fedfa6",
+      "before_read_source_sha256": "5c41e3e4d4ee974e8a49bc5c04a7204c168fb69347fd313d2c9674f531fedfa6",
+      "after_read_source_sha256": "5c41e3e4d4ee974e8a49bc5c04a7204c168fb69347fd313d2c9674f531fedfa6",
+      "hash_stable": true,
+      "read_status": "not_manually_reviewed",
+      "read_ranges": [
+        [
+          1,
+          180
+        ],
+        [
+          181,
+          360
+        ],
+        [
+          361,
+          540
+        ],
+        [
+          541,
+          730
+        ],
+        [
+          731,
+          930
+        ],
+        [
+          931,
+          1132
+        ]
+      ],
+      "analysis_status": "pending",
+      "status": "pending",
+      "source_differs_from_initial_baseline": true,
+      "new_since_initial_baseline": false,
+      "modified": false,
+      "modified_by_this_audit": false,
+      "scope": "当前全文：任务冻结材料、真实任务与图像入口、人工评分、加密命令先持久化、回执恢复、会话/版本边界、UI展示；没有执行其测试或复核全部原生存储实现。",
+      "superseded_completed_review": {
+        "source_sha256": "5c41e3e4d4ee974e8a49bc5c04a7204c168fb69347fd313d2c9674f531fedfa6",
+        "read_status": "complete",
+        "analysis_status": "reviewed",
+        "reason": "当前全文：任务冻结材料、真实任务与图像入口、人工评分、加密命令先持久化、回执恢复、会话/版本边界、UI展示；没有执行其测试或复核全部原生存储实现。",
+        "read_ranges": [
+          [
+            1,
+            180
+          ],
+          [
+            181,
+            360
+          ],
+          [
+            361,
+            540
+          ],
+          [
+            541,
+            730
+          ],
+          [
+            731,
+            930
+          ],
+          [
+            931,
+            1132
+          ]
+        ]
+      },
+      "reason": "原全文完成版本的源码已变化；当前版本必须重新审读，不继承旧完成声明。",
+      "invalidated_at_utc": "2026-10-11T03:49:45.911207+00:00"
+    },
+    {
+      "file": "apps/desktop-client/src/features/scan/ScanWorkspace.tsx",
+      "baseline_source_sha256": "a6f81bfdba2feff03d2fd94225ef329e0b14aedadf3a0014fba9af36bcd4ed84",
+      "source_sha256": "dee947aedcab5b332ea9dbfcdc1ab42f06018379f9bf186e21deddfc15725454",
+      "line_count": 210,
+      "reviewed_source_sha256": "dee947aedcab5b332ea9dbfcdc1ab42f06018379f9bf186e21deddfc15725454",
+      "before_read_source_sha256": "dee947aedcab5b332ea9dbfcdc1ab42f06018379f9bf186e21deddfc15725454",
+      "after_read_source_sha256": "dee947aedcab5b332ea9dbfcdc1ab42f06018379f9bf186e21deddfc15725454",
+      "hash_stable": true,
+      "read_status": "complete",
+      "read_ranges": [
+        [
+          1,
+          70
+        ],
+        [
+          71,
+          140
+        ],
+        [
+          141,
+          210
+        ]
+      ],
+      "analysis_status": "reviewed",
+      "status": "existing_sufficient",
+      "source_differs_from_initial_baseline": true,
+      "new_since_initial_baseline": false,
+      "modified": false,
+      "modified_by_this_audit": false,
+      "scope": "当前全文：真实考试/批次/ready模板与队列导入条件、设备能力说明、当前批次上传及服务端页数/图像质量展示；耐久写盘调用仅补充定位。"
+    },
+    {
+      "file": "apps/web-admin/src/pages/ScoreManagementPage.tsx",
+      "baseline_source_sha256": "0f55391ae3afd441cfc861082897b656997b92e60a0576399c06e69c0e6484ac",
+      "source_sha256": "f5bd3cf4f3d5d590a07561604245bfcbf4fb31919fd04b81deaf2bcc78c8f98f",
+      "line_count": 472,
+      "reviewed_source_sha256": "f5bd3cf4f3d5d590a07561604245bfcbf4fb31919fd04b81deaf2bcc78c8f98f",
+      "before_read_source_sha256": "f5bd3cf4f3d5d590a07561604245bfcbf4fb31919fd04b81deaf2bcc78c8f98f",
+      "after_read_source_sha256": "f5bd3cf4f3d5d590a07561604245bfcbf4fb31919fd04b81deaf2bcc78c8f98f",
+      "hash_stable": true,
+      "read_status": "complete",
+      "read_ranges": [
+        [
+          1,
+          160
+        ],
+        [
+          161,
+          320
+        ],
+        [
+          321,
+          472
+        ]
+      ],
+      "analysis_status": "reviewed",
+      "status": "existing_sufficient",
+      "source_differs_from_initial_baseline": true,
+      "new_since_initial_baseline": false,
+      "modified": false,
+      "modified_by_this_audit": false,
+      "scope": "当前全文：旧成绩发布动作与新版release工作区并存、当前发布指针、质量检查、近期认证委托、快照显示与写入禁用边界。"
+    },
+    {
+      "file": "scripts/ci/check-go-coverage.mjs",
+      "baseline_source_sha256": "9afaccaba6bfaa3c7834dfc523867ef54b0e966d5f27aa9b824b67b41cb0b67f",
+      "source_sha256": "df8909bbfdfc3b8049e003d982d63a3f71022c7de0b438bf93e8337674855a26",
+      "line_count": 89,
+      "reviewed_source_sha256": "df8909bbfdfc3b8049e003d982d63a3f71022c7de0b438bf93e8337674855a26",
+      "before_read_source_sha256": "df8909bbfdfc3b8049e003d982d63a3f71022c7de0b438bf93e8337674855a26",
+      "after_read_source_sha256": "df8909bbfdfc3b8049e003d982d63a3f71022c7de0b438bf93e8337674855a26",
+      "hash_stable": true,
+      "read_status": "complete",
+      "read_ranges": [
+        [
+          1,
+          89
+        ]
+      ],
+      "analysis_status": "reviewed",
+      "status": "existing_sufficient",
+      "source_differs_from_initial_baseline": true,
+      "new_since_initial_baseline": false,
+      "modified": false,
+      "modified_by_this_audit": false,
+      "scope": "当前全文：覆盖率结果解析、预算缺项/低值失败、本机Go执行与返回码；未运行Go覆盖率或审读相关测试。"
+    },
+    {
+      "file": "apps/desktop-client/src/components/OfflineWorkbench.test.tsx",
+      "baseline_source_sha256": "8314268203ad94755db1f1c3f8603d0adda06784adaee0e2c2c8bd26ff1e4391",
+      "source_sha256": "317b6dda979ba302eff1b29be240b750f91d375f275f4b7ede4b42abf5d8ad64",
+      "line_count": 1106,
+      "reviewed_source_sha256": null,
+      "before_read_source_sha256": null,
+      "after_read_source_sha256": null,
+      "hash_stable": null,
+      "read_status": "not_manually_reviewed",
+      "read_ranges": [],
+      "analysis_status": "pending",
+      "status": "pending",
+      "source_differs_from_initial_baseline": true,
+      "new_since_initial_baseline": false,
+      "modified": false,
+      "modified_by_this_audit": false,
+      "scope": "仅核对文件存在、行数与哈希；未人工全文审读或运行，保持pending。"
+    },
+    {
+      "file": "apps/desktop-client/src/features/scan/ScanWorkspace.batch34.test.tsx",
+      "baseline_source_sha256": "ddce2487bdd3442f33be3dba5fce69dbcce10cbba453d0adce28b882998debc5",
+      "source_sha256": "bb1fdc11685249928b70722af13a31f7e88c56e50ab8ba0787472e060e1db45d",
+      "line_count": 223,
+      "reviewed_source_sha256": null,
+      "before_read_source_sha256": null,
+      "after_read_source_sha256": null,
+      "hash_stable": null,
+      "read_status": "not_manually_reviewed",
+      "read_ranges": [],
+      "analysis_status": "pending",
+      "status": "pending",
+      "source_differs_from_initial_baseline": true,
+      "new_since_initial_baseline": false,
+      "modified": false,
+      "modified_by_this_audit": false,
+      "scope": "仅核对文件存在、行数与哈希；未人工全文审读或运行，保持pending。"
+    },
+    {
+      "file": "scripts/ci/go-coverage.test.mjs",
+      "baseline_source_sha256": "a8b3ee0003e0d85d6f6314221fc68b0b91f558685c272d91cb297d1ab809c9de",
+      "source_sha256": "20b32f3f8f2721c8d7e35c6a60da1bffd854a809666e95e82dde316d5a4e1398",
+      "line_count": 141,
+      "reviewed_source_sha256": null,
+      "before_read_source_sha256": null,
+      "after_read_source_sha256": null,
+      "hash_stable": null,
+      "read_status": "not_manually_reviewed",
+      "read_ranges": [],
+      "analysis_status": "pending",
+      "status": "pending",
+      "source_differs_from_initial_baseline": true,
+      "new_since_initial_baseline": false,
+      "modified": false,
+      "modified_by_this_audit": false,
+      "scope": "仅核对文件存在、行数与哈希；未人工全文审读或运行，保持pending。"
+    },
+    {
+      "file": ".github/workflows/ci.yml",
+      "baseline_source_sha256": "8358883cfd9a97ad80742fbce7dce921eda593981bd40bf5e024e82ea736b3ef",
+      "source_sha256": "2cfe292e8cb3b0294c5325811a32b7e5ab80a9c52df73a20244cf7b93c30a8bf",
+      "line_count": 722,
+      "reviewed_source_sha256": null,
+      "before_read_source_sha256": null,
+      "after_read_source_sha256": null,
+      "hash_stable": null,
+      "read_status": "not_manually_reviewed",
+      "read_ranges": [],
+      "analysis_status": "pending",
+      "status": "pending",
+      "source_differs_from_initial_baseline": true,
+      "new_since_initial_baseline": false,
+      "modified": false,
+      "modified_by_this_audit": false,
+      "scope": "hash_only_recheck; source_change_attribution_not_determined; no_full_read_or_runtime_validation"
+    },
+    {
+      "file": "scripts/ci/lint-workflows.mjs",
+      "baseline_source_sha256": "1b32472e519ec26781de6b25c2e157fdad1a5b81a8f6e5a41e9a310ce9d44aec",
+      "source_sha256": "7492a60a08a10b74e019652dfbff3156df833ad5d0368e02af4b2e55750b7a7b",
+      "line_count": 30,
+      "reviewed_source_sha256": null,
+      "before_read_source_sha256": null,
+      "after_read_source_sha256": null,
+      "hash_stable": null,
+      "read_status": "not_manually_reviewed",
+      "read_ranges": [],
+      "analysis_status": "pending",
+      "status": "pending",
+      "source_differs_from_initial_baseline": true,
+      "new_since_initial_baseline": false,
+      "modified": false,
+      "modified_by_this_audit": false,
+      "scope": "hash_only_recheck; source_change_attribution_not_determined; no_full_read_or_runtime_validation"
+    },
+    {
+      "file": "apps/web-admin/src/pages/LearningReportsPage.tsx",
+      "baseline_source_sha256": "10068eea798060c973939bde474bc01c01246e33ba9a276273ddde2f7f26724d",
+      "source_sha256": "ccd3bcce776e8d913795fc175171b9908da49db5fb766e11de8681089f43a222",
+      "line_count": 636,
+      "reviewed_source_sha256": null,
+      "before_read_source_sha256": null,
+      "after_read_source_sha256": null,
+      "hash_stable": null,
+      "read_status": "not_manually_reviewed",
+      "read_ranges": [],
+      "analysis_status": "pending",
+      "status": "pending",
+      "source_differs_from_initial_baseline": true,
+      "new_since_initial_baseline": false,
+      "modified": false,
+      "modified_by_this_audit": false,
+      "scope": "hash_only_recheck; source_change_attribution_not_determined; no_full_read_or_runtime_validation"
+    }
+  ],
+  "supporting_callsite_reads": [
+    {
+      "file": "apps/desktop-client/src/api/review.ts",
+      "read_ranges": [
+        [
+          1,
+          72
+        ]
+      ],
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "scope": "全文用于定位有限调用：context、受控segment-image、人工提交和回执；未结合全部依赖与必要测试完成模块审读。",
+      "modified": false,
+      "modified_by_this_audit": false
+    },
+    {
+      "file": "apps/desktop-client/src/lib/offlineReviewCommand.ts",
+      "read_ranges": [
+        [
+          1,
+          71
+        ]
+      ],
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "scope": "全文用于定位有限调用：身份检查、原回执与稳定载荷；未结合全部依赖与必要测试完成模块审读。",
+      "modified": false,
+      "modified_by_this_audit": false
+    },
+    {
+      "file": "apps/desktop-client/src/features/scan-queue/useScanQueue.ts",
+      "read_ranges": [
+        [
+          164,
+          238
+        ],
+        [
+          284,
+          331
+        ]
+      ],
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "scope": "只定位真实模板门禁、逐件检查、Spool与React投影；不取代其它分工对其全文审读记录。",
+      "modified": false,
+      "modified_by_this_audit": false
+    },
+    {
+      "file": "apps/desktop-client/src/api/exams.ts",
+      "read_ranges": [
+        [
+          64,
+          69
+        ]
+      ],
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "scope": "仅定位getCaptureScanContext路径。",
+      "modified": false,
+      "modified_by_this_audit": false
+    },
+    {
+      "file": "apps/web-admin/src/api/scores.ts",
+      "read_ranges": [
+        [
+          156,
+          180
+        ]
+      ],
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "scope": "仅定位旧成绩confirm/publish及导出路径。",
+      "modified": false,
+      "modified_by_this_audit": false
+    },
+    {
+      "file": "apps/web-admin/src/features/score-management/hooks/useScoreReleaseWorkflow.tsx",
+      "read_ranges": [
+        [
+          69,
+          137
+        ]
+      ],
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "scope": "仅定位新release草稿、gate与step-up发布委托。",
+      "modified": false,
+      "modified_by_this_audit": false
+    },
+    {
+      "file": "apps/web-admin/src/api/scoreReleases.ts",
+      "read_ranges": [
+        [
+          45,
+          56
+        ]
+      ],
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "scope": "仅定位SDK的release gate/create/publish包装。",
+      "modified": false,
+      "modified_by_this_audit": false
+    }
+  ],
+  "matched_spec_nodes": {
+    "01-feature-tree.json": [
+      "F05.02.features",
+      "F07-boundary",
+      "F07.03.features",
+      "F08.01.features",
+      "F08-boundary",
+      "F10.01.features",
+      "F10.02.features",
+      "F10-boundary"
+    ],
+    "08-api-data-flow.json": [
+      "api-overview/desktop",
+      "capture-ocr/row0-page",
+      "capture-ocr/row0-api",
+      "grading-release/row1-api",
+      "grading-release/row2-api",
+      "grading-release/row2-handler",
+      "grading-release/row2-data",
+      "files-workers/download",
+      "files-workers/local"
+    ]
+  },
+  "cutoff_recheck": {
+    "checked_at_utc": "2026-10-10T15:26:14.609810+00:00",
+    "preservation_checked_at_utc": "2026-10-10T15:24:00.314645+00:00",
+    "changed_original_files": 39,
+    "commit_unchanged": true,
+    "original_full_read_timestamp_preserved": true,
+    "all_four_complete_primary_records_still_match": true,
+    "checks": [
+      {
+        "file": "apps/desktop-client/src/components/OfflineWorkbench.tsx",
+        "recorded_sha256": "5c41e3e4d4ee974e8a49bc5c04a7204c168fb69347fd313d2c9674f531fedfa6",
+        "current_sha256": "5c41e3e4d4ee974e8a49bc5c04a7204c168fb69347fd313d2c9674f531fedfa6",
+        "matches_record": true,
+        "read_status": "complete"
+      },
+      {
+        "file": "apps/desktop-client/src/features/scan/ScanWorkspace.tsx",
+        "recorded_sha256": "dee947aedcab5b332ea9dbfcdc1ab42f06018379f9bf186e21deddfc15725454",
+        "current_sha256": "dee947aedcab5b332ea9dbfcdc1ab42f06018379f9bf186e21deddfc15725454",
+        "matches_record": true,
+        "read_status": "complete"
+      },
+      {
+        "file": "apps/web-admin/src/pages/ScoreManagementPage.tsx",
+        "recorded_sha256": "f5bd3cf4f3d5d590a07561604245bfcbf4fb31919fd04b81deaf2bcc78c8f98f",
+        "current_sha256": "f5bd3cf4f3d5d590a07561604245bfcbf4fb31919fd04b81deaf2bcc78c8f98f",
+        "matches_record": true,
+        "read_status": "complete"
+      },
+      {
+        "file": "scripts/ci/check-go-coverage.mjs",
+        "recorded_sha256": "df8909bbfdfc3b8049e003d982d63a3f71022c7de0b438bf93e8337674855a26",
+        "current_sha256": "df8909bbfdfc3b8049e003d982d63a3f71022c7de0b438bf93e8337674855a26",
+        "matches_record": true,
+        "read_status": "complete"
+      },
+      {
+        "file": "apps/desktop-client/src/components/OfflineWorkbench.test.tsx",
+        "recorded_sha256": "317b6dda979ba302eff1b29be240b750f91d375f275f4b7ede4b42abf5d8ad64",
+        "current_sha256": "317b6dda979ba302eff1b29be240b750f91d375f275f4b7ede4b42abf5d8ad64",
+        "matches_record": true,
+        "read_status": "not_manually_reviewed"
+      },
+      {
+        "file": "apps/desktop-client/src/features/scan/ScanWorkspace.batch34.test.tsx",
+        "recorded_sha256": "bb1fdc11685249928b70722af13a31f7e88c56e50ab8ba0787472e060e1db45d",
+        "current_sha256": "bb1fdc11685249928b70722af13a31f7e88c56e50ab8ba0787472e060e1db45d",
+        "matches_record": true,
+        "read_status": "not_manually_reviewed"
+      },
+      {
+        "file": "scripts/ci/go-coverage.test.mjs",
+        "recorded_sha256": "20b32f3f8f2721c8d7e35c6a60da1bffd854a809666e95e82dde316d5a4e1398",
+        "current_sha256": "20b32f3f8f2721c8d7e35c6a60da1bffd854a809666e95e82dde316d5a4e1398",
+        "matches_record": true,
+        "read_status": "not_manually_reviewed"
+      }
+    ],
+    "newly_observed_or_stale_pending_paths": [
+      ".github/workflows/ci.yml",
+      "scripts/ci/lint-workflows.mjs",
+      "apps/web-admin/src/pages/LearningReportsPage.tsx"
+    ],
+    "source_change_author_attribution": "not_determined",
+    "business_files_modified_by_this_audit": false
+  }
+}

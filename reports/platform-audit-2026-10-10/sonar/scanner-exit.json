@@ -1,0 +1,6 @@
+{
+  "exit_code": null,
+  "status": "interrupted_during_compression",
+  "standard_scanner_publish_success": false,
+  "prior_exit_code_was_stale": true
+}

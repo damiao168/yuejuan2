@@ -1,0 +1,60 @@
+{
+  "started_at": "2026-10-11T17:07:26.468381+08:00",
+  "finished_at": "2026-10-11T17:08:34.450371+08:00",
+  "duration_seconds": 67.98399999999674,
+  "command": [
+    "go",
+    "test",
+    "-json",
+    "-p",
+    "1",
+    "-count=1",
+    "-timeout=5m",
+    "./internal/grading",
+    "./internal/mathunderstanding",
+    "./internal/paper",
+    "./internal/schoolassistant"
+  ],
+  "cwd": "D:\\project\\yuejuan\\services\\api-gateway",
+  "exit_code": 0,
+  "isolation": {
+    "toolchain": "local",
+    "module_proxy": "off",
+    "checksum_service": "off",
+    "GOMAXPROCS": 2,
+    "cleared_environment_names": []
+  },
+  "package_results": [
+    {
+      "Time": "2026-10-11T17:07:45.540268+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/grading",
+      "Elapsed": 2.666
+    },
+    {
+      "Time": "2026-10-11T17:07:49.9755358+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/mathunderstanding",
+      "Elapsed": 1.5
+    },
+    {
+      "Time": "2026-10-11T17:08:28.4678061+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/paper",
+      "Elapsed": 4.45
+    },
+    {
+      "Time": "2026-10-11T17:08:33.7890431+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/schoolassistant",
+      "Elapsed": 1.6320000000000001
+    }
+  ],
+  "test_result_counts": {
+    "pass": 951,
+    "fail": 0,
+    "skip": 0
+  },
+  "skipped_tests": [],
+  "note": "只报告实际运行的包；环境缺失跳过项不算真实数据库或外部模型集成通过。"
+}

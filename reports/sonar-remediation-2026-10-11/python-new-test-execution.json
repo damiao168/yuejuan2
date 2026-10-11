@@ -1,0 +1,148 @@
+{
+  "python": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+  "versions": {
+    "pytest": "9.1.1",
+    "jsonschema": "4.25.1",
+    "sympy": "1.14.0",
+    "pillow": "11.3.0",
+    "defusedxml": "0.7.1"
+  },
+  "openssl_path": "C:\\Program Files\\Git\\usr\\bin\\openssl.exe",
+  "environment_names_removed": [],
+  "source_hashes_before": {
+    "ai-services/grading_agent/config.py": "2ff9cbe6105aa62ab6098f53cc5d8cf0bde0d858e8bf7bc5992ec48648d3b460",
+    "ai-services/grading_agent/server.py": "62c2b234657f1f29d444968d8ce815647f820b1b8c7b3eb7d6a6db6d617c637e",
+    "ai-services/tests/test_config.py": "adab58404249d7ae9a86e09a2c42b7c02937cf0a2c9fb8faf72fb2eeacbf8529",
+    "ai-services/tests/test_model_transport_security.py": "daa3c6757a8a6b6e23205e437c980dac395e15451670d8d1306cd5bd3985a6d0",
+    "ai-services/tests/test_server_tls.py": "8a1b347ce43f3c08af267595ea199cb52c674cec6f08b21947b384f57096e693",
+    "ai-services/tests/test_server_tls_handshake.py": "6a3198313784b20317f0e6c12fcda65abefef39ce703fd01ca64d2ee45729a6e",
+    "docs/architecture/tools/finalize_delivery_records.py": "790fca5d4a70d5263d58ce74da40faadd49d450b5a5b36320bfc800de1d5b037",
+    "docs/architecture/tools/fit_box_typography.py": "984d37011dcdf8e47097a7b9d7ce5701402338f0967b80715c0e3192895719eb",
+    "docs/architecture/tools/retire_stale_reviews.py": "d9b3cadeb378d83cb78d4bf4bbcdceee809a91aaf3be0967b3ff17d8a8ded89e",
+    "docs/architecture/tools/verify_typography.py": "1275521d6cc92bb784c3dc852647889845cc14be7188f5d9e880a0349c71399d",
+    "docs/architecture/tools/write_frontend_specs.py": "cc5cd506d2111570357fb43b3a80ca827c7cb4ec42a00db67ab5900e1d7c73c5",
+    "infra/docker-compose/scripts/generate-internal-test-certificates.py": "255c0c174ece90c5a30e15b8954e23bf2c0e8a2f2ecc9cce993ff85ca2cfd6fa",
+    "services/math-verification-worker/math_verification_worker/server.py": "d9d6a02c89cea615738f507e3462e185e4c9992537acdb6b93ce28427f9a4f1f",
+    "services/math-verification-worker/tests/test_server.py": "a81b66cdc60aab230e148ef153e5086980c09a045b26ad289bc104cf7c929538",
+    "services/math-verification-worker/tests/test_server_tls_batch54.py": "aefcb18c85bbd1fb31c380b6b97ada82f721dc68b5c3859fe8a5b2659c9de497",
+    "tests/infra/test_internal_test_certificates.py": "ee08a8ff9c99cbf085b2081d6799342d535b0240b3ec68b1a2bab79dc5fce355"
+  },
+  "results": [
+    {
+      "group": "grading-tls-and-transport",
+      "paths": [
+        "ai-services/tests/test_model_transport_security.py",
+        "ai-services/tests/test_server_tls_handshake.py",
+        "ai-services/tests/test_server_tls.py",
+        "ai-services/tests/test_config.py"
+      ],
+      "command": [
+        "C:\\Users\\pc\\AppData\\Local\\Programs\\Python\\Python311\\python.exe",
+        "-m",
+        "pytest",
+        "--import-mode=importlib",
+        "-p",
+        "no:cacheprovider",
+        "-q",
+        "ai-services/tests/test_model_transport_security.py",
+        "ai-services/tests/test_server_tls_handshake.py",
+        "ai-services/tests/test_server_tls.py",
+        "ai-services/tests/test_config.py",
+        "--junitxml=D:\\project\\yuejuan\\reports\\sonar-remediation-2026-10-11\\python-new-grading-tls-and-transport-junit.xml"
+      ],
+      "started_at_utc": "2026-10-11T10:29:11.317362+00:00",
+      "finished_at_utc": "2026-10-11T10:29:31.988250+00:00",
+      "duration_seconds": 20.672000000005937,
+      "exit_code": 0,
+      "junit_counts": {
+        "tests": 196,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      },
+      "log": "python-new-grading-tls-and-transport-pytest.log",
+      "junit": "python-new-grading-tls-and-transport-junit.xml"
+    },
+    {
+      "group": "math-verifier-tls-and-policy",
+      "paths": [
+        "services/math-verification-worker/tests/test_server_tls_batch54.py",
+        "services/math-verification-worker/tests/test_server.py"
+      ],
+      "command": [
+        "C:\\Users\\pc\\AppData\\Local\\Programs\\Python\\Python311\\python.exe",
+        "-m",
+        "pytest",
+        "--import-mode=importlib",
+        "-p",
+        "no:cacheprovider",
+        "-q",
+        "services/math-verification-worker/tests/test_server_tls_batch54.py",
+        "services/math-verification-worker/tests/test_server.py",
+        "--junitxml=D:\\project\\yuejuan\\reports\\sonar-remediation-2026-10-11\\python-new-math-verifier-tls-and-policy-junit.xml"
+      ],
+      "started_at_utc": "2026-10-11T10:29:31.989613+00:00",
+      "finished_at_utc": "2026-10-11T10:29:41.559719+00:00",
+      "duration_seconds": 9.562999999994645,
+      "exit_code": 0,
+      "junit_counts": {
+        "tests": 96,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      },
+      "log": "python-new-math-verifier-tls-and-policy-pytest.log",
+      "junit": "python-new-math-verifier-tls-and-policy-junit.xml"
+    },
+    {
+      "group": "internal-test-certificates",
+      "paths": [
+        "tests/infra/test_internal_test_certificates.py"
+      ],
+      "command": [
+        "C:\\Users\\pc\\AppData\\Local\\Programs\\Python\\Python311\\python.exe",
+        "-m",
+        "pytest",
+        "--import-mode=importlib",
+        "-p",
+        "no:cacheprovider",
+        "-q",
+        "tests/infra/test_internal_test_certificates.py",
+        "--junitxml=D:\\project\\yuejuan\\reports\\sonar-remediation-2026-10-11\\python-new-internal-test-certificates-junit.xml"
+      ],
+      "started_at_utc": "2026-10-11T10:29:41.560720+00:00",
+      "finished_at_utc": "2026-10-11T10:29:44.713385+00:00",
+      "duration_seconds": 3.1560000000026776,
+      "exit_code": 0,
+      "junit_counts": {
+        "tests": 5,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      },
+      "log": "python-new-internal-test-certificates-pytest.log",
+      "junit": "python-new-internal-test-certificates-junit.xml"
+    }
+  ],
+  "scope": "本地真实 TLS 监听器/握手和短期合成证书，模型依赖由既有夹具替换；不宣称生产学校或真实模型验收。",
+  "source_hashes_after": {
+    "ai-services/grading_agent/config.py": "2ff9cbe6105aa62ab6098f53cc5d8cf0bde0d858e8bf7bc5992ec48648d3b460",
+    "ai-services/grading_agent/server.py": "62c2b234657f1f29d444968d8ce815647f820b1b8c7b3eb7d6a6db6d617c637e",
+    "ai-services/tests/test_config.py": "adab58404249d7ae9a86e09a2c42b7c02937cf0a2c9fb8faf72fb2eeacbf8529",
+    "ai-services/tests/test_model_transport_security.py": "daa3c6757a8a6b6e23205e437c980dac395e15451670d8d1306cd5bd3985a6d0",
+    "ai-services/tests/test_server_tls.py": "8a1b347ce43f3c08af267595ea199cb52c674cec6f08b21947b384f57096e693",
+    "ai-services/tests/test_server_tls_handshake.py": "6a3198313784b20317f0e6c12fcda65abefef39ce703fd01ca64d2ee45729a6e",
+    "docs/architecture/tools/finalize_delivery_records.py": "790fca5d4a70d5263d58ce74da40faadd49d450b5a5b36320bfc800de1d5b037",
+    "docs/architecture/tools/fit_box_typography.py": "984d37011dcdf8e47097a7b9d7ce5701402338f0967b80715c0e3192895719eb",
+    "docs/architecture/tools/retire_stale_reviews.py": "d9b3cadeb378d83cb78d4bf4bbcdceee809a91aaf3be0967b3ff17d8a8ded89e",
+    "docs/architecture/tools/verify_typography.py": "1275521d6cc92bb784c3dc852647889845cc14be7188f5d9e880a0349c71399d",
+    "docs/architecture/tools/write_frontend_specs.py": "cc5cd506d2111570357fb43b3a80ca827c7cb4ec42a00db67ab5900e1d7c73c5",
+    "infra/docker-compose/scripts/generate-internal-test-certificates.py": "255c0c174ece90c5a30e15b8954e23bf2c0e8a2f2ecc9cce993ff85ca2cfd6fa",
+    "services/math-verification-worker/math_verification_worker/server.py": "d9d6a02c89cea615738f507e3462e185e4c9992537acdb6b93ce28427f9a4f1f",
+    "services/math-verification-worker/tests/test_server.py": "a81b66cdc60aab230e148ef153e5086980c09a045b26ad289bc104cf7c929538",
+    "services/math-verification-worker/tests/test_server_tls_batch54.py": "aefcb18c85bbd1fb31c380b6b97ada82f721dc68b5c3859fe8a5b2659c9de497",
+    "tests/infra/test_internal_test_certificates.py": "ee08a8ff9c99cbf085b2081d6799342d535b0240b3ec68b1a2bab79dc5fce355"
+  },
+  "sources_unchanged_during_tests": true,
+  "passed": true
+}

@@ -1,0 +1,78 @@
+{
+  "reviewed_at": "2026-10-11T15:09:58.191342+08:00",
+  "sarif_sha256": "69b53cea47bc6506c0a889325414b1f35a1ded9f492c61ba4e640a91a1766062",
+  "reviewer": "root",
+  "findings": [
+    {
+      "sarif_result_index_zero_based": 0,
+      "rule_id": "rust/hard-coded-cryptographic-value",
+      "path": "apps/desktop-client/src-tauri/src/durable_store/paths.rs",
+      "line": 105,
+      "snapshot_sha256": "18d6cd3ad7c0df27444117953ed996e7532e1f07331cd4c56e57f92998c796a6",
+      "human_verdict": "false_positive_context",
+      "human_priority": "none_for_this_rule",
+      "evidence": "paths.rs:105 的 true 是 durable_data_exists 返回的布尔存在标志，crypto.rs:168 只把它用作已有密文时拒绝生成新密钥的分支条件；该分支 return Err。实际返回密钥来自凭据管理器已保存的32字节值，或 OsRng 填满的新32字节数组。原始 codeFlow 的 bool guard -> master_key 返回值关联是保守流摘要，不存在 bool 转为 AES key 的实现。",
+      "review_scope": "固定快照相关完整paths.rs/crypto.rs、原SARIF codeFlow、锁定依赖实现；非全Rust运行验证"
+    },
+    {
+      "sarif_result_index_zero_based": 4,
+      "rule_id": "rust/hard-coded-cryptographic-value",
+      "path": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+      "line": 127,
+      "snapshot_sha256": "8fdadd2b87d65a01f913540db8864a62eb37d2c6c71d93dbf26d177befd8cb35",
+      "human_verdict": "false_positive_context",
+      "human_priority": "none_for_this_rule",
+      "evidence": "crypto.rs:127 的全零12字节数组只用于分配 nonce 缓冲区。第128行立即 OsRng.fill_bytes(&mut nonce)，第130行后才送入 AES-GCM；锁定 rand_core 0.6.4 的 OsRng.fill_bytes 在随机源失败时 panic，不存在继续使用全零缓冲区的回退路径。未执行系统随机源故障注入或完整Rust测试。",
+      "review_scope": "固定快照相关完整paths.rs/crypto.rs、原SARIF codeFlow、锁定依赖实现；非全Rust运行验证"
+    },
+    {
+      "sarif_result_index_zero_based": 5,
+      "rule_id": "rust/hard-coded-cryptographic-value",
+      "path": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+      "line": 171,
+      "snapshot_sha256": "8fdadd2b87d65a01f913540db8864a62eb37d2c6c71d93dbf26d177befd8cb35",
+      "human_verdict": "false_positive_context",
+      "human_priority": "none_for_this_rule",
+      "evidence": "crypto.rs:171 的全零32字节数组只用于分配新密钥缓冲区；第172行 OsRng.fill_bytes 后才写入 Windows Credential Manager 并返回。已有本地密文而密钥丢失时前一分支返回错误，不会新建替代密钥。凭据管理器读取成功的另一分支使用已保存值；随机源失败时 fill_bytes panic，不会返回初始化全零值。",
+      "review_scope": "固定快照相关完整paths.rs/crypto.rs、原SARIF codeFlow、锁定依赖实现；非全Rust运行验证"
+    }
+  ],
+  "supporting_source_hashes": [
+    {
+      "path": "D:\\tools\\audit-codeql-20261010\\source-20261011\\apps\\desktop-client\\src-tauri\\src\\durable_store\\paths.rs",
+      "sha256": "18d6cd3ad7c0df27444117953ed996e7532e1f07331cd4c56e57f92998c796a6"
+    },
+    {
+      "path": "D:\\tools\\audit-codeql-20261010\\source-20261011\\apps\\desktop-client\\src-tauri\\src\\durable_store\\crypto.rs",
+      "sha256": "8fdadd2b87d65a01f913540db8864a62eb37d2c6c71d93dbf26d177befd8cb35"
+    },
+    {
+      "path": "D:\\tools\\audit-codeql-20261010\\source-20261011\\apps\\desktop-client\\src-tauri\\Cargo.lock",
+      "sha256": "b7b604e606c47c9d5cdc53283c0aea671925b4d95e4ee44e848117697f7b64f5"
+    },
+    {
+      "path": "D:\\rust\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\rand_core-0.6.4\\src\\os.rs",
+      "sha256": "47849479e19c43dd01259eb14be7b4daf8474d23567dc32a1547c10b108b7069"
+    },
+    {
+      "path": "D:\\rust\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\getrandom-0.2.17\\src\\lib.rs",
+      "sha256": "50dbe3913bc42b354bfedd773b54540d569215cc4615140f549fd6be7266f24d"
+    },
+    {
+      "path": "D:\\rust\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\getrandom-0.2.17\\src\\windows.rs",
+      "sha256": "695666d2bf31257e4a02cf970dee50a9a1f83c118b88b67d1a261cc5f7c1a66f"
+    }
+  ],
+  "locked_rand_core": [
+    {
+      "name": "rand_core",
+      "version": "0.6.4",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "checksum": "ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c",
+      "dependencies": [
+        "getrandom 0.2.17"
+      ]
+    }
+  ],
+  "scope_limit": "这些核验排除指定硬编码来源规则的三条上下文命中，不认证随机nonce永不碰撞，不替代整端权限、密钥生命周期和并发测试，也不消除Rust抽取警告。"
+}

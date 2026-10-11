@@ -66,9 +66,11 @@ type SubjectExam struct {
 type Projection struct {
 	ExamID          string          `json:"exam_id"`
 	ExamName        string          `json:"exam_name"`
+	ExamSessionID   string          `json:"exam_session_id,omitempty"`
 	ExamSessionName string          `json:"exam_session_name,omitempty"`
 	SubjectExams    []SubjectExam   `json:"subject_exams"`
 	ExamStatus      string          `json:"exam_status"`
+	ReadOnly        bool            `json:"read_only"`
 	Revision        int64           `json:"revision"`
 	Stage           string          `json:"stage"`
 	Stages          []Stage         `json:"stages"`

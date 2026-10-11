@@ -1,0 +1,229 @@
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"# edugrade-enterprise/services/api-gateway/internal/apicontract.test\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime: VirtualAlloc of 81920 bytes failed with errno=1455\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"fatal error: out of memory\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime stack:\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.throw({0x7ff72d8c011f?, 0x8197ffda0?})\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/panic.go:1229 +0x4d fp=0x8197ffd68 sp=0x8197ffd38 pc=0x7ff72d5c302d\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.sysUsedOS(0x2e894bc74000, 0x14000)\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/mem_windows.go:83 +0x1e5 fp=0x8197ffde8 sp=0x8197ffd68 pc=0x7ff72d5640e5\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.sysUsed(...)\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/mem.go:91\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.(*mheap).allocSpan(0x7ff72db814a0, 0xa, 0x0, 0x83)\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/mheap.go:1404 +0x4a7 fp=0x8197ffe98 sp=0x8197ffde8 pc=0x7ff72d57a1e7\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.(*mheap).alloc.func1()\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/mheap.go:1017 +0x5c fp=0x8197ffee0 sp=0x8197ffe98 pc=0x7ff72d57999c\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.systemstack(0x7ff72db77800)\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/asm_amd64.s:562 +0x49 fp=0x8197ffef0 sp=0x8197ffee0 pc=0x7ff72d5c8489\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"goroutine 1 gp=0x2e8939c02000 m=0 mp=0x7ff72db78bc0 [running]:\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.systemstack_switch()\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/asm_amd64.s:516 +0x8 fp=0x2e8939fe51c8 sp=0x2e8939fe51b8 pc=0x7ff72d5c8428\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.(*mheap).alloc(0x0?, 0x659?, 0x87?)\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/mheap.go:1011 +0x57 fp=0x2e8939fe5210 sp=0x2e8939fe51c8 pc=0x7ff72d5798f7\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.(*mcentral).grow(0x14000?)\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/mcentral.go:253 +0x36 fp=0x2e8939fe5240 sp=0x2e8939fe5210 pc=0x7ff72d561c96\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.(*mcentral).cacheSpan(0x7ff72db97b78)\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/mcentral.go:171 +0x454 fp=0x2e8939fe52b8 sp=0x2e8939fe5240 pc=0x7ff72d561b14\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.(*mcache).refill(0x181eb2f0108, 0x83?)\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/mcache.go:205 +0x16b fp=0x2e8939fe52f8 sp=0x2e8939fe52b8 pc=0x7ff72d5610eb\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.(*mcache).nextFree(0x181eb2f0108, 0x83)\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/malloc.go:1006 +0x7e fp=0x2e8939fe5330 sp=0x2e8939fe52f8 pc=0x7ff72d55d5fe\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.mallocgcSmallNoscan(0x6400?, 0x400f72d877520?, 0x70?)\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/malloc.go:1397 +0x185 fp=0x2e8939fe5388 sp=0x2e8939fe5330 pc=0x7ff72d55dbe5\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.mallocgc(0x6400, 0x7ff72d877520, 0x1)\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/malloc.go:1143 +0xcc fp=0x2e8939fe53b8 sp=0x2e8939fe5388 pc=0x7ff72d5c118c\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.newarray(0x0?, 0x0?)\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/malloc.go:2207 +0x45 fp=0x2e8939fe53e0 sp=0x2e8939fe53b8 pc=0x7ff72d5c1345\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"internal/runtime/maps.newarray(0x20?, 0x7ff72d899d40?)\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/malloc.go:2231 +0x13 fp=0x2e8939fe5400 sp=0x2e8939fe53e0 pc=0x7ff72d5c13f3\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"internal/runtime/maps.newGroups(...)\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\tinternal/runtime/maps/group.go:321\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"internal/runtime/maps.(*table).reset(0x2e8944269a80, 0x7ff72d86eb00, 0x400)\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\tinternal/runtime/maps/table.go:103 +0x3d fp=0x2e8939fe5428 sp=0x2e8939fe5400 pc=0x7ff72d54591d\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"internal/runtime/maps.newTable(0x7ff72d86eb00, 0x395, 0xa4, 0x9)\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\tinternal/runtime/maps/table.go:94 +0x8f fp=0x2e8939fe5458 sp=0x2e8939fe5428 pc=0x7ff72d54586f\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"internal/runtime/maps.NewMap(0x7ff72d86eb00, 0x64603, 0x7ff72d87ec60?, 0x1000000000000)\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\tinternal/runtime/maps/map.go:322 +0x185 fp=0x2e8939fe54b0 sp=0x2e8939fe5458 pc=0x7ff72d543ea5\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.makemap(0x6?, 0x7ff72d8f3900?, 0x1?)\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/map.go:67 +0x29 fp=0x2e8939fe54e0 sp=0x2e8939fe54b0 pc=0x7ff72d5c1489\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"cmd/link/internal/loader.(*Loader).LoadSyms(0x2e8939cea388, 0x7ff72db5ba20)\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\tcmd/link/internal/loader/loader.go:2313 +0x165 fp=0x2e8939fe55d0 sp=0x2e8939fe54e0 pc=0x7ff72d697d65\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"cmd/link/internal/ld.(*Link).loadlib(0x2e8939bc6200)\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\tcmd/link/internal/ld/lib.go:605 +0x4af fp=0x2e8939fe5708 sp=0x2e8939fe55d0 pc=0x7ff72d7593af\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"cmd/link/internal/ld.Main(_, {0x20, 0x20, 0x1, 0x7, 0x10, 0x0, {0x2e8939bd0170, 0x1, 0x1}, ...})\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\tcmd/link/internal/ld/main.go:366 +0x144b fp=0x2e8939fe5ac8 sp=0x2e8939fe5708 pc=0x7ff72d77b14b\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"main.main()\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\tcmd/link/main.go:72 +0x131e fp=0x2e8939fe5f48 sp=0x2e8939fe5ac8 pc=0x7ff72d82247e\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.main()\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/proc.go:290 +0x2c7 fp=0x2e8939fe5fe0 sp=0x2e8939fe5f48 pc=0x7ff72d58ff67\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.goexit({})\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/asm_amd64.s:1771 +0x1 fp=0x2e8939fe5fe8 sp=0x2e8939fe5fe0 pc=0x7ff72d5ca0c1\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"goroutine 2 gp=0x2e8939c02780 m=nil [force gc (idle)]:\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/proc.go:462 +0xce fp=0x2e8939c05fa8 sp=0x2e8939c05f88 pc=0x7ff72d5c314e\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.goparkunlock(...)\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/proc.go:468\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.forcegchelper()\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/proc.go:375 +0xb8 fp=0x2e8939c05fe0 sp=0x2e8939c05fa8 pc=0x7ff72d590258\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.goexit({})\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/asm_amd64.s:1771 +0x1 fp=0x2e8939c05fe8 sp=0x2e8939c05fe0 pc=0x7ff72d5ca0c1\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"created by runtime.init.7 in goroutine 1\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/proc.go:363 +0x1a\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"goroutine 3 gp=0x2e8939c02b40 m=nil [GC sweep wait]:\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.gopark(0x1?, 0x0?, 0x0?, 0x0?, 0x0?)\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/proc.go:462 +0xce fp=0x2e8939c07f88 sp=0x2e8939c07f68 pc=0x7ff72d5c314e\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.goparkunlock(...)\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/proc.go:468\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.bgsweep(0x2e8939c10000)\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/mgcsweep.go:324 +0x151 fp=0x2e8939c07fc8 sp=0x2e8939c07f88 pc=0x7ff72d5761b1\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.gcenable.gowrap1()\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/mgc.go:214 +0x17 fp=0x2e8939c07fe0 sp=0x2e8939c07fc8 pc=0x7ff72d5674b7\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.goexit({})\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/asm_amd64.s:1771 +0x1 fp=0x2e8939c07fe8 sp=0x2e8939c07fe0 pc=0x7ff72d5ca0c1\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"created by runtime.gcenable in goroutine 1\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/mgc.go:214 +0x66\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"goroutine 4 gp=0x2e8939c02d20 m=nil [GC scavenge wait]:\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.gopark(0x10000?, 0x7ff72d8e2720?, 0x0?, 0x0?, 0x0?)\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/proc.go:462 +0xce fp=0x2e8939c17f78 sp=0x2e8939c17f58 pc=0x7ff72d5c314e\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.goparkunlock(...)\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/proc.go:468\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.(*scavengerState).park(0x7ff72db77040)\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/mgcscavenge.go:425 +0x49 fp=0x2e8939c17fa8 sp=0x2e8939c17f78 pc=0x7ff72d573c29\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.bgscavenge(0x2e8939c10000)\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/mgcscavenge.go:658 +0x59 fp=0x2e8939c17fc8 sp=0x2e8939c17fa8 pc=0x7ff72d5741b9\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.gcenable.gowrap2()\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/mgc.go:215 +0x17 fp=0x2e8939c17fe0 sp=0x2e8939c17fc8 pc=0x7ff72d567477\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.goexit({})\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/asm_amd64.s:1771 +0x1 fp=0x2e8939c17fe8 sp=0x2e8939c17fe0 pc=0x7ff72d5ca0c1\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"created by runtime.gcenable in goroutine 1\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/mgc.go:215 +0xa5\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"goroutine 18 gp=0x2e8939c82000 m=nil [GOMAXPROCS updater (idle)]:\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/proc.go:462 +0xce fp=0x2e8939c13f88 sp=0x2e8939c13f68 pc=0x7ff72d5c314e\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.goparkunlock(...)\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/proc.go:468\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.updateMaxProcsGoroutine()\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/proc.go:7095 +0xe7 fp=0x2e8939c13fe0 sp=0x2e8939c13f88 pc=0x7ff72d59e807\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.goexit({})\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/asm_amd64.s:1771 +0x1 fp=0x2e8939c13fe8 sp=0x2e8939c13fe0 pc=0x7ff72d5ca0c1\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"created by runtime.defaultGOMAXPROCSUpdateEnable in goroutine 1\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/proc.go:7083 +0x37\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"goroutine 19 gp=0x2e8939c821e0 m=nil [finalizer wait]:\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/proc.go:462 +0xce fp=0x2e8939c15e20 sp=0x2e8939c15e00 pc=0x7ff72d5c314e\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.runFinalizers()\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/mfinal.go:210 +0x107 fp=0x2e8939c15fe0 sp=0x2e8939c15e20 pc=0x7ff72d566447\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.goexit({})\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/asm_amd64.s:1771 +0x1 fp=0x2e8939c15fe8 sp=0x2e8939c15fe0 pc=0x7ff72d5ca0c1\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"created by runtime.createfing in goroutine 1\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/mfinal.go:172 +0x3d\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"goroutine 20 gp=0x2e8939c823c0 m=nil [cleanup wait]:\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.gopark(0x101000000000000?, 0x3f?, 0x3?, 0x0?, 0x7ff72db2f340?)\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/proc.go:462 +0xce fp=0x2e8939c09f68 sp=0x2e8939c09f48 pc=0x7ff72d5c314e\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.goparkunlock(...)\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/proc.go:468\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.(*cleanupQueue).dequeue(0x7ff72db77300)\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/mcleanup.go:522 +0xd4 fp=0x2e8939c09fa0 sp=0x2e8939c09f68 pc=0x7ff72d5632d4\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.runCleanups()\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/mcleanup.go:718 +0x45 fp=0x2e8939c09fe0 sp=0x2e8939c09fa0 pc=0x7ff72d563945\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.goexit({})\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/asm_amd64.s:1771 +0x1 fp=0x2e8939c09fe8 sp=0x2e8939c09fe0 pc=0x7ff72d5ca0c1\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"created by runtime.(*cleanupQueue).createGs in goroutine 1\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/mcleanup.go:672 +0xa5\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"goroutine 5 gp=0x2e8939c030e0 m=nil [GC worker (idle)]:\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.gopark(0x54b04bc5f120?, 0x0?, 0x0?, 0x0?, 0x0?)\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/proc.go:462 +0xce fp=0x2e8939c19f40 sp=0x2e8939c19f20 pc=0x7ff72d5c314e\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.gcBgMarkWorker(0x2e8939bd82a0)\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/mgc.go:1791 +0xeb fp=0x2e8939c19fc8 sp=0x2e8939c19f40 pc=0x7ff72d569feb\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.gcBgMarkStartWorkers.gowrap1()\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/mgc.go:1695 +0x17 fp=0x2e8939c19fe0 sp=0x2e8939c19fc8 pc=0x7ff72d569ed7\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.goexit({})\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/asm_amd64.s:1771 +0x1 fp=0x2e8939c19fe8 sp=0x2e8939c19fe0 pc=0x7ff72d5ca0c1\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"created by runtime.gcBgMarkStartWorkers in goroutine 1\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/mgc.go:1695 +0x105\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"goroutine 6 gp=0x2e8939c032c0 m=nil [GC worker (idle)]:\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.gopark(0x54b04bc5f120?, 0x0?, 0x0?, 0x0?, 0x0?)\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/proc.go:462 +0xce fp=0x2e8939fd3f40 sp=0x2e8939fd3f20 pc=0x7ff72d5c314e\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.gcBgMarkWorker(0x2e8939bd82a0)\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/mgc.go:1791 +0xeb fp=0x2e8939fd3fc8 sp=0x2e8939fd3f40 pc=0x7ff72d569feb\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.gcBgMarkStartWorkers.gowrap1()\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/mgc.go:1695 +0x17 fp=0x2e8939fd3fe0 sp=0x2e8939fd3fc8 pc=0x7ff72d569ed7\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"runtime.goexit({})\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/asm_amd64.s:1771 +0x1 fp=0x2e8939fd3fe8 sp=0x2e8939fd3fe0 pc=0x7ff72d5ca0c1\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"created by runtime.gcBgMarkStartWorkers in goroutine 1\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-output","Output":"\truntime/mgc.go:1695 +0x105\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/apicontract.test","Action":"build-fail"}
+{"Time":"2026-10-11T17:11:34.4558031+08:00","Action":"start","Package":"edugrade-enterprise/services/api-gateway/internal/apicontract"}
+{"Time":"2026-10-11T17:11:34.4558031+08:00","Action":"output","Package":"edugrade-enterprise/services/api-gateway/internal/apicontract","Output":"FAIL\tedugrade-enterprise/services/api-gateway/internal/apicontract [build failed]\n"}
+{"Time":"2026-10-11T17:11:34.4558031+08:00","Action":"fail","Package":"edugrade-enterprise/services/api-gateway/internal/apicontract","Elapsed":0,"FailedBuild":"edugrade-enterprise/services/api-gateway/internal/apicontract.test"}
+{"Time":"2026-10-11T17:11:39.6220614+08:00","Action":"start","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard"}
+{"Time":"2026-10-11T17:11:42.125269+08:00","Action":"run","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestBatch47BackmarkReaderPreservesProjectionAndDefaultPages"}
+{"Time":"2026-10-11T17:11:42.1256848+08:00","Action":"output","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestBatch47BackmarkReaderPreservesProjectionAndDefaultPages","Output":"=== RUN   TestBatch47BackmarkReaderPreservesProjectionAndDefaultPages\n"}
+{"Time":"2026-10-11T17:11:42.1299086+08:00","Action":"output","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestBatch47BackmarkReaderPreservesProjectionAndDefaultPages","Output":"--- PASS: TestBatch47BackmarkReaderPreservesProjectionAndDefaultPages (0.00s)\n"}
+{"Time":"2026-10-11T17:11:42.1299086+08:00","Action":"pass","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestBatch47BackmarkReaderPreservesProjectionAndDefaultPages","Elapsed":0}
+{"Time":"2026-10-11T17:11:42.1299086+08:00","Action":"run","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestBatch47BackmarkReaderEmptyAndNilService"}
+{"Time":"2026-10-11T17:11:42.1299086+08:00","Action":"output","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestBatch47BackmarkReaderEmptyAndNilService","Output":"=== RUN   TestBatch47BackmarkReaderEmptyAndNilService\n"}
+{"Time":"2026-10-11T17:11:42.1299086+08:00","Action":"output","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestBatch47BackmarkReaderEmptyAndNilService","Output":"--- PASS: TestBatch47BackmarkReaderEmptyAndNilService (0.00s)\n"}
+{"Time":"2026-10-11T17:11:42.1299086+08:00","Action":"pass","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestBatch47BackmarkReaderEmptyAndNilService","Elapsed":0}
+{"Time":"2026-10-11T17:11:42.1299086+08:00","Action":"run","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestBatch47BackmarkReaderDiscardsPartialProjectionAtFirstError"}
+{"Time":"2026-10-11T17:11:42.1299086+08:00","Action":"output","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestBatch47BackmarkReaderDiscardsPartialProjectionAtFirstError","Output":"=== RUN   TestBatch47BackmarkReaderDiscardsPartialProjectionAtFirstError\n"}
+{"Time":"2026-10-11T17:11:42.1299086+08:00","Action":"run","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestBatch47BackmarkReaderDiscardsPartialProjectionAtFirstError/list"}
+{"Time":"2026-10-11T17:11:42.1299086+08:00","Action":"output","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestBatch47BackmarkReaderDiscardsPartialProjectionAtFirstError/list","Output":"=== RUN   TestBatch47BackmarkReaderDiscardsPartialProjectionAtFirstError/list\n"}
+{"Time":"2026-10-11T17:11:42.1299086+08:00","Action":"output","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestBatch47BackmarkReaderDiscardsPartialProjectionAtFirstError/list","Output":"--- PASS: TestBatch47BackmarkReaderDiscardsPartialProjectionAtFirstError/list (0.00s)\n"}
+{"Time":"2026-10-11T17:11:42.1299086+08:00","Action":"pass","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestBatch47BackmarkReaderDiscardsPartialProjectionAtFirstError/list","Elapsed":0}
+{"Time":"2026-10-11T17:11:42.1299086+08:00","Action":"run","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestBatch47BackmarkReaderDiscardsPartialProjectionAtFirstError/missing_batch"}
+{"Time":"2026-10-11T17:11:42.1299086+08:00","Action":"output","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestBatch47BackmarkReaderDiscardsPartialProjectionAtFirstError/missing_batch","Output":"=== RUN   TestBatch47BackmarkReaderDiscardsPartialProjectionAtFirstError/missing_batch\n"}
+{"Time":"2026-10-11T17:11:42.1299086+08:00","Action":"output","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestBatch47BackmarkReaderDiscardsPartialProjectionAtFirstError/missing_batch","Output":"--- PASS: TestBatch47BackmarkReaderDiscardsPartialProjectionAtFirstError/missing_batch (0.00s)\n"}
+{"Time":"2026-10-11T17:11:42.1299086+08:00","Action":"pass","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestBatch47BackmarkReaderDiscardsPartialProjectionAtFirstError/missing_batch","Elapsed":0}
+{"Time":"2026-10-11T17:11:42.1299086+08:00","Action":"run","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestBatch47BackmarkReaderDiscardsPartialProjectionAtFirstError/second_batch"}
+{"Time":"2026-10-11T17:11:42.1299086+08:00","Action":"output","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestBatch47BackmarkReaderDiscardsPartialProjectionAtFirstError/second_batch","Output":"=== RUN   TestBatch47BackmarkReaderDiscardsPartialProjectionAtFirstError/second_batch\n"}
+{"Time":"2026-10-11T17:11:42.1299086+08:00","Action":"output","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestBatch47BackmarkReaderDiscardsPartialProjectionAtFirstError/second_batch","Output":"--- PASS: TestBatch47BackmarkReaderDiscardsPartialProjectionAtFirstError/second_batch (0.00s)\n"}
+{"Time":"2026-10-11T17:11:42.1299086+08:00","Action":"pass","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestBatch47BackmarkReaderDiscardsPartialProjectionAtFirstError/second_batch","Elapsed":0}
+{"Time":"2026-10-11T17:11:42.1299086+08:00","Action":"run","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestBatch47BackmarkReaderDiscardsPartialProjectionAtFirstError/second_items"}
+{"Time":"2026-10-11T17:11:42.1299086+08:00","Action":"output","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestBatch47BackmarkReaderDiscardsPartialProjectionAtFirstError/second_items","Output":"=== RUN   TestBatch47BackmarkReaderDiscardsPartialProjectionAtFirstError/second_items\n"}
+{"Time":"2026-10-11T17:11:42.1299086+08:00","Action":"output","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestBatch47BackmarkReaderDiscardsPartialProjectionAtFirstError/second_items","Output":"--- PASS: TestBatch47BackmarkReaderDiscardsPartialProjectionAtFirstError/second_items (0.00s)\n"}
+{"Time":"2026-10-11T17:11:42.1299086+08:00","Action":"pass","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestBatch47BackmarkReaderDiscardsPartialProjectionAtFirstError/second_items","Elapsed":0}
+{"Time":"2026-10-11T17:11:42.1299086+08:00","Action":"run","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestBatch47BackmarkReaderDiscardsPartialProjectionAtFirstError/second_histogram"}
+{"Time":"2026-10-11T17:11:42.1299086+08:00","Action":"output","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestBatch47BackmarkReaderDiscardsPartialProjectionAtFirstError/second_histogram","Output":"=== RUN   TestBatch47BackmarkReaderDiscardsPartialProjectionAtFirstError/second_histogram\n"}
+{"Time":"2026-10-11T17:11:42.1299086+08:00","Action":"output","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestBatch47BackmarkReaderDiscardsPartialProjectionAtFirstError/second_histogram","Output":"--- PASS: TestBatch47BackmarkReaderDiscardsPartialProjectionAtFirstError/second_histogram (0.00s)\n"}
+{"Time":"2026-10-11T17:11:42.1299086+08:00","Action":"pass","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestBatch47BackmarkReaderDiscardsPartialProjectionAtFirstError/second_histogram","Elapsed":0}
+{"Time":"2026-10-11T17:11:42.1299086+08:00","Action":"run","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestBatch47BackmarkReaderDiscardsPartialProjectionAtFirstError/second_counts"}
+{"Time":"2026-10-11T17:11:42.1299086+08:00","Action":"output","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestBatch47BackmarkReaderDiscardsPartialProjectionAtFirstError/second_counts","Output":"=== RUN   TestBatch47BackmarkReaderDiscardsPartialProjectionAtFirstError/second_counts\n"}
+{"Time":"2026-10-11T17:11:42.1304282+08:00","Action":"output","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestBatch47BackmarkReaderDiscardsPartialProjectionAtFirstError/second_counts","Output":"--- PASS: TestBatch47BackmarkReaderDiscardsPartialProjectionAtFirstError/second_counts (0.00s)\n"}
+{"Time":"2026-10-11T17:11:42.1304282+08:00","Action":"pass","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestBatch47BackmarkReaderDiscardsPartialProjectionAtFirstError/second_counts","Elapsed":0}
+{"Time":"2026-10-11T17:11:42.1304282+08:00","Action":"output","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestBatch47BackmarkReaderDiscardsPartialProjectionAtFirstError","Output":"--- PASS: TestBatch47BackmarkReaderDiscardsPartialProjectionAtFirstError (0.00s)\n"}
+{"Time":"2026-10-11T17:11:42.1304282+08:00","Action":"pass","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestBatch47BackmarkReaderDiscardsPartialProjectionAtFirstError","Elapsed":0}
+{"Time":"2026-10-11T17:11:42.1304282+08:00","Action":"run","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestBatch47DashboardUsesRealBackmarkReader"}
+{"Time":"2026-10-11T17:11:42.1304282+08:00","Action":"output","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestBatch47DashboardUsesRealBackmarkReader","Output":"=== RUN   TestBatch47DashboardUsesRealBackmarkReader\n"}
+{"Time":"2026-10-11T17:11:42.1304282+08:00","Action":"output","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestBatch47DashboardUsesRealBackmarkReader","Output":"--- PASS: TestBatch47DashboardUsesRealBackmarkReader (0.00s)\n"}
+{"Time":"2026-10-11T17:11:42.1304282+08:00","Action":"pass","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestBatch47DashboardUsesRealBackmarkReader","Elapsed":0}
+{"Time":"2026-10-11T17:11:42.1304282+08:00","Action":"run","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestR3OpenCriticalIncidentBlocksQualityGate"}
+{"Time":"2026-10-11T17:11:42.1304282+08:00","Action":"output","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestR3OpenCriticalIncidentBlocksQualityGate","Output":"=== RUN   TestR3OpenCriticalIncidentBlocksQualityGate\n"}
+{"Time":"2026-10-11T17:11:42.1304282+08:00","Action":"output","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestR3OpenCriticalIncidentBlocksQualityGate","Output":"--- PASS: TestR3OpenCriticalIncidentBlocksQualityGate (0.00s)\n"}
+{"Time":"2026-10-11T17:11:42.1304282+08:00","Action":"pass","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestR3OpenCriticalIncidentBlocksQualityGate","Elapsed":0}
+{"Time":"2026-10-11T17:11:42.1304282+08:00","Action":"run","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestQuestionWarningsContainOwnerAndResolution"}
+{"Time":"2026-10-11T17:11:42.1304282+08:00","Action":"output","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestQuestionWarningsContainOwnerAndResolution","Output":"=== RUN   TestQuestionWarningsContainOwnerAndResolution\n"}
+{"Time":"2026-10-11T17:11:42.1304282+08:00","Action":"output","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestQuestionWarningsContainOwnerAndResolution","Output":"--- PASS: TestQuestionWarningsContainOwnerAndResolution (0.00s)\n"}
+{"Time":"2026-10-11T17:11:42.1304282+08:00","Action":"pass","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestQuestionWarningsContainOwnerAndResolution","Elapsed":0}
+{"Time":"2026-10-11T17:11:42.1304282+08:00","Action":"run","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestHumanAgreementFiltersAtStoreBoundary"}
+{"Time":"2026-10-11T17:11:42.1304282+08:00","Action":"output","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestHumanAgreementFiltersAtStoreBoundary","Output":"=== RUN   TestHumanAgreementFiltersAtStoreBoundary\n"}
+{"Time":"2026-10-11T17:11:42.1304282+08:00","Action":"output","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestHumanAgreementFiltersAtStoreBoundary","Output":"--- PASS: TestHumanAgreementFiltersAtStoreBoundary (0.00s)\n"}
+{"Time":"2026-10-11T17:11:42.1304282+08:00","Action":"pass","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Test":"TestHumanAgreementFiltersAtStoreBoundary","Elapsed":0}
+{"Time":"2026-10-11T17:11:42.1304282+08:00","Action":"output","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Output":"PASS\n"}
+{"Time":"2026-10-11T17:11:42.1376656+08:00","Action":"output","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Output":"ok  \tedugrade-enterprise/services/api-gateway/internal/qualitydashboard\t2.510s\n"}
+{"Time":"2026-10-11T17:11:42.1376656+08:00","Action":"pass","Package":"edugrade-enterprise/services/api-gateway/internal/qualitydashboard","Elapsed":2.516}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/mathunderstanding [edugrade-enterprise/services/api-gateway/internal/mathunderstanding.test]","Action":"build-output","Output":"# edugrade-enterprise/services/api-gateway/internal/mathunderstanding [edugrade-enterprise/services/api-gateway/internal/mathunderstanding.test]\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/mathunderstanding [edugrade-enterprise/services/api-gateway/internal/mathunderstanding.test]","Action":"build-output","Output":"internal\\mathunderstanding\\verification_runtime_test.go:138:87: undefined: parent\n"}
+{"ImportPath":"edugrade-enterprise/services/api-gateway/internal/mathunderstanding [edugrade-enterprise/services/api-gateway/internal/mathunderstanding.test]","Action":"build-fail"}
+{"Time":"2026-10-11T17:11:42.6134187+08:00","Action":"start","Package":"edugrade-enterprise/services/api-gateway/internal/mathunderstanding"}
+{"Time":"2026-10-11T17:11:42.6134187+08:00","Action":"output","Package":"edugrade-enterprise/services/api-gateway/internal/mathunderstanding","Output":"FAIL\tedugrade-enterprise/services/api-gateway/internal/mathunderstanding [build failed]\n"}
+{"Time":"2026-10-11T17:11:42.6134187+08:00","Action":"fail","Package":"edugrade-enterprise/services/api-gateway/internal/mathunderstanding","Elapsed":0,"FailedBuild":"edugrade-enterprise/services/api-gateway/internal/mathunderstanding [edugrade-enterprise/services/api-gateway/internal/mathunderstanding.test]"}

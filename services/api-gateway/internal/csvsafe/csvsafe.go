@@ -1,5 +1,4 @@
-// Package csvsafe neutralizes spreadsheet formulas in exported, user-derived
-// CSV cells. CSV quoting alone does not stop spreadsheet formula evaluation.
+// Package csvsafe 消除导出 CSV 中来自用户的单元格公式；仅用 CSV 引号包裹，不能阻止电子表格执行公式。
 package csvsafe
 
 import "strings"

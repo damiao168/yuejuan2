@@ -1,10 +1,5 @@
 import { EduGradeApi } from "@edugrade/sdk";
 import type {
-  CalibrationAttempt,
-  CalibrationMetrics,
-  CalibrationPolicy,
-  CalibrationSession,
-  GraderQualification,
   PutCalibrationPolicyRequest,
   SubmitCalibrationAttemptRequest
 } from "@edugrade/sdk";
@@ -20,7 +15,7 @@ export type {
   GraderQualification,
   PutCalibrationPolicyRequest,
   SubmitCalibrationAttemptRequest
-};
+} from "@edugrade/sdk";
 
 export async function getCalibrationPolicy(examId: string, questionId: string, signal?: AbortSignal) {
   return generatedApi.getCalibrationPolicy({ path: { examId, questionId }, signal });

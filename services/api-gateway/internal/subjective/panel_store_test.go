@@ -17,6 +17,47 @@ func TestPanelStoreKeepsOneFrozenPanelAndOneRunPerRole(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	run, runInput := createAndVerifyPanelPrimaryA(t, ctx, store, panel, input)
+	bInput := runInput
+	bInput.AgentRole, bInput.RequestID, bInput.ModelVersion = AgentRolePrimaryB, "panel-b", "model-b"
+	bRun, err := store.GetOrCreateRun(ctx, "tenant-1", "actor-1", bInput)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, owner, err := store.ClaimPanelRun(ctx, "tenant-1", bRun.ID); err != nil || !owner {
+		t.Fatalf("primary B could not be claimed: owner=%v err=%v", owner, err)
+	}
+	if _, err := store.UpdateRun(ctx, "tenant-1", bRun.ID, UpdateRunInput{Status: RunSucceeded, GradeID: "grade-b"}); err != nil {
+		t.Fatal(err)
+	}
+	resolvedScore := 2.0
+	if _, err := store.UpdatePanel(ctx, "tenant-1", panel.ID, UpdatePanelInput{
+		Status: PanelComparing, PrimaryARunID: run.ID, PrimaryBRunID: bRun.ID,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.UpdatePanel(ctx, "tenant-1", panel.ID, UpdatePanelInput{
+		Status: PanelResolved, ResolvedScore: &resolvedScore, ResolutionSource: ResolutionPrimaryConsensus,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.UpdatePanel(ctx, "tenant-1", panel.ID, UpdatePanelInput{Status: PanelComparing}); !errors.Is(err, ErrIdempotencyConflict) {
+		t.Fatalf("terminal panel regressed to comparing: %v", err)
+	}
+	replay, err := store.GetOrCreatePanel(ctx, "tenant-1", "actor-1", input)
+	if err != nil || replay.ID != panel.ID || replay.Status != PanelResolved {
+		t.Fatalf("completed panel was duplicated: %#v err=%v", replay, err)
+	}
+	changed := input
+	changed.QuestionID = "question-2"
+	if _, err := store.GetOrCreatePanel(ctx, "tenant-1", "actor-1", changed); !errors.Is(err, ErrIdempotencyConflict) {
+		t.Fatalf("changed question reused frozen panel identity: %v", err)
+	}
+}
+
+// A 角色完成前只允许一个执行者；A 成功而 B 未完成时，面板仍不能进入比较状态。
+func createAndVerifyPanelPrimaryA(t *testing.T, ctx context.Context, store *MemoryStore, panel GradingPanel, input CreatePanelInput) (GradingRun, CreateRunInput) {
+	t.Helper()
 	runInput := CreateRunInput{
 		PanelID: panel.ID, AgentRole: AgentRolePrimaryA, RequestID: "panel-a",
 		AnswerSegmentID: input.AnswerSegmentID, AnswerVersion: input.AnswerVersion,
@@ -55,39 +96,5 @@ func TestPanelStoreKeepsOneFrozenPanelAndOneRunPerRole(t *testing.T) {
 	}); !errors.Is(err, ErrIdempotencyConflict) {
 		t.Fatalf("panel compared before primary B completed: %v", err)
 	}
-	bInput := runInput
-	bInput.AgentRole, bInput.RequestID, bInput.ModelVersion = AgentRolePrimaryB, "panel-b", "model-b"
-	bRun, err := store.GetOrCreateRun(ctx, "tenant-1", "actor-1", bInput)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, owner, err := store.ClaimPanelRun(ctx, "tenant-1", bRun.ID); err != nil || !owner {
-		t.Fatalf("primary B could not be claimed: owner=%v err=%v", owner, err)
-	}
-	if _, err := store.UpdateRun(ctx, "tenant-1", bRun.ID, UpdateRunInput{Status: RunSucceeded, GradeID: "grade-b"}); err != nil {
-		t.Fatal(err)
-	}
-	resolvedScore := 2.0
-	if _, err := store.UpdatePanel(ctx, "tenant-1", panel.ID, UpdatePanelInput{
-		Status: PanelComparing, PrimaryARunID: run.ID, PrimaryBRunID: bRun.ID,
-	}); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := store.UpdatePanel(ctx, "tenant-1", panel.ID, UpdatePanelInput{
-		Status: PanelResolved, ResolvedScore: &resolvedScore, ResolutionSource: ResolutionPrimaryConsensus,
-	}); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := store.UpdatePanel(ctx, "tenant-1", panel.ID, UpdatePanelInput{Status: PanelComparing}); !errors.Is(err, ErrIdempotencyConflict) {
-		t.Fatalf("terminal panel regressed to comparing: %v", err)
-	}
-	replay, err := store.GetOrCreatePanel(ctx, "tenant-1", "actor-1", input)
-	if err != nil || replay.ID != panel.ID || replay.Status != PanelResolved {
-		t.Fatalf("completed panel was duplicated: %#v err=%v", replay, err)
-	}
-	changed := input
-	changed.QuestionID = "question-2"
-	if _, err := store.GetOrCreatePanel(ctx, "tenant-1", "actor-1", changed); !errors.Is(err, ErrIdempotencyConflict) {
-		t.Fatalf("changed question reused frozen panel identity: %v", err)
-	}
+	return run, runInput
 }

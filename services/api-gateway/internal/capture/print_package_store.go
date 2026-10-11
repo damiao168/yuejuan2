@@ -15,6 +15,11 @@ type printPackageLayout struct {
 	} `json:"pages"`
 }
 
+type printPackagePageLayout struct {
+	width, height int
+	regions       []PrintPackageRegion
+}
+
 func (s *PostgresStore) GetStudentPrintPackage(ctx context.Context, tenantID, printBatchID string) (StudentPrintPackage, error) {
 	var out StudentPrintPackage
 	var layoutRaw []byte
@@ -36,28 +41,9 @@ WHERE b.tenant_id=$1 AND b.id=$2::uuid
 	); err != nil {
 		return StudentPrintPackage{}, mapNotFound(err)
 	}
-	// 台账数量和模板页数必须先通过边界校验，后面才允许逐页组装可下载包。
-	if expectedSheetCount <= 0 || expectedPageCount <= 0 ||
-		expectedSheetCount > maxPrintPackagePages/expectedPageCount {
-		return StudentPrintPackage{}, ErrInvalidTransition
-	}
-	var layout printPackageLayout
-	if err := json.Unmarshal(layoutRaw, &layout); err != nil ||
-		len(layout.Pages) == 0 || len(layout.Pages) != expectedPageCount {
-		return StudentPrintPackage{}, ErrInvalidTransition
-	}
-	pagesByNumber := make(map[int]struct {
-		width, height int
-		regions       []PrintPackageRegion
-	}, len(layout.Pages))
-	for _, page := range layout.Pages {
-		if page.PageNo <= 0 || page.Width <= 0 || page.Height <= 0 {
-			return StudentPrintPackage{}, ErrInvalidTransition
-		}
-		pagesByNumber[page.PageNo] = struct {
-			width, height int
-			regions       []PrintPackageRegion
-		}{page.Width, page.Height, page.QuestionRegions}
+	pagesByNumber, err := printPackagePages(layoutRaw, expectedSheetCount, expectedPageCount)
+	if err != nil {
+		return StudentPrintPackage{}, err
 	}
 
 	rows, err := s.db.QueryContext(ctx, `
@@ -84,9 +70,7 @@ ORDER BY sh.ordinal,p.page_no
 		if err = rows.Scan(&studentID, &sheetSerial, &ordinal, &status, &pageNo, &barcodeValue); err != nil {
 			return StudentPrintPackage{}, err
 		}
-		// Once a serial has been observed or invalidated, downloading its old
-		// package again could create an indistinguishable second physical copy.
-		// Replacement must go through the explicit revoke/reprint lifecycle.
+		// 序列号已被观察到或作废后，再次下载旧打印包可能生成无法区分的第二份实体副本；替换必须经过显式撤销和重印生命周期。
 		if status != "issued" {
 			return StudentPrintPackage{}, ErrInvalidTransition
 		}
@@ -109,16 +93,42 @@ ORDER BY sh.ordinal,p.page_no
 	if err = rows.Err(); err != nil {
 		return StudentPrintPackage{}, err
 	}
-	if len(out.Sheets) == 0 {
-		return StudentPrintPackage{}, mapNotFound(sql.ErrNoRows)
-	}
-	if len(out.Sheets) != expectedSheetCount {
-		return StudentPrintPackage{}, ErrInvalidTransition
-	}
-	for _, sheet := range out.Sheets {
-		if len(sheet.Pages) != expectedPageCount {
-			return StudentPrintPackage{}, ErrInvalidTransition
-		}
+	if err := validatePrintPackageSheetCounts(out.Sheets, expectedSheetCount, expectedPageCount); err != nil {
+		return StudentPrintPackage{}, err
 	}
 	return out, nil
+}
+
+// 台账数量和模板页数必须先通过边界校验，后面才允许逐页组装可下载包。
+func printPackagePages(layoutRaw []byte, sheetCount, pageCount int) (map[int]printPackagePageLayout, error) {
+	if sheetCount <= 0 || pageCount <= 0 || sheetCount > maxPrintPackagePages/pageCount {
+		return nil, ErrInvalidTransition
+	}
+	var layout printPackageLayout
+	if err := json.Unmarshal(layoutRaw, &layout); err != nil || len(layout.Pages) == 0 || len(layout.Pages) != pageCount {
+		return nil, ErrInvalidTransition
+	}
+	pagesByNumber := make(map[int]printPackagePageLayout, len(layout.Pages))
+	for _, page := range layout.Pages {
+		if page.PageNo <= 0 || page.Width <= 0 || page.Height <= 0 {
+			return nil, ErrInvalidTransition
+		}
+		pagesByNumber[page.PageNo] = printPackagePageLayout{page.Width, page.Height, page.QuestionRegions}
+	}
+	return pagesByNumber, nil
+}
+
+func validatePrintPackageSheetCounts(sheets []PrintPackageSheet, sheetCount, pageCount int) error {
+	if len(sheets) == 0 {
+		return mapNotFound(sql.ErrNoRows)
+	}
+	if len(sheets) != sheetCount {
+		return ErrInvalidTransition
+	}
+	for _, sheet := range sheets {
+		if len(sheet.Pages) != pageCount {
+			return ErrInvalidTransition
+		}
+	}
+	return nil
 }

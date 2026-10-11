@@ -97,7 +97,9 @@ WHERE tenant_id = $1 AND id::text = $2
 		if err != nil {
 			return nil, nil, nil, err
 		}
-		finalGrade, err := s.insertFinalGradeTx(ctx, tx, tenantID, actorID, session, score, "double_mark_auto", "", session.ResolutionStrategy)
+		finalGrade, err := s.insertFinalGradeTx(ctx, tx, tenantID, actorID, session, FinalGrade{
+			Score: score, Source: "double_mark_auto", ResolutionStrategy: session.ResolutionStrategy,
+		})
 		if err != nil {
 			return nil, nil, nil, err
 		}
@@ -118,7 +120,10 @@ WHERE tenant_id = $1 AND id::text = $2
 	// 是否允许原阅卷人参与仲裁取创建仲裁时的策略，并保存到仲裁任务中。
 	policy, _ := s.effectivePolicyTx(ctx, tx, tenantID, session.ExamID, session.QuestionID)
 	reason := fmt.Sprintf("score difference %.2f exceeds threshold %.2f", diff, session.Threshold)
-	arbitrationTask, err := s.createArbitrationTaskTx(ctx, tx, tenantID, actorID, session, first, second, reason, "", policy.AllowSameArbitrator)
+	arbitrationTask, err := s.createArbitrationTaskTx(ctx, tx, tenantID, actorID, session, ArbitrationTask{
+		FirstScore: first.Score, SecondScore: second.Score,
+		DifferenceReason: reason, AllowSameArbitrator: policy.AllowSameArbitrator,
+	})
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -134,10 +139,11 @@ WHERE tenant_id = $1 AND id::text = $2
 	return &session, nil, &arbitrationTask, nil
 }
 
-func (s *PostgresStore) createArbitrationTaskTx(ctx context.Context, tx *sql.Tx, tenantID string, actorID string, session DoubleMarkSession, first HumanGrade, second HumanGrade, reason string, assignedTo string, allowSame bool) (ArbitrationTask, error) {
-	if assignedTo != "" {
-		candidate := ArbitrationTask{FirstReviewerID: session.FirstReviewerID, SecondReviewerID: session.SecondReviewerID, AllowSameArbitrator: allowSame}
-		if !arbitratorAllowed(candidate, assignedTo) {
+// pending 提供本次仲裁的分数、原因和指派策略；答案身份仍取已锁定的双评会话。
+func (s *PostgresStore) createArbitrationTaskTx(ctx context.Context, tx *sql.Tx, tenantID string, actorID string, session DoubleMarkSession, pending ArbitrationTask) (ArbitrationTask, error) {
+	if pending.AssignedTo != "" {
+		candidate := ArbitrationTask{FirstReviewerID: session.FirstReviewerID, SecondReviewerID: session.SecondReviewerID, AllowSameArbitrator: pending.AllowSameArbitrator}
+		if !arbitratorAllowed(candidate, pending.AssignedTo) {
 			return ArbitrationTask{}, ErrForbidden
 		}
 	}
@@ -147,10 +153,11 @@ func (s *PostgresStore) createArbitrationTaskTx(ctx context.Context, tx *sql.Tx,
 	}
 	payload, _ := json.Marshal(contextForArbitration(taskContext))
 	status := "pending"
-	if assignedTo != "" {
+	if pending.AssignedTo != "" {
 		status = "assigned"
 	}
-	diff := math.Abs(first.Score - second.Score)
+	diff := math.Abs(pending.FirstScore - pending.SecondScore)
+	reason := pending.DifferenceReason
 	if stringsTrim(reason) == "" {
 		reason = fmt.Sprintf("score difference %.2f exceeds threshold %.2f", diff, session.Threshold)
 	}
@@ -168,11 +175,12 @@ RETURNING id::text, tenant_id::text, double_mark_session_id::text, exam_id::text
   final_score::float8, reason, student_feedback, allow_same_arbitrator, context, revision, created_by::text, created_at, updated_at
 `, tenantID, session.ID, session.ExamID, session.QuestionID, session.QuestionNo,
 		session.AnswerSegmentID, session.SubmissionID, session.AnonymousCode,
-		session.FirstReviewerID, session.SecondReviewerID, first.Score, second.Score, diff,
-		reason, status, assignedTo, allowSame, payload, actorID))
+		session.FirstReviewerID, session.SecondReviewerID, pending.FirstScore, pending.SecondScore, diff,
+		reason, status, pending.AssignedTo, pending.AllowSameArbitrator, payload, actorID))
 }
 
-func (s *PostgresStore) insertFinalGradeTx(ctx context.Context, tx *sql.Tx, tenantID string, actorID string, session DoubleMarkSession, score float64, source string, arbitrationTaskID string, strategy string) (FinalGrade, error) {
+// pending 提供本次终分及来源；满分从题目上下文读取，身份取双评会话和显式租户、操作者。
+func (s *PostgresStore) insertFinalGradeTx(ctx context.Context, tx *sql.Tx, tenantID string, actorID string, session DoubleMarkSession, pending FinalGrade) (FinalGrade, error) {
 	taskContext, err := s.loadContextTx(ctx, tx, tenantID, session.AnswerSegmentID)
 	if err != nil {
 		return FinalGrade{}, err
@@ -189,7 +197,7 @@ RETURNING id::text, tenant_id::text, exam_id::text, question_id::text, question_
   COALESCE(resolution_strategy, ''), locked, created_by::text, created_at, updated_at
 `, tenantID, session.ExamID, session.QuestionID, session.QuestionNo,
 		session.AnswerSegmentID, session.SubmissionID, session.AnonymousCode,
-		score, taskContext.Question.Score, source, session.ID, arbitrationTaskID, strategy, actorID))
+		pending.Score, taskContext.Question.Score, pending.Source, session.ID, pending.ArbitrationTaskID, pending.ResolutionStrategy, actorID))
 }
 
 func (s *PostgresStore) completeSessionReviewTasksTx(ctx context.Context, tx *sql.Tx, tenantID string, session DoubleMarkSession) error {

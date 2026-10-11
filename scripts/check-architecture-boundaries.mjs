@@ -45,26 +45,32 @@ export function pageWarning(source, filename, threshold = 700) {
   return lines > threshold ? `${filename}: ${lines} lines` : null;
 }
 
+function frontendDebtViolation(path, source, debt) {
+  const lines = source.trimEnd().split("\n").length;
+  const isCss = path.endsWith(".css");
+  const budget = isCss ? debt.legacy_css_max_lines[path] : debt.legacy_page_max_lines[path];
+  if (budget !== undefined) {
+    if (lines > budget) return `${path}: grew to ${lines} lines; debt budget is ${budget}`;
+    if (!isCss && lines <= debt.page_max_lines) return `${path}: now has ${lines} lines; remove its obsolete frontend debt entry`;
+    return null;
+  }
+  if (isCss) {
+    if (Number.isSafeInteger(debt.css_max_lines) && lines > debt.css_max_lines) {
+      return `${path}: new stylesheet has ${lines} lines; maximum is ${debt.css_max_lines}`;
+    }
+    return null;
+  }
+  return lines > debt.page_max_lines ? `${path}: new page has ${lines} lines; maximum is ${debt.page_max_lines}` : null;
+}
+
 // 行数按物理文本计算，注释和空行也计入；整理注释不能顺手放宽冻结的债务预算。
 export function checkFrontendDebt(sources, debt) {
   const failures = [];
   const seen = new Set();
   for (const { path, source } of sources) {
     seen.add(path);
-    const lines = source.trimEnd().split("\n").length;
-    const isCss = path.endsWith(".css");
-    const budget = isCss ? debt.legacy_css_max_lines[path] : debt.legacy_page_max_lines[path];
-    if (budget === undefined) {
-      if (isCss && Number.isSafeInteger(debt.css_max_lines) && lines > debt.css_max_lines) {
-        failures.push(`${path}: new stylesheet has ${lines} lines; maximum is ${debt.css_max_lines}`);
-      } else if (!isCss && lines > debt.page_max_lines) {
-        failures.push(`${path}: new page has ${lines} lines; maximum is ${debt.page_max_lines}`);
-      }
-    } else if (lines > budget) {
-      failures.push(`${path}: grew to ${lines} lines; debt budget is ${budget}`);
-    } else if (!isCss && lines <= debt.page_max_lines) {
-      failures.push(`${path}: now has ${lines} lines; remove its obsolete frontend debt entry`);
-    }
+    const violation = frontendDebtViolation(path, source, debt);
+    if (violation) failures.push(violation);
   }
   for (const path of [...Object.keys(debt.legacy_page_max_lines), ...Object.keys(debt.legacy_css_max_lines)]) {
     if (!seen.has(path)) failures.push(`${path}: frontend debt entry has no matching file`);
@@ -75,7 +81,7 @@ export function checkFrontendDebt(sources, debt) {
 export function hookWarnings(source, filename, lineThreshold = 350, stateThreshold = 15) {
   const warnings = [];
   const lines = source.trimEnd().split("\n").length;
-  const states = [...source.matchAll(/\buseState\s*(?:<[^()\n]*>)?\s*\(/g)].length;
+  const states = [...source.matchAll(/\buseState(?:\s*<[^()\n]*>)?\s*\(/g)].length;
   if (lines > lineThreshold) warnings.push(`${filename}: ${lines} hook lines`);
   if (states > stateThreshold) warnings.push(`${filename}: ${states} useState calls`);
   return warnings;
@@ -85,7 +91,47 @@ export const MAX_BROAD_AUTH_STORE_CONSUMERS = 11;
 
 export function countBroadAuthStoreConsumers(sources) {
   return sources.reduce((count, source) => count
-    + [...source.matchAll(/^\s*(?:audit|Audit)\s+auth\.Store\b/gm)].length, 0);
+    + [...source.matchAll(/^[ \t]*(?:audit|Audit)[ \t]+auth\.Store\b/gm)].length, 0);
+}
+
+function frontendSources() {
+  const webSource = join(root, "apps", "web-admin", "src");
+  const frontendPaths = walk(webSource, ".tsx")
+    .filter((path) => path.endsWith("Page.tsx") || basename(path) === "GradingWorkbench.tsx");
+  const desktopApp = join(root, "apps", "desktop-client", "src", "App.tsx");
+  frontendPaths.push(desktopApp, join(webSource, "styles.css"), ...walk(join(webSource, "styles"), ".css"));
+  return frontendPaths.map((path) => ({
+    path: relative(root, path).split(sep).join("/"),
+    source: readFileSync(path, "utf8"),
+  }));
+}
+
+function collectHookWarnings() {
+  const warnings = [];
+  for (const app of ["web-admin", "desktop-client"]) {
+    const features = join(root, "apps", app, "src", "features");
+    for (const extension of [".ts", ".tsx"]) {
+      for (const path of walk(features, extension)) {
+        if (!/^use[A-Z].*\.tsx?$/.test(path.split(/[\\/]/).at(-1))) continue;
+        warnings.push(...hookWarnings(readFileSync(path, "utf8"), relative(root, path)));
+      }
+    }
+  }
+  return warnings;
+}
+
+function goSourceSignals() {
+  const warnings = [];
+  const goDirectory = join(root, "services", "api-gateway", "internal");
+  const goSources = [];
+  for (const path of walk(goDirectory, ".go")) {
+    if (!path.endsWith("_test.go")) {
+      const source = readFileSync(path, "utf8");
+      goSources.push(source);
+      warnings.push(...findLargeInterfaces(source, relative(root, path)));
+    }
+  }
+  return { goSources, warnings };
 }
 
 function main() {
@@ -98,37 +144,10 @@ function main() {
       failures.push(`${relative(root, path)} reintroduces ConnectOperations`);
     }
   }
-
-  const warnings = [];
-  const webSource = join(root, "apps", "web-admin", "src");
-  const frontendPaths = walk(webSource, ".tsx")
-    .filter((path) => path.endsWith("Page.tsx") || basename(path) === "GradingWorkbench.tsx");
-  const desktopApp = join(root, "apps", "desktop-client", "src", "App.tsx");
-  frontendPaths.push(desktopApp, join(webSource, "styles.css"), ...walk(join(webSource, "styles"), ".css"));
-  const frontendSources = frontendPaths.map((path) => ({
-    path: relative(root, path).split(sep).join("/"),
-    source: readFileSync(path, "utf8"),
-  }));
   const frontendDebt = JSON.parse(readFileSync(join(root, "contracts", "architecture", "frontend-debt.json"), "utf8"));
-  failures.push(...checkFrontendDebt(frontendSources, frontendDebt));
-  for (const app of ["web-admin", "desktop-client"]) {
-    const features = join(root, "apps", app, "src", "features");
-    for (const extension of [".ts", ".tsx"]) {
-      for (const path of walk(features, extension)) {
-        if (!/^use[A-Z].*\.tsx?$/.test(path.split(/[\\/]/).at(-1))) continue;
-        warnings.push(...hookWarnings(readFileSync(path, "utf8"), relative(root, path)));
-      }
-    }
-  }
-  const goDirectory = join(root, "services", "api-gateway", "internal");
-  const goSources = [];
-  for (const path of walk(goDirectory, ".go")) {
-    if (!path.endsWith("_test.go")) {
-      const source = readFileSync(path, "utf8");
-      goSources.push(source);
-      warnings.push(...findLargeInterfaces(source, relative(root, path)));
-    }
-  }
+  failures.push(...checkFrontendDebt(frontendSources(), frontendDebt));
+  const { goSources, warnings } = goSourceSignals();
+  warnings.unshift(...collectHookWarnings());
   const broadAuthConsumers = countBroadAuthStoreConsumers(goSources);
   if (broadAuthConsumers > MAX_BROAD_AUTH_STORE_CONSUMERS) {
     failures.push(`broad audit auth.Store consumers grew to ${broadAuthConsumers}; budget is ${MAX_BROAD_AUTH_STORE_CONSUMERS}`);

@@ -40,28 +40,6 @@
 .question-appeal-regrade-id { width: 260px; }
 
 @media (max-width: 840px) {
-  .score-release-heading,
-  .score-release-subhead,
-  .score-release-row,
-  .score-release-gate-row {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .score-release-columns {
-    grid-template-columns: 1fr;
-  }
-
-  .score-release-columns > section + section {
-    padding: 16px 0 0;
-    border-top: 1px solid var(--border);
-    border-left: 0;
-  }
-
-  .score-release-gate-row > .ant-btn {
-    margin-left: 0;
-  }
-
   .question-appeal-heading { align-items: flex-start; flex-direction: column; }
   .question-appeal-facts { grid-template-columns: 1fr; }
 }

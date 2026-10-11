@@ -17,10 +17,15 @@ type MemoryStore struct {
 	items              map[string]Exam
 	sessionsByCommand  map[string]ExamSession
 	sessionCommandHash map[string]string
+	managementSessions map[string]ExamSession
+	managementRules    map[string]string
+	managementFacts    map[string]managementSubjectFacts
+	archiveState       map[string]ManagementArchiveMetadata
+	archiveCommands    map[string]managementArchiveCommandRecord
 }
 
 func NewMemoryStore() *MemoryStore {
-	return &MemoryStore{next: 1, items: map[string]Exam{}, sessionsByCommand: map[string]ExamSession{}, sessionCommandHash: map[string]string{}}
+	return &MemoryStore{next: 1, items: map[string]Exam{}, sessionsByCommand: map[string]ExamSession{}, sessionCommandHash: map[string]string{}, managementSessions: map[string]ExamSession{}, managementRules: map[string]string{}, managementFacts: map[string]managementSubjectFacts{}, archiveState: map[string]ManagementArchiveMetadata{}, archiveCommands: map[string]managementArchiveCommandRecord{}}
 }
 
 func (s *MemoryStore) CreateExam(_ context.Context, scope auth.AccessScope, createdBy string, input CreateInput) (Exam, error) {
@@ -63,13 +68,7 @@ func (s *MemoryStore) ListExams(_ context.Context, scope auth.AccessScope, filte
 		if item.TenantID != scope.TenantID || !scopeAllowsExam(scope, item) {
 			continue
 		}
-		if filter.Status != "" && item.Status != filter.Status {
-			continue
-		}
-		if filter.SchoolID != "" && item.SchoolID != filter.SchoolID {
-			continue
-		}
-		if !filter.CursorAt.IsZero() && filter.CursorID != "" && (item.CreatedAt.After(filter.CursorAt) || (item.CreatedAt.Equal(filter.CursorAt) && item.ID >= filter.CursorID)) {
+		if !memoryExamMatchesListFilter(item, filter) {
 			continue
 		}
 		out = append(out, item)
@@ -84,6 +83,20 @@ func (s *MemoryStore) ListExams(_ context.Context, scope auth.AccessScope, filte
 		out = out[:filter.Limit]
 	}
 	return out, nil
+}
+
+func memoryExamMatchesListFilter(item Exam, filter ListFilter) bool {
+	if filter.Status != "" && item.Status != filter.Status {
+		return false
+	}
+	if filter.SchoolID != "" && item.SchoolID != filter.SchoolID {
+		return false
+	}
+	// 与列表的时间、ID 倒序一致；完整游标排除边界项，仅有一个字段时不启用游标。
+	if !filter.CursorAt.IsZero() && filter.CursorID != "" && (item.CreatedAt.After(filter.CursorAt) || (item.CreatedAt.Equal(filter.CursorAt) && item.ID >= filter.CursorID)) {
+		return false
+	}
+	return true
 }
 
 func (s *MemoryStore) GetExam(_ context.Context, scope auth.AccessScope, id string) (Exam, error) {
@@ -121,6 +134,9 @@ func (s *MemoryStore) UpdateExam(_ context.Context, scope auth.AccessScope, id s
 	if !ok || item.TenantID != scope.TenantID || !scopeAllowsExam(scope, item) {
 		return Exam{}, ErrNotFound
 	}
+	if s.memoryExamArchivedLocked(item) {
+		return Exam{}, ErrLocked
+	}
 	if input.ExpectedRevision <= 0 || item.Revision != input.ExpectedRevision {
 		return Exam{}, ErrRevisionConflict
 	}
@@ -131,6 +147,18 @@ func (s *MemoryStore) UpdateExam(_ context.Context, scope auth.AccessScope, id s
 	if classIDsChanged && !CanChangeCandidateRoster(item.Status) {
 		return Exam{}, ErrCandidatesFrozen
 	}
+	// 先合并局部副本，再核对变更后的学校与班级；失败不能提前写回存储。
+	item = applyMemoryExamUpdate(item, input)
+	if !scopeAllowsRequestedClasses(scope, item.SchoolID, item.ClassIDs) {
+		return Exam{}, ErrScopeForbidden
+	}
+	item.Revision++
+	item.UpdatedAt = time.Now().UTC()
+	s.items[id] = item
+	return item, nil
+}
+
+func applyMemoryExamUpdate(item Exam, input UpdateInput) Exam {
 	if input.SchoolID != nil {
 		item.SchoolID = *input.SchoolID
 	}
@@ -158,21 +186,22 @@ func (s *MemoryStore) UpdateExam(_ context.Context, scope auth.AccessScope, id s
 	if input.ClassIDs != nil {
 		item.ClassIDs = cloneStrings(*input.ClassIDs)
 	}
-	if !scopeAllowsRequestedClasses(scope, item.SchoolID, item.ClassIDs) {
-		return Exam{}, ErrScopeForbidden
-	}
-	item.Revision++
-	item.UpdatedAt = time.Now().UTC()
-	s.items[id] = item
-	return item, nil
+	return item
 }
 
 func (s *MemoryStore) UpdateStatus(_ context.Context, scope auth.AccessScope, id string, status string, expectedRevision int64) (Exam, error) {
+	// 旧状态接口不能再创建单科归档，整场资格和恢复信息只能由管理归档入口写入。
+	if status == "archived" {
+		return Exam{}, ErrManagementArchiveRequired
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	item, ok := s.items[id]
 	if !ok || item.TenantID != scope.TenantID || !scopeAllowsExam(scope, item) {
 		return Exam{}, ErrNotFound
+	}
+	if s.memoryExamArchivedLocked(item) {
+		return Exam{}, ErrLocked
 	}
 	if expectedRevision <= 0 || item.Revision != expectedRevision {
 		return Exam{}, ErrRevisionConflict
@@ -194,6 +223,9 @@ func (s *MemoryStore) RefreshCandidateSnapshot(_ context.Context, scope auth.Acc
 	item, ok := s.items[id]
 	if !ok || item.TenantID != scope.TenantID || !scopeAllowsExam(scope, item) {
 		return CandidateRefreshResult{}, ErrNotFound
+	}
+	if s.memoryExamArchivedLocked(item) {
+		return CandidateRefreshResult{}, ErrLocked
 	}
 	if item.Status != "draft" && item.Status != "configured" {
 		return CandidateRefreshResult{}, ErrCandidatesFrozen

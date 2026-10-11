@@ -1,0 +1,258 @@
+{
+  "recorded_at": "2026-10-11T11:01:46.566749+00:00",
+  "scope": "只读原 E2E 日志、既有图片/trace、接手基线和扫描前本地快照；仅写独立证据，不运行浏览器/Go/大型测试，不改源码或快照。",
+  "test_run_status": "interrupted_not_a_pass",
+  "original_run": {
+    "result": "interrupted",
+    "recorded_at": "2026-10-11T09:22:20.968423+00:00",
+    "started_at": "2026-10-11T09:08:54Z",
+    "owned_process_root": 42740,
+    "requested_specs": 9,
+    "requested_tests": 47,
+    "reason": "root 协调资源窗口前，核对命令后只终止自己的 frontend_validate.py e2e 进程和后代",
+    "log": "frontend-e2e-0.log",
+    "log_sha256": "0b1df922461c3b33df1930154470b27fdf9ebe408c2eb3fe0ab2f2cfc8d8a63e",
+    "remaining": "串行重跑，先检查 390x844 截图差异；不能计为通过"
+  },
+  "log_sha256": "0b1df922461c3b33df1930154470b27fdf9ebe408c2eb3fe0ab2f2cfc8d8a63e",
+  "observed_test_start_markers": 23,
+  "counts": {
+    "logged_failures": 10,
+    "preexisting_substantive_assertion_failures": 2,
+    "resource_blocked_assertion_failures": 2,
+    "browser_process_navigation_failures": 6
+  },
+  "limitations": [
+    "47 用例只有启动到 23 的日志，无最终 summary 或成功退出；不能推断未记录用例通过。",
+    "资源不足错误有直接 trace 证据；其他关闭/spawn/worker 故障不统一断言为 OOM。",
+    "只读审查不能替代健康环境重跑；既有 UI/测试不一致仍待产品验收决定，未更新任何快照。"
+  ],
+  "baseline_evidence": "frontend-e2e-baseline-readonly-evidence.json",
+  "trace_evidence": "frontend-e2e-trace-readonly-evidence.json",
+  "images": [
+    {
+      "path": "D:\\project\\yuejuan\\output\\playwright\\test-results\\exam-create.visual-lightwe-ab063-mposer-is-stable-at-390x844-chromium\\exam-create-390x844-expected.png",
+      "sha256": "a910914be638835e0e17c975865a896228a89c1b970d16fc748330f7adc3b69f",
+      "width": 390,
+      "height": 844,
+      "review": "使用 view_image 实际看图，未修改图片"
+    },
+    {
+      "path": "D:\\project\\yuejuan\\output\\playwright\\test-results\\exam-create.visual-lightwe-ab063-mposer-is-stable-at-390x844-chromium\\exam-create-390x844-actual.png",
+      "sha256": "875df118eab22934f80141bc75aa4794010bb013d09d4d4c0d3a197cec6ed62d",
+      "width": 390,
+      "height": 844,
+      "review": "使用 view_image 实际看图，未修改图片"
+    },
+    {
+      "path": "D:\\project\\yuejuan\\output\\playwright\\test-results\\exam-create.visual-lightwe-ab063-mposer-is-stable-at-390x844-chromium\\exam-create-390x844-diff.png",
+      "sha256": "dc75bc1f730796765ca402278729cb51dcea91294d25534db5e6f0f6670e177c",
+      "width": 390,
+      "height": 844,
+      "review": "使用 view_image 实际看图，未修改图片"
+    },
+    {
+      "path": "D:\\project\\yuejuan\\output\\playwright\\test-results\\dashboard-workbench-移动端只保留导航触发条，账户位于抽屉底部-chromium\\test-failed-1.png",
+      "sha256": "473ade9d09478f4af2ffb29faf47e8b88f0450cdf6605d606bea95d593e4181c",
+      "width": 760,
+      "height": 800,
+      "review": "使用 view_image 实际看图，未修改图片"
+    },
+    {
+      "path": "D:\\project\\yuejuan\\output\\playwright\\test-results\\exam-workspace-考试工作区按四阶段导航，并让阻断项跳到可处理环节-chromium\\test-failed-1.png",
+      "sha256": "36fe5611a788c3ff3de7676922729e6a6314bb18fae46784bd8dec6b3347319c",
+      "width": 1280,
+      "height": 720,
+      "review": "使用 view_image 实际看图，未修改图片"
+    },
+    {
+      "path": "D:\\project\\yuejuan\\output\\playwright\\test-results\\exam-workspace-左侧显示固定准备任务，右侧仅显示当前任务-chromium\\test-failed-1.png",
+      "sha256": "635bdf1148c58a7767532880a3c6daf55742b7a267414d6b4977cad89396875d",
+      "width": 1280,
+      "height": 720,
+      "review": "使用 view_image 实际看图，未修改图片"
+    }
+  ],
+  "expected_image_matches_repository_snapshot": true,
+  "file_review_status": [
+    {
+      "path": "apps/web-admin/src/components/AppLayout.tsx",
+      "status": "full_current_source_review",
+      "reviewed_scope": "当前完整外壳和扫描前差异：仅 SubmitEvent 类型迁移。"
+    },
+    {
+      "path": "apps/web-admin/src/components/appLayoutPresentation.tsx",
+      "status": "full_current_source_review",
+      "reviewed_scope": "三种外壳分支、移动顶部上下文与导航；扫描前字节相同。"
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/workspace/ExamWorkspaceLayout.tsx",
+      "status": "full_current_source_review",
+      "reviewed_scope": "阶段栏空值、5 项准备任务与失败边界；扫描前字节相同。"
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/preparation/preparationSteps.ts",
+      "status": "full_current_source_review",
+      "reviewed_scope": "4 个准备任务加确认完成入口；扫描前字节相同。"
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/create/exam-create.css",
+      "status": "full_current_source_review",
+      "reviewed_scope": "全部选择器和断点；无隐藏旧标题的 CSS 规则，扫描前字节相同。"
+    },
+    {
+      "path": "apps/web-admin/src/experience.css",
+      "status": "full_current_source_review",
+      "reviewed_scope": "移动外壳上下文和布局；扫描前字节相同。"
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/create/CreateExamComposer.tsx",
+      "status": "focused_source_and_full_baseline_diff_review_remainder_pending",
+      "reviewed_scope": "创建方式数组、主渲染开头、SubjectCard、底部动作；逐行差异仅两个 suffix，未将自动比较计为完整人工审读。"
+    },
+    {
+      "path": "apps/web-admin/src/AppShell.tsx",
+      "status": "focused_source_review_remainder_pending",
+      "reviewed_scope": "AppLayout 调用、shellMode 决策；整个文件字节与扫描前相同仅是自动证据。"
+    },
+    {
+      "path": "tests/e2e/specs/exam-create.visual.spec.ts",
+      "status": "full_current_source_review",
+      "reviewed_scope": "全部三屏等待、布局、字体、像素断言与旧版本差异。"
+    },
+    {
+      "path": "tests/e2e/specs/dashboard-workbench.spec.ts",
+      "status": "full_current_source_review",
+      "reviewed_scope": "全部当前用例；重点移动启动等待和创建流程。"
+    },
+    {
+      "path": "tests/e2e/specs/exam-workspace.spec.ts",
+      "status": "focused_source_review_remainder_pending",
+      "reviewed_scope": "完整两个失败用例和整个文件差异；不把未读其余用例计为完成。"
+    }
+  ],
+  "failures": [
+    {
+      "failure_index": 1,
+      "test_from_log": "tests\\e2e\\specs\\dashboard-workbench.spec.ts:94:1 › 首页主动作完成单页新建考试并进入考试准备",
+      "classification": "browser_context_closed",
+      "category": "基础设施",
+      "error_lines": [
+        "Error: browserContext.newPage: Target page, context or browser has been closed"
+      ],
+      "cause": "browserContext.newPage 时浏览器/上下文已关闭；GPU CommandBuffer 创建失败。没有执行应用断言，日志不能证明具体 OOM 原因。",
+      "required_revalidation": "资源空闲时串行重跑首页创建完整流程，保留真实退出码和 trace。",
+      "status": "failed_in_interrupted_run_revalidation_pending"
+    },
+    {
+      "failure_index": 2,
+      "test_from_log": "tests\\e2e\\specs\\dashboard-workbench.spec.ts:68:1 › 移动端只保留导航触发条，账户位于抽屉底部",
+      "classification": "assertion_blocked_by_resource_failure",
+      "category": "资源失败导致断言超时",
+      "error_lines": [
+        "Error: expect(locator).toBeVisible() failed"
+      ],
+      "cause": "截图与 error-context 只有“正在加载 EduGrade，请稍候…”；trace 中 zIndex.ts、schoolAssistant.ts 均 ERR_INSUFFICIENT_RESOURCES。应用外壳尚未成功加载，不能据此判定正常页面移除了 mobile-shellbar。本次测试把 networkidle 改为 domcontentloaded，后续仅有默认 5 秒 visible 等待；健康环境需补验证冷启动等待是否足够。",
+      "required_revalidation": "串行重跑移动端导航/抽屉账户场景，检查模块请求无资源错误并确保外壳已加载后验证 48px 和抽屉账户；保留等待阶段证据。",
+      "status": "failed_in_interrupted_run_revalidation_pending"
+    },
+    {
+      "failure_index": 3,
+      "test_from_log": "tests\\e2e\\specs\\exam-create-flow.spec.ts:3:1 › 资料优先创建允许空试卷结构并直接进入资料配置",
+      "classification": "worker_terminated",
+      "category": "基础设施",
+      "error_lines": [
+        "Error: worker process exited unexpectedly (code=3221226505, signal=null)"
+      ],
+      "cause": "worker process exited unexpectedly，退出码 3221226505（0xC0000409），没有业务断言失败栈；不能仅凭此退出码称为 OOM。",
+      "required_revalidation": "资源空闲时串行重跑资料优先创建，确认空试卷结构和进入资料配置行为。",
+      "status": "failed_in_interrupted_run_revalidation_pending"
+    },
+    {
+      "failure_index": 4,
+      "test_from_log": "tests\\e2e\\specs\\dashboard-workbench.spec.ts:171:1 › 成员管理入口进入正式班级和教师页面",
+      "classification": "browser_spawn_failed",
+      "category": "基础设施",
+      "error_lines": [
+        "Error: browserType.launch: spawn UNKNOWN"
+      ],
+      "cause": "browserType.launch: spawn UNKNOWN，浏览器启动失败，尚未进入应用。",
+      "required_revalidation": "串行重跑班级/教师成员管理入口。",
+      "status": "failed_in_interrupted_run_revalidation_pending"
+    },
+    {
+      "failure_index": 5,
+      "test_from_log": "tests\\e2e\\specs\\exam-create-flow.spec.ts:56:1 › 考试方案通过抽屉带入科目结构",
+      "classification": "browser_context_closed",
+      "category": "基础设施",
+      "error_lines": [
+        "Error: browser.newContext: Target page, context or browser has been closed"
+      ],
+      "cause": "browser.newContext 时浏览器/上下文已关闭，未验证方案抽屉业务断言。",
+      "required_revalidation": "串行重跑方案抽屉带入科目结构。",
+      "status": "failed_in_interrupted_run_revalidation_pending"
+    },
+    {
+      "failure_index": 6,
+      "test_from_log": "tests\\e2e\\specs\\exam-create.visual.spec.ts:22:3 › lightweight exam composer is stable at 1440x900",
+      "classification": "browser_context_closed",
+      "category": "基础设施",
+      "error_lines": [
+        "Error: browser.newContext: Target page, context or browser has been closed"
+      ],
+      "cause": "1440x900 用例 browser.newContext 已关闭，未获得有效像素比较结果。",
+      "required_revalidation": "1440x900 重新验证布局、导航、无横向溢出与原像素基线；本日志不能认定该屏通过。",
+      "status": "failed_in_interrupted_run_revalidation_pending"
+    },
+    {
+      "failure_index": 7,
+      "test_from_log": "tests\\e2e\\specs\\exam-create.visual.spec.ts:22:3 › lightweight exam composer is stable at 1024x768",
+      "classification": "navigation_resource_failure",
+      "category": "基础设施",
+      "error_lines": [
+        "Error: page.goto: net::ERR_INSUFFICIENT_RESOURCES at http://127.0.0.1:4173/#/admin/exams/new"
+      ],
+      "cause": "1024x768 用例 page.goto 直接 net::ERR_INSUFFICIENT_RESOURCES，未达到像素断言。",
+      "required_revalidation": "1024x768 重新验证布局、导航、无横向溢出与原像素基线；本日志不能认定该屏通过。",
+      "status": "failed_in_interrupted_run_revalidation_pending"
+    },
+    {
+      "failure_index": 8,
+      "test_from_log": "tests\\e2e\\specs\\exam-create.visual.spec.ts:22:3 › lightweight exam composer is stable at 390x844",
+      "classification": "preexisting_visual_baseline_mismatch",
+      "category": "真实既有截图差异",
+      "error_lines": [
+        "Error: expect(page).toHaveScreenshot(expected) failed"
+      ],
+      "cause": "390x844 两次稳定截图在 fonts loaded、animations disabled 后均差 18038 像素（日志 ratio 0.06）。expected 为旧返回考试列表外壳、页面标题和创建方式题目；actual 为汉堡导航/学校上下文，缺旧标题，首卡改为“上传完整试卷识别题目与分值，无需预填题目数量”，卡片及基本信息约上移 175px。基线 Composer 已包含这套文案和无旧标题的结构；当前仅两个未渲染的 SubjectCard 数值框 addonAfter→suffix。AppShell、外壳展示组件与 CSS 在扫描前快照和当前完全相同。因此是本次接手前已存在的截图/工作区设计差异，不能作为本轮 Sonar 修复回归，也不能当作通过。",
+      "required_revalidation": "在串行健康环境先对扫描前只读快照和当前分别使用同一既有 Windows 基线复验 390x844；另验证有选科时 suffix 的尺寸/可读性。保留差异供既有设计验收，不自动更新快照。",
+      "status": "failed_in_interrupted_run_revalidation_pending"
+    },
+    {
+      "failure_index": 9,
+      "test_from_log": "tests\\e2e\\specs\\exam-workspace.spec.ts:40:1 › 考试工作区按四阶段导航，并让阻断项跳到可处理环节",
+      "classification": "preexisting_ui_assertion_mismatch",
+      "category": "真实既有断言不一致",
+      "error_lines": [
+        "Error: expect(locator).toHaveCount(expected) failed"
+      ],
+      "cause": "页面完整渲染、trace 无 console/page error；测试要求“考试流程” navigation 内 4 按钮，实际源码明确 stageRail={null}，准备区域有 5 个“考试准备”任务。当前 ExamWorkspaceLayout 与 preparationSteps 和扫描前快照逐字节相同；本轮测试仅另一个学科切换用例改 waitUntil，不改此场景。它是接手前即有的 UI/断言契约差异。后面的跳转断言因首个断言失败尚未运行。",
+      "required_revalidation": "同一健康浏览器基线/当前分别复验四阶段用例；确认既有导航产品意图，再在独立变更中修正 UI 或验收契约。当前报告保留失败，不能删除断言或称业务链路通过。",
+      "status": "failed_in_interrupted_run_revalidation_pending"
+    },
+    {
+      "failure_index": 10,
+      "test_from_log": "tests\\e2e\\specs\\exam-workspace.spec.ts:81:1 › 左侧显示固定准备任务，右侧仅显示当前任务",
+      "classification": "assertion_blocked_by_resource_failure",
+      "category": "资源失败导致断言超时",
+      "error_lines": [
+        "Test timeout of 30000ms exceeded.",
+        "Error: expect(locator).toBeVisible() failed"
+      ],
+      "cause": "截图为考试外壳与“页面出现异常” ErrorBoundary；trace 中 papers.ts、assessment.ts 报 ERR_INSUFFICIENT_RESOURCES，随后 ExamPreparationPage.tsx 动态导入 fetch 失败。不是正常确认页缺失标题的证据。该断言设置 60 秒等待，但用例总超时仍 30 秒，实际先触发总超时。",
+      "required_revalidation": "资源空闲时串行重跑准备确认任务，确认模块加载成功并验证标题、5 项任务、阻断项跳转和学生范围。若仍超时再针对用例总超时与步骤等待调查。",
+      "status": "failed_in_interrupted_run_revalidation_pending"
+    }
+  ],
+  "necessary_rerun_scope": "先串行重跑上述 10 个失败场景；随后完成原 9 spec/47 个用例的剩余验收并记录最终退出码。390 和 4 阶段断言应同时对相同本地基线与当前验证归因，不自动接受新像素。"
+}

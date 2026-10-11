@@ -83,14 +83,14 @@ def _detect_skew(gray: np.ndarray) -> tuple[float, float]:
         if length < minimum_length:
             continue
         angle = float(np.degrees(np.arctan2(dy, dx)))
-        # Treat horizontal and vertical document structure as evidence for the
-        # same page-axis rotation. This keeps large rotations up to 45 degrees visible
-        # instead of discarding them before the quality decision.
+        # 水平和竖直的文档结构都作为同一页面轴旋转
+        # 的证据。这样可保留最大 45 度的大幅旋转，
+        # 避免在质量判定前将其丢弃。
         angle = ((angle + 45.0) % 90.0) - 45.0
         if abs(angle) > MAX_SKEW_ANALYSIS_DEGREES:
             continue
         angles.append(angle)
-        # Capping prevents one long page border from deciding the result.
+        # 设置上限，避免一条很长的页面边框决定整个结果。
         weights.append(min(length, width * 0.45))
 
     if len(angles) < 2:
@@ -103,7 +103,7 @@ def _detect_skew(gray: np.ndarray) -> tuple[float, float]:
     consistency = _clamp(1.0 - mad / 3.0)
     count_support = min(1.0, len(values) / 8.0)
     length_support = min(1.0, float(line_weights.sum()) / max(width * 2.0, 1.0))
-    # This is heuristic evidence strength, not a calibrated probability.
+    # 这是启发式证据强度，不是经过校准的概率。
     confidence = _clamp(consistency * (0.55 * count_support + 0.45 * length_support))
     if confidence < 0.15:
         return 0.0, confidence
@@ -171,24 +171,11 @@ def _detect_page_border(
     best_quad: np.ndarray | None = None
     best_score = 0.0
     for contour in contours:
-        perimeter = float(cv2.arcLength(contour, True))
-        if perimeter < 0.8 * (width + height):
+        candidate = _page_border_candidate(contour, width, height)
+        if candidate is None:
             continue
-        approximation = cv2.approxPolyDP(contour, 0.02 * perimeter, True)
-        if len(approximation) != 4 or not cv2.isContourConvex(approximation):
-            continue
-        quad = approximation.reshape(4, 2).astype(np.float32)
-        area_ratio = abs(float(cv2.contourArea(quad))) / max(image_area, 1.0)
-        if area_ratio < 0.45 or area_ratio > 1.01:
-            continue
-        center = quad.mean(axis=0)
-        center_offset = float(
-            np.linalg.norm(center - np.array([width / 2.0, height / 2.0]))
-        )
-        center_score = _clamp(
-            1.0 - center_offset / max(np.hypot(width, height) * 0.3, 1.0)
-        )
-        candidate_score = 0.85 * area_ratio + 0.15 * center_score
+        quad, candidate_score = candidate
+        # 同分时沿用先检测到的轮廓，不改变候选顺序对应的页面边框。
         if candidate_score > best_score:
             best_quad, best_score = quad, candidate_score
 
@@ -207,9 +194,9 @@ def _detect_page_border(
         status = "complete" if completeness >= 0.8 else "partial"
         return status, confidence, completeness, None
 
-    # A flatbed scan may contain paper to every canvas edge and therefore no
-    # visible outer contour. Report moderate completeness with low confidence
-    # instead of inventing a reliable border observation.
+    # 平板扫描中的纸张可能延伸到画布各边，因此
+    # 看不到外部轮廓。此时报告中等完整度和低置信度，
+    # 而不虚构可靠的边框观测结果。
     edge_band = max(2, int(min(width, height) * 0.015))
     edge_pixels = np.concatenate(
         (
@@ -224,6 +211,29 @@ def _detect_page_border(
     return "unknown", 0.0, 0.0, None
 
 
+def _page_border_candidate(
+    contour: np.ndarray, width: int, height: int
+) -> tuple[np.ndarray, float] | None:
+    perimeter = float(cv2.arcLength(contour, True))
+    if perimeter < 0.8 * (width + height):
+        return None
+    approximation = cv2.approxPolyDP(contour, 0.02 * perimeter, True)
+    if len(approximation) != 4 or not cv2.isContourConvex(approximation):
+        return None
+    quad = approximation.reshape(4, 2).astype(np.float32)
+    area_ratio = abs(float(cv2.contourArea(quad))) / max(float(height * width), 1.0)
+    if area_ratio < 0.45 or area_ratio > 1.01:
+        return None
+    center = quad.mean(axis=0)
+    center_offset = float(
+        np.linalg.norm(center - np.array([width / 2.0, height / 2.0]))
+    )
+    center_score = _clamp(
+        1.0 - center_offset / max(np.hypot(width, height) * 0.3, 1.0)
+    )
+    return quad, 0.85 * area_ratio + 0.15 * center_score
+
+
 def _border_side_support(edges: np.ndarray) -> list[float]:
     height, width = edges.shape
     lines = cv2.HoughLinesP(
@@ -234,26 +244,34 @@ def _border_side_support(edges: np.ndarray) -> list[float]:
         minLineLength=max(30, int(min(width, height) * 0.12)),
         maxLineGap=max(8, int(min(width, height) * 0.025)),
     )
-    support = [0.0, 0.0, 0.0, 0.0]  # top, right, bottom, left
+    support = [0.0, 0.0, 0.0, 0.0]  # 上、右、下、左
     if lines is None:
         return support
-    for x1, y1, x2, y2 in lines.reshape(-1, 4):
-        dx, dy = abs(float(x2 - x1)), abs(float(y2 - y1))
-        if dx >= 2.5 * max(dy, 1.0):
-            y = (y1 + y2) / 2.0
-            coverage = _clamp(dx / max(width, 1))
-            if y <= height * 0.2:
-                support[0] = max(support[0], coverage)
-            if y >= height * 0.8:
-                support[2] = max(support[2], coverage)
-        elif dy >= 2.5 * max(dx, 1.0):
-            x = (x1 + x2) / 2.0
-            coverage = _clamp(dy / max(height, 1))
-            if x >= width * 0.8:
-                support[1] = max(support[1], coverage)
-            if x <= width * 0.2:
-                support[3] = max(support[3], coverage)
+    for line in lines.reshape(-1, 4):
+        _accumulate_border_line_support(support, line, width, height)
     return support
+
+
+def _accumulate_border_line_support(
+    support: list[float], line: np.ndarray, width: int, height: int
+) -> None:
+    x1, y1, x2, y2 = line
+    dx, dy = abs(float(x2 - x1)), abs(float(y2 - y1))
+    # 每条边保留最长单线的覆盖率，不累加重叠线段以免抬高完整度。
+    if dx >= 2.5 * max(dy, 1.0):
+        y = (y1 + y2) / 2.0
+        coverage = _clamp(dx / max(width, 1))
+        if y <= height * 0.2:
+            support[0] = max(support[0], coverage)
+        if y >= height * 0.8:
+            support[2] = max(support[2], coverage)
+    elif dy >= 2.5 * max(dx, 1.0):
+        x = (x1 + x2) / 2.0
+        coverage = _clamp(dy / max(height, 1))
+        if x >= width * 0.8:
+            support[1] = max(support[1], coverage)
+        if x <= width * 0.2:
+            support[3] = max(support[3], coverage)
 
 
 def _detect_perspective_risk(

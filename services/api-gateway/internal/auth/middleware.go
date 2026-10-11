@@ -13,16 +13,12 @@ func AuthMiddleware(store Store, options ...HandlerOptions) func(http.Handler) h
 	return authMiddleware(store, false, false, options...)
 }
 
-// AccountAuthMiddleware is only for self-account handlers, which always bind
-// queries to the authenticated tenant and user. An unassigned teacher must be
-// able to change a password or revoke sessions without gaining business access.
+// AccountAuthMiddleware 只用于账户自身处理器，查询始终绑定已认证租户和用户。尚未分配任务的教师应能修改密码或撤销会话，而不因此获得业务访问权。
 func AccountAuthMiddleware(store Store, options ...HandlerOptions) func(http.Handler) http.Handler {
 	return authMiddleware(store, true, false, options...)
 }
 
-// ReauthenticationAuthMiddleware admits a locked session only to the small
-// recovery surface (reauthenticate/logout). Business handlers always use the
-// normal middleware and therefore reject the locked session server-side.
+// ReauthenticationAuthMiddleware 仅允许锁定会话访问重新认证和退出的有限恢复入口。业务处理器始终使用常规中间件，在服务端拒绝锁定会话。
 func ReauthenticationAuthMiddleware(store Store, options ...HandlerOptions) func(http.Handler) http.Handler {
 	return authMiddleware(store, true, true, options...)
 }
@@ -36,7 +32,7 @@ func authMiddleware(store Store, allowMissingDataScope bool, allowLocked bool, o
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			token := sessionToken(r, cookieName)
 			if token == "" {
-				httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", "authentication required")
+				httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", authRequiredMessage)
 				return
 			}
 			var user User
@@ -48,32 +44,14 @@ func authMiddleware(store Store, allowMissingDataScope bool, allowLocked bool, o
 			}
 			if err != nil {
 				if errors.Is(err, ErrUnauthenticated) {
-					httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", "authentication required")
+					httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", authRequiredMessage)
 					return
 				}
 				httpx.Error(w, r, http.StatusInternalServerError, "auth_lookup_failed", "failed to authenticate request")
 				return
 			}
-			scope, err := store.ResolveAccessScope(r.Context(), user)
-			if err != nil {
-				if errors.Is(err, ErrAccessScopeMissing) || errors.Is(err, ErrAccessScopeInvalid) {
-					if !allowMissingDataScope {
-						httpx.Error(w, r, http.StatusForbidden, "access_scope_missing", "no valid data access scope is assigned")
-						return
-					}
-					// Discard any partially resolved scope. This is an explicit
-					// empty boundary, never a tenant-wide fallback.
-					scope = AccessScope{TenantID: user.TenantID, ActorID: user.ID}
-				} else {
-					httpx.Error(w, r, http.StatusInternalServerError, "access_scope_lookup_failed", "failed to resolve data access scope")
-					return
-				}
-			}
-			// Business routes fail closed for humans without any resolved data
-			// boundary. Self-account routes alone accept an empty boundary;
-			// service identities retain their explicit worker-only scope.
-			if !allowMissingDataScope && !scope.HasDataAccess() && !scope.syntheticUnbounded && !IsServiceUser(user) {
-				httpx.Error(w, r, http.StatusForbidden, "access_scope_missing", "no valid data access scope is assigned")
+			scope, allowed := resolveRequestAccessScope(store, w, r, user, allowMissingDataScope)
+			if !allowed {
 				return
 			}
 			organizationScope := scope.OrganizationScope()
@@ -82,6 +60,29 @@ func authMiddleware(store Store, allowMissingDataScope bool, allowLocked bool, o
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
+}
+
+func resolveRequestAccessScope(store Store, w http.ResponseWriter, r *http.Request, user User, allowMissingDataScope bool) (AccessScope, bool) {
+	scope, err := store.ResolveAccessScope(r.Context(), user)
+	if err != nil {
+		if errors.Is(err, ErrAccessScopeMissing) || errors.Is(err, ErrAccessScopeInvalid) {
+			if !allowMissingDataScope {
+				httpx.Error(w, r, http.StatusForbidden, "access_scope_missing", "no valid data access scope is assigned")
+				return AccessScope{}, false
+			}
+			// 自账户接口可接受空作用域；解析失败的部分结果必须丢弃，不能扩大访问范围。
+			scope = AccessScope{TenantID: user.TenantID, ActorID: user.ID}
+		} else {
+			httpx.Error(w, r, http.StatusInternalServerError, "access_scope_lookup_failed", "failed to resolve data access scope")
+			return AccessScope{}, false
+		}
+	}
+	// 普通业务接口拒绝没有数据范围的人类账户；服务身份仍由工作器专用接口限制。
+	if !allowMissingDataScope && !scope.HasDataAccess() && !scope.syntheticUnbounded && !IsServiceUser(user) {
+		httpx.Error(w, r, http.StatusForbidden, "access_scope_missing", "no valid data access scope is assigned")
+		return AccessScope{}, false
+	}
+	return scope, true
 }
 
 func IsServiceUser(user User) bool {
@@ -109,7 +110,7 @@ func RequirePermission(permission string) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			user, ok := UserFromContext(r.Context())
 			if !ok {
-				httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", "authentication required")
+				httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", authRequiredMessage)
 				return
 			}
 			if HasPermission(user, permission) {
@@ -126,7 +127,7 @@ func RequireAnyPermission(permissions ...string) func(http.Handler) http.Handler
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			user, ok := UserFromContext(r.Context())
 			if !ok {
-				httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", "authentication required")
+				httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", authRequiredMessage)
 				return
 			}
 			for _, permission := range permissions {
@@ -145,7 +146,7 @@ func RequireAnyRole(roles ...string) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			user, ok := UserFromContext(r.Context())
 			if !ok {
-				httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", "authentication required")
+				httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", authRequiredMessage)
 				return
 			}
 			for _, role := range roles {
@@ -159,14 +160,12 @@ func RequireAnyRole(roles ...string) func(http.Handler) http.Handler {
 	}
 }
 
-// RequirePlatformAdmin rejects role strings that are not anchored to the
-// reserved platform tenant. This keeps cross-tenant administration from
-// depending solely on assignment-time validation.
+// RequirePlatformAdmin 拒绝未绑定保留平台租户的角色字符串，使跨租户管理不只依赖分配角色时的校验。
 func RequirePlatformAdmin(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		user, ok := UserFromContext(r.Context())
 		if !ok {
-			httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", "authentication required")
+			httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", authRequiredMessage)
 			return
 		}
 		if user.TenantID != PlatformTenantID || !HasRole(user, "platform_admin") {

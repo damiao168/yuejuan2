@@ -14,12 +14,13 @@
 - 分差超过阈值时创建 `arbitration_task`。
 - 仲裁员提交最终分后写入 `final_grade`。
 
-本模块不实现 Web 仲裁页面、成绩发布审批、学生端成绩查看、申诉改分、真实 OCR 聚合或真实 AI 聚合。仲裁详情只返回系统当前已有的答案文本、OCR 文本和 AI 摘要；没有真实数据时字段为空。
+仲裁详情返回任务对应的题干、选项、参考答案、解析、冻结评分标准、满分以及已保存的作答、OCR 文本和 AI 摘要。历史仲裁记录缺少标准时，从同租户、同答题片段的冻结上下文补齐；不以最新可编辑标准替代。评分标准快照缺失时返回 `rubric.status=missing`，前端应阻止提交并提示联系本场考试负责人补齐材料。没有真实作答或 AI 数据时，对应字段为空。
 
 ## 权限
 
 - double mark policy 和 session 接口要求 `review:manage`。
-- arbitration task 接口要求 `arbitration:manage`。
+- 仲裁任务读取和提交按既有 `arbitration:manage` / `arbitration:work` 权限及任务分配范围校验；普通仲裁教师只能读取分配给自己的任务。
+- `context.question` 和 `context.rubric` 随获授权的任务详情返回，不要求 `exam:manage`，也不授予教师管理整场考试或读取其他任务的权限。
 - 所有接口按当前登录用户的 `tenant_id` 隔离数据。
 
 ## PUT /api/v1/exams/{examId}/double-mark-policy

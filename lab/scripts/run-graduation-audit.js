@@ -49,7 +49,7 @@ const modelStaysInLab = rel !== "" && !rel.startsWith("..") && !isAbsolute(rel) 
 const serverPidPath = resolve(LAB_ROOT, ".runtime/llama-server.pid");
 const serverStopped = !existsSync(serverPidPath);
 const ignoredRuntimeDirs = [".models/", ".runtime/", ".downloads/"].every((entry) => readFileSync(resolve(LAB_ROOT, ".gitignore"), "utf8").includes(entry));
-const freezeContainsSecret = /(?:authorization|bearer)\s*[:=]\s*["']?[A-Za-z0-9+/=_-]{20,}/i.test(manifestText);
+const freezeContainsSecret = /(?:authorization|bearer)\s*[:=]\s*["']?[a-z0-9+/=_-]{20,}/i.test(manifestText);
 const requiredReports = [
   "evals/reports/local-runtime-benchmark.json",
   "evals/reports/local-adapter-smoke.json",

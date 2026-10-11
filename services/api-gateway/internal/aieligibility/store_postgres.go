@@ -36,8 +36,7 @@ ORDER BY version DESC LIMIT 1 FOR UPDATE`, tenantID, input.SubjectCode, input.Ed
 		return Policy{}, ErrPolicyConflict
 	}
 	modes, _ := json.Marshal(input.AllowedModes)
-	// The version append-only model makes a decision's policy_version stable.
-	// A disabled version intentionally removes its matching active policy.
+	// 版本只追加的模型使决策的 policy_version 保持稳定。禁用某个版本时，会移除其对应的启用策略。
 	row := tx.QueryRowContext(ctx, `INSERT INTO ai_eligibility_policy (
  id,tenant_id,subject_code,education_stage,archetype_code,risk_tier,min_ocr_quality,min_parser_quality,min_eval_n,max_severe_error_rate,allowed_modes_json,version,status
 ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)

@@ -1,0 +1,25 @@
+{
+  "files": [
+    {
+      "file": "services/api-gateway/internal/server/e2e_story060_sheet_identity_test.go",
+      "sha256": "8e19b623e4763bc2e172c7c34e66d92bd84ce5e59c74af97860ee08ce6fa4de1",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_story060_sheet_identity_test.go"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_story060_sheet_identity_test.go",
+      "sha256": "5cd0b627abb5dc1597c2a027a6020b9a648470ad2e21db67537a9af447af2b84",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_story060_sheet_identity_test.go"
+    }
+  ],
+  "issue_functions": [
+    {
+      "file": "services/api-gateway/internal/server/e2e_story060_sheet_identity_test.go",
+      "function": "TestStory060MultiPageInsertionMissingPageAndPrintPackageE2EWithPostgresTestDatabase"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_story060_sheet_identity_test.go",
+      "function": "TestStory060StudentSheetIdentityE2EWithPostgresTestDatabase"
+    }
+  ],
+  "checkpoint_relation": "after checkpoint02; requires subsequent scan"
+}

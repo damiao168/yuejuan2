@@ -23,8 +23,8 @@ import (
 
 type repairAnswer struct{ student, submission, page, grade string }
 
-// Freeze the roster through the API, then seed complete downstream grading
-// facts. Unlike the worker-volume fixture, every candidate answers every question.
+// 通过 API 冻结名册后，再预置完整下游评分事实。
+// 与 worker 批量夹具不同，此处每位考生回答每道题。
 func repairFixture(t *testing.T) (*sql.DB, http.Handler, string, story056AcceptanceFixture, []repairAnswer, *files.MemoryObjectStorage) {
 	t.Helper()
 	dsn := strings.TrimSpace(os.Getenv("EDUGRADE_E2E_DATABASE_URL"))
@@ -134,6 +134,64 @@ func TestReviewRepairsReleaseAndStudentReadWithPostgresTestDatabase(t *testing.T
 	if _, err = svc.Publish(ctx, f.TenantID, base.ID, f.AdminID); err != nil {
 		t.Fatal(err)
 	}
+	e2eAssertRegradeSourceAndReceipt(t, ctx, svc, f, answers, base)
+	conn, err := db.Conn(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cfg *pgx.ConnConfig
+	err = conn.Raw(func(raw any) error { cfg = raw.(*stdlib.Conn).Conn().Config().Copy(); return nil })
+	conn.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	trace := &repairQuestionTracer{}
+	cfg.Tracer = trace
+	traced := stdlib.OpenDB(*cfg)
+	defer traced.Close()
+	reader := scorerelease.NewPostgresStore(traced, nil)
+	result, err := reader.StudentResult(ctx, f.TenantID, f.ExamID, answers[0].student)
+	if err != nil || len(result.Questions) != 3 || result.TotalScore != 1 {
+		t.Fatalf("student: %+v %v", result, err)
+	}
+	if trace.queries != 1 || trace.rows != 3 {
+		t.Fatalf("student loaded %d question rows in %d queries", trace.rows, trace.queries)
+	}
+	fixture := releaseStudentReadFixture{DB: db, Service: svc, Reader: reader, Trace: trace, Acceptance: f, Answers: answers}
+	otherStudent := e2ePrepareLegacyUnsafeAnalyticsRelease(t, ctx, fixture)
+	// 旧版标记不能暴露其他学生的页面或页面元数据。
+	trace.queries, trace.rows = 0, 0
+	result, err = reader.StudentResult(ctx, f.TenantID, f.ExamID, otherStudent)
+	if err != nil || result.HighScorePaper != nil || result.Reference == nil || result.Reference.SampleSize != 2 || result.Reference.StatisticsAvailable {
+		t.Fatalf("analytics: %+v %v", result, err)
+	}
+	if trace.queries != 1 || trace.rows != 3 {
+		t.Fatalf("student question queries=%d rows=%d", trace.queries, trace.rows)
+	}
+	unpublishedQuestionID := e2eAssertUnpublishedQuestionIsolation(t, ctx, fixture)
+	questionID := f.QuestionIDs["single_choice"]
+	if _, err = reader.StudentPaperPageImage(ctx, f.TenantID, f.ExamID, otherStudent, questionID, true); !errors.Is(err, scorerelease.ErrNotFound) {
+		t.Fatalf("peer whole-page image: %v", err)
+	}
+	if own, ownErr := reader.StudentPaperPageImage(ctx, f.TenantID, f.ExamID, otherStudent, questionID, false); ownErr != nil || own.AnswerSegmentID == "" {
+		t.Fatalf("own whole-page image: %+v %v", own, ownErr)
+	}
+	e2eAssertTotalsOnlyStudentRead(t, ctx, fixture, unpublishedQuestionID)
+}
+
+type releaseStudentReadFixture struct {
+	DB         *sql.DB
+	Service    *scorerelease.Service
+	Reader     *scorerelease.PostgresStore
+	Trace      *repairQuestionTracer
+	Acceptance story056AcceptanceFixture
+	Answers    []repairAnswer
+}
+
+// 同一正式版本产生两个更正草稿；第一个发布后第二个来源已过期，但首个发布重放仍成功。
+func e2eAssertRegradeSourceAndReceipt(t *testing.T, ctx context.Context, svc *scorerelease.Service, f story056AcceptanceFixture, answers []repairAnswer, base scorerelease.Release) {
+	t.Helper()
+	var err error
 	makeDraft := func(q, key string) scorerelease.Release {
 		r, err := svc.CreateFromRegrade(ctx, f.TenantID, f.ExamID, f.AdminID, scorerelease.CreateRegradeInput{SourceReleaseID: base.ID, QuestionID: q, Reason: "verified correction", IdempotencyKey: key, Changes: []scorerelease.RegradeChange{{SubmissionID: answers[0].submission, QuestionID: q, Score: 1, MaxScore: 1}}})
 		if err != nil {
@@ -161,29 +219,13 @@ func TestReviewRepairsReleaseAndStudentReadWithPostgresTestDatabase(t *testing.T
 		t.Fatal(err)
 	}
 
-	conn, err := db.Conn(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var cfg *pgx.ConnConfig
-	err = conn.Raw(func(raw any) error { cfg = raw.(*stdlib.Conn).Conn().Config().Copy(); return nil })
-	conn.Close()
-	if err != nil {
-		t.Fatal(err)
-	}
-	trace := &repairQuestionTracer{}
-	cfg.Tracer = trace
-	traced := stdlib.OpenDB(*cfg)
-	defer traced.Close()
-	reader := scorerelease.NewPostgresStore(traced, nil)
-	result, err := reader.StudentResult(ctx, f.TenantID, f.ExamID, answers[0].student)
-	if err != nil || len(result.Questions) != 3 || result.TotalScore != 1 {
-		t.Fatalf("student: %+v %v", result, err)
-	}
-	if trace.queries != 1 || trace.rows != 3 {
-		t.Fatalf("student loaded %d question rows in %d queries", trace.rows, trace.queries)
-	}
-	// An enabled draft cannot publish without verified anonymous assets.
+}
+
+// 先验证服务和存储均拒绝未准备的匿名分享，再用明确的旧版发布夹具核对后续学生投影。
+func e2ePrepareLegacyUnsafeAnalyticsRelease(t *testing.T, ctx context.Context, fixture releaseStudentReadFixture) string {
+	t.Helper()
+	db, svc, f := fixture.DB, fixture.Service, fixture.Acceptance
+	// 启用的草稿在匿名资源未经核验时不能发布。
 	unsafeDraft, err := svc.Create(ctx, f.TenantID, f.ExamID, f.AdminID, scorerelease.CreateInput{Source: scorerelease.SourceMigration, Reason: "unsafe sharing", IdempotencyKey: "repair-release-unsafe", VisibilityPolicy: scorerelease.VisibilityPolicy{ShowQuestionScores: true, ShowHighScorePaper: true}})
 	if err != nil {
 		t.Fatalf("high-score sharing draft: %v", err)
@@ -198,7 +240,7 @@ func TestReviewRepairsReleaseAndStudentReadWithPostgresTestDatabase(t *testing.T
 	if _, err = db.ExecContext(ctx, `UPDATE score_release SET visibility_policy=jsonb_set(visibility_policy,'{show_high_score_paper}','true'::jsonb) WHERE tenant_id=$1 AND id=$2::uuid AND status='draft'`, f.TenantID, analytics.ID); err != nil {
 		t.Fatal(err)
 	}
-	// Model a historical release published before the anonymous asset gate.
+	// 模拟匿名资源门禁引入前发布的历史版本。
 	if _, err = scorerelease.NewPostgresStore(db, nil).Publish(ctx, f.TenantID, analytics.ID, f.AdminID); !errors.Is(err, scorerelease.ErrAnonymousPaperUnavailable) {
 		t.Fatalf("legacy publication must now fail closed: %v", err)
 	}
@@ -216,16 +258,13 @@ ON CONFLICT(tenant_id,exam_id) DO UPDATE SET release_id=EXCLUDED.release_id,upda
 	if err != nil {
 		t.Fatal(err)
 	}
-	// A legacy flag cannot expose another student's page or page metadata.
-	otherStudent := all.Items[1].StudentID
-	trace.queries, trace.rows = 0, 0
-	result, err = reader.StudentResult(ctx, f.TenantID, f.ExamID, otherStudent)
-	if err != nil || result.HighScorePaper != nil || result.Reference == nil || result.Reference.SampleSize != 2 || result.Reference.StatisticsAvailable {
-		t.Fatalf("analytics: %+v %v", result, err)
-	}
-	if trace.queries != 1 || trace.rows != 3 {
-		t.Fatalf("student question queries=%d rows=%d", trace.queries, trace.rows)
-	}
+	return all.Items[1].StudentID
+}
+
+// 冻结后新增题目即使产生分段和终评，也不进入正式题目清单；整页图仍需发布关联才可读取。
+func e2eAssertUnpublishedQuestionIsolation(t *testing.T, ctx context.Context, fixture releaseStudentReadFixture) string {
+	t.Helper()
+	db, svc, reader, f, answers := fixture.DB, fixture.Service, fixture.Reader, fixture.Acceptance, fixture.Answers
 	var unpublishedQuestionID string
 	if err := db.QueryRowContext(ctx, `INSERT INTO question(tenant_id,exam_id,question_no,question_type,score,sort_order,status)
 VALUES($1,$2::uuid,'UNPUBLISHED','short_answer',1,99,'active') RETURNING id::text`, f.TenantID, f.ExamID).Scan(&unpublishedQuestionID); err != nil {
@@ -259,13 +298,13 @@ LIMIT 1 RETURNING id::text`, f.TenantID, answers[0].submission, unpublishedQuest
 	if _, err := reader.StudentPaperPageImage(ctx, f.TenantID, f.ExamID, answers[0].student, unpublishedQuestionID, false); !errors.Is(err, scorerelease.ErrNotFound) {
 		t.Fatalf("unpublished whole-page image: %v", err)
 	}
-	questionID := f.QuestionIDs["single_choice"]
-	if _, err = reader.StudentPaperPageImage(ctx, f.TenantID, f.ExamID, otherStudent, questionID, true); !errors.Is(err, scorerelease.ErrNotFound) {
-		t.Fatalf("peer whole-page image: %v", err)
-	}
-	if own, ownErr := reader.StudentPaperPageImage(ctx, f.TenantID, f.ExamID, otherStudent, questionID, false); ownErr != nil || own.AnswerSegmentID == "" {
-		t.Fatalf("own whole-page image: %+v %v", own, ownErr)
-	}
+	return unpublishedQuestionID
+}
+
+// 仅总分版本既不能混入未发布题目，也不能查询或返回题目明细。
+func e2eAssertTotalsOnlyStudentRead(t *testing.T, ctx context.Context, fixture releaseStudentReadFixture, unpublishedQuestionID string) {
+	t.Helper()
+	db, svc, reader, trace, f, answers := fixture.DB, fixture.Service, fixture.Reader, fixture.Trace, fixture.Acceptance, fixture.Answers
 	totals, err := svc.Create(ctx, f.TenantID, f.ExamID, f.AdminID, scorerelease.CreateInput{Source: scorerelease.SourceMigration, Reason: "totals only", IdempotencyKey: "repair-release-totals"})
 	if err != nil {
 		t.Fatal(err)
@@ -279,10 +318,11 @@ WHERE tenant_id=$1::uuid AND release_id=$2::uuid AND question_id=$3::uuid`, f.Te
 		t.Fatal(err)
 	}
 	trace.queries, trace.rows = 0, 0
-	result, err = reader.StudentResult(ctx, f.TenantID, f.ExamID, answers[0].student)
+	result, err := reader.StudentResult(ctx, f.TenantID, f.ExamID, answers[0].student)
 	if err != nil || len(result.Questions) != 0 || trace.queries != 0 {
 		t.Fatalf("totals result: %+v queries=%d err=%v", result, trace.queries, err)
 	}
+
 }
 
 func TestReleaseFeedbackUsesFinalArbitrationAndFreezesIt(t *testing.T) {
@@ -329,15 +369,33 @@ VALUES($1,$2::uuid,$3::uuid,$4::uuid,$5,$6::uuid,$7::uuid,'anonymous',$8::uuid,$
 	if err != nil {
 		t.Fatal(err)
 	}
-	detail, err := svc.Get(ctx, f.TenantID, release.ID)
+	identity := releaseArbitrationIdentity{ReleaseID: release.ID, QuestionID: questionID, ArbitrationID: arbitrationID}
+	e2eAssertArbitrationReleaseSnapshot(t, ctx, svc, f, answers, identity)
+	if _, err := svc.Publish(ctx, f.TenantID, release.ID, f.AdminID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, `UPDATE arbitration_task SET student_feedback='changed after publication' WHERE tenant_id=$1 AND id=$2::uuid`, f.TenantID, arbitrationID); err != nil {
+		t.Fatal(err)
+	}
+	e2eAssertPublishedArbitrationStudentRead(t, ctx, db, svc, f, answers, questionID)
+}
+
+type releaseArbitrationIdentity struct {
+	ReleaseID, QuestionID, ArbitrationID string
+}
+
+// 发布草稿只选最终仲裁的来源和反馈，不能取首轮已过时的批语。
+func e2eAssertArbitrationReleaseSnapshot(t *testing.T, ctx context.Context, svc *scorerelease.Service, f story056AcceptanceFixture, answers []repairAnswer, identity releaseArbitrationIdentity) {
+	t.Helper()
+	detail, err := svc.Get(ctx, f.TenantID, identity.ReleaseID)
 	if err != nil {
 		t.Fatal(err)
 	}
 	var matched bool
 	for _, question := range detail.Questions {
-		if question.SubmissionID == answers[0].submission && question.QuestionID == questionID {
+		if question.SubmissionID == answers[0].submission && question.QuestionID == identity.QuestionID {
 			matched = true
-			if question.SourceType != "arbitration" || question.SourceID != arbitrationID || question.Explanation.Feedback != "final arbitration feedback" {
+			if question.SourceType != "arbitration" || question.SourceID != identity.ArbitrationID || question.Explanation.Feedback != "final arbitration feedback" {
 				t.Fatalf("arbitration snapshot: %+v", question)
 			}
 		}
@@ -345,12 +403,11 @@ VALUES($1,$2::uuid,$3::uuid,$4::uuid,$5,$6::uuid,$7::uuid,'anonymous',$8::uuid,$
 	if !matched {
 		t.Fatal("arbitrated question missing from release")
 	}
-	if _, err := svc.Publish(ctx, f.TenantID, release.ID, f.AdminID); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := db.ExecContext(ctx, `UPDATE arbitration_task SET student_feedback='changed after publication' WHERE tenant_id=$1 AND id=$2::uuid`, f.TenantID, arbitrationID); err != nil {
-		t.Fatal(err)
-	}
+}
+
+// 发布后修改源任务批语，学生仍读取原冻结反馈；找到目标题目后才继续核对报告。
+func e2eAssertPublishedArbitrationStudentRead(t *testing.T, ctx context.Context, db *sql.DB, svc *scorerelease.Service, f story056AcceptanceFixture, answers []repairAnswer, questionID string) {
+	t.Helper()
 	result, err := svc.StudentResult(ctx, f.TenantID, f.ExamID, answers[0].student)
 	if err != nil {
 		t.Fatal(err)
@@ -360,27 +417,34 @@ VALUES($1,$2::uuid,$3::uuid,$4::uuid,$5,$6::uuid,$7::uuid,'anonymous',$8::uuid,$
 			if question.Feedback != "final arbitration feedback" {
 				t.Fatalf("published feedback changed: %+v", question)
 			}
-			studentReport, reportErr := report.NewPostgresStore(db).StudentReport(ctx, f.TenantID, f.ExamID, answers[0].student)
-			if reportErr != nil {
-				t.Fatal(reportErr)
-			}
-			var reportQuestionFound bool
-			for _, reportQuestion := range studentReport.Questions {
-				if reportQuestion.QuestionID != questionID {
-					continue
-				}
-				reportQuestionFound = true
-				if reportQuestion.Score != question.Score || len(reportQuestion.TeacherFeedback) != 1 || reportQuestion.TeacherFeedback[0].Text != "final arbitration feedback" {
-					t.Fatalf("report drifted from release: %+v", reportQuestion)
-				}
-			}
-			if !reportQuestionFound {
-				t.Fatal("published report question missing")
-			}
+			e2eAssertPublishedArbitrationReport(t, ctx, db, f, answers[0].student, questionID, question.Score)
 			return
 		}
 	}
 	t.Fatal("arbitrated student question missing")
+
+}
+
+// 报告题目必须与正式版本同分，且仅包含一条冻结仲裁反馈；没有目标题目时保留 Fatal。
+func e2eAssertPublishedArbitrationReport(t *testing.T, ctx context.Context, db *sql.DB, f story056AcceptanceFixture, studentID, questionID string, expectedScore float64) {
+	t.Helper()
+	studentReport, reportErr := report.NewPostgresStore(db).StudentReport(ctx, f.TenantID, f.ExamID, studentID)
+	if reportErr != nil {
+		t.Fatal(reportErr)
+	}
+	var reportQuestionFound bool
+	for _, reportQuestion := range studentReport.Questions {
+		if reportQuestion.QuestionID != questionID {
+			continue
+		}
+		reportQuestionFound = true
+		if reportQuestion.Score != expectedScore || len(reportQuestion.TeacherFeedback) != 1 || reportQuestion.TeacherFeedback[0].Text != "final arbitration feedback" {
+			t.Fatalf("report drifted from release: %+v", reportQuestion)
+		}
+	}
+	if !reportQuestionFound {
+		t.Fatal("published report question missing")
+	}
 }
 
 func TestCancelledScoringRunCannotReassignOrSubmitReview(t *testing.T) {

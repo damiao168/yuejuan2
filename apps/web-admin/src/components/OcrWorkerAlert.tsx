@@ -3,7 +3,7 @@ import { Alert, Button } from "antd";
 import { Activity } from "lucide-react";
 import { getOcrAvailability, type WorkerServiceStatus } from "../api/system";
 
-export function OcrWorkerAlert({ enabled }: { enabled: boolean }) {
+export function OcrWorkerAlert({ enabled }: Readonly<{ enabled: boolean }>) {
   const [worker, setWorker] = useState<WorkerServiceStatus | null>(null);
   const [statusError, setStatusError] = useState(false);
   const requestRef = useRef(0);
@@ -36,13 +36,16 @@ export function OcrWorkerAlert({ enabled }: { enabled: boolean }) {
   if (!enabled || (!statusError && (!worker || worker.automation_available))) return null;
 
   const stale = worker?.availability === "stale";
+  let statusMessage = "自动识别已暂停";
+  if (statusError) statusMessage = "暂时无法获取自动识别状态";
+  else if (stale) statusMessage = "自动识别服务可能已中断";
   return (
     <Alert
       className="ocr-worker-alert"
       type={stale || statusError ? "warning" : "error"}
       showIcon
       icon={<Activity size={18} />}
-      message={statusError ? "暂时无法获取自动识别状态" : stale ? "自动识别服务可能已中断" : "自动识别已暂停"}
+      message={statusMessage}
       description={statusError ? (
         "暂时无法获取识别服务状态。填空题如未自动识别，请先按人工方式评阅，稍后点击『重新检查』。"
       ) : (

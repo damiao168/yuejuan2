@@ -1,0 +1,1366 @@
+{
+  "file": "03-module-dependencies.drawio",
+  "title": "模块依赖",
+  "pages": [
+    {
+      "id": "overview",
+      "title": "组合根、公共依赖与维护债务",
+      "nodes": [
+        {
+          "id": "server",
+          "label": "server 组合根\n集中装配各Store/Service/Handler\n通过Dependencies传受限能力",
+          "x": 233,
+          "y": 240,
+          "w": 249,
+          "h": 157,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/application_modules.go:49",
+          "display_label": "server\n组合根",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "auth",
+          "label": "auth / httpx / logger\n多数模块的公共直接依赖\nauth广接口也承载审计写入",
+          "x": 844,
+          "y": 265,
+          "w": 639,
+          "h": 107,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/auth/store_contracts.go;services/api-gateway/internal/server/module_exam.go:55",
+          "display_label": "认证 / HTTP / 日志",
+          "show_evidence": false,
+          "title_font_size": 69,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "db",
+          "label": "database/sql + pgx\n领域PostgresStore直接执行SQL\n租户context包装驱动；非ORM层",
+          "x": 1754,
+          "y": 263,
+          "w": 379,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/db/tenant_context.go:90;services/api-gateway/internal/server/application_stores.go",
+          "display_label": "SQL / pgx",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "web",
+          "label": "Web / Student / Desktop\n共享SDK及自定义transport\n桌面有Rust本地SQLite边界",
+          "x": 78,
+          "y": 717,
+          "w": 559,
+          "h": 100,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "apps/student-portal/src/api.ts:1;apps/desktop-client/src/api/captureUploads.ts:3",
+          "display_label": "Web / 学生 / 桌面",
+          "show_evidence": false,
+          "title_font_size": 63,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "sdk",
+          "label": "packages/sdk\n生成契约 + 自定义业务客户端\n所有API调用并非都由OpenAPI覆盖",
+          "x": 1076,
+          "y": 712,
+          "w": 174,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "packages/sdk/src/index.ts;docs/architecture/evidence/api-catalog.json",
+          "display_label": "SDK",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "workers",
+          "label": "Python worker\n公共lease/http包\n使用HTTP能力，不直接写业务DB",
+          "x": 1657,
+          "y": 712,
+          "w": 574,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "packages/worker-runtime-python/edugrade_worker_runtime/lease.py;packages/worker-runtime-python/edugrade_worker_runtime/http.py",
+          "display_label": "Python Worker",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "debt",
+          "label": "P2：维护边界债务\ncapture.Store 49方法\nreview.Store 21 / governance.Store 21\n题库Store 26；前端3页超700行门禁",
+          "x": 429,
+          "y": 1189,
+          "w": 312,
+          "h": 157,
+          "status": "issue",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/capture/types.go;services/api-gateway/internal/review/types.go;contracts/architecture/frontend-debt.json",
+          "display_label": "维护债务\n宽 Store / 大页面",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "constraints",
+          "label": "边界结论与限制\n68内部包、351静态import边无循环\n装配接口存在多方向业务耦合\n未确认非法跨层调用，不能把依赖数当漏洞\n模型配置旧/新入口共用页面，属于兼容别名",
+          "x": 1441,
+          "y": 1189,
+          "w": 603,
+          "h": 157,
+          "status": "infra",
+          "kind": "note",
+          "evidence": "scripts/check-architecture-boundaries.mjs;docs/architecture/evidence/frontend-api-audit.md",
+          "display_label": "静态 import 无环\n运行时耦合另行核对",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        }
+      ],
+      "edges": [
+        {
+          "source": "server",
+          "target": "auth",
+          "label": "构造注入",
+          "evidence": "services/api-gateway/internal/server/application_modules.go:50",
+          "display_label": "构造注入"
+        },
+        {
+          "source": "server",
+          "target": "db",
+          "label": "Postgres组装",
+          "points": [
+            [
+              676,
+              494
+            ],
+            [
+              1950,
+              494
+            ]
+          ],
+          "exitX": 0.5,
+          "exitY": 1,
+          "entryX": 0.5,
+          "entryY": 1,
+          "evidence": "services/api-gateway/internal/server/application_modules.go:113",
+          "display_label": "Postgres组装"
+        },
+        {
+          "source": "web",
+          "target": "sdk",
+          "label": "直接import",
+          "evidence": "apps/student-portal/src/api.ts:1",
+          "display_label": "直接import"
+        },
+        {
+          "source": "workers",
+          "target": "server",
+          "label": "HTTP；运行调用",
+          "dashed": true,
+          "points": [
+            [
+              2314,
+              767
+            ],
+            [
+              2314,
+              546
+            ],
+            [
+              351,
+              546
+            ]
+          ],
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0.5,
+          "entryY": 1,
+          "display_label": "HTTP；运行调用"
+        }
+      ],
+      "width": 2340,
+      "height": 1599,
+      "note": "实线表示源码直接依赖；虚线HTTP是运行调用。间接依赖由详细页面实线连成的路径表达，未发现Go静态导入环",
+      "display_note": "",
+      "typography_layout_base": {
+        "width": 1800,
+        "height": 1230,
+        "nodes": {
+          "server": {
+            "x": 60,
+            "y": 160,
+            "w": 430,
+            "h": 170
+          },
+          "auth": {
+            "x": 650,
+            "y": 160,
+            "w": 490,
+            "h": 170
+          },
+          "db": {
+            "x": 1260,
+            "y": 160,
+            "w": 470,
+            "h": 170
+          },
+          "web": {
+            "x": 60,
+            "y": 500,
+            "w": 430,
+            "h": 180
+          },
+          "sdk": {
+            "x": 650,
+            "y": 500,
+            "w": 490,
+            "h": 180
+          },
+          "workers": {
+            "x": 1260,
+            "y": 500,
+            "w": 470,
+            "h": 180
+          },
+          "debt": {
+            "x": 60,
+            "y": 870,
+            "w": 780,
+            "h": 210
+          },
+          "constraints": {
+            "x": 950,
+            "y": 870,
+            "w": 780,
+            "h": 210
+          }
+        },
+        "points": {
+          "1": [
+            [
+              520,
+              380
+            ],
+            [
+              1500,
+              380
+            ]
+          ],
+          "3": [
+            [
+              1780,
+              590
+            ],
+            [
+              1780,
+              420
+            ],
+            [
+              270,
+              420
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "prepare",
+      "title": "考试资料与采集的直接包依赖",
+      "nodes": [
+        {
+          "id": "capture",
+          "label": "capture\n源包；右侧列出关键直接import",
+          "x": 174,
+          "y": 276,
+          "w": 301,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/capture/",
+          "display_label": "capture",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "ocr",
+          "label": "ocr\n源包；右侧列出关键直接import",
+          "x": 256,
+          "y": 549,
+          "w": 139,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/ocr/",
+          "display_label": "ocr",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "paper",
+          "label": "paper\n源包；右侧列出关键直接import",
+          "x": 208,
+          "y": 822,
+          "w": 235,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/paper/",
+          "display_label": "paper",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "processing",
+          "label": "processing\n源包；右侧列出关键直接import",
+          "x": 116,
+          "y": 1095,
+          "w": 417,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/processing/",
+          "display_label": "processing",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "exam",
+          "label": "exam\n被直接依赖的包",
+          "x": 1644,
+          "y": 240,
+          "w": 221,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/exam/",
+          "display_label": "exam",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "submission",
+          "label": "submission\n被直接依赖的包",
+          "x": 1538,
+          "y": 468,
+          "w": 434,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/submission/",
+          "display_label": "submission",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "files",
+          "label": "files\n被直接依赖的包",
+          "x": 1668,
+          "y": 695,
+          "w": 173,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/files/",
+          "display_label": "files",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "workerruntime",
+          "label": "workerruntime\n被直接依赖的包",
+          "x": 1471,
+          "y": 923,
+          "w": 568,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/workerruntime/",
+          "display_label": "workerruntime",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "scope",
+          "label": "如何阅读\n实线：源包直接import目标包\n间接依赖沿箭头两跳以上阅读\n完整351条包边见module-imports.json\n静态import无环；不等于运行时无回路",
+          "x": 442,
+          "y": 1400,
+          "w": 312,
+          "h": 111,
+          "status": "infra",
+          "kind": "note",
+          "evidence": "docs/architecture/evidence/module-imports.json",
+          "display_label": "如何阅读",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        }
+      ],
+      "edges": [
+        {
+          "source": "capture",
+          "target": "exam",
+          "label": "import",
+          "evidence": "services/api-gateway/internal/capture/handlers.go:12",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "import"
+        },
+        {
+          "source": "capture",
+          "target": "files",
+          "label": "import",
+          "evidence": "services/api-gateway/internal/capture/handlers.go:13",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "import"
+        },
+        {
+          "source": "capture",
+          "target": "workerruntime",
+          "label": "import",
+          "evidence": "services/api-gateway/internal/capture/handlers.go:17",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "import"
+        },
+        {
+          "source": "ocr",
+          "target": "submission",
+          "label": "import",
+          "evidence": "services/api-gateway/internal/ocr/handlers.go:14",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "import"
+        },
+        {
+          "source": "ocr",
+          "target": "workerruntime",
+          "label": "import",
+          "evidence": "services/api-gateway/internal/ocr/handlers.go:15",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "import"
+        },
+        {
+          "source": "paper",
+          "target": "exam",
+          "label": "import",
+          "evidence": "services/api-gateway/internal/paper/store_postgres_configuration.go:12",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "import"
+        },
+        {
+          "source": "paper",
+          "target": "files",
+          "label": "import",
+          "evidence": "services/api-gateway/internal/paper/document_import.go:12",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "import"
+        },
+        {
+          "source": "paper",
+          "target": "workerruntime",
+          "label": "import",
+          "evidence": "services/api-gateway/internal/paper/paper_import_parse_commit_postgres.go:9",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "import"
+        },
+        {
+          "source": "processing",
+          "target": "files",
+          "label": "import",
+          "evidence": "services/api-gateway/internal/processing/context.go:7",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "import"
+        },
+        {
+          "source": "processing",
+          "target": "workerruntime",
+          "label": "import",
+          "evidence": "services/api-gateway/internal/processing/handlers.go:16",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "import"
+        },
+        {
+          "source": "capture",
+          "target": "paper",
+          "label": "import",
+          "evidence": "services/api-gateway/internal/capture/scan_context.go:11",
+          "dashed": false,
+          "exitX": 0,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "points": [
+            [
+              46,
+              332
+            ],
+            [
+              46,
+              878
+            ]
+          ],
+          "display_label": "import"
+        }
+      ],
+      "width": 2340,
+      "height": 1781,
+      "note": "只画真实import，不把业务先后关系当依赖；代码出处在每条边的evidence属性，公共auth/httpx/logger见概览页",
+      "display_note": "",
+      "typography_layout_base": {
+        "width": 1800,
+        "height": 1370,
+        "nodes": {
+          "capture": {
+            "x": 60,
+            "y": 180,
+            "w": 380,
+            "h": 150
+          },
+          "ocr": {
+            "x": 60,
+            "y": 390,
+            "w": 380,
+            "h": 150
+          },
+          "paper": {
+            "x": 60,
+            "y": 600,
+            "w": 380,
+            "h": 150
+          },
+          "processing": {
+            "x": 60,
+            "y": 810,
+            "w": 380,
+            "h": 150
+          },
+          "exam": {
+            "x": 1090,
+            "y": 160,
+            "w": 520,
+            "h": 135
+          },
+          "submission": {
+            "x": 1090,
+            "y": 335,
+            "w": 520,
+            "h": 135
+          },
+          "files": {
+            "x": 1090,
+            "y": 510,
+            "w": 520,
+            "h": 135
+          },
+          "workerruntime": {
+            "x": 1090,
+            "y": 685,
+            "w": 520,
+            "h": 135
+          },
+          "scope": {
+            "x": 60,
+            "y": 1020,
+            "w": 800,
+            "h": 200
+          }
+        },
+        "points": {
+          "10": [
+            [
+              35,
+              255
+            ],
+            [
+              35,
+              675
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "ai",
+      "title": "主观评分的直接包依赖",
+      "nodes": [
+        {
+          "id": "subjective",
+          "label": "subjective\n源包；右侧列出关键直接import",
+          "x": 130,
+          "y": 276,
+          "w": 391,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/subjective/",
+          "display_label": "subjective",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "modelgovernance",
+          "label": "modelgovernance\n源包；右侧列出关键直接import",
+          "x": 82,
+          "y": 562,
+          "w": 487,
+          "h": 86,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/modelgovernance/",
+          "display_label": "modelgovernance",
+          "show_evidence": false,
+          "title_font_size": 51,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "review",
+          "label": "review\n源包；右侧列出关键直接import",
+          "x": 194,
+          "y": 822,
+          "w": 263,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/review/",
+          "display_label": "review",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "mathunderstanding",
+          "label": "mathunderstanding\n被直接依赖的包",
+          "x": 1423,
+          "y": 245,
+          "w": 664,
+          "h": 101,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/mathunderstanding/",
+          "display_label": "mathunderstanding",
+          "show_evidence": false,
+          "title_font_size": 64,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "grading",
+          "label": "grading\n被直接依赖的包",
+          "x": 1600,
+          "y": 468,
+          "w": 309,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/grading/",
+          "display_label": "grading",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "paper",
+          "label": "paper\n被直接依赖的包",
+          "x": 1638,
+          "y": 695,
+          "w": 235,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/paper/",
+          "display_label": "paper",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "segment",
+          "label": "segment\n被直接依赖的包",
+          "x": 1585,
+          "y": 923,
+          "w": 340,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/segment/",
+          "display_label": "segment",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "assessment",
+          "label": "assessment\n被直接依赖的包",
+          "x": 1534,
+          "y": 1150,
+          "w": 442,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/assessment/",
+          "display_label": "assessment",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "scope",
+          "label": "如何阅读\n实线：源包直接import目标包\n间接依赖沿箭头两跳以上阅读\n完整351条包边见module-imports.json\n静态import无环；不等于运行时无回路",
+          "x": 442,
+          "y": 1284,
+          "w": 312,
+          "h": 111,
+          "status": "infra",
+          "kind": "note",
+          "evidence": "docs/architecture/evidence/module-imports.json",
+          "display_label": "如何阅读",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        }
+      ],
+      "edges": [
+        {
+          "source": "subjective",
+          "target": "mathunderstanding",
+          "label": "import",
+          "evidence": "services/api-gateway/internal/subjective/grading_agent_v2_builder.go:15",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "import"
+        },
+        {
+          "source": "subjective",
+          "target": "grading",
+          "label": "import",
+          "evidence": "services/api-gateway/internal/subjective/adapter.go:7",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "import"
+        },
+        {
+          "source": "subjective",
+          "target": "paper",
+          "label": "import",
+          "evidence": "services/api-gateway/internal/subjective/grading_agent_v2_builder.go:16",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "import"
+        },
+        {
+          "source": "subjective",
+          "target": "segment",
+          "label": "import",
+          "evidence": "services/api-gateway/internal/subjective/active_crop_resolver.go:15",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "import"
+        },
+        {
+          "source": "subjective",
+          "target": "assessment",
+          "label": "import",
+          "evidence": "services/api-gateway/internal/subjective/eligibility.go:8",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "import"
+        },
+        {
+          "source": "modelgovernance",
+          "target": "assessment",
+          "label": "import",
+          "evidence": "services/api-gateway/internal/modelgovernance/role_binding.go:9",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "import"
+        },
+        {
+          "source": "review",
+          "target": "paper",
+          "label": "import",
+          "evidence": "services/api-gateway/internal/review/store_postgres_context.go:9",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "import"
+        },
+        {
+          "source": "review",
+          "target": "segment",
+          "label": "import",
+          "evidence": "services/api-gateway/internal/review/handlers.go:21",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "import"
+        },
+        {
+          "source": "review",
+          "target": "assessment",
+          "label": "import",
+          "evidence": "services/api-gateway/internal/review/task_context.go:8",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "import"
+        },
+        {
+          "source": "subjective",
+          "target": "modelgovernance",
+          "label": "import",
+          "evidence": "services/api-gateway/internal/subjective/panel_agent_binding.go:7",
+          "dashed": false,
+          "exitX": 0,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "points": [
+            [
+              46,
+              332
+            ],
+            [
+              46,
+              604
+            ]
+          ],
+          "display_label": "import"
+        }
+      ],
+      "width": 2340,
+      "height": 1690,
+      "note": "只画真实import，不把业务先后关系当依赖；代码出处在每条边的evidence属性，公共auth/httpx/logger见概览页",
+      "display_note": "",
+      "typography_layout_base": {
+        "width": 1800,
+        "height": 1300,
+        "nodes": {
+          "subjective": {
+            "x": 60,
+            "y": 180,
+            "w": 380,
+            "h": 150
+          },
+          "modelgovernance": {
+            "x": 60,
+            "y": 390,
+            "w": 380,
+            "h": 150
+          },
+          "review": {
+            "x": 60,
+            "y": 600,
+            "w": 380,
+            "h": 150
+          },
+          "mathunderstanding": {
+            "x": 1090,
+            "y": 160,
+            "w": 520,
+            "h": 135
+          },
+          "grading": {
+            "x": 1090,
+            "y": 335,
+            "w": 520,
+            "h": 135
+          },
+          "paper": {
+            "x": 1090,
+            "y": 510,
+            "w": 520,
+            "h": 135
+          },
+          "segment": {
+            "x": 1090,
+            "y": 685,
+            "w": 520,
+            "h": 135
+          },
+          "assessment": {
+            "x": 1090,
+            "y": 860,
+            "w": 520,
+            "h": 135
+          },
+          "scope": {
+            "x": 60,
+            "y": 930,
+            "w": 800,
+            "h": 200
+          }
+        },
+        "points": {
+          "9": [
+            [
+              35,
+              255
+            ],
+            [
+              35,
+              465
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "release",
+      "title": "发布与学校助手的直接包依赖",
+      "nodes": [
+        {
+          "id": "schoolassistant",
+          "label": "schoolassistant\n源包；右侧列出关键直接import",
+          "x": 82,
+          "y": 284,
+          "w": 487,
+          "h": 96,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/schoolassistant/",
+          "display_label": "schoolassistant",
+          "show_evidence": false,
+          "title_font_size": 60,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "releasegate",
+          "label": "releasegate\n源包；右侧列出关键直接import",
+          "x": 104,
+          "y": 549,
+          "w": 442,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/releasegate/",
+          "display_label": "releasegate",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "scorerelease",
+          "label": "scorerelease\n源包；右侧列出关键直接import",
+          "x": 88,
+          "y": 822,
+          "w": 473,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/scorerelease/",
+          "display_label": "scorerelease",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "exam",
+          "label": "exam\n被直接依赖的包",
+          "x": 1644,
+          "y": 240,
+          "w": 221,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/exam/",
+          "display_label": "exam",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "workspace",
+          "label": "workspace\n被直接依赖的包",
+          "x": 1550,
+          "y": 468,
+          "w": 411,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/workspace/",
+          "display_label": "workspace",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "qualitydashboard",
+          "label": "qualitydashboard\n被直接依赖的包",
+          "x": 1424,
+          "y": 695,
+          "w": 662,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/qualitydashboard/",
+          "display_label": "qualitydashboard",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "files",
+          "label": "files\n被直接依赖的包",
+          "x": 1668,
+          "y": 923,
+          "w": 173,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/files/",
+          "display_label": "files",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "scope",
+          "label": "如何阅读\n实线：源包直接import目标包\n间接依赖沿箭头两跳以上阅读\n完整351条包边见module-imports.json\n静态import无环；不等于运行时无回路",
+          "x": 442,
+          "y": 1284,
+          "w": 312,
+          "h": 111,
+          "status": "infra",
+          "kind": "note",
+          "evidence": "docs/architecture/evidence/module-imports.json",
+          "display_label": "如何阅读",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        }
+      ],
+      "edges": [
+        {
+          "source": "schoolassistant",
+          "target": "exam",
+          "label": "import",
+          "evidence": "services/api-gateway/internal/schoolassistant/conversation.go:13",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "import"
+        },
+        {
+          "source": "schoolassistant",
+          "target": "workspace",
+          "label": "import",
+          "evidence": "services/api-gateway/internal/schoolassistant/adapters.go:11",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "import"
+        },
+        {
+          "source": "scorerelease",
+          "target": "qualitydashboard",
+          "label": "import",
+          "evidence": "services/api-gateway/internal/scorerelease/store_postgres.go:14",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "import"
+        },
+        {
+          "source": "scorerelease",
+          "target": "files",
+          "label": "import",
+          "evidence": "services/api-gateway/internal/scorerelease/anonymous_paper.go:23",
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "display_label": "import"
+        },
+        {
+          "source": "schoolassistant",
+          "target": "releasegate",
+          "label": "import",
+          "evidence": "services/api-gateway/internal/schoolassistant/types.go:12",
+          "dashed": false,
+          "exitX": 0,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "points": [
+            [
+              46,
+              332
+            ],
+            [
+              46,
+              604
+            ]
+          ],
+          "display_label": "import"
+        },
+        {
+          "source": "schoolassistant",
+          "target": "scorerelease",
+          "label": "import",
+          "evidence": "services/api-gateway/internal/schoolassistant/adapters.go:10",
+          "dashed": false,
+          "exitX": 0,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "points": [
+            [
+              46,
+              332
+            ],
+            [
+              46,
+              878
+            ]
+          ],
+          "display_label": "import"
+        },
+        {
+          "source": "releasegate",
+          "target": "scorerelease",
+          "label": "import",
+          "evidence": "services/api-gateway/internal/releasegate/coordinator.go:8",
+          "dashed": false,
+          "exitX": 0,
+          "exitY": 0.5,
+          "entryX": 0,
+          "entryY": 0.5,
+          "points": [
+            [
+              46,
+              604
+            ],
+            [
+              46,
+              878
+            ]
+          ],
+          "display_label": "import"
+        }
+      ],
+      "width": 2340,
+      "height": 1690,
+      "note": "只画真实import，不把业务先后关系当依赖；代码出处在每条边的evidence属性，公共auth/httpx/logger见概览页",
+      "display_note": "",
+      "typography_layout_base": {
+        "width": 1800,
+        "height": 1300,
+        "nodes": {
+          "schoolassistant": {
+            "x": 60,
+            "y": 180,
+            "w": 380,
+            "h": 150
+          },
+          "releasegate": {
+            "x": 60,
+            "y": 390,
+            "w": 380,
+            "h": 150
+          },
+          "scorerelease": {
+            "x": 60,
+            "y": 600,
+            "w": 380,
+            "h": 150
+          },
+          "exam": {
+            "x": 1090,
+            "y": 160,
+            "w": 520,
+            "h": 135
+          },
+          "workspace": {
+            "x": 1090,
+            "y": 335,
+            "w": 520,
+            "h": 135
+          },
+          "qualitydashboard": {
+            "x": 1090,
+            "y": 510,
+            "w": 520,
+            "h": 135
+          },
+          "files": {
+            "x": 1090,
+            "y": 685,
+            "w": 520,
+            "h": 135
+          },
+          "scope": {
+            "x": 60,
+            "y": 930,
+            "w": 800,
+            "h": 200
+          }
+        },
+        "points": {
+          "4": [
+            [
+              35,
+              255
+            ],
+            [
+              35,
+              465
+            ]
+          ],
+          "5": [
+            [
+              35,
+              255
+            ],
+            [
+              35,
+              675
+            ]
+          ],
+          "6": [
+            [
+              35,
+              465
+            ],
+            [
+              35,
+              675
+            ]
+          ]
+        }
+      }
+    }
+  ],
+  "compact": true
+}

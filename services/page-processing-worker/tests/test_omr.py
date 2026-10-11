@@ -66,20 +66,28 @@ def test_rejects_missing_or_unsafe_regions() -> None:
 
 
 def test_rejects_non_finite_regions_and_profile_thresholds() -> None:
-    with pytest.raises(OMRExtractionError, match="omr_option_region_invalid"):
-        extract_marks(sheet("A"), [{"label": "A", "x": float("nan"), "y": 0, "width": 10, "height": 10}])
+    image_bytes = sheet('A')
+    invalid_value = float('nan')
+    with pytest.raises(OMRExtractionError, match='omr_option_region_invalid'):
+        extract_marks(image_bytes, [{'label': 'A', 'x': invalid_value, 'y': 0, 'width': 10, 'height': 10}])
 
-    with pytest.raises(OMRExtractionError, match="omr_profile_threshold_invalid"):
-        extract_marks(sheet("A"), REGIONS, profile=OMRProfile(marked_threshold=float("nan")))
+    image_bytes = sheet('A')
+    profile = OMRProfile(marked_threshold=float('nan'))
+    with pytest.raises(OMRExtractionError, match='omr_profile_threshold_invalid'):
+        extract_marks(image_bytes, REGIONS, profile=profile)
 
-    with pytest.raises(OMRExtractionError, match="omr_profile_threshold_invalid"):
-        extract_marks(sheet("A"), REGIONS, profile=OMRProfile(border_fraction=0.5))
+    image_bytes = sheet('A')
+    profile = OMRProfile(border_fraction=0.5)
+    with pytest.raises(OMRExtractionError, match='omr_profile_threshold_invalid'):
+        extract_marks(image_bytes, REGIONS, profile=profile)
 
-    with pytest.raises(OMRExtractionError, match="omr_multiple_flag_invalid"):
-        extract_marks(sheet("A"), REGIONS, multiple="false")
+    image_bytes = sheet('A')
+    with pytest.raises(OMRExtractionError, match='omr_multiple_flag_invalid'):
+        extract_marks(image_bytes, REGIONS, multiple='false')
 
-    with pytest.raises(OMRExtractionError, match="omr_option_region_invalid"):
-        extract_marks(sheet("A"), [{"label": "A", "x": True, "y": 0, "width": 10, "height": 10}])
+    image_bytes = sheet('A')
+    with pytest.raises(OMRExtractionError, match='omr_option_region_invalid'):
+        extract_marks(image_bytes, [{'label': 'A', 'x': True, 'y': 0, 'width': 10, 'height': 10}])
 
 
 def test_rejects_unsafe_reference_dimensions_before_resize() -> None:
@@ -88,14 +96,7 @@ def test_rejects_unsafe_reference_dimensions_before_resize() -> None:
         version="opencv-template-difference-bubble-v1",
     )
     reference_region = {"x": 0, "y": 0, "width": 1, "height": 1}
-    with pytest.raises(OMRExtractionError, match="omr_reference_dimensions_invalid"):
-        extract_marks(
-            sheet("A"),
-            REGIONS,
-            profile=profile,
-            reference_image_bytes=sheet(),
-            reference_content_type="image/png",
-            reference_page_width=100_000,
-            reference_page_height=100_000,
-            reference_question_region=reference_region,
-        )
+    image_bytes = sheet('A')
+    image_bytes_2 = sheet()
+    with pytest.raises(OMRExtractionError, match='omr_reference_dimensions_invalid'):
+        extract_marks(image_bytes, REGIONS, profile=profile, reference_image_bytes=image_bytes_2, reference_content_type='image/png', reference_page_width=100000, reference_page_height=100000, reference_question_region=reference_region)

@@ -274,6 +274,17 @@ func normalizeChoiceSet(values []string) []string {
 	out := []string{}
 	for _, value := range values {
 		value = normalizeChoice(value)
+		// 识别资料常将多选答案写成 BC；与 [B,C] 使用同一选项集合，不能把 BC 当成一个选项。
+		if len(value) > 1 && strings.IndexFunc(value, func(r rune) bool { return r < 'A' || r > 'Z' }) == -1 {
+			for _, option := range value {
+				label := string(option)
+				if !seen[label] {
+					seen[label] = true
+					out = append(out, label)
+				}
+			}
+			continue
+		}
 		if value == "" || seen[value] {
 			continue
 		}
@@ -312,6 +323,7 @@ func hasWrongOption(expected []string, actual []string) bool {
 // 默认只做首尾空白及 NFKC 归一化；忽略大小写、内部空白、标点都需要规则显式开启。
 func normalizeFill(value string, tolerance any) string {
 	value = norm.NFKC.String(strings.TrimSpace(value))
+	value = canonicalFillMath(value)
 	if boolConfig(tolerance, "ignore_case", false) {
 		value = strings.ToLower(value)
 	}
@@ -325,6 +337,24 @@ func normalizeFill(value string, tolerance any) string {
 			}
 			return r
 		}, value)
+	}
+	return value
+}
+
+var simpleMathFraction = regexp.MustCompile(`^([+-]?)\\(?:dfrac|tfrac|frac)\{([+-]?\d+)\}\{([+-]?\d+)\}$`)
+
+// 去掉整段数学内容的展示包装，并统一简单数字分式的书写格式；不求值或放宽数学条件。
+// 端点括号、负号和变量必须保留；0.5 与 1/2 是否可互换仍由等价答案配置决定。
+func canonicalFillMath(value string) string {
+	for _, pair := range [][2]string{{"$$", "$$"}, {"$", "$"}, {`\(`, `\)`}, {`\[`, `\]`}} {
+		if len(value) > len(pair[0])+len(pair[1]) && strings.HasPrefix(value, pair[0]) && strings.HasSuffix(value, pair[1]) {
+			value = strings.TrimSpace(value[len(pair[0]) : len(value)-len(pair[1])])
+			break
+		}
+	}
+	value = strings.NewReplacer(`\left`, "", `\right`, "").Replace(value)
+	if fraction := simpleMathFraction.FindStringSubmatch(value); fraction != nil {
+		return fraction[1] + fraction[2] + "/" + fraction[3]
 	}
 	return value
 }

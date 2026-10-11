@@ -1,7 +1,5 @@
-// Package aidisagreement records an auditable, human-only follow-up when a
-// real subjective-AI suggestion differs from the human grading fact that was
-// created from the same review task. It deliberately never updates a grade or
-// exposes answer content, Gold content, or blind-seed material.
+// Package aidisagreement 在真实主观题 AI 建议与同一复核任务产生的人工评分事实不一致时，记录可审计的纯人工跟进。
+// 它不会更新成绩，也不会暴露答案、Gold 内容或盲投种子材料。
 package aidisagreement
 
 import (
@@ -68,9 +66,8 @@ func (t Taxonomy) Valid() bool {
 	}
 }
 
-// ActualComparison is derived by the Store from tenant-scoped ai_grade,
-// human_grade and review_task records. It is intentionally aggregate-only:
-// evidence is represented as counts, not answer text, image URLs or Gold.
+// ActualComparison 由 Store 从租户范围内的 ai_grade、human_grade 和 review_task 记录派生。
+// 只保留聚合信息：证据用数量表示，不包含答案文本、图片 URL 或 Gold。
 type ActualComparison struct {
 	ExamID                  string
 	QuestionID              string
@@ -149,10 +146,8 @@ type Filter struct {
 	Limit      int
 }
 
-// DatasetEntry is safe for evaluation exports: it is de-identified and has
-// no student response, image, comments, Gold answer or reviewer identity.
-// LineageRef is one-way so a privileged service can join back internally while
-// a dataset consumer cannot use it to identify a student.
+// DatasetEntry 用于评测导出，已去标识化，不含学生作答、图片、评语、Gold 答案或复核者身份。
+// LineageRef 是单向引用，特权服务可在内部关联回来源，数据集使用方不能用它识别学生。
 type DatasetEntry struct {
 	LineageRef       string         `json:"lineage_ref"`
 	QuestionID       string         `json:"question_id"`

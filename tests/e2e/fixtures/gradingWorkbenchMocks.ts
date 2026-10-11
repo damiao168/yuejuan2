@@ -101,7 +101,7 @@ function requestBody(route: Route): Record<string, unknown> {
 function contextFor(task: FixtureTask, draft: FixtureDraft | undefined, fastConfirm = false) {
   const { subject } = task;
   return {
-    task,
+    task: wireTask(task),
     expected_revision: task.revision,
     question_snapshot: {
       id: `snapshot-${task.id}`,
@@ -131,6 +131,9 @@ function contextFor(task: FixtureTask, draft: FixtureDraft | undefined, fastConf
       question_type: subject.archetype,
       score: 9,
       stem: `${subject.label} 键盘阅卷夹具 ${task.question_no}`,
+      options: ["参考选项甲", "参考选项乙"],
+      answer_key: { id: `answer-${task.id}`, question_id: task.question_id, answer_version: "reference-v1", standard_answer: "冻结参考答案", equivalent_answers: ["允许的等价答案"], tolerance: null },
+      solution: { id: `solution-${task.id}`, question_id: task.question_id, solution_version: "solution-v1", raw_text: "冻结解答全文", steps: [{ text: "冻结解答步骤" }], source_refs: [], verification_status: "human_confirmed" },
       knowledge_points: []
     },
     answer_artifact: {
@@ -140,9 +143,9 @@ function contextFor(task: FixtureTask, draft: FixtureDraft | undefined, fastConf
       ocr_text: `${subject.label} 作答`,
       status: "ready",
       confidence: 0.99,
-      // Keyboard/revision flows do not require a rendered image. Keeping this
-      // empty also prevents image-fit state from creating an unrelated draft
-      // write before either browser window starts the conflict scenario.
+      // 键盘和修订号流程不需要渲染图像。这里保持为空，
+      // 也可避免在任一浏览器窗口开始冲突场景前，
+      // 图像适配状态触发无关的草稿写入。
       segment_image_url: fastConfirm ? `/api/v1/review-assets/${task.id}` : ""
     },
     frozen_rubric: {
@@ -151,14 +154,14 @@ function contextFor(task: FixtureTask, draft: FixtureDraft | undefined, fastConf
       version: "1",
       status: "frozen",
       max_score: 9,
-      points: []
+      points: [], deductions: [{ condition: "单位遗漏", deduction: 1 }], examples: [{ answer: "冻结评分样例", score: 7 }]
     },
     ai_candidates: [],
     ...(fastConfirm ? { ai_second_opinion: {
       available: true, presentation: "explicit_second_opinion", score_prefill_allowed: true,
       metadata: { id: `ai-${task.id}`, answer_segment_id: task.answer_segment_id, suggested_score: 7, max_score: 9,
         confidence: 0.98, matched_points: [], missing_points: [], evidence: [{ type: "text", answer_text: "作答要点与标准答案一致" }],
-        risk_flags: [], mock: false, status: "succeeded", delivery_mode: "teacher_review" }
+        risk_flags: [], mock: false, status: "succeeded", delivery_mode: "teacher_review", student_feedback: "AI 学生反馈草稿", teacher_note: "AI 内部备注草稿" }
     } } : {}),
     scoring_evidence: [],
     claim: {
@@ -180,15 +183,20 @@ function contextFor(task: FixtureTask, draft: FixtureDraft | undefined, fastConf
   };
 }
 
+function wireTask(task: FixtureTask) {
+  // 学科工具夹具保留内部描述对象；API 只按权威 ReviewTask 契约返回展示用编码和考试名称。
+  return { ...task, subject: task.subject.code, exam_name: "连续阅卷测试考试" };
+}
+
 function taskFromPath(path: string, tasks: FixtureTask[]) {
   const match = path.match(/^\/api\/v1\/review-tasks\/([^/]+)(?:\/|$)/);
   return match ? tasks.find((task) => task.id === decodeURIComponent(match[1])) : undefined;
 }
 
 /**
- * Adds a stateful review-task API on top of the product-wide auth/navigation
- * mocks. The explicit revision check lets two independent browser contexts
- * exercise the same optimistic-locking contract the workbench uses in production.
+ * 在产品通用的认证和导航模拟上，加入有状态的阅卷任务 API。
+ * 显式修订号检查让两个独立浏览器上下文
+ * 能验证生产工作台使用的同一乐观锁契约。
  */
 export async function installGradingWorkbenchMocks(page: Page, state = createGradingWorkbenchMockState()) {
   await installApiMocks(page, { role: "grader", initiallyAuthenticated: true });
@@ -211,12 +219,18 @@ export async function installGradingWorkbenchMocks(page: Page, state = createGra
       const assignedTo = url.searchParams.get("assigned_to");
       const examID = url.searchParams.get("exam_id");
       const status = url.searchParams.get("status");
+      const subject = url.searchParams.get("subject");
+      const question = url.searchParams.get("question_id");
+      const unassigned = url.searchParams.get("unassigned") === "true";
+      const q = (url.searchParams.get("q") || "").toLowerCase();
       const cursor = url.searchParams.get("cursor") ?? "";
       const limit = Math.max(1, Math.min(Number(url.searchParams.get("limit") ?? 50), 200));
       state.listCursors.push(cursor);
-      const tasks = state.tasks.filter((task) =>
-        (!assignedTo || task.assigned_to === assignedTo) && (!examID || task.exam_id === examID) && (!status || task.status === status)
-      );
+      const matches = (task: FixtureTask) => (!assignedTo || task.assigned_to === assignedTo) && (!examID || task.exam_id === examID)
+        && (!status || (status === "active" ? ["pending", "assigned", "in_progress", "returned"].includes(task.status) : task.status === status))
+        && (!subject || task.subject.code === subject) && (!question || task.question_id === question) && (!unassigned || !task.assigned_to)
+        && (!q || [task.id, task.anonymous_code, task.question_no, task.source, wireTask(task).exam_name, task.subject.code].join(" ").toLowerCase().includes(q));
+      const tasks = state.tasks.filter(matches);
       const aggregate = {
         total_count: tasks.length,
         completed_count: tasks.filter((task) => ["submitted", "completed"].includes(task.status)).length,
@@ -229,12 +243,10 @@ export async function installGradingWorkbenchMocks(page: Page, state = createGra
         })
       };
       const anchor = cursor ? state.tasks.findIndex((task) => task.id === cursor) : -1;
-      const remaining = state.tasks.slice(anchor + 1).filter((task) =>
-        (!assignedTo || task.assigned_to === assignedTo) && (!examID || task.exam_id === examID) && (!status || task.status === status)
-      );
+      const remaining = state.tasks.slice(anchor + 1).filter(matches);
       const page = remaining.slice(0, limit);
       const hasMore = remaining.length > page.length;
-      return json(route, { tasks: page, aggregate, next_cursor: hasMore ? page[page.length - 1]?.id ?? "" : "", has_more: hasMore });
+      return json(route, { tasks: page.map(wireTask), aggregate, next_cursor: hasMore ? page[page.length - 1]?.id ?? "" : "", has_more: hasMore });
     }
 
     if (path === "/api/v1/review-tasks/next" && method === "POST") {
@@ -246,7 +258,7 @@ export async function installGradingWorkbenchMocks(page: Page, state = createGra
       task.revision += 1;
       task.updated_at = now;
       state.claims.push(task.id);
-      return json(route, { task });
+      return json(route, { task: wireTask(task) });
     }
 
     const task = taskFromPath(path, state.tasks);
@@ -293,7 +305,7 @@ export async function installGradingWorkbenchMocks(page: Page, state = createGra
       task.updated_at = now;
       state.submissions.push(task.id);
       return json(route, {
-        task,
+        task: wireTask(task),
         human_grade: {
           id: `grade-${task.id}`,
           tenant_id: task.tenant_id,

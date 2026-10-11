@@ -18,6 +18,24 @@ from edugrade_worker_runtime import (
 )
 
 
+class _RejectRedirects(request.HTTPRedirectHandler):
+    def http_error_302(self, req, fp, code, msg, headers):
+        # 初始目标校验不覆盖跳转；同源跳转也拒绝，避免令牌、租约或登录正文被再次转发。
+        # 尚未进入调用方的 with；先释放原连接，避免异常链长期保留响应套接字。
+        fp.close()
+        raise error.HTTPError(req.full_url, code, "redirects are not allowed", headers, None)
+
+    http_error_301 = http_error_302
+    http_error_303 = http_error_302
+    http_error_307 = http_error_302
+    http_error_308 = http_error_302
+
+
+def _open_request(req: request.Request, *, timeout: float) -> Any:
+    # 独立 opener 不修改进程全局设置；HTTPS 仍使用标准库的默认证书验证。
+    return request.build_opener(_RejectRedirects()).open(req, timeout=timeout)
+
+
 class APIError(RuntimeError):
     def __init__(self, message: str, *, status_code: int | None = None, retry_after: float | None = None) -> None:
         super().__init__(message)
@@ -68,7 +86,7 @@ class Client:
     def download(self, path: str) -> bytes:
         req = self._request("GET", path, None)
         try:
-            with request.urlopen(req, timeout=120) as response:
+            with _open_request(req, timeout=120) as response:
                 return read_bounded(response, MAX_DOCUMENT_RESPONSE_BYTES)
         except error.HTTPError as exc:
             if exc.code in {401, 403}:
@@ -99,17 +117,12 @@ class Client:
         req.add_header("Content-Type", f"multipart/form-data; boundary={boundary}")
         req.add_header("Content-Length", str(len(body)))
         try:
-            with request.urlopen(req, timeout=180) as response:
+            with _open_request(req, timeout=180) as response:
                 result = json.loads(read_json_response(response).decode("utf-8"))
         except error.HTTPError as exc:
             if exc.code == 409:
-                try:
-                    duplicate = json.loads(read_json_response(exc).decode("utf-8"))
-                    existing = duplicate.get("existing_file") or {}
-                except (ResponseValidationError, UnicodeDecodeError, json.JSONDecodeError):
-                    existing = {}
-                # 网关冲突响应携带已有资产时复用它，使上传成功后的任务重试无需再造副本。
-                if existing.get("id") and existing.get("hash_sha256"):
+                existing = _existing_asset_from_conflict(exc)
+                if existing is not None:
                     return existing
             raise APIError(f"decoded_page_upload_failed:{exc.code}") from exc
         except ResponseValidationError as exc:
@@ -162,7 +175,7 @@ class Client:
         req = self._request(method, path, json.dumps(payload).encode("utf-8"), auth=auth)
         req.add_header("Content-Type", "application/json")
         try:
-            with request.urlopen(req, timeout=120 if timeout is None else timeout) as response:
+            with _open_request(req, timeout=120 if timeout is None else timeout) as response:
                 raw = read_json_response(response)
         except error.HTTPError as exc:
             raise APIError(
@@ -170,7 +183,7 @@ class Client:
                 status_code=exc.code,
                 retry_after=_retry_after_seconds(exc.headers),
             ) from exc
-        except (error.URLError, OSError, ResponseValidationError, TimeoutError) as exc:
+        except (OSError, ResponseValidationError) as exc:
             raise APIError("api_request_failed:transport") from exc
         return json.loads(raw.decode("utf-8")) if raw else {}
 
@@ -182,6 +195,18 @@ class Client:
             if self.current_task:
                 headers.update(_task_capability_headers(self.current_task))
         return request.Request(url, data=body, headers=headers, method=method)
+
+
+def _existing_asset_from_conflict(response: error.HTTPError) -> dict[str, Any] | None:
+    try:
+        duplicate = json.loads(read_json_response(response).decode("utf-8"))
+        existing = duplicate.get("existing_file") or {}
+    except (ResponseValidationError, UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    # 409 只有同时携带资产 ID 和 hash 才能复用；解析失败或字段不完整仍按原上传失败处理。
+    if existing.get("id") and existing.get("hash_sha256"):
+        return existing
+    return None
 
 
 def _task_capability_headers(task: dict[str, str]) -> dict[str, str]:

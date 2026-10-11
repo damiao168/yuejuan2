@@ -1,7 +1,7 @@
 import type { AiGrade } from "../../../api/review";
 import type { AnswerSegment } from "../../../api/submissions";
-import { appQueryClient } from "../../../query/client";
-import { reviewTaskContextQueryOptions } from "../../../query/reviewTaskContext";
+import type { QueryClient } from "@tanstack/react-query";
+import { assertReviewTaskContextScope, reviewTaskContextQueryOptions, type ReviewTaskContextScope } from "../../../query/reviewTaskContext";
 import { questionFromContext, secondOpinionMetadata } from "./reviewContext";
 import type { PrefetchedTaskBundle, WorkbenchContext } from "./gradingWorkbench.types";
 
@@ -24,8 +24,10 @@ function resolveTaskAISuggestion(value: unknown): { grade?: AiGrade; warning?: s
     : { warning: "AI 建议数据不完整，已切换为人工阅卷；本任务仍可正常提交。" };
 }
 
-export async function loadTaskContext(taskId: string, allowOriginalImage: boolean): Promise<WorkbenchContext> {
-  const reviewContext = await appQueryClient.fetchQuery(reviewTaskContextQueryOptions(taskId));
+export async function loadTaskContext(queryClient: QueryClient, scope: ReviewTaskContextScope, taskId: string): Promise<WorkbenchContext> {
+  assertReviewTaskContextScope(scope);
+  const reviewContext = await queryClient.fetchQuery(reviewTaskContextQueryOptions(scope, taskId));
+  assertReviewTaskContextScope(scope);
   const task = reviewContext.task;
   // 初次加载仍遵守第二意见的显式揭示规则，不能因预取任务而提前填入 AI 建议。
   const metadata = secondOpinionMetadata(reviewContext, false);
@@ -34,6 +36,10 @@ export async function loadTaskContext(taskId: string, allowOriginalImage: boolea
     const resolved = resolveTaskAISuggestion(item);
     return resolved.grade?.answer_segment_id === task.answer_segment_id ? [resolved.grade] : [];
   }) : [];
+  // 当前答题片段的有效历史优先；历史为空时才使用当前已允许展示的建议。
+  let aiGrades: AiGrade[] = [];
+  if (history.length) aiGrades = history;
+  else if (suggestion.grade) aiGrades = [suggestion.grade];
   const question = questionFromContext(reviewContext);
   const artifact = reviewContext.answer_artifact;
   const segment = {
@@ -58,17 +64,17 @@ export async function loadTaskContext(taskId: string, allowOriginalImage: boolea
     pages: [],
     ocrTasks: [],
     ocrResults: [],
-    aiGrades: history.length ? history : suggestion.grade ? [suggestion.grade] : [],
+    aiGrades,
     automationResult: reviewContext.automation_result,
     warnings: suggestion.warning ? [suggestion.warning] : [],
     ocrText: recognizedText,
     segmentImageUrl: artifact.segment_image_url,
-    originalImageUrl: allowOriginalImage ? artifact.original_image_url : undefined
+    originalImageUrl: scope.allowOriginalImage ? artifact.original_image_url : undefined
   };
 }
 
-export async function fetchTaskBundle(taskId: string, currentUserId: string, initialExamId: string, allowOriginalImage: boolean): Promise<PrefetchedTaskBundle> {
-  const context = await loadTaskContext(taskId, allowOriginalImage);
+export async function fetchTaskBundle(queryClient: QueryClient, scope: ReviewTaskContextScope, taskId: string, currentUserId: string, initialExamId: string): Promise<PrefetchedTaskBundle> {
+  const context = await loadTaskContext(queryClient, scope, taskId);
   if (initialExamId && context.task.exam_id !== initialExamId) throw new Error("该阅卷任务不属于当前考试，已停止加载。");
   if (context.task.assigned_to !== currentUserId) throw new Error("该阅卷任务已不再分配给当前用户。");
   return { task: context.task, context };

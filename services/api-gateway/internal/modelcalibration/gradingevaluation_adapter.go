@@ -6,9 +6,7 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/gradingevaluation"
 )
 
-// NewEvaluationReader adapts the A16 service without exposing its persistence
-// internals. Calibration can therefore only consume completed, tenant-scoped
-// aligned observations that A16 has already accepted.
+// NewEvaluationReader 适配 A16 服务，不暴露持久化内部细节；校准只能使用 A16 已接受、已完成且在租户范围内的对齐观察。
 func NewEvaluationReader(service *gradingevaluation.Service) EvaluationReader {
 	return evaluationReader{service: service}
 }

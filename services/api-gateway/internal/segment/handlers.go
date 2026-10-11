@@ -162,9 +162,8 @@ func (h *Handler) GetImage(w http.ResponseWriter, r *http.Request) {
 	binaryresourcehttp.Serve(w, r, resource, h.audit)
 }
 
-// GetPageImage serves the full answer-sheet page that owns an already
-// authorized answer segment. Public callers never provide a submission or
-// file id, so the score-release boundary remains the source of authorization.
+// GetPageImage 返回已获授权答案分段所属的完整答题卡页面。
+// 公开调用方绝不提供提交或文件 ID，因此成绩发布边界仍是授权来源。
 func (h *Handler) GetPageImage(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
 	resource, err := h.images.ReadPageImage(r.Context(), user.TenantID, r.PathValue("id"))

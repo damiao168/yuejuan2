@@ -39,8 +39,7 @@ func TestResumableCaptureUploadCompletesOnceAfterRetry(t *testing.T) {
 	if updated.ConfirmedOffset != int64(len(payload)) {
 		t.Fatalf("confirmed offset=%d want=%d", updated.ConfirmedOffset, len(payload))
 	}
-	// An interrupted client retries its init and first chunk. Neither action
-	// creates a second server-side page or shifts the confirmed offset.
+	// 中断的客户端重试初始化和首个分块；两者都不会创建第二个服务端页面，也不会移动已确认偏移。
 	resumed, err := service.Init(ctx, testTenant, testActor, input)
 	if err != nil {
 		t.Fatalf("resume init: %v", err)
@@ -175,10 +174,8 @@ func TestFiveHundredPageFixtureRecoversPage173WithoutDuplicateRegistration(t *te
 	input := testInitInput(payload, batchID)
 	input.IdempotencyKey = "a24-500-pages-page-173"
 
-	// The fixture represents the 500 durable page records on the station. The
-	// first 172 are already complete, page 173 is interrupted after one remote
-	// chunk, and 327 later pages remain pending. This service test focuses on
-	// the only state that crosses the desktop/server boundary: page 173.
+	// 夹具表示工作站上的 500 条持久页面记录：前 172 页已完成，第 173 页在远端收到一个分块后中断，后续 327 页仍待处理。
+	// 此服务测试只关注跨桌面与服务端边界的第 173 页状态。
 	const fixturePages = 500
 	const interruptedPage = 173
 	if fixturePages-interruptedPage != 327 {
@@ -198,33 +195,7 @@ func TestFiveHundredPageFixtureRecoversPage173WithoutDuplicateRegistration(t *te
 		t.Fatalf("confirmed offset=%d want 3", updated.ConfirmedOffset)
 	}
 
-	// Simulate kill/restart: Init returns the remote checkpoint. A stale retry
-	// of the known chunk is idempotent, then the desktop resumes at offset 3.
-	resumed, err := service.Init(ctx, testTenant, testActor, input)
-	if err != nil {
-		t.Fatalf("restart init: %v", err)
-	}
-	if !resumed.AlreadyExists || resumed.ConfirmedOffset != 3 || resumed.Status != "uploading" {
-		t.Fatalf("restart checkpoint=%+v", resumed)
-	}
-	if _, err := service.AppendChunk(ctx, testTenant, resumed.RemoteUploadID, ChunkInput{Offset: 0, SHA256: sha256Hex(firstChunk), Data: firstChunk}); err != nil {
-		t.Fatalf("known chunk replay must be idempotent: %v", err)
-	}
-	for offset := int64(3); offset < int64(len(payload)); {
-		end := offset + service.chunkSize
-		if end > int64(len(payload)) {
-			end = int64(len(payload))
-		}
-		chunk := payload[offset:end]
-		updated, err = service.AppendChunk(ctx, testTenant, resumed.RemoteUploadID, ChunkInput{Offset: offset, SHA256: sha256Hex(chunk), Data: chunk})
-		if err != nil {
-			t.Fatalf("resume chunk at offset %d: %v", offset, err)
-		}
-		offset = updated.ConfirmedOffset
-	}
-	if updated.ConfirmedOffset != int64(len(payload)) {
-		t.Fatalf("final offset=%d want %d", updated.ConfirmedOffset, len(payload))
-	}
+	resumed := resumeInterruptedCaptureChunks(t, ctx, service, input, payload, updated)
 
 	// 完成后再次 Init 模拟客户端未收到完成响应的重试；必须返回原登记，不能新增页面。
 	completed, err := service.Complete(ctx, testTenant, testActor, resumed.RemoteUploadID, CompleteInput{SHA256: input.SHA256})
@@ -255,19 +226,7 @@ func TestFiveHundredPageFixtureRecoversPage173WithoutDuplicateRegistration(t *te
 	if len(files) != 1 {
 		t.Fatalf("capture files=%d want exactly one after restart recovery", len(files))
 	}
-	asset, err := service.fileStore.Get(ctx, testTenant, completed.FileAssetID)
-	if err != nil {
-		t.Fatalf("get confirmed file asset: %v", err)
-	}
-	object, err := objects.Get(ctx, asset.StorageBucket, asset.StorageKey)
-	if err != nil {
-		t.Fatalf("get verified object: %v", err)
-	}
-	materialized, readErr := io.ReadAll(object)
-	_ = object.Close()
-	if readErr != nil || !bytes.Equal(materialized, payload) {
-		t.Fatalf("verified object does not match recovered source: err=%v", readErr)
-	}
+	assertRecoveredCaptureObjectBytes(t, ctx, service, objects, completed.FileAssetID, payload)
 }
 
 func newTestService(t *testing.T) (context.Context, *Service, *capture.MemoryStore, *files.MemoryStore, *files.MemoryObjectStorage, string) {
@@ -291,4 +250,55 @@ func testInitInput(payload []byte, batchID string) InitInput {
 func sha256Hex(payload []byte) string {
 	sum := sha256.Sum256(payload)
 	return hex.EncodeToString(sum[:])
+}
+
+func resumeInterruptedCaptureChunks(t *testing.T, ctx context.Context, service *Service, input InitInput, payload []byte, updated Session) InitResponse {
+	t.Helper()
+	firstChunk := payload[:3]
+	// 模拟终止和重启：Init 返回远端检查点；已知分块的过时重试保持幂等，随后桌面端从偏移 3 继续。
+	resumed, err := service.Init(ctx, testTenant, testActor, input)
+	if err != nil {
+		t.Fatalf("restart init: %v", err)
+	}
+	if !resumed.AlreadyExists || resumed.ConfirmedOffset != 3 || resumed.Status != "uploading" {
+		t.Fatalf("restart checkpoint=%+v", resumed)
+	}
+	if _, err := service.AppendChunk(ctx, testTenant, resumed.RemoteUploadID, ChunkInput{Offset: 0, SHA256: sha256Hex(firstChunk), Data: firstChunk}); err != nil {
+		t.Fatalf("known chunk replay must be idempotent: %v", err)
+	}
+	for offset := int64(3); offset < int64(len(payload)); {
+		end := offset + service.chunkSize
+		if end > int64(len(payload)) {
+			end = int64(len(payload))
+		}
+		chunk := payload[offset:end]
+		updated, err = service.AppendChunk(ctx, testTenant, resumed.RemoteUploadID, ChunkInput{Offset: offset, SHA256: sha256Hex(chunk), Data: chunk})
+		if err != nil {
+			t.Fatalf("resume chunk at offset %d: %v", offset, err)
+		}
+		offset = updated.ConfirmedOffset
+	}
+	if updated.ConfirmedOffset != int64(len(payload)) {
+		t.Fatalf("final offset=%d want %d", updated.ConfirmedOffset, len(payload))
+	}
+
+	return resumed
+}
+
+// 完成与重复登记已验证后，仍读取实际存储对象核对恢复后原始字节。
+func assertRecoveredCaptureObjectBytes(t *testing.T, ctx context.Context, service *Service, objects *files.MemoryObjectStorage, fileAssetID string, payload []byte) {
+	t.Helper()
+	asset, err := service.fileStore.Get(ctx, testTenant, fileAssetID)
+	if err != nil {
+		t.Fatalf("get confirmed file asset: %v", err)
+	}
+	object, err := objects.Get(ctx, asset.StorageBucket, asset.StorageKey)
+	if err != nil {
+		t.Fatalf("get verified object: %v", err)
+	}
+	materialized, readErr := io.ReadAll(object)
+	_ = object.Close()
+	if readErr != nil || !bytes.Equal(materialized, payload) {
+		t.Fatalf("verified object does not match recovered source: err=%v", readErr)
+	}
 }

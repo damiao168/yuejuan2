@@ -1,0 +1,14 @@
+{
+  "all_string_rune_raw_literals_retained": true,
+  "literal_removed": [],
+  "literal_added": [],
+  "guard_counts_before": 51,
+  "guard_counts_after": 51,
+  "subtest_calls_before": 8,
+  "subtest_calls_after": 8,
+  "comment_standard_read": "docs/engineering/commenting-standard.md",
+  "original_baseline_read": "D:/tools/sonar-remediation-20261011/baseline/services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+  "checkpoint03_owner_changes_preserved": true,
+  "review_status": "annotated",
+  "review_scope": "完整审读当前与原始文件，包括配置恢复、模板几何、HTTP表单、SQL驱动、注册事务、故障导入及裁剪修复；本次只提取上传协议校验和故障输入准备。"
+}

@@ -1,0 +1,118 @@
+{
+  "date": "2026-10-11",
+  "source": "new findings from the full rescan snapshot",
+  "scope_boundary": "补充修复全仓复扫新发现的两个同类 XML 读取入口；对应 3 条扫描命中，不计入原 105 条命中的 36 条本次修复统计。",
+  "scanner_findings_count": 3,
+  "parser_entry_count": 2,
+  "findings": [
+    {
+      "id": "SUP-XML-001",
+      "status": "fixed",
+      "scanner_findings_count": 1,
+      "files": ["docs/architecture/tools/build_preview.py"],
+      "change": "SVG 尺寸读取改为已声明的 defusedxml.fromstring(..., forbid_dtd=True)，拒绝 DTD 和实体声明后不覆盖已有离线预览；原 SVG 内容、尺寸和仅内嵌副本字体回退行为保留。"
+    },
+    {
+      "id": "SUP-XML-002",
+      "status": "fixed",
+      "scanner_findings_count": 2,
+      "files": ["docs/architecture/tools/verify_typography.py"],
+      "change": "字号验收图纸读取改为 defusedxml.parse(..., forbid_dtd=True)，解析失败停止并保留此前验收报告；正常内容、关系、哈希和字号报告字段不变。整理新增依赖导入，并将两个既有 dict() 构造写成等值字面量以通过定向 Ruff。"
+    }
+  ],
+  "baseline": {
+    "captured_utc": "2026-10-11T10:05:06.550006+00:00",
+    "kind": "supplemental_after_full_rescan_not_task_start",
+    "description": "两个文件此前未保存基线；在复扫发现后、补充修改前复制当前原字节。此补充备份不能冒充开工前全仓基线；既有 backup 不覆盖。",
+    "files": [
+      {
+        "file": "docs/architecture/tools/build_preview.py",
+        "baseline_sha256": "036ab4cedea81399a6d47be79def0c9bb772aada3916562749b6ffc8f2d30986",
+        "baseline_bytes": 6052,
+        "current_sha256": "56d94138d0123f4ae3f7beba356fbde9703403ba955aa85638871ed6e9bdc9bd"
+      },
+      {
+        "file": "docs/architecture/tools/verify_typography.py",
+        "baseline_sha256": "137c7dd41384557080b8fa1f149a6379009cdaac4ec6dded84b7ba164193d33f",
+        "baseline_bytes": 2993,
+        "current_sha256": "1275521d6cc92bb784c3dc852647889845cc14be7188f5d9e880a0349c71399d"
+      }
+    ]
+  },
+  "dependency": {
+    "file": "docs/architecture/tools/requirements.txt",
+    "version": "defusedxml==0.7.1",
+    "changed": false
+  },
+  "documentation": {
+    "file": "docs/architecture/DIAGRAM_MAINTENANCE.md",
+    "change": "将原来只覆盖两个工具的解析说明同步为四个具体工具，保留已有安装命令和其余维护内容。"
+  },
+  "metadata_correction": {
+    "file": "model-results.json",
+    "change": "model.py 的全文审读状态由 annotated 改为 pending，另列 increment_review=annotated；仅传输及关联错误增量完成审读，不声称全文审读完成。"
+  },
+  "new_tests": ["docs/architecture/tools/test_xml_supplemental_security.py"],
+  "test_count": 19,
+  "combined_xml_test_count": 31,
+  "test_composition": {
+    "preview_normal_dimensions_font_and_source_preservation": 1,
+    "preview_dtd_and_entities_rejected_before_overwrite": 5,
+    "preview_existing_nonpositive_dimension_rule": 2,
+    "typography_normal_content_hash_and_report": 1,
+    "typography_dtd_entities_utf8_utf16_rejected_before_overwrite": 10
+  },
+  "validation": [
+    {
+      "command": "$env:PYTHONPATH = 'docs/architecture/tools'; python -m pytest -q --import-mode=importlib docs/architecture/tools/test_xml_security.py docs/architecture/tools/test_xml_supplemental_security.py",
+      "exit_code": 0,
+      "result": "31 passed in 1.04s (12 existing XML cases and 19 supplemental cases)"
+    },
+    {
+      "command": "python -m ruff check docs/architecture/tools/build_preview.py docs/architecture/tools/verify_typography.py docs/architecture/tools/test_xml_supplemental_security.py",
+      "exit_code": 0,
+      "result": "All checks passed"
+    },
+    {
+      "command": "git diff --check -- docs/architecture/tools/build_preview.py docs/architecture/tools/verify_typography.py docs/architecture/DIAGRAM_MAINTENANCE.md",
+      "exit_code": 0,
+      "result": "No whitespace errors"
+    },
+    {
+      "command": "Run supplemental baseline and current normal-input main() functions with BASE restricted to four TemporaryDirectory fixtures",
+      "exit_code": 0,
+      "result": "Preview HTML bytes exactly equal the supplemental baseline; typography report values exactly equal except the expected checked_at_utc timestamp. No real diagrams, SVGs, preview index or acceptance records were regenerated."
+    }
+  ],
+  "file_review": [
+    {
+      "file": "docs/architecture/tools/build_preview.py",
+      "status": "annotated",
+      "reviewed_scope": "完整现有脚本、HTML/JS 模板与修改后的正常输出对比",
+      "maintenance_notes": "SVG 尺寸和离线嵌入不需要 DTD；被拒绝输入不能进入输出。"
+    },
+    {
+      "file": "docs/architecture/tools/verify_typography.py",
+      "status": "annotated",
+      "reviewed_scope": "完整现有脚本、原报告字段与修改后正常输出对比",
+      "maintenance_notes": "解析失败停止后保留此前字号验收；正常报告和审计边界不改变。"
+    },
+    {
+      "file": "docs/architecture/tools/test_xml_supplemental_security.py",
+      "status": "annotated",
+      "reviewed_scope": "完整新增测试",
+      "maintenance_notes": "每个输入和输出限制在临时目录；失败时校验旧输出和输入原字节保留。"
+    },
+    {
+      "file": "docs/architecture/DIAGRAM_MAINTENANCE.md",
+      "status": "pending",
+      "increment_review": "documentation",
+      "reviewed_scope": "仅解析器和工具运行边界相关段落，不登记全文审读完成。"
+    }
+  ],
+  "limitations": [
+    "补充修改晚于完整复扫快照；原 full rescan 保持原样，修复后代码由根代理另做显式补充复扫。",
+    "测试仅运行临时合成图纸和 SVG；没有覆盖现有图纸、预览索引或验收账本。",
+    "本次不扩展到其余图纸工具入口，也不将解析成功表述为业务或视觉验收通过。"
+  ]
+}

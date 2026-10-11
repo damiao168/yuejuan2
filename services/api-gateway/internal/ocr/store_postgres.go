@@ -217,9 +217,8 @@ RETURNING id::text, tenant_id::text, submission_id::text, status, engine, engine
 		return Task{}, err
 	}
 
-	// A second worker runtime lease may legitimately resume a source task that
-	// is already processing after the previous lease expired. Do not rewrite
-	// timestamps or any result metadata in that idempotent case.
+	// 上一租约过期后，第二个 Worker Runtime 租约可以继续处理已处于 processing 的来源任务。
+	// 这种幂等情况下，不改写时间戳或任何结果元数据。
 	task, err := s.getTask(ctx, tenantID, id)
 	if err != nil {
 		return Task{}, err

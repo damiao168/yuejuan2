@@ -1,0 +1,17 @@
+{
+  "observed_completed_at": "2026-10-11T16:59:42.419977+08:00",
+  "start_timestamp_recorded": false,
+  "command": "go test -p 1 -count=1 -timeout=5m ./internal/appeal ./internal/paper ./internal/exam ./internal/scorerelease ./internal/calibration ./internal/ocr ./internal/schoolassistant",
+  "cwd": "D:/project/yuejuan/services/api-gateway",
+  "toolchain": "go1.26.4 windows/amd64",
+  "environment": {
+    "GOTOOLCHAIN": "local",
+    "GOPROXY": "off",
+    "GOSUMDB": "off",
+    "GOMAXPROCS": "2"
+  },
+  "session_id": 49005,
+  "exit_code": 0,
+  "stdout": "ok\tedugrade-enterprise/services/api-gateway/internal/appeal\t1.840s\nok\tedugrade-enterprise/services/api-gateway/internal/paper\t4.665s\nok\tedugrade-enterprise/services/api-gateway/internal/exam\t3.831s\nok\tedugrade-enterprise/services/api-gateway/internal/scorerelease\t1.408s\nok\tedugrade-enterprise/services/api-gateway/internal/calibration\t1.227s\nok\tedugrade-enterprise/services/api-gateway/internal/ocr\t4.065s\nok\tedugrade-enterprise/services/api-gateway/internal/schoolassistant\t2.377s\n",
+  "scope_note": "整包实际运行；现有环境条件性 PostgreSQL/外部服务测试可能跳过，未称真实数据库集成完成。"
+}

@@ -94,6 +94,24 @@ func (c *recordingManagedChatter) Chat(_ context.Context, connection ManagedAPIC
 	}, nil
 }
 
+// 审计只记录治理元数据；对话正文和供应商密钥不能经reason或AfterValue泄露。
+func verifyManagedChatPrivacyAudit(t *testing.T, audits *auth.MemoryStore, user auth.User) {
+	t.Helper()
+	records, err := audits.ListAudits(context.Background(), user.TenantID, auth.AuditFilter{Limit: 10})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, record := range records {
+		if strings.Contains(record.Reason, "复习") {
+			t.Fatal("conversation content was written to audit reason")
+		}
+		encoded, _ := json.Marshal(record.AfterValue)
+		if strings.Contains(string(encoded), "复习") || strings.Contains(string(encoded), "sk-secret") {
+			t.Fatal("conversation content or credential was written to audit metadata")
+		}
+	}
+}
+
 func TestManagedChatUsesTenantDefaultWithoutExposingCredential(t *testing.T) {
 	store := NewMemoryStore()
 	verified := successfulManagedProbe()
@@ -138,19 +156,7 @@ func TestManagedChatUsesTenantDefaultWithoutExposingCredential(t *testing.T) {
 	if otherSchool.Code != http.StatusServiceUnavailable || len(chatter.messages) != 1 {
 		t.Fatalf("other school accessed the configured model: %d %s", otherSchool.Code, otherSchool.Body.String())
 	}
-	records, err := audits.ListAudits(context.Background(), user.TenantID, auth.AuditFilter{Limit: 10})
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, record := range records {
-		if strings.Contains(record.Reason, "复习") {
-			t.Fatal("conversation content was written to audit reason")
-		}
-		encoded, _ := json.Marshal(record.AfterValue)
-		if strings.Contains(string(encoded), "复习") || strings.Contains(string(encoded), "sk-secret") {
-			t.Fatal("conversation content or credential was written to audit metadata")
-		}
-	}
+	verifyManagedChatPrivacyAudit(t, audits, user)
 }
 
 func TestManagedChatRejectsUnsafeOrOversizedMessageLists(t *testing.T) {

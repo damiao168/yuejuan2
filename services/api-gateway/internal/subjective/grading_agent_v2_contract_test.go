@@ -106,7 +106,54 @@ func loadGradingAgentV2Fixture(t *testing.T, name string) map[string]any {
 	return value
 }
 
+// 夹具验证按治理、证据和二进制绑定顺序执行，首个失败仍返回原错误。
 func validateGradingAgentV2RequestFixture(request map[string]any) error {
+	if err := validateGradingV2RequestGovernance(request); err != nil {
+		return err
+	}
+	if err := validateGradingV2OutputAuthority(request); err != nil {
+		return err
+	}
+	if err := validateGradingV2MathEvidenceEnvelope(request); err != nil {
+		return err
+	}
+	media, err := gradingV2FixtureMediaEnvelope(request)
+	if err != nil {
+		return err
+	}
+	size, err := v2JSONInt(media["byte_size"])
+	if err != nil || size < 1 || size > gradingAgentV2MaxMediaBytes {
+		return errors.New("media byte size is invalid")
+	}
+	width, err := v2JSONInt(media["width_pixels"])
+	if err != nil || width < 1 {
+		return errors.New("media width is invalid")
+	}
+	height, err := v2JSONInt(media["height_pixels"])
+	if err != nil || height < 1 || width > gradingAgentV2MaxPixels/height {
+		return errors.New("media height or pixel count is invalid")
+	}
+	bbox, units, err := gradingAgentV2BBox(media["normalized_bbox"])
+	if err != nil {
+		return err
+	}
+	if bbox[2]*bbox[3] >= 0.9 {
+		return errors.New("whole-page or near-whole-page media evidence is forbidden")
+	}
+	if err := validateGradingV2FixturePNG(media, size, width, height); err != nil {
+		return err
+	}
+	expectedBinding, err := gradingAgentV2BindingHash(request, units)
+	if err != nil {
+		return err
+	}
+	if media["binding_hash"] != expectedBinding {
+		return errors.New("media binding does not match request")
+	}
+	return nil
+}
+
+func validateGradingV2RequestGovernance(request map[string]any) error {
 	expected := []string{
 		"schema_version", "request_id", "subject", "grade_level", "agent_role", "question_id", "answer_segment_id",
 		"question_type", "question_text", "max_score", "answer_text", "ocr_confidence", "rubric_version",
@@ -129,6 +176,10 @@ func validateGradingAgentV2RequestFixture(request map[string]any) error {
 			return fmt.Errorf("request leaks forbidden field %s", forbidden)
 		}
 	}
+	return nil
+}
+
+func validateGradingV2OutputAuthority(request map[string]any) error {
 	constraint, ok := request["output_constraint"].(map[string]any)
 	if !ok {
 		return errors.New("output_constraint must be an object")
@@ -140,6 +191,10 @@ func validateGradingAgentV2RequestFixture(request map[string]any) error {
 		constraint["final_score_authority"] != "server_rubric_or_human_confirmation" {
 		return errors.New("output_constraint must preserve server-owned final-score authority")
 	}
+	return nil
+}
+
+func validateGradingV2MathEvidenceEnvelope(request map[string]any) error {
 	mathEvidence, ok := request["math_evidence"].(map[string]any)
 	if !ok {
 		return errors.New("math_evidence must be an object")
@@ -151,39 +206,28 @@ func validateGradingAgentV2RequestFixture(request map[string]any) error {
 		return errors.New("math scoring version is invalid")
 	}
 
+	return nil
+}
+
+func gradingV2FixtureMediaEnvelope(request map[string]any) (map[string]any, error) {
 	media, ok := request["media_evidence"].(map[string]any)
 	if !ok {
-		return errors.New("media_evidence must be an object")
+		return nil, errors.New("media_evidence must be an object")
 	}
 	if err := exactV2Fields(
 		media,
 		"kind", "encoding", "media_type", "sha256", "byte_size", "width_pixels", "height_pixels",
 		"normalized_bbox", "binding_hash", "data_base64",
 	); err != nil {
-		return err
+		return nil, err
 	}
 	if media["kind"] != "answer_segment_crop" || media["encoding"] != "base64" || media["media_type"] != "image/png" {
-		return errors.New("media evidence literals are not approved")
+		return nil, errors.New("media evidence literals are not approved")
 	}
-	size, err := v2JSONInt(media["byte_size"])
-	if err != nil || size < 1 || size > gradingAgentV2MaxMediaBytes {
-		return errors.New("media byte size is invalid")
-	}
-	width, err := v2JSONInt(media["width_pixels"])
-	if err != nil || width < 1 {
-		return errors.New("media width is invalid")
-	}
-	height, err := v2JSONInt(media["height_pixels"])
-	if err != nil || height < 1 || width > gradingAgentV2MaxPixels/height {
-		return errors.New("media height or pixel count is invalid")
-	}
-	bbox, units, err := gradingAgentV2BBox(media["normalized_bbox"])
-	if err != nil {
-		return err
-	}
-	if bbox[2]*bbox[3] >= 0.9 {
-		return errors.New("whole-page or near-whole-page media evidence is forbidden")
-	}
+	return media, nil
+}
+
+func validateGradingV2FixturePNG(media map[string]any, size, width, height int) error {
 	encoded, ok := media["data_base64"].(string)
 	if !ok || encoded == "" {
 		return errors.New("media data must be non-empty base64")
@@ -205,17 +249,38 @@ func validateGradingAgentV2RequestFixture(request map[string]any) error {
 	if media["sha256"] != hex.EncodeToString(digest[:]) {
 		return errors.New("media hash does not match decoded PNG")
 	}
-	expectedBinding, err := gradingAgentV2BindingHash(request, units)
-	if err != nil {
-		return err
-	}
-	if media["binding_hash"] != expectedBinding {
-		return errors.New("media binding does not match request")
-	}
 	return nil
 }
 
 func validateGradingAgentV2ResponseFixture(response map[string]any, request map[string]any) error {
+	if err := validateGradingV2ResponseGovernance(response, request); err != nil {
+		return err
+	}
+	knownEvidence, err := gradingV2FixtureKnownEvidence(request)
+	if err != nil {
+		return err
+	}
+	rubric := request["rubric"].(map[string]any)
+	knownPoints := map[string]bool{}
+	for _, raw := range rubric["points"].([]any) {
+		point := raw.(map[string]any)
+		id, _ := point["id"].(string)
+		knownPoints[id] = true
+	}
+	candidates, ok := response["criterion_candidates"].([]any)
+	if !ok {
+		return errors.New("criterion_candidates must be an array")
+	}
+	seen := map[string]bool{}
+	for _, raw := range candidates {
+		if err := validateGradingV2CriterionCandidate(raw, knownPoints, knownEvidence, seen); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateGradingV2ResponseGovernance(response, request map[string]any) error {
 	if err := exactV2Fields(
 		response,
 		"schema_version", "request_id", "status", "delivery", "criterion_candidates", "alternative_solution_candidate", "risk_flags", "needs_human_review",
@@ -236,56 +301,51 @@ func validateGradingAgentV2ResponseFixture(response map[string]any, request map[
 			return fmt.Errorf("model response contains forbidden score field %s", forbidden)
 		}
 	}
+	return nil
+}
+
+func gradingV2FixtureKnownEvidence(request map[string]any) (map[string]bool, error) {
 	mathEvidence := request["math_evidence"].(map[string]any)
 	knownEvidence := map[string]bool{}
 	for _, field := range []string{"steps", "formulas"} {
 		items, ok := mathEvidence[field].([]any)
 		if !ok {
-			return fmt.Errorf("%s must be an array", field)
+			return nil, fmt.Errorf("%s must be an array", field)
 		}
 		for _, raw := range items {
 			item, ok := raw.(map[string]any)
 			if !ok {
-				return errors.New("math evidence item must be an object")
+				return nil, errors.New("math evidence item must be an object")
 			}
 			id, _ := item["id"].(string)
 			knownEvidence[id] = id != ""
 		}
 	}
-	rubric := request["rubric"].(map[string]any)
-	knownPoints := map[string]bool{}
-	for _, raw := range rubric["points"].([]any) {
-		point := raw.(map[string]any)
-		id, _ := point["id"].(string)
-		knownPoints[id] = true
-	}
-	candidates, ok := response["criterion_candidates"].([]any)
+	return knownEvidence, nil
+}
+
+// 重复点标记先于链接校验，保持原候选遍历与首个失败的顺序。
+func validateGradingV2CriterionCandidate(raw any, knownPoints, knownEvidence, seen map[string]bool) error {
+	candidate, ok := raw.(map[string]any)
 	if !ok {
-		return errors.New("criterion_candidates must be an array")
+		return errors.New("candidate must be an object")
 	}
-	seen := map[string]bool{}
-	for _, raw := range candidates {
-		candidate, ok := raw.(map[string]any)
-		if !ok {
-			return errors.New("candidate must be an object")
-		}
-		if err := exactV2Fields(candidate, "rubric_point_id", "status", "evidence_ids", "confidence", "reason_code"); err != nil {
-			return err
-		}
-		pointID, _ := candidate["rubric_point_id"].(string)
-		if !knownPoints[pointID] || seen[pointID] {
-			return errors.New("candidate point is unknown or duplicated")
-		}
-		seen[pointID] = true
-		links, ok := candidate["evidence_ids"].([]any)
-		if !ok {
-			return errors.New("candidate evidence ids must be an array")
-		}
-		for _, link := range links {
-			id, _ := link.(string)
-			if !knownEvidence[id] {
-				return errors.New("candidate evidence link is invalid")
-			}
+	if err := exactV2Fields(candidate, "rubric_point_id", "status", "evidence_ids", "confidence", "reason_code"); err != nil {
+		return err
+	}
+	pointID, _ := candidate["rubric_point_id"].(string)
+	if !knownPoints[pointID] || seen[pointID] {
+		return errors.New("candidate point is unknown or duplicated")
+	}
+	seen[pointID] = true
+	links, ok := candidate["evidence_ids"].([]any)
+	if !ok {
+		return errors.New("candidate evidence ids must be an array")
+	}
+	for _, link := range links {
+		id, _ := link.(string)
+		if !knownEvidence[id] {
+			return errors.New("candidate evidence link is invalid")
 		}
 	}
 	return nil

@@ -1,0 +1,30 @@
+{
+  "reviewed_at_utc": "2026-10-11T11:09:52.913995+00:00",
+  "reviewer": "/root/sonar_python_fix",
+  "source_writes_performed": false,
+  "scope": "当前 openExistingArtifact/openArtifactForUpdate/readonlyArtifactUnchanged/verifyArtifactPath/writeIfChanged 完整源码及原权威基线 writeIfChanged；第一轮审查记录保留，未覆盖。",
+  "previous_review": "root-new-js-independent-review-python-agent.json",
+  "file": "D:\\project\\yuejuan\\scripts\\lib\\openapi-sdk.mjs",
+  "current_sha256": "257f2b7281b3ce2fcce5d2463a25960dd7da75ad8a16eb69c2dc165d6fd940e6",
+  "verdict": "no_actionable_regression_found",
+  "checks": [
+    "openExistingArtifact 的 O_RDWR 成功只交出 {descriptor,created:false}；任何 fstat/read/write 异常仍由后续 writeIfChanged finally 关闭。",
+    "ENOENT 唯一返回 undefined，允许当前轮尝试 wx+ 排他创建；null 唯一表示只读内容及路径 dev/ino 已核对、描述符已由 readonly helper 关闭。",
+    "只读入口仍仅限 EACCES/EPERM；内容不同、非普通文件抛原权限错误，读取/stat/close 自身错误按原顺序传播。不会被外层排他创建 catch 误捕获。",
+    "openArtifactForUpdate 只对 wx+ 的 EEXIST 继续，attempt 0/1/2 共三轮，第 3 次争用立即抛该 createError；不吞其他创建错误、不开第 4 轮、不用截断模式。",
+    "writeIfChanged 对 null 返回 false；对已有/新建描述符仍按 fstat、FD 内容读取、0 位置短写补齐、ftruncate、路径身份验证、finally close 顺序执行，空文件 created 布尔语义不变。",
+    "中文说明准确解释 undefined 与 null 的职责，未承诺路径校验后的全局排他保证。"
+  ],
+  "existing_dynamic_evidence": {
+    "report": "root-new-js-tests-02.json",
+    "log": "root-new-js-tests-02.tap",
+    "exit_code": 0,
+    "passed": 18,
+    "failed": 0,
+    "skipped": 0,
+    "current_sha_bound": true,
+    "tests_repeated_by_reviewer": false,
+    "tap_sha256": "758e02bbc0f7f7759f20e12b4df67cd88766341cd46d0b7f119579f3eac94d4b"
+  },
+  "platform_verification": "pending_root_final_scan"
+}

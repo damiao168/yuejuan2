@@ -1,0 +1,443 @@
+{
+  "scope": "组合根、工程、认证授权与部署；不是全仓完成声明",
+  "automatic_enumeration_is_review": false,
+  "files": [
+    {
+      "file": "AGENTS.md",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "status": "existing_sufficient",
+      "modified": false,
+      "reason": "完整审读架构规则与实现；没有改动业务文件",
+      "source_sha256": "41503e5909a98016701609add9c6efe9914012853d8ced68a71b812c0e6f421c"
+    },
+    {
+      "file": "lab/AGENTS.md",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "status": "existing_sufficient",
+      "modified": false,
+      "reason": "完整审读架构规则与实现；没有改动业务文件",
+      "source_sha256": "e8a34bd4a960dfa56c7671a239d1c301641a0ba52a8fa65c3d51644c3eb87315"
+    },
+    {
+      "file": "docs/engineering/commenting-standard.md",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "status": "existing_sufficient",
+      "modified": false,
+      "reason": "完整审读架构规则与实现；没有改动业务文件",
+      "source_sha256": "582d56da32f8b6300ca5d8e51626815a2e30c936e657377060347734ed2696ea"
+    },
+    {
+      "file": "package.json",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "status": "existing_sufficient",
+      "modified": false,
+      "reason": "完整审读架构规则与实现；没有改动业务文件",
+      "source_sha256": "f75a488df89d3b9640fd128bc913d0bd7d0d3d3ed2ff87f3c376a1e54f0b25f1"
+    },
+    {
+      "file": "lab/package.json",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "status": "existing_sufficient",
+      "modified": false,
+      "reason": "完整审读架构规则与实现；没有改动业务文件",
+      "source_sha256": "a5eca54a6ceacde7e26d9ea3cf2834fe1082d6cb25598e3c395b44b17996a408"
+    },
+    {
+      "file": "services/api-gateway/go.mod",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "status": "existing_sufficient",
+      "modified": false,
+      "reason": "完整审读架构规则与实现；没有改动业务文件",
+      "source_sha256": "5a280d3adfeb7d81751ab5db73fa9e910d3600e8456014e0e679feaa4905adcf"
+    },
+    {
+      "file": "docs/architecture/overview.md",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "status": "existing_sufficient",
+      "modified": false,
+      "reason": "完整审读架构规则与实现；没有改动业务文件",
+      "source_sha256": "34d909a343992597eceedb71b850728a728ce2a09823396343f20be798665c3a"
+    },
+    {
+      "file": "apps/teacher-portal/README.md",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "status": "existing_sufficient",
+      "modified": false,
+      "reason": "完整审读架构规则与实现；没有改动业务文件",
+      "source_sha256": "f93a7588e1377b5a4a22297d8de4e5591ba8e411f0f97a4f2269e524e9372bd2"
+    },
+    {
+      "file": "services/api-gateway/internal/server/application_modules.go",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "status": "existing_sufficient",
+      "modified": false,
+      "reason": "完整审读架构规则与实现；没有改动业务文件",
+      "source_sha256": "aacbdebccefa416889f675e6760c93866e0d2734c33dca97b13ea943319e2aee"
+    },
+    {
+      "file": "services/api-gateway/internal/server/infrastructure.go",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "status": "existing_sufficient",
+      "modified": false,
+      "reason": "完整审读架构规则与实现；没有改动业务文件",
+      "source_sha256": "b919dd75833fd85a886ae25455b12f0fa6bfc53a825c3eba7c562ed789b2a636"
+    },
+    {
+      "file": "services/api-gateway/internal/server/router_guards.go",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "status": "existing_sufficient",
+      "modified": false,
+      "reason": "完整审读架构规则与实现；没有改动业务文件",
+      "source_sha256": "239b49ea63862ebed4d2e65d090b465db4185037c8e0024ea9d1f1b5c1faba6f"
+    },
+    {
+      "file": "services/api-gateway/internal/server/routes_release.go",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "status": "existing_sufficient",
+      "modified": false,
+      "reason": "完整审读架构规则与实现；没有改动业务文件",
+      "source_sha256": "e404627ab415b702d2a850e1f6fc3b3bd97d106bd5af7ac444630790f416b845"
+    },
+    {
+      "file": "services/api-gateway/internal/server/routes_system.go",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "status": "existing_sufficient",
+      "modified": false,
+      "reason": "完整审读架构规则与实现；没有改动业务文件",
+      "source_sha256": "065a6ede7d1dc5300e6787c99885959fcf107a56b0745a7a2d796599a94403c1"
+    },
+    {
+      "file": "services/api-gateway/internal/server/module_identity.go",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "status": "existing_sufficient",
+      "modified": false,
+      "reason": "完整审读架构规则与实现；没有改动业务文件",
+      "source_sha256": "9e85a310ed1e459f4bb8ddd105d26bf496485c358cafa046b22cc99b7bbd0745"
+    },
+    {
+      "file": "services/api-gateway/internal/server/module_exam.go",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "status": "existing_sufficient",
+      "modified": false,
+      "reason": "完整审读架构规则与实现；没有改动业务文件",
+      "source_sha256": "f4bb5eb8cebf3755110641be98158ffbaa9c0b6a4c677362dde8ff8e4137be8d"
+    },
+    {
+      "file": "services/api-gateway/internal/server/module_capture.go",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "status": "existing_sufficient",
+      "modified": false,
+      "reason": "完整审读架构规则与实现；没有改动业务文件",
+      "source_sha256": "dd28ef1c57f9500015a5c5cf0709e1cb24832cd8a1a86587424245f2f5d9a600"
+    },
+    {
+      "file": "services/api-gateway/internal/server/module_grading.go",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "status": "existing_sufficient",
+      "modified": false,
+      "reason": "完整审读架构规则与实现；没有改动业务文件",
+      "source_sha256": "93ee56103a5ba5894642497eb6f640de770b49148f84663907746879be57eade"
+    },
+    {
+      "file": "services/api-gateway/internal/server/module_release.go",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "status": "existing_sufficient",
+      "modified": false,
+      "reason": "完整审读架构规则与实现；没有改动业务文件",
+      "source_sha256": "94c5adc3197861674c47d9c0b1cd2cbdf8435e706e254e636bb55b9099e1403a"
+    },
+    {
+      "file": "services/api-gateway/internal/server/module_ai_governance.go",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "status": "existing_sufficient",
+      "modified": false,
+      "reason": "完整审读架构规则与实现；没有改动业务文件",
+      "source_sha256": "7175758281fbf41e5d39251066e2d8dbc3f6fb7f69a6811c02bfb6879b77f5e9"
+    },
+    {
+      "file": "services/api-gateway/internal/server/module_ai_foundation.go",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "status": "existing_sufficient",
+      "modified": false,
+      "reason": "完整审读架构规则与实现；没有改动业务文件",
+      "source_sha256": "b42ccbe34d80bd116a29adebaccf1716266a7dabc45d59c3bddc8c7b7e11320e"
+    },
+    {
+      "file": "services/api-gateway/internal/server/module_school_assistant.go",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "status": "existing_sufficient",
+      "modified": false,
+      "reason": "完整审读架构规则与实现；没有改动业务文件",
+      "source_sha256": "ba244a8f63f917f18b31b0326179fa9d6bcd9e139d1c182f442db50472062c54"
+    },
+    {
+      "file": "services/api-gateway/internal/auth/middleware.go",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "status": "existing_sufficient",
+      "modified": false,
+      "reason": "完整审读架构规则与实现；没有改动业务文件",
+      "source_sha256": "1be2b26d991c162c3be6d6336b5b3cc931c4905207cb44892655a0abeb1de3a0"
+    },
+    {
+      "file": "services/api-gateway/internal/auth/role_policy.go",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "status": "existing_sufficient",
+      "modified": false,
+      "reason": "完整审读架构规则与实现；没有改动业务文件",
+      "source_sha256": "e4177d4adf139d10a2b9be728d0b94bb1d699df5c19d49e5d873ccb35e3f6828"
+    },
+    {
+      "file": "services/api-gateway/internal/auth/token.go",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "status": "existing_sufficient",
+      "modified": false,
+      "reason": "完整审读架构规则与实现；没有改动业务文件",
+      "source_sha256": "de0be9f08eebb837f2543b675a2327b310d146405cfbcea4c68be30725ec7988"
+    },
+    {
+      "file": "services/api-gateway/internal/auth/password.go",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "status": "existing_sufficient",
+      "modified": false,
+      "reason": "完整审读架构规则与实现；没有改动业务文件",
+      "source_sha256": "38bb4612c0847e31cb6330a84926974f7cafbfd751ae37d385663c3cf48c1167"
+    },
+    {
+      "file": "services/api-gateway/internal/db/tenant_context.go",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "status": "existing_sufficient",
+      "modified": false,
+      "reason": "完整审读架构规则与实现；没有改动业务文件",
+      "source_sha256": "eacdb801497dbe16b0bf9f4fc3d7acb35b04c5a2a88d0bdc0ca76ea01b32ea31"
+    },
+    {
+      "file": "services/api-gateway/internal/outbox/publisher_log.go",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "status": "existing_sufficient",
+      "modified": false,
+      "reason": "完整审读架构规则与实现；没有改动业务文件",
+      "source_sha256": "a5ae5f53d57a77954643cd09915942ccca8a4b0ceaf2bba0eee18f7a4660fd4d"
+    },
+    {
+      "file": "services/api-gateway/internal/middleware/middleware.go",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "status": "existing_sufficient",
+      "modified": false,
+      "reason": "完整审读架构规则与实现；没有改动业务文件",
+      "source_sha256": "7389555a2d26d8a8a53ef228291206b894a74b6bf05b5b02ebef545d187ecc34"
+    },
+    {
+      "file": "services/api-gateway/internal/logger/logger.go",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "status": "existing_sufficient",
+      "modified": false,
+      "reason": "完整审读架构规则与实现；没有改动业务文件",
+      "source_sha256": "b006882c02968d7b8515cbb9503dadc36a40a00c1fe89a749cae553ca395df84"
+    },
+    {
+      "file": "packages/sdk/src/index.ts",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "status": "existing_sufficient",
+      "modified": false,
+      "reason": "末次哈希变化后重新全文审读5行导出；新增browserLifecycle导出，API导出/架构边界仍成立",
+      "source_sha256": "d65c9f7c4ad0270bdacde70f3495869a7792f8ffd7d1464c348756eda13f5607"
+    },
+    {
+      "file": "infra/docker-compose/nginx/nginx.conf",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "status": "existing_sufficient",
+      "modified": false,
+      "reason": "完整审读架构规则与实现；没有改动业务文件",
+      "source_sha256": "531c5f024f66944a7a4e40e9f23eced6231a324b13f60e315c9aca539e22699f"
+    },
+    {
+      "file": "README.md",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "status": "pending",
+      "modified": false,
+      "reason": "核对相关调用或配置片段；其余内容仍pending",
+      "source_sha256": "f586531accc09089a9727d60596a7a446d5ed4db0a875cfd0371a2f8f7010190"
+    },
+    {
+      "file": ".github/workflows/ci.yml",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "status": "pending",
+      "modified": false,
+      "reason": "source_changed_after_prior_review; prior SHA no longer matches; current version not reread; pending",
+      "source_sha256": "2cfe292e8cb3b0294c5325811a32b7e5ab80a9c52df73a20244cf7b93c30a8bf",
+      "previous_source_sha256": "8358883cfd9a97ad80742fbce7dce921eda593981bd40bf5e024e82ea736b3ef",
+      "previous_read_status": "partial",
+      "previous_review_invalidated_by_source_change": true,
+      "hash_recheck_only": true,
+      "modified_by_this_audit": false
+    },
+    {
+      "file": "services/api-gateway/internal/server/server.go",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "status": "pending",
+      "modified": false,
+      "reason": "核对相关调用或配置片段；其余内容仍pending",
+      "source_sha256": "784283dce580311be8d14d62aa0213d61c13d1a08f34664702f5f1cbf3760fa1"
+    },
+    {
+      "file": "services/api-gateway/internal/server/application_stores.go",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "status": "pending",
+      "modified": false,
+      "reason": "核对相关调用或配置片段；其余内容仍pending",
+      "source_sha256": "9a46f539f675a9c31805dc85a4e300ad2c7639c55b3fc3b12250435b30bfbc92"
+    },
+    {
+      "file": "services/api-gateway/internal/config/config.go",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "status": "pending",
+      "modified": false,
+      "reason": "核对相关调用或配置片段；其余内容仍pending",
+      "source_sha256": "d15adabb8e1a0fa33dfbfc16305fca8097156ee8e08dfbf3289d2600ac4c812a"
+    },
+    {
+      "file": "services/api-gateway/internal/auth/store_postgres.go",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "status": "pending",
+      "modified": false,
+      "reason": "核对相关调用或配置片段；其余内容仍pending",
+      "source_sha256": "e0f2e45e2af1861400d0c6662b9eb317ba636b0f378864b0e59655e941e6ceec"
+    },
+    {
+      "file": "services/api-gateway/internal/auth/managed_access_store.go",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "status": "pending",
+      "modified": false,
+      "reason": "核对相关调用或配置片段；其余内容仍pending",
+      "source_sha256": "d2f619277bceb529714b918035b1b7fd58b3303017b9719efd285d9de88a0f2c"
+    },
+    {
+      "file": "services/api-gateway/internal/auth/resource_scope.go",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "status": "pending",
+      "modified": false,
+      "reason": "核对相关调用或配置片段；其余内容仍pending",
+      "source_sha256": "b98dd3f3fcc4e5d00eec918cfdd342cb5e363bfc8be035c47b0ee9077aa31166"
+    },
+    {
+      "file": "services/api-gateway/internal/idempotency/middleware.go",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "status": "pending",
+      "modified": false,
+      "reason": "核对相关调用或配置片段；其余内容仍pending",
+      "source_sha256": "253afc85359c9ab8f160b869db6606b5365d9c0b4ee37a8d815339326f250193"
+    },
+    {
+      "file": "services/api-gateway/internal/idempotency/store_postgres.go",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "status": "pending",
+      "modified": false,
+      "reason": "核对相关调用或配置片段；其余内容仍pending",
+      "source_sha256": "f0158a67da920f9832dc62dedda1886d272daf6c2bce85da00e1a43bf1840074"
+    },
+    {
+      "file": "services/api-gateway/internal/server/recent_auth_test.go",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "status": "pending",
+      "modified": false,
+      "reason": "核对相关调用或配置片段；其余内容仍pending",
+      "source_sha256": "f398f6877187c28d1cb525faceb407793755ebd7339d31b9c01dcd305f3ea6b5"
+    },
+    {
+      "file": "services/api-gateway/internal/deps/deps.go",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "status": "pending",
+      "modified": false,
+      "reason": "核对相关调用或配置片段；其余内容仍pending",
+      "source_sha256": "ea87b8fa3628cc9e6dedcbaf4c24ba105f517a1bf5403feb142cf83be3e0f139"
+    },
+    {
+      "file": "apps/desktop-client/src-tauri/src/lib.rs",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "status": "pending",
+      "modified": false,
+      "reason": "核对相关调用或配置片段；其余内容仍pending",
+      "source_sha256": "6d8b736932040c35c990243ffb28fbb75948a18fbb0dfcd484b1a8b3b2aa920f"
+    },
+    {
+      "file": "packages/sdk/src/runtime.ts",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "status": "pending",
+      "modified": false,
+      "reason": "核对相关调用或配置片段；其余内容仍pending",
+      "source_sha256": "115fdd2b69fb1c57200b3888c42d1974593932684ca690b9d053e3c72f5a96fc"
+    },
+    {
+      "file": "apps/web-admin/src/router/routes.tsx",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "status": "pending",
+      "modified": false,
+      "reason": "核对相关调用或配置片段；其余内容仍pending",
+      "source_sha256": "456d60cb121e3138fb73d94a6bd156af4cb52d19f6e069bc79bed70098c7f2ac"
+    },
+    {
+      "file": "infra/docker-compose/docker-compose.yml",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "status": "pending",
+      "modified": false,
+      "reason": "核对相关调用或配置片段；其余内容仍pending",
+      "source_sha256": "18773e940caab52f25d572754034a426d4238425e605a31956e00b26a22451f3"
+    },
+    {
+      "file": "scripts/check-architecture-boundaries.mjs",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "status": "pending",
+      "modified": false,
+      "reason": "核对相关调用或配置片段；其余内容仍pending",
+      "source_sha256": "ec96982835bc8cca510ebae53395f69c6cde3ef5dc53ec8cd60a7aa6fc616b18"
+    }
+  ]
+}

@@ -277,7 +277,8 @@ func (s *PostgresStore) ConfirmGrades(ctx context.Context, tenantID string, exam
 	}
 	defer func() { _ = tx.Rollback() }()
 	var replay []SubmissionGrade
-	if found, err := commandreceipt.Load(ctx, tx, tenantID, actorID, "score.confirm", examID, input, &replay); err != nil || found {
+	identity := commandreceipt.Identity{TenantID: tenantID, ActorID: actorID, Operation: "score.confirm", TargetID: examID}
+	if found, err := commandreceipt.Load(ctx, tx, identity, input, &replay); err != nil || found {
 		return replay, err
 	}
 	if err := lockExamTx(ctx, tx, tenantID, examID); err != nil {
@@ -320,7 +321,7 @@ WHERE tenant_id = $1 AND exam_id::text = $2 AND deleted_at IS NULL AND locked = 
 	if err != nil {
 		return nil, err
 	}
-	if err := commandreceipt.Save(ctx, tx, tenantID, actorID, "score.confirm", examID, input, grades); err != nil {
+	if err := commandreceipt.Save(ctx, tx, identity, input, grades); err != nil {
 		return nil, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -337,7 +338,8 @@ func (s *PostgresStore) PublishGrades(ctx context.Context, tenantID string, exam
 	}
 	defer func() { _ = tx.Rollback() }()
 	var replay PublishResult
-	if found, err := commandreceipt.Load(ctx, tx, tenantID, actorID, "score.publish", examID, input, &replay); err != nil || found {
+	identity := commandreceipt.Identity{TenantID: tenantID, ActorID: actorID, Operation: "score.publish", TargetID: examID}
+	if found, err := commandreceipt.Load(ctx, tx, identity, input, &replay); err != nil || found {
 		return replay, err
 	}
 	if err := lockExamTx(ctx, tx, tenantID, examID); err != nil {
@@ -384,7 +386,7 @@ WHERE tenant_id = $1 AND exam_id::text = $2 AND deleted_at IS NULL
 		PublishedAt:      now,
 	}
 
-	if err := commandreceipt.Save(ctx, tx, tenantID, actorID, "score.publish", examID, input, result); err != nil {
+	if err := commandreceipt.Save(ctx, tx, identity, input, result); err != nil {
 		return PublishResult{}, err
 	}
 	if err := tx.Commit(); err != nil {

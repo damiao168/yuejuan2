@@ -1,0 +1,129 @@
+{
+  "checked_at": "2026-10-11T13:43:35.241507+08:00",
+  "baseline_manifest": "source-manifest-resume-2026-10-11.csv",
+  "checked_files": 2502,
+  "changed": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "snapshot_sha256": "2cfe292e8cb3b0294c5325811a32b7e5ab80a9c52df73a20244cf7b93c30a8bf",
+      "workspace_sha256": "0080fdb3fd7ff33c24b3c48e51374687cde7a8b8694b7b7ce8bc32bf74e53e47"
+    },
+    {
+      "path": "ai-services/grading_agent/config.py",
+      "snapshot_sha256": "4827d926bdb1c09ff323311bfc54ec3da8c5ade1fe08f390f34f70b8fa92597e",
+      "workspace_sha256": "2ff9cbe6105aa62ab6098f53cc5d8cf0bde0d858e8bf7bc5992ec48648d3b460"
+    },
+    {
+      "path": "ai-services/grading_agent/server.py",
+      "snapshot_sha256": "2394f6fff31c0cdd0af06a413a9abcba639dc385a9e4dc156097724eae3e79cd",
+      "workspace_sha256": "62c2b234657f1f29d444968d8ce815647f820b1b8c7b3eb7d6a6db6d617c637e"
+    },
+    {
+      "path": "ai-services/tests/test_config.py",
+      "snapshot_sha256": "7dbcc1a49737890cbaedd4e12e311f9e65c5b4a1e8c94434ac074c16e25c7de0",
+      "workspace_sha256": "adab58404249d7ae9a86e09a2c42b7c02937cf0a2c9fb8faf72fb2eeacbf8529"
+    },
+    {
+      "path": "ai-services/tests/test_server_tls.py",
+      "snapshot_sha256": "fead1bd4c8b4483a35d29c7c581802fc494158eea81906fb8a39966e1f4ee725",
+      "workspace_sha256": "8a1b347ce43f3c08af267595ea199cb52c674cec6f08b21947b384f57096e693"
+    },
+    {
+      "path": "apps/desktop-client/src/components/OfflineWorkbench.test.tsx",
+      "snapshot_sha256": "317b6dda979ba302eff1b29be240b750f91d375f275f4b7ede4b42abf5d8ad64",
+      "workspace_sha256": "da030c3b0d9ff1b03a49f6d2c2aaca007c0ec52d4a0f7fcf0f10e7c037cbed40"
+    },
+    {
+      "path": "apps/desktop-client/src/components/OfflineWorkbench.tsx",
+      "snapshot_sha256": "5c41e3e4d4ee974e8a49bc5c04a7204c168fb69347fd313d2c9674f531fedfa6",
+      "workspace_sha256": "d4bc67fb9e21a876a18f3d92daa63bb23c7a0f00d7d40c062db9e44b0f345fe3"
+    },
+    {
+      "path": "docs/architecture/previews/index.html",
+      "snapshot_sha256": "7823b8f45f095ab98aab682c861565b470dfe5a07028e32aeb7818f2640ef92f",
+      "workspace_sha256": "e3adfdfbd41292442592f0474d78a6b3762acfd508a13fdf74bfa47ac94acd2b"
+    },
+    {
+      "path": "docs/architecture/tools/build_preview.py",
+      "snapshot_sha256": "9253434bedcb47f08ce5861591cd449108c9bfbc41b46e7f22961f0021845f5c",
+      "workspace_sha256": "a41b9dec3a9f2bedfbc31eb04384bd97870cffd37a32b24b5a3832351b0f37fd"
+    },
+    {
+      "path": "docs/architecture/tools/simplify_diagrams.py",
+      "snapshot_sha256": "3d83822d3934659622537677a83242019241f61959fa2a0fe80ba08b312d0dda",
+      "workspace_sha256": "eefa17ee93e0c9c6b0067b58cc14c1bdc11f449100daf0fbdc8b1671080d2fba"
+    },
+    {
+      "path": "docs/architecture/tools/verify_delivery.py",
+      "snapshot_sha256": "a8261cbdf6ba61acf045abe50b1a83902d507b2a36fc80f0a16e992ffb7c7572",
+      "workspace_sha256": "db7a6e7b8924cf4eaf67d352dd2cdc2e7a8619f11096069d934b8630d7e87e78"
+    },
+    {
+      "path": "infra/docker-compose/docker-compose.story060-e2e.yml",
+      "snapshot_sha256": "e547e80d8c6e96781b65d95c3a717a393e563d7fc3501fe7c33b40f69ce05c72",
+      "workspace_sha256": "0909839aa2debd2f8df2fa28b3e73459e57a7639f12c56405ff205c8bf9fda40"
+    },
+    {
+      "path": "infra/docker-compose/docker-compose.yml",
+      "snapshot_sha256": "18773e940caab52f25d572754034a426d4238425e605a31956e00b26a22451f3",
+      "workspace_sha256": "e3bf76a592b30e82e2d6534b943710e453db9f8fb2c8e0bf5f1b415e3cc43067"
+    },
+    {
+      "path": "infra/docker-compose/scripts/preflight.ps1",
+      "snapshot_sha256": "0e96f038fa5a04f43b94ec117a450f7820d2641e9056addaa1c7b1731bdf8ec6",
+      "workspace_sha256": "78cc6e4ba5c5356c159bc12716b0b6f51ae7fa7b86725a00553e8f704de3557b"
+    },
+    {
+      "path": "scripts/ci/trusted-executable.mjs",
+      "snapshot_sha256": "ced88f2d565af2e592c064a17c422da6a5248e4e21b29d2eba2b2b3650fdf97c",
+      "workspace_sha256": "bf375adbaad7b66348fe93ac473b6bde1bb43a94095a0e402ffb342cbd0e3af8"
+    },
+    {
+      "path": "scripts/ci/trusted-executable.test.mjs",
+      "snapshot_sha256": "cc257b861cc730aa84a3b5b3c907e567077030c948fac88f9241ba5d53e046b0",
+      "workspace_sha256": "cbbbcb3de887a90e471730bb0aa05369eccfd9ed3618b261ef161c749a2ca860"
+    },
+    {
+      "path": "services/api-gateway/internal/releasegate/service.go",
+      "snapshot_sha256": "71cedb7f514c86f18bf6831832debe2980a0efb5ae035b8b1cb4c05bd6ddd33d",
+      "workspace_sha256": "1a66121cfe3df61d7be016e0b85dc7a99a2c1991ec66531e77958127fd5ac05b"
+    },
+    {
+      "path": "services/api-gateway/tools/story056-postgres-e2e/Dockerfile",
+      "snapshot_sha256": "32826aade9794a0a0f050f031d06af93ef371b3f50aa0cb515ce83a9656fff74",
+      "workspace_sha256": "20c9fbae828ab0c478929582e614253844e1f5ad5deb0a003af7962d99e8485e"
+    },
+    {
+      "path": "services/math-verification-worker/Dockerfile",
+      "snapshot_sha256": "32cd813a931ae01433963052e0c00224ec028b0ec2e66adc54b5519f08eaa367",
+      "workspace_sha256": "ccc5dd806d314670d00671f82abdb409b1c5fadd892a973b36c356645f14ab4d"
+    },
+    {
+      "path": "services/math-verification-worker/math_verification_worker/server.py",
+      "snapshot_sha256": "4fda507b4bb88ed41323febf606801808b4432e7b36b26754cd5f821186aae82",
+      "workspace_sha256": "d9d6a02c89cea615738f507e3462e185e4c9992537acdb6b93ce28427f9a4f1f"
+    },
+    {
+      "path": "services/math-verification-worker/tests/test_server.py",
+      "snapshot_sha256": "f3365c0466ee6aafc93bcbcad044cdcadbb92f89beea3bc495be13d89b529ff3",
+      "workspace_sha256": "a81b66cdc60aab230e148ef153e5086980c09a045b26ad289bc104cf7c929538"
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/config.py",
+      "snapshot_sha256": "249da52e184b9461a7ff8919a5d78a00f868047aace9909189c085e3d8453ae7",
+      "workspace_sha256": "d49444a1ead2f5f5c3d8277cd75c2a7823e5e6b7c200a91b5ef496292d0ecc59"
+    },
+    {
+      "path": "services/ocr-worker/tests/test_config.py",
+      "snapshot_sha256": "cd9b8a4c4fb8adcefd5228b859a3c0cbfdc51053e591d37b40d419b44b1e3ceb",
+      "workspace_sha256": "93a1f82542e76efb159eb3bc1bce5ea3a5a8b89c18354b8a6de2db665c4267c0"
+    },
+    {
+      "path": "tests/e2e/story060_grading_agent.py",
+      "snapshot_sha256": "e8810f3e0e6d1f35003c705b45a65526727469a2e21d2862e7e6e9ba850ae77c",
+      "workspace_sha256": "aa7978bb3fbb8e658314abd1bc595b6381edf739eb4731e0b30214cea9870f69"
+    }
+  ],
+  "missing": [],
+  "scope": "仅比较固定清单已有文件；不枚举新增文件，也不能重建各引擎逐文件读取时的内容。CodeQL固定扫描快照的完整性另行记录。"
+}

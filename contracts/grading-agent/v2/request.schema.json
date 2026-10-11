@@ -114,6 +114,29 @@
         "standard_answer": {},
         "equivalent_answers": {"type": "array", "maxItems": 100, "items": {}},
         "solution_text": {"type": "string", "maxLength": 20000},
+        "answer_parts": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "part_no",
+              "answer_text"
+            ],
+            "properties": {
+              "part_no": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "answer_text": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 20000
+              }
+            }
+          }
+        },
         "solution_steps": {
           "type": "array", "maxItems": 100,
           "items": {

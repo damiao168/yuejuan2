@@ -15,14 +15,12 @@ const tenantRuntimeRole = "edugrade_tenant_runtime"
 const tenantUnscopedSetting = "unscoped"
 const tenantMaintenanceSetting = "maintenance"
 
-// WithTenant binds the authenticated tenant to database operations issued with
-// this context. Empty or missing tenant scopes fail closed for RLS-protected data.
+// WithTenant 将已认证租户绑定到使用此上下文发出的数据库操作。租户作用域为空或缺失时，对 RLS 保护的数据拒绝放行。
 func WithTenant(ctx context.Context, tenantID string) context.Context {
 	return context.WithValue(ctx, tenantContextKey{}, tenantID)
 }
 
-// WithTenantMaintenance explicitly authorizes a process-level job to operate
-// across tenants. Request handlers must use WithTenant through auth.WithUser.
+// WithTenantMaintenance 显式授权进程级任务跨租户操作；请求处理器必须通过 auth.WithUser 使用 WithTenant。
 func WithTenantMaintenance(ctx context.Context) context.Context {
 	return context.WithValue(ctx, tenantMaintenanceContextKey{}, true)
 }

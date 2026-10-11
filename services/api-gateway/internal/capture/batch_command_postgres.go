@@ -15,8 +15,7 @@ func (s *PostgresStore) createBatchCommand(ctx context.Context, tenantID, examID
 	if _, err = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1,0))`, "capture-batch:"+tenantID+":"+actorID+":"+input.IdempotencyKey); err != nil {
 		return Batch{}, err
 	}
-	// Include deleted rows and legacy commands. Ambiguous legacy history is a
-	// conflict, never permission to create an additional resource.
+	// 包含已删除记录和旧命令。旧历史存在歧义时应判为冲突，不能视为允许额外创建资源。
 	rows, err := tx.QueryContext(ctx, `SELECT id::text FROM capture_batch WHERE tenant_id=$1::uuid AND operator_id=$2::uuid AND idempotency_key=$3 ORDER BY created_at,id LIMIT 2`, tenantID, actorID, input.IdempotencyKey)
 	if err != nil {
 		return Batch{}, err

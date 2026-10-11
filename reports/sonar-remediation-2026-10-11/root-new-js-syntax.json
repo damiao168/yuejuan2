@@ -1,0 +1,40 @@
+{
+  "records": [
+    {
+      "file": "docs/architecture/tools/check_preview_typography.js",
+      "exit_code": 0,
+      "source_sha256": "1ef9d115d07883936333d8c4b77cbd46832e3a01f563b4c5da45e3a7841714b2",
+      "output": ""
+    },
+    {
+      "file": "docs/architecture/tools/frontend-api-scan.mjs",
+      "exit_code": 0,
+      "source_sha256": "11fcb6c8245c78186be7e49661773805d99d6ecc8d5e42e9b9373f1221169dc7",
+      "output": ""
+    },
+    {
+      "file": "docs/architecture/tools/render_native.js",
+      "exit_code": 0,
+      "source_sha256": "85e0b8d9604713f3506c56758a3af02977ef66e35bc66ff7d3136e129eefac65",
+      "output": ""
+    },
+    {
+      "file": "scripts/check-story052-production-deployment.mjs",
+      "exit_code": 0,
+      "source_sha256": "688b7952d124a8208bd4f650c191862f6124993a471a66affa956420f3334676",
+      "output": ""
+    },
+    {
+      "file": "scripts/ci/check-generated-contracts.mjs",
+      "exit_code": 0,
+      "source_sha256": "35fef0a11c6d6b35c07b321eed2c7ef27d2471f244899aec03d8c0002ab4d5aa",
+      "output": ""
+    },
+    {
+      "file": "scripts/lib/openapi-sdk.mjs",
+      "exit_code": 0,
+      "source_sha256": "257f2b7281b3ce2fcce5d2463a25960dd7da75ad8a16eb69c2dc165d6fd940e6",
+      "output": ""
+    }
+  ]
+}

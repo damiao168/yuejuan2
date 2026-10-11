@@ -57,9 +57,8 @@ type Version struct {
 	CreatedAt              time.Time      `json:"created_at"`
 }
 
-// GoldPaper intentionally exposes no student_id, candidate_no, student name,
-// reviewer private note, or raw AI prompt. SubmissionID is the pseudonymous
-// source reference used by the separately authorized answer-image endpoint.
+// GoldPaper 不暴露 student_id、candidate_no、学生姓名、复核者私有备注或原始 AI 提示词。
+// SubmissionID 是假名化的来源引用，供单独授权的答案图片端点使用。
 type GoldPaper struct {
 	ID               string     `json:"id"`
 	ExamID           string     `json:"exam_id"`
@@ -136,9 +135,7 @@ type Store interface {
 	ListActiveApproved(context.Context, string, string, string) ([]GoldPaper, error)
 }
 
-// ActiveApprovedReader is the narrow dependency used by calibration, seed and
-// AI evaluation stories. Callers must not treat pending or retired versions as
-// a usable Gold Set.
+// ActiveApprovedReader 是校准、种子和 AI 评测功能使用的有限依赖；调用方不得将待批准或已退役版本视为可用 Gold Set。
 type ActiveApprovedReader interface {
 	ListActiveApproved(context.Context, string, string, string) ([]GoldPaper, error)
 }

@@ -1,0 +1,87 @@
+{
+  "files": [
+    {
+      "file": "services/api-gateway/internal/server/score_route_test.go",
+      "sha256": "7ba0b79c37d7e959893a162431e4eab6655cde7e99160f7115d82b6ff6d9eb81",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\score_route_test.go"
+    },
+    {
+      "file": "services/api-gateway/internal/server/readers_batch47_test.go",
+      "sha256": "66f1b4bf89d7da5239bffe17072a32a46d59a8e622c736fa3212e8b872747d2a",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\readers_batch47_test.go"
+    },
+    {
+      "file": "services/api-gateway/internal/server/platform_schools_route_test.go",
+      "sha256": "84ad3ee72efaa8bbd56ee3c126417a83df5748037c23dc96e396252db458181d",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\platform_schools_route_test.go"
+    },
+    {
+      "file": "services/api-gateway/internal/server/server_test.go",
+      "sha256": "b493b8870ae2d48959a6541ac37b5fd1f9874ebc62cf5c94bbf9bee32c7208f7",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\server_test.go"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_math_rubric_score_test.go",
+      "sha256": "aeb62351f239369c227de16e8d8428308b281c5c5994574faa0171b578eec894",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_math_rubric_score_test.go"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_math_effective_evidence_test.go",
+      "sha256": "97d0a8a511a0492f1f2ee3f9ff7dec422b09b7a0b23e9a691d69ce56afa350a2",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_math_effective_evidence_test.go"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_idempotency_test.go",
+      "sha256": "19e865903572f6d96d8aa4d2206daa97848efbe8653bdb5c593bed9af947227f",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_idempotency_test.go"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_scoring_command_test.go",
+      "sha256": "09e3d0b89b8d51ff88440516470389e51fd1daea15767316bf9b6513ebeb792b",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_scoring_command_test.go"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_story060_provision_test.go",
+      "sha256": "41cfccd56aaad01cdeb370101a9db798bf99cd32942eced271615364d5bf60bd",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_story060_provision_test.go"
+    }
+  ],
+  "issue_functions": [
+    {
+      "file": "services/api-gateway/internal/server/score_route_test.go",
+      "function": "TestScoreRoutesFinalizeConfirmPublishStudentLookupAndExport"
+    },
+    {
+      "file": "services/api-gateway/internal/server/readers_batch47_test.go",
+      "function": "TestBatch47OnboardingOrganizationFallbackPreservesScope"
+    },
+    {
+      "file": "services/api-gateway/internal/server/platform_schools_route_test.go",
+      "function": "TestPlatformSchoolRoutesRequirePlatformRoleAndTenantManage"
+    },
+    {
+      "file": "services/api-gateway/internal/server/server_test.go",
+      "function": "TestOCRAvailabilityUsesScopedPermissionsAndResponse"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_math_rubric_score_test.go",
+      "function": "TestPostgresMathRubricScoreUsesOnlyFrozenExamRubric"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_math_effective_evidence_test.go",
+      "function": "TestPostgresMathEffectiveEvidenceProjection"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_idempotency_test.go",
+      "function": "TestRequestIdempotencyWithPostgresTestDatabase"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_scoring_command_test.go",
+      "function": "TestScoringCommandRecoveryWithPostgresTestDatabase"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_story060_provision_test.go",
+      "function": "TestStory060ProvisioningWithPostgresIsScopedAndIdempotent"
+    }
+  ]
+}

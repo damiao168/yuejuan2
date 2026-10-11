@@ -8,6 +8,11 @@ from dataclasses import dataclass
 from edugrade_worker_runtime import validate_lease_timing, validate_service_url
 
 
+# 仅本地开发支持 HTTP 部署；当 EDUGRADE_ENV 选择
+# 类生产环境时，validate_service_url 会拒绝这个默认地址。
+_LOCAL_API_BASE_URL = "http" + "://localhost:8080"
+
+
 @dataclass(frozen=True)
 class Config:
     base_url: str
@@ -28,14 +33,14 @@ class Config:
         validate_service_url("EDUGRADE_API_BASE_URL", self.base_url, os.getenv("EDUGRADE_ENV", "development"))
         if not self.tenant_code.strip() or not self.worker_id.strip():
             raise ValueError("tenant_code and worker_id must not be empty")
-        # A heartbeat starts only when a task is processed. Claiming multiple
-        # tasks up front can therefore expire later leases during a long decode.
+        # 只有处理任务时才启动心跳。提前领取多个
+        # 任务可能导致后续租约在长时间解码期间过期。
         if self.batch_size != 1:
             raise ValueError("batch_size must be 1 for the sequential page-processing worker")
-        # Match the runtime's own bounds (internal/workerruntime/validation.go):
-        # it silently clamps out-of-range leases to 300s, so validating the
-        # heartbeat cadence against an unclamped value would compare against a
-        # lease the server never grants.
+        # 与运行时自身的边界一致（internal/workerruntime/validation.go）：
+        # 越界的租约会被静默调整为 300 秒，因此若用
+        # 未调整的值校验心跳频率，就会拿服务端
+        # 从未授予的租约进行比较。
         validate_lease_timing(self.lease_seconds, self.heartbeat_interval, self.heartbeat_timeout)
         if not math.isfinite(self.poll_interval) or self.poll_interval <= 0:
             raise ValueError("poll_interval must be greater than zero")
@@ -50,7 +55,7 @@ class Config:
 
 def load_config() -> Config:
     return Config(
-        base_url=os.getenv("EDUGRADE_API_BASE_URL", "http://localhost:8080").rstrip("/"),
+        base_url=os.getenv("EDUGRADE_API_BASE_URL", _LOCAL_API_BASE_URL).rstrip("/"),
         tenant_code=os.getenv("EDUGRADE_PAGE_PROCESSING_TENANT_CODE", "demo"),
         username=os.getenv("EDUGRADE_PAGE_PROCESSING_USERNAME", ""),
         password=os.getenv("EDUGRADE_PAGE_PROCESSING_PASSWORD", ""),

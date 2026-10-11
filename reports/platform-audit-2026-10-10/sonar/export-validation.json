@@ -1,0 +1,13 @@
+{
+  "issues_expected": 2223,
+  "issues_exported": 2223,
+  "issue_keys_unique": 2223,
+  "files_expected": 1339,
+  "files_exported": 1339,
+  "file_keys_unique": 1339,
+  "hotspots_expected": 0,
+  "hotspots_exported": 0,
+  "rules_expected": 51,
+  "rules_exported": 51,
+  "all_counts_reconciled": true
+}

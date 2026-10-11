@@ -7,20 +7,21 @@ import (
 )
 
 var (
-	ErrInvalidCredentials  = errors.New("invalid credentials")
-	ErrUnauthenticated     = errors.New("unauthenticated")
-	ErrForbidden           = errors.New("forbidden")
-	ErrUsernameExists      = errors.New("username already exists")
-	ErrIdentityExists      = errors.New("login identity already exists")
-	ErrRoleNotFound        = errors.New("role not found")
-	ErrRoleAssignment      = errors.New("role assignment is not allowed")
-	ErrOrganizationScope   = errors.New("organization scope is not allowed")
-	ErrInvalidRoleBinding  = errors.New("role organization binding is invalid")
-	ErrManagedUserNotFound = errors.New("managed user not found")
-	ErrUserStatusForbidden = errors.New("managed user status change is not allowed")
-	ErrLastSchoolAdmin     = errors.New("last active school administrator cannot be disabled")
-	ErrActivationInvalid   = errors.New("activation token is invalid or expired")
-	ErrRecoveryInvalid     = errors.New("recovery token is invalid or expired")
+	ErrInvalidCredentials        = errors.New("invalid credentials")
+	ErrUnauthenticated           = errors.New("unauthenticated")
+	ErrForbidden                 = errors.New("forbidden")
+	ErrUsernameExists            = errors.New("username already exists")
+	ErrIdentityExists            = errors.New("login identity already exists")
+	ErrRoleNotFound              = errors.New("role not found")
+	ErrRoleAssignment            = errors.New("role assignment is not allowed")
+	ErrOrganizationScope         = errors.New("organization scope is not allowed")
+	ErrInvalidRoleBinding        = errors.New("role organization binding is invalid")
+	ErrManagedUserNotFound       = errors.New("managed user not found")
+	ErrUserStatusForbidden       = errors.New("managed user status change is not allowed")
+	ErrLastSchoolAdmin           = errors.New("last active school administrator cannot be disabled")
+	ErrManagedUserAccessConflict = errors.New("managed user access changed")
+	ErrActivationInvalid         = errors.New("activation token is invalid or expired")
+	ErrRecoveryInvalid           = errors.New("recovery token is invalid or expired")
 )
 
 const PlatformTenantID = "00000000-0000-0000-0000-000000000001"
@@ -35,9 +36,8 @@ type User struct {
 	Roles       []string       `json:"roles"`
 	Permissions []string       `json:"permissions"`
 	DataScope   map[string]any `json:"data_scope"`
-	// OrganizationScope is the resolved, server-trusted organization boundary.
-	// DataScope remains the persisted RBAC declaration; clients should use this
-	// projection when deciding which schools, grades and classes are selectable.
+	// OrganizationScope 是已解析、由服务端信任的组织边界。DataScope 仍是持久化 RBAC 声明；
+	// 客户端判断哪些学校、年级和班级可选时，应使用此投影。
 	OrganizationScope  *OrganizationScope `json:"organization_scope,omitempty"`
 	CurrentSessionType string             `json:"current_session_type,omitempty"`
 	CurrentAuthLevel   int                `json:"-"`
@@ -64,6 +64,7 @@ type UserWithPassword struct {
 	ActivatedAt     time.Time
 	LastLoginAt     time.Time
 	CreatedAt       time.Time
+	ManagedClassIDs []string
 }
 
 type ManagedUser struct {
@@ -74,6 +75,7 @@ type ManagedUser struct {
 	EmployeeNo  string     `json:"employee_no,omitempty"`
 	Status      string     `json:"status"`
 	Roles       []string   `json:"roles"`
+	ClassIDs    []string   `json:"class_ids"`
 	SchoolID    string     `json:"school_id,omitempty"`
 	ActivatedAt *time.Time `json:"activated_at,omitempty"`
 	LastLoginAt *time.Time `json:"last_login_at,omitempty"`
@@ -106,6 +108,7 @@ type CreateManagedUserInput struct {
 	DisplayName         string    `json:"display_name"`
 	Password            string    `json:"password"`
 	RoleCode            string    `json:"role_code"`
+	RoleCodes           []string  `json:"role_codes,omitempty"`
 	SchoolID            string    `json:"school_id,omitempty"`
 	ClassIDs            []string  `json:"class_ids,omitempty"`
 	ActivationTokenHash string    `json:"-"`
@@ -141,6 +144,15 @@ type UpdateManagedUserStatusInput struct {
 	Status string `json:"status"`
 }
 
+// UpdateManagedUserAccessInput 只调整同校职责和教学班级；旧值用于拒绝覆盖另一位管理员的修改。
+type UpdateManagedUserAccessInput struct {
+	RoleCodes        []string `json:"role_codes"`
+	ClassIDs         []string `json:"class_ids"`
+	ExpectedRoles    []string `json:"expected_roles"`
+	ExpectedClassIDs []string `json:"expected_class_ids"`
+	Reason           string   `json:"reason"`
+}
+
 type Session struct {
 	Token     string    `json:"access_token"`
 	TokenHash string    `json:"-"`
@@ -173,8 +185,7 @@ type CreateSessionInput struct {
 	RiskPolicyVersion   string
 	RiskEvidenceQuality RiskEvidenceQuality
 	AuthMethod          string
-	// SecurityEpoch is the credential snapshot verified during login. A
-	// positive value must still match when the session is created.
+	// SecurityEpoch 是登录时验证的凭据快照；创建会话时，正值仍须匹配。
 	SecurityEpoch int64
 }
 
@@ -206,8 +217,7 @@ type CreateWechatLoginChallengeInput struct {
 	ExpiresAt      time.Time
 }
 
-// WechatLoginRepository keeps one-time browser challenges and tenant-scoped
-// Open Platform bindings durable so callbacks can land on any API instance.
+// WechatLoginRepository 持久保存一次性浏览器挑战和租户范围内的开放平台绑定，使回调可落到任意 API 实例。
 type WechatLoginRepository interface {
 	CreateWechatLoginChallenge(context.Context, CreateWechatLoginChallengeInput) error
 	FindWechatLoginChallengeByState(context.Context, string, time.Time) (WechatLoginChallenge, error)
@@ -271,8 +281,7 @@ type AuditFilter struct {
 	Limit           int
 	CursorCreatedAt time.Time
 	CursorID        string
-	// ScopeMode is derived from the authenticated principal. Non-tenant
-	// scopes fail closed until audit rows carry a trusted resource projection.
+	// ScopeMode 从已认证主体派生。在审计记录包含可信资源投影前，非租户级作用域拒绝放行。
 	ScopeMode string
 }
 
@@ -313,6 +322,7 @@ type UserAdministrationRepository interface {
 	ListAssignableRoles(ctx context.Context, actor User) ([]AssignableRole, error)
 	CreateManagedUser(ctx context.Context, actor User, actorScope AccessScope, input CreateManagedUserInput, passwordHash string) (ManagedUser, error)
 	UpdateManagedUserStatus(ctx context.Context, actor User, actorScope AccessScope, userID string, status string) (ManagedUser, string, error)
+	UpdateManagedUserAccess(ctx context.Context, actor User, actorScope AccessScope, userID string, input UpdateManagedUserAccessInput) (ManagedUser, error)
 }
 
 type ActivationRepository interface {
@@ -327,8 +337,7 @@ type RecoveryRepository interface {
 	CompleteRecovery(ctx context.Context, tokenHash string, passwordHash string, now time.Time) (RecoveryResult, error)
 }
 
-// Store remains the compatibility aggregate for existing composition roots.
-// New application services should depend only on the capabilities they use.
+// Store 保留为现有组装入口使用的兼容聚合接口；新的应用服务应只依赖自己使用的能力。
 type Store interface {
 	CredentialRepository
 	SessionRepository

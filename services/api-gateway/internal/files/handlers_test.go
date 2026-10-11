@@ -277,7 +277,7 @@ func TestChunkedUploadStopsAtOuterLimitBeforeIdempotencySpool(t *testing.T) {
 	reader := &countingReader{Reader: bytes.NewReader(body.Bytes())}
 	req := authedRequest(http.MethodPost, "/api/v1/files", nil, token)
 	req.Body = io.NopCloser(reader)
-	req.ContentLength = -1 // chunked request: no early Content-Length rejection
+	req.ContentLength = -1 // 分块请求不会因 Content-Length 而提前被拒绝。
 	req.Header.Set("Content-Type", contentType)
 	req.Header.Set("Idempotency-Key", "oversized-chunked-file")
 	rec := httptest.NewRecorder()
@@ -460,7 +460,7 @@ func testRouter(authStore *auth.MemoryStore, fileStore files.Store, objectStore 
 			AllowedExtensions: []string{".pdf", ".png", ".jpg", ".jpeg", ".csv", ".docx"},
 		},
 	}
-	return server.NewRouterWithFiles(cfg, logger.New(io.Discard, "error"), nil, authStore, org.NewMemoryStore(), exam.NewMemoryStore(), paper.NewMemoryStore(), fileStore, objectStore)
+	return server.NewRouterWithFiles(cfg, logger.New(io.Discard, "error"), nil, server.IdentityStores{Auth: authStore, Org: org.NewMemoryStore()}, server.ExamPreparationStores{Exam: exam.NewMemoryStore(), Paper: paper.NewMemoryStore(), Files: fileStore}, objectStore)
 }
 
 func authStoreWithPermissions(t *testing.T, permissions []string) *auth.MemoryStore {

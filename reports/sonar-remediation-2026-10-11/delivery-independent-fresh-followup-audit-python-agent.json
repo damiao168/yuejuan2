@@ -1,0 +1,1313 @@
+{
+  "audited_at_utc": "2026-10-11T11:22:14.610142+00:00",
+  "scope": "只读最新现有测试产物与当前 SHA；未重测、未修改任何代理账本，保留第一次preflight。",
+  "python_fresh": {
+    "report": "fresh-python-dynamic-01/execution.json",
+    "execution_sha256": "54bf182e8270119d55a93639bf332fcc344e9ceecee940072738287f94965b95",
+    "counts": {
+      "passed": 45
+    },
+    "exit_codes": [
+      0,
+      0
+    ],
+    "current_source_sha_valid": true,
+    "bound_source_files": 27,
+    "resolved_preflight_code": "PYTHON_CURRENT_TEST_SHA_NOT_DYNAMically_BOUND",
+    "overlap_note": "45 是旧1006中指定3文件的补证，不能相加宣称新增45个独立用例。"
+  },
+  "server_current": {
+    "report": "go-server-batch04-tests.json",
+    "exit_code": 0,
+    "actual_counts": {
+      "pass": 188,
+      "skip": 62
+    },
+    "current_source_sha_valid": true,
+    "bound_source_files": 95,
+    "skip_categories": {
+      "postgres_environment_missing": 61,
+      "intentional_helper_entrypoint": 1
+    },
+    "skip_records": [
+      {
+        "test": "TestHighScorePaperShareRedactsAndRevokesWithPostgresTestDatabase",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_anonymous_paper_test.go:22: EDUGRADE_E2E_DATABASE_URL is not set"
+        ]
+      },
+      {
+        "test": "TestTeacherAccountSecurityE2EWithPostgres",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_auth_security_test.go:24: EDUGRADE_E2E_DATABASE_URL is not set; skipping isolated PostgreSQL account security E2E"
+        ]
+      },
+      {
+        "test": "TestBusinessCommandReservationCrashHelper",
+        "category": "intentional_helper_entrypoint",
+        "reasons": [
+          "e2e_business_command_test.go:50: child-process crash helper"
+        ]
+      },
+      {
+        "test": "TestComposeApplicationBootstrapAndLoginWithPostgres",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_compose_bootstrap_test.go:25: EDUGRADE_E2E_DATABASE_URL is required"
+        ]
+      },
+      {
+        "test": "TestDashboardSummaryE2EWithPostgresTestDatabase",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_dashboard_test.go:15: EDUGRADE_E2E_DATABASE_URL is not set; skipping PostgreSQL dashboard workflow"
+        ]
+      },
+      {
+        "test": "TestExamArchiveCommandsE2EWithPostgresTestDatabase",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_exam_archive_commands_test.go:25: EDUGRADE_E2E_DATABASE_URL is required for archive command PostgreSQL acceptance"
+        ]
+      },
+      {
+        "test": "TestWholeExamManagementE2EWithPostgresTestDatabase",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_exam_management_test.go:22: EDUGRADE_E2E_DATABASE_URL is required for whole-exam PostgreSQL acceptance"
+        ]
+      },
+      {
+        "test": "TestFileReconciliationWithPostgresTestDatabase",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_file_reconciliation_test.go:20: EDUGRADE_E2E_DATABASE_URL is not set; skipping PostgreSQL file reconciliation workflow"
+        ]
+      },
+      {
+        "test": "TestRequestIdempotencyWithPostgresTestDatabase",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_idempotency_test.go:19: EDUGRADE_E2E_DATABASE_URL is not set; skipping PostgreSQL idempotency workflow"
+        ]
+      },
+      {
+        "test": "TestOutboxLeaseRecoveryWithPostgresTestDatabase",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_idempotency_test.go:125: EDUGRADE_E2E_DATABASE_URL is not set; skipping PostgreSQL outbox workflow"
+        ]
+      },
+      {
+        "test": "TestPostgresMathEffectiveEvidenceProjection",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_math_effective_evidence_test.go:21: EDUGRADE_E2E_DATABASE_URL is required for real PostgreSQL evidence"
+        ]
+      },
+      {
+        "test": "TestPostgresMathGradingBindingsRoundTripAndRejectWrongVersion",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_math_grading_binding_test.go:23: EDUGRADE_E2E_DATABASE_URL is required"
+        ]
+      },
+      {
+        "test": "TestPostgresMathRubricScoreUsesOnlyFrozenExamRubric",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_math_rubric_score_test.go:31: EDUGRADE_E2E_DATABASE_URL is required"
+        ]
+      },
+      {
+        "test": "TestPostgresMathVerificationRuntimeAtomicActivation",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_math_verification_runtime_test.go:25: EDUGRADE_E2E_DATABASE_URL is required for real PostgreSQL evidence"
+        ]
+      },
+      {
+        "test": "TestTOTPManagementE2EWithPostgres",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_mfa_test.go:28: EDUGRADE_E2E_DATABASE_URL is not set"
+        ]
+      },
+      {
+        "test": "TestPaperImportApplyGateE2EWithPostgresTestDatabase",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_paper_import_reconciliation_test.go:26: EDUGRADE_E2E_DATABASE_URL is not set; skipping paper import PostgreSQL apply gate test"
+        ]
+      },
+      {
+        "test": "TestCoreWorkflowE2EWithPostgresTestDatabase",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_postgres_test.go:37: EDUGRADE_E2E_DATABASE_URL is not set; skipping PostgreSQL E2E test database workflow"
+        ]
+      },
+      {
+        "test": "TestE2EPostgresUXHistoricalACLAndActualMemberResponsibilities",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_question_bank_acl_ux_test.go:20: requires isolated PostgreSQL"
+        ]
+      },
+      {
+        "test": "TestE2EPostgresQuestionBankFrozenImport",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_question_bank_import_test.go:23: EDUGRADE_E2E_DATABASE_URL is required for real PostgreSQL evidence"
+        ]
+      },
+      {
+        "test": "TestE2EPostgresQuestionBankMetadataACLSearch",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_question_bank_metadata_acl_search_test.go:19: requires isolated PostgreSQL"
+        ]
+      },
+      {
+        "test": "TestE2EPostgresQuestionBankPublication",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_question_bank_publication_test.go:22: requires isolated PostgreSQL"
+        ]
+      },
+      {
+        "test": "TestE2EPostgresQuestionBank",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_question_bank_test.go:26: EDUGRADE_E2E_DATABASE_URL is required for real PostgreSQL evidence"
+        ]
+      },
+      {
+        "test": "TestReleaseGateBlocksSubmissionWithoutCompleteQuestionCoverageE2EWithPostgresTestDatabase",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_question_coverage_test.go:16: EDUGRADE_E2E_DATABASE_URL is not set; skipping question coverage PostgreSQL acceptance workflow"
+        ]
+      },
+      {
+        "test": "TestReliabilityCommandRecoveryWithPostgresTestDatabase",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_reliability_command_test.go:45: EDUGRADE_E2E_DATABASE_URL is not set outside the PostgreSQL CI job"
+        ]
+      },
+      {
+        "test": "TestReliabilityMigrationFrom000122PostgresTestDatabase",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_reliability_command_test.go:1423: EDUGRADE_E2E_DATABASE_URL is not set outside the PostgreSQL CI job"
+        ]
+      },
+      {
+        "test": "TestReviewAssignmentLookupE2EWithPostgresTestDatabase",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_review_assignment_test.go:15: EDUGRADE_E2E_DATABASE_URL is not set; skipping exact review assignment PostgreSQL test"
+        ]
+      },
+      {
+        "test": "TestReviewRepairsRecoveryWithPostgresTestDatabase",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_review_recovery_test.go:40: EDUGRADE_E2E_DATABASE_URL is not set"
+        ]
+      },
+      {
+        "test": "TestReviewRepairsReleaseAndStudentReadWithPostgresTestDatabase",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_review_repairs_test.go:127: EDUGRADE_E2E_DATABASE_URL is not set"
+        ]
+      },
+      {
+        "test": "TestReleaseFeedbackUsesFinalArbitrationAndFreezesIt",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_review_repairs_test.go:329: EDUGRADE_E2E_DATABASE_URL is not set"
+        ]
+      },
+      {
+        "test": "TestCancelledScoringRunCannotReassignOrSubmitReview",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_review_repairs_test.go:451: EDUGRADE_E2E_DATABASE_URL is not set"
+        ]
+      },
+      {
+        "test": "TestRuleConfirmationWaitsForConcurrentCancellation",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_review_repairs_test.go:490: EDUGRADE_E2E_DATABASE_URL is not set"
+        ]
+      },
+      {
+        "test": "TestScoringAIBatchCancellationBlocksNewTasks",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_review_repairs_test.go:540: EDUGRADE_E2E_DATABASE_URL is not set"
+        ]
+      },
+      {
+        "test": "TestFailedScoringAIBatchSegmentsRequireOpenTeacherTask",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_review_repairs_test.go:620: EDUGRADE_E2E_DATABASE_URL is not set"
+        ]
+      },
+      {
+        "test": "TestScoringCommandRecoveryWithPostgresTestDatabase",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_scoring_command_test.go:22: dedicated PostgreSQL required"
+        ]
+      },
+      {
+        "test": "TestScoringDoubleMarkLifecycleWithPostgresTestDatabase",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_scoring_double_mark_test.go:19: dedicated PostgreSQL required"
+        ]
+      },
+      {
+        "test": "TestStory056TemplateDifferenceCalibrationApprovalAndRevocationE2E",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_story056_calibration_test.go:24: EDUGRADE_E2E_DATABASE_URL is not set; skipping STORY-056 calibration PostgreSQL test"
+        ]
+      },
+      {
+        "test": "TestStory056ApprovedCalibrationIsInheritedByTemplateCloneE2E",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_story056_calibration_test.go:170: EDUGRADE_E2E_DATABASE_URL is not set; skipping STORY-056 calibration clone PostgreSQL test"
+        ]
+      },
+      {
+        "test": "TestStory056TemplateCloneIsRejectedAfterReadinessConfirmationE2E",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_story056_calibration_test.go:239: EDUGRADE_E2E_DATABASE_URL is not set; skipping STORY-056 frozen clone PostgreSQL test"
+        ]
+      },
+      {
+        "test": "TestReadinessConfirmationSerializesConcurrentConfigurationWriteE2E",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_story056_calibration_test.go:265: EDUGRADE_E2E_DATABASE_URL is not set; skipping transactional readiness PostgreSQL test"
+        ]
+      },
+      {
+        "test": "TestStory056OMRAutoGradeConfirmationFailureFallsBackToReviewE2E",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_story056_lease_test.go:21: EDUGRADE_E2E_DATABASE_URL is not set; skipping OMR confirmation fallback PostgreSQL test"
+        ]
+      },
+      {
+        "test": "TestStory056ManualOnlyOMRProfileRequiresReviewE2E",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_story056_lease_test.go:94: EDUGRADE_E2E_DATABASE_URL is not set; skipping STORY-056 manual-only OMR gate test"
+        ]
+      },
+      {
+        "test": "TestStory056RejectsMismatchedOMRProfileBeforeCompletingTaskE2E",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_story056_lease_test.go:140: EDUGRADE_E2E_DATABASE_URL is not set; skipping STORY-056 OMR profile mismatch test"
+        ]
+      },
+      {
+        "test": "TestStory056TemplateDifferenceReferenceSnapshotE2E",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_story056_lease_test.go:198: EDUGRADE_E2E_DATABASE_URL is not set; skipping STORY-056 template-difference reference test"
+        ]
+      },
+      {
+        "test": "TestStory056OMRSameVersionChangedMeasurementsIsConflictE2E",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_story056_lease_test.go:330: EDUGRADE_E2E_DATABASE_URL is not set; skipping OMR semantic replay PostgreSQL test"
+        ]
+      },
+      {
+        "test": "TestStory056ExpiredOMRLeaseLeavesScoringFactsUntouchedE2E",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_story056_lease_test.go:468: EDUGRADE_E2E_DATABASE_URL is not set; skipping OMR stale-lease PostgreSQL acceptance test"
+        ]
+      },
+      {
+        "test": "TestStory056ObjectiveScoringRecoveryE2EWithPostgresTestDatabase",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_story056_test.go:48: EDUGRADE_E2E_DATABASE_URL is not set; skipping STORY-056 PostgreSQL acceptance workflow"
+        ]
+      },
+      {
+        "test": "TestStory060CaptureRecoveryE2EWithPostgresTestDatabase",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_story060_capture_recovery_test.go:24: EDUGRADE_E2E_DATABASE_URL is not set; skipping STORY-060 capture recovery workflow"
+        ]
+      },
+      {
+        "test": "TestStory060ProvisioningWithPostgresIsScopedAndIdempotent",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_story060_provision_test.go:16: EDUGRADE_E2E_DATABASE_URL is not set; skipping STORY-060 provisioning PostgreSQL regression test"
+        ]
+      },
+      {
+        "test": "TestStory060RosterReconciliationAndAbsenceE2EWithPostgresTestDatabase",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_story060_roster_test.go:18: EDUGRADE_E2E_DATABASE_URL is not set; skipping STORY-060 roster PostgreSQL acceptance workflow"
+        ]
+      },
+      {
+        "test": "TestExamRosterFreezeBlocksUpdateAndDirectMutationE2EWithPostgresTestDatabase",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_story060_roster_test.go:133: EDUGRADE_E2E_DATABASE_URL is not set; skipping exam roster freeze PostgreSQL acceptance workflow"
+        ]
+      },
+      {
+        "test": "TestStory060FiveHundredStudentRosterScaleE2EWithPostgresTestDatabase",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_story060_roster_test.go:178: EDUGRADE_E2E_DATABASE_URL is not set; skipping STORY-060 roster scale acceptance workflow"
+        ]
+      },
+      {
+        "test": "TestStory060MultiPageInsertionMissingPageAndPrintPackageE2EWithPostgresTestDatabase",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_story060_sheet_identity_test.go:21: EDUGRADE_E2E_DATABASE_URL is not set; skipping STORY-060 multi-page PostgreSQL acceptance workflow"
+        ]
+      },
+      {
+        "test": "TestStory060StudentSheetIdentityE2EWithPostgresTestDatabase",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_story060_sheet_identity_test.go:460: EDUGRADE_E2E_DATABASE_URL is not set; skipping STORY-060 sheet identity PostgreSQL acceptance workflow"
+        ]
+      },
+      {
+        "test": "TestStory061ActiveCropResolverE2EWithPostgresTestDatabase",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_story061_active_crop_resolver_test.go:24: EDUGRADE_E2E_DATABASE_URL is not set; skipping STORY-061 active crop resolver PostgreSQL workflow"
+        ]
+      },
+      {
+        "test": "TestStory061GovernanceFoundationE2EWithPostgresTestDatabase",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_story061_governance_test.go:20: EDUGRADE_E2E_DATABASE_URL is not set; skipping STORY-061 PostgreSQL E2E"
+        ]
+      },
+      {
+        "test": "TestSubjectiveCommandRecoveryWithPostgresTestDatabase",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_subjective_command_test.go:18: dedicated PostgreSQL required"
+        ]
+      },
+      {
+        "test": "TestPostgresSubjectivePanelAndEvaluationRoundTrip",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_subjective_panel_test.go:24: EDUGRADE_E2E_DATABASE_URL is required"
+        ]
+      },
+      {
+        "test": "TestSubjectiveUsageLedgerPostgresTestDatabase",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_subjective_usage_ledger_test.go:16: EDUGRADE_E2E_DATABASE_URL is required for PostgreSQL usage ledger regression"
+        ]
+      },
+      {
+        "test": "TestExamTemplateBindingE2EWithPostgresTestDatabase",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_template_routing_test.go:18: EDUGRADE_E2E_DATABASE_URL is not set; skipping PostgreSQL template binding workflow"
+        ]
+      },
+      {
+        "test": "TestWorkerRuntimeReliabilityWithPostgresTestDatabase",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "e2e_worker_runtime_reliability_test.go:22: EDUGRADE_E2E_DATABASE_URL is not set; skipping Worker Runtime PostgreSQL reliability tests"
+        ]
+      },
+      {
+        "test": "TestPostgresManagedConfigProbeTimestamps",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "managed_config_postgres_test.go:18: EDUGRADE_E2E_DATABASE_URL is required"
+        ]
+      },
+      {
+        "test": "TestPostgresMigrationUpgradeFrom000154",
+        "category": "postgres_environment_missing",
+        "reasons": [
+          "migration_upgrade_test.go:24: EDUGRADE_E2E_DATABASE_URL is required for PostgreSQL migration upgrade test"
+        ]
+      }
+    ],
+    "limitations": "61项真实PostgreSQL环境条件跳过，1项辅助子进程入口跳过；均不转换为通过。source manifest仅server目录，后续最终扫描/Go6包记录补充其它生产源证据。"
+  },
+  "model_existing_evidence": {
+    "report": "go-modelgovernance-test-execution.json",
+    "true_static_compilation_scope_files": 117,
+    "production_dependency_sha_changes": [],
+    "no_current_rerun_required_confirmed_by_root": true,
+    "manifest_limitation": "旧1002清单过度展开依赖包自身*_test.go；实际根包测试+依赖生产源码117文件均保持，mathunderstanding不被真实导入。",
+    "same_pass_and_skip_ids": true,
+    "same_complete_trace_sequences": true,
+    "runs": [
+      {
+        "name": "baseline-overlay",
+        "passed_ids": [
+          "TestAgentClientMessagesNeverBecomeTrustedToolCalls",
+          "TestAgentStreamCancellationRetainsReasoningBeforeContent",
+          "TestAgentStreamKeepsFrameAndFinishSemantics",
+          "TestAgentStreamKeepsFrameAndFinishSemantics/compatible_null_finish_remains_literal",
+          "TestAgentStreamKeepsFrameAndFinishSemantics/done_prevents_trailing_frames",
+          "TestAgentStreamKeepsFrameAndFinishSemantics/multiline_event_ends_at_EOF",
+          "TestAgentStreamKeepsFrameAndFinishSemantics/native_null_finish_preserves_prior_finish",
+          "TestAgentStreamRetainsReadErrorBeforeUnterminatedFrame",
+          "TestAgentTranscriptCountsArgumentsAndReasoningWithinSharedBudget",
+          "TestAgentTranscriptCountsArgumentsAndReasoningWithinSharedBudget/exact_shared_byte_budget",
+          "TestAgentTranscriptCountsArgumentsAndReasoningWithinSharedBudget/one_byte_over_shared_budget",
+          "TestAgentTranscriptKeepsCompleteGroupsAndReusableCallIDs",
+          "TestAgentTranscriptKeepsCompleteGroupsAndReusableCallIDs/completed_call_IDs_may_be_reused",
+          "TestAgentTranscriptKeepsCompleteGroupsAndReusableCallIDs/duplicate_calls_in_one_group_remain_invalid",
+          "TestAgentTranscriptKeepsCompleteGroupsAndReusableCallIDs/duplicate_result_cannot_finish_another_call",
+          "TestAgentTranscriptKeepsCompleteGroupsAndReusableCallIDs/new_turn_cannot_skip_a_pending_result",
+          "TestAgentTranscriptKeepsCompleteGroupsAndReusableCallIDs/results_may_arrive_in_reverse_order",
+          "TestAgentTranscriptRequiresMatchingToolResults",
+          "TestApprovedPanelScopeRequiresEvidenceAndValidRoleBindings",
+          "TestAssessSandboxAdmissionAllowsBoundedSyntheticShadowText",
+          "TestAssessSandboxAdmissionBlockersAreStableAndContainNoSecretFacts",
+          "TestAssessSandboxAdmissionFailsClosedForMissingComplianceAndCredentials",
+          "TestAssessSandboxAdmissionRejectsCompatibleOrMismatchedNativeInventory",
+          "TestAssessSandboxAdmissionRejectsNonShadowAndUnboundedApproval",
+          "TestAssessSandboxAdmissionRequiresSeparateImageApproval",
+          "TestAssessStoredSandboxAdmissionRequiresActiveBoundApproval",
+          "TestAutoManagedAPIConfigChecksConnectionBeforeSavingAsBackup",
+          "TestAutoManagedAPIConfigHandlerReturnsProviderChoicesBeforeProbingUnknownModel",
+          "TestAutoManagedAPIConfigHandlerReturnsValidationAndNeverEchoesKey",
+          "TestAutoManagedAPIConfigHandlerReusesKeyWithoutEchoingIt",
+          "TestAutoManagedAPIConfigNeverSavesFailedOrUnknownConfiguration",
+          "TestAutoManagedAPIConfigReusesSchoolCredentialForAnotherModel",
+          "TestBatch6ManagedChatRuneBudgetAndPartialMutation",
+          "TestBatch6ManagedDeleteDependencyOrderAndAtomicity",
+          "TestBatch6ManagedDeleteDependencyOrderAndAtomicity/foreign_inactive_expired_revoked_do_not_block",
+          "TestBatch6ManagedDeleteDependencyOrderAndAtomicity/model_approval",
+          "TestBatch6ManagedDeleteDependencyOrderAndAtomicity/policy",
+          "TestBatch6ManagedDeleteDependencyOrderAndAtomicity/role_wins_over_approval_and_policy",
+          "TestBatch6ManagedDeleteDependencyOrderAndAtomicity/sandbox_approval",
+          "TestBatch6ManagedInputNormalizationAndErrorOrder",
+          "TestBatch6ManagedInputNormalizationAndErrorOrder/http://example.test",
+          "TestBatch6ManagedInputNormalizationAndErrorOrder/https://example.test#fragment",
+          "TestBatch6ManagedInputNormalizationAndErrorOrder/https://example.test?a=1",
+          "TestBatch6ManagedInputNormalizationAndErrorOrder/https://user@example.test",
+          "TestBatch6ManagedProbeCapabilityPersistence",
+          "TestBatch6ManagedProbeCapabilityPersistence/quick",
+          "TestBatch6ManagedProbeCapabilityPersistence/reused",
+          "TestBatch6ManagedProbeCapabilityPersistence/transient",
+          "TestBatch6ManagedStreamReaderOrdering",
+          "TestBatch6ManagedStreamReaderOrdering/cancel_delivered_by_callback",
+          "TestBatch6ManagedStreamReaderOrdering/compat_keeps_finish_across_empty_choice_and_malformed_usage",
+          "TestBatch6ManagedStreamReaderOrdering/compat_malformed_empty_done_and_trailing_ignored",
+          "TestBatch6ManagedStreamReaderOrdering/content_callback_error_stops_done",
+          "TestBatch6ManagedStreamReaderOrdering/done_callback_error_propagated",
+          "TestBatch6ManagedStreamReaderOrdering/done_ignores_later_reader_error",
+          "TestBatch6ManagedStreamReaderOrdering/empty_response",
+          "TestBatch6ManagedStreamReaderOrdering/final_line_without_newline",
+          "TestBatch6ManagedStreamReaderOrdering/native_empty_finish_replaces_prior_value",
+          "TestBatch6ManagedStreamReaderOrdering/native_prefers_output_and_retains_zero_total",
+          "TestBatch6ManagedStreamReaderOrdering/reader_error_after_frame_prevents_done",
+          "TestBatch6ManagedStreamReaderOrdering/reasoning_callback_error_stops_content",
+          "TestBatch6ManagedStreamReaderOrdering/whitespace_content_empty",
+          "TestBatch6ManagedUpdateProbesBeforeSaving",
+          "TestBatch6ManagedUpdateProbesBeforeSaving/backup_success_quick_only",
+          "TestBatch6ManagedUpdateProbesBeforeSaving/default_failure_retains_prior_secret",
+          "TestBatch6ManagedUpdateProbesBeforeSaving/default_success_full_capability",
+          "TestBatch6ProductionValidationOrder",
+          "TestBatch6ProductionValidationOrder/active_unsupported_resolver_before_bad_deployment",
+          "TestBatch6ProductionValidationOrder/all_providers_before_deployments_and_disabled_skipped",
+          "TestBatch6ProductionValidationOrder/metadata_before_secret_and_deployments",
+          "TestBatch6ProviderExplicitChoiceDoesNotFallBack",
+          "TestBatch6RoleResolutionKeepsFirstEligibleBinding",
+          "TestBatch6RuntimePromptValidationBoundaries",
+          "TestBatch6RuntimePromptValidationBoundaries/duplicate_component",
+          "TestBatch6RuntimePromptValidationBoundaries/empty_component",
+          "TestBatch6RuntimePromptValidationBoundaries/length_only_not_cryptographic_validation",
+          "TestBatch6RuntimePromptValidationBoundaries/mutable",
+          "TestBatch6RuntimePromptValidationBoundaries/required_role_absent",
+          "TestBatch6RuntimePromptValidationBoundaries/short_component_hash",
+          "TestBatch6RuntimePromptValidationBoundaries/trailing_object",
+          "TestBatch6RuntimePromptValidationBoundaries/trailing_whitespace",
+          "TestBatch6RuntimePromptValidationBoundaries/unknown_subject",
+          "TestBatch6RuntimePromptValidationBoundaries/wrong_activation",
+          "TestBatch6SandboxAggregatesAndBoundsLifetime",
+          "TestCapabilityProbeRecordsGeneratedUsage",
+          "TestCreateProviderNeverEchoesOrAuditsSecretReference",
+          "TestCreateProviderRejectsUnknownFieldsAndExternalActivation",
+          "TestCredentialCipherUsesTenantAndConfigBoundAuthenticatedEncryption",
+          "TestDefaultManagedAPIResolutionIsTenantScoped",
+          "TestDefaultPolicyCannotRouteToExternalDeployment",
+          "TestEnvironmentSecretResolverDoesNotClaimUnconfiguredManagers",
+          "TestEnvironmentSecretResolverProbesWithoutReturningSecret",
+          "TestEnvironmentSecretResolverRejectsTraversalAndPlaintext",
+          "TestEvaluationCandidateRefactorPreservesErrorOrderAndFailureState",
+          "TestEvaluationCandidateRefactorPreservesErrorOrderAndFailureState/inventory_before_duplicate",
+          "TestEvaluationCandidateRefactorPreservesErrorOrderAndFailureState/managed_image_not_supported",
+          "TestEvaluationCandidateRefactorPreservesErrorOrderAndFailureState/measurements_before_inventory",
+          "TestEvaluationCandidateRefactorPreservesErrorOrderAndFailureState/state_before_invalid_measurements",
+          "TestEvaluationCandidateRefactorPreservesErrorOrderAndFailureState/tenant_before_state",
+          "TestEvaluationCandidateRefactorPreservesErrorOrderAndFailureState/valid_duplicate",
+          "TestEvaluationHandlerRejectsUnknownFields",
+          "TestEvaluationHandlersUseStrictJSONAndAuditLifecycle",
+          "TestEvaluationValidationSeparatesFixtureFromQualityEvidence",
+          "TestExternalDeploymentRequiresEveryAuthorizationLayer",
+          "TestFailedCapabilityProbeKeepsConfigAndPersistsOnlySafeDiagnostic",
+          "TestHTTPAgentAppliesOnlyKnownThinkingCompatibilityFields",
+          "TestHTTPAgentAppliesOnlyKnownThinkingCompatibilityFields/compatible_qwen_hybrid",
+          "TestHTTPAgentAppliesOnlyKnownThinkingCompatibilityFields/deepseek_hybrid",
+          "TestHTTPAgentAppliesOnlyKnownThinkingCompatibilityFields/deepseek_reasoner",
+          "TestHTTPAgentAppliesOnlyKnownThinkingCompatibilityFields/native_qwen_hybrid",
+          "TestHTTPAgentAppliesOnlyKnownThinkingCompatibilityFields/other_compatible_provider",
+          "TestHTTPAgentFinalStreamDetectsDisconnectTruncationAndUnexpectedTools",
+          "TestHTTPAgentFinalStreamDetectsDisconnectTruncationAndUnexpectedTools/disconnect",
+          "TestHTTPAgentFinalStreamDetectsDisconnectTruncationAndUnexpectedTools/tool_call_despite_none",
+          "TestHTTPAgentFinalStreamDetectsDisconnectTruncationAndUnexpectedTools/truncated",
+          "TestHTTPAgentFinalStreamForBothAdapters",
+          "TestHTTPAgentFinalStreamForBothAdapters/dashscope_native",
+          "TestHTTPAgentFinalStreamForBothAdapters/openai_compatible",
+          "TestHTTPAgentNativeToolRoundTripForBothAdapters",
+          "TestHTTPAgentNativeToolRoundTripForBothAdapters/dashscope_native",
+          "TestHTTPAgentNativeToolRoundTripForBothAdapters/openai_compatible",
+          "TestHTTPAgentProviderFailuresDoNotExposeBodyOrSilentlyFallback",
+          "TestHTTPAgentProviderFailuresDoNotExposeBodyOrSilentlyFallback/native_tools_unsupported",
+          "TestHTTPAgentProviderFailuresDoNotExposeBodyOrSilentlyFallback/rate_limit",
+          "TestHTTPAgentProviderFailuresDoNotExposeBodyOrSilentlyFallback/tools_unsupported",
+          "TestHTTPAgentProviderFailuresDoNotExposeBodyOrSilentlyFallback/unrelated_bad_request",
+          "TestHTTPAgentRejectsMalformedOrTruncatedToolOutput",
+          "TestHTTPAgentRejectsMalformedOrTruncatedToolOutput/array_arguments",
+          "TestHTTPAgentRejectsMalformedOrTruncatedToolOutput/duplicate_call_identity",
+          "TestHTTPAgentRejectsMalformedOrTruncatedToolOutput/malformed_arguments",
+          "TestHTTPAgentRejectsMalformedOrTruncatedToolOutput/truncated_answer",
+          "TestHTTPAgentRejectsMalformedOrTruncatedToolOutput/unsupported_tool_type",
+          "TestHTTPAgentRetainsHTTPSAndRedirectRestrictions",
+          "TestHTTPAgentStreamStopsOnConsumerCancellation",
+          "TestHTTPManagedAPIProberAllowsGenerationBeyondQuickTimeout",
+          "TestHTTPManagedAPIProberAllowsGenerationBeyondQuickTimeout/delayed_body",
+          "TestHTTPManagedAPIProberAllowsGenerationBeyondQuickTimeout/delayed_headers",
+          "TestHTTPManagedAPIProberBoundsGenerationWithoutRetry",
+          "TestHTTPManagedAPIProberBoundsGenerationWithoutRetry/waiting_for_body",
+          "TestHTTPManagedAPIProberBoundsGenerationWithoutRetry/waiting_for_headers",
+          "TestHTTPManagedAPIProberCancelsGenerationWithCaller",
+          "TestHTTPManagedAPIProberChecksOpenAICompatibleModelAndStructuredOutput",
+          "TestHTTPManagedAPIProberClassifiesUnsupportedJSONMode",
+          "TestHTTPManagedAPIProberDoesNotReuseOlderCapabilityVersion",
+          "TestHTTPManagedAPIProberFailsClosedOnInvalidStructuredCapability",
+          "TestHTTPManagedAPIProberFailsClosedOnInvalidStructuredCapability/invalid_JSON",
+          "TestHTTPManagedAPIProberFailsClosedOnInvalidStructuredCapability/schema_mismatch",
+          "TestHTTPManagedAPIProberFailsClosedOnInvalidStructuredCapability/truncated_response",
+          "TestHTTPManagedAPIProberRejectsCredentialAndUnknownModelBeforeGeneration",
+          "TestHTTPManagedAPIProberRejectsCredentialAndUnknownModelBeforeGeneration/forbidden_key",
+          "TestHTTPManagedAPIProberRejectsCredentialAndUnknownModelBeforeGeneration/model_missing",
+          "TestHTTPManagedAPIProberRejectsCredentialAndUnknownModelBeforeGeneration/unauthorized_key",
+          "TestHTTPManagedAPIProberRejectsMalformedOrEmptyCapabilityEnvelope",
+          "TestHTTPManagedAPIProberRejectsMalformedOrEmptyCapabilityEnvelope/empty_choices",
+          "TestHTTPManagedAPIProberRejectsMalformedOrEmptyCapabilityEnvelope/malformed_envelope",
+          "TestHTTPManagedAPIProberRejectsOversizedModelListBeforeGeneration",
+          "TestHTTPManagedAPIProberSeparatesQuickAndCapabilityTimeouts",
+          "TestHTTPManagedAPIProberSeparatesQuickAndCapabilityTimeouts/custom_quick",
+          "TestHTTPManagedAPIProberSeparatesQuickAndCapabilityTimeouts/default",
+          "TestHTTPManagedAPIProberSeparatesQuickAndCapabilityTimeouts/invalid_excessive",
+          "TestHTTPManagedAPIProberSeparatesQuickAndCapabilityTimeouts/invalid_negative",
+          "TestHTTPManagedAPIProberUsesBoundedDashScopeNativeCapabilityRequest",
+          "TestHTTPManagedAPIQuickProbeKeepsShortTimeout",
+          "TestHTTPManagedAPIQuickProbeListsModelsWithoutGenerating",
+          "TestHTTPManagedAPIQuickProbeReadsBodyBeforeCancelingBudget",
+          "TestHTTPRuntimePromptSourceFailsClosedOnInvalidSnapshot",
+          "TestHTTPRuntimePromptSourceReadsAuthenticatedRuntimeSnapshot",
+          "TestLegacyPanelMigrationKeepsRecordedChecksumAndRestoresGuards",
+          "TestLocalDeploymentRemainsAvailableWithoutExternalAuthorization",
+          "TestManagedAPIConfigCannotPromoteDisabledUnverifiedModelToDefault",
+          "TestManagedAPIConfigDeleteRequiresSwitchingAwayFromCurrent",
+          "TestManagedAPIConfigHandlerPromotesPreviouslyVerifiedBackupWithoutNewGeneration",
+          "TestManagedAPIConfigHandlerRejectsUnverifiedBackupAsCurrent",
+          "TestManagedAPIConfigLegacyCreateAlsoValidatesBeforeSaving",
+          "TestManagedAPIConfigSoftDeleteRejectsActivePanelBinding",
+          "TestManagedAPIHandlersAssignPerTenantWithoutEchoingKey",
+          "TestManagedAPIHandlersRejectCrossTenantSchoolAdmin",
+          "TestManagedAPIModelDiscoveryCanReuseSavedCredential",
+          "TestManagedAPIModelDiscoveryFailureAuditContainsOnlySafeDiagnostics",
+          "TestManagedAPIModelDiscoveryHandlerReusesSavedKeyWithoutEchoingIt",
+          "TestManagedAPIModelDiscoveryRequiresProviderWhenModelNameIsEmpty",
+          "TestManagedAPIModelDiscoveryUsesSelectedProviderWithoutModelName",
+          "TestManagedAPIProbeDefaultsToZeroGenerationQuickMode",
+          "TestManagedApprovalUsesModelConfigAndFrozenScope",
+          "TestManagedCapabilityDiagnosticBoundsAndSanitizesPreview",
+          "TestManagedCapabilityPayloadBoundsOutputAndDisablesOptionalThinking",
+          "TestManagedChatLimitsFiveConcurrentRequests",
+          "TestManagedChatRecordsProviderUsageOncePerRequest",
+          "TestManagedChatRejectsUnsafeOrOversizedMessageLists",
+          "TestManagedChatStreamEmitsReasoningAndAnswer",
+          "TestManagedChatUsesTenantDefaultWithoutExposingCredential",
+          "TestManagedConfigConnectionChangeClearsOldProbeEvidence",
+          "TestManagedEvaluationCandidatesUseTenantConfigAndFrozenIdentity",
+          "TestManagedModelMultiModelMigrationKeepsTenantAndDefaultGuards",
+          "TestManagedModelMultipleCredentialsMigrationKeepsDefaultGuard",
+          "TestManagedModelTransientProbeMigrationPreservesDefinitiveFailures",
+          "TestManagedOpenAIProbeUsagePreservesTokenBreakdown",
+          "TestManagedProbeClassifiesProviderFailures",
+          "TestManagedProbeClassifiesStructuredOutputPrecisely",
+          "TestManagedProbeEndpointAndPublicIPGuards",
+          "TestManagedProbePersistenceClassifiesTransientAndDeterministicErrors",
+          "TestManagedProbePersistenceClassifiesTransientAndDeterministicErrors/credential_invalid",
+          "TestManagedProbePersistenceClassifiesTransientAndDeterministicErrors/model_not_found",
+          "TestManagedProbePersistenceClassifiesTransientAndDeterministicErrors/provider_timeout",
+          "TestManagedProbePersistenceClassifiesTransientAndDeterministicErrors/provider_unavailable",
+          "TestManagedProbeRejectsResultForConfigurationChangedDuringRequest",
+          "TestManagedProbeTransientFailureRetainsLastSuccessAndCapabilityEvidence",
+          "TestManagedProductionReadinessRequiresCredentialCipher",
+          "TestManagedProviderRejectsMixedSpecialDNSBeforeAnyDial",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/0.1.2.3",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/100.127.255.254",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/100.64.0.1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/100:0:0:1::1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/100::1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/192.0.0.9",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/192.0.2.1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/192.175.48.1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/192.31.196.1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/192.52.193.1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/192.88.99.2",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/198.18.0.1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/198.19.255.254",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/198.51.100.1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/2001:1::1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/2001:20::1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/2001:2::1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/2001::1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/2001:db8::1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/2002:a00:1::1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/203.0.113.1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/240.0.0.1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/255.255.255.255",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/2620:4f:8000::1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/3fff::1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/4000::1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/5f00::1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/64:ff9b:1::a00:1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/64:ff9b::a00:1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/::",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/::ffff:100.64.0.1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/::ffff:127.0.0.1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/fc00::1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/fe80::1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/ff02::1",
+          "TestManagedPublicAddressFallbackKeepsPrivateAddressGuard",
+          "TestManagedQuickProbeNeverFallsBackToGeneratedRequest",
+          "TestManagedReadOnlyProbeDoesNotRetryResponseOrCertificateError",
+          "TestManagedReadOnlyProbeRetriesNetworkFailureOnce",
+          "TestManagedRoutingRefactorFiltersBeforeChoosingStableIdentity",
+          "TestMemoryEvaluationLifecycleIsTenantBoundImmutableAndRequiresLocalBaseline",
+          "TestMemorySandboxApprovalIsTenantBoundImmutableAndRevocable",
+          "TestModelApprovalRefactorPreservesEvidenceAndCandidateErrorOrder",
+          "TestModelApprovalRefactorPreservesEvidenceAndCandidateErrorOrder/candidate_before_duplicate_decision",
+          "TestModelApprovalRefactorPreservesEvidenceAndCandidateErrorOrder/draft_before_missing_candidate",
+          "TestModelApprovalRefactorPreservesEvidenceAndCandidateErrorOrder/fixture_evidence_before_candidate",
+          "TestModelApprovalRefactorPreservesEvidenceAndCandidateErrorOrder/invalid_input_before_missing_run",
+          "TestModelApprovalRefactorPreservesEvidenceAndCandidateErrorOrder/tenant_before_evidence",
+          "TestModelApprovalRefactorPreservesEvidenceAndCandidateErrorOrder/valid_duplicate_decision",
+          "TestModelApprovalRefactorPreservesRawDecisionReferenceComparison",
+          "TestModelApprovalRefactorRetainsFrozenVersionsAndDecisionHistory",
+          "TestModelApprovalRejectsProtocolFixtureAndExpiredDecision",
+          "TestModelApprovalRequiresCompletedAuthorizedEvidenceAndExactVersions",
+          "TestModelRoleBindingMigrationIsScopedAndGoverned",
+          "TestPanelBindingAdminCanDisableUnverifiedModelButCannotActivateIt",
+          "TestPlatformPanelBindingActorMigrationKeepsAuditIdentity",
+          "TestPlatformPanelBindingsAreSchoolScopedAndSeparateFromChatDefault",
+          "TestPlatformRoleBindingHTTPRejectsMissingAndStaleRevision",
+          "TestPolicyAuthorizesOnlyVerifiedModelsFromItsSchool",
+          "TestPolicyRefactorKeepsLastDuplicateEligibilityAndDoesNotRequireConnectionTest",
+          "TestPolicyRefactorKeepsLastDuplicateEligibilityAndDoesNotRequireConnectionTest/last_active",
+          "TestPolicyRefactorKeepsLastDuplicateEligibilityAndDoesNotRequireConnectionTest/last_disabled",
+          "TestPolicyRefactorPreservesValidationOrderAndFailureAtomicity",
+          "TestPolicyRefactorPreservesValidationOrderAndFailureAtomicity/legacy_read_failure",
+          "TestPolicyRefactorPreservesValidationOrderAndFailureAtomicity/legacy_target_before_version",
+          "TestPolicyRefactorPreservesValidationOrderAndFailureAtomicity/managed_read_failure",
+          "TestPolicyRefactorPreservesValidationOrderAndFailureAtomicity/managed_target_before_version",
+          "TestPolicyRefactorPreservesValidationOrderAndFailureAtomicity/mixed_sources_before_inventory",
+          "TestPolicyRefactorPreservesValidationOrderAndFailureAtomicity/policy_before_mixed_sources",
+          "TestPolicyRefactorPreservesValidationOrderAndFailureAtomicity/strict_json_before_tenant",
+          "TestPolicyRefactorPreservesValidationOrderAndFailureAtomicity/tenant_before_policy",
+          "TestPolicyRefactorPreservesValidationOrderAndFailureAtomicity/version_after_empty_sources",
+          "TestPolicyUpdateRequiresKnownDeploymentAndVersion",
+          "TestProductionGateAllowsCompleteUnverifiedNativeProviderMetadata",
+          "TestProductionGateRejectsActiveProviderWithoutInstalledResolver",
+          "TestProductionGateRejectsExternalDeploymentWithoutPricingMeter",
+          "TestProductionGateRejectsWeakConfiguredSecret",
+          "TestProviderRegistryResolvesOfficialModelsWithoutUsingCredential",
+          "TestProviderRejectsPlaintextCredentialAndCompatibilityAdapter",
+          "TestResolvePanelRoleBindingsFailsClosedBeforeListingInvalidRequests",
+          "TestResolvePanelRoleBindingsFailsClosedBeforeListingInvalidRequests/blank_tenant",
+          "TestResolvePanelRoleBindingsFailsClosedBeforeListingInvalidRequests/invalid_stage",
+          "TestResolvePanelRoleBindingsFailsClosedBeforeListingInvalidRequests/invalid_subject",
+          "TestResolvePanelRoleBindingsFailsClosedBeforeListingInvalidRequests/nil_store",
+          "TestResolvePanelRoleBindingsFailsClosedBeforeListingInvalidRequests/oversized_archetype",
+          "TestResolvePanelRoleBindingsPrefersExactArchetypeBeforeWildcard",
+          "TestResolvePanelRoleBindingsPropagatesStoreErrors",
+          "TestResolvePanelRoleBindingsRequiresCompleteGovernedRolesAndIndependentArbiter",
+          "TestResolvePanelRoleBindingsRequiresCompleteGovernedRolesAndIndependentArbiter/arbiter_reuses_primary_A_model",
+          "TestResolvePanelRoleBindingsRequiresCompleteGovernedRolesAndIndependentArbiter/arbiter_reuses_primary_B_model",
+          "TestResolvePanelRoleBindingsRequiresCompleteGovernedRolesAndIndependentArbiter/arbiter_strength_below_both_primaries",
+          "TestResolvePanelRoleBindingsRequiresCompleteGovernedRolesAndIndependentArbiter/arbiter_strength_equals_primary_A",
+          "TestResolvePanelRoleBindingsRequiresCompleteGovernedRolesAndIndependentArbiter/arbiter_strength_equals_primary_B",
+          "TestResolvePanelRoleBindingsRequiresCompleteGovernedRolesAndIndependentArbiter/disabled_arbiter",
+          "TestResolvePanelRoleBindingsRequiresCompleteGovernedRolesAndIndependentArbiter/missing_arbiter",
+          "TestResolvePanelRoleBindingsRequiresCompleteGovernedRolesAndIndependentArbiter/missing_primary_A",
+          "TestResolvePanelRoleBindingsRequiresCompleteGovernedRolesAndIndependentArbiter/missing_primary_B",
+          "TestResolvePanelRoleBindingsRequiresCompleteGovernedRolesAndIndependentArbiter/unverified_primary_B_model",
+          "TestResolvePanelRoleBindingsUsesCanonicalScopeAndStrongerDistinctArbiter",
+          "TestReusedCredentialSavedIsTheOneActuallyProbed",
+          "TestRoleBindingConcurrentCreateAndUpdateHaveSingleWinner",
+          "TestRoleBindingMissingOrInvalidPreconditionNeverWrites",
+          "TestRoleBindingRevisionNormalizationMatchesPostgresUUIDComparison",
+          "TestRoleBindingRevisionRejectsABAAndCannotCreateFromUpdateToken",
+          "TestRoleBindingStaleEditorAndRepeatedTokenCannotOverwrite",
+          "TestRoutingRefactorPreservesValidationOrderAndProviderOverrides",
+          "TestRoutingRefactorPreservesValidationOrderAndProviderOverrides/all_providers_validated",
+          "TestRoutingRefactorPreservesValidationOrderAndProviderOverrides/last_duplicate_provider_wins",
+          "TestRoutingRefactorPreservesValidationOrderAndProviderOverrides/modality_before_provider",
+          "TestRoutingRefactorPreservesValidationOrderAndProviderOverrides/policy_before_provider",
+          "TestRoutingRefactorSelectsSortedEligibleDeploymentWithoutMutatingInput",
+          "TestSandboxApprovalHandlerRejectsUnknownAndIncompleteFacts",
+          "TestSandboxApprovalHandlersUseStrictJSONAuditAndTenantScope",
+          "TestSandboxApprovalRefactorRequiresRevocationEvenAfterExpiry",
+          "TestSandboxApprovalRefactorRequiresRevocationEvenAfterExpiry/legacy",
+          "TestSandboxApprovalRefactorRequiresRevocationEvenAfterExpiry/managed",
+          "TestSandboxApprovalRefactorSerializesConcurrentDuplicateCreation",
+          "TestSandboxApprovalValidationAndEvidence",
+          "TestSelectManagedModelAuthorizationBoundaries",
+          "TestSelectManagedModelAuthorizationBoundaries/capability_test_failed",
+          "TestSelectManagedModelAuthorizationBoundaries/connection_test_failed",
+          "TestSelectManagedModelAuthorizationBoundaries/external_disabled",
+          "TestSelectManagedModelAuthorizationBoundaries/image_export_disabled",
+          "TestSelectManagedModelAuthorizationBoundaries/image_modality_absent",
+          "TestSelectManagedModelAuthorizationBoundaries/local_only",
+          "TestSelectManagedModelAuthorizationBoundaries/not_allowed",
+          "TestSelectManagedModelAuthorizationBoundaries/text_export_disabled",
+          "TestSelectManagedModelBreaksProviderAndNameTiesByModelID",
+          "TestSelectManagedModelFailsClosedForDisabledOrUnverifiedConfig",
+          "TestSelectManagedModelRejectsInvalidRequestAndSelectsStableAllowedModel",
+          "TestStoreBoundaryRejectsUnverifiedExternalActivation",
+          "TestTenantAdminCannotReadAnotherTenantGovernance",
+          "TestUpdatePolicyRejectsMixedLegacyAndManagedModels",
+          "TestUpdatePolicyRejectsUnavailableManagedModel",
+          "TestUpdatePolicyRejectsUnavailableManagedModel/capability_failed",
+          "TestUpdatePolicyRejectsUnavailableManagedModel/disabled",
+          "TestUpdatePolicyRejectsUnavailableManagedModel/missing",
+          "TestUpdatePolicyRejectsUnavailableManagedModel/other_school",
+          "TestUpdatePolicyRejectsUnavailableManagedModel/ready",
+          "TestUpdatePolicyRejectsUnavailableManagedModel/stale_probe",
+          "TestValidateManagedProductionCandidate",
+          "TestValidateManagedProductionCandidate/blank_API_key",
+          "TestValidateManagedProductionCandidate/decrypt_failure",
+          "TestValidateManagedProductionCandidate/deleted",
+          "TestValidateManagedProductionCandidate/disabled",
+          "TestValidateManagedProductionCandidate/empty_API_key",
+          "TestValidateManagedProductionCandidate/failed_capability",
+          "TestValidateManagedProductionCandidate/failed_connection",
+          "TestValidateManagedProductionCandidate/http_endpoint",
+          "TestValidateManagedProductionCandidate/invalid_URL",
+          "TestValidateManagedProductionCandidate/missing_host",
+          "TestValidateManagedProductionCandidate/missing_model_version",
+          "TestValidateManagedProductionCandidate/missing_region",
+          "TestValidateManagedProductionCandidate/ready",
+          "TestValidateManagedProductionCandidate/stale_probe",
+          "TestValidateManagedProductionCandidate/untested_capability"
+        ],
+        "skipped_ids": [],
+        "complete_trace_by_test": {
+          "TestBatch6ManagedStreamReaderOrdering/compat_malformed_empty_done_and_trailing_ignored": [
+            "[{\"type\":\"reasoning\",\"delta\":\"think\"},{\"type\":\"content\",\"delta\":\" answer \"},{\"type\":\"done\",\"completion\":{\"message\":{\"role\":\"assistant\",\"content\":\"answer\",\"reasoning_content\":\"think\"},\"model_name\":\"model\",\"display_name\":\"fixture\",\"provider_key\":\"fixture\",\"finish_reason\":\"stop\",\"usage\":{\"input_tokens\":2,\"cached_input_tokens\":0,\"output_tokens\":3,\"reasoning_tokens\":0,\"total_tokens\":5}}}]"
+          ],
+          "TestBatch6ManagedStreamReaderOrdering/native_prefers_output_and_retains_zero_total": [
+            "[{\"type\":\"reasoning\",\"delta\":\"reason\"},{\"type\":\"content\",\"delta\":\"native\"},{\"type\":\"done\",\"completion\":{\"message\":{\"role\":\"assistant\",\"content\":\"native\",\"reasoning_content\":\"reason\"},\"model_name\":\"model\",\"display_name\":\"fixture\",\"provider_key\":\"fixture\",\"finish_reason\":\"stop\",\"usage\":{\"input_tokens\":2,\"cached_input_tokens\":0,\"output_tokens\":3,\"reasoning_tokens\":0,\"total_tokens\":0}}}]"
+          ],
+          "TestBatch6ManagedStreamReaderOrdering/compat_keeps_finish_across_empty_choice_and_malformed_usage": [
+            "[{\"type\":\"reasoning\",\"delta\":\"think\"},{\"type\":\"content\",\"delta\":\" answer \"},{\"type\":\"content\",\"delta\":\"next\"},{\"type\":\"done\",\"completion\":{\"message\":{\"role\":\"assistant\",\"content\":\"answer next\",\"reasoning_content\":\"think\"},\"model_name\":\"model\",\"display_name\":\"fixture\",\"provider_key\":\"fixture\",\"finish_reason\":\"stop\",\"usage\":{\"input_tokens\":2,\"cached_input_tokens\":0,\"output_tokens\":3,\"reasoning_tokens\":0,\"total_tokens\":5}}}]"
+          ],
+          "TestBatch6ManagedStreamReaderOrdering/native_empty_finish_replaces_prior_value": [
+            "[{\"type\":\"reasoning\",\"delta\":\"reason\"},{\"type\":\"content\",\"delta\":\"native\"},{\"type\":\"content\",\"delta\":\"next\"},{\"type\":\"done\",\"completion\":{\"message\":{\"role\":\"assistant\",\"content\":\"nativenext\",\"reasoning_content\":\"reason\"},\"model_name\":\"model\",\"display_name\":\"fixture\",\"provider_key\":\"fixture\",\"usage\":{\"input_tokens\":2,\"cached_input_tokens\":0,\"output_tokens\":3,\"reasoning_tokens\":0,\"total_tokens\":0}}}]"
+          ],
+          "TestBatch6ManagedStreamReaderOrdering/reasoning_callback_error_stops_content": [
+            "[{\"type\":\"reasoning\",\"delta\":\"think\"}]"
+          ],
+          "TestBatch6ManagedStreamReaderOrdering/content_callback_error_stops_done": [
+            "[{\"type\":\"reasoning\",\"delta\":\"think\"},{\"type\":\"content\",\"delta\":\" answer \"}]"
+          ],
+          "TestBatch6ManagedStreamReaderOrdering/done_callback_error_propagated": [
+            "[{\"type\":\"reasoning\",\"delta\":\"think\"},{\"type\":\"content\",\"delta\":\" answer \"},{\"type\":\"done\",\"completion\":{\"message\":{\"role\":\"assistant\",\"content\":\"answer\",\"reasoning_content\":\"think\"},\"model_name\":\"model\",\"display_name\":\"fixture\",\"provider_key\":\"fixture\",\"finish_reason\":\"stop\",\"usage\":{\"input_tokens\":2,\"cached_input_tokens\":0,\"output_tokens\":3,\"reasoning_tokens\":0,\"total_tokens\":5}}}]"
+          ],
+          "TestBatch6ManagedStreamReaderOrdering/cancel_delivered_by_callback": [
+            "[{\"type\":\"reasoning\",\"delta\":\"think\"}]"
+          ],
+          "TestBatch6ManagedStreamReaderOrdering/reader_error_after_frame_prevents_done": [
+            "[{\"type\":\"reasoning\",\"delta\":\"think\"},{\"type\":\"content\",\"delta\":\" answer \"}]"
+          ],
+          "TestBatch6ManagedStreamReaderOrdering/done_ignores_later_reader_error": [
+            "[{\"type\":\"reasoning\",\"delta\":\"think\"},{\"type\":\"content\",\"delta\":\" answer \"},{\"type\":\"done\",\"completion\":{\"message\":{\"role\":\"assistant\",\"content\":\"answer\",\"reasoning_content\":\"think\"},\"model_name\":\"model\",\"display_name\":\"fixture\",\"provider_key\":\"fixture\",\"finish_reason\":\"stop\",\"usage\":{\"input_tokens\":2,\"cached_input_tokens\":0,\"output_tokens\":3,\"reasoning_tokens\":0,\"total_tokens\":5}}}]"
+          ],
+          "TestBatch6ManagedStreamReaderOrdering/empty_response": [
+            "null"
+          ],
+          "TestBatch6ManagedStreamReaderOrdering/whitespace_content_empty": [
+            "[{\"type\":\"content\",\"delta\":\" \"}]"
+          ],
+          "TestBatch6ManagedStreamReaderOrdering/final_line_without_newline": [
+            "[{\"type\":\"reasoning\",\"delta\":\"think\"},{\"type\":\"content\",\"delta\":\" answer \"},{\"type\":\"done\",\"completion\":{\"message\":{\"role\":\"assistant\",\"content\":\"answer\",\"reasoning_content\":\"think\"},\"model_name\":\"model\",\"display_name\":\"fixture\",\"provider_key\":\"fixture\",\"finish_reason\":\"stop\",\"usage\":{\"input_tokens\":2,\"cached_input_tokens\":0,\"output_tokens\":3,\"reasoning_tokens\":0,\"total_tokens\":5}}}]"
+          ]
+        },
+        "trace_line_count": 13,
+        "raw_jsonl_sha256": "806c17e910d5e0a886f98755df01b8f89e25debc01bd97d1774b46a0671f7cde"
+      },
+      {
+        "name": "current",
+        "passed_ids": [
+          "TestAgentClientMessagesNeverBecomeTrustedToolCalls",
+          "TestAgentStreamCancellationRetainsReasoningBeforeContent",
+          "TestAgentStreamKeepsFrameAndFinishSemantics",
+          "TestAgentStreamKeepsFrameAndFinishSemantics/compatible_null_finish_remains_literal",
+          "TestAgentStreamKeepsFrameAndFinishSemantics/done_prevents_trailing_frames",
+          "TestAgentStreamKeepsFrameAndFinishSemantics/multiline_event_ends_at_EOF",
+          "TestAgentStreamKeepsFrameAndFinishSemantics/native_null_finish_preserves_prior_finish",
+          "TestAgentStreamRetainsReadErrorBeforeUnterminatedFrame",
+          "TestAgentTranscriptCountsArgumentsAndReasoningWithinSharedBudget",
+          "TestAgentTranscriptCountsArgumentsAndReasoningWithinSharedBudget/exact_shared_byte_budget",
+          "TestAgentTranscriptCountsArgumentsAndReasoningWithinSharedBudget/one_byte_over_shared_budget",
+          "TestAgentTranscriptKeepsCompleteGroupsAndReusableCallIDs",
+          "TestAgentTranscriptKeepsCompleteGroupsAndReusableCallIDs/completed_call_IDs_may_be_reused",
+          "TestAgentTranscriptKeepsCompleteGroupsAndReusableCallIDs/duplicate_calls_in_one_group_remain_invalid",
+          "TestAgentTranscriptKeepsCompleteGroupsAndReusableCallIDs/duplicate_result_cannot_finish_another_call",
+          "TestAgentTranscriptKeepsCompleteGroupsAndReusableCallIDs/new_turn_cannot_skip_a_pending_result",
+          "TestAgentTranscriptKeepsCompleteGroupsAndReusableCallIDs/results_may_arrive_in_reverse_order",
+          "TestAgentTranscriptRequiresMatchingToolResults",
+          "TestApprovedPanelScopeRequiresEvidenceAndValidRoleBindings",
+          "TestAssessSandboxAdmissionAllowsBoundedSyntheticShadowText",
+          "TestAssessSandboxAdmissionBlockersAreStableAndContainNoSecretFacts",
+          "TestAssessSandboxAdmissionFailsClosedForMissingComplianceAndCredentials",
+          "TestAssessSandboxAdmissionRejectsCompatibleOrMismatchedNativeInventory",
+          "TestAssessSandboxAdmissionRejectsNonShadowAndUnboundedApproval",
+          "TestAssessSandboxAdmissionRequiresSeparateImageApproval",
+          "TestAssessStoredSandboxAdmissionRequiresActiveBoundApproval",
+          "TestAutoManagedAPIConfigChecksConnectionBeforeSavingAsBackup",
+          "TestAutoManagedAPIConfigHandlerReturnsProviderChoicesBeforeProbingUnknownModel",
+          "TestAutoManagedAPIConfigHandlerReturnsValidationAndNeverEchoesKey",
+          "TestAutoManagedAPIConfigHandlerReusesKeyWithoutEchoingIt",
+          "TestAutoManagedAPIConfigNeverSavesFailedOrUnknownConfiguration",
+          "TestAutoManagedAPIConfigReusesSchoolCredentialForAnotherModel",
+          "TestBatch6ManagedChatRuneBudgetAndPartialMutation",
+          "TestBatch6ManagedDeleteDependencyOrderAndAtomicity",
+          "TestBatch6ManagedDeleteDependencyOrderAndAtomicity/foreign_inactive_expired_revoked_do_not_block",
+          "TestBatch6ManagedDeleteDependencyOrderAndAtomicity/model_approval",
+          "TestBatch6ManagedDeleteDependencyOrderAndAtomicity/policy",
+          "TestBatch6ManagedDeleteDependencyOrderAndAtomicity/role_wins_over_approval_and_policy",
+          "TestBatch6ManagedDeleteDependencyOrderAndAtomicity/sandbox_approval",
+          "TestBatch6ManagedInputNormalizationAndErrorOrder",
+          "TestBatch6ManagedInputNormalizationAndErrorOrder/http://example.test",
+          "TestBatch6ManagedInputNormalizationAndErrorOrder/https://example.test#fragment",
+          "TestBatch6ManagedInputNormalizationAndErrorOrder/https://example.test?a=1",
+          "TestBatch6ManagedInputNormalizationAndErrorOrder/https://user@example.test",
+          "TestBatch6ManagedProbeCapabilityPersistence",
+          "TestBatch6ManagedProbeCapabilityPersistence/quick",
+          "TestBatch6ManagedProbeCapabilityPersistence/reused",
+          "TestBatch6ManagedProbeCapabilityPersistence/transient",
+          "TestBatch6ManagedStreamReaderOrdering",
+          "TestBatch6ManagedStreamReaderOrdering/cancel_delivered_by_callback",
+          "TestBatch6ManagedStreamReaderOrdering/compat_keeps_finish_across_empty_choice_and_malformed_usage",
+          "TestBatch6ManagedStreamReaderOrdering/compat_malformed_empty_done_and_trailing_ignored",
+          "TestBatch6ManagedStreamReaderOrdering/content_callback_error_stops_done",
+          "TestBatch6ManagedStreamReaderOrdering/done_callback_error_propagated",
+          "TestBatch6ManagedStreamReaderOrdering/done_ignores_later_reader_error",
+          "TestBatch6ManagedStreamReaderOrdering/empty_response",
+          "TestBatch6ManagedStreamReaderOrdering/final_line_without_newline",
+          "TestBatch6ManagedStreamReaderOrdering/native_empty_finish_replaces_prior_value",
+          "TestBatch6ManagedStreamReaderOrdering/native_prefers_output_and_retains_zero_total",
+          "TestBatch6ManagedStreamReaderOrdering/reader_error_after_frame_prevents_done",
+          "TestBatch6ManagedStreamReaderOrdering/reasoning_callback_error_stops_content",
+          "TestBatch6ManagedStreamReaderOrdering/whitespace_content_empty",
+          "TestBatch6ManagedUpdateProbesBeforeSaving",
+          "TestBatch6ManagedUpdateProbesBeforeSaving/backup_success_quick_only",
+          "TestBatch6ManagedUpdateProbesBeforeSaving/default_failure_retains_prior_secret",
+          "TestBatch6ManagedUpdateProbesBeforeSaving/default_success_full_capability",
+          "TestBatch6ProductionValidationOrder",
+          "TestBatch6ProductionValidationOrder/active_unsupported_resolver_before_bad_deployment",
+          "TestBatch6ProductionValidationOrder/all_providers_before_deployments_and_disabled_skipped",
+          "TestBatch6ProductionValidationOrder/metadata_before_secret_and_deployments",
+          "TestBatch6ProviderExplicitChoiceDoesNotFallBack",
+          "TestBatch6RoleResolutionKeepsFirstEligibleBinding",
+          "TestBatch6RuntimePromptValidationBoundaries",
+          "TestBatch6RuntimePromptValidationBoundaries/duplicate_component",
+          "TestBatch6RuntimePromptValidationBoundaries/empty_component",
+          "TestBatch6RuntimePromptValidationBoundaries/length_only_not_cryptographic_validation",
+          "TestBatch6RuntimePromptValidationBoundaries/mutable",
+          "TestBatch6RuntimePromptValidationBoundaries/required_role_absent",
+          "TestBatch6RuntimePromptValidationBoundaries/short_component_hash",
+          "TestBatch6RuntimePromptValidationBoundaries/trailing_object",
+          "TestBatch6RuntimePromptValidationBoundaries/trailing_whitespace",
+          "TestBatch6RuntimePromptValidationBoundaries/unknown_subject",
+          "TestBatch6RuntimePromptValidationBoundaries/wrong_activation",
+          "TestBatch6SandboxAggregatesAndBoundsLifetime",
+          "TestCapabilityProbeRecordsGeneratedUsage",
+          "TestCreateProviderNeverEchoesOrAuditsSecretReference",
+          "TestCreateProviderRejectsUnknownFieldsAndExternalActivation",
+          "TestCredentialCipherUsesTenantAndConfigBoundAuthenticatedEncryption",
+          "TestDefaultManagedAPIResolutionIsTenantScoped",
+          "TestDefaultPolicyCannotRouteToExternalDeployment",
+          "TestEnvironmentSecretResolverDoesNotClaimUnconfiguredManagers",
+          "TestEnvironmentSecretResolverProbesWithoutReturningSecret",
+          "TestEnvironmentSecretResolverRejectsTraversalAndPlaintext",
+          "TestEvaluationCandidateRefactorPreservesErrorOrderAndFailureState",
+          "TestEvaluationCandidateRefactorPreservesErrorOrderAndFailureState/inventory_before_duplicate",
+          "TestEvaluationCandidateRefactorPreservesErrorOrderAndFailureState/managed_image_not_supported",
+          "TestEvaluationCandidateRefactorPreservesErrorOrderAndFailureState/measurements_before_inventory",
+          "TestEvaluationCandidateRefactorPreservesErrorOrderAndFailureState/state_before_invalid_measurements",
+          "TestEvaluationCandidateRefactorPreservesErrorOrderAndFailureState/tenant_before_state",
+          "TestEvaluationCandidateRefactorPreservesErrorOrderAndFailureState/valid_duplicate",
+          "TestEvaluationHandlerRejectsUnknownFields",
+          "TestEvaluationHandlersUseStrictJSONAndAuditLifecycle",
+          "TestEvaluationValidationSeparatesFixtureFromQualityEvidence",
+          "TestExternalDeploymentRequiresEveryAuthorizationLayer",
+          "TestFailedCapabilityProbeKeepsConfigAndPersistsOnlySafeDiagnostic",
+          "TestHTTPAgentAppliesOnlyKnownThinkingCompatibilityFields",
+          "TestHTTPAgentAppliesOnlyKnownThinkingCompatibilityFields/compatible_qwen_hybrid",
+          "TestHTTPAgentAppliesOnlyKnownThinkingCompatibilityFields/deepseek_hybrid",
+          "TestHTTPAgentAppliesOnlyKnownThinkingCompatibilityFields/deepseek_reasoner",
+          "TestHTTPAgentAppliesOnlyKnownThinkingCompatibilityFields/native_qwen_hybrid",
+          "TestHTTPAgentAppliesOnlyKnownThinkingCompatibilityFields/other_compatible_provider",
+          "TestHTTPAgentFinalStreamDetectsDisconnectTruncationAndUnexpectedTools",
+          "TestHTTPAgentFinalStreamDetectsDisconnectTruncationAndUnexpectedTools/disconnect",
+          "TestHTTPAgentFinalStreamDetectsDisconnectTruncationAndUnexpectedTools/tool_call_despite_none",
+          "TestHTTPAgentFinalStreamDetectsDisconnectTruncationAndUnexpectedTools/truncated",
+          "TestHTTPAgentFinalStreamForBothAdapters",
+          "TestHTTPAgentFinalStreamForBothAdapters/dashscope_native",
+          "TestHTTPAgentFinalStreamForBothAdapters/openai_compatible",
+          "TestHTTPAgentNativeToolRoundTripForBothAdapters",
+          "TestHTTPAgentNativeToolRoundTripForBothAdapters/dashscope_native",
+          "TestHTTPAgentNativeToolRoundTripForBothAdapters/openai_compatible",
+          "TestHTTPAgentProviderFailuresDoNotExposeBodyOrSilentlyFallback",
+          "TestHTTPAgentProviderFailuresDoNotExposeBodyOrSilentlyFallback/native_tools_unsupported",
+          "TestHTTPAgentProviderFailuresDoNotExposeBodyOrSilentlyFallback/rate_limit",
+          "TestHTTPAgentProviderFailuresDoNotExposeBodyOrSilentlyFallback/tools_unsupported",
+          "TestHTTPAgentProviderFailuresDoNotExposeBodyOrSilentlyFallback/unrelated_bad_request",
+          "TestHTTPAgentRejectsMalformedOrTruncatedToolOutput",
+          "TestHTTPAgentRejectsMalformedOrTruncatedToolOutput/array_arguments",
+          "TestHTTPAgentRejectsMalformedOrTruncatedToolOutput/duplicate_call_identity",
+          "TestHTTPAgentRejectsMalformedOrTruncatedToolOutput/malformed_arguments",
+          "TestHTTPAgentRejectsMalformedOrTruncatedToolOutput/truncated_answer",
+          "TestHTTPAgentRejectsMalformedOrTruncatedToolOutput/unsupported_tool_type",
+          "TestHTTPAgentRetainsHTTPSAndRedirectRestrictions",
+          "TestHTTPAgentStreamStopsOnConsumerCancellation",
+          "TestHTTPManagedAPIProberAllowsGenerationBeyondQuickTimeout",
+          "TestHTTPManagedAPIProberAllowsGenerationBeyondQuickTimeout/delayed_body",
+          "TestHTTPManagedAPIProberAllowsGenerationBeyondQuickTimeout/delayed_headers",
+          "TestHTTPManagedAPIProberBoundsGenerationWithoutRetry",
+          "TestHTTPManagedAPIProberBoundsGenerationWithoutRetry/waiting_for_body",
+          "TestHTTPManagedAPIProberBoundsGenerationWithoutRetry/waiting_for_headers",
+          "TestHTTPManagedAPIProberCancelsGenerationWithCaller",
+          "TestHTTPManagedAPIProberChecksOpenAICompatibleModelAndStructuredOutput",
+          "TestHTTPManagedAPIProberClassifiesUnsupportedJSONMode",
+          "TestHTTPManagedAPIProberDoesNotReuseOlderCapabilityVersion",
+          "TestHTTPManagedAPIProberFailsClosedOnInvalidStructuredCapability",
+          "TestHTTPManagedAPIProberFailsClosedOnInvalidStructuredCapability/invalid_JSON",
+          "TestHTTPManagedAPIProberFailsClosedOnInvalidStructuredCapability/schema_mismatch",
+          "TestHTTPManagedAPIProberFailsClosedOnInvalidStructuredCapability/truncated_response",
+          "TestHTTPManagedAPIProberRejectsCredentialAndUnknownModelBeforeGeneration",
+          "TestHTTPManagedAPIProberRejectsCredentialAndUnknownModelBeforeGeneration/forbidden_key",
+          "TestHTTPManagedAPIProberRejectsCredentialAndUnknownModelBeforeGeneration/model_missing",
+          "TestHTTPManagedAPIProberRejectsCredentialAndUnknownModelBeforeGeneration/unauthorized_key",
+          "TestHTTPManagedAPIProberRejectsMalformedOrEmptyCapabilityEnvelope",
+          "TestHTTPManagedAPIProberRejectsMalformedOrEmptyCapabilityEnvelope/empty_choices",
+          "TestHTTPManagedAPIProberRejectsMalformedOrEmptyCapabilityEnvelope/malformed_envelope",
+          "TestHTTPManagedAPIProberRejectsOversizedModelListBeforeGeneration",
+          "TestHTTPManagedAPIProberSeparatesQuickAndCapabilityTimeouts",
+          "TestHTTPManagedAPIProberSeparatesQuickAndCapabilityTimeouts/custom_quick",
+          "TestHTTPManagedAPIProberSeparatesQuickAndCapabilityTimeouts/default",
+          "TestHTTPManagedAPIProberSeparatesQuickAndCapabilityTimeouts/invalid_excessive",
+          "TestHTTPManagedAPIProberSeparatesQuickAndCapabilityTimeouts/invalid_negative",
+          "TestHTTPManagedAPIProberUsesBoundedDashScopeNativeCapabilityRequest",
+          "TestHTTPManagedAPIQuickProbeKeepsShortTimeout",
+          "TestHTTPManagedAPIQuickProbeListsModelsWithoutGenerating",
+          "TestHTTPManagedAPIQuickProbeReadsBodyBeforeCancelingBudget",
+          "TestHTTPRuntimePromptSourceFailsClosedOnInvalidSnapshot",
+          "TestHTTPRuntimePromptSourceReadsAuthenticatedRuntimeSnapshot",
+          "TestLegacyPanelMigrationKeepsRecordedChecksumAndRestoresGuards",
+          "TestLocalDeploymentRemainsAvailableWithoutExternalAuthorization",
+          "TestManagedAPIConfigCannotPromoteDisabledUnverifiedModelToDefault",
+          "TestManagedAPIConfigDeleteRequiresSwitchingAwayFromCurrent",
+          "TestManagedAPIConfigHandlerPromotesPreviouslyVerifiedBackupWithoutNewGeneration",
+          "TestManagedAPIConfigHandlerRejectsUnverifiedBackupAsCurrent",
+          "TestManagedAPIConfigLegacyCreateAlsoValidatesBeforeSaving",
+          "TestManagedAPIConfigSoftDeleteRejectsActivePanelBinding",
+          "TestManagedAPIHandlersAssignPerTenantWithoutEchoingKey",
+          "TestManagedAPIHandlersRejectCrossTenantSchoolAdmin",
+          "TestManagedAPIModelDiscoveryCanReuseSavedCredential",
+          "TestManagedAPIModelDiscoveryFailureAuditContainsOnlySafeDiagnostics",
+          "TestManagedAPIModelDiscoveryHandlerReusesSavedKeyWithoutEchoingIt",
+          "TestManagedAPIModelDiscoveryRequiresProviderWhenModelNameIsEmpty",
+          "TestManagedAPIModelDiscoveryUsesSelectedProviderWithoutModelName",
+          "TestManagedAPIProbeDefaultsToZeroGenerationQuickMode",
+          "TestManagedApprovalUsesModelConfigAndFrozenScope",
+          "TestManagedCapabilityDiagnosticBoundsAndSanitizesPreview",
+          "TestManagedCapabilityPayloadBoundsOutputAndDisablesOptionalThinking",
+          "TestManagedChatLimitsFiveConcurrentRequests",
+          "TestManagedChatRecordsProviderUsageOncePerRequest",
+          "TestManagedChatRejectsUnsafeOrOversizedMessageLists",
+          "TestManagedChatStreamEmitsReasoningAndAnswer",
+          "TestManagedChatUsesTenantDefaultWithoutExposingCredential",
+          "TestManagedConfigConnectionChangeClearsOldProbeEvidence",
+          "TestManagedEvaluationCandidatesUseTenantConfigAndFrozenIdentity",
+          "TestManagedModelMultiModelMigrationKeepsTenantAndDefaultGuards",
+          "TestManagedModelMultipleCredentialsMigrationKeepsDefaultGuard",
+          "TestManagedModelTransientProbeMigrationPreservesDefinitiveFailures",
+          "TestManagedOpenAIProbeUsagePreservesTokenBreakdown",
+          "TestManagedProbeClassifiesProviderFailures",
+          "TestManagedProbeClassifiesStructuredOutputPrecisely",
+          "TestManagedProbeEndpointAndPublicIPGuards",
+          "TestManagedProbePersistenceClassifiesTransientAndDeterministicErrors",
+          "TestManagedProbePersistenceClassifiesTransientAndDeterministicErrors/credential_invalid",
+          "TestManagedProbePersistenceClassifiesTransientAndDeterministicErrors/model_not_found",
+          "TestManagedProbePersistenceClassifiesTransientAndDeterministicErrors/provider_timeout",
+          "TestManagedProbePersistenceClassifiesTransientAndDeterministicErrors/provider_unavailable",
+          "TestManagedProbeRejectsResultForConfigurationChangedDuringRequest",
+          "TestManagedProbeTransientFailureRetainsLastSuccessAndCapabilityEvidence",
+          "TestManagedProductionReadinessRequiresCredentialCipher",
+          "TestManagedProviderRejectsMixedSpecialDNSBeforeAnyDial",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/0.1.2.3",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/100.127.255.254",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/100.64.0.1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/100:0:0:1::1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/100::1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/192.0.0.9",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/192.0.2.1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/192.175.48.1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/192.31.196.1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/192.52.193.1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/192.88.99.2",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/198.18.0.1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/198.19.255.254",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/198.51.100.1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/2001:1::1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/2001:20::1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/2001:2::1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/2001::1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/2001:db8::1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/2002:a00:1::1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/203.0.113.1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/240.0.0.1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/255.255.255.255",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/2620:4f:8000::1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/3fff::1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/4000::1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/5f00::1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/64:ff9b:1::a00:1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/64:ff9b::a00:1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/::",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/::ffff:100.64.0.1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/::ffff:127.0.0.1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/fc00::1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/fe80::1",
+          "TestManagedProviderRejectsSpecialPurposeAndTransitionAddresses/ff02::1",
+          "TestManagedPublicAddressFallbackKeepsPrivateAddressGuard",
+          "TestManagedQuickProbeNeverFallsBackToGeneratedRequest",
+          "TestManagedReadOnlyProbeDoesNotRetryResponseOrCertificateError",
+          "TestManagedReadOnlyProbeRetriesNetworkFailureOnce",
+          "TestManagedRoutingRefactorFiltersBeforeChoosingStableIdentity",
+          "TestMemoryEvaluationLifecycleIsTenantBoundImmutableAndRequiresLocalBaseline",
+          "TestMemorySandboxApprovalIsTenantBoundImmutableAndRevocable",
+          "TestModelApprovalRefactorPreservesEvidenceAndCandidateErrorOrder",
+          "TestModelApprovalRefactorPreservesEvidenceAndCandidateErrorOrder/candidate_before_duplicate_decision",
+          "TestModelApprovalRefactorPreservesEvidenceAndCandidateErrorOrder/draft_before_missing_candidate",
+          "TestModelApprovalRefactorPreservesEvidenceAndCandidateErrorOrder/fixture_evidence_before_candidate",
+          "TestModelApprovalRefactorPreservesEvidenceAndCandidateErrorOrder/invalid_input_before_missing_run",
+          "TestModelApprovalRefactorPreservesEvidenceAndCandidateErrorOrder/tenant_before_evidence",
+          "TestModelApprovalRefactorPreservesEvidenceAndCandidateErrorOrder/valid_duplicate_decision",
+          "TestModelApprovalRefactorPreservesRawDecisionReferenceComparison",
+          "TestModelApprovalRefactorRetainsFrozenVersionsAndDecisionHistory",
+          "TestModelApprovalRejectsProtocolFixtureAndExpiredDecision",
+          "TestModelApprovalRequiresCompletedAuthorizedEvidenceAndExactVersions",
+          "TestModelRoleBindingMigrationIsScopedAndGoverned",
+          "TestPanelBindingAdminCanDisableUnverifiedModelButCannotActivateIt",
+          "TestPlatformPanelBindingActorMigrationKeepsAuditIdentity",
+          "TestPlatformPanelBindingsAreSchoolScopedAndSeparateFromChatDefault",
+          "TestPlatformRoleBindingHTTPRejectsMissingAndStaleRevision",
+          "TestPolicyAuthorizesOnlyVerifiedModelsFromItsSchool",
+          "TestPolicyRefactorKeepsLastDuplicateEligibilityAndDoesNotRequireConnectionTest",
+          "TestPolicyRefactorKeepsLastDuplicateEligibilityAndDoesNotRequireConnectionTest/last_active",
+          "TestPolicyRefactorKeepsLastDuplicateEligibilityAndDoesNotRequireConnectionTest/last_disabled",
+          "TestPolicyRefactorPreservesValidationOrderAndFailureAtomicity",
+          "TestPolicyRefactorPreservesValidationOrderAndFailureAtomicity/legacy_read_failure",
+          "TestPolicyRefactorPreservesValidationOrderAndFailureAtomicity/legacy_target_before_version",
+          "TestPolicyRefactorPreservesValidationOrderAndFailureAtomicity/managed_read_failure",
+          "TestPolicyRefactorPreservesValidationOrderAndFailureAtomicity/managed_target_before_version",
+          "TestPolicyRefactorPreservesValidationOrderAndFailureAtomicity/mixed_sources_before_inventory",
+          "TestPolicyRefactorPreservesValidationOrderAndFailureAtomicity/policy_before_mixed_sources",
+          "TestPolicyRefactorPreservesValidationOrderAndFailureAtomicity/strict_json_before_tenant",
+          "TestPolicyRefactorPreservesValidationOrderAndFailureAtomicity/tenant_before_policy",
+          "TestPolicyRefactorPreservesValidationOrderAndFailureAtomicity/version_after_empty_sources",
+          "TestPolicyUpdateRequiresKnownDeploymentAndVersion",
+          "TestProductionGateAllowsCompleteUnverifiedNativeProviderMetadata",
+          "TestProductionGateRejectsActiveProviderWithoutInstalledResolver",
+          "TestProductionGateRejectsExternalDeploymentWithoutPricingMeter",
+          "TestProductionGateRejectsWeakConfiguredSecret",
+          "TestProviderRegistryResolvesOfficialModelsWithoutUsingCredential",
+          "TestProviderRejectsPlaintextCredentialAndCompatibilityAdapter",
+          "TestResolvePanelRoleBindingsFailsClosedBeforeListingInvalidRequests",
+          "TestResolvePanelRoleBindingsFailsClosedBeforeListingInvalidRequests/blank_tenant",
+          "TestResolvePanelRoleBindingsFailsClosedBeforeListingInvalidRequests/invalid_stage",
+          "TestResolvePanelRoleBindingsFailsClosedBeforeListingInvalidRequests/invalid_subject",
+          "TestResolvePanelRoleBindingsFailsClosedBeforeListingInvalidRequests/nil_store",
+          "TestResolvePanelRoleBindingsFailsClosedBeforeListingInvalidRequests/oversized_archetype",
+          "TestResolvePanelRoleBindingsPrefersExactArchetypeBeforeWildcard",
+          "TestResolvePanelRoleBindingsPropagatesStoreErrors",
+          "TestResolvePanelRoleBindingsRequiresCompleteGovernedRolesAndIndependentArbiter",
+          "TestResolvePanelRoleBindingsRequiresCompleteGovernedRolesAndIndependentArbiter/arbiter_reuses_primary_A_model",
+          "TestResolvePanelRoleBindingsRequiresCompleteGovernedRolesAndIndependentArbiter/arbiter_reuses_primary_B_model",
+          "TestResolvePanelRoleBindingsRequiresCompleteGovernedRolesAndIndependentArbiter/arbiter_strength_below_both_primaries",
+          "TestResolvePanelRoleBindingsRequiresCompleteGovernedRolesAndIndependentArbiter/arbiter_strength_equals_primary_A",
+          "TestResolvePanelRoleBindingsRequiresCompleteGovernedRolesAndIndependentArbiter/arbiter_strength_equals_primary_B",
+          "TestResolvePanelRoleBindingsRequiresCompleteGovernedRolesAndIndependentArbiter/disabled_arbiter",
+          "TestResolvePanelRoleBindingsRequiresCompleteGovernedRolesAndIndependentArbiter/missing_arbiter",
+          "TestResolvePanelRoleBindingsRequiresCompleteGovernedRolesAndIndependentArbiter/missing_primary_A",
+          "TestResolvePanelRoleBindingsRequiresCompleteGovernedRolesAndIndependentArbiter/missing_primary_B",
+          "TestResolvePanelRoleBindingsRequiresCompleteGovernedRolesAndIndependentArbiter/unverified_primary_B_model",
+          "TestResolvePanelRoleBindingsUsesCanonicalScopeAndStrongerDistinctArbiter",
+          "TestReusedCredentialSavedIsTheOneActuallyProbed",
+          "TestRoleBindingConcurrentCreateAndUpdateHaveSingleWinner",
+          "TestRoleBindingMissingOrInvalidPreconditionNeverWrites",
+          "TestRoleBindingRevisionNormalizationMatchesPostgresUUIDComparison",
+          "TestRoleBindingRevisionRejectsABAAndCannotCreateFromUpdateToken",
+          "TestRoleBindingStaleEditorAndRepeatedTokenCannotOverwrite",
+          "TestRoutingRefactorPreservesValidationOrderAndProviderOverrides",
+          "TestRoutingRefactorPreservesValidationOrderAndProviderOverrides/all_providers_validated",
+          "TestRoutingRefactorPreservesValidationOrderAndProviderOverrides/last_duplicate_provider_wins",
+          "TestRoutingRefactorPreservesValidationOrderAndProviderOverrides/modality_before_provider",
+          "TestRoutingRefactorPreservesValidationOrderAndProviderOverrides/policy_before_provider",
+          "TestRoutingRefactorSelectsSortedEligibleDeploymentWithoutMutatingInput",
+          "TestSandboxApprovalHandlerRejectsUnknownAndIncompleteFacts",
+          "TestSandboxApprovalHandlersUseStrictJSONAuditAndTenantScope",
+          "TestSandboxApprovalRefactorRequiresRevocationEvenAfterExpiry",
+          "TestSandboxApprovalRefactorRequiresRevocationEvenAfterExpiry/legacy",
+          "TestSandboxApprovalRefactorRequiresRevocationEvenAfterExpiry/managed",
+          "TestSandboxApprovalRefactorSerializesConcurrentDuplicateCreation",
+          "TestSandboxApprovalValidationAndEvidence",
+          "TestSelectManagedModelAuthorizationBoundaries",
+          "TestSelectManagedModelAuthorizationBoundaries/capability_test_failed",
+          "TestSelectManagedModelAuthorizationBoundaries/connection_test_failed",
+          "TestSelectManagedModelAuthorizationBoundaries/external_disabled",
+          "TestSelectManagedModelAuthorizationBoundaries/image_export_disabled",
+          "TestSelectManagedModelAuthorizationBoundaries/image_modality_absent",
+          "TestSelectManagedModelAuthorizationBoundaries/local_only",
+          "TestSelectManagedModelAuthorizationBoundaries/not_allowed",
+          "TestSelectManagedModelAuthorizationBoundaries/text_export_disabled",
+          "TestSelectManagedModelBreaksProviderAndNameTiesByModelID",
+          "TestSelectManagedModelFailsClosedForDisabledOrUnverifiedConfig",
+          "TestSelectManagedModelRejectsInvalidRequestAndSelectsStableAllowedModel",
+          "TestStoreBoundaryRejectsUnverifiedExternalActivation",
+          "TestTenantAdminCannotReadAnotherTenantGovernance",
+          "TestUpdatePolicyRejectsMixedLegacyAndManagedModels",
+          "TestUpdatePolicyRejectsUnavailableManagedModel",
+          "TestUpdatePolicyRejectsUnavailableManagedModel/capability_failed",
+          "TestUpdatePolicyRejectsUnavailableManagedModel/disabled",
+          "TestUpdatePolicyRejectsUnavailableManagedModel/missing",
+          "TestUpdatePolicyRejectsUnavailableManagedModel/other_school",
+          "TestUpdatePolicyRejectsUnavailableManagedModel/ready",
+          "TestUpdatePolicyRejectsUnavailableManagedModel/stale_probe",
+          "TestValidateManagedProductionCandidate",
+          "TestValidateManagedProductionCandidate/blank_API_key",
+          "TestValidateManagedProductionCandidate/decrypt_failure",
+          "TestValidateManagedProductionCandidate/deleted",
+          "TestValidateManagedProductionCandidate/disabled",
+          "TestValidateManagedProductionCandidate/empty_API_key",
+          "TestValidateManagedProductionCandidate/failed_capability",
+          "TestValidateManagedProductionCandidate/failed_connection",
+          "TestValidateManagedProductionCandidate/http_endpoint",
+          "TestValidateManagedProductionCandidate/invalid_URL",
+          "TestValidateManagedProductionCandidate/missing_host",
+          "TestValidateManagedProductionCandidate/missing_model_version",
+          "TestValidateManagedProductionCandidate/missing_region",
+          "TestValidateManagedProductionCandidate/ready",
+          "TestValidateManagedProductionCandidate/stale_probe",
+          "TestValidateManagedProductionCandidate/untested_capability"
+        ],
+        "skipped_ids": [],
+        "complete_trace_by_test": {
+          "TestBatch6ManagedStreamReaderOrdering/compat_malformed_empty_done_and_trailing_ignored": [
+            "[{\"type\":\"reasoning\",\"delta\":\"think\"},{\"type\":\"content\",\"delta\":\" answer \"},{\"type\":\"done\",\"completion\":{\"message\":{\"role\":\"assistant\",\"content\":\"answer\",\"reasoning_content\":\"think\"},\"model_name\":\"model\",\"display_name\":\"fixture\",\"provider_key\":\"fixture\",\"finish_reason\":\"stop\",\"usage\":{\"input_tokens\":2,\"cached_input_tokens\":0,\"output_tokens\":3,\"reasoning_tokens\":0,\"total_tokens\":5}}}]"
+          ],
+          "TestBatch6ManagedStreamReaderOrdering/native_prefers_output_and_retains_zero_total": [
+            "[{\"type\":\"reasoning\",\"delta\":\"reason\"},{\"type\":\"content\",\"delta\":\"native\"},{\"type\":\"done\",\"completion\":{\"message\":{\"role\":\"assistant\",\"content\":\"native\",\"reasoning_content\":\"reason\"},\"model_name\":\"model\",\"display_name\":\"fixture\",\"provider_key\":\"fixture\",\"finish_reason\":\"stop\",\"usage\":{\"input_tokens\":2,\"cached_input_tokens\":0,\"output_tokens\":3,\"reasoning_tokens\":0,\"total_tokens\":0}}}]"
+          ],
+          "TestBatch6ManagedStreamReaderOrdering/compat_keeps_finish_across_empty_choice_and_malformed_usage": [
+            "[{\"type\":\"reasoning\",\"delta\":\"think\"},{\"type\":\"content\",\"delta\":\" answer \"},{\"type\":\"content\",\"delta\":\"next\"},{\"type\":\"done\",\"completion\":{\"message\":{\"role\":\"assistant\",\"content\":\"answer next\",\"reasoning_content\":\"think\"},\"model_name\":\"model\",\"display_name\":\"fixture\",\"provider_key\":\"fixture\",\"finish_reason\":\"stop\",\"usage\":{\"input_tokens\":2,\"cached_input_tokens\":0,\"output_tokens\":3,\"reasoning_tokens\":0,\"total_tokens\":5}}}]"
+          ],
+          "TestBatch6ManagedStreamReaderOrdering/native_empty_finish_replaces_prior_value": [
+            "[{\"type\":\"reasoning\",\"delta\":\"reason\"},{\"type\":\"content\",\"delta\":\"native\"},{\"type\":\"content\",\"delta\":\"next\"},{\"type\":\"done\",\"completion\":{\"message\":{\"role\":\"assistant\",\"content\":\"nativenext\",\"reasoning_content\":\"reason\"},\"model_name\":\"model\",\"display_name\":\"fixture\",\"provider_key\":\"fixture\",\"usage\":{\"input_tokens\":2,\"cached_input_tokens\":0,\"output_tokens\":3,\"reasoning_tokens\":0,\"total_tokens\":0}}}]"
+          ],
+          "TestBatch6ManagedStreamReaderOrdering/reasoning_callback_error_stops_content": [
+            "[{\"type\":\"reasoning\",\"delta\":\"think\"}]"
+          ],
+          "TestBatch6ManagedStreamReaderOrdering/content_callback_error_stops_done": [
+            "[{\"type\":\"reasoning\",\"delta\":\"think\"},{\"type\":\"content\",\"delta\":\" answer \"}]"
+          ],
+          "TestBatch6ManagedStreamReaderOrdering/done_callback_error_propagated": [
+            "[{\"type\":\"reasoning\",\"delta\":\"think\"},{\"type\":\"content\",\"delta\":\" answer \"},{\"type\":\"done\",\"completion\":{\"message\":{\"role\":\"assistant\",\"content\":\"answer\",\"reasoning_content\":\"think\"},\"model_name\":\"model\",\"display_name\":\"fixture\",\"provider_key\":\"fixture\",\"finish_reason\":\"stop\",\"usage\":{\"input_tokens\":2,\"cached_input_tokens\":0,\"output_tokens\":3,\"reasoning_tokens\":0,\"total_tokens\":5}}}]"
+          ],
+          "TestBatch6ManagedStreamReaderOrdering/cancel_delivered_by_callback": [
+            "[{\"type\":\"reasoning\",\"delta\":\"think\"}]"
+          ],
+          "TestBatch6ManagedStreamReaderOrdering/reader_error_after_frame_prevents_done": [
+            "[{\"type\":\"reasoning\",\"delta\":\"think\"},{\"type\":\"content\",\"delta\":\" answer \"}]"
+          ],
+          "TestBatch6ManagedStreamReaderOrdering/done_ignores_later_reader_error": [
+            "[{\"type\":\"reasoning\",\"delta\":\"think\"},{\"type\":\"content\",\"delta\":\" answer \"},{\"type\":\"done\",\"completion\":{\"message\":{\"role\":\"assistant\",\"content\":\"answer\",\"reasoning_content\":\"think\"},\"model_name\":\"model\",\"display_name\":\"fixture\",\"provider_key\":\"fixture\",\"finish_reason\":\"stop\",\"usage\":{\"input_tokens\":2,\"cached_input_tokens\":0,\"output_tokens\":3,\"reasoning_tokens\":0,\"total_tokens\":5}}}]"
+          ],
+          "TestBatch6ManagedStreamReaderOrdering/empty_response": [
+            "null"
+          ],
+          "TestBatch6ManagedStreamReaderOrdering/whitespace_content_empty": [
+            "[{\"type\":\"content\",\"delta\":\" \"}]"
+          ],
+          "TestBatch6ManagedStreamReaderOrdering/final_line_without_newline": [
+            "[{\"type\":\"reasoning\",\"delta\":\"think\"},{\"type\":\"content\",\"delta\":\" answer \"},{\"type\":\"done\",\"completion\":{\"message\":{\"role\":\"assistant\",\"content\":\"answer\",\"reasoning_content\":\"think\"},\"model_name\":\"model\",\"display_name\":\"fixture\",\"provider_key\":\"fixture\",\"finish_reason\":\"stop\",\"usage\":{\"input_tokens\":2,\"cached_input_tokens\":0,\"output_tokens\":3,\"reasoning_tokens\":0,\"total_tokens\":5}}}]"
+          ]
+        },
+        "trace_line_count": 13,
+        "raw_jsonl_sha256": "c9a73c09f10fc1e5290ad1945c538fdcc70153303cce4d4cbda968dcfc789a58"
+      }
+    ]
+  },
+  "previous_preflight": "delivery-independent-preflight-audit-python-agent.json",
+  "platform_result": "pending_final_full_checkpoint03_scan_and_complete_export"
+}

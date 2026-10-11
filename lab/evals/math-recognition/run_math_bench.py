@@ -81,6 +81,22 @@ def score_item(expected: dict[str, Any], actual: dict[str, Any]) -> dict[str, tu
     }
 
 
+def _accumulate_scores(
+    totals: dict[str, int],
+    counts: dict[str, list[int]],
+    scored: dict[str, tuple[int, int, int] | int],
+) -> None:
+    # 每条 manifest 记录都累加；先汇总 TP/FP/FN，再计算整批指标。
+    totals["samples"] += 1
+    for name in ("formula_exact", "formula_total", "ast_exact", "ast_total", "unsafe_suggestion", "suggestion_total", "risky_case", "risky_recalled"):
+        totals[name] += int(scored[name])
+    for name, values in counts.items():
+        triple = scored[name]
+        assert isinstance(triple, tuple)
+        for index, value in enumerate(triple):
+            values[index] += value
+
+
 def evaluate(
     manifest_path: Path, predictions_dir: Path, dataset: str | None = None
 ) -> dict[str, Any]:
@@ -98,14 +114,7 @@ def evaluate(
         expected = load_json(root / entry["ground_truth"])
         actual = load_json(predictions_dir / f"{sample_id}.json")
         scored = score_item(expected, actual)
-        totals["samples"] += 1
-        for name in ("formula_exact", "formula_total", "ast_exact", "ast_total", "unsafe_suggestion", "suggestion_total", "risky_case", "risky_recalled"):
-            totals[name] += int(scored[name])
-        for name, values in counts.items():
-            triple = scored[name]
-            assert isinstance(triple, tuple)
-            for index, value in enumerate(triple):
-                values[index] += value
+        _accumulate_scores(totals, counts, scored)
         sample_results.append({"sample_id": sample_id, "original": entry["original"]})
     metrics: dict[str, Any] = {
         "formula_exact_accuracy": safe_div(totals["formula_exact"], totals["formula_total"]),

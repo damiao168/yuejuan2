@@ -1,0 +1,6 @@
+{
+  "short_lived_scan_token_revoked": true,
+  "recovery_project_analysis_token_revoked": true,
+  "revoked_at": "2026-10-11T12:08:11.248843+08:00",
+  "secret_value_persisted_in_reports": false
+}

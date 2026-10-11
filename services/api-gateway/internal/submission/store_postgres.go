@@ -303,8 +303,8 @@ func decodeAnswerRegionBBox(raw []byte) []float64 {
 		}
 		return []float64{object["x"], object["y"], width, height}
 	}
-	// Preserve fail-closed behavior: an empty bbox is serialized to the worker,
-	// which rejects the task as invalid_ocr_region instead of silently using a page fallback.
+	// 保留保守拒绝行为：空 bbox 仍序列化给 worker，
+	// worker 将任务拒绝为 invalid_ocr_region，而不是静默使用整页回退。
 	return []float64{}
 }
 
@@ -321,8 +321,7 @@ func (s *PostgresStore) ApplyPageQualityResult(ctx context.Context, tenantID str
 	return page, tx.Commit()
 }
 
-// ApplyPageQualityResultInTx lets the quality result coordinator commit the
-// page projection and its submission aggregate with the source/runtime result.
+// ApplyPageQualityResultInTx 允许质量结果协调器将页面投影与提交聚合结果同来源和运行时结果一起提交。
 func ApplyPageQualityResultInTx(ctx context.Context, tx *sql.Tx, tenantID string, input ApplyPageQualityInput) (SubmissionPage, error) {
 	if input.QualityStatus != "passed" && input.QualityStatus != "review" && input.QualityStatus != "failed" {
 		return SubmissionPage{}, ErrInvalidInput
@@ -455,8 +454,7 @@ func (s *PostgresStore) RunQualityCheck(ctx context.Context, tenantID string, su
 		return QualityResult{}, err
 	}
 	defer tx.Rollback()
-	// Collection integrity is only the first gate. The aggregate may pass only
-	// after every page has passed image quality or received a valid override.
+	// 采集完整性只是第一道门禁。只有每页都通过图像质量检查或获得有效覆盖批准后，聚合结果才可通过。
 	if err = aggregateQualityTx(ctx, tx, tenantID, submissionID); err != nil {
 		return QualityResult{}, err
 	}

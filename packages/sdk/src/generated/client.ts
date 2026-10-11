@@ -3,6 +3,18 @@
 import type { ApiTransport } from "../runtime";
 import { appendQuery, fillPath } from "../runtime";
 import type {
+  RegradeReviewContextResponse,
+  AnswerGroupMemberContextResponse,
+  WorkflowActorsResponse,
+  ProcessingExceptionContextResponse,
+  CaptureObjectTargetsResponse,
+  SchoolAssistantQueryRequest,
+  SchoolAssistantCapabilities,
+  SchoolConversationRequest,
+  PaperStructurePreview,
+  AdoptPaperStructureRequest,
+  FillPaperImportContentRequest,
+  PaperImportContentResult,
   RecordSegmentAnswerInput,
   SegmentAnswer,
   ObjectiveGrade,
@@ -282,6 +294,7 @@ import type {
   UpdateQuestionBankMetadataSchemaRequest,
   ValidateQuestionBankMetadataRequest,
   QuestionBankMetadataValidationResult,
+  QuestionBankMembersResponse,
   QuestionBankACLResponse,
   UpdateQuestionBankACLRequest,
   RetireQuestionBankItemRequest,
@@ -291,10 +304,41 @@ import type {
   QuestionBankImportRequest,
   QuestionBankImportResult,
   QuestionBankBatchImportRequest,
-  QuestionBankBatchImportResult
+  QuestionBankBatchImportResult,
+  ManagementExamResponse,
+  ManagementExamPage,
+  ManagementUpdateRequest,
+  ManagementArchiveRequest,
+  ManagementArchiveCheckResponse,
+  ManagementArchiveCommandResponse,
+  ManagedOrganizationUserResponse,
+  ManagedOrganizationUserPage,
+  CreateManagedOrganizationUserRequest,
+  CreateManagedOrganizationUserResponse,
+  UpdateManagedUserAccessRequest,
+  StudentScorePreviewResponse,
+  ConfirmExamReadinessRequest,
+  ExamReadinessConfirmationResponse,
+  QuestionAppealReviewOpinionRequest,
+  CaptureScanContextResponse
 } from "./types";
 
 export interface operations {
+  "getRegradeItemReviewContext": { args: { path: { "itemId": string; }; signal?: AbortSignal; }; response: RegradeReviewContextResponse; };
+  "downloadRegradeItemReviewImage": { args: { path: { "itemId": string; }; signal?: AbortSignal; }; response: unknown; };
+  "getAnswerGroupMemberContext": { args: { path: { "groupId": string; "segmentId": string; }; signal?: AbortSignal; }; response: AnswerGroupMemberContextResponse; };
+  "downloadAnswerGroupMemberImage": { args: { path: { "groupId": string; "segmentId": string; }; signal?: AbortSignal; }; response: unknown; };
+  "listExamReviewActors": { args: { path: { "examId": string; }; signal?: AbortSignal; }; response: WorkflowActorsResponse; };
+  "listExamProcessingActors": { args: { path: { "examId": string; }; signal?: AbortSignal; }; response: WorkflowActorsResponse; };
+  "getProcessingExceptionContext": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: ProcessingExceptionContextResponse; };
+  "downloadProcessingExceptionPageImage": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: unknown; };
+  "findExamCaptureTargets": { args: { path: { "examId": string; }; query?: { "submission_id"?: string; "student_id"?: string; }; signal?: AbortSignal; }; response: CaptureObjectTargetsResponse; };
+  "streamSchoolConversation": { args: { body: SchoolConversationRequest; signal?: AbortSignal; }; response: unknown; };
+  "getSchoolAssistantCapabilities": { args: { signal?: AbortSignal; }; response: SchoolAssistantCapabilities; };
+  "streamSchoolAssistantQuery": { args: { body: SchoolAssistantQueryRequest; signal?: AbortSignal; }; response: unknown; };
+  "previewPaperStructure": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: PaperStructurePreview; };
+  "adoptPaperStructure": { args: { path: { "id": string; }; body: AdoptPaperStructureRequest; signal?: AbortSignal; }; response: PaperStructurePreview; };
+  "fillPaperImportContent": { args: { path: { "id": string; }; body: FillPaperImportContentRequest; signal?: AbortSignal; }; response: PaperImportContentResult; };
   "getExamScoringReadiness": { args: { path: { "examId": string; }; signal?: AbortSignal; }; response: ScoringReadinessResponse; };
   "getExamScoringSummary": { args: { path: { "examId": string; }; signal?: AbortSignal; }; response: ScoringSummaryResponse; };
   "recordSegmentAnswer": { args: { path: { "id": string; }; body: RecordSegmentAnswerInput; signal?: AbortSignal; }; response: { "answer": SegmentAnswer; }; };
@@ -313,7 +357,7 @@ export interface operations {
   "createOMRCalibration": { args: { path: { "id": string; }; body: CreateOMRCalibrationRequest; signal?: AbortSignal; }; response: OMRCalibrationResponse; };
   "listPlatformSchools": { args: { query?: { "q"?: string; "status"?: "active" | "disabled"; "activity"?: "today" | "7d" | "30d" | "inactive_30d" | "never"; "model_health"?: "healthy" | "warning" | "unconfigured"; "usage_window"?: "today" | "1d" | "7d" | "30d" | "90d"; "sort"?: "created_at" | "last_activity" | "token_usage" | "student_count"; "order"?: "asc" | "desc"; "limit"?: number; "cursor"?: string; }; signal?: AbortSignal; }; response: PlatformSchoolListResponse; };
   "getPlatformSchool": { args: { path: { "tenant_id": string; }; signal?: AbortSignal; }; response: PlatformSchoolResponse; };
-  "listPlatformSchoolMembers": { args: { path: { "tenant_id": string; }; query?: { "q"?: string; "role"?: "school_admin" | "tenant_admin" | "teacher" | "grader" | "arbitrator" | "auditor"; "status"?: "active" | "disabled"; }; signal?: AbortSignal; }; response: PlatformSchoolMembersResponse; };
+  "listPlatformSchoolMembers": { args: { path: { "tenant_id": string; }; query?: { "q"?: string; "role"?: "school_admin" | "tenant_admin" | "teacher" | "grader" | "arbitrator" | "auditor"; "status"?: "active" | "invited" | "disabled"; }; signal?: AbortSignal; }; response: PlatformSchoolMembersResponse; };
   "getPlatformSchoolUsage": { args: { path: { "tenant_id": string; }; query?: { "window"?: "today" | "1d" | "7d" | "30d" | "90d"; "start_date"?: string; "end_date"?: string; }; signal?: AbortSignal; }; response: PlatformSchoolUsageResponse; };
   "getPlatformSchoolModelHealth": { args: { path: { "tenant_id": string; }; signal?: AbortSignal; }; response: PlatformSchoolModelHealthResponse; };
   "getPlatformSchoolActivity": { args: { path: { "tenant_id": string; }; query?: { "limit"?: number; }; signal?: AbortSignal; }; response: PlatformSchoolActivityResponse; };
@@ -350,7 +394,7 @@ export interface operations {
   "completeCredentialRecovery": { args: { body: CompleteOneTimePasswordRequest; signal?: AbortSignal; }; response: RecoveryCompleteResponse; };
   "createManagedUserCredentialRecovery": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: ManagedUserRecoveryResponse; };
   "reissueManagedUserActivation": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: ManagedUserActivationDeliveryResponse; };
-  "updateManagedUserStatus": { args: { path: { "id": string; }; body: { "status": "active" | "disabled"; }; signal?: AbortSignal; }; response: { "user": { "id": string; "username": string; "display_name": string; "status": "active" | "disabled"; "roles": Array<string>; "school_id"?: string; "phone_masked"?: string; "employee_no"?: string; "activated_at"?: string; "last_login_at"?: string; "created_at"?: string; }; }; };
+  "updateManagedUserStatus": { args: { path: { "id": string; }; body: { "status": "active" | "disabled"; }; signal?: AbortSignal; }; response: { "user": { "id": string; "username": string; "display_name": string; "status": "active" | "disabled"; "roles": Array<string>; "school_id"?: string; "phone_masked"?: string; "employee_no"?: string; "activated_at"?: string; "last_login_at"?: string; "created_at"?: string; "class_ids"?: Array<string>; }; }; };
   "listSubmissionPageQualityRuns": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: { "runs": Array<Record<string, unknown>>; }; };
   "recoverCaptureUpload": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: CaptureUploadRecoveryResponse; };
   "recoverCaptureBatchCommand": { args: { path: { "examId": string; "commandId": string; }; signal?: AbortSignal; }; response: CaptureBatchCommandResponse; };
@@ -359,7 +403,7 @@ export interface operations {
   "refreshExamCandidates": { args: { path: { "examId": string; }; signal?: AbortSignal; }; response: CandidateRefreshResponse; };
   "getExamWorkspace": { args: { path: { "examId": string; }; signal?: AbortSignal; }; response: ExamWorkspaceResponse; };
   "listExamSubmissions": { args: { path: { "examId": string; }; query?: { "limit"?: number; "cursor"?: string; }; signal?: AbortSignal; }; response: SubmissionPage; };
-  "listReviewTasks": { args: { query?: { "limit"?: number; "cursor"?: string; "status"?: string; "assigned_to"?: string; "exam_id"?: string; }; signal?: AbortSignal; }; response: ReviewTaskPage; };
+  "listReviewTasks": { args: { query?: { "limit"?: number; "cursor"?: string; "status"?: string; "assigned_to"?: string; "exam_id"?: string; "question_id"?: string; "q"?: string; "unassigned"?: boolean; "subject"?: string; }; signal?: AbortSignal; }; response: ReviewTaskPage; };
   "getReviewTaskContext": { args: { path: { "taskId": string; }; signal?: AbortSignal; }; response: ReviewTaskContextResponse; };
   "listReviewAnnotations": { args: { path: { "taskId": string; }; signal?: AbortSignal; }; response: ReviewAnnotationListResponse; };
   "createReviewAnnotation": { args: { path: { "taskId": string; }; body: CreateReviewAnnotationRequest; signal?: AbortSignal; }; response: ReviewAnnotationResponse; };
@@ -438,9 +482,9 @@ export interface operations {
   "createScoreReleaseRollback": { args: { path: { "examId": string; }; body: CreateScoreReleaseRollbackRequest; signal?: AbortSignal; }; response: ScoreReleaseResponse; };
   "listStudentPublishedExams": { args: { signal?: AbortSignal; }; response: StudentPublishedExamListResponse; };
   "getStudentPublishedResult": { args: { path: { "examId": string; }; signal?: AbortSignal; }; response: StudentPublishedResultResponse; };
-  "getStudentPublishedQuestion": { args: { path: { "examId": string; "questionId": string; }; signal?: AbortSignal; }; response: StudentPublishedQuestionResponse; };
-  "listStudentQuestionReviewAnnotations": { args: { path: { "examId": string; "questionId": string; }; signal?: AbortSignal; }; response: StudentQuestionReviewAnnotationListResponse; };
-  "getStudentPublishedQuestionAnswerImage": { args: { path: { "examId": string; "questionId": string; }; signal?: AbortSignal; }; response: unknown; };
+  "getStudentPublishedQuestion": { args: { path: { "examId": string; "questionId": string; }; query?: { "expected_release_id"?: string; }; signal?: AbortSignal; }; response: StudentPublishedQuestionResponse; };
+  "listStudentQuestionReviewAnnotations": { args: { path: { "examId": string; "questionId": string; }; query?: { "expected_release_id"?: string; }; signal?: AbortSignal; }; response: StudentQuestionReviewAnnotationListResponse; };
+  "getStudentPublishedQuestionAnswerImage": { args: { path: { "examId": string; "questionId": string; }; query?: { "expected_release_id"?: string; }; signal?: AbortSignal; }; response: unknown; };
   "previewRegrade": { args: { path: { "examId": string; "questionId": string; }; body: CreateRegradePreviewRequest; signal?: AbortSignal; }; response: RegradePreviewResponse; };
   "createRegradeJob": { args: { path: { "examId": string; "questionId": string; }; body: CreateRegradeJobRequest; signal?: AbortSignal; }; response: RegradeSummaryResponse; };
   "listRegradeJobs": { args: { query?: { "exam_id"?: string; "question_id"?: string; }; signal?: AbortSignal; }; response: RegradeJobListResponse; };
@@ -554,6 +598,7 @@ export interface operations {
   "getQuestionBankMetadataSchema": { args: { path: { "bankId": string; }; query?: { "version"?: number; }; signal?: AbortSignal; }; response: QuestionBankMetadataSchemaResponse; };
   "updateQuestionBankMetadataSchema": { args: { path: { "bankId": string; }; headers: { "Idempotency-Key": string; }; body: UpdateQuestionBankMetadataSchemaRequest; signal?: AbortSignal; }; response: QuestionBankMetadataSchemaResponse; };
   "validateQuestionBankMetadata": { args: { path: { "bankId": string; }; body: ValidateQuestionBankMetadataRequest; signal?: AbortSignal; }; response: QuestionBankMetadataValidationResult; };
+  "listQuestionBankMembers": { args: { path: { "bankId": string; }; signal?: AbortSignal; }; response: QuestionBankMembersResponse; };
   "getQuestionBankACL": { args: { path: { "bankId": string; }; signal?: AbortSignal; }; response: QuestionBankACLResponse; };
   "updateQuestionBankACL": { args: { path: { "bankId": string; }; headers: { "Idempotency-Key": string; }; body: UpdateQuestionBankACLRequest; signal?: AbortSignal; }; response: QuestionBankACLResponse; };
   "searchQuestionBankItems": { args: { query?: { "q"?: string; "bank_id"?: string; "subject_code"?: SubjectCode; "knowledge_point"?: string; "question_type"?: string; "archetype"?: string; "workflow_status"?: "draft" | "reviewing" | "approved" | "published"; "difficulty_band"?: string; "cognitive_level"?: string; "copyright"?: string; "intended_use"?: string; "use_policy"?: "practice_only" | "exam_allowed"; "metadata_key"?: string; "metadata_value"?: string; "statistics_available"?: boolean; "mode"?: "default" | "published" | "my_drafts" | "all"; "sort"?: "updated_desc" | "created_desc" | "item_code_asc"; "limit"?: number; "offset"?: number; }; signal?: AbortSignal; }; response: QuestionBankSearchPage; };
@@ -562,10 +607,100 @@ export interface operations {
   "confirmQuestionBankImportBatch": { args: { body: QuestionBankBatchImportRequest; signal?: AbortSignal; }; response: QuestionBankBatchImportResult; };
   "importQuestionBankItemFromExamQuestion": { args: { path: { "questionId": string; }; headers: { "Idempotency-Key": string; }; body: QuestionBankImportRequest; signal?: AbortSignal; }; response: QuestionBankImportResult; };
   "getOnboardingReadiness": { args: { signal?: AbortSignal; }; response: OnboardingReadiness; };
+  "listManagementExams": { args: { query?: { "limit"?: number; "cursor"?: string; "school_id"?: string; "grade_id"?: string; "search"?: string; "exam_type"?: string; "status"?: string; "archive"?: "active" | "archived" | "all"; }; signal?: AbortSignal; }; response: ManagementExamPage; };
+  "getManagementExam": { args: { path: { "kind": "session" | "standalone"; "id": string; }; signal?: AbortSignal; }; response: ManagementExamResponse; };
+  "updateManagementExam": { args: { path: { "kind": "session" | "standalone"; "id": string; }; headers: { "Idempotency-Key": string; }; body: ManagementUpdateRequest; signal?: AbortSignal; }; response: ManagementExamResponse; };
+  "checkManagementArchive": { args: { path: { "kind": "session" | "standalone"; "id": string; }; signal?: AbortSignal; }; response: ManagementArchiveCheckResponse; };
+  "archiveManagementExam": { args: { path: { "kind": "session" | "standalone"; "id": string; }; headers: { "Idempotency-Key": string; }; body: ManagementArchiveRequest; signal?: AbortSignal; }; response: ManagementExamResponse; };
+  "restoreManagementExam": { args: { path: { "kind": "session" | "standalone"; "id": string; }; headers: { "Idempotency-Key": string; }; body: ManagementArchiveRequest; signal?: AbortSignal; }; response: ManagementExamResponse; };
+  "recoverManagementArchiveCommand": { args: { path: { "commandID": string; }; signal?: AbortSignal; }; response: ManagementArchiveCommandResponse; };
+  "listManagedOrganizationUsers": { args: { query?: { "q"?: string; "role"?: string; "limit"?: number; "cursor"?: string; }; signal?: AbortSignal; }; response: ManagedOrganizationUserPage; };
+  "createManagedOrganizationUser": { args: { body: CreateManagedOrganizationUserRequest; signal?: AbortSignal; }; response: CreateManagedOrganizationUserResponse; };
+  "updateManagedUserAccess": { args: { path: { "id": string; }; body: UpdateManagedUserAccessRequest; signal?: AbortSignal; }; response: ManagedOrganizationUserResponse; };
+  "getScoreReleaseStudentPreview": { args: { path: { "id": string; }; query: { "student_id": string; }; signal?: AbortSignal; }; response: StudentScorePreviewResponse; };
+  "confirmExamReadiness": { args: { path: { "examId": string; }; body?: ConfirmExamReadinessRequest; signal?: AbortSignal; }; response: ExamReadinessConfirmationResponse; };
+  "getStudentPublishedPaperPageImage": { args: { path: { "examId": string; "questionId": string; }; query?: { "variant"?: "high_score"; "expected_release_id"?: string; }; signal?: AbortSignal; }; response: unknown; };
+  "submitQuestionAppealReviewOpinion": { args: { path: { "id": string; }; body: QuestionAppealReviewOpinionRequest; signal?: AbortSignal; }; response: PublishedQuestionAppealResponse; };
+  "getCaptureScanContext": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: CaptureScanContextResponse; };
 }
 
 export class EduGradeApi {
   constructor(private readonly transport: ApiTransport) {}
+
+  getRegradeItemReviewContext(args: operations["getRegradeItemReviewContext"]["args"]): Promise<operations["getRegradeItemReviewContext"]["response"]> {
+    const requestPath = fillPath("/api/v1/regrade-items/{itemId}/review-context", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  downloadRegradeItemReviewImage(args: operations["downloadRegradeItemReviewImage"]["args"]): Promise<operations["downloadRegradeItemReviewImage"]["response"]> {
+    const requestPath = fillPath("/api/v1/regrade-items/{itemId}/review-segment-image", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  getAnswerGroupMemberContext(args: operations["getAnswerGroupMemberContext"]["args"]): Promise<operations["getAnswerGroupMemberContext"]["response"]> {
+    const requestPath = fillPath("/api/v1/answer-groups/{groupId}/samples/{segmentId}/context", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  downloadAnswerGroupMemberImage(args: operations["downloadAnswerGroupMemberImage"]["args"]): Promise<operations["downloadAnswerGroupMemberImage"]["response"]> {
+    const requestPath = fillPath("/api/v1/answer-groups/{groupId}/samples/{segmentId}/segment-image", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  listExamReviewActors(args: operations["listExamReviewActors"]["args"]): Promise<operations["listExamReviewActors"]["response"]> {
+    const requestPath = fillPath("/api/v1/exams/{examId}/review-actors", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  listExamProcessingActors(args: operations["listExamProcessingActors"]["args"]): Promise<operations["listExamProcessingActors"]["response"]> {
+    const requestPath = fillPath("/api/v1/exams/{examId}/processing/actors", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  getProcessingExceptionContext(args: operations["getProcessingExceptionContext"]["args"]): Promise<operations["getProcessingExceptionContext"]["response"]> {
+    const requestPath = fillPath("/api/v1/processing/exceptions/{id}/context", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  downloadProcessingExceptionPageImage(args: operations["downloadProcessingExceptionPageImage"]["args"]): Promise<operations["downloadProcessingExceptionPageImage"]["response"]> {
+    const requestPath = fillPath("/api/v1/processing/exceptions/{id}/page-image", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  findExamCaptureTargets(args: operations["findExamCaptureTargets"]["args"]): Promise<operations["findExamCaptureTargets"]["response"]> {
+    const requestPath = appendQuery(fillPath("/api/v1/exams/{examId}/capture-targets", args.path), args.query);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  streamSchoolConversation(args: operations["streamSchoolConversation"]["args"]): Promise<operations["streamSchoolConversation"]["response"]> {
+    const requestPath = "/api/v1/school-assistant/conversations/stream";
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  getSchoolAssistantCapabilities(args: operations["getSchoolAssistantCapabilities"]["args"] = {}): Promise<operations["getSchoolAssistantCapabilities"]["response"]> {
+    const requestPath = "/api/v1/school-assistant/capabilities";
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  streamSchoolAssistantQuery(args: operations["streamSchoolAssistantQuery"]["args"]): Promise<operations["streamSchoolAssistantQuery"]["response"]> {
+    const requestPath = "/api/v1/school-assistant/queries/stream";
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  previewPaperStructure(args: operations["previewPaperStructure"]["args"]): Promise<operations["previewPaperStructure"]["response"]> {
+    const requestPath = fillPath("/api/v1/paper-imports/{id}/structure-preview", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  adoptPaperStructure(args: operations["adoptPaperStructure"]["args"]): Promise<operations["adoptPaperStructure"]["response"]> {
+    const requestPath = fillPath("/api/v1/paper-imports/{id}/adopt-structure", args.path);
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  fillPaperImportContent(args: operations["fillPaperImportContent"]["args"]): Promise<operations["fillPaperImportContent"]["response"]> {
+    const requestPath = fillPath("/api/v1/paper-imports/{id}/fill-content", args.path);
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
 
   getExamScoringReadiness(args: operations["getExamScoringReadiness"]["args"]): Promise<operations["getExamScoringReadiness"]["response"]> {
     const requestPath = fillPath("/api/v1/exams/{examId}/scoring-readiness", args.path);
@@ -1283,17 +1418,17 @@ export class EduGradeApi {
   }
 
   getStudentPublishedQuestion(args: operations["getStudentPublishedQuestion"]["args"]): Promise<operations["getStudentPublishedQuestion"]["response"]> {
-    const requestPath = fillPath("/api/v1/student/exams/{examId}/questions/{questionId}", args.path);
+    const requestPath = appendQuery(fillPath("/api/v1/student/exams/{examId}/questions/{questionId}", args.path), args.query);
     return this.transport.request(requestPath, { method: "GET", signal: args.signal });
   }
 
   listStudentQuestionReviewAnnotations(args: operations["listStudentQuestionReviewAnnotations"]["args"]): Promise<operations["listStudentQuestionReviewAnnotations"]["response"]> {
-    const requestPath = fillPath("/api/v1/student/exams/{examId}/questions/{questionId}/annotations", args.path);
+    const requestPath = appendQuery(fillPath("/api/v1/student/exams/{examId}/questions/{questionId}/annotations", args.path), args.query);
     return this.transport.request(requestPath, { method: "GET", signal: args.signal });
   }
 
   getStudentPublishedQuestionAnswerImage(args: operations["getStudentPublishedQuestionAnswerImage"]["args"]): Promise<operations["getStudentPublishedQuestionAnswerImage"]["response"]> {
-    const requestPath = fillPath("/api/v1/student/exams/{examId}/questions/{questionId}/answer-image", args.path);
+    const requestPath = appendQuery(fillPath("/api/v1/student/exams/{examId}/questions/{questionId}/answer-image", args.path), args.query);
     return this.transport.request(requestPath, { method: "GET", signal: args.signal });
   }
 
@@ -1862,6 +1997,11 @@ export class EduGradeApi {
     return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
   }
 
+  listQuestionBankMembers(args: operations["listQuestionBankMembers"]["args"]): Promise<operations["listQuestionBankMembers"]["response"]> {
+    const requestPath = fillPath("/api/v1/question-banks/{bankId}/members", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
   getQuestionBankACL(args: operations["getQuestionBankACL"]["args"]): Promise<operations["getQuestionBankACL"]["response"]> {
     const requestPath = fillPath("/api/v1/question-banks/{bankId}/acl", args.path);
     return this.transport.request(requestPath, { method: "GET", signal: args.signal });
@@ -1899,6 +2039,81 @@ export class EduGradeApi {
 
   getOnboardingReadiness(args: operations["getOnboardingReadiness"]["args"] = {}): Promise<operations["getOnboardingReadiness"]["response"]> {
     const requestPath = "/api/v1/onboarding/readiness";
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  listManagementExams(args: operations["listManagementExams"]["args"] = {}): Promise<operations["listManagementExams"]["response"]> {
+    const requestPath = appendQuery("/api/v1/exam-management", args.query);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  getManagementExam(args: operations["getManagementExam"]["args"]): Promise<operations["getManagementExam"]["response"]> {
+    const requestPath = fillPath("/api/v1/exam-management/{kind}/{id}", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  updateManagementExam(args: operations["updateManagementExam"]["args"]): Promise<operations["updateManagementExam"]["response"]> {
+    const requestPath = fillPath("/api/v1/exam-management/{kind}/{id}", args.path);
+    return this.transport.request(requestPath, { method: "PATCH", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body), headers: Object.fromEntries(Object.entries(args.headers ?? {}).map(([name, value]) => [name, String(value)])) });
+  }
+
+  checkManagementArchive(args: operations["checkManagementArchive"]["args"]): Promise<operations["checkManagementArchive"]["response"]> {
+    const requestPath = fillPath("/api/v1/exam-management/{kind}/{id}/archive-check", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  archiveManagementExam(args: operations["archiveManagementExam"]["args"]): Promise<operations["archiveManagementExam"]["response"]> {
+    const requestPath = fillPath("/api/v1/exam-management/{kind}/{id}/archive", args.path);
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body), headers: Object.fromEntries(Object.entries(args.headers ?? {}).map(([name, value]) => [name, String(value)])) });
+  }
+
+  restoreManagementExam(args: operations["restoreManagementExam"]["args"]): Promise<operations["restoreManagementExam"]["response"]> {
+    const requestPath = fillPath("/api/v1/exam-management/{kind}/{id}/restore", args.path);
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body), headers: Object.fromEntries(Object.entries(args.headers ?? {}).map(([name, value]) => [name, String(value)])) });
+  }
+
+  recoverManagementArchiveCommand(args: operations["recoverManagementArchiveCommand"]["args"]): Promise<operations["recoverManagementArchiveCommand"]["response"]> {
+    const requestPath = fillPath("/api/v1/exam-management/commands/{commandID}", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  listManagedOrganizationUsers(args: operations["listManagedOrganizationUsers"]["args"] = {}): Promise<operations["listManagedOrganizationUsers"]["response"]> {
+    const requestPath = appendQuery("/api/v1/users", args.query);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  createManagedOrganizationUser(args: operations["createManagedOrganizationUser"]["args"]): Promise<operations["createManagedOrganizationUser"]["response"]> {
+    const requestPath = "/api/v1/users";
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  updateManagedUserAccess(args: operations["updateManagedUserAccess"]["args"]): Promise<operations["updateManagedUserAccess"]["response"]> {
+    const requestPath = fillPath("/api/v1/users/{id}/access", args.path);
+    return this.transport.request(requestPath, { method: "PATCH", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  getScoreReleaseStudentPreview(args: operations["getScoreReleaseStudentPreview"]["args"]): Promise<operations["getScoreReleaseStudentPreview"]["response"]> {
+    const requestPath = appendQuery(fillPath("/api/v1/score-releases/{id}/student-preview", args.path), args.query);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  confirmExamReadiness(args: operations["confirmExamReadiness"]["args"]): Promise<operations["confirmExamReadiness"]["response"]> {
+    const requestPath = fillPath("/api/v1/exams/{examId}/readiness/confirm", args.path);
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  getStudentPublishedPaperPageImage(args: operations["getStudentPublishedPaperPageImage"]["args"]): Promise<operations["getStudentPublishedPaperPageImage"]["response"]> {
+    const requestPath = appendQuery(fillPath("/api/v1/student/exams/{examId}/questions/{questionId}/page-image", args.path), args.query);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  submitQuestionAppealReviewOpinion(args: operations["submitQuestionAppealReviewOpinion"]["args"]): Promise<operations["submitQuestionAppealReviewOpinion"]["response"]> {
+    const requestPath = fillPath("/api/v1/question-appeals/{id}/review-opinion", args.path);
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  getCaptureScanContext(args: operations["getCaptureScanContext"]["args"]): Promise<operations["getCaptureScanContext"]["response"]> {
+    const requestPath = fillPath("/api/v1/capture-batches/{id}/scan-context", args.path);
     return this.transport.request(requestPath, { method: "GET", signal: args.signal });
   }
 }

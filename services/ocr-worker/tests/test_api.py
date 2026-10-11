@@ -24,7 +24,7 @@ class FakeResponse:
 
 
 class APITests(unittest.TestCase):
-    @patch("ocr_worker.api.request.urlopen", return_value=FakeResponse())
+    @patch("ocr_worker.api._open_request", return_value=FakeResponse())
     def test_heartbeat_renews_configured_lease_with_short_timeout(self, urlopen):
         client = EduGradeClient(
             base_url="http://api-gateway:8080",
@@ -34,12 +34,14 @@ class APITests(unittest.TestCase):
             token="worker-token",
         )
 
-        client.heartbeat_task("runtime-1", "lease-1", "worker-1", 300, 3.0)
+        progress = {"stage": "text_ocr", "completed": 1, "total": 2}
+        client.heartbeat_task("runtime-1", "lease-1", "worker-1", 300, 3.0, progress=progress)
 
         req = urlopen.call_args.args[0]
         payload = json.loads(req.data.decode("utf-8"))
         self.assertEqual(payload["lease_seconds"], 300)
         self.assertEqual(payload["state"], "running")
+        self.assertEqual(payload["progress"], progress)
         self.assertEqual(urlopen.call_args.kwargs["timeout"], 3.0)
 
     def test_download_rejects_cross_origin_url_before_sending_worker_token(self):
@@ -48,7 +50,7 @@ class APITests(unittest.TestCase):
         with self.assertRaisesRegex(APIError, "configured API origin"):
             client.download("https://attacker.invalid/collect")
 
-    @patch("ocr_worker.api.request.urlopen", return_value=FakeResponse())
+    @patch("ocr_worker.api._open_request", return_value=FakeResponse())
     def test_claimed_task_capability_is_sent_without_caller_selected_tenant(self, urlopen):
         client = EduGradeClient(
             base_url="http://api-gateway:8080",
@@ -59,7 +61,7 @@ class APITests(unittest.TestCase):
         )
 
         client.activate_task({"id": "runtime-1", "lease_token": "lease-1"}, "worker-1")
-        client.start_task("task-1", "tenant-1")
+        client.start_task("task-1")
 
         req = urlopen.call_args.args[0]
         self.assertEqual(req.headers["X-edugrade-worker-task-id"], "runtime-1")
@@ -68,7 +70,7 @@ class APITests(unittest.TestCase):
         self.assertEqual(req.headers["X-edugrade-worker-instance-id"], "worker-1")
         self.assertNotIn("X-edugrade-tenant-id", req.headers)
 
-    @patch("ocr_worker.api.request.urlopen", return_value=FakeResponse())
+    @patch("ocr_worker.api._open_request", return_value=FakeResponse())
     def test_paper_import_completion_allows_local_model_processing_budget(self, urlopen):
         client = EduGradeClient(
             base_url="http://api-gateway:8080",

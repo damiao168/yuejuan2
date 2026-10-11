@@ -41,16 +41,50 @@ export const JORGPT_DROPPED_COLUMNS = Object.freeze([
   "teacher_corrected"
 ]);
 
-export function redactStructuredIdentityValues(value) {
-  let redactions = 0;
-  const text = String(value ?? "").replace(
-    /((?:^|[,{])\s*["']?(?:name|surname|first_name|last_name)["']?\s*:\s*)([^,}\r\n]{1,80})(?=\s*[,}])/giu,
-    (_match, prefix) => {
-      redactions += 1;
-      return `${prefix}[redacted]`;
+function identityValueEnd(segment, start, contentEnd) {
+  let end = start;
+  let codePoints = 0;
+  // 原值上限是 80 个 Unicode 码点；值不跨 CR/LF，分隔符前的剩余空白另保留。
+  while (end < segment.length && codePoints < 80) {
+    if (segment[end] === "\r" || segment[end] === "\n") break;
+    end += segment.codePointAt(end) > 0xffff ? 2 : 1;
+    codePoints += 1;
+  }
+  return end > start && end >= contentEnd ? end : null;
+}
+
+function redactIdentitySegment(segment) {
+  const prefixes = /((?:^|[,{])\s*["']?(?:name|surname|first_name|last_name)["']?\s*:)(\s*)/giu;
+  const contentEnd = segment.trimEnd().length;
+  let match;
+  while ((match = prefixes.exec(segment)) !== null) {
+    let valueStart = prefixes.lastIndex;
+    if (valueStart === segment.length) {
+      const whitespaceStart = match.index + match[1].length;
+      // 全空白值仍需至少一个非 CR/LF 字符；保留原贪婪前缀留下的最后一个可捕获字符。
+      while (valueStart > whitespaceStart && (segment[valueStart - 1] === "\r" || segment[valueStart - 1] === "\n")) valueStart -= 1;
+      if (valueStart === whitespaceStart) continue;
+      valueStart -= 1;
     }
-  );
-  return { text, redactions };
+    const valueEnd = identityValueEnd(segment, valueStart, contentEnd);
+    if (valueEnd === null) continue;
+    return { text: `${segment.slice(0, valueStart)}[redacted]${segment.slice(valueEnd)}`, redactions: 1 };
+  }
+  return { text: segment, redactions: 0 };
+}
+
+export function redactStructuredIdentityValues(value) {
+  // 先分出逗号/右花括号终止边界，避免长空白在值和尾部 lookahead 之间反复回溯。
+  const parts = String(value ?? "").split(/([,}])/u);
+  let redactions = 0;
+  for (let index = 0; index < parts.length - 1; index += 2) {
+    // 前一分隔符只参与识别：逗号允许新键，右花括号不能被当作原文起始位置。
+    const previousDelimiter = index === 0 ? "" : parts[index - 1];
+    const result = redactIdentitySegment(previousDelimiter + parts[index]);
+    parts[index] = result.text.slice(previousDelimiter.length);
+    redactions += result.redactions;
+  }
+  return { text: parts.join(""), redactions };
 }
 
 function nonEmpty(value, field, rowIndex) {

@@ -3,7 +3,13 @@ import { Alert, Empty, Spin, Timeline } from "antd";
 import { getPlatformSchoolActivity, type SchoolActivityResponse } from "../../../api/platformSchools";
 import { fullDate, numberText } from "./schoolPresentation";
 
-export function SchoolActivityTab({ tenantId }: { tenantId: string }) {
+function activityColor(severity: string): string {
+  if (severity === "warning") return "orange";
+  if (severity === "success") return "green";
+  return "blue";
+}
+
+export function SchoolActivityTab({ tenantId }: Readonly<{ tenantId: string }>) {
   const [data, setData] = useState<SchoolActivityResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -23,7 +29,7 @@ export function SchoolActivityTab({ tenantId }: { tenantId: string }) {
       <div><dt>活跃会话</dt><dd>{numberText(data?.security.active_sessions ?? 0)}</dd></div>
       <div><dt>最近登录</dt><dd>{fullDate(data?.security.last_login_at)}</dd></div>
     </dl></section>
-    <section><h3>业务活动</h3>{data?.activities.length ? <Timeline items={data.activities.map((item) => ({ color: item.severity === "warning" ? "orange" : item.severity === "success" ? "green" : "blue", children: <div className="platform-school-timeline-item"><time>{fullDate(item.happened_at)}</time><strong>{item.title}</strong><span>{item.actor_name ? `${item.actor_name} · ` : ""}{item.summary}</span></div> }))} /> : <Empty description="尚无业务活动" image={Empty.PRESENTED_IMAGE_SIMPLE} />}</section>
+    <section><h3>业务活动</h3>{data?.activities.length ? <Timeline items={data.activities.map((item) => ({ color: activityColor(item.severity), children: <div className="platform-school-timeline-item"><time>{fullDate(item.happened_at)}</time><strong>{item.title}</strong><span>{item.actor_name ? `${item.actor_name} · ` : ""}{item.summary}</span></div> }))} /> : <Empty description="尚无业务活动" image={Empty.PRESENTED_IMAGE_SIMPLE} />}</section>
     <p className="platform-school-readonly-note">这里展示已投影的关键业务事件；完整安全操作请到平台审计查看。</p>
   </div>;
 }

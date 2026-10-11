@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Alert,
@@ -18,7 +18,6 @@ import type { TableColumnsType } from "antd";
 import { ArrowRight, CheckCircle2, Download, FileUp, RefreshCw } from "lucide-react";
 import Papa from "papaparse";
 import { getUserErrorMessage } from "../api/client";
-import { validateNewPassword } from "../auth/loginSecurity";
 import { createExam, listExams } from "../api/exams";
 import {
   createClass,
@@ -35,10 +34,11 @@ import {
   type Student,
   type StudentImportError
 } from "../api/org";
-import { createManagedUser, listAssignableRoles, listManagedUsers, type AssignableRole, type ManagedUser } from "../api/users";
+import { createManagedUser, listAssignableRoles, listManagedUsers, type AssignableRole, type ManagedUser, type ManagedUserActivation } from "../api/users";
 import { ErrorState, LoadingState } from "../components/PageState";
 import { ResponsiveTable } from "../components/ResponsiveTable";
 import { onboardingQueryKey, useOnboardingReadiness } from "../features/onboarding/queries";
+import { MemberCreationFields } from "../features/members/teachers/TeacherManagementViews";
 
 interface SetupData {
   schools: School[];
@@ -78,7 +78,14 @@ function downloadCSV(filename: string, rows: Array<Record<string, string | numbe
   URL.revokeObjectURL(url);
 }
 
-export function OrganizationSetupPage({ onNavigate }: { onNavigate: (path: string) => void }) {
+type StaffInvitation = { name: string; activation?: ManagedUserActivation };
+
+function renderStaffInvitationNotice(invitation: StaffInvitation | undefined, message: ReturnType<typeof App.useApp>["message"]) {
+  if (!invitation) return null;
+  return <Alert type="success" showIcon message={`${invitation.name}：邀请已创建，等待激活`} description={<div>{invitation.activation ? <><p>请核对本人后交接此一次性链接。有效至 {new Date(invitation.activation.expires_at).toLocaleString("zh-CN")}。</p><Input readOnly value={`${window.location.origin}${invitation.activation.path}`} /><Button onClick={() => void Promise.resolve().then(() => navigator.clipboard.writeText(`${window.location.origin}${invitation.activation!.path}`)).then(() => message.success("邀请链接已复制")).catch(() => message.warning("复制失败，请选中链接手动复制"))}>复制激活链接</Button></> : <p>本次响应未提供激活链接，请进入人员管理核对该账号。</p>}<p>激活后刷新进度；邀请过期时，由学校人员管理员重新生成。</p></div>} />;
+}
+
+export function OrganizationSetupPage({ onNavigate }: Readonly<{ onNavigate: (path: string) => void }>) {
   const { message } = App.useApp();
   const queryClient = useQueryClient();
   const readiness = useOnboardingReadiness();
@@ -92,6 +99,29 @@ export function OrganizationSetupPage({ onNavigate }: { onNavigate: (path: strin
   const [csvRecords, setCsvRecords] = useState<Record<string, string>[]>([]);
   const [mapping, setMapping] = useState({ studentNo: "", name: "", classCode: "" });
   const [importErrors, setImportErrors] = useState<StudentImportError[]>([]);
+  const [staffForm] = Form.useForm();
+  const staffSchool = Form.useWatch("school_id", staffForm) as string | undefined;
+  const staffRoles = Form.useWatch("role_codes", staffForm) as string[] | undefined;
+  const [invitation, setInvitation] = useState<StaffInvitation>();
+  const invitationSavingRef = useRef(false);
+
+  const inviteStaff = async (values: { display_name: string; phone: string; employee_no?: string; school_id: string; role_codes: string[]; class_ids?: string[] }) => {
+    if (saving || invitationSavingRef.current) return;
+    // React 提交按钮更新前也可能再次收到提交；同步锁保护一次性邀请回执。
+    invitationSavingRef.current = true;
+    setSaving(true);
+    try {
+      const classIDs = values.role_codes.includes("teacher") ? values.class_ids ?? [] : [];
+      if (classIDs.some((id) => !data?.classes.some((item) => item.id === id && item.school_id === values.school_id))) throw new Error("关联班级必须属于所选学校");
+      const result = await createManagedUser({ display_name: values.display_name, phone: values.phone, employee_no: values.employee_no, school_id: values.school_id, role_codes: values.role_codes, class_ids: classIDs });
+      // 一次性邀请只出现在创建响应；先保留回执，再刷新，刷新失败不能让人重新创建账号。
+      setInvitation({ name: result.user.display_name, activation: result.activation });
+      staffForm.resetFields();
+      message.success("人员邀请已创建，等待本人激活");
+      await load();
+      await queryClient.invalidateQueries({ queryKey: onboardingQueryKey });
+    } catch (reason) { message.error(messageOf(reason)); } finally { invitationSavingRef.current = false; setSaving(false); }
+  };
 
   const load = async () => {
     setLoading(true);
@@ -139,7 +169,8 @@ export function OrganizationSetupPage({ onNavigate }: { onNavigate: (path: strin
     // 仅首次载入按已有数据定位；后续刷新不能把用户从正在填写的步骤自动跳走。
     if (data && !stepInitialized) {
       const firstIncomplete = completed.slice(0, 5).findIndex((value) => !value);
-      setStep(firstIncomplete >= 0 ? firstIncomplete : completed[5] ? 6 : 5);
+      const examOrFinishStep = completed[5] ? 6 : 5;
+      setStep(firstIncomplete >= 0 ? firstIncomplete : examOrFinishStep);
       setStepInitialized(true);
     }
   }, [completed, data, stepInitialized]);
@@ -244,6 +275,40 @@ export function OrganizationSetupPage({ onNavigate }: { onNavigate: (path: strin
   if (!data && error) return <ErrorState message={error} onRetry={() => void load()} />;
   if (!data) return null;
 
+  const renderStudentsStep = (setupData: SetupData) => {
+    const existingStudentsNotice = setupData.students.length
+      ? <Alert type="success" showIcon message={`已导入 ${setupData.students.length} 名学生，可继续或追加导入。`} />
+      : null;
+    return (
+      <div>
+        <h2>导入学生</h2>
+        <p className="section-copy">先下载模板填写，或直接上传现有名单，然后指定学号、姓名、班级对应哪一列。只有校验通过的行会被导入。</p>
+        <Space wrap>
+          <Button icon={<Download size={16} />} onClick={() => downloadCSV("学生导入模板.csv", [{ student_no: "20260001", name: "张同学", class_code: setupData.classes[0]?.code ?? "G10-01" }])}>下载模板</Button>
+          <Upload accept=".csv,text/csv" maxCount={1} showUploadList={false} beforeUpload={(file) => { void readCSV(file); return false; }}>
+            <Button type="primary" icon={<FileUp size={16} />}>选择 CSV</Button>
+          </Upload>
+        </Space>
+        {csvHeaders.length ? (
+          <>
+            <div className="mapping-grid">
+              <label>学号字段<Select value={mapping.studentNo || undefined} options={csvHeaders.map((value) => ({ value }))} onChange={(value) => setMapping((current) => ({ ...current, studentNo: value }))} /></label>
+              <label>姓名字段<Select value={mapping.name || undefined} options={csvHeaders.map((value) => ({ value }))} onChange={(value) => setMapping((current) => ({ ...current, name: value }))} /></label>
+              <label>班级代码字段<Select value={mapping.classCode || undefined} options={csvHeaders.map((value) => ({ value }))} onChange={(value) => setMapping((current) => ({ ...current, classCode: value }))} /></label>
+            </div>
+            <ResponsiveTable rowKey="key" size="small" columns={importColumns} dataSource={importRows} pagination={{ pageSize: 8 }} className="setup-preview-table dense-data-table" />
+            <Space wrap>
+              <Button type="primary" icon={<FileUp size={16} />} loading={saving} disabled={!validImportRows.length} onClick={() => void submitStudents()}>导入 {validImportRows.length} 行</Button>
+              {importRows.some((row) => row.error) ? <Button icon={<Download size={16} />} onClick={() => downloadCSV("学生导入错误.csv", importRows.filter((row) => row.error).map((row) => ({ row: row.sourceRow, student_no: row.studentNo, name: row.name, class_code: row.classCode, error: row.error ?? "" })))}>下载错误行</Button> : null}
+            </Space>
+          </>
+        ) : existingStudentsNotice}
+        {importErrors.length ? <Alert type="warning" showIcon message={`${importErrors.length} 行未导入：${importErrors[0]?.message ?? "请检查名单内容"}`} description={<Button type="link" onClick={() => downloadCSV("导入错误行.csv", importErrors.map((item) => ({ row: item.row, error: item.message })))}>下载错误行</Button>} /> : null}
+        {setupData.students.length ? <Button className="step-next" onClick={() => setStep(4)}>继续 <ArrowRight size={16} /></Button> : null}
+      </div>
+    );
+  };
+
   const stepContent = (() => {
     switch (step) {
       case 0:
@@ -291,47 +356,17 @@ export function OrganizationSetupPage({ onNavigate }: { onNavigate: (path: strin
           </Form>
         );
       case 3:
-        return (
-          <div>
-            <h2>导入学生</h2>
-            <p className="section-copy">先下载模板填写，或直接上传现有名单，然后指定学号、姓名、班级对应哪一列。只有校验通过的行会被导入。</p>
-            <Space wrap>
-              <Button icon={<Download size={16} />} onClick={() => downloadCSV("学生导入模板.csv", [{ student_no: "20260001", name: "张同学", class_code: data.classes[0]?.code ?? "G10-01" }])}>下载模板</Button>
-              <Upload accept=".csv,text/csv" maxCount={1} showUploadList={false} beforeUpload={(file) => { void readCSV(file); return false; }}>
-                <Button type="primary" icon={<FileUp size={16} />}>选择 CSV</Button>
-              </Upload>
-            </Space>
-            {csvHeaders.length ? (
-              <>
-                <div className="mapping-grid">
-                  <label>学号字段<Select value={mapping.studentNo || undefined} options={csvHeaders.map((value) => ({ value }))} onChange={(value) => setMapping((current) => ({ ...current, studentNo: value }))} /></label>
-                  <label>姓名字段<Select value={mapping.name || undefined} options={csvHeaders.map((value) => ({ value }))} onChange={(value) => setMapping((current) => ({ ...current, name: value }))} /></label>
-                  <label>班级代码字段<Select value={mapping.classCode || undefined} options={csvHeaders.map((value) => ({ value }))} onChange={(value) => setMapping((current) => ({ ...current, classCode: value }))} /></label>
-                </div>
-                <ResponsiveTable rowKey="key" size="small" columns={importColumns} dataSource={importRows} pagination={{ pageSize: 8 }} className="setup-preview-table dense-data-table" />
-                <Space wrap>
-                  <Button type="primary" icon={<FileUp size={16} />} loading={saving} disabled={!validImportRows.length} onClick={() => void submitStudents()}>导入 {validImportRows.length} 行</Button>
-                  {importRows.some((row) => row.error) ? <Button icon={<Download size={16} />} onClick={() => downloadCSV("学生导入错误.csv", importRows.filter((row) => row.error).map((row) => ({ row: row.sourceRow, student_no: row.studentNo, name: row.name, class_code: row.classCode, error: row.error ?? "" })))}>下载错误行</Button> : null}
-                </Space>
-              </>
-            ) : data.students.length ? <Alert type="success" showIcon message={`已导入 ${data.students.length} 名学生，可继续或追加导入。`} /> : null}
-            {importErrors.length ? <Alert type="warning" showIcon message={`${importErrors.length} 行未导入：${importErrors[0]?.message ?? "请检查名单内容"}`} description={<Button type="link" onClick={() => downloadCSV("导入错误行.csv", importErrors.map((item) => ({ row: item.row, error: item.message })))}>下载错误行</Button>} /> : null}
-            {data.students.length ? <Button className="step-next" onClick={() => setStep(4)}>继续 <ArrowRight size={16} /></Button> : null}
-          </div>
-        );
+        return renderStudentsStep(data);
       case 4:
         return (
-          <Form key="user" layout="vertical" preserve={false} onFinish={(values) => void runSave(() => createManagedUser(values), "人员账号已创建")}>
+          <Form key="user" form={staffForm} layout="vertical" preserve={false} initialValues={{ role_codes: ["teacher"], school_id: data.schools.length === 1 ? data.schools[0].id : undefined }} disabled={saving} onFinish={(values) => void inviteStaff(values)}>
             <h2>人员账号</h2>
-            <p className="section-copy">创建第一位教务或阅卷教师账号。请当面告知或通过安全渠道发送初始密码，并提醒对方首次登录后立即修改。</p>
+            <p className="section-copy">创建教师激活邀请，由本人设置密码。请通过可信渠道交给本人；邀请创建后仍为待激活，学校人员就绪以启用账号为准。</p>
             {completed[4] ? <Alert type="success" showIcon message="已存在可参与学校业务的管理员或教师账号" /> : null}
-            <div className="form-grid compact-form-grid">
-              <Form.Item name="username" label="登录账号" rules={[{ required: true }]}><Input autoComplete="off" /></Form.Item>
-              <Form.Item name="display_name" label="姓名" rules={[{ required: true }]}><Input /></Form.Item>
-              <Form.Item name="role_code" label="业务角色" rules={[{ required: true }]}><Select options={data.roles.filter((role) => !["platform_admin", "tenant_admin"].includes(role.code)).map((role) => ({ value: role.code, label: role.description || role.name }))} /></Form.Item>
-              <Form.Item name="password" label="初始密码" extra="建议使用至少 15 个字符的长密码短语" rules={[{ required: true }, { validator: validateNewPassword }]}><Input.Password autoComplete="new-password" /></Form.Item>
-            </div>
-            <Button type="primary" htmlType="submit" loading={saving}>创建并继续</Button>
+            <MemberCreationFields mode="teacher" selectedRole={staffRoles} roles={data.roles} schools={data.schools} classes={data.classes.filter((item) => item.school_id === staffSchool)} grades={data.grades} />
+            <Button type="primary" htmlType="submit" loading={saving}>创建激活邀请</Button>
+            {renderStaffInvitationNotice(invitation, message)}
+            <Space wrap><Button onClick={() => onNavigate("/members/teachers")}>前往人员与权限管理</Button><Button disabled={saving} onClick={() => setStep(5)}>继续准备考试</Button></Space>
           </Form>
         );
       case 5:
@@ -374,7 +409,12 @@ export function OrganizationSetupPage({ onNavigate }: { onNavigate: (path: strin
       </div>
       <div className="onboarding-shell">
         <aside className="onboarding-rail">
-          <Steps direction="vertical" current={step} items={setupSteps.map((title, index) => ({ title, status: completed[index] ? "finish" : index === step ? "process" : "wait", disabled: index > 0 && !completed[index - 1] && !completed[index] }))} onChange={setStep} />
+          <Steps direction="vertical" current={step} items={setupSteps.map((title, index) => {
+            let status: "finish" | "process" | "wait" = "wait";
+            if (completed[index]) status = "finish";
+            else if (index === step) status = "process";
+            return { title, status, disabled: index > 0 && !completed[index - 1] && !completed[index] };
+          })} onChange={setStep} />
         </aside>
         <main className="onboarding-panel">{stepContent}</main>
       </div>

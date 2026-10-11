@@ -7,6 +7,9 @@
     "dev": "vite --host 127.0.0.1",
     "build": "tsc --noEmit && vite build",
     "check:production-routes": "node scripts/check-production-routes.mjs",
+    "test:production-contracts": "node --test scripts/production-route-contracts.test.mjs scripts/measure-build.test.mjs",
+    "measure:build": "node scripts/measure-build.mjs",
+    "check:bundle": "node scripts/measure-build.mjs --budget scripts/build-budget.json",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "preview": "vite preview --host 127.0.0.1"
@@ -23,13 +26,18 @@
     "framer-motion": "^12.23.0",
     "katex": "^0.18.7",
     "lucide-react": "^0.468.0",
+    "mdast-util-from-markdown": "^2.0.3",
+    "mdast-util-gfm": "^3.1.0",
+    "micromark-extension-gfm": "^3.0.0",
     "papaparse": "^5.5.3",
     "pdfjs-dist": "^5.4.149",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-markdown": "^10.1.0",
     "recharts": "^2.15.0",
+    "rehype-highlight": "^7.0.2",
     "rehype-katex": "^7.0.1",
+    "remark-gfm": "^4.0.1",
     "remark-math": "^6.0.0"
   },
   "devDependencies": {

@@ -1,0 +1,15 @@
+{
+  "files": [
+    {
+      "file": "services/api-gateway/internal/server/e2e_mfa_test.go",
+      "sha256": "baef7b00789aa9b30bc285357fdc645175dd34bdf446cc33b64aef51a4455f60",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_mfa_test.go"
+    }
+  ],
+  "issue_functions": [
+    {
+      "file": "services/api-gateway/internal/server/e2e_mfa_test.go",
+      "function": "TestTOTPManagementE2EWithPostgres"
+    }
+  ]
+}

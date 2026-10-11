@@ -1,0 +1,22 @@
+{
+  "synthetic": true,
+  "scope": "Exact snapshot normalization and page-furniture functions extracted as AST; no server, model, grading, or production request",
+  "results": [
+    {
+      "padding": 1024,
+      "block_chars_after_normalize": 1028,
+      "is_page_furniture": false,
+      "seconds": 0.04903769999509677
+    },
+    {
+      "padding": 2048,
+      "block_chars_after_normalize": 2052,
+      "is_page_furniture": false,
+      "seconds": 0.2148940000042785
+    },
+    {
+      "padding": 4096,
+      "timeout_seconds": 3
+    }
+  ]
+}

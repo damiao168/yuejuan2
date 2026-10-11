@@ -9,6 +9,10 @@ from edugrade_worker_runtime import validate_lease_timing, validate_service_url
 from .deployment_profile import FormulaRuntimePlan, resolve_formula_runtime_plan
 
 
+# 数学表达式和内部令牌跨容器传输；默认 HTTPS，由客户端验证内部 CA 和服务主机名。
+_DEFAULT_MATH_VERIFY_BASE_URL = "https://math-verification-worker:8092"
+
+
 @dataclass(frozen=True)
 class Settings:
     api_base_url: str
@@ -30,7 +34,7 @@ class Settings:
     ocr_runtime_enabled: bool = True
     math_runtime_enabled: bool = False
     paper_formula_runtime_enabled: bool = False
-    math_verify_base_url: str = "http://math-verification-worker:8092"
+    math_verify_base_url: str = _DEFAULT_MATH_VERIFY_BASE_URL
     math_verify_token: str = ""
     formula_model_version: str = "PP-FormulaNet_plus-M"
     formula_fallback_model_version: str = "PP-FormulaNet_plus-L"
@@ -73,7 +77,7 @@ def load_settings() -> Settings:
         ocr_runtime_enabled=os.environ.get("EDUGRADE_OCR_RUNTIME_ENABLED", "true").lower() in {"1", "true", "yes"},
         math_runtime_enabled=os.environ.get("EDUGRADE_MATH_RUNTIME_ENABLED", "false").lower() in {"1", "true", "yes"},
         paper_formula_runtime_enabled=os.environ.get("EDUGRADE_PAPER_FORMULA_RUNTIME_ENABLED", "false").lower() in {"1", "true", "yes"},
-        math_verify_base_url=os.environ.get("EDUGRADE_MATH_VERIFY_BASE_URL", "http://math-verification-worker:8092"),
+        math_verify_base_url=os.environ.get("EDUGRADE_MATH_VERIFY_BASE_URL", _DEFAULT_MATH_VERIFY_BASE_URL),
         math_verify_token=os.environ.get("EDUGRADE_MATH_VERIFY_TOKEN", ""),
         formula_model_version=os.environ.get("EDUGRADE_FORMULA_MODEL_VERSION", "PP-FormulaNet_plus-M"),
         formula_fallback_model_version=os.environ.get("EDUGRADE_FORMULA_FALLBACK_MODEL_VERSION", "PP-FormulaNet_plus-L"),
@@ -106,7 +110,16 @@ def load_settings() -> Settings:
 
 def _validate_settings(settings: Settings) -> None:
     environment = os.environ.get("EDUGRADE_ENV", "development")
+    # 保留校验顺序；多项配置同时出错时，仍先报告原来最早检查的一项。
     validate_service_url("EDUGRADE_API_BASE_URL", settings.api_base_url, environment)
+    _validate_required_settings(settings)
+    _validate_ocr_settings(settings)
+    _validate_formula_settings(settings)
+    validate_lease_timing(settings.lease_seconds, settings.heartbeat_interval, settings.heartbeat_timeout)
+    _validate_enabled_runtimes(settings, environment)
+
+
+def _validate_required_settings(settings: Settings) -> None:
     for name, value in (
         ("EDUGRADE_OCR_WORKER_TENANT_CODE", settings.tenant_code),
         ("EDUGRADE_OCR_WORKER_USERNAME", settings.username),
@@ -119,12 +132,15 @@ def _validate_settings(settings: Settings) -> None:
     ):
         if not value.strip():
             raise ValueError(f"{name} must not be empty")
+
+
+def _validate_ocr_settings(settings: Settings) -> None:
     if not math.isfinite(settings.min_confidence) or not 0 <= settings.min_confidence <= 1:
         raise ValueError("EDUGRADE_OCR_MIN_CONFIDENCE must be between 0 and 1")
     if not math.isfinite(settings.poll_interval) or settings.poll_interval <= 0:
         raise ValueError("EDUGRADE_OCR_POLL_INTERVAL must be greater than 0")
-    # OCR processing is sequential. Claiming more than one task would leave
-    # later tasks without a heartbeat while the first model inference runs.
+    # OCR 按顺序处理。一次领取多个任务会导致
+    # 后续任务在第一个模型推理期间没有心跳。
     if settings.batch_size != 1:
         raise ValueError("EDUGRADE_OCR_BATCH_SIZE must be 1 for the sequential OCR worker")
     if settings.cpu_threads < 1 or settings.cpu_threads > 64:
@@ -137,6 +153,9 @@ def _validate_settings(settings: Settings) -> None:
         raise ValueError("EDUGRADE_OCR_TEXT_DET_LIMIT_SIDE_LEN must be between 32 and 4096")
     if settings.text_recognition_batch_size < 1 or settings.text_recognition_batch_size > 64:
         raise ValueError("EDUGRADE_OCR_TEXT_RECOGNITION_BATCH_SIZE must be between 1 and 64")
+
+
+def _validate_formula_settings(settings: Settings) -> None:
     if settings.formula_recognition_batch_size is not None and not 1 <= settings.formula_recognition_batch_size <= 16:
         raise ValueError("EDUGRADE_FORMULA_RECOGNITION_BATCH_SIZE must be between 1 and 16")
     if settings.formula_result_cache_size < 0 or settings.formula_result_cache_size > 100_000:
@@ -151,7 +170,9 @@ def _validate_settings(settings: Settings) -> None:
         raise ValueError("EDUGRADE_FORMULA_MODEL_LIFECYCLE must be auto, resident, or per_job")
     if not settings.formula_deployment_profile_path:
         raise ValueError("EDUGRADE_FORMULA_DEPLOYMENT_PROFILE_PATH must not be empty")
-    validate_lease_timing(settings.lease_seconds, settings.heartbeat_interval, settings.heartbeat_timeout)
+
+
+def _validate_enabled_runtimes(settings: Settings, environment: str) -> None:
     if not settings.ocr_runtime_enabled and not settings.math_runtime_enabled and not settings.paper_formula_runtime_enabled:
         raise ValueError("at least one OCR worker runtime must be enabled")
     if settings.math_runtime_enabled:

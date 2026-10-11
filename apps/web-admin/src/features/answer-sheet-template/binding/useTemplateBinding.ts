@@ -8,8 +8,20 @@ export function useTemplateBinding(examId: string) {
   const [examBinding, setExamBinding] = useState<ExamTemplateBinding | null>(null);
   const [bindingBusy, setBindingBusy] = useState(false);
 
+  const activateTemplate = async (template: AnswerSheetTemplate) => {
+    if (template.status !== "locked") throw new Error("请先确认答题区域");
+    setBindingBusy(true);
+    try {
+      const response = await bindExamTemplate(examId, template.id, examBinding?.revision ?? 0);
+      setExamBinding(response.binding);
+      return response.binding;
+    } finally {
+      setBindingBusy(false);
+    }
+  };
+
   const bindTemplateForExam = (template?: AnswerSheetTemplate) => {
-    if (!template || template.status !== "locked") return;
+    if (template?.status !== "locked") return;
     modal.confirm({
       title: "将模板用于本场考试",
       content: `后续无条码答卷将优先使用 v${template.version_no}，并在每页处理前进行版式一致性检查。`,
@@ -18,8 +30,8 @@ export function useTemplateBinding(examId: string) {
       onOk: async () => {
         setBindingBusy(true);
         try {
-          const response = await bindExamTemplate(examId, template.id, examBinding?.revision ?? 0);
-          setExamBinding(response.binding);
+          // 绑定有独立版本号；模板已锁定并不代表考试绑定仍是打开确认框时的版本。
+          await activateTemplate(template);
           message.success("已将该模板锁定为本场考试模板");
         } catch (error) {
           message.error(getUserErrorMessage(error, "考试模板绑定失败，请刷新后重试"));
@@ -53,5 +65,5 @@ export function useTemplateBinding(examId: string) {
     });
   };
 
-  return { examBinding, setExamBinding, bindingBusy, bindTemplateForExam, releaseExamBinding };
+  return { examBinding, setExamBinding, bindingBusy, activateTemplate, bindTemplateForExam, releaseExamBinding };
 }

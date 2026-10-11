@@ -10,6 +10,6 @@ const colors: Record<StatusTone, string> = {
   neutral: "default"
 };
 
-export function StatusTag({ tone, children }: { tone: StatusTone; children: string }) {
+export function StatusTag({ tone, children }: Readonly<{ tone: StatusTone; children: string }>) {
   return <Tag color={colors[tone]}>{children}</Tag>;
 }

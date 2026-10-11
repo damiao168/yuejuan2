@@ -1,0 +1,47 @@
+{
+  "actions" : [
+    "D:\\tools\\audit-codeql-20261010\\codeql\\actions"
+  ],
+  "cpp" : [
+    "D:\\tools\\audit-codeql-20261010\\codeql\\cpp"
+  ],
+  "csharp" : [
+    "D:\\tools\\audit-codeql-20261010\\codeql\\csharp"
+  ],
+  "csv" : [
+    "D:\\tools\\audit-codeql-20261010\\codeql\\csv"
+  ],
+  "go" : [
+    "D:\\tools\\audit-codeql-20261010\\codeql\\go"
+  ],
+  "html" : [
+    "D:\\tools\\audit-codeql-20261010\\codeql\\html"
+  ],
+  "java" : [
+    "D:\\tools\\audit-codeql-20261010\\codeql\\java"
+  ],
+  "javascript" : [
+    "D:\\tools\\audit-codeql-20261010\\codeql\\javascript"
+  ],
+  "properties" : [
+    "D:\\tools\\audit-codeql-20261010\\codeql\\properties"
+  ],
+  "python" : [
+    "D:\\tools\\audit-codeql-20261010\\codeql\\python"
+  ],
+  "ruby" : [
+    "D:\\tools\\audit-codeql-20261010\\codeql\\ruby"
+  ],
+  "rust" : [
+    "D:\\tools\\audit-codeql-20261010\\codeql\\rust"
+  ],
+  "swift" : [
+    "D:\\tools\\audit-codeql-20261010\\codeql\\swift"
+  ],
+  "xml" : [
+    "D:\\tools\\audit-codeql-20261010\\codeql\\xml"
+  ],
+  "yaml" : [
+    "D:\\tools\\audit-codeql-20261010\\codeql\\yaml"
+  ]
+}

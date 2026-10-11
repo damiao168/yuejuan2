@@ -1,0 +1,214 @@
+{
+  "started_at": "2026-10-11T18:17:28.052205+08:00",
+  "finished_at": "2026-10-11T18:21:08.431274+08:00",
+  "duration_seconds": 220.375,
+  "command": [
+    "go",
+    "test",
+    "-json",
+    "-p",
+    "1",
+    "-count=1",
+    "-timeout=5m",
+    "./internal/review",
+    "./internal/auth",
+    "./internal/workerruntime",
+    "./tools/story056-real-worker-e2e",
+    "./internal/dashboard",
+    "./internal/seedquality",
+    "./internal/graderdrift",
+    "./internal/imagequality",
+    "./internal/backmark",
+    "./internal/platformschools",
+    "./internal/files",
+    "./internal/regrade",
+    "./internal/scorerelease",
+    "./internal/exam",
+    "./internal/apicontract",
+    "./internal/org",
+    "./internal/grading",
+    "./internal/captureupload",
+    "./internal/taskmaterials",
+    "./internal/mathunderstanding",
+    "./internal/paper"
+  ],
+  "cwd": "D:\\project\\yuejuan\\services\\api-gateway",
+  "exit_code": 1,
+  "isolation": {
+    "toolchain": "local",
+    "module_proxy": "off",
+    "checksum_service": "off",
+    "GOMAXPROCS": 1,
+    "cleared_environment_names": []
+  },
+  "source_identity": {
+    "before": "go-batch13-21-source-before.json",
+    "after": "go-batch13-21-source-after.json",
+    "count": 785,
+    "changed_paths": []
+  },
+  "package_results": [
+    {
+      "Time": "2026-10-11T18:17:38.2303799+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/review",
+      "Elapsed": 1.142
+    },
+    {
+      "Time": "2026-10-11T18:18:38.2955524+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/auth",
+      "Elapsed": 7.764
+    },
+    {
+      "Time": "2026-10-11T18:18:41.5073951+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/workerruntime",
+      "Elapsed": 0.941
+    },
+    {
+      "Time": "2026-10-11T18:18:43.5890415+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/tools/story056-real-worker-e2e",
+      "Elapsed": 0.807
+    },
+    {
+      "Time": "2026-10-11T18:18:46.2259812+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/dashboard",
+      "Elapsed": 1.058
+    },
+    {
+      "Time": "2026-10-11T18:18:48.9606798+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/seedquality",
+      "Elapsed": 0.803
+    },
+    {
+      "Time": "2026-10-11T18:18:51.6226851+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/graderdrift",
+      "Elapsed": 0.915
+    },
+    {
+      "Time": "2026-10-11T18:18:59.1018885+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/imagequality",
+      "Elapsed": 2.36
+    },
+    {
+      "Time": "2026-10-11T18:19:02.6630275+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/backmark",
+      "Elapsed": 1.193
+    },
+    {
+      "Time": "2026-10-11T18:19:04.5581137+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/platformschools",
+      "Elapsed": 0.659
+    },
+    {
+      "Time": "2026-10-11T18:19:33.4168378+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/files",
+      "Elapsed": 3.462
+    },
+    {
+      "Time": "2026-10-11T18:19:36.1176313+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/regrade",
+      "Elapsed": 0.863
+    },
+    {
+      "Time": "2026-10-11T18:19:39.7530555+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/scorerelease",
+      "Elapsed": 1.038
+    },
+    {
+      "Time": "2026-10-11T18:20:06.7232356+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/exam",
+      "Elapsed": 3.049
+    },
+    {
+      "Time": "2026-10-11T18:20:10.8691964+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/apicontract",
+      "Elapsed": 1.783
+    },
+    {
+      "Time": "2026-10-11T18:20:18.3044022+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/org",
+      "Elapsed": 2.567
+    },
+    {
+      "Time": "2026-10-11T18:20:29.0273265+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/grading",
+      "Elapsed": 2.751
+    },
+    {
+      "Time": "2026-10-11T18:20:31.9601287+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/captureupload",
+      "Elapsed": 0.995
+    },
+    {
+      "Time": "2026-10-11T18:20:34.1749733+08:00",
+      "Action": "fail",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/taskmaterials",
+      "Elapsed": 0.902
+    },
+    {
+      "Time": "2026-10-11T18:20:37.8538637+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/mathunderstanding",
+      "Elapsed": 1.029
+    },
+    {
+      "Time": "2026-10-11T18:21:07.0090816+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/paper",
+      "Elapsed": 3.384
+    }
+  ],
+  "test_result_counts": {
+    "pass": 1857,
+    "fail": 2,
+    "skip": 4
+  },
+  "skipped_tests": [
+    {
+      "Time": "2026-10-11T18:18:34.643808+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/auth",
+      "Test": "TestAuthorizationContractPostgres",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T18:19:02.6543421+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/backmark",
+      "Test": "TestPostgresBackmarkCountsAndFilteredCursorPages",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T18:19:39.7474175+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/scorerelease",
+      "Test": "TestStudentSessionProjectionWithPostgres",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T18:20:10.7233668+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/apicontract",
+      "Test": "TestReliabilitySharedClientContract",
+      "Elapsed": 0
+    }
+  ],
+  "note": "只报告实际运行的包；环境缺失跳过项不算真实数据库或外部模型集成通过。"
+}

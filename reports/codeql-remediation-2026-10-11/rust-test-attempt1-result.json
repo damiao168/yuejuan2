@@ -1,0 +1,4 @@
+{
+  "command": "cargo test --offline --locked --lib --all-features --jobs 1 -- --test-threads=1",
+  "exitCode": 101
+}

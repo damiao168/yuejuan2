@@ -11,9 +11,7 @@ var seniorPanelSubjects = []string{
 	"geography", "history", "mathematics", "physics",
 }
 
-// PanelReadinessPolicy is supplied by an approved, versioned shadow policy.
-// This package intentionally has no permissive defaults: missing empirical
-// thresholds make readiness invalid rather than silently enabling a panel.
+// PanelReadinessPolicy 来自已批准且按版本管理的影子策略。本包不提供宽松默认值；缺少实证阈值会使就绪状态无效，不会静默启用模型组。
 type PanelReadinessPolicy struct {
 	PolicyVersion               string  `json:"policy_version"`
 	MinSamplesPerSlice          int     `json:"min_samples_per_slice"`
@@ -109,20 +107,7 @@ func panelSliceReadinessReasons(metrics PanelMetrics, policy PanelReadinessPolic
 	if metrics.Arbiter.SampleCount < policy.MinArbitrationsPerSlice {
 		reasons = append(reasons, "insufficient_arbitrations")
 	}
-	if metrics.FalseConsensusRate > policy.MaxFalseConsensusRate {
-		reasons = append(reasons, "false_consensus_rate_exceeded")
-	}
-	if metrics.ArbitrationErrorRate > policy.MaxArbitrationErrorRate {
-		reasons = append(reasons, "arbitration_error_rate_exceeded")
-	}
-	if metrics.Resolved.MAE > policy.MaxResolvedMAE {
-		reasons = append(reasons, "resolved_mae_exceeded")
-	}
-	if !metrics.Resolved.QWKAvailable || metrics.Resolved.QWK == nil {
-		reasons = append(reasons, "resolved_qwk_unavailable")
-	} else if *metrics.Resolved.QWK < policy.MinResolvedQWK {
-		reasons = append(reasons, "resolved_qwk_below_threshold")
-	}
+	reasons = append(reasons, panelAccuracyReadinessReasons(metrics, policy)...)
 	if metrics.Arbiter.SampleCount >= policy.MinArbitrationsPerSlice {
 		bestPrimaryMAE := math.Min(metrics.ArbitratedPrimaryA.MAE, metrics.ArbitratedPrimaryB.MAE)
 		if bestPrimaryMAE-metrics.Arbiter.MAE < policy.MinArbiterMAEImprovement {
@@ -146,6 +131,25 @@ func panelSliceReadinessReasons(metrics PanelMetrics, policy PanelReadinessPolic
 		reasons = append(reasons, "cost_per_1000_exceeded")
 	}
 	sort.Strings(reasons)
+	return reasons
+}
+
+func panelAccuracyReadinessReasons(metrics PanelMetrics, policy PanelReadinessPolicy) []string {
+	reasons := []string{}
+	if metrics.FalseConsensusRate > policy.MaxFalseConsensusRate {
+		reasons = append(reasons, "false_consensus_rate_exceeded")
+	}
+	if metrics.ArbitrationErrorRate > policy.MaxArbitrationErrorRate {
+		reasons = append(reasons, "arbitration_error_rate_exceeded")
+	}
+	if metrics.Resolved.MAE > policy.MaxResolvedMAE {
+		reasons = append(reasons, "resolved_mae_exceeded")
+	}
+	if !metrics.Resolved.QWKAvailable || metrics.Resolved.QWK == nil {
+		reasons = append(reasons, "resolved_qwk_unavailable")
+	} else if *metrics.Resolved.QWK < policy.MinResolvedQWK {
+		reasons = append(reasons, "resolved_qwk_below_threshold")
+	}
 	return reasons
 }
 

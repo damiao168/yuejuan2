@@ -1,18 +1,18 @@
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { Alert, Avatar, Button, ConfigProvider, Drawer, Dropdown, Grid, Input, Layout, Menu, Modal, Segmented, Space, Tag, theme, Tooltip } from "antd";
-import { ArrowLeft, ChevronDown, Menu as MenuIcon, PanelLeft, UserRound } from "lucide-react";
-import { productIdentityLabel, type SessionUser } from "../auth/session";
+import { useEffect, useRef, useState, type SubmitEvent, type ReactNode } from "react";
+import { Alert, Button, ConfigProvider, Drawer, Grid, Input, Layout, Modal, Tag, theme } from "antd";
+import type { SessionUser } from "../auth/session";
 import type { AppRoute } from "../router/routes";
 import { hasRouteAccess, routeGroups, routePresentation, visibleRoutes } from "../router/routes";
-import { experienceLabel, type ProductExperience } from "../router/experience";
+import type { ProductExperience } from "../router/experience";
 import { workspaceLabel } from "../workspaces/registry";
 import { MockBadge } from "./MockBadge";
 import { applyReadingSize, readReadingSize } from "@edugrade/design-tokens";
 import { isPublicComputerIdle, PUBLIC_COMPUTER_IDLE_LOCK_MS } from "../auth/loginSecurity";
 import { getUserErrorMessage } from "../api/client";
 import { StepUpDialog, useStepUp } from "../auth/stepUpContext";
+import { selectedNavigationPath, shellClassNames, ShellNavigation, ShellTopbar } from "./appLayoutPresentation";
 
-const { Header, Sider, Content } = Layout;
+const { Sider, Content } = Layout;
 const DESKTOP_NAVIGATION_WIDTH = 192;
 const DESKTOP_NAVIGATION_COLLAPSED_WIDTH = 64;
 const MOBILE_NAVIGATION_WIDTH = 280;
@@ -27,6 +27,7 @@ export interface FocusedShellContext {
 export function AppLayout({
   user,
   currentRoute,
+  examWorkspaceSection,
   experience,
   availableExperiences,
   children,
@@ -37,9 +38,10 @@ export function AppLayout({
   onReauthenticate,
   shellMode = "standard",
   focusedContext = { title: "新建考试", backLabel: "返回考试列表", backPath: "/exams" }
-}: {
+}: Readonly<{
   user: SessionUser;
   currentRoute: AppRoute;
+  examWorkspaceSection?: string;
   experience: ProductExperience;
   availableExperiences: ProductExperience[];
   children: ReactNode;
@@ -50,9 +52,8 @@ export function AppLayout({
   onReauthenticate: (password: string) => Promise<void>;
   shellMode?: ShellMode;
   focusedContext?: FocusedShellContext;
-}) {
+}>) {
   const immersive = shellMode !== "standard";
-  const focused = shellMode === "focused";
   const screens = Grid.useBreakpoint();
   const [readingSize, setReadingSize] = useState(readReadingSize);
   useEffect(() => { applyReadingSize(readingSize); }, [readingSize]);
@@ -78,7 +79,8 @@ export function AppLayout({
     }
   });
   const permittedRoutes = visibleRoutes(experience).filter((route) => hasRouteAccess(user, route, experience));
-  const selectedPath = currentRoute.key === "examWorkspace" ? "/exams" : currentRoute.path;
+  const selectedPath = selectedNavigationPath(currentRoute, examWorkspaceSection);
+  const shellClasses = shellClassNames(shellMode, currentRoute.key);
   const currentPresentation = routePresentation(currentRoute, experience);
   useEffect(() => () => {
     if (navigationScrollbarHideTimer.current !== null) {
@@ -101,7 +103,7 @@ export function AppLayout({
       if (lockTriggered) return;
       lockTriggered = true;
       cancelStepUp();
-      // 公共电脑空闲时先遮住工作区，再请求服务端锁定；锁定请求失败也保持遮挡，避免凭网络抖动重新暴露内容。
+      // 公共电脑空闲时先设置本地锁定状态，再请求服务端锁定；请求失败也保留本地锁定，不因网络抖动恢复内容。
       setWorkspaceLocked(true);
       setUnlockError(undefined);
       setLockingSession(true);
@@ -139,7 +141,7 @@ export function AppLayout({
       document.removeEventListener("visibilitychange", checkOnReturn);
     };
   }, [cancelStepUp, onLockSession, user.publicComputer, workspaceLocked]);
-  const unlockWorkspace = async (event: FormEvent<HTMLFormElement>) => {
+  const unlockWorkspace = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!unlockPassword || unlocking || lockingSession) return;
     setUnlocking(true);
@@ -203,9 +205,9 @@ export function AppLayout({
   const toggleNavigation = () => {
     const next = !navigationCollapsed;
     setNavigationCollapsed(next);
-    try { window.localStorage.setItem(NAVIGATION_COLLAPSED_STORAGE_KEY, String(next)); } catch { /* persistence is optional */ }
+    try { window.localStorage.setItem(NAVIGATION_COLLAPSED_STORAGE_KEY, String(next)); } catch { /* 持久化是可选的。 */ }
   };
-  const menuItems = routeGroups(experience)
+  const menuItems = routeGroups(experience, user)
     .map((group) => {
       const children = permittedRoutes
         .filter((route) => routePresentation(route, experience).group === group)
@@ -252,78 +254,12 @@ export function AppLayout({
       }
     }
   };
-  const navigation = (
-    <div
-      id="primary-navigation"
-      className={desktopNavigation && navigationCollapsed ? "sidebar-inner is-collapsed" : "sidebar-inner"}
-      onMouseEnter={desktopNavigation ? showNavigationScrollbar : undefined}
-      onMouseLeave={desktopNavigation ? scheduleNavigationScrollbarHide : undefined}
-    >
-      <div className="sidebar-header">
-        <button type="button" className="brand-block brand-button" onClick={() => { setNavigationOpen(false); onNavigate("/dashboard"); }} aria-label={`返回${experienceLabel(experience)}工作台`}>
-          <div className="brand-copy">
-            <strong>EduGrade</strong>
-          </div>
-        </button>
-        {desktopNavigation ? (
-          <Tooltip title={navigationCollapsed ? "展开导航" : "收起导航"} placement="right">
-            <button
-              type="button"
-              className="sidebar-toggle"
-              aria-label={navigationCollapsed ? "展开导航" : "收起导航"}
-              aria-expanded={!navigationCollapsed}
-              aria-controls="primary-navigation"
-              onClick={toggleNavigation}
-            >
-              <PanelLeft size={18} strokeWidth={1.8} />
-            </button>
-          </Tooltip>
-        ) : null}
-      </div>
-      <div
-        className={
-          !desktopNavigation
-            ? "sidebar-main is-scrollbar-visible"
-            : navigationScrollbarVisible
-              ? `sidebar-main is-scrollbar-visible${navigationScrollbarFading ? " is-scrollbar-fading" : ""}`
-              : "sidebar-main"
-        }
-      >
-        {availableExperiences.length > 1 && !(desktopNavigation && navigationCollapsed) ? (
-          <div className="experience-switcher">
-            <Segmented
-              block
-              size="small"
-              aria-label="切换管理端或教师端"
-              value={experience}
-              options={availableExperiences.map((value) => ({ value, label: workspaceLabel(user, value) }))}
-              onChange={(value) => { setNavigationOpen(false); onExperienceChange(value as ProductExperience); }}
-            />
-          </div>
-        ) : null}
-        <Menu
-          mode="inline"
-          inlineCollapsed={desktopNavigation && navigationCollapsed}
-          selectedKeys={[selectedPath]}
-          items={menuItems}
-          onClick={(item) => { setNavigationOpen(false); onNavigate(item.key); }}
-          className="side-menu"
-        />
-      </div>
-      <div className="sidebar-footer">
-        <Dropdown menu={accountMenu} placement="topLeft" trigger={["click"]}>
-          <button type="button" className="sidebar-account" aria-label={`账户菜单：${user.displayName || user.username}`}>
-            <Avatar size={28} icon={<UserRound size={16} />} />
-            <span className="sidebar-account-copy">
-              <strong>{user.displayName || user.username}</strong>
-              <small>{productIdentityLabel(user)}</small>
-            </span>
-            <ChevronDown size={14} />
-          </button>
-        </Dropdown>
-      </div>
-    </div>
-  );
+  const navigation = <ShellNavigation desktop={desktopNavigation} collapsed={navigationCollapsed}
+    scrollbarVisible={navigationScrollbarVisible} scrollbarFading={navigationScrollbarFading}
+    onShowScrollbar={showNavigationScrollbar} onHideScrollbar={scheduleNavigationScrollbarHide}
+    onCloseNavigation={() => setNavigationOpen(false)} onToggleNavigation={toggleNavigation}
+    onNavigate={onNavigate} onExperienceChange={onExperienceChange} user={user} experience={experience}
+    availableExperiences={availableExperiences} selectedPath={selectedPath} menuItems={menuItems} accountMenu={accountMenu} />;
 
   return (
     <ConfigProvider
@@ -348,7 +284,7 @@ export function AppLayout({
         }
       }}
     >
-      <Layout className={shellMode === "grading" ? "app-frame immersive-frame" : focused ? "app-frame focused-frame" : "app-frame"}>
+      <Layout className={shellClasses.frame}>
         <a className="skip-to-workspace" href="#main-workspace" onClick={(event) => { event.preventDefault(); document.getElementById("main-workspace")?.focus(); }}>跳到主要内容</a>
         {!immersive && desktopNavigation ? (
           <Sider width={DESKTOP_NAVIGATION_WIDTH} collapsedWidth={DESKTOP_NAVIGATION_COLLAPSED_WIDTH} collapsed={navigationCollapsed} trigger={null} className="sidebar">
@@ -370,53 +306,18 @@ export function AppLayout({
         ) : null}
         <Layout>
           {user.publicComputer ? (
-            <div className="public-computer-banner" role="status">
+            <output className="public-computer-banner">
               <span><Tag color="orange">公共电脑</Tag>请勿让他人使用当前会话，离开前退出并清理本机数据。</span>
               <Button danger size="small" onClick={onLogout}>立即退出</Button>
-            </div>
+            </output>
           ) : null}
-          {focused ? (
-            <Header className="topbar focused-topbar">
-              <div className="topbar-left">
-                <Button type="text" icon={<ArrowLeft size={17} />} aria-label={focusedContext.backLabel} onClick={() => onNavigate(focusedContext.backPath)}>{focusedContext.backLabel}</Button>
-                <strong>{focusedContext.title}</strong>
-              </div>
-              <Space className="topbar-actions">
-                <Dropdown menu={accountMenu} placement="bottomRight" trigger={["click"]}>
-                  <Button className="user-button"><Avatar size={24} icon={<UserRound size={15} />} /><span>{user.username}</span><ChevronDown size={14} /></Button>
-                </Dropdown>
-              </Space>
-            </Header>
-          ) : shellMode === "grading" ? (
-            <Header className="topbar immersive-topbar">
-              <div className="topbar-left">
-                <Space size="middle">
-                <Button type="text" icon={<ArrowLeft size={17} />} aria-label="退出阅卷" onClick={() => onNavigate("/dashboard")}>退出阅卷</Button>
-                <strong>{experienceLabel(experience)} · {currentPresentation.title}</strong>
-                </Space>
-                {currentRoute.mock ? <MockBadge compact={true} /> : null}
-              </div>
-              <Space className="topbar-actions">
-                <Dropdown menu={accountMenu} placement="bottomRight" trigger={["click"]}>
-                <Button className="user-button">
-                  <Avatar size={24} icon={<UserRound size={15} />} />
-                  <span>{user.username}</span>
-                  <ChevronDown size={14} />
-                </Button>
-                </Dropdown>
-              </Space>
-            </Header>
-          ) : !desktopNavigation ? (
-            <Header className="mobile-shellbar">
-              <Button className="mobile-nav-button" type="text" icon={<MenuIcon size={20} />} aria-label="打开主导航" onClick={() => setNavigationOpen(true)} />
-              <div className="mobile-page-context"><strong>{currentPresentation.title}</strong><span>{user.school || workspaceLabel(user, experience)}</span></div>
-              {currentRoute.mock ? <MockBadge compact={true} /> : null}
-            </Header>
-          ) : null}
+          <ShellTopbar mode={shellMode} desktop={desktopNavigation} focusedContext={focusedContext}
+            user={user} experience={experience} title={currentPresentation.title} mock={currentRoute.mock}
+            accountMenu={accountMenu} onNavigate={onNavigate} onOpenNavigation={() => setNavigationOpen(true)} />
           <Content
             id="main-workspace"
             tabIndex={-1}
-            className={shellMode === "grading" ? "workspace immersive-workspace" : focused ? "workspace focused-workspace" : "workspace"}
+            className={shellClasses.workspace}
             onMouseEnter={showWorkspaceScrollbar}
             onMouseLeave={scheduleWorkspaceScrollbarHide}
           >

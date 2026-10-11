@@ -80,8 +80,9 @@ class ApplicationV2Tests(unittest.TestCase):
 
         changed = copy.deepcopy(request)
         changed["answer_text"] += " changed"
+        request_size = body_size(changed)
         with self.assertRaises(AgentError) as caught:
-            app.grade(changed, changed["request_id"], body_size=body_size(changed))
+            app.grade(changed, changed['request_id'], body_size=request_size)
         self.assertEqual(caught.exception.code, "idempotency_conflict")
         self.assertEqual(len(adapter.calls), 1)
 
@@ -99,7 +100,7 @@ class ApplicationV2Tests(unittest.TestCase):
                 results.append(
                     app.grade(request, request["request_id"], body_size=body_size(request))
                 )
-            except Exception as exc:  # noqa: BLE001 - test captures thread failures.
+            except Exception as exc:  # noqa: BLE001 - 测试捕获线程失败。
                 errors.append(exc)
 
         threads = [threading.Thread(target=run) for _ in range(2)]
@@ -114,7 +115,7 @@ class ApplicationV2Tests(unittest.TestCase):
         self.assertEqual(sorted(replayed for _, replayed in results), [False, True])
         self.assertEqual(len(adapter.calls), 1)
 
-    # 两个不同请求各执行一次；fixture seam 的并发上限与同键幂等合并是两条独立规则。
+    # 两个不同请求各执行一次；测试样本接入点 的并发上限与同键幂等合并是两条独立规则。
     def test_distinct_v2_requests_are_serialized_to_one_inference(self):
         first = fixture("valid-request.json")
         second = copy.deepcopy(first)
@@ -129,7 +130,7 @@ class ApplicationV2Tests(unittest.TestCase):
             try:
                 barrier.wait()
                 app.grade(request, request["request_id"], body_size=body_size(request))
-            except Exception as exc:  # noqa: BLE001 - test captures thread failures.
+            except Exception as exc:  # noqa: BLE001 - 测试捕获线程失败。
                 errors.append(exc)
 
         threads = [
@@ -153,8 +154,9 @@ class ApplicationV2Tests(unittest.TestCase):
         events = []
         app = GradingAgentV2ApplicationSeam(adapter, logger=events.append)
 
+        request_size = body_size(request)
         with self.assertRaises(AgentError) as caught:
-            app.grade(request, request["request_id"], body_size=body_size(request))
+            app.grade(request, request['request_id'], body_size=request_size)
         self.assertEqual(caught.exception.code, "evidence_verification_failed")
         self.assertEqual(len(app._cache), 0)
         self.assertEqual(len(app._inflight), 0)
@@ -166,8 +168,9 @@ class ApplicationV2Tests(unittest.TestCase):
         class UnapprovedAdapter:
             pass
 
-        with self.assertRaisesRegex(TypeError, "OfflineV2FixtureAdapter"):
-            GradingAgentV2ApplicationSeam(UnapprovedAdapter())
+        adapter = UnapprovedAdapter()
+        with self.assertRaisesRegex(TypeError, 'OfflineV2FixtureAdapter'):
+            GradingAgentV2ApplicationSeam(adapter)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,998 @@
+{
+  "file": "10-security-deployment.drawio",
+  "title": "权限安全部署",
+  "pages": [
+    {
+      "id": "authorization",
+      "title": "身份、权限、幂等与学校数据边界",
+      "nodes": [
+        {
+          "id": "human",
+          "label": "实际人类角色\nplatform_admin / tenant_admin / school_admin\nteacher / grader / arbitrator / auditor / student\n数据范围：platform/tenant/school/class/exam_task/self",
+          "x": 160,
+          "y": 260,
+          "w": 824,
+          "h": 157,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/auth/role_policy.go:19",
+          "display_label": "平台 / 租户 / 学校管理员\n教师 / 阅卷员 / 仲裁员 / 审计员 / 学生",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "service",
+          "label": "实际服务身份\npage_processing_worker / subjective_grading_worker\n*_worker按服务角色策略识别\n服务账户仍须绑定任务与租约",
+          "x": 1278,
+          "y": 260,
+          "w": 968,
+          "h": 157,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/auth/role_policy.go:28;services/api-gateway/internal/server/router_guards.go:295",
+          "display_label": "页面处理 / 主观评分 Worker\n任务绑定 + 租约校验",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "auth",
+          "label": "AuthMiddleware\n会话hash查询、expiry/revoke/epoch/locked校验\n解析当前角色、permissions、AccessScope\ncookie / Bearer；空scope只限特定自账户入口",
+          "x": 104,
+          "y": 679,
+          "w": 532,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/auth/middleware.go:36;services/api-gateway/internal/auth/store_postgres.go:180",
+          "display_label": "认证 / 当前会话",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "idem",
+          "label": "requireAuth中的幂等收据\n缓存key含tenant+actor+route+指纹\n命中时直接返回旧响应\nP1：内层权限/资源检查未执行",
+          "x": 948,
+          "y": 679,
+          "w": 456,
+          "h": 111,
+          "status": "issue",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/router_guards.go:98;services/api-gateway/internal/idempotency/middleware.go:144",
+          "display_label": "通用收据重放",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "resource",
+          "label": "资源边界 + Permission\n学校、班级、考试、学生、分派任务\n平台角色仍受保留tenant校验\n新命令继续经过业务Store scope",
+          "x": 1668,
+          "y": 686,
+          "w": 577,
+          "h": 98,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/auth/resource_scope.go:37;services/api-gateway/internal/server/router_guards.go:130",
+          "display_label": "资源范围 / 业务权限",
+          "show_evidence": false,
+          "title_font_size": 61,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "recent",
+          "label": "受保护关键guard顺序\nauth → resource → permission → recentAuth\n→ idempotency → handler\n导出/关键命令会在缓存返回前再次检查",
+          "x": 382,
+          "y": 1085,
+          "w": 380,
+          "h": 157,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/router_guards.go:116;services/api-gateway/internal/server/recent_auth_test.go:67",
+          "display_label": "关键操作\n授权 → 近期认证 → 重放",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "task",
+          "label": "Worker作用域与能力\nTaskScope + source/payload/file校验\nowner/generation/lease限制结果提交\n服务声明不能自行扩大全租户范围",
+          "x": 1422,
+          "y": 1108,
+          "w": 680,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/router_guards.go:182;services/api-gateway/internal/server/router_guards.go:307",
+          "display_label": "Worker 能力 / 租约",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "rls",
+          "label": "DB第二道防线\n每次query设置runtime role与tenant_id\n非superuser / 不可BYPASSRLS\n仅部分表FORCE RLS；学校细分仍靠应用\nmaintenance是显式后台跨租户上下文",
+          "x": 174,
+          "y": 1504,
+          "w": 796,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/db/tenant_context.go:55;services/api-gateway/migrations/000139_high_risk_tenant_rls.sql",
+          "display_label": "SQL 范围 + 部分表 RLS",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "boundary",
+          "label": "审计边界\n身份仍始终校验；权限变更会废止旧会话\n同actor重新登录、scope仍有效后才可能旧键重放\n不表示重放会再次执行写操作\nDB复合租户FK与快照触发器缺口见审查报告",
+          "x": 1318,
+          "y": 1482,
+          "w": 888,
+          "h": 157,
+          "status": "partial",
+          "kind": "note",
+          "evidence": "services/api-gateway/internal/auth/managed_access_store.go:154;docs/architecture/evidence/database-audit.md",
+          "display_label": "旧键：同操作者有效新会话\n收据命中可能跳过当前业务授权",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        }
+      ],
+      "edges": [
+        {
+          "source": "human",
+          "target": "auth",
+          "label": "请求 / 当前会话",
+          "display_label": "请求 / 当前会话"
+        },
+        {
+          "source": "service",
+          "target": "task",
+          "label": "Bearer + task headers",
+          "points": [
+            [
+              2301,
+              338
+            ],
+            [
+              2301,
+              975
+            ],
+            [
+              1762,
+              975
+            ]
+          ],
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0.5,
+          "entryY": 0,
+          "display_label": "Bearer + task headers"
+        },
+        {
+          "source": "auth",
+          "target": "idem",
+          "label": "requireAuth路线",
+          "display_label": "requireAuth路线"
+        },
+        {
+          "source": "idem",
+          "target": "resource",
+          "label": "只有新执行时",
+          "display_label": "只有新执行时"
+        },
+        {
+          "source": "auth",
+          "target": "recent",
+          "label": "专用guard路线",
+          "display_label": "专用guard路线"
+        },
+        {
+          "source": "resource",
+          "target": "rls",
+          "label": "Store SQL",
+          "points": [
+            [
+              2275,
+              748
+            ],
+            [
+              2275,
+              1352
+            ],
+            [
+              572,
+              1352
+            ]
+          ],
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0.5,
+          "entryY": 0,
+          "display_label": "Store SQL"
+        },
+        {
+          "source": "task",
+          "target": "rls",
+          "label": "任务租户context",
+          "points": [
+            [
+              1144,
+              1164
+            ],
+            [
+              1144,
+              1560
+            ]
+          ],
+          "exitX": 0,
+          "exitY": 0.5,
+          "entryX": 1,
+          "entryY": 0.5,
+          "display_label": "任务租户context"
+        }
+      ],
+      "width": 2340,
+      "height": 1885,
+      "note": "当前工作区实际实现 · 2026-10-10 · 箭头表示调用／依赖方向；完整出处见节点属性与provenance目录",
+      "display_note": "",
+      "typography_layout_base": {
+        "width": 1800,
+        "height": 1450,
+        "nodes": {
+          "human": {
+            "x": 60,
+            "y": 160,
+            "w": 760,
+            "h": 200
+          },
+          "service": {
+            "x": 980,
+            "y": 160,
+            "w": 750,
+            "h": 200
+          },
+          "auth": {
+            "x": 60,
+            "y": 460,
+            "w": 450,
+            "h": 210
+          },
+          "idem": {
+            "x": 680,
+            "y": 460,
+            "w": 450,
+            "h": 210
+          },
+          "resource": {
+            "x": 1280,
+            "y": 460,
+            "w": 450,
+            "h": 210
+          },
+          "recent": {
+            "x": 60,
+            "y": 800,
+            "w": 760,
+            "h": 190
+          },
+          "task": {
+            "x": 980,
+            "y": 800,
+            "w": 750,
+            "h": 190
+          },
+          "rls": {
+            "x": 60,
+            "y": 1100,
+            "w": 760,
+            "h": 200
+          },
+          "boundary": {
+            "x": 980,
+            "y": 1100,
+            "w": 750,
+            "h": 200
+          }
+        },
+        "points": {
+          "1": [
+            [
+              1770,
+              260
+            ],
+            [
+              1770,
+              750
+            ],
+            [
+              1355,
+              750
+            ]
+          ],
+          "5": [
+            [
+              1750,
+              575
+            ],
+            [
+              1750,
+              1040
+            ],
+            [
+              440,
+              1040
+            ]
+          ],
+          "6": [
+            [
+              880,
+              895
+            ],
+            [
+              880,
+              1200
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "credential",
+      "title": "凭据加密、使用与会话安全",
+      "nodes": [
+        {
+          "id": "admin",
+          "label": "平台模型配置操作\nAPI Key仅输入/掩码显示\n角色+模型配置权限+资源检查",
+          "x": 130,
+          "y": 263,
+          "w": 456,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/router_guards.go:310;services/api-gateway/internal/modelgovernance/managed_config_store_postgres.go:34",
+          "display_label": "保存模型配置",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "cipher",
+          "label": "CredentialCipher\nSHA-256(masterKey) → AES-256-GCM\n随机nonce；AAD绑定tenantID+configID\n解密失败返回配置不可用",
+          "x": 972,
+          "y": 253,
+          "w": 370,
+          "h": 157,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/modelgovernance/managed_config.go:208",
+          "display_label": "AES-GCM\ntenant / config AAD",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "store",
+          "label": "PostgreSQL托管配置\n只保存ciphertext + nonce\n状态/能力探测/更新版本\n主密钥来自部署环境；图中无真实值",
+          "x": 1818,
+          "y": 276,
+          "w": 291,
+          "h": 111,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/modelgovernance/managed_config_store_postgres.go:44",
+          "display_label": "PG 密文",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "resolve",
+          "label": "运行时解析 / 解密\nResolveDefaultManagedAPI / role binding\n同租户、active、当前能力探测版本\n显式默认不可用时不静默换供应商",
+          "x": 1001,
+          "y": 731,
+          "w": 312,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/modelgovernance/managed_config.go:183;services/api-gateway/internal/modelgovernance/managed_config_store_postgres.go:211",
+          "display_label": "受控解密",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "go",
+          "label": "Go业务处理器 / 托管Agent\n试卷导入、评分Agent、学校助手\n将短期明文凭据用于本次HTTP调用",
+          "x": 80,
+          "y": 740,
+          "w": 554,
+          "h": 94,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/application_modules.go:126;services/api-gateway/internal/modelgovernance/managed_agent_http.go",
+          "display_label": "业务处理器 / Agent",
+          "show_evidence": false,
+          "title_font_size": 58,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "external",
+          "label": "本地或外部模型\n受控BaseURL + provider adapter\n认证header；timeouts / retries\n具体部署与密钥轮换未运行确认",
+          "x": 1697,
+          "y": 731,
+          "w": 532,
+          "h": 111,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "ai-services/grading_agent/provider_adapter.py;ai-services/grading_agent/model.py",
+          "display_label": "本地 / 外部模型",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "session",
+          "label": "用户会话与密码\n密码Argon2id；兼容bcrypt并升级\n随机token，DB保存SHA-256 hash\n授权变更提升epoch并撤销会话",
+          "x": 277,
+          "y": 1254,
+          "w": 617,
+          "h": 157,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/auth/password.go:36;services/api-gateway/internal/auth/token.go:11;services/api-gateway/internal/auth/managed_access_store.go:154",
+          "display_label": "会话 Token Hash\n密码 Argon2id",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "protect",
+          "label": "HTTP与审计控制\nCSRF、CORS、body limit、安全头\nRedis登录失败限流、MFA/step-up\n日志、指标、显式审计写入\n真实.env、口令、API Key未写入文档",
+          "x": 1420,
+          "y": 1277,
+          "w": 645,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/server.go:183;services/api-gateway/internal/server/infrastructure.go:84;services/api-gateway/internal/server/routes_auth.go",
+          "display_label": "CSRF / 限流 / 审计",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        }
+      ],
+      "edges": [
+        {
+          "source": "admin",
+          "target": "cipher",
+          "label": "写入凭据",
+          "display_label": "写入凭据"
+        },
+        {
+          "source": "cipher",
+          "target": "store",
+          "label": "密文存储",
+          "display_label": "密文存储"
+        },
+        {
+          "source": "store",
+          "target": "resolve",
+          "label": "受限配置读取",
+          "points": [
+            [
+              1963,
+              546
+            ],
+            [
+              1157,
+              546
+            ]
+          ],
+          "display_label": "受限配置读取"
+        },
+        {
+          "source": "resolve",
+          "target": "go",
+          "label": "解密后的运行配置",
+          "display_label": "解密后的运行配置"
+        },
+        {
+          "source": "go",
+          "target": "external",
+          "label": "受控模型HTTP调用",
+          "points": [
+            [
+              351,
+              1040
+            ],
+            [
+              1963,
+              1040
+            ]
+          ],
+          "exitX": 0.5,
+          "exitY": 1,
+          "entryX": 0.5,
+          "entryY": 1,
+          "display_label": "受控模型HTTP调用"
+        }
+      ],
+      "width": 2340,
+      "height": 1677,
+      "note": "当前工作区实际实现 · 2026-10-10 · 箭头表示调用／依赖方向；完整出处见节点属性与provenance目录",
+      "display_note": "",
+      "typography_layout_base": {
+        "width": 1800,
+        "height": 1290,
+        "nodes": {
+          "admin": {
+            "x": 60,
+            "y": 160,
+            "w": 430,
+            "h": 170
+          },
+          "cipher": {
+            "x": 650,
+            "y": 160,
+            "w": 480,
+            "h": 190
+          },
+          "store": {
+            "x": 1290,
+            "y": 160,
+            "w": 440,
+            "h": 190
+          },
+          "resolve": {
+            "x": 650,
+            "y": 500,
+            "w": 480,
+            "h": 210
+          },
+          "go": {
+            "x": 60,
+            "y": 500,
+            "w": 430,
+            "h": 210
+          },
+          "external": {
+            "x": 1290,
+            "y": 500,
+            "w": 440,
+            "h": 210
+          },
+          "session": {
+            "x": 60,
+            "y": 920,
+            "w": 780,
+            "h": 210
+          },
+          "protect": {
+            "x": 950,
+            "y": 920,
+            "w": 780,
+            "h": 210
+          }
+        },
+        "points": {
+          "2": [
+            [
+              1510,
+              420
+            ],
+            [
+              890,
+              420
+            ]
+          ],
+          "4": [
+            [
+              270,
+              800
+            ],
+            [
+              1510,
+              800
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "deployment",
+      "title": "物理部署：Compose定义与客户端宿主机",
+      "nodes": [
+        {
+          "id": "client",
+          "label": "浏览器 / 桌面宿主机\nWeb Admin；Student可独立构建\n桌面Tauri在客户端，不是Compose服务",
+          "x": 82,
+          "y": 266,
+          "w": 565,
+          "h": 105,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "apps/student-portal/package.json;apps/desktop-client/src-tauri/tauri.conf.json",
+          "display_label": "浏览器 / 桌面宿主",
+          "show_evidence": false,
+          "title_font_size": 67,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "nginx",
+          "label": "nginx :80 → 宿主8088\n/api/* → api-gateway:8080\n/ → web-admin:80\n样例HTTP；外部TLS终止待环境确认",
+          "x": 972,
+          "y": 276,
+          "w": 408,
+          "h": 111,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "infra/docker-compose/nginx/nginx.conf:45;infra/docker-compose/docker-compose.yml:753",
+          "display_label": "Nginx 入口",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "web",
+          "label": "web-admin Nginx容器\nVite静态构建；默认主页管理端\nCompose没有独立student服务",
+          "x": 1713,
+          "y": 276,
+          "w": 500,
+          "h": 111,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "infra/docker-compose/docker-compose.yml:408;apps/web-admin/Dockerfile",
+          "display_label": "Web 静态容器",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "api",
+          "label": "api-gateway Go容器\nPostgres应用身份；Worker→API TLS可配置\nCompose样例API→grading-agent使用HTTPS与内部CA\nAPI宿主8080；health/live与health/ready",
+          "x": 958,
+          "y": 712,
+          "w": 437,
+          "h": 111,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "infra/docker-compose/docker-compose.yml:264;infra/docker-compose/docker-compose.yml:314;infra/docker-compose/.env.example;services/api-gateway/cmd/api-gateway/main.go:62",
+          "display_label": "Go API 容器",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "data",
+          "label": "持久数据服务容器\nPostgreSQL16、Redis7、MinIO\nQdrant；独立Docker volumes\n数据服务默认宿主127.0.0.1绑定",
+          "x": 70,
+          "y": 1206,
+          "w": 588,
+          "h": 72,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "infra/docker-compose/docker-compose.yml:10;infra/docker-compose/docker-compose.yml:817",
+          "display_label": "PG / Redis / MinIO / Qdrant",
+          "show_evidence": false,
+          "title_font_size": 40,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "workers",
+          "label": "按profile启用Python Worker\nocr / processing / quality / subjective-grading\nmath-verification (math或ocr)\nOCR→数学验证默认HTTPS；CA/证书只读挂载\n服务账户与外部模型依赖仍需配置",
+          "x": 1680,
+          "y": 689,
+          "w": 567,
+          "h": 156,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "infra/docker-compose/docker-compose.yml:490;infra/docker-compose/docker-compose.yml:518;infra/docker-compose/docker-compose.yml:687;infra/docker-compose/docker-compose.yml:701",
+          "display_label": "Python Worker\nOCR → 数学验证：HTTPS",
+          "show_evidence": false,
+          "title_font_size": 71,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "agent",
+          "label": "grading-agent容器 :8100\nTLS证书成对校验；内部CA与证书只读挂载\nprovider adapter向宿主/外部模型发送请求\nCompose样例服务链HTTPS，未做运行验收",
+          "x": 902,
+          "y": 1163,
+          "w": 549,
+          "h": 157,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "infra/docker-compose/docker-compose.yml:430;infra/docker-compose/docker-compose.yml:459;ai-services/grading_agent/server.py",
+          "display_label": "grading-agent\n内部 HTTPS / 证书",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "model",
+          "label": "宿主llama.cpp / 外部模型\n本地启动脚本支持Qwen运行时\nCompose external provider由环境决定",
+          "x": 1697,
+          "y": 1186,
+          "w": 532,
+          "h": 111,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "scripts/launch-local.ps1;infra/docker-compose/docker-compose.yml:443",
+          "display_label": "本地 / 外部模型",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "ops",
+          "label": "部署工具与维护\ntools: db-migrate / minio-init\nSQL checksum + advisory lock + 每份迁移事务\n备份、校验、restore drill、文件巡检",
+          "x": 288,
+          "y": 1648,
+          "w": 608,
+          "h": 111,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "infra/docker-compose/docker-compose.yml:122;infra/docker-compose/scripts/restore-drill.ps1",
+          "display_label": "迁移 / 备份 / 恢复",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "observe",
+          "label": "observability可选profile\nPrometheus抓取API metrics → Grafana\nCI含静态/单测/race/PG/Worker/E2E门禁\n当前部署运行、告警投递与测试结果未全确认",
+          "x": 1328,
+          "y": 1624,
+          "w": 827,
+          "h": 157,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "infra/docker-compose/docker-compose.yml:773;.github/workflows/ci.yml",
+          "display_label": "Prometheus / Grafana\n可选 profile",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        }
+      ],
+      "edges": [
+        {
+          "source": "client",
+          "target": "nginx",
+          "label": "HTTP入口",
+          "display_label": "HTTP入口"
+        },
+        {
+          "source": "nginx",
+          "target": "web",
+          "label": "静态页面",
+          "display_label": "静态页面"
+        },
+        {
+          "source": "nginx",
+          "target": "api",
+          "label": "/api/*",
+          "display_label": "/api/*"
+        },
+        {
+          "source": "workers",
+          "target": "api",
+          "label": "服务账户HTTP / claim / complete",
+          "display_label": "任务 HTTP"
+        },
+        {
+          "source": "api",
+          "target": "data",
+          "label": "SQL/对象/限流",
+          "points": [
+            [
+              793,
+              949
+            ],
+            [
+              364,
+              949
+            ]
+          ],
+          "exitX": 0,
+          "exitY": 0.5,
+          "entryX": 0.5,
+          "entryY": 0,
+          "display_label": "SQL/对象/限流"
+        },
+        {
+          "source": "api",
+          "target": "agent",
+          "label": "模型调用 HTTPS",
+          "display_label": "模型调用 HTTPS",
+          "evidence": "infra/docker-compose/.env.example;infra/docker-compose/scripts/preflight.ps1"
+        },
+        {
+          "source": "agent",
+          "target": "model",
+          "label": "provider HTTP",
+          "display_label": "provider HTTP"
+        },
+        {
+          "source": "observe",
+          "target": "api",
+          "label": "metrics scrape",
+          "dashed": true,
+          "points": [
+            [
+              2301,
+              1716
+            ],
+            [
+              2301,
+              1027
+            ],
+            [
+              1176,
+              1027
+            ]
+          ],
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0.5,
+          "entryY": 1,
+          "display_label": "metrics scrape"
+        }
+      ],
+      "width": 2340,
+      "height": 2028,
+      "note": "仓库Compose定义；API→Agent与OCR→Math样例HTTPS，证书与CA需配置。外层TLS/profile/生产运行未验收；凭据省略。",
+      "display_note": "",
+      "typography_layout_base": {
+        "width": 1800,
+        "height": 1560,
+        "nodes": {
+          "client": {
+            "x": 60,
+            "y": 160,
+            "w": 440,
+            "h": 170
+          },
+          "nginx": {
+            "x": 680,
+            "y": 160,
+            "w": 450,
+            "h": 190
+          },
+          "web": {
+            "x": 1290,
+            "y": 160,
+            "w": 440,
+            "h": 190
+          },
+          "api": {
+            "x": 680,
+            "y": 490,
+            "w": 450,
+            "h": 200
+          },
+          "data": {
+            "x": 60,
+            "y": 850,
+            "w": 440,
+            "h": 210
+          },
+          "workers": {
+            "x": 1290,
+            "y": 490,
+            "w": 440,
+            "h": 200
+          },
+          "agent": {
+            "x": 680,
+            "y": 850,
+            "w": 450,
+            "h": 210
+          },
+          "model": {
+            "x": 1290,
+            "y": 850,
+            "w": 440,
+            "h": 210
+          },
+          "ops": {
+            "x": 60,
+            "y": 1210,
+            "w": 790,
+            "h": 200
+          },
+          "observe": {
+            "x": 950,
+            "y": 1210,
+            "w": 780,
+            "h": 200
+          }
+        },
+        "points": {
+          "4": [
+            [
+              610,
+              730
+            ],
+            [
+              280,
+              730
+            ]
+          ],
+          "7": [
+            [
+              1770,
+              1320
+            ],
+            [
+              1770,
+              790
+            ],
+            [
+              905,
+              790
+            ]
+          ]
+        }
+      }
+    }
+  ],
+  "compact": true
+}

@@ -1,0 +1,18 @@
+{
+  "command": [
+    "rustup",
+    "toolchain",
+    "install",
+    "1.98.1",
+    "--profile",
+    "minimal",
+    "--component",
+    "rust-src",
+    "--no-self-update"
+  ],
+  "started": "2026-10-11T13:48:05+08:00",
+  "purpose": "恢复官方 CodeQL Rust 提取器实际选择的 1.98.1 工具链；不更改默认 stable 工具链。",
+  "exit_code": 0,
+  "finished": "2026-10-11T13:49:25+08:00",
+  "elapsed_seconds": 80.12
+}

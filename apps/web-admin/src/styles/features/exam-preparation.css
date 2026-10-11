@@ -1,4 +1,4 @@
-/* STORY-054 exam preparation */
+/* STORY-054 考试准备。 */
 .template-editor-page,
 .preparation-page {
   display: flex;
@@ -6,6 +6,7 @@
   gap: 16px;
   min-width: 0;
 }
+.template-editor-page { container: template-editor / inline-size; }
 
 .template-toolbar,
 .preparation-heading {
@@ -39,14 +40,15 @@
 }
 
 .template-workbench {
+  position: relative;
   min-height: 680px;
   display: grid;
-  grid-template-columns: 210px minmax(520px, 1fr) 290px;
-  overflow: hidden;
+  grid-template-columns: 200px minmax(0, 1fr) 304px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
 }
+.template-question-toggle { display: none; }
 
 .template-question-pane,
 .template-inspector {
@@ -124,6 +126,18 @@
   padding: 8px 14px;
   background: #f8fafc;
   border-bottom: 1px solid #d8dde5;
+}
+
+/* 二级考试导航会压缩工作区，模板按实际容器宽度收起题号栏，而不是按窗口宽度猜测。 */
+@container template-editor (max-width: 1135px) {
+  .template-workbench { grid-template-columns: minmax(0, 1fr) 304px; }
+  .template-question-toggle { display: inline-flex; }
+  .template-question-pane { display: none; }
+  .template-question-pane.is-open { position: absolute; z-index: 8; top: 0; bottom: 0; left: 0; display: block; width: min(280px, 90%); overflow-y: auto; border-right: 1px solid var(--border); box-shadow: 8px 0 24px rgba(31, 35, 41, .12); }
+}
+@container template-editor (max-width: 919px) {
+  .template-workbench { grid-template-columns: minmax(0, 1fr); }
+  .template-inspector { grid-column: 1; border-left: 0; border-top: 1px solid var(--border); }
 }
 
 .template-canvas-toolbar span {
@@ -208,12 +222,25 @@
   place-items: center;
   border: 2px solid #16845b;
   background: rgba(22, 132, 91, 0.2);
-  color: #093d2d;
   font-size: var(--eg-font-caption);
   font-style: normal;
   font-weight: 700;
   line-height: 1;
   pointer-events: none;
+}
+
+/* 扫描图像明暗不固定；仅标签加实色底，选项框继续透明显示原件。 */
+.template-option-region > span {
+  box-sizing: border-box;
+  /* 极小标记也保留一个字母的底牌；不扩大实际选项坐标框。 */
+  min-width: 1.2em;
+  max-width: 100%;
+  padding: 1px 2px;
+  overflow: hidden;
+  color: #fff;
+  background: #093d2d;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .template-option-editor {

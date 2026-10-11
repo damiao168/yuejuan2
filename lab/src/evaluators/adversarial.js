@@ -83,6 +83,34 @@ export function runAdversarialSuite() {
   return createAdversarialAgents().map(evaluateAdversarialAgent);
 }
 
+function checkAdversarialReport(agentId, matches, gate, reasons) {
+  if (matches.length === 0) {
+    reasons.push(`missing adversarial agent ${agentId}`);
+    return;
+  }
+  // 重复代理仍只验证首份报告；重复本身另记失败，不能挑选较好的报告通过门禁。
+  if (matches.length > 1) reasons.push(`duplicate adversarial agent ${agentId}`);
+
+  const report = matches[0];
+  // 从逐条用例重算汇总值，防止报告中的比例与实际攻击/对照样本不一致。
+  const calculated = aggregateResults(report, reasons);
+  if (!calculated) return;
+  for (const field of AGGREGATE_FIELDS) {
+    if (!aggregateMatches(report[field], calculated[field])) {
+      reasons.push(`${agentId}.${field} does not match results`);
+    }
+  }
+
+  if (calculated.attack_count < gate.minimum_attacks_per_agent) reasons.push(`${agentId}.attack_count ${calculated.attack_count} < ${gate.minimum_attacks_per_agent}`);
+  if (calculated.control_count < gate.minimum_controls_per_agent) reasons.push(`${agentId}.control_count ${calculated.control_count} < ${gate.minimum_controls_per_agent}`);
+  if (calculated.attack_family_count < gate.minimum_attack_families_per_agent) reasons.push(`${agentId}.attack_family_count ${calculated.attack_family_count} < ${gate.minimum_attack_families_per_agent}`);
+  if (calculated.control_family_count < gate.minimum_control_families_per_agent) reasons.push(`${agentId}.control_family_count ${calculated.control_family_count} < ${gate.minimum_control_families_per_agent}`);
+  if (calculated.attack_recall < gate.minimum_attack_recall) reasons.push(`${agentId}.attack_recall ${calculated.attack_recall} < ${gate.minimum_attack_recall}`);
+  if (calculated.control_false_positive_rate > gate.maximum_control_false_positive_rate) {
+    reasons.push(`${agentId}.control_false_positive_rate ${calculated.control_false_positive_rate} > ${gate.maximum_control_false_positive_rate}`);
+  }
+}
+
 export function checkAdversarialGate(reports, level, configPath = "config/adversarial-gates.json") {
   const config = JSON.parse(readFileSync(configPath, "utf8"));
   const gate = config[level];
@@ -105,31 +133,7 @@ export function checkAdversarialGate(reports, level, configPath = "config/advers
   }
 
   for (const agentId of ADVERSARIAL_AGENT_IDS) {
-    const matches = reportGroups.get(agentId);
-    if (matches.length === 0) {
-      reasons.push(`missing adversarial agent ${agentId}`);
-      continue;
-    }
-    if (matches.length > 1) reasons.push(`duplicate adversarial agent ${agentId}`);
-
-    const report = matches[0];
-    // 从逐条用例重算汇总值，防止报告中的比例与实际攻击/对照样本不一致。
-    const calculated = aggregateResults(report, reasons);
-    if (!calculated) continue;
-    for (const field of AGGREGATE_FIELDS) {
-      if (!aggregateMatches(report[field], calculated[field])) {
-        reasons.push(`${agentId}.${field} does not match results`);
-      }
-    }
-
-    if (calculated.attack_count < gate.minimum_attacks_per_agent) reasons.push(`${agentId}.attack_count ${calculated.attack_count} < ${gate.minimum_attacks_per_agent}`);
-    if (calculated.control_count < gate.minimum_controls_per_agent) reasons.push(`${agentId}.control_count ${calculated.control_count} < ${gate.minimum_controls_per_agent}`);
-    if (calculated.attack_family_count < gate.minimum_attack_families_per_agent) reasons.push(`${agentId}.attack_family_count ${calculated.attack_family_count} < ${gate.minimum_attack_families_per_agent}`);
-    if (calculated.control_family_count < gate.minimum_control_families_per_agent) reasons.push(`${agentId}.control_family_count ${calculated.control_family_count} < ${gate.minimum_control_families_per_agent}`);
-    if (calculated.attack_recall < gate.minimum_attack_recall) reasons.push(`${agentId}.attack_recall ${calculated.attack_recall} < ${gate.minimum_attack_recall}`);
-    if (calculated.control_false_positive_rate > gate.maximum_control_false_positive_rate) {
-      reasons.push(`${agentId}.control_false_positive_rate ${calculated.control_false_positive_rate} > ${gate.maximum_control_false_positive_rate}`);
-    }
+    checkAdversarialReport(agentId, reportGroups.get(agentId), gate, reasons);
   }
   return { level, passed: reasons.length === 0, reasons };
 }

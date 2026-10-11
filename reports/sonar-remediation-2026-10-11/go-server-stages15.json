@@ -1,0 +1,16 @@
+{
+  "files": [
+    {
+      "file": "services/api-gateway/internal/server/e2e_math_verification_runtime_test.go",
+      "sha256": "45c3fddfdd205b6a4a9e27dd04c6127e64500172ef349afe52b5434343ba6caa",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_math_verification_runtime_test.go"
+    }
+  ],
+  "issue_functions": [
+    {
+      "file": "services/api-gateway/internal/server/e2e_math_verification_runtime_test.go",
+      "function": "TestPostgresMathVerificationRuntimeAtomicActivation"
+    }
+  ],
+  "checkpoint_relation": "after checkpoint02; requires subsequent scan"
+}

@@ -1,0 +1,217 @@
+{
+  "checked_at_utc": "2026-10-11T09:27:43.572990+00:00",
+  "source_sha256": "df5d1e523942351cbc2245fd93df75ead18c4abf7e3527ecc4e6d7544cd75d3c",
+  "comparison_cases": [
+    {
+      "case": "complete",
+      "sql": "FOREACH t IN ARRAY ARRAY['a', 'b'] LOOP ALTER TABLE a ENABLE ROW LEVEL SECURITY; END LOOP;",
+      "expected": [
+        [
+          0,
+          "'a', 'b'",
+          " ALTER TABLE a ENABLE ROW LEVEL SECURITY; "
+        ]
+      ],
+      "actual": [
+        [
+          0,
+          "'a', 'b'",
+          " ALTER TABLE a ENABLE ROW LEVEL SECURITY; "
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "case": "multiple",
+      "sql": "FOREACH t IN ARRAY ARRAY['a'] LOOP x END LOOP; FOREACH u IN ARRAY ARRAY['b'] LOOP y END LOOP;",
+      "expected": [
+        [
+          0,
+          "'a'",
+          " x "
+        ],
+        [
+          47,
+          "'b'",
+          " y "
+        ]
+      ],
+      "actual": [
+        [
+          0,
+          "'a'",
+          " x "
+        ],
+        [
+          47,
+          "'b'",
+          " y "
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "case": "multiline",
+      "sql": "FOREACH\nt\nIN\nARRAY\nARRAY\n[\n'a'\n]\nLOOP\nx\nEND\nLOOP",
+      "expected": [
+        [
+          0,
+          "\n'a'\n",
+          "\nx\n"
+        ]
+      ],
+      "actual": [
+        [
+          0,
+          "\n'a'\n",
+          "\nx\n"
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "case": "case",
+      "sql": "foreach t in array array['a'] loop x end loop",
+      "expected": [
+        [
+          0,
+          "'a'",
+          " x "
+        ]
+      ],
+      "actual": [
+        [
+          0,
+          "'a'",
+          " x "
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "case": "missing_array_end",
+      "sql": "FOREACH t IN ARRAY ARRAY['a' LOOP x END LOOP",
+      "expected": [],
+      "actual": [],
+      "passed": true
+    },
+    {
+      "case": "missing_body_end",
+      "sql": "FOREACH t IN ARRAY ARRAY['a'] LOOP x",
+      "expected": [],
+      "actual": [],
+      "passed": true
+    },
+    {
+      "case": "nested_header_in_array",
+      "sql": "FOREACH t IN ARRAY ARRAY['a', FOREACH u IN ARRAY ARRAY['b'] LOOP x END LOOP",
+      "expected": [
+        [
+          0,
+          "'a', FOREACH u IN ARRAY ARRAY['b'",
+          " x "
+        ]
+      ],
+      "actual": [
+        [
+          0,
+          "'a', FOREACH u IN ARRAY ARRAY['b'",
+          " x "
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "case": "nested_header_in_body",
+      "sql": "FOREACH t IN ARRAY ARRAY['a'] LOOP FOREACH u IN ARRAY ARRAY['b'] LOOP x END LOOP END LOOP",
+      "expected": [
+        [
+          0,
+          "'a'",
+          " FOREACH u IN ARRAY ARRAY['b'] LOOP x "
+        ]
+      ],
+      "actual": [
+        [
+          0,
+          "'a'",
+          " FOREACH u IN ARRAY ARRAY['b'] LOOP x "
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "case": "extra_array_token_in_body",
+      "sql": "FOREACH t IN ARRAY ARRAY['a'] LOOP ] LOOP x END LOOP",
+      "expected": [
+        [
+          0,
+          "'a'",
+          " ] LOOP x "
+        ]
+      ],
+      "actual": [
+        [
+          0,
+          "'a'",
+          " ] LOOP x "
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "case": "incomplete_then_complete",
+      "sql": "FOREACH t IN ARRAY ARRAY['a' FOREACH u IN ARRAY ARRAY['b'] LOOP x END LOOP",
+      "expected": [
+        [
+          0,
+          "'a' FOREACH u IN ARRAY ARRAY['b'",
+          " x "
+        ]
+      ],
+      "actual": [
+        [
+          0,
+          "'a' FOREACH u IN ARRAY ARRAY['b'",
+          " x "
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "case": "unrelated_tokens",
+      "sql": "END LOOP x ] LOOP FOREACH t IN ARRAY ARRAY['a'] LOOP END LOOP",
+      "expected": [
+        [
+          18,
+          "'a'",
+          " "
+        ]
+      ],
+      "actual": [
+        [
+          18,
+          "'a'",
+          " "
+        ]
+      ],
+      "passed": true
+    },
+    {
+      "case": "empty",
+      "sql": "",
+      "expected": [],
+      "actual": [],
+      "passed": true
+    }
+  ],
+  "passed": true,
+  "malformed_input": {
+    "bytes": 350000,
+    "repeated_headers": 10000,
+    "missing_end_loop": true,
+    "matches": 0,
+    "elapsed_seconds": 0.014999999999417923
+  },
+  "scope": "原正则匹配语义兼容；大量不完整边界只执行新扫描器，避免运行已知回溯风险模式"
+}

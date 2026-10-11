@@ -36,12 +36,7 @@ func scoringFixture(t *testing.T) (*Service, *MemoryStore, Item) {
 }
 
 func TestSubmitValidatesFrozenRubricThroughAPI(t *testing.T) {
-	for _, test := range []struct {
-		name       string
-		score      float64
-		selections []RubricSelection
-		status     int
-	}{
+	for _, test := range []frozenRubricSubmitCase{
 		{"unknown point", 3, []RubricSelection{{PointID: "forged", Score: 3}}, http.StatusBadRequest},
 		{"duplicate point", 4, []RubricSelection{{PointID: "p1", Score: 2}, {PointID: "p1", Score: 2}}, http.StatusBadRequest},
 		{"point above maximum", 4, []RubricSelection{{PointID: "p1", Score: 4}}, http.StatusBadRequest},
@@ -52,27 +47,7 @@ func TestSubmitValidatesFrozenRubricThroughAPI(t *testing.T) {
 		{"required point can earn zero", 0, []RubricSelection{{PointID: "p1", Score: 0}}, http.StatusCreated},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			service, store, item := scoringFixture(t)
-			body, err := json.Marshal(SubmitInput{Score: test.score, RubricSelections: test.selections, ExpectedRevision: item.Revision})
-			if err != nil {
-				t.Fatal(err)
-			}
-			request := httptest.NewRequest(http.MethodPost, "/api/v1/backmark-items/"+item.ID+"/submit", strings.NewReader(string(body)))
-			request.SetPathValue("itemId", item.ID)
-			request = request.WithContext(auth.WithUser(request.Context(), auth.User{ID: "grader-b", TenantID: "tenant-1"}))
-			response := httptest.NewRecorder()
-			NewHandler(service, nil).Submit(response, request)
-			if response.Code != test.status {
-				t.Fatalf("status=%d body=%s", response.Code, response.Body.String())
-			}
-			if test.status == http.StatusBadRequest {
-				if len(store.grades) != 0 || store.items[item.ID].Revision != item.Revision {
-					t.Fatal("invalid evidence mutated grading facts")
-				}
-				if !strings.Contains(response.Body.String(), "invalid_backmark_input") {
-					t.Fatal(response.Body.String())
-				}
-			}
+			assertFrozenRubricSubmitScenario(t, test)
 		})
 	}
 }
@@ -200,5 +175,38 @@ func TestSummaryCountsAndStatusFilterIncludeUnloadedItems(t *testing.T) {
 	second, err := service.GetPage(context.Background(), "tenant-1", created.Batch.ID, PageOptions{Limit: 10, Status: ItemRegradeRequired, CursorID: last.ID, CursorCreatedAt: last.CreatedAt})
 	if err != nil || len(second.Items) != 3 || second.Items[0].ID == filtered.Items[0].ID {
 		t.Fatalf("second=%#v err=%v", second, err)
+	}
+}
+
+type frozenRubricSubmitCase struct {
+	name       string
+	score      float64
+	selections []RubricSelection
+	status     int
+}
+
+// 无效证据返回后检查内存事实和原修订均未变，避免仅验证 HTTP 状态。
+func assertFrozenRubricSubmitScenario(t *testing.T, test frozenRubricSubmitCase) {
+	t.Helper()
+	service, store, item := scoringFixture(t)
+	body, err := json.Marshal(SubmitInput{Score: test.score, RubricSelections: test.selections, ExpectedRevision: item.Revision})
+	if err != nil {
+		t.Fatal(err)
+	}
+	request := httptest.NewRequest(http.MethodPost, "/api/v1/backmark-items/"+item.ID+"/submit", strings.NewReader(string(body)))
+	request.SetPathValue("itemId", item.ID)
+	request = request.WithContext(auth.WithUser(request.Context(), auth.User{ID: "grader-b", TenantID: "tenant-1"}))
+	response := httptest.NewRecorder()
+	NewHandler(service, nil).Submit(response, request)
+	if response.Code != test.status {
+		t.Fatalf("status=%d body=%s", response.Code, response.Body.String())
+	}
+	if test.status == http.StatusBadRequest {
+		if len(store.grades) != 0 || store.items[item.ID].Revision != item.Revision {
+			t.Fatal("invalid evidence mutated grading facts")
+		}
+		if !strings.Contains(response.Body.String(), "invalid_backmark_input") {
+			t.Fatal(response.Body.String())
+		}
 	}
 }

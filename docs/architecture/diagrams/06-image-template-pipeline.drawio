@@ -1,0 +1,347 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxfile host="app.diagrams.net" agent="yuejuan architecture audit" version="24.7.17" type="device" compressed="false">
+  <diagram id="template_routing" name="01 采集、质量与已有模板路由">
+    <mxGraphModel dx="2340" dy="1963" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2340" pageHeight="1963" math="0" shadow="0" background="#FFFFFF">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="__title" value="06 / 01  采集、质量与已有模板路由" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Microsoft YaHei;fontColor=#25364B;fontSize=48;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40" y="24" width="2260" height="64" />
+        </mxCell>
+        <mxCell id="__note" value="" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Microsoft YaHei;fontColor=#25364B;fontSize=26;fontColor=#617084;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40" y="96" width="2260" height="48" />
+        </mxCell>
+        <mxCell id="upload" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;上传原件&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/capture/store_postgres.go:80" details="输入：采集文件资产&#10;PDF / PNG / JPEG 等支持类型" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="228" y="253" width="312" height="111" />
+        </mxCell>
+        <mxCell id="decode" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;解码 / 条码观测&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/page-processing-worker/page_processing/runner.py:182" details="capture_file_decode&#10;decode_document → 多页 PNG → 条码观测" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="858" y="253" width="532" height="111" />
+        </mxCell>
+        <mxCell id="quality" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;图像质量&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/image-quality-worker/image_quality/engine.py:43" details="image_quality&#10;尺寸上限、EXIF、焦点/遮挡/透视等测量&#10;有限 deskew；anchor/curvature 未评估" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="1710" y="253" width="312" height="111" />
+        </mxCell>
+        <mxCell id="q" value="&lt;div style=&quot;font-size:70px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;质量通过？&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;shape=rhombus;align=center;spacing=5;rounded=0;" vertex="1" parent="1" evidence="services/api-gateway/internal/imagequality/coordinator_postgres.go:79" details="quality_status = passed？" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="1588" y="600" width="555" height="152" />
+        </mxCell>
+        <mxCell id="blocked" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;人工复核&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/capture/registration_review_store_postgres.go:129" details="质量 / 身份复核阻塞&#10;review / failed → 不自动配准&#10;条码冲突需人工核对" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="968" y="604" width="312" height="111" />
+        </mxCell>
+        <mxCell id="controlled" value="&lt;div style=&quot;font-size:40px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;受控输入已有模板？&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;shape=rhombus;align=center;spacing=5;rounded=0;" vertex="1" parent="1" evidence="services/api-gateway/internal/capture/registration_store_postgres.go:240" details="已有可验证模板身份？&#10;实体纸张模板 → 考试绑定 → 唯一锁定模板" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="99" y="628" width="570" height="97" />
+        </mxCell>
+        <mxCell id="bound" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;锁定模板&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/capture/registration_store_postgres.go:249" details="使用现有锁定模板及内容 hash&#10;barcode / single_template /&#10;bound_auto / locked_with_guard" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="228" y="994" width="312" height="111" />
+        </mxCell>
+        <mxCell id="candidates" value="&lt;div style=&quot;font-size:66px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;已有模板候选匹配&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/capture/template_match_store_postgres.go:15" details="无直接路由：候选匹配任务&#10;最多 8 个已有锁定模板/页&#10;不自动创建未知模板" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="848" y="998" width="552" height="104" />
+        </mxCell>
+        <mxCell id="score" value="&lt;div style=&quot;font-size:48px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;结构 + 几何验证&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;shape=rhombus;align=center;spacing=5;rounded=0;" vertex="1" parent="1" evidence="services/page-processing-worker/page_processing/registration.py:77" details="候选粗结构 + OpenCV 几何证据&#10;score ≥ 0.70 且 margin ≥ 0.06？" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="1586" y="1010" width="559" height="112" />
+        </mxCell>
+        <mxCell id="match" value="&lt;div style=&quot;font-size:70px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;匹配成功 → 绑定&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/capture/template_match_store_postgres.go:210" details="matched → bound_auto&#10;同事务写匹配、绑定、配准任务、runtime成功" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="1588" y="1386" width="556" height="108" />
+        </mxCell>
+        <mxCell id="unknown" value="&lt;div style=&quot;font-size:65px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;未知 / 歧义 / 冲突&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/paper/store_postgres_template_binding.go:25" details="unknown / ambiguous / conflict&#10;needs_review：人工绑定已有锁定模板&#10;修订号校验后重新处理" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="848" y="1389" width="552" height="102" />
+        </mxCell>
+        <mxCell id="next" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;配准任务&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/capture/registration_store_postgres.go:321" details="排 page_registration&#10;质量通过的 normalized 页作为 source&#10;详见下一页" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="228" y="1384" width="312" height="111" />
+        </mxCell>
+        <mxCell id="missing" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;待确认：YOLO 未知版面模板&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#F5F5F6;strokeColor=#8C94A0;strokeWidth=1.5;dashed=1;dashed=1;" vertex="1" parent="1" evidence="docs/architecture/evidence/pipeline-audit.md:34" details="待确认：YOLO 备用识别 / 未知版面建模板&#10;本次源码与设计检索未发现实现/开发依据&#10;V1 文档明确不承诺无模板切题" implementationStatus="unknown">
+          <mxGeometry as="geometry" x="270" y="1700" width="969" height="111" />
+        </mxCell>
+        <mxCell id="__e0" value="页文件" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="upload" target="decode" evidence="" details="页文件">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e1" value="ApplyFileResult 排任务" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="decode" target="quality" evidence="" details="ApplyFileResult 排任务">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e2" value="质量输出" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="quality" target="q" evidence="" details="质量输出">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e3" value="review / failed" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="q" target="blocked" evidence="" details="review / failed">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e4" value="passed" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="q" target="controlled" evidence="" details="passed">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="1866" y="845" />
+              <mxPoint x="384" y="845" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e5" value="有" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="controlled" target="bound" evidence="" details="有">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e6" value="无" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.75;entryX=0;entryY=0.25;" edge="1" parent="1" source="controlled" target="candidates" evidence="" details="无">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="689" y="728" />
+              <mxPoint x="819" y="728" />
+              <mxPoint x="819" y="1006" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e7" value="候选证据" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="candidates" target="score" evidence="" details="候选证据">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e8" value="matched" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="score" target="match" evidence="" details="matched">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e9" value="其他" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=0;exitY=0.75;entryX=1;entryY=0.25;" edge="1" parent="1" source="score" target="unknown" evidence="" details="其他">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="1560" y="1118" />
+              <mxPoint x="1430" y="1118" />
+              <mxPoint x="1430" y="1396" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e10" value="排配准" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="bound" target="next" evidence="" details="排配准">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e11" value="绑定后继续" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="match" target="next" evidence="" details="绑定后继续">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="1872" y="1599" />
+              <mxPoint x="384" y="1599" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e12" value="人工绑定后重处理" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;dashed=1;" edge="1" parent="1" source="unknown" target="next" evidence="" details="人工绑定后重处理">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__legend0" value="已实现" style="rounded=1;html=1;fillColor=#E9F6EE;strokeColor=#38835B;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40.0" y="1901" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend1" value="部分接入" style="rounded=1;html=1;fillColor=#FFF4D9;strokeColor=#AD7D24;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="416.6666666666667" y="1901" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend2" value="规划" style="rounded=1;html=1;fillColor=#F1F2F4;strokeColor=#969DA7;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="793.3333333333334" y="1901" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend3" value="问题" style="rounded=1;html=1;fillColor=#FDECEF;strokeColor=#B64857;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1170.0" y="1901" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend4" value="基础设施" style="rounded=1;html=1;fillColor=#EAF2FF;strokeColor=#5278B0;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1546.6666666666667" y="1901" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend5" value="待确认" style="rounded=1;html=1;fillColor=#F5F5F6;strokeColor=#8C94A0;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1923.3333333333335" y="1901" width="373.3333333333333" height="38" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="registration_crops" name="02 OpenCV 配准、切题与人工纠正">
+    <mxGraphModel dx="2340" dy="1911" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2340" pageHeight="1911" math="0" shadow="0" background="#FFFFFF">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="__title" value="06 / 02  OpenCV 配准、切题与人工纠正" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Microsoft YaHei;fontColor=#25364B;fontSize=48;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40" y="24" width="2260" height="64" />
+        </mxCell>
+        <mxCell id="__note" value="" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Microsoft YaHei;fontColor=#25364B;fontSize=26;fontColor=#617084;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40" y="96" width="2260" height="48" />
+        </mxCell>
+        <mxCell id="input" value="&lt;div style=&quot;font-size:64px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;标准化页面 + 模板&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/capture/registration_store_postgres.go:344" details="输入：normalized PNG + 模板页&#10;冻结模板 hash + question_regions" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="104" y="258" width="559" height="101" />
+        </mxCell>
+        <mxCell id="guard" value="&lt;div style=&quot;font-size:50px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;需要模板守卫？&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;shape=rhombus;align=center;spacing=5;rounded=0;" vertex="1" parent="1" evidence="services/page-processing-worker/page_processing/runner.py:243" details="bound_auto / locked_with_guard？&#10;静态布局 guard：方向/比例/pHash/边缘" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="847" y="268" width="555" height="115" />
+        </mxCell>
+        <mxCell id="fallback" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;小范围重匹配&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;不替换考试锁定模板&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/page-processing-worker/page_processing/runner.py:298" details="guard 不通过：少量候选重匹配&#10;只能诊断；选中不同模板/hash 则拒绝" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="1638" y="230" width="456" height="157" />
+        </mxCell>
+        <mxCell id="cv" value="&lt;div style=&quot;font-size:43px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;像素一致 / ORB → AKAZE&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/page-processing-worker/page_processing/registration.py:234" details="pixel_identity 或 ORB → AKAZE&#10;Hamming + ratio test + RANSAC homography" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="107" y="674" width="553" height="76" />
+        </mxCell>
+        <mxCell id="safe" value="&lt;div style=&quot;font-size:70px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;几何通过？&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;shape=rhombus;align=center;spacing=5;rounded=0;" vertex="1" parent="1" evidence="services/page-processing-worker/page_processing/registration.py:283" details="几何证据门槛通过？&#10;≥8 inlier、ratio≥0.35、平均误差≤8px&#10;角点变换面积比 coverage≥0.55" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="847" y="655" width="555" height="152" />
+        </mxCell>
+        <mxCell id="terminal" value="&lt;div style=&quot;font-size:70px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;算法失败 → 人工&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#FFF4D9;strokeColor=#AD7D24;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/page-processing-worker/page_processing/runner.py:463" details="确定算法错误：不可自动重试&#10;terminal_error → needs_review&#10;API/临时错误依 runtime 次数退避" implementationStatus="partial">
+          <mxGeometry as="geometry" x="1588" y="658" width="556" height="108" />
+        </mxCell>
+        <mxCell id="crop" value="&lt;div style=&quot;font-size:54px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;透视校正 → ROI 裁片&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/page-processing-worker/page_processing/registration.py:369" details="warpPerspective → registered PNG&#10;ROI 在 [0,1] 归一化坐标裁切&#10;输出逐题 PNG + bbox + hash" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="109" y="1083" width="550" height="89" />
+        </mxCell>
+        <mxCell id="persist" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;保存配准结果&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/capture/registration_store_postgres.go:430" details="提交配准领域事实&#10;answer_segment + 注册结果 + page状态&#10;confidence &lt;0.75 → needs_review" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="896" y="1072" width="456" height="111" />
+        </mxCell>
+        <mxCell id="runtime" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;完成 Runtime&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;与领域提交分事务&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#FDECEF;strokeColor=#B64857;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/capture/handlers.go:760" details="入口先验租约；领域提交后 runtime.Complete&#10;领域与任务完成不是同一事务&#10;入口后失租/最终失败可留下状态分裂" implementationStatus="issue">
+          <mxGeometry as="geometry" x="1617" y="1049" width="497" height="157" />
+        </mxCell>
+        <mxCell id="confirm" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;人工确认&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/capture/registration_review_store_postgres.go:8" details="用户：ConfirmRegistration&#10;只确认 completed + needs_review&#10;page → ready，保存原因" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="228" y="1488" width="312" height="111" />
+        </mxCell>
+        <mxCell id="manual" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;四点校正&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/page-processing-worker/page_processing/registration.py:307" details="用户：手工四点校正&#10;校验点序/范围/面积/矩阵/coverage&#10;worker生成预览 registered + ROI" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="968" y="1488" width="312" height="111" />
+        </mxCell>
+        <mxCell id="apply" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;应用 / 撤销&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#FFF4D9;strokeColor=#AD7D24;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/capture/correction_apply_store_postgres.go:14" details="用户：应用 / 撤销校正&#10;旧配准失效；裁片/页面快照应用与恢复&#10;校验来源/base run/expected revision" implementationStatus="partial">
+          <mxGeometry as="geometry" x="1672" y="1488" width="388" height="111" />
+        </mxCell>
+        <mxCell id="__e0" value="冻结路由" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="input" target="guard" evidence="" details="冻结路由">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e1" value="非 guard / 通过" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="guard" target="cv" evidence="" details="非 guard / 通过">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="780" y="507" />
+              <mxPoint x="384" y="507" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e2" value="不通过" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="guard" target="fallback" evidence="" details="不通过">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e3" value="匹配仍为锁定模板" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="fallback" target="cv" evidence="" details="匹配仍为锁定模板">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="1885" y="507" />
+              <mxPoint x="384" y="507" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e4" value="冲突 / 不确定" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="fallback" target="terminal" evidence="" details="冲突 / 不确定">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e5" value="矩阵与证据" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="cv" target="safe" evidence="" details="矩阵与证据">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e6" value="不通过" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="safe" target="terminal" evidence="" details="不通过">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e7" value="通过" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="safe" target="crop" evidence="" details="通过">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="1118" y="936" />
+              <mxPoint x="384" y="936" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e8" value="上传产物" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="crop" target="persist" evidence="" details="上传产物">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e9" value="领域提交后" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="persist" target="runtime" evidence="" details="领域提交后">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e10" value="低置信度" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="persist" target="confirm" evidence="" details="低置信度">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="806" y="1300" />
+              <mxPoint x="384" y="1300" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e11" value="人工纠正" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;dashed=1;" edge="1" parent="1" source="terminal" target="manual" evidence="" details="人工纠正">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="2236" y="1365" />
+              <mxPoint x="1131" y="1365" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e12" value="预览审核" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="manual" target="apply" evidence="" details="预览审核">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__legend0" value="已实现" style="rounded=1;html=1;fillColor=#E9F6EE;strokeColor=#38835B;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40.0" y="1849" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend1" value="部分接入" style="rounded=1;html=1;fillColor=#FFF4D9;strokeColor=#AD7D24;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="416.6666666666667" y="1849" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend2" value="规划" style="rounded=1;html=1;fillColor=#F1F2F4;strokeColor=#969DA7;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="793.3333333333334" y="1849" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend3" value="问题" style="rounded=1;html=1;fillColor=#FDECEF;strokeColor=#B64857;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1170.0" y="1849" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend4" value="基础设施" style="rounded=1;html=1;fillColor=#EAF2FF;strokeColor=#5278B0;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1546.6666666666667" y="1849" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend5" value="待确认" style="rounded=1;html=1;fillColor=#F5F5F6;strokeColor=#8C94A0;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1923.3333333333335" y="1849" width="373.3333333333333" height="38" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="blank_boundaries" name="03 整页空白、OMR空白与OCR空文本">
+    <mxGraphModel dx="2340" dy="1833" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2340" pageHeight="1833" math="0" shadow="0" background="#FFFFFF">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="__title" value="06 / 03  整页空白、OMR空白与OCR空文本" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Microsoft YaHei;fontColor=#25364B;fontSize=48;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40" y="24" width="2260" height="64" />
+        </mxCell>
+        <mxCell id="__note" value="" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Microsoft YaHei;fontColor=#25364B;fontSize=26;fontColor=#617084;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40" y="96" width="2260" height="48" />
+        </mxCell>
+        <mxCell id="page_input" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;整页图像&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/image-quality-worker/image_quality/metrics.py:14" details="整页 normalized 输入质量测量&#10;墨迹 coverage 包括印刷框线/文字" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="228" y="253" width="312" height="111" />
+        </mxCell>
+        <mxCell id="page_detect" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;像素空白概率&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/image-quality-worker/image_quality/policy.py:84" details="blank_probability = clamp(1-ink/0.012)&#10;&gt;0.97 → blank_page 质量问题" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="896" y="253" width="456" height="111" />
+        </mxCell>
+        <mxCell id="page_review" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;质量复核&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/capture/registration_review_store_postgres.go:129" details="质量复核：不是学生逐题未作答证明&#10;review/failed 不自动进入配准" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="1710" y="253" width="312" height="111" />
+        </mxCell>
+        <mxCell id="omr_input" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;选项 ROI&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/page-processing-worker/page_processing/runner.py:409" details="选择题裁片 + option ROI&#10;可使用任务冻结的空白参考图差分&#10;参考下载字节必须匹配 SHA256" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="223" y="643" width="322" height="111" />
+        </mxCell>
+        <mxCell id="omr_detect" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;选项强度判断&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/page-processing-worker/page_processing/omr.py:148" details="最高选项 strength&lt;ambiguous_threshold&#10;默认 0.10 → decision=blank" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="896" y="643" width="456" height="111" />
+        </mxCell>
+        <mxCell id="omr_review" value="&lt;div style=&quot;font-size:62px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;未选中 → 人工复核&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/page-processing-worker/page_processing/omr.py:86" details="decision!=selected → needs_human_review&#10;空白与 ambiguous/multiple 转人工&#10;不直接自动零分" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="1588" y="649" width="556" height="99" />
+        </mxCell>
+        <mxCell id="ocr_input" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;文本 OCR&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/ocr-worker/ocr_worker/recognition_router.py:105" details="TEXT OCR → 可定位文字 blocks&#10;保留识别事实与裁片证据" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="210" y="1033" width="346" height="111" />
+        </mxCell>
+        <mxCell id="ocr_detect" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;无文本块&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/ocr-worker/ocr_worker/recognition_router.py:122" details="无 blocks → empty_text_result&#10;机器读不出文字≠确认学生未作答" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="968" y="1033" width="312" height="111" />
+        </mxCell>
+        <mxCell id="ocr_review" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;人工判断&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/ocr-worker/ocr_worker/recognition_router.py:115" details="needs_human_review → 人工判断&#10;FORMULA/MIXED另有路由；图片继续保留" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="1710" y="1033" width="312" height="111" />
+        </mxCell>
+        <mxCell id="gap" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;待确认：空白主观题自动零分&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#F5F5F6;strokeColor=#8C94A0;strokeWidth=1.5;dashed=1;" vertex="1" parent="1" evidence="docs/architecture/evidence/pipeline-audit.md:48" details="待确认：任意主观题的统一空白判定与自动零分&#10;v1/v2 请求仍要求非空 AnswerText；不能用整页指标或 OCR 空文本代替业务确认&#10;阈值为代码配置/启发式，不代表已校准错误概率" implementationStatus="unknown">
+          <mxGeometry as="geometry" x="644" y="1456" width="960" height="111" />
+        </mxCell>
+        <mxCell id="__e0" value="整页质量" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="page_input" target="page_detect" evidence="" details="整页质量">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e1" value="质量问题" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="page_detect" target="page_review" evidence="" details="质量问题">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e2" value="填涂强度" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="omr_input" target="omr_detect" evidence="" details="填涂强度">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e3" value="blank" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="omr_detect" target="omr_review" evidence="" details="blank">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e4" value="无文字" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="ocr_input" target="ocr_detect" evidence="" details="无文字">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e5" value="人工判定" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="ocr_detect" target="ocr_review" evidence="" details="人工判定">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__legend0" value="已实现" style="rounded=1;html=1;fillColor=#E9F6EE;strokeColor=#38835B;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40.0" y="1771" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend1" value="部分接入" style="rounded=1;html=1;fillColor=#FFF4D9;strokeColor=#AD7D24;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="416.6666666666667" y="1771" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend2" value="规划" style="rounded=1;html=1;fillColor=#F1F2F4;strokeColor=#969DA7;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="793.3333333333334" y="1771" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend3" value="问题" style="rounded=1;html=1;fillColor=#FDECEF;strokeColor=#B64857;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1170.0" y="1771" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend4" value="基础设施" style="rounded=1;html=1;fillColor=#EAF2FF;strokeColor=#5278B0;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1546.6666666666667" y="1771" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend5" value="待确认" style="rounded=1;html=1;fillColor=#F5F5F6;strokeColor=#8C94A0;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1923.3333333333335" y="1771" width="373.3333333333333" height="38" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

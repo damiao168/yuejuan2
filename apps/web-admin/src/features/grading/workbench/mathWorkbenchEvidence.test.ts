@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { createElement } from "react";
 import type { MathRubricScoreResponse, MathUnderstandingResponse } from "../../../api/mathUnderstanding";
 import type { AiGrade } from "../../../api/review";
-import { MathRubricMatrix } from "./components/MathRubricMatrix";
+import { MathRubricMatrix, type MathRubricMatrixProps } from "./components/MathRubricMatrix";
 import { mathDecisionSteps, mathScoreMatchesUnderstanding, mathSuggestionState, selectMathStep, type MathWorkbenchEvidence } from "./mathWorkbenchEvidence";
 
 function fixture() {
@@ -19,6 +19,13 @@ function fixture() {
     delivery_mode: "teacher_suggestion", needs_human_review: true, status: "succeeded", mock: false, suggested_score: 2, max_score: 2, created_at: "2026-09-14T00:00:00Z" } as AiGrade;
   const evidence: MathWorkbenchEvidence = { segmentId: "s1", phase: "ready", understanding, score, message: "" };
   return { understanding, score, grade, evidence };
+}
+
+function matrixHTML(evidence: MathWorkbenchEvidence, overrides: Partial<MathRubricMatrixProps> = {}) {
+  return renderToStaticMarkup(createElement(MathRubricMatrix, {
+    evidence, grades: [], points: [], dirty: false, requesting: false, canRequest: true,
+    onRequest: () => {}, onSelectStep: () => {}, ...overrides,
+  }));
 }
 
 describe("mathematical suggestion freshness", () => {
@@ -58,6 +65,22 @@ describe("mathematical suggestion freshness", () => {
 });
 
 describe("rubric × step provenance", () => {
+  it.each([
+    { name: "permission before dirty and pending", canRequest: false, dirty: true, phase: "pending", disabledReason: "当前身份无重新生成数学建议的权限；请联系管理员。", expected: "当前身份无重新生成数学建议的权限；请联系管理员。", disabled: true },
+    { name: "empty permission reason fallback", canRequest: false, dirty: true, phase: "pending", disabledReason: "", expected: "当前任务无重新生成权限，请继续人工评分或联系管理员。", disabled: true },
+    { name: "missing permission reason fallback", canRequest: false, dirty: false, phase: "ready", disabledReason: undefined, expected: "当前任务无重新生成权限，请继续人工评分或联系管理员。", disabled: true },
+    { name: "dirty before pending", canRequest: true, dirty: true, phase: "pending", disabledReason: undefined, expected: "请先保存证据校正并完成验证，再重新生成建议。", disabled: true },
+    { name: "pending clean evidence", canRequest: true, dirty: false, phase: "pending", disabledReason: undefined, expected: "数学证据尚未验证就绪；请刷新证据状态，或继续人工评分。", disabled: true },
+    { name: "ready clean evidence", canRequest: true, dirty: false, phase: "ready", disabledReason: undefined, expected: "点击后请求受治理模型；建议仍需人工核对。", disabled: false },
+  ] as const)("preserves regeneration status and disabled state for $name", ({ canRequest, dirty, phase, disabledReason, expected, disabled }) => {
+    const { evidence } = fixture();
+    evidence.phase = phase;
+    const html = matrixHTML(evidence, { canRequest, dirty, disabledReason });
+    expect(html).toContain(`<output class="math-suggestion-note" aria-live="polite">${expected}</output>`);
+    const requestButton = [...html.matchAll(/<button\b[^>]*>[\s\S]*?<\/button>/g)].find(([button]) => button.includes("重新生成数学建议"))?.[0];
+    expect(requestButton).toBeDefined();
+    expect(requestButton?.includes('disabled=""')).toBe(disabled);
+  });
   it("resolves bound formulas/blocks/verification to a single step and crop-relative box", () => {
     const { understanding, score } = fixture();
     expect(mathDecisionSteps(score.criterion_decisions[0], score, understanding).map((step) => step.id)).toEqual(["step1"]);
@@ -82,5 +105,49 @@ describe("rubric × step provenance", () => {
       requesting: false, canRequest: false, onRequest: () => {}, onSelectStep: () => {} }));
     expect(html).toContain("建议区间"); expect(html).toContain("0–2"); expect(html).toContain("待确认"); expect(html).toContain("已过期");
     expect(html).toContain("定位数学步骤 step1");
+  });
+  it("preserves fractional server values and zero scores while uncertain rows remain pending", () => {
+    const { evidence, score } = fixture();
+    score.verified_score = .25; score.unresolved_score = .5; score.max_score = 2.75; score.suggested_score = 0;
+    score.criterion_decisions[0].max_score = 2.75; score.criterion_decisions[0].awarded_score = 0;
+    const html = matrixHTML(evidence);
+    expect(html).toContain("<strong>0.25</strong>");
+    expect(html).toContain("<strong>0.5</strong>");
+    expect(html).toContain("<strong>0<small> / 2.75</small></strong>");
+    expect(html).toContain("<td>0 / 2.75</td>");
+    score.suggested_score = null; score.score_range = { min: .25, max: 1.75 };
+    score.criterion_decisions[0].status = "uncertain";
+    const pending = matrixHTML(evidence);
+    expect(pending).toContain("0.25–1.75");
+    expect(pending).toContain("<td>待确认 / 2.75</td>");
+  });
+  it("preserves effective verification order and the empty verification source fallback", () => {
+    const { evidence, understanding, score } = fixture();
+    const verification = understanding.artifact.verifications![0];
+    const effectiveArtifact: NonNullable<MathUnderstandingResponse["effective_artifact"]> = { ...understanding.artifact, input_hash: "test-input", relations: understanding.artifact.relations ?? null, rubric_evidence: understanding.artifact.rubric_evidence ?? null, verifications: [
+      { ...verification, id: "v1", engine: "sympy", status: "contradicted" },
+      { ...verification, id: "v2", engine: "rule", status: "verified" },
+      { ...verification, id: "v3", engine: "rule", status: "not_applicable" },
+    ] };
+    understanding.effective_artifact = effectiveArtifact;
+    score.criterion_decisions[0].verification_ids = ["v1", "v2", "v3"];
+    expect(matrixHTML(evidence)).toContain("SymPy · 不成立；规则 · 已验证；规则 · 待确认");
+    effectiveArtifact.verifications = [];
+    score.criterion_decisions[0].decision_source = "model_candidate";
+    expect(matrixHTML(evidence)).toContain("语义候选 · 人工确认");
+    score.criterion_decisions[0].decision_source = "rule";
+    expect(matrixHTML(evidence)).toContain("规则 / 语义待确认");
+  });
+  it("keeps dirty and conflicting evidence read-only and other phases limited to step navigation", () => {
+    const { evidence } = fixture();
+    const disabledButtons = (dirty = false, canRequest = true) =>
+      (matrixHTML(evidence, { dirty, canRequest }).match(/<button\b[^>]*\bdisabled=""/g) ?? []).length;
+    expect(disabledButtons()).toBe(0);
+    expect(disabledButtons(false, false)).toBe(1);
+    expect(disabledButtons(true)).toBe(2);
+    evidence.phase = "conflict";
+    expect(disabledButtons()).toBe(2);
+    evidence.phase = "pending";
+    expect(disabledButtons()).toBe(1);
   });
 });

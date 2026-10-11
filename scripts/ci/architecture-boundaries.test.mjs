@@ -33,6 +33,16 @@ test("size signals remain warnings", () => {
   assert.equal(hookWarnings("line\n".repeat(351), "useExample.ts").length, 1);
 });
 
+test("hook signal retains multiline calls and nested generic arguments", () => {
+  const source = "useState\n (0);\nuseState <Map<string, number>>\n (new Map());\nuseState   (1);";
+  assert.deepEqual(hookWarnings(source, "useExample.ts", 350, 2), ["useExample.ts: 3 useState calls"]);
+});
+
+test("audit fields use horizontal whitespace rather than absorbing unrelated blank lines", () => {
+  const source = `${"\n".repeat(20000)}  Audit\t auth.Store\n  audit auth.Store\n`;
+  assert.equal(countBroadAuthStoreConsumers([source]), 2);
+});
+
 test("broad audit store consumers cannot grow beyond the debt budget", () => {
   const source = `type Handler struct {
   audit auth.Store

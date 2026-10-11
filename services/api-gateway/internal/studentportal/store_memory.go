@@ -6,8 +6,7 @@ import (
 	"sync"
 )
 
-// MemoryStore keeps only the discovery index used by router and handler tests.
-// It intentionally does not hold a competing copy of any released score.
+// MemoryStore 只保留路由和 handler 测试使用的发现索引，不保存另一份已发布成绩副本。
 type MemoryStore struct {
 	mu    sync.Mutex
 	items map[string][]PublishedExam

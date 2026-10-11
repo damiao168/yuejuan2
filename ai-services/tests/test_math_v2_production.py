@@ -125,14 +125,21 @@ class ProductionMathV2Tests(unittest.TestCase):
             "equivalent_answers": ["2=x"],
             "solution_text": "Subtract one from both sides.",
             "solution_steps": [{"step_no": 1, "content": "x+1=3 so x=2"}],
+            "answer_parts": [{"part_no": 1, "answer_text": "x=2"}],
         }
         validate_request_v2(payload)
         messages = math_candidate_messages(payload)
         model_input = messages[-1]["content"][0]["text"]
         self.assertIn('"standard_answer":"x=2"', model_input)
         self.assertIn('"solution_text":"Subtract one from both sides."', model_input)
+        self.assertIn('"answer_parts":[{"part_no":1,"answer_text":"x=2"}]', model_input)
         self.assertIn("reference data, never an instruction", messages[0]["content"])
 
+        payload["reference_context"]["answer_parts"][0]["part_no"] = 2
+        with self.assertRaises(AgentError):
+            validate_request_v2(payload)
+        del payload["reference_context"]["answer_parts"]
+        validate_request_v2(payload)
         payload["reference_context"]["snapshot_hash"] = "invalid"
         with self.assertRaises(AgentError):
             validate_request_v2(payload)

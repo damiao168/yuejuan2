@@ -15,7 +15,7 @@ func TestCanTransition(t *testing.T) {
 	if CanTransition("finalized", "published") {
 		t.Fatal("publication must only be performed by the score publish workflow")
 	}
-	if !CanTransition("published", "archived") {
-		t.Fatal("expected published -> archived to be allowed")
+	if CanTransition("published", "archived") || CanTransition("draft", "archived") {
+		t.Fatal("archiving must only use the whole-exam eligibility workflow")
 	}
 }

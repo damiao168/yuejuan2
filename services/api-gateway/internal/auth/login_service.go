@@ -63,8 +63,7 @@ type LoginRiskEvaluation struct {
 	Persistent bool
 }
 
-// RiskEvaluator owns the optional risk-store boundary. Implementations must
-// preserve the neutral fallback when risk context is unavailable.
+// RiskEvaluator 负责可选风险存储的边界。风险上下文不可用时，实现必须保留中性回退。
 type RiskEvaluator interface {
 	EvaluateLogin(context.Context, LoginRiskContextRequest, string) (LoginRiskEvaluation, error)
 	RecordLogin(context.Context, RiskEvent) error
@@ -159,86 +158,13 @@ func NewLoginService(
 }
 
 func (s *LoginService) Login(ctx context.Context, command LoginCommand) (LoginResult, error) {
-	command.TenantCode = strings.TrimSpace(command.TenantCode)
-	command.TenantHint = strings.TrimSpace(command.TenantHint)
-	command.Username = strings.TrimSpace(command.Username)
-	command.Identifier = strings.TrimSpace(command.Identifier)
-	command.DeviceName = strings.TrimSpace(command.DeviceName)
-	command.ClientType = strings.ToLower(strings.TrimSpace(command.ClientType))
-	tenantCode := command.TenantCode
-	if tenantCode == "" {
-		tenantCode = command.TenantHint
+	command, tenantCode, identifier, err := normalizedLoginCommand(command)
+	if err != nil {
+		return LoginResult{}, err
 	}
-	identifier := command.Identifier
-	if identifier == "" {
-		identifier = command.Username
-	}
-	if tenantCode == "" || identifier == "" || command.Password == "" {
-		return LoginResult{}, detailedLoginServiceError(LoginFailureInvalidRequest, "missing_required")
-	}
-	if command.RememberDevice && command.PublicDevice {
-		return LoginResult{}, detailedLoginServiceError(LoginFailureInvalidDeviceMode, "public_remembered")
-	}
-	if command.TokenResponse && command.PublicDevice {
-		return LoginResult{}, detailedLoginServiceError(LoginFailureInvalidDeviceMode, "public_token")
-	}
-	if !loginFieldsWithinLimits(tenantCode, identifier, command.Password) {
-		return LoginResult{}, detailedLoginServiceError(LoginFailureInvalidRequest, "fields_too_large")
-	}
-
-	attempt := LoginAttempt{TenantCode: tenantCode, Identifier: identifier, IPAddress: command.IPAddress}
-	limit, blocked := s.guard.Check(ctx, attempt, s.now())
-	if !s.limiterAvailable() {
-		return LoginResult{}, loginServiceError(LoginFailureLimiterUnavailable)
-	}
-	if blocked {
-		s.recordRateLimited(ctx, PlatformTenantID, "", limit, command)
-		return LoginResult{}, rateLimitedLoginError(limit)
-	}
-
-	user, findErr := s.credentials.FindUserByLogin(ctx, tenantCode, identifier)
-	// Only an explicit credential miss is an authentication failure. Dependency
-	// errors do not poison the limiter and do not masquerade as bad passwords.
-	if findErr != nil && !errors.Is(findErr, ErrInvalidCredentials) {
-		return LoginResult{}, loginServiceError(LoginFailureServiceUnavailable)
-	}
-	if findErr == nil {
-		attempt.AccountID = user.ID
-		limit, blocked = s.guard.Check(ctx, attempt, s.now())
-		if !s.limiterAvailable() {
-			return LoginResult{}, loginServiceError(LoginFailureLimiterUnavailable)
-		}
-		if blocked {
-			s.recordRateLimited(ctx, user.TenantID, user.ID, limit, command)
-			return LoginResult{}, rateLimitedLoginError(limit)
-		}
-	}
-
-	passwordHash := user.PasswordHash
-	// 账号不存在时也进行密码校验，避免直接跳过哈希计算形成明显的账号枚举时序差异。
-	if errors.Is(findErr, ErrInvalidCredentials) {
-		passwordHash = dummyPasswordHash
-	}
-	passwordValid, passwordNeedsRehash := VerifyPassword(passwordHash, command.Password)
-	if findErr != nil || !passwordValid {
-		limit, blocked = s.guard.RegisterFailure(ctx, attempt, s.now())
-		tenantID := user.TenantID
-		if tenantID == "" {
-			tenantID = PlatformTenantID
-		}
-		RecordAudit(ctx, s.audit, AuditEvent{
-			TenantID: tenantID, ActorID: user.ID, Action: "auth.login_failed",
-			TargetType: "user", TargetID: user.ID, Reason: "invalid credentials",
-			IPAddress: command.IPAddress, UserAgent: command.UserAgent, RequestID: command.RequestID,
-		})
-		if !s.limiterAvailable() {
-			return LoginResult{}, loginServiceError(LoginFailureLimiterUnavailable)
-		}
-		if blocked {
-			s.recordRateLimited(ctx, tenantID, user.ID, limit, command)
-			return LoginResult{}, rateLimitedLoginError(limit)
-		}
-		return LoginResult{}, loginServiceError(LoginFailureInvalidCredentials)
+	user, attempt, passwordNeedsRehash, err := s.authenticatePassword(ctx, command, tenantCode, identifier)
+	if err != nil {
+		return LoginResult{}, err
 	}
 
 	if resolvedScope, err := s.scopes.ResolveAccessScope(ctx, user.User); err == nil {
@@ -254,19 +180,18 @@ func (s *LoginService) Login(ctx context.Context, command LoginCommand) (LoginRe
 	riskNow := s.now()
 	userAgentHash := hashUserAgent(command.UserAgent)
 	ipPrefix := networkPrefix(command.IPAddress)
-	deviceToken := ""
 	deviceTokenHash := ""
 	if !command.TokenResponse && !command.PublicDevice {
-		deviceToken = command.DeviceToken
-		if deviceToken != "" {
-			deviceTokenHash = HashToken(deviceToken)
+		if command.DeviceToken != "" {
+			deviceTokenHash = HashToken(command.DeviceToken)
 		}
 	}
 	riskContext := WithUser(ctx, user.User)
-	riskEvaluation, riskErr := s.risk.EvaluateLogin(riskContext, LoginRiskContextRequest{
+	riskRequest := LoginRiskContextRequest{
 		TenantID: user.TenantID, UserID: user.ID, DeviceTokenHash: deviceTokenHash,
 		UserAgentHash: userAgentHash, IPPrefix: ipPrefix, Now: riskNow,
-	}, sessionType)
+	}
+	riskEvaluation, riskErr := s.risk.EvaluateLogin(riskContext, riskRequest, sessionType)
 	if riskErr != nil {
 		RecordAudit(ctx, s.audit, AuditEvent{
 			TenantID: user.TenantID, ActorID: user.ID, Action: "auth.risk_evaluation_degraded",
@@ -279,20 +204,10 @@ func (s *LoginService) Login(ctx context.Context, command LoginCommand) (LoginRe
 		})
 	}
 
-	replacementHash := ""
-	if passwordNeedsRehash {
-		var err error
-		replacementHash, err = HashPassword(command.Password)
-		if err != nil {
-			return LoginResult{}, loginServiceError(LoginFailureServiceUnavailable)
-		}
-	}
-	// 传入校验时读取的旧哈希，让存储层拒绝在并发改密后继续按旧凭据确认登录。
-	if err := s.credentials.RecordSuccessfulLogin(ctx, user.TenantID, user.ID, user.PasswordHash, replacementHash); err != nil {
-		if errors.Is(err, ErrInvalidCredentials) {
-			return LoginResult{}, loginServiceError(LoginFailureInvalidCredentials)
-		}
-		return LoginResult{}, loginServiceError(LoginFailureServiceUnavailable)
+	// 旧密码哈希确认必须先于会话创建，避免并发改密后仍用旧凭据建立会话。
+	replacementHash, err := s.confirmSuccessfulCredentials(ctx, user, command.Password, passwordNeedsRehash)
+	if err != nil {
+		return LoginResult{}, err
 	}
 
 	token, tokenHash, err := s.newToken()
@@ -327,48 +242,7 @@ func (s *LoginService) Login(ctx context.Context, command LoginCommand) (LoginRe
 		PersistentCookie:  command.RememberDevice,
 		ClearDeviceCookie: !command.TokenResponse && command.PublicDevice,
 	}
-	if riskEvaluation.Persistent {
-		if err := s.risk.RecordLogin(riskContext, RiskEvent{
-			TenantID: user.TenantID, UserID: user.ID, SessionID: createdSession.ID,
-			Purpose: riskEvaluation.Decision.Purpose, Level: riskEvaluation.Decision.Level,
-			Action: riskEvaluation.Decision.Action, Score: riskEvaluation.Decision.Score,
-			ReasonCodes: riskEvaluation.Decision.ReasonCodes, FamilyScores: riskEvaluation.Decision.FamilyScores,
-			EvidenceQuality: riskEvaluation.Decision.EvidenceQuality, PolicyVersion: riskEvaluation.Decision.PolicyVersion,
-			UserAgentHash: userAgentHash, IPPrefix: ipPrefix,
-			DeviceRecognized: riskEvaluation.Context.KnownDevice,
-			DeviceTrusted:    riskEvaluation.Context.TrustedDevice, OccurredAt: riskNow,
-		}); err != nil {
-			RecordAudit(ctx, s.audit, AuditEvent{
-				TenantID: user.TenantID, ActorID: user.ID, Action: "auth.risk_event_persist_failed",
-				TargetType: "user", TargetID: user.ID, Reason: "risk event persistence failed",
-				IPAddress: command.IPAddress, UserAgent: command.UserAgent, RequestID: command.RequestID,
-			})
-		}
-		if !command.TokenResponse && !command.PublicDevice {
-			newDeviceToken := false
-			if !riskEvaluation.Context.KnownDevice {
-				deviceToken, deviceTokenHash, err = s.newToken()
-				newDeviceToken = err == nil
-			}
-			if deviceTokenHash != "" {
-				deviceExpiresAt := riskNow.Add(s.options.DeviceBindingTTL)
-				if err := s.risk.ObserveDevice(riskContext, ObservedDeviceInput{
-					TenantID: user.TenantID, UserID: user.ID, TokenHash: deviceTokenHash,
-					UserAgentHash: userAgentHash, IPPrefix: ipPrefix, AssuranceLevel: 1,
-					TrustBasis: "password_observed", Now: riskNow, ExpiresAt: deviceExpiresAt,
-				}); err != nil {
-					RecordAudit(ctx, s.audit, AuditEvent{
-						TenantID: user.TenantID, ActorID: user.ID, Action: "auth.device_binding_persist_failed",
-						TargetType: "user", TargetID: user.ID, Reason: "device binding persistence failed",
-						IPAddress: command.IPAddress, UserAgent: command.UserAgent, RequestID: command.RequestID,
-					})
-				} else if newDeviceToken {
-					result.DeviceToken = deviceToken
-					result.DeviceTokenExpiresAt = deviceExpiresAt
-				}
-			}
-		}
-	}
+	s.persistSessionRisk(ctx, riskContext, command, riskEvaluation, riskRequest, createdSession.ID, &result)
 
 	s.guard.RegisterSuccess(ctx, attempt)
 	user.CurrentSessionType = sessionType
@@ -393,6 +267,174 @@ func (s *LoginService) Login(ctx context.Context, command LoginCommand) (LoginRe
 	return result, nil
 }
 
+func normalizedLoginCommand(command LoginCommand) (LoginCommand, string, string, error) {
+	// 只规范化账号和设备字段；密码中的空白仍是凭据的一部分。
+	command.TenantCode = strings.TrimSpace(command.TenantCode)
+	command.TenantHint = strings.TrimSpace(command.TenantHint)
+	command.Username = strings.TrimSpace(command.Username)
+	command.Identifier = strings.TrimSpace(command.Identifier)
+	command.DeviceName = strings.TrimSpace(command.DeviceName)
+	command.ClientType = strings.ToLower(strings.TrimSpace(command.ClientType))
+	tenantCode := command.TenantCode
+	if tenantCode == "" {
+		tenantCode = command.TenantHint
+	}
+	identifier := command.Identifier
+	if identifier == "" {
+		identifier = command.Username
+	}
+	if tenantCode == "" || identifier == "" || command.Password == "" {
+		return command, "", "", detailedLoginServiceError(LoginFailureInvalidRequest, "missing_required")
+	}
+	if command.RememberDevice && command.PublicDevice {
+		return command, "", "", detailedLoginServiceError(LoginFailureInvalidDeviceMode, "public_remembered")
+	}
+	if command.TokenResponse && command.PublicDevice {
+		return command, "", "", detailedLoginServiceError(LoginFailureInvalidDeviceMode, "public_token")
+	}
+	if !loginFieldsWithinLimits(tenantCode, identifier, command.Password) {
+		return command, "", "", detailedLoginServiceError(LoginFailureInvalidRequest, "fields_too_large")
+	}
+	return command, tenantCode, identifier, nil
+}
+
+func (s *LoginService) authenticatePassword(ctx context.Context, command LoginCommand, tenantCode, identifier string) (UserWithPassword, LoginAttempt, bool, error) {
+	attempt := LoginAttempt{TenantCode: tenantCode, Identifier: identifier, IPAddress: command.IPAddress}
+	// 来源限流先于账号查询；找到账号后才检查账号桶，保留原来的失败优先级。
+	if err := s.checkLoginAttempt(ctx, attempt, PlatformTenantID, "", command); err != nil {
+		return UserWithPassword{}, attempt, false, err
+	}
+
+	user, findErr := s.credentials.FindUserByLogin(ctx, tenantCode, identifier)
+	// 只有明确的凭据不匹配才算认证失败。依赖错误不应污染限流器状态，也不应冒充密码错误。
+	if findErr != nil && !errors.Is(findErr, ErrInvalidCredentials) {
+		return UserWithPassword{}, attempt, false, loginServiceError(LoginFailureServiceUnavailable)
+	}
+	if findErr == nil {
+		attempt.AccountID = user.ID
+		if err := s.checkLoginAttempt(ctx, attempt, user.TenantID, user.ID, command); err != nil {
+			return UserWithPassword{}, attempt, false, err
+		}
+	}
+
+	passwordHash := user.PasswordHash
+	// 账号不存在时也进行密码校验，避免直接跳过哈希计算形成明显的账号枚举时序差异。
+	if errors.Is(findErr, ErrInvalidCredentials) {
+		passwordHash = dummyPasswordHash
+	}
+	passwordValid, passwordNeedsRehash := VerifyPassword(passwordHash, command.Password)
+	if findErr != nil || !passwordValid {
+		return UserWithPassword{}, attempt, false, s.recordCredentialFailure(ctx, user.User, attempt, command)
+	}
+	return user, attempt, passwordNeedsRehash, nil
+}
+
+func (s *LoginService) checkLoginAttempt(ctx context.Context, attempt LoginAttempt, tenantID, userID string, command LoginCommand) error {
+	limit, blocked := s.guard.Check(ctx, attempt, s.now())
+	if !s.limiterAvailable() {
+		return loginServiceError(LoginFailureLimiterUnavailable)
+	}
+	if blocked {
+		s.recordRateLimited(ctx, tenantID, userID, limit, command)
+		return rateLimitedLoginError(limit)
+	}
+	return nil
+}
+
+func (s *LoginService) recordCredentialFailure(ctx context.Context, user User, attempt LoginAttempt, command LoginCommand) error {
+	limit, blocked := s.guard.RegisterFailure(ctx, attempt, s.now())
+	tenantID := user.TenantID
+	if tenantID == "" {
+		tenantID = PlatformTenantID
+	}
+	// 失败记录和审计先落下，再判断依赖降级或限流；不能因提前返回丢失失败事实。
+	RecordAudit(ctx, s.audit, AuditEvent{
+		TenantID: tenantID, ActorID: user.ID, Action: "auth.login_failed",
+		TargetType: "user", TargetID: user.ID, Reason: "invalid credentials",
+		IPAddress: command.IPAddress, UserAgent: command.UserAgent, RequestID: command.RequestID,
+	})
+	if !s.limiterAvailable() {
+		return loginServiceError(LoginFailureLimiterUnavailable)
+	}
+	if blocked {
+		s.recordRateLimited(ctx, tenantID, user.ID, limit, command)
+		return rateLimitedLoginError(limit)
+	}
+	return loginServiceError(LoginFailureInvalidCredentials)
+}
+
+func (s *LoginService) confirmSuccessfulCredentials(ctx context.Context, user UserWithPassword, password string, needsRehash bool) (string, error) {
+	replacementHash := ""
+	if needsRehash {
+		var err error
+		replacementHash, err = HashPassword(password)
+		if err != nil {
+			return "", loginServiceError(LoginFailureServiceUnavailable)
+		}
+	}
+	// 传入校验时读取的旧哈希，让存储层拒绝在并发改密后继续按旧凭据确认登录。
+	if err := s.credentials.RecordSuccessfulLogin(ctx, user.TenantID, user.ID, user.PasswordHash, replacementHash); err != nil {
+		if errors.Is(err, ErrInvalidCredentials) {
+			return "", loginServiceError(LoginFailureInvalidCredentials)
+		}
+		return "", loginServiceError(LoginFailureServiceUnavailable)
+	}
+	return replacementHash, nil
+}
+
+func (s *LoginService) persistSessionRisk(ctx, riskContext context.Context, command LoginCommand, evaluation LoginRiskEvaluation, request LoginRiskContextRequest, sessionID string, result *LoginResult) {
+	if !evaluation.Persistent {
+		return
+	}
+	// 会话已创建；风险事件和设备存储失败只记降级审计，不撤销成功会话。
+	user := result.User
+	if err := s.risk.RecordLogin(riskContext, RiskEvent{
+		TenantID: user.TenantID, UserID: user.ID, SessionID: sessionID,
+		Purpose: evaluation.Decision.Purpose, Level: evaluation.Decision.Level,
+		Action: evaluation.Decision.Action, Score: evaluation.Decision.Score,
+		ReasonCodes: evaluation.Decision.ReasonCodes, FamilyScores: evaluation.Decision.FamilyScores,
+		EvidenceQuality: evaluation.Decision.EvidenceQuality, PolicyVersion: evaluation.Decision.PolicyVersion,
+		UserAgentHash: request.UserAgentHash, IPPrefix: request.IPPrefix,
+		DeviceRecognized: evaluation.Context.KnownDevice,
+		DeviceTrusted:    evaluation.Context.TrustedDevice, OccurredAt: request.Now,
+	}); err != nil {
+		RecordAudit(ctx, s.audit, AuditEvent{
+			TenantID: user.TenantID, ActorID: user.ID, Action: "auth.risk_event_persist_failed",
+			TargetType: "user", TargetID: user.ID, Reason: "risk event persistence failed",
+			IPAddress: command.IPAddress, UserAgent: command.UserAgent, RequestID: command.RequestID,
+		})
+	}
+	if command.TokenResponse || command.PublicDevice {
+		return
+	}
+	deviceToken, deviceTokenHash := command.DeviceToken, request.DeviceTokenHash
+	newDeviceToken := false
+	if !evaluation.Context.KnownDevice {
+		var err error
+		deviceToken, deviceTokenHash, err = s.newToken()
+		newDeviceToken = err == nil
+	}
+	if deviceTokenHash == "" {
+		return
+	}
+	deviceExpiresAt := request.Now.Add(s.options.DeviceBindingTTL)
+	if err := s.risk.ObserveDevice(riskContext, ObservedDeviceInput{
+		TenantID: user.TenantID, UserID: user.ID, TokenHash: deviceTokenHash,
+		UserAgentHash: request.UserAgentHash, IPPrefix: request.IPPrefix, AssuranceLevel: 1,
+		TrustBasis: "password_observed", Now: request.Now, ExpiresAt: deviceExpiresAt,
+	}); err != nil {
+		RecordAudit(ctx, s.audit, AuditEvent{
+			TenantID: user.TenantID, ActorID: user.ID, Action: "auth.device_binding_persist_failed",
+			TargetType: "user", TargetID: user.ID, Reason: "device binding persistence failed",
+			IPAddress: command.IPAddress, UserAgent: command.UserAgent, RequestID: command.RequestID,
+		})
+	} else if newDeviceToken {
+		// 只有新绑定成功才返回设备 cookie；生成或保存失败不能把临时令牌发给浏览器。
+		result.DeviceToken = deviceToken
+		result.DeviceTokenExpiresAt = deviceExpiresAt
+	}
+}
+
 func (s *LoginService) limiterAvailable() bool {
 	status, ok := s.guard.(LoginLimiterStatus)
 	return !s.options.LoginLimiterFailClosed || !ok || !status.Degraded()
@@ -411,34 +453,39 @@ func (s *LoginService) sessionPolicy(user User, command *LoginCommand) (string, 
 	sessionType := SessionTypeStandard
 	sessionTTL := s.options.SessionTTL
 	if command.TokenResponse {
-		if command.ClientType == "" {
-			command.ClientType = "desktop"
-		}
-		switch command.ClientType {
-		case "desktop":
-			if IsServiceUser(user) {
-				return "", 0, detailedLoginServiceError(LoginFailureClientTypeForbidden, "account_client_type")
-			}
-			sessionType = SessionTypeDesktopDevice
-		case "service":
-			if !IsServiceUser(user) {
-				return "", 0, detailedLoginServiceError(LoginFailureClientTypeForbidden, "account_client_type")
-			}
-			sessionType = SessionTypeService
-		default:
-			return "", 0, loginServiceError(LoginFailureClientTypeRequired)
-		}
-	} else {
+		return tokenSessionPolicy(user, command, sessionTTL)
+	}
+	if IsServiceUser(user) {
+		return "", 0, detailedLoginServiceError(LoginFailureClientTypeForbidden, "browser_service_account")
+	}
+	if command.PublicDevice {
+		sessionType = SessionTypePublicDevice
+		sessionTTL = s.options.PublicSessionTTL
+	} else if command.RememberDevice {
+		sessionType = SessionTypeRememberedDevice
+		sessionTTL = s.options.RememberedSessionTTL
+	}
+	return sessionType, sessionTTL, nil
+}
+
+func tokenSessionPolicy(user User, command *LoginCommand, sessionTTL time.Duration) (string, time.Duration, error) {
+	sessionType := SessionTypeStandard
+	if command.ClientType == "" {
+		command.ClientType = "desktop"
+	}
+	switch command.ClientType {
+	case "desktop":
 		if IsServiceUser(user) {
-			return "", 0, detailedLoginServiceError(LoginFailureClientTypeForbidden, "browser_service_account")
+			return "", 0, detailedLoginServiceError(LoginFailureClientTypeForbidden, "account_client_type")
 		}
-		if command.PublicDevice {
-			sessionType = SessionTypePublicDevice
-			sessionTTL = s.options.PublicSessionTTL
-		} else if command.RememberDevice {
-			sessionType = SessionTypeRememberedDevice
-			sessionTTL = s.options.RememberedSessionTTL
+		sessionType = SessionTypeDesktopDevice
+	case "service":
+		if !IsServiceUser(user) {
+			return "", 0, detailedLoginServiceError(LoginFailureClientTypeForbidden, "account_client_type")
 		}
+		sessionType = SessionTypeService
+	default:
+		return "", 0, loginServiceError(LoginFailureClientTypeRequired)
 	}
 	return sessionType, sessionTTL, nil
 }

@@ -67,9 +67,9 @@ _UNICODE_MATH = str.maketrans(
 _SUPERSCRIPTS = str.maketrans("⁰¹²³⁴⁵⁶⁷⁸⁹", "0123456789")
 _SUBSCRIPTS = str.maketrans("₀₁₂₃₄₅₆₇₈₉", "0123456789")
 
-# This is intentionally a broad allow-list for printed middle-school and
-# high-school mathematics. Unknown macros fail closed instead of reaching a
-# renderer that may interpret file or process commands.
+# 这里刻意为初高中印刷数学内容采用较宽的
+# 允许列表。未知宏会被拒绝，不会交给可能解释
+# 文件或进程命令的渲染器。
 _ALLOWED_MACROS = {
     "alpha", "beta", "gamma", "delta", "epsilon", "varepsilon", "zeta", "eta", "theta",
     "vartheta", "iota", "kappa", "lambda", "mu", "nu", "xi", "pi", "varpi", "rho",
@@ -106,7 +106,7 @@ _FORBIDDEN_MACROS = {
 
 
 def normalize_latex(value: str) -> str:
-    """Create a stable, safe comparison form without changing mathematical meaning."""
+    """统一识别结果的命令、空白和上下标，供后续结构检查与比较。"""
     text = str(value or "").strip()
     if not text:
         return ""
@@ -114,19 +114,20 @@ def normalize_latex(value: str) -> str:
     text = _replace_script_digits(text, superscript=False)
     text = unicodedata.normalize("NFKC", text)
     text = _strip_outer_math_delimiters(text).translate(_UNICODE_MATH)
-    # FormulaNet occasionally serializes a command with two leading slashes.
-    # Keep LaTeX row separators intact, but collapse duplicates before letters.
+    # FormulaNet 偶尔会将命令序列化为两个前导反斜杠。
+    # 保留 LaTeX 行分隔符，但合并字母前重复的反斜杠。
     text = re.sub(r"\\\\(?=[A-Za-z])", r"\\", text)
-    text = re.sub(r"\\(?:t|d)frac\b", r"\\frac", text)
-    # LaTeX uses a dot after left/right to mean an invisible delimiter, not a
-    # decimal point. Dropping only the command adds spurious dots to sets.
+    text = re.sub(r"\\[td]frac\b", r"\\frac", text)
+    # LaTeX 在 left/right 后用点表示不可见分隔符，
+    # 而非小数点。只删除命令会给集合留下多余的点。
     text = re.sub(r"\\(?:left|right)\s*\.", "", text)
     text = re.sub(r"\\(?:left|right)\s*", "", text)
     text = re.sub(r"\s+", " ", text)
     text = re.sub(r"\\([A-Za-z]+)\s+\{", r"\\\1{", text)
-    text = re.sub(r"\s*([{}_^=+\-*/(),\[\]])\s*", r"\1", text)
+    # 前面已把连续空白归为单个空格；这里只需去掉符号两侧各一个空格，不反复回溯空白段。
+    text = re.sub(r" ?([{}_^=+\-*/(),\[\]]) ?", r"\1", text)
     text = re.sub(r"([_^])([A-Za-z0-9])", r"\1{\2}", text)
-    text = re.sub(r"\s*(&)\s*", r"\1", text)
+    text = re.sub(r" ?& ?", "&", text)
     return text.strip()
 
 
@@ -140,6 +141,40 @@ def validate_latex_structure(value: str) -> tuple[bool, bool, tuple[str, ...]]:
     if any(ord(char) < 32 and char not in "\n\t" for char in latex):
         return False, False, ("latex_control_character",)
 
+    reasons.extend(_delimiter_reasons(latex))
+    reasons.extend(_environment_reasons(latex))
+
+    macros = re.findall(r"\\([A-Za-z]+|\\|[{}|,;:! ])", latex)
+    if any(macro in _FORBIDDEN_MACROS for macro in macros):
+        reasons.append("forbidden_macro")
+    if any(macro not in _ALLOWED_MACROS for macro in macros):
+        reasons.append("unknown_macro")
+    if re.search(r"[\^_]\s*(?:$|[=+\-*/&])", latex):
+        reasons.append("missing_script_operand")
+    # 公式布局偶尔会选中附近中文句子的尾部。
+    # FormulaNet 可能复现这些文字，回渲染检查
+    # 也可能看起来相似，因此仅凭语法和像素
+    # 不能证明它是数学表达式。只有模型明确将
+    # 中文标签放进 LaTeX 文本样式命令时才允许使用。
+    prose_check = re.sub(
+        r"\\(?:text|textrm|mathrm)\s*\{[^{}]*\}", "", latex
+    )
+    if re.search(r"[\u4e00-\u9fff]", prose_check):
+        reasons.append("formula_contains_prose")
+    reasons.extend(_fraction_relation_reasons(latex))
+    if not re.search(r"[A-Za-z0-9\u4e00-\u9fff]|\\(?:frac|sqrt|sum|int|pi|theta|angle)", latex):
+        reasons.append("missing_math_content")
+
+    syntax_valid = not any(
+        reason in reasons
+        for reason in ("unbalanced_delimiter", "environment_mismatch", "latex_control_character", "latex_too_long")
+    )
+    structure_valid = syntax_valid and not reasons
+    # 理由按检查顺序保留首次出现的位置，调用方据此展示故障来源。
+    return syntax_valid, structure_valid, tuple(dict.fromkeys(reasons))
+
+
+def _delimiter_reasons(latex: str) -> list[str]:
     stack: list[str] = []
     pairs = {"{": "}", "[": "]", "(": ")"}
     escaped = False
@@ -153,11 +188,12 @@ def validate_latex_structure(value: str) -> tuple[bool, bool, tuple[str, ...]]:
         if char in pairs:
             stack.append(pairs[char])
         elif char in pairs.values() and (not stack or stack.pop() != char):
-            reasons.append("unbalanced_delimiter")
-            break
-    if stack and "unbalanced_delimiter" not in reasons:
-        reasons.append("unbalanced_delimiter")
+            return ["unbalanced_delimiter"]
+    return ["unbalanced_delimiter"] if stack else []
 
+
+def _environment_reasons(latex: str) -> list[str]:
+    reasons: list[str] = []
     environment_stack: list[str] = []
     for match in re.finditer(r"\\(begin|end)\s*\{([^{}]+)\}", latex):
         operation, environment = match.groups()
@@ -170,24 +206,11 @@ def validate_latex_structure(value: str) -> tuple[bool, bool, tuple[str, ...]]:
             reasons.append("environment_mismatch")
     if environment_stack:
         reasons.append("environment_mismatch")
+    return reasons
 
-    macros = re.findall(r"\\([A-Za-z]+|\\|[{}|,;:! ])", latex)
-    if any(macro in _FORBIDDEN_MACROS for macro in macros):
-        reasons.append("forbidden_macro")
-    if any(macro not in _ALLOWED_MACROS for macro in macros):
-        reasons.append("unknown_macro")
-    if re.search(r"(?:\^|_)\s*(?:$|[=+\-*/&])", latex):
-        reasons.append("missing_script_operand")
-    # Formula layout occasionally selects the tail of a surrounding Chinese
-    # sentence. FormulaNet can reproduce that prose and the render-back check
-    # may still look similar, so syntax + pixels alone are not proof that this
-    # is a mathematical expression. Chinese labels are allowed only when the
-    # model explicitly places them inside a text-style LaTeX command.
-    prose_check = re.sub(
-        r"\\(?:text|textrm|mathrm)\s*\{[^{}]*\}", "", latex
-    )
-    if re.search(r"[\u4e00-\u9fff]", prose_check):
-        reasons.append("formula_contains_prose")
+
+def _fraction_relation_reasons(latex: str) -> list[str]:
+    reasons: list[str] = []
     for match in re.finditer(r"\\frac\b", latex):
         argument_start = match.end()
         for _ in range(2):
@@ -197,15 +220,7 @@ def validate_latex_structure(value: str) -> tuple[bool, bool, tuple[str, ...]]:
             content, argument_start = argument
             if _contains_top_level_relation(content):
                 reasons.append("fraction_contains_relation")
-    if not re.search(r"[A-Za-z0-9\u4e00-\u9fff]|\\(?:frac|sqrt|sum|int|pi|theta|angle)", latex):
-        reasons.append("missing_math_content")
-
-    syntax_valid = not any(
-        reason in reasons
-        for reason in ("unbalanced_delimiter", "environment_mismatch", "latex_control_character", "latex_too_long")
-    )
-    structure_valid = syntax_valid and not reasons
-    return syntax_valid, structure_valid, tuple(dict.fromkeys(reasons))
+    return reasons
 
 
 def _braced_argument(latex: str, start: int) -> tuple[str, int] | None:
@@ -298,7 +313,7 @@ class FormulaValidator:
             rendered = None
             reasons.append("render_validator_unavailable")
             return FormulaValidationResult(True, True, None, True, None, FormulaAction.REVIEW, tuple(reasons))
-        except Exception:  # noqa: BLE001 - renderer backends expose heterogeneous parse errors.
+        except Exception:  # noqa: BLE001 - 渲染后端可能抛出不同类型的解析错误。
             rendered = b""
         if rendered is None:
             reasons.append("render_validator_unavailable")
@@ -407,4 +422,4 @@ def _resample(values: list[float], size: int) -> list[float]:
 
 def _unit(values: list[float]) -> list[float]:
     norm = math.sqrt(sum(value * value for value in values))
-    return [value / norm for value in values] if norm else [0.0 for value in values]
+    return [value / norm for value in values] if norm else [0.0 for _ in values]

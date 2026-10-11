@@ -1,7 +1,5 @@
-// Package processing exposes the canonical page-processing projection used by
-// school operations. Source systems (capture, image quality, OCR,
-// registration and segmentation) remain authoritative; this package stores
-// only their compact, explainable operational state.
+// Package processing 提供学校运营所用的标准页面处理投影。
+// 捕获、图像质量、OCR、配准和分段等来源系统仍为权威来源；本包只存储它们精简、可解释的运行状态。
 package processing
 
 import (
@@ -99,9 +97,8 @@ type ParserQuality struct {
 	Diagram            *float64 `json:"diagram_quality,omitempty"`
 }
 
-// For returns the conservative quality signal relevant to an assessment
-// context. A missing specialised parser quality stays nil so A14 abstains;
-// it is never silently substituted by text OCR quality.
+// For 返回与评估上下文相关的保守质量信号。
+// 专用解析器质量缺失时保持 nil，让 A14 放弃判断；绝不静默替换为文本 OCR 质量。
 func (q ParserQuality) For(subject assessment.SubjectCode, archetype string) *float64 {
 	if archetype == "diagram_graph" {
 		return q.Diagram
@@ -159,23 +156,27 @@ type Summary struct {
 }
 
 type Exception struct {
-	ID              string          `json:"id"`
-	ExamID          string          `json:"exam_id"`
-	PageID          string          `json:"page_id"`
-	SourceType      string          `json:"source_type"`
-	SourceID        string          `json:"source_id"`
-	Code            IssueCode       `json:"code"`
-	Severity        Severity        `json:"severity"`
-	Blocking        bool            `json:"blocking"`
-	Status          ExceptionStatus `json:"status"`
-	AssignedTo      string          `json:"assigned_to,omitempty"`
-	Details         map[string]any  `json:"details"`
-	CreatedAt       time.Time       `json:"created_at"`
-	UpdatedAt       time.Time       `json:"updated_at"`
-	ResolvedAt      *time.Time      `json:"resolved_at,omitempty"`
-	Resolution      string          `json:"resolution,omitempty"`
-	RetrySourceType string          `json:"retry_source_type,omitempty"`
-	RetrySourceID   string          `json:"retry_source_id,omitempty"`
+	ID                 string          `json:"id"`
+	ExamID             string          `json:"exam_id"`
+	PageID             string          `json:"page_id"`
+	SourceType         string          `json:"source_type"`
+	SourceID           string          `json:"source_id"`
+	Code               IssueCode       `json:"code"`
+	Severity           Severity        `json:"severity"`
+	Blocking           bool            `json:"blocking"`
+	Status             ExceptionStatus `json:"status"`
+	AssignedTo         string          `json:"assigned_to,omitempty"`
+	AssignedToName     string          `json:"assigned_to_name,omitempty"`
+	AssignedToUsername string          `json:"assigned_to_username,omitempty"`
+	CandidateNo        string          `json:"candidate_no,omitempty"`
+	PageNo             int             `json:"page_no,omitempty"`
+	Details            map[string]any  `json:"details"`
+	CreatedAt          time.Time       `json:"created_at"`
+	UpdatedAt          time.Time       `json:"updated_at"`
+	ResolvedAt         *time.Time      `json:"resolved_at,omitempty"`
+	Resolution         string          `json:"resolution,omitempty"`
+	RetrySourceType    string          `json:"retry_source_type,omitempty"`
+	RetrySourceID      string          `json:"retry_source_id,omitempty"`
 }
 
 type ExceptionFilter struct {
@@ -220,9 +221,8 @@ type Store interface {
 	ParserQualityForSegment(context.Context, string, string, assessment.SubjectCode, string) (*float64, error)
 }
 
-// ProjectionRefresh identifies one durable source version claimed by the
-// background projector. RequestedVersion prevents a concurrent source change
-// from being acknowledged by an older refresh.
+// ProjectionRefresh 标识后台投影器领取的一个持久化来源版本。
+// RequestedVersion 防止较旧刷新确认并发发生的来源变化。
 type ProjectionRefresh struct {
 	claimID          string
 	TenantID         string

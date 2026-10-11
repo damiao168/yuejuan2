@@ -40,6 +40,7 @@ func registerAuthRoutes(mux *http.ServeMux, ctx routerContext) {
 	mux.Handle("POST /api/v1/users", ctx.guards.requireOrgManage(ctx.modules.Identity.AuthHandler.CreateManagedUser))
 	mux.Handle("POST /api/v1/users/{id}/activation", ctx.guards.requireOrgManage(ctx.modules.Identity.AuthHandler.AdminCreateActivation))
 	mux.Handle("PATCH /api/v1/users/{id}/status", ctx.guards.requireOrgManage(ctx.modules.Identity.AuthHandler.UpdateManagedUserStatus))
+	mux.Handle("PATCH /api/v1/users/{id}/access", ctx.guards.requireRecentPermission("org:manage", ctx.modules.Identity.AuthHandler.UpdateManagedUserAccess))
 	mux.Handle("POST /api/v1/users/{id}/credential-reset", ctx.guards.requireRecentPermission("org:manage", ctx.modules.Identity.AuthHandler.AdminCreateRecovery))
 	mux.Handle("GET /api/v1/roles", ctx.guards.requireOrgManage(ctx.modules.Identity.AuthHandler.ListAssignableRoles))
 	mux.Handle("GET /api/v1/audit-logs", ctx.guards.requireAuditRead(ctx.modules.Identity.AuthHandler.ListAudits))

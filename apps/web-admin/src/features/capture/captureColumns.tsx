@@ -1,3 +1,4 @@
+import { primitiveDisplayValue } from "../../utils/displayValue";
 import { Button, Space, Tooltip, type TableColumnsType } from "antd";
 import { FolderOpen, RotateCw, Trash2, Undo2 } from "lucide-react";
 import type { CaptureFile, CapturePage } from "../../api/capture";
@@ -43,18 +44,20 @@ export function captureFileColumns(): TableColumnsType<CaptureFile> {
     {
       title: "问题",
       width: 200,
-      render: (_, item) =>
-        item.error_code ? (
-          <Tooltip title={item.error_code}>
-            <span>
-              {errorLabels[item.error_code] ?? "处理失败，请删除后重新导入"}
-            </span>
-          </Tooltip>
-        ) : item.status === "duplicate" ? (
-          "内容与批次内文件重复"
-        ) : (
-          "-"
-        ),
+      render: (_, item) => {
+        // 错误提示优先于重复状态，避免重复标签遮住需要修复的失败原因。
+        if (item.error_code) {
+          return (
+            <Tooltip title={item.error_code}>
+              <span>
+                {errorLabels[item.error_code] ?? "处理失败，请删除后重新导入"}
+              </span>
+            </Tooltip>
+          );
+        }
+        if (item.status === "duplicate") return "内容与批次内文件重复";
+        return "-";
+      },
     },
   ];
 }
@@ -94,13 +97,14 @@ export function capturePageColumns({ batchCanManage, showPage, rotatePage, chang
         const candidates = item.match_candidates ?? [];
         if (!candidates.length) return "-";
         const top = candidates[0];
-        const name = String(top.template_name || "候选模板");
+        const name = primitiveDisplayValue(top.template_name || "候选模板", "候选模板");
         const version = Number(top.version_no || 0);
         const score = Math.round(Number(top.score || 0) * 100);
         const detailText = candidates.slice(0, 3).map((candidate) => {
-          const candidateName = String(candidate.template_name || candidate.template_id || "候选模板");
+          const candidateName = primitiveDisplayValue(candidate.template_name || candidate.template_id || "候选模板", "候选模板");
           const candidateVersion = Number(candidate.version_no || 0);
-          return `${candidateName}${candidateVersion ? ` v${candidateVersion}` : ""} · ${Math.round(Number(candidate.score || 0) * 100)}%`;
+          const versionSuffix = candidateVersion ? ` v${candidateVersion}` : "";
+          return `${candidateName}${versionSuffix} · ${Math.round(Number(candidate.score || 0) * 100)}%`;
         }).join("；");
         return <Tooltip title={detailText}><span>{item.status === "needs_review" ? "需确认：" : "已识别："}{name}{version ? ` v${version}` : ""} · {score}%</span></Tooltip>;
       },
@@ -137,7 +141,7 @@ export function capturePageColumns({ batchCanManage, showPage, rotatePage, chang
             disabled={!batchCanManage}
             aria-label={item.status === "deleted" ? "恢复页面" : "删除页面"}
           />
-          {["review", "failed"].includes(String(item.page_identity.quality_status ?? "")) &&
+          {["review", "failed"].includes(primitiveDisplayValue(item.page_identity.quality_status, "")) &&
           item.status !== "deleted" ? (
             <Button
               size="small"

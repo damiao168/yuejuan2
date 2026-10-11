@@ -1,0 +1,37 @@
+{
+  "recorded_at": "2026-10-11T15:22:53+08:00",
+  "database": "D:/tools/audit-codeql-20261010/databases/rust-20261011-context",
+  "source_root": "D:\\tools\\audit-codeql-20261010\\source-rust-context-20261011",
+  "base_files_unchanged": 2514,
+  "added_local_asset_count": 1,
+  "generated_build_context_count": 4,
+  "rust_source_files": 16,
+  "selected_queries": 41,
+  "ram_mib": 4096,
+  "threads": 1,
+  "max_disk_cache_mib": 4096,
+  "min_disk_free_mib": 8192,
+  "native_environment_overrides": {
+    "RAYON_NUM_THREADS": "1",
+    "CARGO_BUILD_JOBS": "1",
+    "CARGO_NET_OFFLINE": "true"
+  },
+  "reason": "Normal offline locked all-feature/all-target Cargo check failed without the real local Windows icon, then succeeded after it was supplied. A new CodeQL database keeps the original successful partial-context result intact. Higher CLI memory and disk-cache budgets apply only to this new child process and do not change scope.",
+  "old_valid_result_evidence": [
+    "rust-create-attempt3-execution.json",
+    "rust-analyze-attempt3-execution.json",
+    "rust-attempt3.sarif",
+    "rust-attempt3-finding-review.json",
+    "rust-attempt3-finding-review.md"
+  ],
+  "references": [
+    "https://docs.github.com/en/code-security/reference/code-scanning/codeql/codeql-cli-manual/database-analyze",
+    "rust-query-resource-research.md",
+    "rust-resource-control-research.md"
+  ],
+  "limits": [
+    "--ram is an engine budget / extractor suggestion, not a whole-machine or native-process hard cap.",
+    "CARGO_BUILD_JOBS limits Cargo jobs; RAYON_NUM_THREADS is not a limit for every process thread.",
+    "Cargo check success does not replace actual CodeQL extraction diagnostics or all 41 queries."
+  ]
+}

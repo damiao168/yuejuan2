@@ -6,8 +6,8 @@ import (
 	"encoding/json"
 )
 
-// BankQuestionFacts is a frozen input, with no question-bank Store dependency.
-// The caller owns the transaction, target revision and authorization checks.
+// BankQuestionFacts 是冻结输入，不依赖题库 Store。
+// 调用方负责事务、目标修订号和授权检查。
 type BankQuestionFacts struct {
 	ItemID, VersionID, BundleHash, QuestionNo, QuestionType, Stem, Archetype string
 	SortOrder                                                                int
@@ -75,8 +75,7 @@ func MaterializeBankQuestionTx(ctx context.Context, tx *sql.Tx, tenant, exam, ac
 	return q, err
 }
 
-// Preserve existing risk and AI gates when authored content changes the
-// question archetype. A missing subject profile remains missing.
+// 编写的内容改变题型原型时，保留已有风险和 AI 门禁。缺失的学科配置仍保持缺失。
 func syncQuestionAssessmentArchetypeTx(ctx context.Context, tx *sql.Tx, tenant, exam, question, archetype string) error {
 	if _, err := tx.ExecContext(ctx, `SELECT assessment_apply_default_question_config($1,$2,$3)`, tenant, exam, question); err != nil {
 		return err

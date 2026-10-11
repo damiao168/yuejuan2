@@ -20,10 +20,10 @@ type completeActivationRequest struct {
 }
 
 func (h *Handler) AdminCreateActivation(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set(authCacheControlHeader, authNoStore)
 	actor, ok := UserFromContext(r.Context())
 	if !ok {
-		httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", "authentication required")
+		httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", authRequiredMessage)
 		return
 	}
 	actorScope, ok := AccessScopeFromContext(r.Context())
@@ -68,7 +68,7 @@ func (h *Handler) AdminCreateActivation(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *Handler) VerifyActivation(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set(authCacheControlHeader, authNoStore)
 	var input activationRequest
 	if err := decodeAuthJSON(w, r, &input, true); err != nil {
 		writeActivationDecodeError(w, r, err)
@@ -76,23 +76,23 @@ func (h *Handler) VerifyActivation(w http.ResponseWriter, r *http.Request) {
 	}
 	input.Token = strings.TrimSpace(input.Token)
 	if input.Token == "" || len(input.Token) > 512 {
-		httpx.Error(w, r, http.StatusBadRequest, "activation_invalid", "activation link is invalid or expired")
+		httpx.Error(w, r, http.StatusBadRequest, "activation_invalid", activationInvalidMsg)
 		return
 	}
 	preview, err := h.store.FindActivation(r.Context(), HashToken(input.Token), time.Now().UTC())
 	if errors.Is(err, ErrActivationInvalid) {
-		httpx.Error(w, r, http.StatusBadRequest, "activation_invalid", "activation link is invalid or expired")
+		httpx.Error(w, r, http.StatusBadRequest, "activation_invalid", activationInvalidMsg)
 		return
 	}
 	if err != nil {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "auth_service_unavailable", "authentication service temporarily unavailable")
+		httpx.Error(w, r, http.StatusServiceUnavailable, "auth_service_unavailable", authServiceUnavailable)
 		return
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"activation": preview})
 }
 
 func (h *Handler) CompleteActivation(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set(authCacheControlHeader, authNoStore)
 	var input completeActivationRequest
 	if err := decodeAuthJSON(w, r, &input, true); err != nil {
 		writeActivationDecodeError(w, r, err)
@@ -107,10 +107,10 @@ func (h *Handler) CompleteActivation(w http.ResponseWriter, r *http.Request) {
 	// 先检查邀请再计算昂贵的密码哈希；最终消费仍由 ActivateUser 核查，不能依赖这次预检。
 	if _, err := h.store.FindActivation(r.Context(), tokenHash, time.Now().UTC()); err != nil {
 		if errors.Is(err, ErrActivationInvalid) {
-			httpx.Error(w, r, http.StatusBadRequest, "activation_invalid", "activation link is invalid or expired")
+			httpx.Error(w, r, http.StatusBadRequest, "activation_invalid", activationInvalidMsg)
 			return
 		}
-		httpx.Error(w, r, http.StatusServiceUnavailable, "auth_service_unavailable", "authentication service temporarily unavailable")
+		httpx.Error(w, r, http.StatusServiceUnavailable, "auth_service_unavailable", authServiceUnavailable)
 		return
 	}
 	if !StrongPassword(input.Password) {
@@ -119,12 +119,12 @@ func (h *Handler) CompleteActivation(w http.ResponseWriter, r *http.Request) {
 	}
 	passwordHash, err := HashPassword(input.Password)
 	if err != nil {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "auth_service_unavailable", "authentication service temporarily unavailable")
+		httpx.Error(w, r, http.StatusServiceUnavailable, "auth_service_unavailable", authServiceUnavailable)
 		return
 	}
 	result, err := h.store.ActivateUser(r.Context(), tokenHash, passwordHash, time.Now().UTC())
 	if errors.Is(err, ErrActivationInvalid) {
-		httpx.Error(w, r, http.StatusBadRequest, "activation_invalid", "activation link is invalid or expired")
+		httpx.Error(w, r, http.StatusBadRequest, "activation_invalid", activationInvalidMsg)
 		return
 	}
 	if err != nil {

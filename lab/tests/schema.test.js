@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { validateGradingInput, validateGradingOutput } from "../src/schemas/gradingSchema.js";
+import { validateGradingInput, validateGradingOutput, validateRubric } from "../src/schemas/gradingSchema.js";
 import { baseInput, baseOutput, baseRubric } from "./helpers.js";
 
 test("valid input and output pass schema validation", () => {
@@ -125,4 +125,89 @@ test("missing rubric points require a known id and a reason", () => {
   assert.equal(validation.valid, false);
   assert.match(validation.errors.join("\n"), /reason is required/);
   assert.match(validation.errors.join("\n"), /does not exist/);
+});
+
+test("rubric validation preserves point, alias, deduction, and question errors in order", () => {
+  const rubric = baseRubric({
+    synthetic: true,
+    max_score: 3,
+    question_type: "essay",
+    points: [
+      null,
+      false,
+      { ...baseRubric().points[0], aliases: ["\uFF21"] },
+      { ...baseRubric().points[1], aliases: ["a"] },
+      { ...baseRubric().points[1], aliases: ["b"] }
+    ],
+    deductions: [null, { id: "", max_deduction: -1 }]
+  });
+  // 全角别名经 NFKC 后与半角别名相同，仍须按采分点归属报告冲突。
+  assert.deepEqual(validateRubric(rubric).errors, [
+    "rubric.points[0] must be an object",
+    "rubric.points[1] must be an object",
+    "rubric alias is shared by multiple points: a",
+    "rubric point id is duplicated: p2",
+    "rubric.deductions[0] must be an object",
+    "rubric.deductions[1].id is required",
+    "rubric.deductions[1].max_deduction must be >= 0",
+    "essay rubric must declare dimensions"
+  ]);
+});
+
+test("input rubric binding errors follow rubric validation", () => {
+  const input = baseInput({
+    synthetic: true,
+    max_score: 3,
+    rubric_version: "other-version",
+    rubric: baseRubric({ synthetic: true, rubric_id: "" })
+  });
+  assert.deepEqual(validateGradingInput(input).errors, [
+    "input.rubric.rubric_id is required",
+    "input.max_score must equal input.rubric.max_score",
+    "input.rubric_version must equal input.rubric.rubric_version"
+  ]);
+});
+
+test("output validation accumulates structural and binding errors in order", () => {
+  const evidence = baseOutput({ synthetic: true }).evidence[0];
+  const output = baseOutput({
+    synthetic: true,
+    model_version: "",
+    risk_flags: ["MOCK_OUTPUT", "MOCK_OUTPUT", "UNKNOWN"],
+    evidence: [evidence, structuredClone(evidence)],
+    matched_points: [{ rubric_point_id: "p1", score: 3, evidence_ids: ["ev-p1", "ev-p1", ""] }],
+    missing_points: [{ rubric_point_id: "p1", reason: "" }],
+    deductions: [null]
+  });
+  assert.deepEqual(validateGradingOutput(output, baseInput({ synthetic: true })).errors, [
+    "output.model_version is required",
+    "output.risk_flags contains duplicate flag: MOCK_OUTPUT",
+    "output.risk_flags contains unsupported flag: UNKNOWN",
+    "output.evidence contains duplicate evidence_id: ev-p1",
+    "output.matched_points[0].evidence_ids contains duplicate id: ev-p1",
+    "output.matched_points[0].evidence_ids[2] must be a non-empty string",
+    "output.matched_points score total cannot exceed output.max_score",
+    "output rubric point is classified more than once: p1",
+    "output.missing_points[0].reason is required",
+    "output.deductions[0] must be an object",
+    "matched point score exceeds rubric allowance: p1",
+    "matched point has invalid evidence_id link: p1:",
+    "rubric point was not classified: p2"
+  ]);
+});
+
+test("output binding requires valid input and skips absent input", () => {
+  const output = baseOutput({ synthetic: true, request_id: "other-request" });
+  assert.deepEqual(validateGradingOutput(output), { valid: true, errors: [] });
+  for (const input of [null, [], 1]) {
+    assert.deepEqual(validateGradingOutput(output, input), {
+      valid: false, errors: ["output validation input is invalid: input must be an object"]
+    });
+  }
+  const invalid = validateGradingOutput(output, { ...baseInput({ synthetic: true }), rubric: null });
+  assert.equal(invalid.valid, false);
+  assert.ok(invalid.errors.every((error) => error.startsWith("output validation input is invalid: ")));
+  assert.deepEqual(validateGradingOutput(output, baseInput({ synthetic: true })).errors, [
+    "output.request_id must equal input.request_id"
+  ]);
 });

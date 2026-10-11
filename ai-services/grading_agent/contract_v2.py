@@ -1,5 +1,4 @@
 import base64
-import binascii
 import hashlib
 import json
 import math
@@ -135,6 +134,14 @@ def compute_media_binding_hash(request):
 
 def validate_media_evidence(media, request):
     request_id = request.get("request_id", "")
+    _validate_media_metadata(media, request_id)
+    _validate_media_dimensions(media, request_id)
+    _bbox_units(media["normalized_bbox"], request_id)
+    _validate_media_content(media, request)
+    return media
+
+
+def _validate_media_metadata(media, request_id):
     _exact_fields(media, _MEDIA_FIELDS, "media_evidence", request_id)
     if media["kind"] != "answer_segment_crop":
         _fail("media_evidence.kind must be answer_segment_crop", request_id)
@@ -147,6 +154,8 @@ def validate_media_evidence(media, request):
     if not isinstance(media["binding_hash"], str) or not _SHA256.fullmatch(media["binding_hash"]):
         _fail("media_evidence.binding_hash must be lowercase hexadecimal SHA-256", request_id)
 
+
+def _validate_media_dimensions(media, request_id):
     byte_size = media["byte_size"]
     width = media["width_pixels"]
     height = media["height_pixels"]
@@ -163,7 +172,9 @@ def validate_media_evidence(media, request):
     ):
         _fail("media_evidence dimensions are invalid or too large", request_id)
 
-    _bbox_units(media["normalized_bbox"], request_id)
+
+def _validate_media_content(media, request):
+    request_id = request.get("request_id", "")
     if (
         not isinstance(media["data_base64"], str)
         or not media["data_base64"]
@@ -172,20 +183,20 @@ def validate_media_evidence(media, request):
         _fail("media_evidence.data_base64 must be non-empty and bounded", request_id)
     try:
         decoded = base64.b64decode(media["data_base64"], validate=True)
-    except (ValueError, binascii.Error) as exc:
+    except ValueError as exc:
         raise AgentError(
             "invalid_request",
             "media_evidence.data_base64 is not valid base64",
             status=400,
             request_id=request_id,
         ) from exc
-    if len(decoded) != byte_size:
+    if len(decoded) != media["byte_size"]:
         _fail("media_evidence.byte_size does not match decoded content", request_id)
     if len(decoded) < 24 or not decoded.startswith(_PNG_SIGNATURE) or decoded[12:16] != b"IHDR":
         _fail("media_evidence content is not a PNG", request_id)
     decoded_width = int.from_bytes(decoded[16:20], "big")
     decoded_height = int.from_bytes(decoded[20:24], "big")
-    if (decoded_width, decoded_height) != (width, height):
+    if (decoded_width, decoded_height) != (media["width_pixels"], media["height_pixels"]):
         _fail("media_evidence dimensions do not match decoded PNG", request_id)
     if decoded_width * decoded_height > MAX_MEDIA_PIXELS:
         _fail("decoded PNG exceeds the pixel limit", request_id)
@@ -193,7 +204,6 @@ def validate_media_evidence(media, request):
         _fail("media_evidence.sha256 does not match decoded content", request_id)
     if compute_media_binding_hash(request) != media["binding_hash"]:
         _fail("media_evidence.binding_hash does not match this request", request_id)
-    return media
 
 
 def validate_request_v2(payload):
@@ -211,9 +221,9 @@ def validate_request_v2(payload):
         if not isinstance(payload[field], str) or not _INTERNAL_ID.fullmatch(payload[field]):
             _fail(f"{field} must be a bounded internal identifier", request_id)
 
-    # Reuse the already-parsed values without duplicating the bounded Base64
-    # string. The v1 validator is read-only, so a shallow inherited envelope is
-    # sufficient and keeps peak memory predictable for the future v2 seam.
+    # 复用已解析的值，避免重复复制长度受限的 Base64
+    # 字符串。v1 校验器只读取数据，因此浅层继承请求信封
+    # 就足够，也能让未来 v2 接入时的内存峰值保持可预测。
     inherited = {key: value for key, value in payload.items() if key not in {"media_evidence", "math_evidence", "reference_context"}}
     inherited["schema_version"] = "grading-agent-v1"
     validate_request(inherited)
@@ -226,6 +236,8 @@ def validate_request_v2(payload):
 
 def validate_reference_context(reference, request_id):
     fields = {"source", "snapshot_hash", "standard_answer", "equivalent_answers", "solution_text", "solution_steps"}
+    if isinstance(reference, dict) and "answer_parts" in reference:
+        fields.add("answer_parts")
     _exact_fields(reference, fields, "reference_context", request_id)
     if reference["source"] != "confirmed_exam_import_snapshot":
         _fail("reference_context.source is unsupported", request_id)
@@ -241,17 +253,51 @@ def validate_reference_context(reference, request_id):
     steps = reference["solution_steps"]
     if not isinstance(steps, list) or len(steps) > 100:
         _fail("reference_context.solution_steps is invalid", request_id)
+    _validate_reference_steps(steps, request_id)
+    if reference["standard_answer"] is None and not reference["solution_text"].strip() and not steps:
+        _fail("reference_context has no authored answer or solution", request_id)
+    _validate_reference_parts(reference.get("answer_parts", []), request_id)
+
+
+def _validate_reference_steps(steps, request_id):
     for index, step in enumerate(steps):
         _exact_fields(step, {"step_no", "content"}, f"reference_context.solution_steps[{index}]", request_id)
         if isinstance(step["step_no"], bool) or not isinstance(step["step_no"], int) or step["step_no"] <= 0:
             _fail("reference_context.solution_steps.step_no is invalid", request_id)
         if not isinstance(step["content"], str) or len(step["content"]) > 4_000:
             _fail("reference_context.solution_steps.content is invalid", request_id)
-    if reference["standard_answer"] is None and not reference["solution_text"].strip() and not steps:
-        _fail("reference_context has no authored answer or solution", request_id)
+
+
+def _validate_reference_parts(parts, request_id):
+    # 子题答案是已冻结原文的拆分结果；编号连续才接受，不能用它补造缺失的子题。
+    if not isinstance(parts, list) or len(parts) > 100:
+        _fail("reference_context.answer_parts is invalid", request_id)
+    for index, part in enumerate(parts):
+        _exact_fields(part, {"part_no", "answer_text"}, f"reference_context.answer_parts[{index}]", request_id)
+        if isinstance(part["part_no"], bool) or not isinstance(part["part_no"], int) or part["part_no"] != index + 1:
+            _fail("reference_context.answer_parts.part_no is invalid", request_id)
+        if not isinstance(part["answer_text"], str) or not part["answer_text"].strip() or len(part["answer_text"]) > 20_000:
+            _fail("reference_context.answer_parts.answer_text is invalid", request_id)
 
 
 def validate_math_evidence(evidence, request_id):
+    _validate_math_metadata(evidence, request_id)
+    _validate_math_quality(evidence["quality"], request_id)
+    # 步骤和公式共用身份集合，后校验的公式也不能复用已经出现的步骤编号。
+    known = set()
+    _validate_math_steps(evidence["steps"], known, request_id)
+    _validate_math_formulas(evidence["formulas"], known, request_id)
+    if not isinstance(evidence["verifications"], list) or len(evidence["verifications"]) > 2048:
+        _fail("math_evidence.verifications must be bounded", request_id)
+    if not isinstance(evidence["rubric_evidence"], list) or len(evidence["rubric_evidence"]) > 512:
+        _fail("math_evidence.rubric_evidence must be bounded", request_id)
+    for flag in ("has_diagram", "graph_uncertain", "required_rubric_uncertain"):
+        if not isinstance(evidence[flag], bool):
+            _fail(f"math_evidence.{flag} must be boolean", request_id)
+    return known
+
+
+def _validate_math_metadata(evidence, request_id):
     if not isinstance(evidence, dict):
         _fail("math_evidence must be an object", request_id)
     _exact_fields(evidence, _MATH_FIELDS, "math_evidence", request_id)
@@ -264,14 +310,17 @@ def validate_math_evidence(evidence, request_id):
     if evidence["scoring_version"] != "math-rubric-score-v1":
         _fail("math_evidence.scoring_version is unsupported", request_id)
     _number_model(evidence["overall_confidence"], "math evidence confidence", request_id, 0, 1)
-    quality = evidence["quality"]
+
+
+def _validate_math_quality(quality, request_id):
     _exact_fields(quality, _QUALITY_FIELDS, "math_evidence.quality", request_id)
     for key in _QUALITY_FIELDS:
         _number_model(quality[key], f"math_evidence.quality.{key}", request_id, 0, 1)
     if not math.isclose(quality["critical"], min(quality[key] for key in _QUALITY_FIELDS if key != "critical"), abs_tol=1e-9):
         _fail("math_evidence.quality.critical must be the minimum dimension", request_id)
-    known = set()
-    steps = evidence["steps"]
+
+
+def _validate_math_steps(steps, known, request_id):
     if not isinstance(steps, list) or not 1 <= len(steps) <= 512:
         _fail("math_evidence.steps must be a bounded non-empty array", request_id)
     for index, step in enumerate(steps):
@@ -282,7 +331,9 @@ def validate_math_evidence(evidence, request_id):
             _fail("math_evidence step identity is invalid", request_id)
         known.add(step["id"])
         _number_model(step["confidence"], "math step confidence", request_id, 0, 1)
-    formulas = evidence["formulas"]
+
+
+def _validate_math_formulas(formulas, known, request_id):
     if not isinstance(formulas, list) or len(formulas) > 512:
         _fail("math_evidence.formulas must be bounded", request_id)
     for index, formula in enumerate(formulas):
@@ -294,14 +345,6 @@ def validate_math_evidence(evidence, request_id):
         known.add(formula["id"])
         _number_model(formula["confidence"], "math formula confidence", request_id, 0, 1)
         _bbox_units(formula["bbox"], request_id)
-    if not isinstance(evidence["verifications"], list) or len(evidence["verifications"]) > 2048:
-        _fail("math_evidence.verifications must be bounded", request_id)
-    if not isinstance(evidence["rubric_evidence"], list) or len(evidence["rubric_evidence"]) > 512:
-        _fail("math_evidence.rubric_evidence must be bounded", request_id)
-    for flag in ("has_diagram", "graph_uncertain", "required_rubric_uncertain"):
-        if not isinstance(evidence[flag], bool):
-            _fail(f"math_evidence.{flag} must be boolean", request_id)
-    return known
 
 
 def _validate_crop_bbox(bbox, request_id):
@@ -318,6 +361,14 @@ def validate_response_v2(suggestion, request):
     """Validate a score-free semantic mapping returned by the model."""
 
     request_id = request["request_id"]
+    _validate_response_binding(suggestion, request)
+    _validate_response_risks(suggestion, request_id)
+    _validate_criterion_candidates(suggestion["criterion_candidates"], request)
+    return suggestion
+
+
+def _validate_response_binding(suggestion, request):
+    request_id = request["request_id"]
     if not isinstance(suggestion, dict):
         _fail_model("suggestion must be an object", request_id)
     _exact_fields(suggestion, _RESPONSE_FIELDS, "suggestion", request_id)
@@ -331,6 +382,9 @@ def validate_response_v2(suggestion, request):
         _fail_model("suggestion version mismatch", request_id)
     if not isinstance(suggestion["alternative_solution_candidate"], bool):
         _fail_model("alternative solution candidate flag is invalid", request_id)
+
+
+def _validate_response_risks(suggestion, request_id):
     allowed_risks = {"alternative_solution_candidate", "schema_repaired", "prompt_injection_suspected", "human_review_required"}
     risks = suggestion["risk_flags"]
     if not isinstance(risks, list) or len(risks) > 20 or len(risks) != len(set(risks)) or not set(risks).issubset(allowed_risks):
@@ -338,27 +392,32 @@ def validate_response_v2(suggestion, request):
     if suggestion["alternative_solution_candidate"] and "alternative_solution_candidate" not in risks:
         _fail_model("alternative solution candidate must carry its risk flag", request_id)
 
+
+def _validate_criterion_candidates(candidates, request):
+    request_id = request["request_id"]
     rubric_points = {point["id"] for point in request["rubric"]["points"]}
     known_evidence = {step["id"] for step in request["math_evidence"]["steps"]} | {formula["id"] for formula in request["math_evidence"]["formulas"]}
-    candidates = suggestion["criterion_candidates"]
     if not isinstance(candidates, list) or len(candidates) > 100:
         _fail_model("criterion_candidates must be a bounded array", request_id)
     seen = set()
     for index, candidate in enumerate(candidates):
-        expected = {"rubric_point_id", "status", "evidence_ids", "confidence", "reason_code"}
-        if not isinstance(candidate, dict) or set(candidate) != expected:
-            _fail_model(f"criterion_candidates[{index}] is invalid", request_id)
-        point_id = candidate["rubric_point_id"]
-        if point_id not in rubric_points or point_id in seen:
-            _fail_model("criterion candidate is unknown or duplicated", request_id)
-        seen.add(point_id)
-        if candidate["status"] not in {"supported", "contradicted", "uncertain"}:
-            _fail_model("criterion candidate status is invalid", request_id)
-        _number_model(candidate["confidence"], "criterion candidate confidence", request_id, 0, 1)
-        _string(candidate["reason_code"], "criterion candidate reason", request_id, 1, 256)
-        ids = candidate["evidence_ids"]
-        if not isinstance(ids, list) or len(ids) > 100 or len(ids) != len(set(ids)) or any(item not in known_evidence for item in ids):
-            _fail_evidence("criterion candidate evidence link is invalid", request_id)
-        if candidate["status"] in {"supported", "contradicted"} and not ids:
-            _fail_evidence("supported or contradicted candidate requires evidence", request_id)
-    return suggestion
+        _validate_criterion_candidate(candidate, index, rubric_points, known_evidence, seen, request_id)
+
+
+def _validate_criterion_candidate(candidate, index, rubric_points, known_evidence, seen, request_id):
+    expected = {"rubric_point_id", "status", "evidence_ids", "confidence", "reason_code"}
+    if not isinstance(candidate, dict) or set(candidate) != expected:
+        _fail_model(f"criterion_candidates[{index}] is invalid", request_id)
+    point_id = candidate["rubric_point_id"]
+    if point_id not in rubric_points or point_id in seen:
+        _fail_model("criterion candidate is unknown or duplicated", request_id)
+    seen.add(point_id)
+    if candidate["status"] not in {"supported", "contradicted", "uncertain"}:
+        _fail_model("criterion candidate status is invalid", request_id)
+    _number_model(candidate["confidence"], "criterion candidate confidence", request_id, 0, 1)
+    _string(candidate["reason_code"], "criterion candidate reason", request_id, 1, 256)
+    ids = candidate["evidence_ids"]
+    if not isinstance(ids, list) or len(ids) > 100 or len(ids) != len(set(ids)) or any(item not in known_evidence for item in ids):
+        _fail_evidence("criterion candidate evidence link is invalid", request_id)
+    if candidate["status"] in {"supported", "contradicted"} and not ids:
+        _fail_evidence("supported or contradicted candidate requires evidence", request_id)

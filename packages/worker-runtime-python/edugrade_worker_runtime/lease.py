@@ -44,7 +44,8 @@ class LeaseHeartbeat:
         thread_name: str,
     ) -> None:
         validate_lease_timing(lease_seconds, interval, request_timeout)
-        self._send = send
+        # 子类可能用 _send 方法实现请求；回调字段另命名，避免覆盖该绑定方法。
+        self._send_callback = send
         self.interval = interval
         self.lease_seconds = lease_seconds
         self.request_timeout = request_timeout
@@ -56,7 +57,7 @@ class LeaseHeartbeat:
 
     def __enter__(self) -> Self:
         # 先同步确认能续租，再让调用方开始处理；首次失败不交给后台线程吞掉。
-        self._send()
+        self._send_callback()
         self._last_success = time.monotonic()
         self._thread = threading.Thread(target=self._run, name=self.thread_name, daemon=True)
         self._thread.start()
@@ -89,9 +90,9 @@ class LeaseHeartbeat:
     def _run(self) -> None:
         while not self._stop.wait(self.interval):
             try:
-                self._send()
+                self._send_callback()
                 self._last_success = time.monotonic()
-            except Exception as exc:  # noqa: BLE001 - transports expose heterogeneous failures.
+            except Exception as exc:  # noqa: BLE001 - 传输层可能抛出不同类型的失败。
                 if lease_is_lost(exc) or self._renewal_window_exhausted():
                     self._error = exc
                     return

@@ -5,9 +5,8 @@ import (
 	"database/sql"
 )
 
-// PostgresQuestionReader intentionally reads only question metadata and the
-// frozen assessment classification. It is kept separate from the dashboard
-// service so alternate stores can be used in tests or future read replicas.
+// PostgresQuestionReader 只读取题目元数据和冻结的评估分类。
+// 它与仪表盘服务分开，使测试或未来只读副本可使用其他存储。
 type PostgresQuestionReader struct{ db *sql.DB }
 
 func NewPostgresQuestionReader(db *sql.DB) *PostgresQuestionReader {
@@ -47,9 +46,8 @@ ORDER BY q.sort_order, q.question_no, q.id`, tenantID, examID)
 	return result, rows.Err()
 }
 
-// PostgresCalibrationReader returns only manager-facing aggregate/session
-// state. It never reads a Gold sample manifest, attempt score, or rubric
-// selection, so this endpoint cannot leak calibration answer material.
+// PostgresCalibrationReader 只返回面向管理员的聚合和会话状态。
+// 它不读取 Gold 样本清单、尝试分数或评分细则选择，避免此端点泄漏校准答案材料。
 type PostgresCalibrationReader struct{ db *sql.DB }
 
 func NewPostgresCalibrationReader(db *sql.DB) *PostgresCalibrationReader {

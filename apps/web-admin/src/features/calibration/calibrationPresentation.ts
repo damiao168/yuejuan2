@@ -20,5 +20,14 @@ export function formatMetric(key: string, value: number | undefined) {
 export function formatCriterionValue(value: unknown) {
   if (value === undefined || value === null || value === "") return "未选择";
   if (typeof value === "object") return JSON.stringify(value);
-  return String(value);
+  // 明确区分可直接转换的值；结构化采分点仍保留上面的 JSON 表示。
+  switch (typeof value) {
+    case "string": return value;
+    case "number":
+    case "boolean":
+    case "bigint":
+    case "symbol":
+    case "function": return String(value);
+    default: return "未选择";
+  }
 }

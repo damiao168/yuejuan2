@@ -176,8 +176,8 @@ export function useExamScoring({ initialExamId, currentUserId, currentTenantId, 
       setRunDetail(detail);
       setReadiness(nextReadiness.scoring_readiness);
       await onTasksChanged();
-      // The active-run reconciliation effect also runs after a reload or a
-      // browser switch, closing the gap after the scoring command is accepted.
+      // 活动运行状态的核对 effect 也会在重载或切换浏览器后执行，
+      // 补上评分命令已被接受后的状态核对。
     } catch (error) {
       message.error(formatError(error));
       setAIIssue(`评分可能已经启动；AI 建议尚未确认入队：${formatError(error)}。请刷新后重试 AI 入队。`);
@@ -236,7 +236,7 @@ export function useExamScoring({ initialExamId, currentUserId, currentTenantId, 
 
   useEffect(() => {
     const run = summary?.run;
-    if (!canGrade || !run || run.exam_id !== initialExamId || !["queued", "processing", "needs_review", "failed"].includes(run.status)) return;
+    if (!canGrade || run?.exam_id !== initialExamId || !["queued", "processing", "needs_review", "failed"].includes(run.status)) return;
     const key = `${initialExamId}:${run.id}`;
     if (reconciledRun.current === key) return;
     reconciledRun.current = key;

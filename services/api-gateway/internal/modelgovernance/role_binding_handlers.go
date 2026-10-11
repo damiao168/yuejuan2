@@ -85,8 +85,10 @@ func (h *Handler) SavePlatformPanelRoleBinding(w http.ResponseWriter, r *http.Re
 
 func writePanelRoleBindingError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
+	case errors.Is(err, ErrModelRoleBindingChanged):
+		httpx.Error(w, r, http.StatusConflict, "panel_model_binding_changed", "该角色配置已被其他管理员更新，请刷新核对后重新操作")
 	case errors.Is(err, ErrInvalidManagedConfig):
-		httpx.Error(w, r, http.StatusBadRequest, "invalid_panel_model_binding", "三智能体模型配置不完整或范围无效")
+		httpx.Error(w, r, http.StatusBadRequest, "invalid_panel_model_binding", "三智能体模型配置不完整、范围无效或缺少读取修订")
 	case errors.Is(err, ErrManagedCapabilityRequired), errors.Is(err, ErrNotFound):
 		httpx.Error(w, r, http.StatusConflict, "panel_model_capability_required", "模型必须属于该学校且通过完整结构化能力检测")
 	default:

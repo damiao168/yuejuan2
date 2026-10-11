@@ -7,8 +7,7 @@ import (
 	"strings"
 )
 
-// ValidateManagedProductionReadiness checks models actually assigned to a
-// production role or selected as a school's daily model.
+// ValidateManagedProductionReadiness 检查实际分配给生产角色或被选为学校日常模型的模型。
 func (s *PostgresStore) ValidateManagedProductionReadiness(ctx context.Context) error {
 	if s.credentialCipher == nil {
 		return ErrManagedConfigUnavailable
@@ -85,8 +84,7 @@ type approvedPanelScope struct {
 	ready                             bool
 }
 
-// Only approved scopes are production routes. Partially configured shadow
-// scopes may still be edited without preventing the service from starting.
+// 只有已批准作用域才是生产路由；部分配置的影子作用域仍可编辑，不妨碍服务启动。
 func (s *PostgresStore) validateApprovedPanelScopes(ctx context.Context) error {
 	rows, err := s.db.QueryContext(ctx, `
 SELECT policy.tenant_id::text, policy.education_stage, policy.subject_code,

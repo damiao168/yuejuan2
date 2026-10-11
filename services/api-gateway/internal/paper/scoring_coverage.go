@@ -2,14 +2,11 @@ package paper
 
 import "sort"
 
-// Configuration accepts more question types than either scoring path implements.
-// A paper that only passes the blocking readiness checks can therefore still
-// contain questions no automated path will ever score, and that gap is only
-// discovered when the scoring run reaches them. The two mirrors below make the
-// gap describable before the exam starts; drift tests in the grading and
-// subjective packages fail if either path changes without updating them.
+// 配置接受的题型多于两条评分路径实际支持的题型。
+// 因此，仅通过阻断性准备度检查的试卷，仍可能含有自动路径永远不会评分的题目，直到评分运行遇到它们才发现缺口。
+// 下方两份对应清单让考试开始前就能说明该缺口；grading 和 subjective 中的偏移测试会在路径改变却未同步清单时失败。
 
-// ruleGradedQuestionTypes mirrors the switch in grading.Engine.Grade.
+// ruleGradedQuestionTypes 与 grading.Engine.Grade 中的 switch 对应。
 var ruleGradedQuestionTypes = map[string]bool{
 	"single_choice":   true,
 	"multiple_choice": true,
@@ -18,9 +15,8 @@ var ruleGradedQuestionTypes = map[string]bool{
 	"numeric":         true,
 }
 
-// aiAssistedQuestionTypes mirrors subjective.supportedQuestionTypes. A human
-// still confirms every one of these, but the reviewer starts from a suggested
-// score instead of a blank page.
+// aiAssistedQuestionTypes 与 subjective.supportedQuestionTypes 对应。
+// 这些题目仍逐题由人工确认，但复核人员从建议分数开始，而非从空白开始。
 var aiAssistedQuestionTypes = map[string]bool{
 	"short_answer": true,
 	"calculation":  true,
@@ -28,24 +24,22 @@ var aiAssistedQuestionTypes = map[string]bool{
 	"discussion":   true,
 }
 
-// HasAutomatedScoringPath reports whether a question type reaches any automated
-// scoring path. Types that do not are graded by a human for every submission.
+// HasAutomatedScoringPath 判断题型是否进入任何自动评分路径。未进入的题型，每份提交都由人工评分。
 func HasAutomatedScoringPath(questionType string) bool {
 	return ruleGradedQuestionTypes[questionType] || aiAssistedQuestionTypes[questionType]
 }
 
-// RuleGradedQuestionTypes lists the types the rule engine claims to score.
+// RuleGradedQuestionTypes 列出规则引擎声明支持评分的题型。
 func RuleGradedQuestionTypes() []string {
 	return sortedKeys(ruleGradedQuestionTypes)
 }
 
-// AIAssistedQuestionTypes lists the types the subjective adapter claims to score.
+// AIAssistedQuestionTypes 列出主观题适配器声明支持评分的题型。
 func AIAssistedQuestionTypes() []string {
 	return sortedKeys(aiAssistedQuestionTypes)
 }
 
-// ManualOnlyQuestionTypes lists the configurable question types that no
-// automated scoring path supports.
+// ManualOnlyQuestionTypes 列出可配置但任何自动评分路径都不支持的题型。
 func ManualOnlyQuestionTypes() []string {
 	out := []string{}
 	for questionType := range validQuestionTypes {

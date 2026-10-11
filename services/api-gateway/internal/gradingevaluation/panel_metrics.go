@@ -109,29 +109,15 @@ func CalculatePanelMetrics(items []PanelObservation) (PanelMetrics, error) {
 		}
 		aItems = append(aItems, metricObservation(item.ResponseKey+":a", item.ReferenceScore, item.ScoreA, item.MaxScore))
 		bItems = append(bItems, metricObservation(item.ResponseKey+":b", item.ReferenceScore, item.ScoreB, item.MaxScore))
-		if math.Abs(item.ScoreA-item.ScoreB) <= scoreEpsilon {
-			abExact++
-			if math.Abs(item.ScoreA-item.ReferenceScore) > scoreEpsilon {
-				falseConsensus++
-			}
-		}
+		exact, falseExact := panelConsensusCounts(item)
+		abExact += exact
+		falseConsensus += falseExact
 		if item.ArbitrationTriggered {
 			arbitrations++
 		}
-		if item.ScoreC != nil {
-			// Compare C with both primaries on exactly the cases C actually
-			// rated; human-only escalations have no C score to compare.
-			arbitratedAItems = append(arbitratedAItems, metricObservation(item.ResponseKey+":arbitrated:a", item.ReferenceScore, item.ScoreA, item.MaxScore))
-			arbitratedBItems = append(arbitratedBItems, metricObservation(item.ResponseKey+":arbitrated:b", item.ReferenceScore, item.ScoreB, item.MaxScore))
-			cItems = append(cItems, metricObservation(item.ResponseKey+":c", item.ReferenceScore, *item.ScoreC, item.MaxScore))
-			if math.Abs(*item.ScoreC-item.ReferenceScore) <= scoreEpsilon &&
-				(math.Abs(item.ScoreA-item.ReferenceScore) > scoreEpsilon || math.Abs(item.ScoreB-item.ReferenceScore) > scoreEpsilon) {
-				rescues++
-			}
-			if math.Abs(*item.ScoreC-item.ReferenceScore) > scoreEpsilon {
-				arbiterErrors++
-			}
-		}
+		rescued, arbiterError := appendArbitratedPanelObservations(item, &arbitratedAItems, &arbitratedBItems, &cItems)
+		rescues += rescued
+		arbiterErrors += arbiterError
 		if item.ResolvedScore != nil {
 			resolvedItems = append(resolvedItems, metricObservation(item.ResponseKey+":resolved", item.ReferenceScore, *item.ResolvedScore, item.MaxScore))
 		}
@@ -156,6 +142,34 @@ func CalculatePanelMetrics(items []PanelObservation) (PanelMetrics, error) {
 	result.HumanEscalationRate = rounded(float64(humanEscalations) / float64(len(items)))
 	result.CostPer1000AnswersMicros = int64(math.Round(float64(totalCost) * 1000 / float64(len(items))))
 	return result, nil
+}
+
+func panelConsensusCounts(item PanelObservation) (exact, falseConsensus int) {
+	if math.Abs(item.ScoreA-item.ScoreB) <= scoreEpsilon {
+		exact = 1
+		if math.Abs(item.ScoreA-item.ReferenceScore) > scoreEpsilon {
+			falseConsensus = 1
+		}
+	}
+	return exact, falseConsensus
+}
+
+// 只有 C 实际评分的样本才进入这三组；人工升级无 C 分数时不参与救援率和仲裁错误率的分母。
+func appendArbitratedPanelObservations(item PanelObservation, aItems, bItems, cItems *[]Observation) (rescues, errors int) {
+	if item.ScoreC == nil {
+		return 0, 0
+	}
+	*aItems = append(*aItems, metricObservation(item.ResponseKey+":arbitrated:a", item.ReferenceScore, item.ScoreA, item.MaxScore))
+	*bItems = append(*bItems, metricObservation(item.ResponseKey+":arbitrated:b", item.ReferenceScore, item.ScoreB, item.MaxScore))
+	*cItems = append(*cItems, metricObservation(item.ResponseKey+":c", item.ReferenceScore, *item.ScoreC, item.MaxScore))
+	if math.Abs(*item.ScoreC-item.ReferenceScore) <= scoreEpsilon &&
+		(math.Abs(item.ScoreA-item.ReferenceScore) > scoreEpsilon || math.Abs(item.ScoreB-item.ReferenceScore) > scoreEpsilon) {
+		rescues = 1
+	}
+	if math.Abs(*item.ScoreC-item.ReferenceScore) > scoreEpsilon {
+		errors = 1
+	}
+	return rescues, errors
 }
 
 func CalculatePanelMetricsBySlice(items []PanelObservation) ([]PanelSliceMetrics, error) {

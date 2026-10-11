@@ -8,7 +8,48 @@ import (
 	"time"
 
 	"edugrade-enterprise/services/api-gateway/internal/goldpaper"
+	"edugrade-enterprise/services/api-gateway/internal/paper"
 )
+
+type calibrationQuestionReader struct {
+	t     *testing.T
+	calls int
+}
+
+func (r *calibrationQuestionReader) QuestionForSnapshot(_ context.Context, tenant, exam, question, snapshot string) (paper.Question, error) {
+	r.t.Helper()
+	if tenant != "tenant-a" || exam != "exam-1" || question != "question-1" || snapshot != "snapshot-1" {
+		r.t.Fatalf("unfrozen question source: %s %s %s %s", tenant, exam, question, snapshot)
+	}
+	r.calls++
+	return paper.Question{ID: question, ExamID: exam, QuestionNo: "1", Score: 5, Stem: "冻结题干", Options: []string{"冻结选项"}, Rubric: &paper.Rubric{Version: "snapshot-rule", Deductions: []any{map[string]any{"rule": "冻结扣分"}}}}, nil
+}
+
+func TestExistingCalibrationSessionLoadsFrozenQuestionWithoutReferenceScore(t *testing.T) {
+	service, _, _ := testService(t, 2)
+	session, err := service.CreateSession(context.Background(), "tenant-a", "exam-1", "question-1", "grader-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	reader := &calibrationQuestionReader{t: t}
+	service.WithQuestionSource(reader)
+	loaded, err := service.GetSession(context.Background(), "tenant-a", session.ID)
+	if err != nil || len(loaded.Samples) != 2 || loaded.Samples[0].Question == nil || loaded.Samples[0].Question.Stem != "冻结题干" || reader.calls != 2 {
+		t.Fatalf("material=%#v err=%v", loaded, err)
+	}
+	raw, _ := json.Marshal(loaded)
+	if strings.Contains(string(raw), "reference_score") || strings.Contains(string(raw), "expected_criteria") {
+		t.Fatalf("blind reference leaked: %s", raw)
+	}
+	loaded.Samples[0].Question.Options[0] = "reader mutation"
+	loadedAgain, err := service.GetSession(context.Background(), "tenant-a", session.ID)
+	if err != nil || loadedAgain.Samples[0].Question.Options[0] != "冻结选项" {
+		t.Fatalf("frozen question mutated: %#v %v", loadedAgain, err)
+	}
+	if _, err := service.GetSession(context.Background(), "tenant-b", session.ID); err == nil {
+		t.Fatal("cross tenant session readable")
+	}
+}
 
 func TestCalibrationProducesSampleAwareMetricsAndQualification(t *testing.T) {
 	service, _, _ := testService(t, 2)

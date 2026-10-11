@@ -14,7 +14,7 @@ interface Props {
 // 筛选条件改变后旧游标不再对应当前结果集，必须从第一页重新查询。
 const update = (filter: PlatformSchoolListFilter, key: keyof PlatformSchoolListFilter, value: string | undefined) => ({ ...filter, [key]: value, cursor: undefined });
 
-export function SchoolManagementToolbar({ filter, onChange, onRefresh, onCreate, loading, summary }: Props) {
+export function SchoolManagementToolbar({ filter, onChange, onRefresh, onCreate, loading, summary }: Readonly<Props>) {
   return <div className="platform-school-toolbar">
     <div className="platform-school-toolbar-filters">
       <Input
@@ -32,8 +32,8 @@ export function SchoolManagementToolbar({ filter, onChange, onRefresh, onCreate,
         { label: "全部活跃度", value: "all" }, { label: "今天活跃", value: "today" }, { label: "7 天内活跃", value: "7d" },
         { label: "30 天内活跃", value: "30d" }, { label: "30 天未活跃", value: "inactive_30d" }, { label: "从未活跃", value: "never" }
       ]} />
-      <Select aria-label="模型状态" value={filter.model_health ?? "all"} onChange={(value) => onChange(update(filter, "model_health", value === "all" ? undefined : value))} options={[
-        { label: "全部模型", value: "all" }, { label: "正常", value: "healthy" }, { label: "异常", value: "warning" }, { label: "未配置", value: "unconfigured" }
+      <Select aria-label="对话默认模型状态" value={filter.model_health ?? "all"} onChange={(value) => onChange(update(filter, "model_health", value === "all" ? undefined : value))} options={[
+        { label: "全部对话默认模型状态", value: "all" }, { label: "对话默认模型正常", value: "healthy" }, { label: "对话默认模型异常", value: "warning" }, { label: "对话默认模型未配置", value: "unconfigured" }
       ]} />
       <Select<UsageWindow> aria-label="AI 用量时间范围" value={filter.usage_window ?? "30d"} onChange={(value) => onChange({ ...filter, usage_window: value, cursor: undefined })} options={[
         { label: "AI 用量 · 今天", value: "today" }, { label: "AI 用量 · 7 天", value: "7d" }, { label: "AI 用量 · 30 天", value: "30d" }, { label: "AI 用量 · 90 天", value: "90d" }

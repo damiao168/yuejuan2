@@ -1,0 +1,15 @@
+{
+  "verified_at": "2026-10-11T17:10:45.380043+08:00",
+  "metadata_url": "https://registry.npmjs.org/echarts/5.5.1",
+  "tarball_url": "https://registry.npmjs.org/echarts/-/echarts-5.5.1.tgz",
+  "npm_tarball_integrity_verified": true,
+  "cdn_url": "https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js",
+  "cdn_equals_npm_distribution": true,
+  "cdn_bytes": 1030855,
+  "cdn_sha256": "e84270bd0cd5bdf60fefc26d00c2a391cb2e81f4d26a7a9ee16185a54773a3cf",
+  "integrity_attribute": "sha384-Mx5lkUEQPM1pOJCwFtUICyX45KNojXbkWdYhkKUKsbv391mavbfoAmONbzkgYPzR",
+  "access_control_allow_origin": "*",
+  "downloaded_script": "D:\\tools\\sonar-remediation-20261011\\public-dependencies\\echarts-5.5.1.min.js",
+  "reference": "https://developer.mozilla.org/en-US/docs/Web/Security/Defenses/Subresource_Integrity",
+  "network_scope": "Only public fixed-version npm/CDN downloads; no workspace content uploaded"
+}

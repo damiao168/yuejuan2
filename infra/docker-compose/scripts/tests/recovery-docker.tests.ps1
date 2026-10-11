@@ -4,8 +4,8 @@ param(
   [string]$MinioClientImage = 'minio/mc:RELEASE.2025-04-16T18-13-26Z'
 )
 
-# Opt-in real integration test. It uses synthetic data, no host ports, and a unique
-# Compose project with its own volumes. Existing deployment containers are untouched.
+# 需显式启用的真实集成测试，使用合成数据、不暴露主机端口，
+# 并使用独立数据卷的唯一 Compose 项目，不影响现有部署容器。
 $ErrorActionPreference = 'Stop'
 $scriptDirectory = Split-Path -Parent $PSScriptRoot
 . (Join-Path $scriptDirectory 'recovery-common.ps1')
@@ -133,7 +133,7 @@ INSERT INTO question_bank_item_asset SELECT tenant_id,id FROM file_asset WHERE l
   Pass 'missing source object fails backup and still resumes only original writers'
 } finally {
   if ($started) {
-    # The unique Compose name and explicit file prevent cleanup from selecting the deployment.
+    # 唯一的 Compose 名称和显式文件参数可防止清理时选中部署资源。
     & docker compose --env-file $envPath -f $composePath down --volumes --remove-orphans | Out-Null
     if ($LASTEXITCODE -ne 0) { Write-Warning "Cleanup failed for isolated test project $project." }
   }

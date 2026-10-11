@@ -9,6 +9,10 @@ import (
 	"time"
 )
 
+const (
+	paperImportRunIDPrefix = "paper-import-run"
+)
+
 // MemoryStore 以进程内锁维护状态，不提供数据库事务回滚或跨进程任务租约。
 // 用它验证业务分支时，不能据此推断 PostgreSQL 的并发提交和持久化恢复行为。
 type MemoryStore struct {
@@ -69,7 +73,7 @@ func (s *MemoryStore) CreatePaperImport(_ context.Context, tenantID, examID, use
 		return PaperImportJob{}, ErrInvalidInput
 	}
 	now := time.Now().UTC()
-	job := PaperImportJob{ID: s.id("paper-import"), TenantID: tenantID, ExamID: examID, ExamPaperID: input.ExamPaperID, PaperFileAssetID: input.PaperFileAssetID, AnswerFileAssetID: input.AnswerFileAssetID, Status: "processing", Generation: 1, RunID: s.id("paper-import-run"), Subject: input.Subject, Questions: []PaperImportDraftQuestion{}, Issues: []string{}, QuestionCandidates: []QuestionCandidate{}, AnswerCandidates: []AnswerCandidate{}, SolutionCandidates: []SolutionCandidate{}, RubricCandidates: []RubricCandidate{}, StructuredIssues: []PaperImportIssue{}, CreatedBy: userID, CreatedAt: now, UpdatedAt: now}
+	job := PaperImportJob{ID: s.id("paper-import"), TenantID: tenantID, ExamID: examID, ExamPaperID: input.ExamPaperID, PaperFileAssetID: input.PaperFileAssetID, AnswerFileAssetID: input.AnswerFileAssetID, Status: "processing", Generation: 1, RunID: s.id(paperImportRunIDPrefix), Subject: input.Subject, Questions: []PaperImportDraftQuestion{}, Issues: []string{}, QuestionCandidates: []QuestionCandidate{}, AnswerCandidates: []AnswerCandidate{}, SolutionCandidates: []SolutionCandidate{}, RubricCandidates: []RubricCandidate{}, StructuredIssues: []PaperImportIssue{}, CreatedBy: userID, CreatedAt: now, UpdatedAt: now}
 	seenAssets, seenIndexes := map[string]bool{}, map[int]bool{}
 	for _, source := range sources {
 		if source.FileAssetID == "" || source.DocumentIndex < 0 || seenAssets[source.FileAssetID] || seenIndexes[source.DocumentIndex] || !validPaperImportRole(source.RoleHint, true) {
@@ -115,7 +119,7 @@ func (s *MemoryStore) AddPaperImportSources(_ context.Context, tenantID, id, _ s
 	}
 	job.Status, job.ErrorCode, job.Issues, job.UpdatedAt = "processing", "", []string{}, now
 	job.Generation++
-	job.RunID = s.id("paper-import-run")
+	job.RunID = s.id(paperImportRunIDPrefix)
 	job.SourceRevision = paperImportSourceConfigurationHash(job.Sources)
 	job.ResultGeneration = 0
 	job.StructuredIssues = []PaperImportIssue{}
@@ -174,16 +178,19 @@ func (s *MemoryStore) ReplacePaperImportSources(_ context.Context, tenantID, id,
 	}
 	job.UpdatedAt = now
 	job.Generation++
-	job.RunID = s.id("paper-import-run")
+	job.RunID = s.id(paperImportRunIDPrefix)
 	job.SourceRevision = paperImportSourceConfigurationHash(job.Sources)
 	job.ResultGeneration = 0
 	s.imports[id] = job
 	return job, nil
 }
 
-func (s *MemoryStore) CompletePaperImportCandidates(_ context.Context, tenantID, id string, detected []PaperImportDetectedDocument, questions []QuestionCandidate, answers []AnswerCandidate, solutions []SolutionCandidate, rubrics []RubricCandidate, issues []PaperImportIssue) (PaperImportJob, error) {
+func (s *MemoryStore) CompletePaperImportCandidates(_ context.Context, tenantID, id string, parsed PaperImportParseResult) (PaperImportJob, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	// 这里沿用六类候选结果的存储范围；解析响应中的模型用量不随候选写入。
+	detected, questions, answers := parsed.Documents, parsed.QuestionCandidates, parsed.AnswerCandidates
+	solutions, rubrics, issues := parsed.SolutionCandidates, parsed.RubricCandidates, parsed.Issues
 	job, ok := s.imports[id]
 	if !ok || job.TenantID != tenantID {
 		return PaperImportJob{}, ErrNotFound
@@ -215,13 +222,18 @@ func (s *MemoryStore) CompletePaperImportCandidates(_ context.Context, tenantID,
 }
 
 func (s *MemoryStore) SavePaperImportReview(_ context.Context, tenantID, id, _ string, input ReviewPaperImportInput) (PaperImportJob, error) {
+	expectedUpdatedAt, err := time.Parse(time.RFC3339Nano, input.ExpectedUpdatedAt)
+	if err != nil || expectedUpdatedAt.IsZero() {
+		return PaperImportJob{}, ErrInvalidInput
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	job, ok := s.imports[id]
 	if !ok || job.TenantID != tenantID {
 		return PaperImportJob{}, ErrNotFound
 	}
-	if job.Status != "review_required" || job.Generation != input.ExpectedGeneration {
+	// 与数据库路径一样，在持锁期间校验内容快照；同generation的旧整卷不能静默覆盖。
+	if job.Status != "review_required" || job.Generation != input.ExpectedGeneration || !job.UpdatedAt.Equal(expectedUpdatedAt) {
 		return PaperImportJob{}, ErrConflict
 	}
 	reviewedQuestions, reconciliationIssues := s.reconcileMemoryPaperImport(job.ExamID, input.Questions, nil)
@@ -237,7 +249,12 @@ func (s *MemoryStore) SavePaperImportReview(_ context.Context, tenantID, id, _ s
 	job.Questions = input.Questions
 	job.StructuredIssues = withPaperImportReconciliationIssues(appendReviewedDraftIssues(issuesAfterHumanReview(job.StructuredIssues, job.Questions, true), job.Questions), reconciliationIssues)
 	job.Issues = issueMessages(job.StructuredIssues)
-	job.UpdatedAt = time.Now().UTC()
+	// 连续保存可能落在同一系统时钟刻度，仍须使旧预览和推理请求失效。
+	now := time.Now().UTC()
+	if !now.After(job.UpdatedAt) {
+		now = job.UpdatedAt.Add(time.Nanosecond)
+	}
+	job.UpdatedAt = now
 	s.imports[id] = job
 	return job, nil
 }
@@ -336,101 +353,132 @@ func (s *MemoryStore) ApplyPaperImport(_ context.Context, tenantID, id, userID s
 	if !ok || job.TenantID != tenantID {
 		return PaperImportJob{}, ErrNotFound
 	}
-	if job.Status != "review_required" {
+	if job.Status != "review_required" || job.StructureConfirmedGeneration > 0 && job.StructureConfirmedGeneration == job.Generation {
 		return PaperImportJob{}, ErrConflict
 	}
 	if err := s.ensureExamPaperMutableLocked(job.ExamID); err != nil {
 		return PaperImportJob{}, err
 	}
-	existing := 0
-	for _, question := range s.questions {
-		if question.TenantID == tenantID && question.ExamID == job.ExamID && question.Status != "deleted" {
-			existing++
-		}
-	}
+	existing := s.importQuestionCountLocked(tenantID, job.ExamID)
 	job.Questions, job.Issues = s.reconcileMemoryPaperImport(job.ExamID, job.Questions, job.Issues)
 	if paperImportHasBlockingIssues(job) {
 		return PaperImportJob{}, ErrInvalidInput
 	}
 	for i := range job.Questions {
-		draft := &job.Questions[i]
-		if err := validateQuestionInput(draft.QuestionNo, draft.QuestionType, draft.Score); err != nil {
-			return PaperImportJob{}, ErrInvalidInput
+		if err := s.applyImportQuestionLocked(tenantID, job, &job.Questions[i], i, existing > 0); err != nil {
+			return PaperImportJob{}, err
 		}
-		if draft.Rubric != nil && (!scoreEqual(SumRubricPoints(draft.Rubric.Points), draft.Score) || !scoreEqual(draft.Rubric.MaxScore, draft.Score)) {
-			return PaperImportJob{}, ErrRubricMismatch
-		}
-		if draft.Rubric != nil && draft.Rubric.Status == "" {
-			draft.Rubric.Status = "draft"
-		}
-		if draft.Rubric != nil && (!IsValidRubricStatus(draft.Rubric.Status) || !ValidRubricEvidenceRequirements(draft.Rubric.Points)) {
-			return PaperImportJob{}, ErrInvalidInput
-		}
-		if existing > 0 {
-			if draft.MatchedQuestionID == "" || draft.MatchStatus == "extra" || draft.MatchStatus == "ambiguous" {
-				continue
-			}
-			q, ok := s.questions[draft.MatchedQuestionID]
-			if !ok || q.TenantID != tenantID || q.ExamID != job.ExamID {
-				return PaperImportJob{}, ErrConflict
-			}
-			q.ExamPaperID, q.Stem, q.KnowledgePoints = job.ExamPaperID, draft.Stem, cloneStrings(draft.KnowledgePoints)
-			q.QuestionType, q.Score, q.AssessmentArchetype = draft.QuestionType, draft.Score, draft.AssessmentArchetype
-			q.ParentQuestionNo, q.SubquestionNo, q.Options = draft.ParentQuestionNo, draft.SubquestionNo, cloneStrings(draft.Options)
-			q.PaperImportID, q.PaperImportCandidateID, q.PaperImportSourceRefs = job.ID, draft.CandidateID, append([]PaperImportSourceRef{}, draft.SourceRefs...)
-			{
-				if draft.AnswerKey != nil {
-					q.AnswerKey = &AnswerKey{ID: s.id("answer"), QuestionID: q.ID, AnswerVersion: fmt.Sprintf("v%d", 1), StandardAnswer: draft.AnswerKey.StandardAnswer, EquivalentAnswers: draft.AnswerKey.EquivalentAnswers, Tolerance: draft.AnswerKey.Tolerance, PaperImportID: job.ID, PaperImportCandidateID: draft.AnswerCandidateID, PaperImportSourceRefs: append([]PaperImportSourceRef{}, draft.SourceRefs...)}
-				}
-				if draft.Solution != nil {
-					q.Solution = &QuestionSolution{ID: s.id("solution"), QuestionID: q.ID, PaperImportID: job.ID, SolutionVersion: "v1", RawText: draft.Solution.RawText, Steps: draft.Solution.Steps, SourceRefs: draft.Solution.SourceRefs, VerificationStatus: solutionVerificationStatus(*draft)}
-				}
-				if draft.Rubric != nil {
-					if rubrics := s.rubrics[q.ID]; len(rubrics) > 0 && rubrics[len(rubrics)-1].Status == "locked" {
-						return PaperImportJob{}, ErrRubricLocked
-					}
-					status := draft.Rubric.Status
-					if status != "locked" {
-						status = "draft"
-					}
-					if status == "locked" && !stringSet(draft.HumanConfirmedFields)["rubric"] {
-						return PaperImportJob{}, ErrInvalidInput
-					}
-					r := Rubric{ID: s.id("rubric"), QuestionID: q.ID, Version: fmt.Sprintf("v%d", len(s.rubrics[q.ID])+1), Status: status, MaxScore: draft.Rubric.MaxScore, Points: draft.Rubric.Points, Deductions: draft.Rubric.Deductions, Examples: draft.Rubric.Examples, PaperImportID: job.ID, PaperImportCandidateID: draft.RubricCandidateID, PaperImportSourceRefs: append([]PaperImportSourceRef{}, draft.SourceRefs...)}
-					s.rubrics[q.ID] = append(s.rubrics[q.ID], r)
-				}
-			}
-			s.questions[q.ID] = q
-			continue
-		}
-		qid := s.id("question")
-		q := Question{ID: qid, TenantID: tenantID, ExamID: job.ExamID, ExamPaperID: job.ExamPaperID, QuestionNo: draft.QuestionNo, QuestionType: draft.QuestionType, AssessmentArchetype: draft.AssessmentArchetype, Score: draft.Score, Stem: draft.Stem, ParentQuestionNo: draft.ParentQuestionNo, SubquestionNo: draft.SubquestionNo, Options: cloneStrings(draft.Options), KnowledgePoints: cloneStrings(draft.KnowledgePoints), AnswerArea: map[string]any{}, SortOrder: i + 1, Status: "active", PaperImportID: job.ID, PaperImportCandidateID: draft.CandidateID, PaperImportSourceRefs: append([]PaperImportSourceRef{}, draft.SourceRefs...)}
-		if draft.AnswerKey != nil {
-			q.AnswerKey = &AnswerKey{ID: s.id("answer"), QuestionID: qid, AnswerVersion: "v1", StandardAnswer: draft.AnswerKey.StandardAnswer, EquivalentAnswers: draft.AnswerKey.EquivalentAnswers, Tolerance: draft.AnswerKey.Tolerance, PaperImportID: job.ID, PaperImportCandidateID: draft.AnswerCandidateID, PaperImportSourceRefs: append([]PaperImportSourceRef{}, draft.SourceRefs...)}
-		}
-		if draft.Solution != nil {
-			q.Solution = &QuestionSolution{ID: s.id("solution"), QuestionID: qid, PaperImportID: job.ID, SolutionVersion: "v1", RawText: draft.Solution.RawText, Steps: draft.Solution.Steps, SourceRefs: draft.Solution.SourceRefs, VerificationStatus: solutionVerificationStatus(*draft)}
-		}
-		s.questions[qid] = q
-		if draft.Rubric != nil {
-			status := draft.Rubric.Status
-			if status != "locked" {
-				status = "draft"
-			}
-			if status == "locked" && !stringSet(draft.HumanConfirmedFields)["rubric"] {
-				return PaperImportJob{}, ErrInvalidInput
-			}
-			r := Rubric{ID: s.id("rubric"), QuestionID: qid, Version: "v1", Status: status, MaxScore: draft.Rubric.MaxScore, Points: draft.Rubric.Points, Deductions: draft.Rubric.Deductions, Examples: draft.Rubric.Examples, PaperImportID: job.ID, PaperImportCandidateID: draft.RubricCandidateID, PaperImportSourceRefs: append([]PaperImportSourceRef{}, draft.SourceRefs...)}
-			s.rubrics[qid] = []Rubric{r}
-		}
-		draft.MatchedQuestionID = qid
-		draft.MatchStatus = "matched"
 	}
 	now := time.Now().UTC()
 	job.Status, job.AppliedAt, job.UpdatedAt = "applied", &now, now
 	s.imports[id] = job
 	_ = userID
 	return job, nil
+}
+
+func (s *MemoryStore) importQuestionCountLocked(tenantID, examID string) int {
+	count := 0
+	for _, question := range s.questions {
+		if question.TenantID == tenantID && question.ExamID == examID && question.Status != "deleted" {
+			count++
+		}
+	}
+	return count
+}
+
+// 每题依次校验和写入；后题失败时，保留前题修改与已经消耗的 ID。
+func (s *MemoryStore) applyImportQuestionLocked(tenantID string, job PaperImportJob, draft *PaperImportDraftQuestion, index int, hasExisting bool) error {
+	if err := validateMemoryImportDraft(draft); err != nil {
+		return err
+	}
+	if hasExisting {
+		return s.updateImportedQuestionLocked(tenantID, job, draft)
+	}
+	return s.createImportedQuestionLocked(tenantID, job, draft, index)
+}
+
+func validateMemoryImportDraft(draft *PaperImportDraftQuestion) error {
+	if err := validateQuestionInput(draft.QuestionNo, draft.QuestionType, draft.Score); err != nil {
+		return ErrInvalidInput
+	}
+	if draft.Rubric != nil && (!scoreEqual(SumRubricPoints(draft.Rubric.Points), draft.Score) || !scoreEqual(draft.Rubric.MaxScore, draft.Score)) {
+		return ErrRubricMismatch
+	}
+	if draft.Rubric != nil && draft.Rubric.Status == "" {
+		draft.Rubric.Status = "draft"
+	}
+	if draft.Rubric != nil && (!IsValidRubricStatus(draft.Rubric.Status) || !ValidRubricEvidenceRequirements(draft.Rubric.Points)) {
+		return ErrInvalidInput
+	}
+	return nil
+}
+
+func (s *MemoryStore) updateImportedQuestionLocked(tenantID string, job PaperImportJob, draft *PaperImportDraftQuestion) error {
+	if draft.MatchedQuestionID == "" || draft.MatchStatus == "extra" || draft.MatchStatus == "ambiguous" {
+		return nil
+	}
+	q, ok := s.questions[draft.MatchedQuestionID]
+	if !ok || q.TenantID != tenantID || q.ExamID != job.ExamID {
+		return ErrConflict
+	}
+	q.ExamPaperID, q.Stem, q.KnowledgePoints = job.ExamPaperID, draft.Stem, cloneStrings(draft.KnowledgePoints)
+	q.QuestionType, q.Score, q.AssessmentArchetype = draft.QuestionType, draft.Score, draft.AssessmentArchetype
+	q.ScoreSource = importedScoreSource(*draft)
+	q.ParentQuestionNo, q.SubquestionNo, q.Options = draft.ParentQuestionNo, draft.SubquestionNo, cloneStrings(draft.Options)
+	q.PaperImportID, q.PaperImportCandidateID, q.PaperImportSourceRefs = job.ID, draft.CandidateID, append([]PaperImportSourceRef{}, draft.SourceRefs...)
+	s.attachImportedAnswerSolutionLocked(&q, job, draft, fmt.Sprintf("v%d", 1))
+	if draft.Rubric != nil {
+		// 已锁量规的检查仍晚于答案、解析 ID 分配，但早于本题写回。
+		if rubrics := s.rubrics[q.ID]; len(rubrics) > 0 && rubrics[len(rubrics)-1].Status == "locked" {
+			return ErrRubricLocked
+		}
+		r, err := s.importedRubricLocked(q.ID, job, draft, fmt.Sprintf("v%d", len(s.rubrics[q.ID])+1))
+		if err != nil {
+			return err
+		}
+		s.rubrics[q.ID] = append(s.rubrics[q.ID], r)
+	}
+	s.questions[q.ID] = q
+	return nil
+}
+
+func (s *MemoryStore) createImportedQuestionLocked(tenantID string, job PaperImportJob, draft *PaperImportDraftQuestion, index int) error {
+	qid := s.id("question")
+	q := Question{ID: qid, TenantID: tenantID, ExamID: job.ExamID, ExamPaperID: job.ExamPaperID, QuestionNo: draft.QuestionNo, QuestionType: draft.QuestionType, AssessmentArchetype: draft.AssessmentArchetype, Score: draft.Score, Stem: draft.Stem, ParentQuestionNo: draft.ParentQuestionNo, SubquestionNo: draft.SubquestionNo, Options: cloneStrings(draft.Options), KnowledgePoints: cloneStrings(draft.KnowledgePoints), AnswerArea: map[string]any{}, SortOrder: index + 1, Status: "active", PaperImportID: job.ID, PaperImportCandidateID: draft.CandidateID, PaperImportSourceRefs: append([]PaperImportSourceRef{}, draft.SourceRefs...)}
+	q.ScoreSource = importedScoreSource(*draft)
+	s.attachImportedAnswerSolutionLocked(&q, job, draft, "v1")
+	// 新题先写入，再校验量规确认；失败时维持原有部分副作用。
+	s.questions[qid] = q
+	if draft.Rubric != nil {
+		r, err := s.importedRubricLocked(qid, job, draft, "v1")
+		if err != nil {
+			return err
+		}
+		s.rubrics[qid] = []Rubric{r}
+	}
+	draft.MatchedQuestionID = qid
+	draft.MatchStatus = "matched"
+	return nil
+}
+
+func (s *MemoryStore) attachImportedAnswerSolutionLocked(q *Question, job PaperImportJob, draft *PaperImportDraftQuestion, answerVersion string) {
+	if draft.AnswerKey != nil {
+		q.AnswerKey = &AnswerKey{ID: s.id("answer"), QuestionID: q.ID, AnswerVersion: answerVersion, StandardAnswer: draft.AnswerKey.StandardAnswer, EquivalentAnswers: draft.AnswerKey.EquivalentAnswers, Tolerance: draft.AnswerKey.Tolerance, PaperImportID: job.ID, PaperImportCandidateID: draft.AnswerCandidateID, PaperImportSourceRefs: append([]PaperImportSourceRef{}, draft.SourceRefs...)}
+	}
+	if draft.Solution != nil {
+		q.Solution = &QuestionSolution{ID: s.id("solution"), QuestionID: q.ID, PaperImportID: job.ID, SolutionVersion: "v1", RawText: draft.Solution.RawText, Steps: draft.Solution.Steps, SourceRefs: draft.Solution.SourceRefs, VerificationStatus: solutionVerificationStatus(*draft)}
+	}
+}
+
+func (s *MemoryStore) importedRubricLocked(questionID string, job PaperImportJob, draft *PaperImportDraftQuestion, version string) (Rubric, error) {
+	status := draft.Rubric.Status
+	if status != "locked" {
+		status = "draft"
+	}
+	if status == "locked" && !stringSet(draft.HumanConfirmedFields)["rubric"] {
+		return Rubric{}, ErrInvalidInput
+	}
+	return Rubric{ID: s.id("rubric"), QuestionID: questionID, Version: version, Status: status, MaxScore: draft.Rubric.MaxScore, Points: draft.Rubric.Points, Deductions: draft.Rubric.Deductions, Examples: draft.Rubric.Examples, PaperImportID: job.ID, PaperImportCandidateID: draft.RubricCandidateID, PaperImportSourceRefs: append([]PaperImportSourceRef{}, draft.SourceRefs...)}, nil
 }
 
 func solutionVerificationStatus(draft PaperImportDraftQuestion) string {
@@ -484,8 +532,22 @@ func (s *MemoryStore) ExamStatus(examID string) string {
 }
 
 func (s *MemoryStore) CreatePaper(_ context.Context, tenantID string, examID string, _ string, input CreatePaperInput) (Paper, error) {
+	purpose, err := normalizePaperPurpose(input.Purpose)
+	if err != nil {
+		return Paper{}, err
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if err := s.ensureExamPaperMutableLocked(examID); err != nil {
+		return Paper{}, err
+	}
+	item, exists, err := s.replayedPaperForFileLocked(tenantID, examID, input.FileAssetID, purpose)
+	if err != nil {
+		return Paper{}, err
+	}
+	if exists {
+		return item, nil
+	}
 	version := 1
 	for _, item := range s.papers {
 		if item.TenantID == tenantID && item.ExamID == examID && item.VersionNo >= version {
@@ -499,6 +561,7 @@ func (s *MemoryStore) CreatePaper(_ context.Context, tenantID string, examID str
 		FileAssetID: input.FileAssetID,
 		VersionNo:   version,
 		Status:      "uploaded",
+		Purpose:     purpose,
 		File:        input.File,
 	}
 	if paper.FileAssetID == "" {
@@ -506,6 +569,22 @@ func (s *MemoryStore) CreatePaper(_ context.Context, tenantID string, examID str
 	}
 	s.papers[paper.ID] = paper
 	return paper, nil
+}
+
+func (s *MemoryStore) replayedPaperForFileLocked(tenantID, examID, fileAssetID, purpose string) (Paper, bool, error) {
+	if fileAssetID == "" {
+		return Paper{}, false, nil
+	}
+	for _, item := range s.papers {
+		if item.TenantID == tenantID && item.FileAssetID == fileAssetID {
+			itemPurpose, _ := normalizePaperPurpose(item.Purpose)
+			if item.ExamID != examID || itemPurpose != purpose {
+				return Paper{}, false, ErrInvalidInput
+			}
+			return item, true, nil
+		}
+	}
+	return Paper{}, false, nil
 }
 
 func (s *MemoryStore) ListPapers(_ context.Context, tenantID string, examID string) ([]Paper, error) {
@@ -543,6 +622,7 @@ func (s *MemoryStore) CreateQuestion(_ context.Context, tenantID string, examID 
 		QuestionNo:       input.QuestionNo,
 		QuestionType:     input.QuestionType,
 		Score:            input.Score,
+		ScoreSource:      "human",
 		Stem:             input.Stem,
 		KnowledgePoints:  cloneStrings(input.KnowledgePoints),
 		AnswerArea:       cloneMap(input.AnswerArea),
@@ -606,6 +686,7 @@ func (s *MemoryStore) UpdateQuestion(_ context.Context, tenantID string, id stri
 	}
 	if input.Score != nil {
 		item.Score = *input.Score
+		item.ScoreSource = "human"
 	}
 	if input.Stem != nil {
 		item.Stem = *input.Stem

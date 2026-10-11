@@ -1,0 +1,681 @@
+{
+  "total": 4,
+  "p": 1,
+  "ps": 500,
+  "paging": {
+    "pageIndex": 1,
+    "pageSize": 500,
+    "total": 4
+  },
+  "effortTotal": 35,
+  "issues": [
+    {
+      "key": "eb390af3-af14-4c27-b33c-0b1442f95181",
+      "rule": "python:S125",
+      "severity": "MAJOR",
+      "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/build_preview.py",
+      "project": "yuejuan-local-workspace-20261010",
+      "line": 17,
+      "hash": "6d9b501dacddba24dba88c7c1b744996",
+      "textRange": {
+        "startLine": 17,
+        "endLine": 17,
+        "startOffset": 8,
+        "endOffset": 44
+      },
+      "flows": [],
+      "status": "OPEN",
+      "message": "Remove this commented out code.",
+      "effort": "5min",
+      "debt": "5min",
+      "author": "",
+      "tags": [
+        "unused"
+      ],
+      "transitions": [
+        "accept",
+        "falsepositive",
+        "confirm",
+        "resolve",
+        "wontfix"
+      ],
+      "actions": [
+        "set_type",
+        "set_tags",
+        "comment",
+        "set_severity",
+        "assign"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T18:01:26+0800",
+      "type": "CODE_SMELL",
+      "scope": "MAIN",
+      "quickFixAvailable": false,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "CLEAR",
+      "cleanCodeAttributeCategory": "INTENTIONAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ],
+      "issueStatus": "OPEN",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "98688ff8-f75e-4bbb-897a-2eaf11ee1c8f",
+      "rule": "javascript:S905",
+      "severity": "MAJOR",
+      "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/check_preview_typography.js",
+      "project": "yuejuan-local-workspace-20261010",
+      "line": 2,
+      "hash": "a0e8204a6e0a217cb7d6cccdf0e9b8a2",
+      "textRange": {
+        "startLine": 2,
+        "endLine": 37,
+        "startOffset": 0,
+        "endOffset": 1
+      },
+      "flows": [],
+      "status": "OPEN",
+      "message": "Expected an assignment or function call and instead saw an expression.",
+      "effort": "10min",
+      "debt": "10min",
+      "author": "",
+      "tags": [
+        "cwe",
+        "unused"
+      ],
+      "transitions": [
+        "accept",
+        "falsepositive",
+        "confirm",
+        "resolve",
+        "wontfix"
+      ],
+      "actions": [
+        "set_type",
+        "set_tags",
+        "comment",
+        "set_severity",
+        "assign"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T18:01:26+0800",
+      "type": "BUG",
+      "scope": "MAIN",
+      "quickFixAvailable": false,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "CLEAR",
+      "cleanCodeAttributeCategory": "INTENTIONAL",
+      "impacts": [
+        {
+          "softwareQuality": "RELIABILITY",
+          "severity": "MEDIUM"
+        }
+      ],
+      "issueStatus": "OPEN",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "6eb1de9a-c6f8-4662-9a79-01e20787127a",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "component": "yuejuan-local-workspace-20261010:services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+      "project": "yuejuan-local-workspace-20261010",
+      "line": 198,
+      "hash": "6b7b10e3d936cf92a8063b859d0c6d87",
+      "textRange": {
+        "startLine": 198,
+        "endLine": 198,
+        "startOffset": 5,
+        "endOffset": 29
+      },
+      "flows": [
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+              "textRange": {
+                "startLine": 210,
+                "endLine": 210,
+                "startOffset": 1,
+                "endOffset": 4
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+              "textRange": {
+                "startLine": 215,
+                "endLine": 215,
+                "startOffset": 4,
+                "endOffset": 6
+              },
+              "msg": "+4 (incl 3 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+              "textRange": {
+                "startLine": 215,
+                "endLine": 215,
+                "startOffset": 41,
+                "endOffset": 43
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+              "textRange": {
+                "startLine": 219,
+                "endLine": 219,
+                "startOffset": 4,
+                "endOffset": 6
+              },
+              "msg": "+4 (incl 3 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+              "textRange": {
+                "startLine": 219,
+                "endLine": 219,
+                "startOffset": 48,
+                "endOffset": 50
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+              "textRange": {
+                "startLine": 227,
+                "endLine": 227,
+                "startOffset": 3,
+                "endOffset": 5
+              },
+              "msg": "+3 (incl 2 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+              "textRange": {
+                "startLine": 230,
+                "endLine": 230,
+                "startOffset": 3,
+                "endOffset": 5
+              },
+              "msg": "+3 (incl 2 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+              "textRange": {
+                "startLine": 233,
+                "endLine": 233,
+                "startOffset": 3,
+                "endOffset": 5
+              },
+              "msg": "+3 (incl 2 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+              "textRange": {
+                "startLine": 233,
+                "endLine": 233,
+                "startOffset": 27,
+                "endOffset": 29
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        }
+      ],
+      "status": "OPEN",
+      "message": "Refactor this method to reduce its Cognitive Complexity from 21 to the 15 allowed.",
+      "effort": "11min",
+      "debt": "11min",
+      "author": "",
+      "tags": [
+        "brain-overload"
+      ],
+      "transitions": [
+        "accept",
+        "falsepositive",
+        "confirm",
+        "resolve",
+        "wontfix"
+      ],
+      "actions": [
+        "set_type",
+        "set_tags",
+        "comment",
+        "set_severity",
+        "assign"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T11:43:02+0800",
+      "updateDate": "2026-10-11T11:43:02+0800",
+      "type": "CODE_SMELL",
+      "scope": "TEST",
+      "quickFixAvailable": false,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "FOCUSED",
+      "cleanCodeAttributeCategory": "ADAPTABLE",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ],
+      "issueStatus": "OPEN",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "32ec19c6-7711-4694-b5dd-6577c7ecf0e9",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "component": "yuejuan-local-workspace-20261010:services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+      "project": "yuejuan-local-workspace-20261010",
+      "line": 659,
+      "hash": "99ed1ba62f327ac760629b4c0ba09e9c",
+      "textRange": {
+        "startLine": 659,
+        "endLine": 659,
+        "startOffset": 5,
+        "endOffset": 47
+      },
+      "flows": [
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+              "textRange": {
+                "startLine": 670,
+                "endLine": 670,
+                "startOffset": 1,
+                "endOffset": 4
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+              "textRange": {
+                "startLine": 673,
+                "endLine": 673,
+                "startOffset": 3,
+                "endOffset": 5
+              },
+              "msg": "+3 (incl 2 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+              "textRange": {
+                "startLine": 676,
+                "endLine": 676,
+                "startOffset": 3,
+                "endOffset": 5
+              },
+              "msg": "+3 (incl 2 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+              "textRange": {
+                "startLine": 687,
+                "endLine": 687,
+                "startOffset": 3,
+                "endOffset": 5
+              },
+              "msg": "+3 (incl 2 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+              "textRange": {
+                "startLine": 692,
+                "endLine": 692,
+                "startOffset": 3,
+                "endOffset": 5
+              },
+              "msg": "+3 (incl 2 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+              "textRange": {
+                "startLine": 692,
+                "endLine": 692,
+                "startOffset": 34,
+                "endOffset": 36
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+              "textRange": {
+                "startLine": 694,
+                "endLine": 694,
+                "startOffset": 4,
+                "endOffset": 6
+              },
+              "msg": "+4 (incl 3 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+              "textRange": {
+                "startLine": 694,
+                "endLine": 694,
+                "startOffset": 30,
+                "endOffset": 32
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        }
+      ],
+      "status": "OPEN",
+      "message": "Refactor this method to reduce its Cognitive Complexity from 19 to the 15 allowed.",
+      "effort": "9min",
+      "debt": "9min",
+      "author": "",
+      "tags": [
+        "brain-overload"
+      ],
+      "transitions": [
+        "accept",
+        "falsepositive",
+        "confirm",
+        "resolve",
+        "wontfix"
+      ],
+      "actions": [
+        "set_type",
+        "set_tags",
+        "comment",
+        "set_severity",
+        "assign"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T11:43:02+0800",
+      "updateDate": "2026-10-11T18:01:26+0800",
+      "type": "CODE_SMELL",
+      "scope": "TEST",
+      "quickFixAvailable": false,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "FOCUSED",
+      "cleanCodeAttributeCategory": "ADAPTABLE",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ],
+      "issueStatus": "OPEN",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    }
+  ],
+  "components": [
+    {
+      "key": "yuejuan-local-workspace-20261010:docs/architecture/tools/check_preview_typography.js",
+      "enabled": true,
+      "qualifier": "FIL",
+      "name": "check_preview_typography.js",
+      "longName": "docs/architecture/tools/check_preview_typography.js",
+      "path": "docs/architecture/tools/check_preview_typography.js"
+    },
+    {
+      "key": "yuejuan-local-workspace-20261010:services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+      "enabled": true,
+      "qualifier": "UTS",
+      "name": "main_batch9_test.go",
+      "longName": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+      "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go"
+    },
+    {
+      "key": "yuejuan-local-workspace-20261010",
+      "enabled": true,
+      "qualifier": "TRK",
+      "name": "yuejuan current local workspace 2026-10-10",
+      "longName": "yuejuan current local workspace 2026-10-10"
+    },
+    {
+      "key": "yuejuan-local-workspace-20261010:docs/architecture/tools/build_preview.py",
+      "enabled": true,
+      "qualifier": "FIL",
+      "name": "build_preview.py",
+      "longName": "docs/architecture/tools/build_preview.py",
+      "path": "docs/architecture/tools/build_preview.py"
+    }
+  ],
+  "rules": [
+    {
+      "key": "javascript:S905",
+      "name": "Non-empty statements should change control flow or have at least one side-effect",
+      "lang": "js",
+      "status": "READY",
+      "langName": "JavaScript"
+    },
+    {
+      "key": "go:S3776",
+      "name": "Cognitive Complexity of functions should not be too high",
+      "lang": "go",
+      "status": "READY",
+      "langName": "Go"
+    },
+    {
+      "key": "python:S125",
+      "name": "Sections of code should not be commented out",
+      "lang": "py",
+      "status": "READY",
+      "langName": "Python"
+    }
+  ],
+  "users": [
+    {
+      "login": "admin",
+      "name": "Administrator",
+      "active": true
+    }
+  ],
+  "languages": [
+    {
+      "key": "py",
+      "name": "Python"
+    },
+    {
+      "key": "ipynb",
+      "name": "IPython Notebooks"
+    },
+    {
+      "key": "go",
+      "name": "Go"
+    },
+    {
+      "key": "kotlin",
+      "name": "Kotlin"
+    },
+    {
+      "key": "terraform",
+      "name": "Terraform"
+    },
+    {
+      "key": "cloudformation",
+      "name": "CloudFormation"
+    },
+    {
+      "key": "kubernetes",
+      "name": "Kubernetes"
+    },
+    {
+      "key": "docker",
+      "name": "Docker"
+    },
+    {
+      "key": "azureresourcemanager",
+      "name": "Azure Resource Manager"
+    },
+    {
+      "key": "yaml",
+      "name": "YAML"
+    },
+    {
+      "key": "json",
+      "name": "JSON"
+    },
+    {
+      "key": "js",
+      "name": "JavaScript"
+    },
+    {
+      "key": "ts",
+      "name": "TypeScript"
+    },
+    {
+      "key": "css",
+      "name": "CSS"
+    },
+    {
+      "key": "ruby",
+      "name": "Ruby"
+    },
+    {
+      "key": "scala",
+      "name": "Scala"
+    },
+    {
+      "key": "rust",
+      "name": "Rust"
+    },
+    {
+      "key": "cs",
+      "name": "C#"
+    },
+    {
+      "key": "java",
+      "name": "Java"
+    },
+    {
+      "key": "web",
+      "name": "HTML"
+    },
+    {
+      "key": "jsp",
+      "name": "JSP"
+    },
+    {
+      "key": "flex",
+      "name": "Flex"
+    },
+    {
+      "key": "xml",
+      "name": "XML"
+    },
+    {
+      "key": "php",
+      "name": "PHP"
+    },
+    {
+      "key": "text",
+      "name": "Text"
+    },
+    {
+      "key": "secrets",
+      "name": "Secrets"
+    },
+    {
+      "key": "vbnet",
+      "name": "VB.NET"
+    }
+  ],
+  "facets": []
+}

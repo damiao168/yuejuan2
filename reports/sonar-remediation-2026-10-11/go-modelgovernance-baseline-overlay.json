@@ -1,0 +1,10 @@
+{
+  "Replace": {
+    "D:\\project\\yuejuan\\services\\api-gateway\\internal\\modelgovernance\\governance_routing_state_refactor_test.go": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\modelgovernance\\governance_routing_state_refactor_test.go",
+    "D:\\project\\yuejuan\\services\\api-gateway\\internal\\modelgovernance\\managed_agent_http_test.go": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\modelgovernance\\managed_agent_http_test.go",
+    "D:\\project\\yuejuan\\services\\api-gateway\\internal\\modelgovernance\\managed_chat_test.go": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\modelgovernance\\managed_chat_test.go",
+    "D:\\project\\yuejuan\\services\\api-gateway\\internal\\modelgovernance\\managed_config_probe_http_test.go": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\modelgovernance\\managed_config_probe_http_test.go",
+    "D:\\project\\yuejuan\\services\\api-gateway\\internal\\modelgovernance\\managed_governance_refactor_test.go": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\modelgovernance\\managed_governance_refactor_test.go",
+    "D:\\project\\yuejuan\\services\\api-gateway\\internal\\modelgovernance\\role_binding_test.go": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\modelgovernance\\role_binding_test.go"
+  }
+}

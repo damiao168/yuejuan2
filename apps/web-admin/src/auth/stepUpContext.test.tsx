@@ -2,7 +2,7 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ApiClientError } from "../api/client";
+import { ApiClientError, RECENT_AUTH_REQUIRED_EVENT } from "../api/client";
 import { isStepUpCancelledError, StepUpProvider, useStepUp } from "./stepUpContext";
 
 const recentAuthError = () => new ApiClientError(428, "recent_auth_required", "recent authentication required");
@@ -12,6 +12,7 @@ describe("StepUpProvider", () => {
   let container: HTMLDivElement;
   let current: ReturnType<typeof useStepUp>;
   let reauthenticate: ReturnType<typeof vi.fn>;
+  let renderProvider: (onReauthenticate?: (password: string) => Promise<void>) => Promise<void>;
 
   beforeEach(async () => {
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
@@ -23,9 +24,10 @@ describe("StepUpProvider", () => {
       current = useStepUp();
       return null;
     }
-    await act(async () => {
-      root.render(<StepUpProvider onReauthenticate={reauthenticate}><Probe /></StepUpProvider>);
+    renderProvider = async (onReauthenticate = reauthenticate) => act(async () => {
+      root.render(<StepUpProvider onReauthenticate={onReauthenticate}><Probe /></StepUpProvider>);
     });
+    await renderProvider();
   });
 
   afterEach(async () => {
@@ -41,6 +43,31 @@ describe("StepUpProvider", () => {
     expect(action).toHaveBeenCalledTimes(1);
     expect(reauthenticate).not.toHaveBeenCalled();
     expect(current.open).toBe(false);
+  });
+
+  it("keeps the context value on an unchanged parent render and uses the latest verification callback", async () => {
+    const initial = current;
+    await renderProvider();
+    expect(current).toBe(initial);
+    await act(async () => current.setPassword("synthetic-password"));
+    expect(current).not.toBe(initial);
+    expect(current.password).toBe("synthetic-password");
+    const nextReauthenticate = vi.fn().mockResolvedValue(undefined);
+    await renderProvider(nextReauthenticate);
+    await act(async () => current.complete());
+    expect(nextReauthenticate).toHaveBeenCalledWith("synthetic-password");
+    expect(reauthenticate).not.toHaveBeenCalled();
+    expect(current.password).toBe("");
+    expect(current.feedback).toContain("刚才的操作尚未执行");
+  });
+
+  it("marks fallback verification as identity-only and asks the user to repeat the original action", async () => {
+    await act(async () => { window.dispatchEvent(new Event(RECENT_AUTH_REQUIRED_EVENT)); await new Promise(resolve => setTimeout(resolve, 10)); });
+    expect(current.open).toBe(true); expect(current.canResume).toBe(false);
+    await act(async () => current.setPassword("synthetic-password"));
+    await act(async () => current.complete());
+    expect(reauthenticate).toHaveBeenCalledOnce(); expect(current.open).toBe(false);
+    expect(current.feedback).toContain("刚才的操作尚未执行");
   });
 
   it("reauthenticates and retries a 428 action exactly once", async () => {

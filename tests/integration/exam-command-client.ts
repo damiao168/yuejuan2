@@ -35,8 +35,8 @@ export async function run(fixture: string) {
     }
     assert.equal(rejected,true,"server must inject failure after committing business facts");
     payload.name = "edited draft must not alter pending request";
-    // Recreate page state solely from persisted storage, then use the actual
-    // recovery API and actual transport to replay the original immutable body.
+    // 只从持久化存储重建页面状态，再通过实际恢复 API
+    // 和实际传输重放原始不可变请求体。
     const restored = loadExamCreateCommand(storage,"submitted");
     assert.ok(restored);
     const recovered = await recoverExamSessionCommand(restored.commandId);

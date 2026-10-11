@@ -18,13 +18,15 @@ export interface DashboardWorkItem {
 function examAction(exam: DashboardActiveExam) {
   const encodedId = encodeURIComponent(exam.id);
   const issueCount = exam.failed_count + exam.quality_issue_count + exam.unmatched_count;
-  if (["draft", "configured", "ready"].includes(exam.status)) {
+  if (["draft", "configured"].includes(exam.status)) {
     return { label: "完善试卷", path: `/exams/${encodedId}/paper` };
   }
+  if (["ready", "preparation_confirmed"].includes(exam.status)) return {label:"导入答题卡",path:`/exams/${encodedId}/capture`};
   if (["collecting", "processing"].includes(exam.status)) {
     return { label: issueCount ? "处理答卷" : "继续导入", path: `/exams/${encodedId}/capture` };
   }
-  if (["grading", "reviewing"].includes(exam.status)) {
+  if (exam.status === "reviewing") return { label: "处理人工复核", path: `/exams/${encodedId}/grading` };
+  if (exam.status === "grading") {
     return { label: "继续阅卷", path: `/exams/${encodedId}/grading` };
   }
   if (exam.status === "finalized") return { label: "发布成绩", path: `/exams/${encodedId}/scores` };
@@ -32,7 +34,7 @@ function examAction(exam: DashboardActiveExam) {
   return { label: "查看考试", path: `/exams/${encodedId}/overview` };
 }
 
-function MembersSection({ statistics, onNavigate }: { statistics: DashboardOrganizationStatistics; onNavigate: (path: string) => void }) {
+function MembersSection({ statistics, onNavigate }: Readonly<{ statistics: DashboardOrganizationStatistics; onNavigate: (path: string) => void }>) {
   const items = [
     {
       label: "学生名册",
@@ -79,7 +81,7 @@ function MembersSection({ statistics, onNavigate }: { statistics: DashboardOrgan
   );
 }
 
-function ExamsSection({ exams, activeExamCount, onNavigate }: { exams: DashboardActiveExam[]; activeExamCount: number; onNavigate: (path: string) => void }) {
+function ExamsSection({ exams, activeExamCount, onNavigate }: Readonly<{ exams: DashboardActiveExam[]; activeExamCount: number; onNavigate: (path: string) => void }>) {
   return (
     <section className="school-dashboard-section exams-section">
       <div className="school-dashboard-section-head">
@@ -113,7 +115,7 @@ function ExamsSection({ exams, activeExamCount, onNavigate }: { exams: Dashboard
   );
 }
 
-function GradingResultsSection({ statistics, workItems, onNavigate }: { statistics: DashboardStatistics; workItems: DashboardWorkItem[]; onNavigate: (path: string) => void }) {
+function GradingResultsSection({ statistics, workItems, onNavigate }: Readonly<{ statistics: DashboardStatistics; workItems: DashboardWorkItem[]; onNavigate: (path: string) => void }>) {
   const metrics = [
     { label: "待阅", value: statistics.pending_review_question_count, unit: "题" },
     { label: "待复核", value: statistics.pending_arbitration_submission_count, unit: "份" },
@@ -147,7 +149,7 @@ function GradingResultsSection({ statistics, workItems, onNavigate }: { statisti
   );
 }
 
-function KeyProgressSection({ activities, onNavigate }: { activities: DashboardActivity[]; onNavigate: (path: string) => void }) {
+function KeyProgressSection({ activities, onNavigate }: Readonly<{ activities: DashboardActivity[]; onNavigate: (path: string) => void }>) {
   if (!activities.length) return null;
   return (
     <section className="school-dashboard-section key-progress-section">
@@ -170,7 +172,7 @@ function KeyProgressSection({ activities, onNavigate }: { activities: DashboardA
   );
 }
 
-export function SchoolDashboard({ organizationStatistics, statistics, activeExamCount, exams, workItems, activities, onNavigate }: {
+export function SchoolDashboard({ organizationStatistics, statistics, activeExamCount, exams, workItems, activities, onNavigate }: Readonly<{
   organizationStatistics: DashboardOrganizationStatistics;
   statistics: DashboardStatistics;
   activeExamCount: number;
@@ -178,7 +180,7 @@ export function SchoolDashboard({ organizationStatistics, statistics, activeExam
   workItems: DashboardWorkItem[];
   activities: DashboardActivity[];
   onNavigate: (path: string) => void;
-}) {
+}>) {
   return (
     <div className="school-dashboard-sections">
       <MembersSection statistics={organizationStatistics} onNavigate={onNavigate} />

@@ -1,5 +1,5 @@
-import type { Dispatch, SetStateAction } from "react";
-import { Button, Checkbox, Input, Popconfirm, Space, Tooltip } from "antd";
+import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
+import { Button, Checkbox, Input, Modal, Popconfirm, Space, Tooltip } from "antd";
 import { Award, Check, CheckCircle2, Flag } from "lucide-react";
 import type { RubricPoint } from "../../../../api/papers";
 import type { AiGrade } from "../../../../api/review";
@@ -8,6 +8,8 @@ import { SharedScoreControl } from "../../SharedScoreControl";
 import { requiresExplicitSecondOpinion } from "../reviewContext";
 import { commentPresets } from "../gradingWorkbench.model";
 import type { ScoreDraft, WorkbenchContext } from "../gradingWorkbench.types";
+import { useSingleKeyShortcuts } from "../shortcutPreference";
+import { aiPointAdoption } from "../aiAdoption";
 
 export interface ScoreEditorProps {
   context: WorkbenchContext;
@@ -22,6 +24,7 @@ export interface ScoreEditorProps {
   canManageTasks: boolean;
   actioning: string | null;
   onAdoptAiScore: () => void;
+  onAdoptAiFeedback?: () => void;
   canAdoptAiScore?: boolean;
   onMarkDispute: () => Promise<void>;
   onSubmit: (nominateAsGold?: boolean) => Promise<void>;
@@ -42,12 +45,32 @@ export function ScoreEditor({
   canManageTasks,
   actioning,
   onAdoptAiScore,
+  onAdoptAiFeedback,
   canAdoptAiScore = true,
   onMarkDispute,
   onSubmit,
   quickSubmit = false,
   onQuickSubmitChange
-}: ScoreEditorProps) {
+}: Readonly<ScoreEditorProps>) {
+  const { enabled: singleKeyShortcutsEnabled, setEnabled: setSingleKeyShortcutsEnabled } = useSingleKeyShortcuts();
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  useEffect(() => { setFeedbackOpen(false); }, [context.task.id]);
+  const previewScore = () => {
+    if (!selectedGrade) return;
+    const mapped = aiPointAdoption(selectedGrade, rubricPoints, context.question?.rubric?.version);
+    Modal.confirm({ title: "确认采用 AI 建议分？", okText: "填入评分草稿", cancelText: "继续核对",
+      content: <div><p>最终分：{draft.score ?? "未填写"} → {selectedGrade.suggested_score}</p>
+        <p>{mapped ? `同时填入 ${rubricPoints.length} 个同版评分点，合计与建议分一致。` : "仅修改总分；未能完整核对评分点绑定，现有评分点保留，请人工核对。"}</p><p>学生反馈和内部备注保持原文。</p></div>,
+      onOk: onAdoptAiScore });
+  };
+  const previewFeedback = () => {
+    if (!selectedGrade || !onAdoptAiFeedback) return;
+    Modal.confirm({ title: "审读并采用 AI 反馈草稿", okText: "采用并展开编辑", cancelText: "保留现有文字", width: 640,
+      content: <div><p>以下文字会替换对应的现有内容，分数不改变。</p>
+        <strong>学生可见反馈</strong><p>{selectedGrade.student_feedback ?? "没有建议，保留原文"}</p>
+        <strong>内部备注（教师与授权管理员可见）</strong><p>{selectedGrade.teacher_note ?? "没有建议，保留原文"}</p></div>,
+      onOk: () => { onAdoptAiFeedback(); setFeedbackOpen(true); } });
+  };
   return (
     <section className="score-panel">
       <div className="panel-head">
@@ -55,8 +78,10 @@ export function ScoreEditor({
           <h2>最终评分</h2>
           <p>满分 {maxScore || "—"}</p>
         </div>
+        {/* 高风险独立评分只开放第二意见展示，不从此入口采纳预填分数。 */}
         {selectedGrade && !requiresExplicitSecondOpinion(context.reviewContext) ? (
-          <Button icon={<Check size={14} />} disabled={!canEditDraft || !canAdoptAiScore} onClick={onAdoptAiScore}>采纳 AI 建议</Button>
+          <Space wrap><Button icon={<Check size={14} />} disabled={!canEditDraft || !canAdoptAiScore} onClick={previewScore}>采纳 AI 建议分</Button>
+            {onAdoptAiFeedback && (selectedGrade.student_feedback || selectedGrade.teacher_note) ? <Button disabled={!canEditDraft || !canAdoptAiScore} onClick={previewFeedback}>审读 AI 反馈</Button> : null}</Space>
         ) : null}
       </div>
 
@@ -75,7 +100,7 @@ export function ScoreEditor({
         </div>
       ) : null}
 
-      <details className="grading-more-fields">
+      <details className="grading-more-fields" open={feedbackOpen} onToggle={(event) => setFeedbackOpen(event.currentTarget.open)}>
         <summary>评语与备注（可选）</summary>
         <div className="grading-more-fields-body">
           <div className="grading-comment-presets">
@@ -114,7 +139,7 @@ export function ScoreEditor({
 
       <div className="grading-submit-note">提交后进入质检，不会直接发布成绩</div>
       <Checkbox checked={quickSubmit} onChange={(event) => onQuickSubmitChange?.(event.target.checked)}>连续阅卷：允许 Enter 提交并下一份</Checkbox>
-      <details className="grading-shortcut-help"><summary>键盘帮助 · {quickSubmit ? "Enter" : "Ctrl / ⌘ + Enter"} 提交</summary><p>{rubricPoints.length ? "1–9 仅切换对应评分点并合计；没有对应评分点的数字键不生效。" : "1–9 直接打分，0分或小数请在最终分输入框填写。"} A 采纳建议 · F 标记异常 · R 退回 · Z 撤销本次评分编辑 · +/- 缩放。输入文字或打开弹窗时快捷键暂停。</p></details>
+      <details className="grading-shortcut-help"><summary>键盘帮助 · {quickSubmit ? "Enter" : "Ctrl / ⌘ + Enter"} 提交</summary><Checkbox checked={singleKeyShortcutsEnabled} onChange={(event) => setSingleKeyShortcutsEnabled(event.target.checked)}>启用单字符快捷键（数字、A / F / R / Z、+ / -）</Checkbox><p>{rubricPoints.length ? "1–9 仅切换对应评分点并合计；没有对应评分点的数字键不生效。" : "1–9 直接打分，0分或小数请在最终分输入框填写。"} A 采纳建议分（不采用反馈） · F 标记异常 · R 退回 · Z 撤销本次评分编辑 · +/- 缩放。输入文字或打开弹窗时快捷键暂停。关闭单字符快捷键后仍可使用提交组合键和答题图工具按钮。</p></details>
 
       <Space wrap className="grading-submit-bar">
         {canReturn ? (

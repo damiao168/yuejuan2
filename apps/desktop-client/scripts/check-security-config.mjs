@@ -29,7 +29,7 @@ function requireSources(policy, directive, expected) {
 }
 
 const security = tauriConfig.app?.security;
-if (!security || !security.csp || !security.devCsp) {
+if (!security?.csp || !security.devCsp) {
   fail("production and development CSP must both be configured");
 } else {
   requireSources(security.csp, "default-src", ["'self'"]);
@@ -38,6 +38,8 @@ if (!security || !security.csp || !security.devCsp) {
   requireSources(security.csp, "object-src", ["'none'"]);
   requireSources(security.csp, "base-uri", ["'none'"]);
   requireSources(security.csp, "frame-ancestors", ["'none'"]);
+  // 答卷 PDF 只从下载后的本机 Blob 显示，不能开放远程网站作为内嵌阅卷内容。
+  if (JSON.stringify(sources(security.csp, "frame-src")) !== JSON.stringify(["blob:"])) fail("frame-src must allow only local blob PDF previews");
   requireSources(security.csp, "script-src-attr", ["'none'"]);
   if (sources(security.csp, "script-src").some((source) => source.includes("unsafe-"))) {
     fail("production script-src must not allow unsafe-inline or unsafe-eval");
@@ -63,16 +65,25 @@ if (JSON.stringify(capability.windows) !== JSON.stringify(["main"])) {
 if (JSON.stringify(capability.platforms) !== JSON.stringify(["windows"])) {
   fail("the default capability must be Windows-only");
 }
-if (!Array.isArray(capability.permissions) || capability.permissions.length !== 0) {
-  fail("no Tauri core or plugin permission is currently required");
+// 关闭事件等待教师处理草稿后才销毁窗口；仅开放监听、解除监听和销毁，不能顺带授予其他窗口能力。
+if (JSON.stringify(capability.permissions) !== JSON.stringify(["core:event:allow-listen", "core:event:allow-unlisten", "core:window:allow-destroy"])) {
+  fail("only the event listener and confirmed window destroy permissions are required");
 }
 
 // 仅扫描源码中的字面量调用，并与允许的 IPC 命令双向核对；新增命令时必须同步更新清单和能力审查。
 const expectedCommands = new Set([
   "archive_durable_scan_queue_items",
+  "remove_unstarted_scan_queue_item",
+  "durable_storage_usage",
+  "list_archived_cleanup_candidates",
+  "cleanup_archived_originals",
   "append_local_log",
   "begin_spool_local_asset",
   "bind_durable_session",
+  "authorize_offline_access",
+  "read_offline_access",
+  "unlock_offline_access",
+  "revoke_offline_access",
   "capability_statuses",
   "claim_legacy_durable_store",
   "clear_durable_session",

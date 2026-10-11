@@ -1,0 +1,107 @@
+{
+  "javascript:S2681": {
+    "rule": {
+      "key": "javascript:S2681",
+      "repo": "javascript",
+      "name": "Multiline blocks should be enclosed in curly braces",
+      "createdAt": "2026-10-02T19:31:58+0800",
+      "severity": "MAJOR",
+      "status": "READY",
+      "isTemplate": false,
+      "tags": [],
+      "sysTags": [
+        "cwe",
+        "editable-source"
+      ],
+      "lang": "js",
+      "langName": "JavaScript",
+      "params": [],
+      "defaultDebtRemFnType": "CONSTANT_ISSUE",
+      "debtRemFnType": "CONSTANT_ISSUE",
+      "type": "CODE_SMELL",
+      "defaultRemFnType": "CONSTANT_ISSUE",
+      "defaultRemFnBaseEffort": "5min",
+      "remFnType": "CONSTANT_ISSUE",
+      "remFnBaseEffort": "5min",
+      "remFnOverloaded": false,
+      "scope": "MAIN",
+      "isExternal": false,
+      "descriptionSections": [
+        {
+          "key": "root_cause",
+          "content": "<p>Having inconsistent indentation and omitting curly braces from a control structure, such as an <code>if</code> statement or <code>for</code> loop,\nis misleading and can induce bugs.</p>\n<p>This rule raises an issue when the indentation of the lines after a control structure indicates an intent to include those lines in the block, but\nthe omission of curly braces means the lines will be unconditionally executed once.</p>\n<p>The following patterns are recognized:</p>\n<pre>\nif (condition)\n  firstActionInBlock();\n  secondAction();  // Noncompliant: secondAction is executed unconditionally\nthirdAction();\n</pre>\n<pre>\nif (condition) firstActionInBlock(); secondAction();  // Noncompliant: secondAction is executed unconditionally\n</pre>\n<pre>\nif (condition) firstActionInBlock();  // Noncompliant\n  secondAction();  // Executed unconditionally\n</pre>\n<pre>\nif (condition); secondAction();  // Noncompliant: secondAction is executed unconditionally\n</pre>\n<pre>\nlet str = undefined;\nfor (let i = 0; i &lt; array.length; i++)\n  str = array[i];\n  doTheThing(str);  // Noncompliant: executed only on the last element\n</pre>\n<p>Note that this rule considers tab characters to be equivalent to 1 space. When mixing spaces and tabs, a code may look fine in one editor but be\nconfusing in another configured differently.</p>"
+        },
+        {
+          "key": "resources",
+          "content": "<ul>\n  <li>CWE - <a href=\"https://cwe.mitre.org/data/definitions/483\">CWE-483 - Incorrect Block Delimitation</a></li>\n</ul>"
+        }
+      ],
+      "educationPrinciples": [],
+      "updatedAt": "2026-10-02T19:31:58+0800",
+      "cleanCodeAttribute": "FORMATTED",
+      "cleanCodeAttributeCategory": "CONSISTENT",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ]
+    },
+    "actives": []
+  },
+  "javascript:S7773": {
+    "rule": {
+      "key": "javascript:S7773",
+      "repo": "javascript",
+      "name": "Number static methods and properties should be preferred over global equivalents",
+      "createdAt": "2026-10-02T19:31:58+0800",
+      "severity": "MINOR",
+      "status": "READY",
+      "isTemplate": false,
+      "tags": [],
+      "sysTags": [
+        "convention",
+        "es2015",
+        "editable-source"
+      ],
+      "lang": "js",
+      "langName": "JavaScript",
+      "params": [],
+      "defaultDebtRemFnType": "CONSTANT_ISSUE",
+      "debtRemFnType": "CONSTANT_ISSUE",
+      "type": "CODE_SMELL",
+      "defaultRemFnType": "CONSTANT_ISSUE",
+      "defaultRemFnBaseEffort": "2min",
+      "remFnType": "CONSTANT_ISSUE",
+      "remFnBaseEffort": "2min",
+      "remFnOverloaded": false,
+      "scope": "MAIN",
+      "isExternal": false,
+      "descriptionSections": [
+        {
+          "key": "root_cause",
+          "content": "<p>ECMAScript 2015 introduced static methods and properties on the <code>Number</code> constructor to replace several global functions and values.\nUsing these <code>Number</code> equivalents provides several benefits:</p>\n<p><strong>Consistency and Organization</strong>: All number-related utilities are grouped under the <code>Number</code> namespace, making the code\nmore organized and easier to understand.</p>\n<p><strong>Reduced Global Namespace Pollution</strong>: By using <code>Number</code> methods instead of globals, you help keep the global namespace\ncleaner and reduce the risk of naming conflicts.</p>\n<p><strong>Improved Behavior</strong>: Some <code>Number</code> methods have better behavior than their global counterparts:</p>\n<ul>\n  <li><code>Number.isNaN()</code> only returns <code>true</code> for actual <code>NaN</code> values, while global <code>isNaN()</code> coerces\n  non-numbers to numbers first, leading to unexpected results</li>\n  <li><code>Number.isFinite()</code> only returns <code>true</code> for finite numbers, while global <code>isFinite()</code> coerces non-numbers\n  first</li>\n</ul>\n<p><strong>Modern JavaScript Standards</strong>: Using <code>Number</code> methods aligns with modern JavaScript practices and demonstrates\nfamiliarity with ES2015+ features.</p>\n<p>The global functions still exist for backward compatibility, but the <code>Number</code> equivalents are the recommended approach in modern\nJavaScript development.</p>\n<h3>What is the potential impact?</h3>\n<p>Using global functions instead of <code>Number</code> methods can lead to:</p>\n<ul>\n  <li><strong>Unexpected behavior</strong>: Global <code>isNaN()</code> and <code>isFinite()</code> perform type coercion, which can cause bugs when\n  checking non-number values</li>\n  <li><strong>Code inconsistency</strong>: Mixing global and <code>Number</code> methods makes the codebase less uniform</li>\n  <li><strong>Maintainability issues</strong>: Code that doesn’t follow modern standards may be harder for other developers to understand and\n  maintain</li>\n</ul>\n<h3>How to fix?</h3>\n<p>Replace global parsing functions with their Number equivalents. The behavior is identical, but the Number methods are more explicit and\norganized.</p>\n<h4>Non-compliant code example</h4>\n<pre data-diff-id=\"1\" data-diff-type=\"noncompliant\">\nconst num1 = parseInt('42', 10); // Noncompliant\nconst num2 = parseFloat('3.14'); // Noncompliant\n</pre>\n<h4>Compliant code example</h4>\n<pre data-diff-id=\"1\" data-diff-type=\"compliant\">\nconst num1 = Number.parseInt('42', 10);\nconst num2 = Number.parseFloat('3.14');\n</pre>\n<h3>Documentation</h3>\n<ul>\n  <li><a href=\"https://github.com/sindresorhus/eslint-plugin-unicorn#readme\">eslint-plugin-unicorn</a> - Rule <a\n  href=\"https://github.com/sindresorhus/eslint-plugin-unicorn/blob/HEAD/docs/rules/prefer-number-properties.md\">prefer-number-properties</a></li>\n  <li>Number.parseInt() - MDN - <a\n  href=\"https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/parseInt\">Documentation for Number.parseInt()\n  method</a></li>\n  <li>Number.parseFloat() - MDN - <a\n  href=\"https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/parseFloat\">Documentation for Number.parseFloat()\n  method</a></li>\n  <li>Number.isNaN() - MDN - <a href=\"https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/isNaN\">Documentation for\n  Number.isNaN() method and its differences from global isNaN()</a></li>\n  <li>Number.isFinite() - MDN - <a\n  href=\"https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/isFinite\">Documentation for Number.isFinite() method\n  and its differences from global isFinite()</a></li>\n</ul>"
+        },
+        {
+          "key": "introduction",
+          "content": "<p>This rule raises an issue when global functions like <code>parseInt()</code>, <code>parseFloat()</code>, <code>isNaN()</code>,\n<code>isFinite()</code> or global values like <code>NaN</code>, <code>Infinity</code> are used instead of their <code>Number</code> constructor\nequivalents.</p>"
+        }
+      ],
+      "educationPrinciples": [],
+      "updatedAt": "2026-10-02T19:31:58+0800",
+      "cleanCodeAttribute": "CONVENTIONAL",
+      "cleanCodeAttributeCategory": "CONSISTENT",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "LOW"
+        },
+        {
+          "softwareQuality": "RELIABILITY",
+          "severity": "MEDIUM"
+        }
+      ]
+    },
+    "actives": []
+  }
+}

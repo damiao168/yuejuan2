@@ -1,0 +1,28 @@
+{
+  "language": "python",
+  "stage": "analyze",
+  "started": "2026-10-11T11:30:00+08:00",
+  "command": [
+    "D:\\tools\\audit-codeql-20261010\\codeql\\codeql.exe",
+    "database",
+    "analyze",
+    "D:\\tools\\audit-codeql-20261010\\databases\\python-20261011",
+    "codeql/python-queries:codeql-suites/python-security-and-quality.qls",
+    "--threads=2",
+    "--ram=2048",
+    "--max-disk-cache=2048",
+    "--min-disk-free=8192",
+    "--no-download",
+    "--format=sarifv2.1.0",
+    "--output=D:\\project\\yuejuan\\reports\\platform-audit-2026-10-10\\codeql\\python.sarif",
+    "--sarif-category=python",
+    "--sarif-include-query-help=always",
+    "--no-sarif-add-file-contents",
+    "--no-sarif-add-snippets",
+    "--common-caches=D:\\tools\\audit-codeql-20261010\\common-caches"
+  ],
+  "log": "D:\\project\\yuejuan\\reports\\platform-audit-2026-10-10\\codeql\\python-analyze.log",
+  "exit_code": 0,
+  "finished": "2026-10-11T11:31:42+08:00",
+  "elapsed_seconds": 102.06
+}

@@ -17,14 +17,10 @@ func (s *PostgresStore) Begin(ctx context.Context, input BeginInput) (Record, bo
 		return Record{}, false, err
 	}
 	defer tx.Rollback()
-	// TTL expires completed HTTP response caches only. A processing reservation
-	// is the durable request fingerprint needed to resume an interrupted
-	// command; deleting it would allow a different payload to take its place.
+	// TTL 只使已完成的 HTTP 响应缓存过期。处理中预留保存恢复中断命令所需的持久请求指纹；删除它会允许其他载荷取而代之。
 	_, _ = tx.ExecContext(ctx, `DELETE FROM idempotency_record WHERE expires_at < now() AND tenant_id=$1 AND state='completed'`, input.TenantID)
 	if !input.AllowTakeover {
-		// Legacy protected routes without a durable business recovery contract
-		// retain their previous TTL behavior. Do not turn them into permanent
-		// processing records merely because closed commands need a fingerprint.
+		// 没有持久业务恢复约定的旧受保护路由，保留原有 TTL 行为；不能只因闭环命令需要指纹，就将旧路由变成永久处理中记录。
 		_, _ = tx.ExecContext(ctx, `DELETE FROM idempotency_record
 WHERE tenant_id=$1 AND actor_id=$2 AND method=$3 AND route=$4 AND idempotency_key=$5
   AND state='processing' AND expires_at<now()`, input.TenantID, input.ActorID, input.Method, input.Route, input.Key)

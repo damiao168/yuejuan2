@@ -15,8 +15,8 @@ if (-not (Test-Path -LiteralPath $envFile -PathType Leaf)) {
     throw "Missing $envFile. Copy infra/docker-compose/.env.example to .env and configure it first."
 }
 
-# Bind mounts do not reliably create a writable leaf directory on every Docker
-# Desktop version, so create the project-local model cache before Compose runs.
+# 部分 Docker Desktop 版本的绑定挂载不能可靠地创建可写的末级目录，
+# 因此在 Compose 运行前先创建项目内的模型缓存目录。
 New-Item -ItemType Directory -Force -Path $ocrModelCache | Out-Null
 
 $composeArguments = @(
@@ -43,8 +43,8 @@ if ($Build) {
     } elseif ($BuildWorkers) {
         $buildTargets = @($knownBuildServices | Select-Object -Unique)
     } else {
-        # Daily application changes do not need the large PaddleOCR image.
-        # Rebuild it only with -BuildWorkers or an explicit -BuildService.
+        # 日常应用修改不需要重建大型 PaddleOCR 镜像；
+        # 只在使用 -BuildWorkers 或显式 -BuildService 时重建。
         $buildTargets = $dailyBuildServices
     }
     $unknownTargets = @($buildTargets | Where-Object { $_ -notin $knownBuildServices })

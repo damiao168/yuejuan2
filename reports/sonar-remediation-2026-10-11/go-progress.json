@@ -1,0 +1,3251 @@
+{
+  "updated_at": "2026-10-11T18:36:30.811423+08:00",
+  "original_count": 209,
+  "severity_counts": {
+    "CRITICAL": 201,
+    "MAJOR": 8
+  },
+  "scope_note": "原报告全部Go告警在测试代码；尚未处理条目保持pending，不通过排除或抑制消除。",
+  "issue_states": [
+    {
+      "key": "6c9a81c1-c07a-43d4-bfde-ad38a4422017",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/cmd/reliability-repair/main_batch50_test.go",
+      "original_line": 159,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch08",
+      "change": "按锁定/事务故障/回执重放/恢复代数的独立场景分解，保持SQL顺序、失败终止及原所有断言"
+    },
+    {
+      "key": "32cd76a9-0715-40a6-b9f6-3b0a79854eeb",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/cmd/reliability-repair/main_batch50_test.go",
+      "original_line": 245,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch08",
+      "change": "按锁定/事务故障/回执重放/恢复代数的独立场景分解，保持SQL顺序、失败终止及原所有断言"
+    },
+    {
+      "key": "ee291179-f09c-42bf-8401-747a62efe3d8",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/cmd/reliability-repair/main_batch51_coverage_test.go",
+      "original_line": 105,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch08",
+      "change": "按锁定/事务故障/回执重放/恢复代数的独立场景分解，保持SQL顺序、失败终止及原所有断言"
+    },
+    {
+      "key": "199ae2fc-88be-43ed-ad28-fe88e4d383bf",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/cmd/reliability-repair/main_batch51_coverage_test.go",
+      "original_line": 141,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch08",
+      "change": "按锁定/事务故障/回执重放/恢复代数的独立场景分解，保持SQL顺序、失败终止及原所有断言"
+    },
+    {
+      "key": "045afad0-877f-410f-ba4c-94bc1c4d6a42",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/cmd/reliability-repair/main_batch51_coverage_test.go",
+      "original_line": 190,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch08",
+      "change": "按锁定/事务故障/回执重放/恢复代数的独立场景分解，保持SQL顺序、失败终止及原所有断言"
+    },
+    {
+      "key": "d254098e-15a6-45c5-8488-bcbec5db9f6c",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/cmd/reliability-repair/main_batch51_coverage_test.go",
+      "original_line": 327,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch08",
+      "change": "按锁定/事务故障/回执重放/恢复代数的独立场景分解，保持SQL顺序、失败终止及原所有断言"
+    },
+    {
+      "key": "dd7309b4-f4c8-4404-b2d9-510393320385",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/cmd/reliability-repair/main_batch51_coverage_test.go",
+      "original_line": 373,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch08",
+      "change": "按锁定/事务故障/回执重放/恢复代数的独立场景分解，保持SQL顺序、失败终止及原所有断言"
+    },
+    {
+      "key": "e1eec84d-a085-4a9a-8a30-524db7c863e1",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/answergroup/store_test.go",
+      "original_line": 46,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch03",
+      "change": "将抽样前拒绝、所有样本通过后就绪和可回滚建议事实断言按阶段拆分，保留rollback结果。"
+    },
+    {
+      "key": "08462c0f-4c1b-4d74-bb33-c08b11fe699e",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/apicontract/a14_a24_openapi_test.go",
+      "original_line": 11,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch07",
+      "change": "提取鉴权操作契约，保留所有原路径及401/403检查"
+    },
+    {
+      "key": "0d9d0e6c-3261-42ef-a7e3-d9d2aa9f3086",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/apicontract/exam_command_handler_schema_test.go",
+      "original_line": 108,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch19",
+      "change": "完整审读：按对象字段边界、数组递归及原始类型拆分实际响应合同验证器；保留引用/枚举/可空处理和原错误位置。"
+    },
+    {
+      "key": "eace8ee6-714b-4ac1-9e31-4e6d96903c62",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/apicontract/math_understanding_openapi_test.go",
+      "original_line": 11,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch19",
+      "change": "完整审读：按评分建议权限、模型候选、不可变绑定、SDK证据和试点学科拆分合同核验；全部字段和原判断顺序保留。"
+    },
+    {
+      "key": "bc95e27d-087d-4a85-b8f0-69b022b7d1cc",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/apicontract/platform_schools_openapi_test.go",
+      "original_line": 10,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch07",
+      "change": "提取学校路由操作契约校验，保留操作ID唯一性与响应码检查"
+    },
+    {
+      "key": "430681ae-171a-455a-b150-7653e22631e6",
+      "rule": "go:S107",
+      "severity": "MAJOR",
+      "path": "services/api-gateway/internal/apicontract/reliability_handler_schema_test.go",
+      "original_line": 75,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch26",
+      "change": "8 参数导入命令闭包改为语义请求结构；7处调用保留逐字段原值、幂等键、OpenAPI 期望、资源绑定与原顺序。"
+    },
+    {
+      "key": "a42db18a-71a4-425e-990a-a4acf799fe86",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/appeal/handlers_test.go",
+      "original_line": 82,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch10",
+      "change": "按意见移交、摘要读取权限、调分原子事实及学生作用域逐场景分离断言与执行；保留原检查顺序与失败短路"
+    },
+    {
+      "key": "8559b3d5-ba16-4c31-a5ee-7a4a844fcddc",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/appeal/published_question_opinion_test.go",
+      "original_line": 23,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch10",
+      "change": "按意见移交、摘要读取权限、调分原子事实及学生作用域逐场景分离断言与执行；保留原检查顺序与失败短路"
+    },
+    {
+      "key": "c42e0e89-c1c4-41da-ae5d-4e7639178ff2",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/appeal/published_question_opinion_test.go",
+      "original_line": 154,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch10",
+      "change": "按意见移交、摘要读取权限、调分原子事实及学生作用域逐场景分离断言与执行；保留原检查顺序与失败短路"
+    },
+    {
+      "key": "55ed8491-ae99-4f13-a7b5-845d17bd7822",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/appeal/published_question_opinion_test.go",
+      "original_line": 234,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch10",
+      "change": "按意见移交、摘要读取权限、调分原子事实及学生作用域逐场景分离断言与执行；保留原检查顺序与失败短路"
+    },
+    {
+      "key": "e99b774c-dd16-450e-9138-9d1c0622b367",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/appeal/published_question_summary_test.go",
+      "original_line": 31,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch10",
+      "change": "按意见移交、摘要读取权限、调分原子事实及学生作用域逐场景分离断言与执行；保留原检查顺序与失败短路"
+    },
+    {
+      "key": "19f95817-f9a2-430a-bdac-74093f5328f2",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/appeal/published_question_summary_test.go",
+      "original_line": 85,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch10",
+      "change": "按意见移交、摘要读取权限、调分原子事实及学生作用域逐场景分离断言与执行；保留原检查顺序与失败短路"
+    },
+    {
+      "key": "b1bf4e9a-099e-4ccd-a041-cbb23f8ab054",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/appeal/store_memory_batch27_test.go",
+      "original_line": 107,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch10",
+      "change": "按意见移交、摘要读取权限、调分原子事实及学生作用域逐场景分离断言与执行；保留原检查顺序与失败短路"
+    },
+    {
+      "key": "188f98a7-3645-4fd1-aa54-1fd1362a4b45",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/appeal/store_memory_batch27_test.go",
+      "original_line": 161,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch10",
+      "change": "按意见移交、摘要读取权限、调分原子事实及学生作用域逐场景分离断言与执行；保留原检查顺序与失败短路"
+    },
+    {
+      "key": "eeaef4e5-942a-4961-8d00-9dce9074b2e0",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/appeal/unicode_test.go",
+      "original_line": 10,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch01",
+      "change": "理由、决定文字和处理结果分开验证字符上限，保留原字段修改和先后顺序。"
+    },
+    {
+      "key": "44b89dce-877f-4de8-ab36-27e55da748e8",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/auth/authorization_contract_postgres_test.go",
+      "original_line": 19,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch14",
+      "change": "完整审读：提取按文件顺序执行迁移及单角色双向权限比较；保留隔离数据库清理和全局差异排序。"
+    },
+    {
+      "key": "cd485d32-e8d4-45ed-b44a-1ffa6c03d3a0",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/auth/authorization_contract_postgres_test.go",
+      "original_line": 134,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch14",
+      "change": "完整审读：提取按文件顺序执行迁移及单角色双向权限比较；保留隔离数据库清理和全局差异排序。"
+    },
+    {
+      "key": "163eab91-39f2-4361-aa75-f12bad2198ec",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/auth/handlers_test.go",
+      "original_line": 796,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch14",
+      "change": "完整审读：提取公共电脑再认证三类审计事实核验；保留失败后成功请求、同一会话恢复和原断言时序。"
+    },
+    {
+      "key": "8f7ba3f9-35b5-43f8-89ee-059e1208f567",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/auth/lifecycle_test.go",
+      "original_line": 154,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch06",
+      "change": "分离账户安全状态变更与恢复授权失效验证，保留状态变更顺序"
+    },
+    {
+      "key": "70adb860-01ce-4ab4-8da7-96504b3a0c21",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/auth/login_service_batch21_test.go",
+      "original_line": 112,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch09",
+      "change": "按登录CAS/会话退化、MFA安全事实、评分模式冻结、任务作用域与租约、批准策略运行门禁分解测试职责"
+    },
+    {
+      "key": "9237ea10-3e3a-46b8-ba59-33c93d3df804",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/auth/login_service_batch21_test.go",
+      "original_line": 142,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch09",
+      "change": "按登录CAS/会话退化、MFA安全事实、评分模式冻结、任务作用域与租约、批准策略运行门禁分解测试职责"
+    },
+    {
+      "key": "196f45c1-9c1f-4a3d-ae60-7a8288d87e5c",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/auth/mfa_security_changes_test.go",
+      "original_line": 50,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch09",
+      "change": "按登录CAS/会话退化、MFA安全事实、评分模式冻结、任务作用域与租约、批准策略运行门禁分解测试职责"
+    },
+    {
+      "key": "466980f8-037f-4eea-af70-1af498b2f6fb",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/auth/mfa_test.go",
+      "original_line": 150,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch09",
+      "change": "按登录CAS/会话退化、MFA安全事实、评分模式冻结、任务作用域与租约、批准策略运行门禁分解测试职责"
+    },
+    {
+      "key": "5f20b393-6997-4ca9-b640-715e8bb286b2",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/auth/migrations_test.go",
+      "original_line": 203,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch14",
+      "change": "完整审读：提取角色管理权限与服务角色边界断言；保留权限范围先验检查和迁移SQL契约检查顺序。"
+    },
+    {
+      "key": "f7052427-2b75-4f6a-a807-a289d0392571",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/auth/store_postgres_batch50_test.go",
+      "original_line": 30,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch14",
+      "change": "完整审读：提取用户绑定事务场景；保留所有SQL步骤、晚失败回滚及成功返回副本断言。"
+    },
+    {
+      "key": "da1e4ab9-263e-4943-a9f2-35d72dff475c",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/backmark/handlers_test.go",
+      "original_line": 18,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch17",
+      "change": "完整审读：拆分各HTTP路由与单游标页核验，保留跨页seen共享、先校验再推进游标及创建响应全部边界。"
+    },
+    {
+      "key": "0130465a-8f67-49f5-81be-f87b4bad47f7",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/backmark/service_batch19_test.go",
+      "original_line": 36,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch06",
+      "change": "提取完整页游标夹具，保持精确ID收集与空尾页"
+    },
+    {
+      "key": "befc5cfd-4ad0-4db9-a69a-0fdad68a66e3",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/backmark/validation_test.go",
+      "original_line": 38,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch06",
+      "change": "按冻结量规场景校验提交与失败后的成绩和版本不变"
+    },
+    {
+      "key": "24d403f9-0b8b-432d-8097-b79ef6cbbb6e",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/calibration/service_batch41_test.go",
+      "original_line": 38,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch01",
+      "change": "案例循环与每例Gold读取/首错/冻结参考集断言分开，保留读取次数、材料次序和失败不落库断言。"
+    },
+    {
+      "key": "18bf2740-50eb-40b5-8316-6e6a008e07ab",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/captureupload/service_test.go",
+      "original_line": 170,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch20",
+      "change": "完整审读：提取第173页检查点恢复/分块追加和对象字节核验，保留已确认偏移、过时重试、最终登记幂等全部判断。"
+    },
+    {
+      "key": "a2d251f7-2f8e-4653-9d93-bf556a8ab3fe",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/dashboard/service_test.go",
+      "original_line": 33,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch16",
+      "change": "完整审读：提取十二场考试与跨租户干扰数据准备，保留统计单位、全量聚合及作用域时间断言。"
+    },
+    {
+      "key": "4b06fcd7-92ee-4cab-9bca-e51607f3fccd",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/exam/archive_release_policy_batch30_test.go",
+      "original_line": 10,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch01",
+      "change": "抽取有工作/已发布/申诉窗的脚本夹具，原checker调用、事务回滚和阻塞排序断言不变。"
+    },
+    {
+      "key": "247e7189-a5cc-4e11-be3f-c57310862027",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/exam/management_archive_test.go",
+      "original_line": 39,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch19",
+      "change": "完整审读：提取归档学科写入锁定核验，保持归档后检查、恢复后原阶段检查和所有原错误断言。"
+    },
+    {
+      "key": "93ac65ef-bf84-430e-b6da-e035ed2a0f97",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/exam/session_postgres_batch49_test.go",
+      "original_line": 47,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch19",
+      "change": "完整审读：提取命令哈希重放、子科事务场景与名册元数据校验；保留行锁/唯一冲突恢复、完整SQL顺序和晚失败全回滚。"
+    },
+    {
+      "key": "7e0ef400-6ec9-4361-a1a7-32724d6b84c7",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/exam/session_postgres_batch49_test.go",
+      "original_line": 117,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch19",
+      "change": "完整审读：提取命令哈希重放、子科事务场景与名册元数据校验；保留行锁/唯一冲突恢复、完整SQL顺序和晚失败全回滚。"
+    },
+    {
+      "key": "018477ee-7aa2-46e9-80a8-a192fa433c12",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/files/reconciliation_batch21_test.go",
+      "original_line": 155,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch17",
+      "change": "完整审读：提取协调分支场景，保留对象/SQL顺序、失败补偿、租户身份和各finding的修复状态。"
+    },
+    {
+      "key": "a726e05a-21e4-48d9-a6b3-9f38408fa7cc",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/files/upload_batch31_test.go",
+      "original_line": 15,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch03",
+      "change": "每种回读故障独立验证未激活/无成功审计和同资产同存储键重试。"
+    },
+    {
+      "key": "5805daec-fdd1-4e78-9006-1c80b57328f5",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/graderdrift/service_batch18_test.go",
+      "original_line": 60,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch16",
+      "change": "完整审读：提取相同时间逆序ID的双阅卷者观测准备，保留窗口排序、时钟调用、暂停失败及再次计算断言。"
+    },
+    {
+      "key": "0076acf4-196e-46f1-82e4-c427acd2bbbd",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/grading/engine_test.go",
+      "original_line": 11,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch03",
+      "change": "将规则评分结果、上限、复核风险与真实来源断言独立，原表格所有题型保持不变。"
+    },
+    {
+      "key": "d40266d6-96d3-4466-9590-641796515f05",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/grading/handlers_test.go",
+      "original_line": 109,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch20",
+      "change": "完整审读：提取取消完成后的失败任务重试阶段，保留实际HTTP调用、同一runtime任务重入队和最终审计顺序。"
+    },
+    {
+      "key": "421c0ae5-8cfa-4ed6-bf90-d40a34504621",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/grading/rules_batch47_test.go",
+      "original_line": 29,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch05",
+      "change": "提取数值边界场景验证，保留验证与转换的先后次序"
+    },
+    {
+      "key": "bd5c3e70-703e-439c-b3cc-ccd6acf885dd",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/grading/scoring_assessment_mode_contract_test.go",
+      "original_line": 12,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch02",
+      "change": "每种管理员评分模式独立执行配置/冻结/路由断言，保留默认AI模式和人工拒绝自动路径。"
+    },
+    {
+      "key": "de39df1b-d917-487e-95c6-af1b50ed902b",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/grading/scoring_capability_matrix_contract_test.go",
+      "original_line": 15,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch09",
+      "change": "按登录CAS/会话退化、MFA安全事实、评分模式冻结、任务作用域与租约、批准策略运行门禁分解测试职责"
+    },
+    {
+      "key": "261b4b30-823c-437e-9bd1-7c8248d2ec53",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/grading/scoring_capability_matrix_contract_test.go",
+      "original_line": 95,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch09",
+      "change": "按登录CAS/会话退化、MFA安全事实、评分模式冻结、任务作用域与租约、批准策略运行门禁分解测试职责"
+    },
+    {
+      "key": "972b84ad-520c-4619-9282-7c08339de794",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/gradingevaluation/service_test.go",
+      "original_line": 14,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch04",
+      "change": "将完整切片维度和单样本partial错误率/QWK不可用断言独立；难度与pipeline质量检查继续随后执行。"
+    },
+    {
+      "key": "143f1a26-7be2-4a56-abfc-1d6dac5a3ebf",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/idempotency/middleware_batch29_test.go",
+      "original_line": 57,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch12",
+      "change": "分离工作区部分来源读取、阶段分母与导入提示场景，分离幂等响应持久化与严格过期接管场景；保留原读取/持久化次序及失败早停"
+    },
+    {
+      "key": "df450755-032f-495f-8b30-cbeeb02d267b",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/idempotency/middleware_batch29_test.go",
+      "original_line": 161,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch12",
+      "change": "分离工作区部分来源读取、阶段分母与导入提示场景，分离幂等响应持久化与严格过期接管场景；保留原读取/持久化次序及失败早停"
+    },
+    {
+      "key": "f6ce5646-fd8d-4eed-94d6-c4aa9e813637",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/imagequality/result_order_batch30_test.go",
+      "original_line": 141,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch16",
+      "change": "完整审读：提取结果投影场景与worker回执核验；保留HTTP副作用顺序、失败短路及成功/失败回执条件。"
+    },
+    {
+      "key": "376dcb30-dded-4bc8-9165-dafe23f846aa",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/mathunderstanding/scorer_test.go",
+      "original_line": 216,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch20",
+      "change": "完整审读：提取跟进及自我修正证据场景，保留前序矛盾/缺失/不确定及显式政策全部原评分断言。"
+    },
+    {
+      "key": "0be601dc-6d72-4c79-a0f6-892f0f0ecb58",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/mathunderstanding/verification_runtime_test.go",
+      "original_line": 11,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch07",
+      "change": "分离租约及订正版本场景执行与原子激活终态断言"
+    },
+    {
+      "key": "c9579c94-8e69-4215-97e7-627294ee5317",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/mathunderstanding/workbench_preview_test.go",
+      "original_line": 28,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch05",
+      "change": "分离保存与调度状态断言、失效切图逐场景验证"
+    },
+    {
+      "key": "70af4c29-89c7-4e5b-b681-ed085b004a66",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/mathunderstanding/workbench_preview_test.go",
+      "original_line": 85,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch05",
+      "change": "分离保存与调度状态断言、失效切图逐场景验证"
+    },
+    {
+      "key": "9abbbb70-774c-464d-af39-62fd52ef2e50",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/modelcalibration/service_test.go",
+      "original_line": 13,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch04",
+      "change": "将先完成对齐评测及校准完成/未审拒绝/审批证据阶段分开；后续候选、回放和来源撤回仍按原顺序执行。"
+    },
+    {
+      "key": "d6c9fc78-8075-4d13-85b4-554748ddd284",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/modelgovernance/governance_routing_state_refactor_test.go",
+      "original_line": 201,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "8bacfdbb-b883-458b-a02b-67ca11b48c96",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/modelgovernance/managed_agent_http_test.go",
+      "original_line": 38,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "6e588db2-cc1a-479a-acc1-e4d166535fae",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/modelgovernance/managed_agent_http_test.go",
+      "original_line": 185,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "9183213a-96e9-4ffc-a158-024b78b4a23e",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/modelgovernance/managed_agent_http_test.go",
+      "original_line": 323,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "d75154b5-0a50-45fc-95e5-97e5587b085b",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/modelgovernance/managed_chat_test.go",
+      "original_line": 97,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "c53a9855-5f50-4264-850d-ed0490987eaf",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/modelgovernance/managed_config_probe_http_test.go",
+      "original_line": 100,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "d4549b29-14ec-4f0b-b5b0-d1baf73828aa",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/modelgovernance/managed_config_probe_http_test.go",
+      "original_line": 226,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "5719ee29-7260-4201-816e-0b17f1a38d0d",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/modelgovernance/managed_config_probe_http_test.go",
+      "original_line": 327,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "8303d0cd-5224-4012-b849-39040b6c0bf5",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/modelgovernance/managed_governance_refactor_test.go",
+      "original_line": 201,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "358bf845-2379-4d4b-93e6-6e324b3cf411",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/modelgovernance/managed_governance_refactor_test.go",
+      "original_line": 326,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "5ba5d602-e0e2-4d12-b50b-18f8682837aa",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/modelgovernance/managed_governance_refactor_test.go",
+      "original_line": 401,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "4c83193b-668a-4d70-bf34-df8c7edb4160",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/modelgovernance/role_binding_test.go",
+      "original_line": 52,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "de24507a-6f6f-48cf-aca1-3c4822116ee6",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/ocr/runtime_coordinator_batch24_test.go",
+      "original_line": 12,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch01",
+      "change": "双入口案例、runtime假绑定夹具和两侧无修改验证分开，保留租户/来源拒绝及钩子次数。"
+    },
+    {
+      "key": "5bd7284d-bdf5-4342-b1fe-73903a699afb",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/org/handlers_test.go",
+      "original_line": 120,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch20",
+      "change": "完整审读：学校与班级编码冲突分别为具名场景，保留原t.Run、两次请求顺序、状态和明确错误码断言。"
+    },
+    {
+      "key": "7be0cdc1-831a-49bf-b947-a796b3aa7649",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/paper/document_import_batch23_test.go",
+      "original_line": 40,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch21",
+      "change": "完整审读：提取来源读取失败场景，保留内存失败状态写入/持久化原读取错误分派和错误优先级。"
+    },
+    {
+      "key": "6f22ad3b-0dc9-4f5c-8aaf-676b83282171",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/paper/document_rubric_draft_batch42_test.go",
+      "original_line": 13,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch01",
+      "change": "表格案例与单次模型请求/证据位置验证分开；保留原得分指针、错误首项和身份断言。"
+    },
+    {
+      "key": "94300e2e-8186-4b94-b7fb-43a4fde51b33",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/paper/document_rubric_draft_test.go",
+      "original_line": 13,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch05",
+      "change": "提取模型请求审阅字段校验，保留调用计数先增长和失败短路"
+    },
+    {
+      "key": "52819191-d46d-4ea9-8b06-e03517c6083b",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/paper/paper_import_candidates_test.go",
+      "original_line": 118,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch21",
+      "change": "完整审读：提取候选题目/答案/解析独立核验场景，保留组合矩阵和未匹配问题判断。"
+    },
+    {
+      "key": "666999fe-37c9-4ba4-8e36-d851c4cc57ec",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/paper/paper_import_content_batch32_test.go",
+      "original_line": 125,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch21",
+      "change": "完整审读：提取空内容字段补齐场景，保留已有答案/解析、蓝图分值和不可改写人工确认断言。"
+    },
+    {
+      "key": "149779fb-8274-4d8e-b94a-ffbb04111070",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/paper/paper_import_content_test.go",
+      "original_line": 11,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch21",
+      "change": "完整审读：提取首次补齐后的幂等与状态边界核验；保留原版本、跨租户/代次/冻结错误及人工确认门禁。"
+    },
+    {
+      "key": "cd03b810-d422-4785-89d0-9611a3837c00",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/paper/paper_import_parse_batch33_test.go",
+      "original_line": 15,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch21",
+      "change": "完整审读：分离解析重试SQL场景准备与实际事务核验，保留全部11状态场景、锁定次序和提交后读取失败语义。"
+    },
+    {
+      "key": "9154b19c-0891-49d6-9537-b2228c6565c5",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/paper/paper_import_runtime_batch11_test.go",
+      "original_line": 146,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch22",
+      "change": "按输入加载场景核对源顺序与哈希失败优先级；原脚本事件与错误短路完整保留。"
+    },
+    {
+      "key": "d5fc9fe3-e376-4ed7-b347-87f0d98fb325",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/paper/paper_import_structure_batch37_test.go",
+      "original_line": 342,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch22",
+      "change": "分离内存/事务 guard 场景、回执身份校验和正式题目保护边界；保留 SQL 顺序、回滚、教师内容及跨租户隔离断言。"
+    },
+    {
+      "key": "4e8a82b2-992d-4dd7-87dd-1a6df9a819fa",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/paper/paper_import_structure_batch37_test.go",
+      "original_line": 405,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch22",
+      "change": "分离内存/事务 guard 场景、回执身份校验和正式题目保护边界；保留 SQL 顺序、回滚、教师内容及跨租户隔离断言。"
+    },
+    {
+      "key": "509da507-dc5d-4dc7-a7dc-f26ccf07a0e0",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/paper/paper_import_structure_batch37_test.go",
+      "original_line": 503,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch22",
+      "change": "分离内存/事务 guard 场景、回执身份校验和正式题目保护边界；保留 SQL 顺序、回滚、教师内容及跨租户隔离断言。"
+    },
+    {
+      "key": "0a95230b-7d94-45af-aef3-bd035a47d3cc",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/paper/paper_import_structure_batch37_test.go",
+      "original_line": 612,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch22",
+      "change": "分离内存/事务 guard 场景、回执身份校验和正式题目保护边界；保留 SQL 顺序、回滚、教师内容及跨租户隔离断言。"
+    },
+    {
+      "key": "d9872361-6064-4195-92ac-1a1599a5f2b7",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/platformschools/handlers_test.go",
+      "original_line": 12,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch17",
+      "change": "完整审读：提取学校各只读模型请求核验，保留JSON字段、敏感字段拒绝与仲裁请求量存在断言。"
+    },
+    {
+      "key": "e5cf60b6-6362-40cc-a8e9-e9f03fc898c6",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/processing/store_memory_batch28_test.go",
+      "original_line": 11,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch03",
+      "change": "将各筛选条件与投影存在性断言独立，原分页与Details不回写继续随后验证。"
+    },
+    {
+      "key": "30a809e0-9d8a-4014-a607-d3edfc5e1c8d",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/qualitydashboard/adapters_batch47_test.go",
+      "original_line": 64,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch07",
+      "change": "分离回填读取权限与默认分页投影验证"
+    },
+    {
+      "key": "6800510c-b729-44f8-8443-d84eb3e7c2c0",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/questionbank/acl_preservation_ux_test.go",
+      "original_line": 15,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch11",
+      "change": "提取历史自定义ACL夹具、搜索可见性夹具及排序筛选断言、评分失败阶段断言、事务持久化和原始收据场景；保留原先后与回滚检查"
+    },
+    {
+      "key": "420bba31-1dbf-4a20-8ac9-0b0d2db991b2",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/questionbank/content_acl_scoring_batch25_test.go",
+      "original_line": 200,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch11",
+      "change": "提取历史自定义ACL夹具、搜索可见性夹具及排序筛选断言、评分失败阶段断言、事务持久化和原始收据场景；保留原先后与回滚检查"
+    },
+    {
+      "key": "00242c43-c79d-40a5-883d-42c25aa23c7c",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/questionbank/metadata_batch23_test.go",
+      "original_line": 172,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch11",
+      "change": "提取历史自定义ACL夹具、搜索可见性夹具及排序筛选断言、评分失败阶段断言、事务持久化和原始收据场景；保留原先后与回滚检查"
+    },
+    {
+      "key": "60a4b911-e108-4217-8e46-35660f4dca5d",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/questionbank/postgres_batch22_test.go",
+      "original_line": 176,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch11",
+      "change": "提取历史自定义ACL夹具、搜索可见性夹具及排序筛选断言、评分失败阶段断言、事务持久化和原始收据场景；保留原先后与回滚检查"
+    },
+    {
+      "key": "dd5eb9a1-6f3f-4b40-ae4f-96420d790981",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/questionbank/questionbank_test.go",
+      "original_line": 53,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch02",
+      "change": "将同命令四次并发克隆阶段独立，等待全部错误/版本结果后仍按原顺序检查修订和撤权后回放。"
+    },
+    {
+      "key": "472ab683-d314-4e58-8caa-a31c11ce1bbf",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/questionbank/scoring_batch19_test.go",
+      "original_line": 38,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch11",
+      "change": "提取历史自定义ACL夹具、搜索可见性夹具及排序筛选断言、评分失败阶段断言、事务持久化和原始收据场景；保留原先后与回滚检查"
+    },
+    {
+      "key": "1cc3efa6-75ba-4d82-83ef-4b58ba022545",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/regrade/grader_context_test.go",
+      "original_line": 13,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch03",
+      "change": "将独立领取夹具和管理复核上下文生命周期分开，保留跨租户、修订冲突与接受后上下文/图片关闭。"
+    },
+    {
+      "key": "3a7aa30d-a99f-44da-83d4-0702fd506462",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/regrade/service_test.go",
+      "original_line": 10,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch18",
+      "change": "完整审读：提取批准、启动、候选与人工确认阶段；保留幂等先验、冻结来源分数、终结和后续发布计划断言。"
+    },
+    {
+      "key": "b22208ac-22d0-4dfb-b215-a50dc906c532",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/regrade/store_postgres_batch48_test.go",
+      "original_line": 149,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch18",
+      "change": "完整审读：提取重评状态重试和失败场景；保留行锁、写事件顺序及所有失败不提交断言。"
+    },
+    {
+      "key": "f2ed5109-2a1c-41d8-aff6-4453fe73231e",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/review/review_workbench_batch38_test.go",
+      "original_line": 21,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch13",
+      "change": "按种子提交回退、意见历史与分数可见性、父运行锁、仲裁身份、并发提交退回及双评策略分离测试阶段；保留原断言、失败优先级和并发启动次序，新断言函数t.Helper()，附近中文维护注释已核对。"
+    },
+    {
+      "key": "6377021f-f7e9-46f5-b76b-8657514518c7",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/review/review_workbench_batch38_test.go",
+      "original_line": 161,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch13",
+      "change": "按种子提交回退、意见历史与分数可见性、父运行锁、仲裁身份、并发提交退回及双评策略分离测试阶段；保留原断言、失败优先级和并发启动次序，新断言函数t.Helper()，附近中文维护注释已核对。"
+    },
+    {
+      "key": "1a456cbf-619c-4c59-9d8d-dacb4aea2bf1",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/review/store_postgres_batch34_test.go",
+      "original_line": 20,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch13",
+      "change": "按种子提交回退、意见历史与分数可见性、父运行锁、仲裁身份、并发提交退回及双评策略分离测试阶段；保留原断言、失败优先级和并发启动次序，新断言函数t.Helper()，附近中文维护注释已核对。"
+    },
+    {
+      "key": "d2d2cbf2-4b4f-4e0c-be2c-1b22b9830d25",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/review/store_postgres_batch34_test.go",
+      "original_line": 103,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch13",
+      "change": "按种子提交回退、意见历史与分数可见性、父运行锁、仲裁身份、并发提交退回及双评策略分离测试阶段；保留原断言、失败优先级和并发启动次序，新断言函数t.Helper()，附近中文维护注释已核对。"
+    },
+    {
+      "key": "c4a5990e-8be5-4874-8d46-7294c9f123ba",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/review/store_test.go",
+      "original_line": 85,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch13",
+      "change": "按种子提交回退、意见历史与分数可见性、父运行锁、仲裁身份、并发提交退回及双评策略分离测试阶段；保留原断言、失败优先级和并发启动次序，新断言函数t.Helper()，附近中文维护注释已核对。"
+    },
+    {
+      "key": "ae930739-d87e-4347-a881-3a45d3d28b15",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/review/store_test.go",
+      "original_line": 510,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch13",
+      "change": "按种子提交回退、意见历史与分数可见性、父运行锁、仲裁身份、并发提交退回及双评策略分离测试阶段；保留原断言、失败优先级和并发启动次序，新断言函数t.Helper()，附近中文维护注释已核对。"
+    },
+    {
+      "key": "ec94952e-a6cf-4ec0-a2bf-d2ceaeac8065",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/review/task_aggregate_test.go",
+      "original_line": 16,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch02",
+      "change": "将租户人员过滤的页读取、120任务夹具和三页游标链分开，额外抽取去重检查，保留转移后的新查询链。"
+    },
+    {
+      "key": "d67afc4c-ad24-441b-980b-35062219f3e1",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/schoolassistant/adapters_test.go",
+      "original_line": 12,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch01",
+      "change": "将计数字段可用性检查抽为职责清楚的断言helper，分别验证空值/原因与真实零值。"
+    },
+    {
+      "key": "2f630e0d-8029-4496-901d-4a296b7f5640",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/schoolassistant/conversation_test.go",
+      "original_line": 98,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch05",
+      "change": "提取用量及事件身份断言、重复批次与规划预算场景"
+    },
+    {
+      "key": "5e2c3f2a-1da3-49f6-bf7c-bc66be1f9d57",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/schoolassistant/conversation_test.go",
+      "original_line": 204,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch05",
+      "change": "提取用量及事件身份断言、重复批次与规划预算场景"
+    },
+    {
+      "key": "9549ce73-1228-4c6a-92a8-f05fccf6a6b9",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/schoolassistant/schoolassistant_batch40_test.go",
+      "original_line": 24,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch02",
+      "change": "每个流写入失败边界独立执行，保留事件顺序、后续来源零读取和成功审计不发生。"
+    },
+    {
+      "key": "2ee7a93d-abab-4b66-8498-7e14a07a8715",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/scorerelease/anonymous_paper_test.go",
+      "original_line": 14,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch01",
+      "change": "将合成身份图构造和身份像素遮白断言独立；PNG尾部身份、答案像素和缺区域阻断仍在主测试。"
+    },
+    {
+      "key": "bfbc3b37-060e-4c8d-9a6f-0a02aa0da530",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/scorerelease/store_postgres_batch48_test.go",
+      "original_line": 81,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch18",
+      "change": "完整审读：按来源类型提取草稿写入场景，保留SQL占位、策略与数据库拥有的ID/时间/状态核验。"
+    },
+    {
+      "key": "f3308468-42ec-411f-b4bc-38e28f7fa465",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/scorerelease/store_postgres_batch50_test.go",
+      "original_line": 149,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch18",
+      "change": "完整审读：提取学生题目可见性和副本核验；保留共享几何引用、独立量规副本及后续答卷排序。"
+    },
+    {
+      "key": "3e696b7d-45e4-4e97-bfdd-03837b2c611f",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/scorerelease/student_session_integration_test.go",
+      "original_line": 17,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch18",
+      "change": "完整审读：拆分最小表、分科场景准备与冻结版本查询校验，保持连接清理生命周期、真实SQL和跨租户/统计隐私全部断言。"
+    },
+    {
+      "key": "c4364ae0-538f-41f0-b114-13d00c07d0c8",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/seedquality/service_test.go",
+      "original_line": 60,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch16",
+      "change": "完整审读：提取隐藏种子题提交及质量观察核验阶段，保留抽样、阅卷者保密和管理观察各原断言。"
+    },
+    {
+      "key": "02db44b6-53aa-4785-af59-1940189d2f8e",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/appeal_route_test.go",
+      "original_line": 83,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "5441f7bd-8bb6-4bd4-a3a2-19298d33ba97",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_anonymous_paper_test.go",
+      "original_line": 20,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "27058d46-50e2-4abb-affd-7b15e33e2596",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_auth_security_test.go",
+      "original_line": 20,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "355d2730-b341-4d05-938e-d0649b88200a",
+      "rule": "go:S107",
+      "severity": "MAJOR",
+      "path": "services/api-gateway/internal/server/e2e_business_command_test.go",
+      "original_line": 117,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "8dde4c3c-a554-44bd-a3f9-81cd925db6b1",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_business_command_test.go",
+      "original_line": 117,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "e0fed87e-570f-419a-ad8a-18c9d0f5ce53",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_business_command_test.go",
+      "original_line": 372,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "592ae856-9652-4d38-af48-fd5cb6ca8c0f",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_business_command_test.go",
+      "original_line": 507,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "fe2b3df2-0c82-40fb-9577-bb24b401bda7",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_core_workflow_test.go",
+      "original_line": 59,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "edeebb35-5655-438a-a67e-cbee771171f0",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_exam_archive_commands_test.go",
+      "original_line": 21,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "002bfb82-d88d-4a6a-bcd0-51c4dc63f978",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_exam_management_test.go",
+      "original_line": 18,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "1dafed1d-6648-4754-a97d-c8cdae4b8e23",
+      "rule": "go:S107",
+      "severity": "MAJOR",
+      "path": "services/api-gateway/internal/server/e2e_file_reconciliation_test.go",
+      "original_line": 82,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "821d2b73-3871-4798-aa29-29aa365ec2ef",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_idempotency_test.go",
+      "original_line": 16,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "d41bddc7-6de0-443d-9e8c-9d64dc7eb662",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_math_effective_evidence_test.go",
+      "original_line": 17,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "28ea3104-b4ca-4dee-b958-5f3f1ba48a2c",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_math_grading_binding_test.go",
+      "original_line": 19,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "fc9744fc-12f7-49b2-b3a8-96189981129b",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_math_rubric_score_test.go",
+      "original_line": 27,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "5f3837d7-51e2-4452-94a8-6d1e56eb7ea1",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_math_verification_runtime_test.go",
+      "original_line": 21,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "77deafaa-c4d0-42b5-b5be-ee17beb415fc",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_mfa_test.go",
+      "original_line": 25,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "eddd2f8f-ec04-42a6-a250-267378faaea9",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_mfa_test.go",
+      "original_line": 231,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "ad33caf4-951a-4590-8477-d2f83c3c410e",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_paper_import_reconciliation_test.go",
+      "original_line": 22,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "806f255e-a3f3-4b1f-a544-00c400209b3f",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+      "original_line": 34,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "0d76ce3f-6815-4c1a-a644-1176be68e60d",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+      "original_line": 319,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "34f43eef-3fbd-4f67-a180-c0d8211b6a67",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+      "original_line": 791,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "7cb650e1-5588-44da-a10b-b257e3c7552f",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_question_bank_acl_ux_test.go",
+      "original_line": 17,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "5964a35d-7fae-423d-a1ed-a4a30ede5062",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_question_bank_import_test.go",
+      "original_line": 20,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "401d2b22-9756-477e-bc8b-3e8ec7e98bd4",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_question_bank_metadata_acl_search_test.go",
+      "original_line": 16,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "d3266c6c-bdb5-4c2f-b29f-bb05a0814c28",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_question_bank_publication_test.go",
+      "original_line": 19,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "b4fa2740-1843-412d-9e61-3213f6e47909",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_question_bank_test.go",
+      "original_line": 23,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "da632cfa-2302-4f56-a2cc-1c1444d42d90",
+      "rule": "go:S107",
+      "severity": "MAJOR",
+      "path": "services/api-gateway/internal/server/e2e_question_bank_test.go",
+      "original_line": 325,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "26b49389-9514-4bfe-9e24-2bb14261d028",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+      "original_line": 41,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "a6992c8c-5bbc-4e9f-9495-0cfc1d40e920",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+      "original_line": 1050,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "30e4b54c-5d74-4a65-bf28-ec0a763d255d",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_review_recovery_test.go",
+      "original_line": 38,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "f6df961e-375a-4caf-a5ba-bca9114d86e6",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_review_repairs_test.go",
+      "original_line": 126,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "e90f8bbb-686d-4c42-87a4-b4ac8aaf8e1c",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_review_repairs_test.go",
+      "original_line": 288,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "0e7c8bdf-2083-4d43-a53f-a95331adf40b",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_scoring_command_test.go",
+      "original_line": 18,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "bceb0567-6074-4e2a-8c99-b499a852fffc",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_scoring_double_mark_test.go",
+      "original_line": 15,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "881f81cd-b61d-4b03-9da7-11487f0f166b",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_story056_calibration_test.go",
+      "original_line": 21,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "052382f9-98c1-4502-9cf3-9263babc38e4",
+      "rule": "go:S107",
+      "severity": "MAJOR",
+      "path": "services/api-gateway/internal/server/e2e_story056_calibration_test.go",
+      "original_line": 530,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "251a544a-6153-4d96-8f79-f1ed602751a6",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_story056_lease_test.go",
+      "original_line": 195,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "73fcb99f-02f2-4712-887e-9acfa90be764",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+      "original_line": 45,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "bb21233c-220c-4011-81fa-8dedcffb59e1",
+      "rule": "go:S107",
+      "severity": "MAJOR",
+      "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+      "original_line": 327,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "9083f1fb-3e73-4298-bf44-65bc2044707e",
+      "rule": "go:S107",
+      "severity": "MAJOR",
+      "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+      "original_line": 586,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "04c5b6da-0eef-44ca-a0b6-480f47e9ac4f",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+      "original_line": 621,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "cc1eb7ba-ff20-4ed5-85ae-92bba3f44970",
+      "rule": "go:S107",
+      "severity": "MAJOR",
+      "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+      "original_line": 621,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "763787f5-4d25-40ca-9b20-fb122a3fd435",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_story060_capture_recovery_test.go",
+      "original_line": 20,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "04978ae6-aa72-4e5c-a103-0bb516c471c9",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_story060_provision_test.go",
+      "original_line": 12,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "6d045e4b-df38-4860-87ba-f84850349c5e",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_story060_roster_test.go",
+      "original_line": 174,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "79778945-8950-4b10-8307-a448be94bc2f",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_story060_sheet_identity_test.go",
+      "original_line": 17,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "0c53b85c-266b-4035-810d-2b58c3dde6e9",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_story060_sheet_identity_test.go",
+      "original_line": 403,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "94a4df0b-6f1f-42eb-bf1f-3eacf27e5fef",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_story061_governance_test.go",
+      "original_line": 16,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "b7686be2-e360-4b3d-aba9-bf296853b0e3",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_subjective_command_test.go",
+      "original_line": 14,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "f2c7125d-8fb0-4bbc-99df-d9c74fa345bb",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_subjective_panel_test.go",
+      "original_line": 20,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "f567e83e-3a26-4547-ada0-fc2bae8372bb",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_worker_runtime_reliability_test.go",
+      "original_line": 19,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "1a328436-93ef-4b77-8df6-b8e1119ab616",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/managed_config_postgres_test.go",
+      "original_line": 15,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "afa3f400-7f5b-4eb4-be08-9d156b00c0b6",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/migration_upgrade_test.go",
+      "original_line": 21,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "19cce2dd-88da-4961-af92-bd088c13d52e",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/platform_schools_route_test.go",
+      "original_line": 18,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "ac333da4-2bf8-46c5-a9c2-04f01449da9f",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/readers_batch47_test.go",
+      "original_line": 65,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "f6b0eecd-060b-4283-932b-32b824ffdfae",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/review_route_test.go",
+      "original_line": 183,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "c037921b-d14c-412c-911c-03dcedb4ea28",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/review_route_test.go",
+      "original_line": 465,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "2786080b-a181-42ff-beb4-d5e03ef163df",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/review_route_test.go",
+      "original_line": 821,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "1d3ffd34-4a5a-407d-9cbc-ccacd95c6f4c",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/review_route_test.go",
+      "original_line": 987,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "8a691a5b-d705-476a-bbb0-4e4cd57dd5f0",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/score_route_test.go",
+      "original_line": 18,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "c2c48cf9-df54-421c-95b3-8c5dc882b906",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/server_test.go",
+      "original_line": 443,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "c5fdc0df-a1af-42af-bb30-0f52e95c559c",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/subjective/adapter_http_test.go",
+      "original_line": 19,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch23",
+      "change": "分离 HTTP 调用与对外契约/响应证据断言；保留鉴权、幂等、禁止身份字段、服务器评分权和遥测期望。"
+    },
+    {
+      "key": "e92b6008-239c-40f0-b371-f2dbbf7fcb2e",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/subjective/grade_settlement_pipeline_test.go",
+      "original_line": 13,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch23",
+      "change": "按六种结算策略分离场景；保留校准回调、错误归类、注入风险和人工复核条件。"
+    },
+    {
+      "key": "54341719-0c14-4ab9-812b-fbf886486912",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/subjective/grading_agent_v2_builder_batch35_test.go",
+      "original_line": 127,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch23",
+      "change": "提取具名场景保留原失败短路、版本/裁剪/角色治理边界与证据断言；不改变依赖创建与资源释放顺序。"
+    },
+    {
+      "key": "9baad360-a383-4e02-ab48-01019369f68e",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/subjective/grading_agent_v2_contract_test.go",
+      "original_line": 109,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch24",
+      "change": "V2 夹具请求/响应按治理字段、服务器评分权、数学证据、PNG 完整性及候选链接分解；保留原错误优先级、短路、边界、去重标记顺序。"
+    },
+    {
+      "key": "effd515f-f34c-44dd-98d3-baabbd72807f",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/subjective/grading_agent_v2_contract_test.go",
+      "original_line": 218,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch24",
+      "change": "V2 夹具请求/响应按治理字段、服务器评分权、数学证据、PNG 完整性及候选链接分解；保留原错误优先级、短路、边界、去重标记顺序。"
+    },
+    {
+      "key": "4f7e9bc8-e34d-4a6c-9dd8-068b3da72242",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/subjective/handlers_test.go",
+      "original_line": 270,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch24",
+      "change": "分离批次入队重放与租约执行/实时进度阶段；保留批次创建、请求变化冲突和重复 segment 拒绝断言。"
+    },
+    {
+      "key": "5024fafc-5cb2-450d-a401-2763afcdcdbf",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/subjective/math_evidence_batch35_test.go",
+      "original_line": 16,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch23",
+      "change": "提取具名场景保留原失败短路、版本/裁剪/角色治理边界与证据断言；不改变依赖创建与资源释放顺序。"
+    },
+    {
+      "key": "b47d3667-834d-49ac-8d2e-17d0e37e62ab",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/subjective/math_grading_handler_test.go",
+      "original_line": 95,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch25",
+      "change": "数学直接/队列评分按场景和阶段拆分；保留证据先于推理、租约、版本修改锁、服务器重算、失败终态、原短路与缓存裁剪漂移断言。"
+    },
+    {
+      "key": "b36a54b2-41d4-4d91-984a-6c4643491506",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/subjective/math_grading_handler_test.go",
+      "original_line": 123,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch25",
+      "change": "数学直接/队列评分按场景和阶段拆分；保留证据先于推理、租约、版本修改锁、服务器重算、失败终态、原短路与缓存裁剪漂移断言。"
+    },
+    {
+      "key": "8b6a4aed-ddbb-4b3b-aecb-a59b3349fc82",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/subjective/math_grading_handler_test.go",
+      "original_line": 225,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch25",
+      "change": "数学直接/队列评分按场景和阶段拆分；保留证据先于推理、租约、版本修改锁、服务器重算、失败终态、原短路与缓存裁剪漂移断言。"
+    },
+    {
+      "key": "48f08539-0183-4d85-b738-160e92e2b7d6",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/subjective/panel_agent_binding_batch48_test.go",
+      "original_line": 74,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch23",
+      "change": "提取具名场景保留原失败短路、版本/裁剪/角色治理边界与证据断言；不改变依赖创建与资源释放顺序。"
+    },
+    {
+      "key": "e3af1ce4-f14f-4f0f-b483-8906896037ae",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/subjective/panel_policy_test.go",
+      "original_line": 46,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch09",
+      "change": "按登录CAS/会话退化、MFA安全事实、评分模式冻结、任务作用域与租约、批准策略运行门禁分解测试职责"
+    },
+    {
+      "key": "8accae7d-f0c3-436a-ae1f-970aac8d9c5b",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/subjective/panel_shadow_runner_test.go",
+      "original_line": 184,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch23",
+      "change": "分离仲裁/人工升级场景；保留三角色执行、结论来源、最终分候选和存储指标顺序。"
+    },
+    {
+      "key": "120d9bfe-415b-45b0-bbbe-d2d668dece55",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/subjective/panel_store_test.go",
+      "original_line": 9,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch02",
+      "change": "将A角色独占领取、冻结答案版本和B未完成拒绝比较作为独立阶段，原B完成/解析/终态回放继续随后验证。"
+    },
+    {
+      "key": "45a32a4d-9580-4fca-802b-75321c022619",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/subjective/scoring_run_batch_test.go",
+      "original_line": 17,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch24",
+      "change": "分离批次身份/租户隔离、失败候选与取消终态断言；保持创建、更新、读取与候选排序原执行顺序。"
+    },
+    {
+      "key": "a6d76a96-c778-4795-8e8d-bcdfb3a30daf",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/subjective/worker_execution_service_test.go",
+      "original_line": 61,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch23",
+      "change": "按任务/租约/数学证据/准入拒绝边界分离工作准备场景；保留领域运行与队列任务终止状态检查。"
+    },
+    {
+      "key": "650fa9f7-ca4f-4fab-9c99-3195d40feb49",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/taskmaterials/management_scope_test.go",
+      "original_line": 172,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch20",
+      "change": "完整审读：提取分组成员材料场景，保留成员/表示哈希/冻结题目SQL范围和外部成员拒绝断言。；Go overlay 原测试同样失败，严格补齐当前已存在的单份复核 SQL 范围与查询次序后单包通过，生产代码未修改。"
+    },
+    {
+      "key": "259e83d8-88cd-4484-b0ed-a2f781883625",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/workerruntime/handlers_test.go",
+      "original_line": 149,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch15",
+      "change": "完整审读：按来源类型拆出托管任务完成场景，保留409拒绝、激活错误码和租约未完成断言。"
+    },
+    {
+      "key": "2c3767d1-dc93-48c9-939c-a9a2fb36a758",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/workerruntime/scope_claim_metrics_batch26_test.go",
+      "original_line": 34,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch09",
+      "change": "按登录CAS/会话退化、MFA安全事实、评分模式冻结、任务作用域与租约、批准策略运行门禁分解测试职责"
+    },
+    {
+      "key": "44761712-1f8f-4e60-9122-35d20f0c4c7d",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/workerruntime/scope_claim_metrics_batch26_test.go",
+      "original_line": 166,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch09",
+      "change": "按登录CAS/会话退化、MFA安全事实、评分模式冻结、任务作用域与租约、批准策略运行门禁分解测试职责"
+    },
+    {
+      "key": "78469c51-512b-4c8f-afeb-952f2e574ea1",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/workerruntime/store_memory_test.go",
+      "original_line": 33,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch15",
+      "change": "完整审读：提取完成及重复租约检查阶段，先保留领取/心跳状态版本进度检查，再验证幂等完成和过期令牌拒绝。"
+    },
+    {
+      "key": "93a6de7a-1218-4bf2-b983-26736665b983",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/workerruntime/store_postgres_batch48_test.go",
+      "original_line": 112,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch15",
+      "change": "完整审读：分别提取轮询身份数据库时钟和心跳原子失败场景，保留原SQL参数、步骤顺序及回滚/副本断言。"
+    },
+    {
+      "key": "754eac67-ce33-42c2-a86e-40bb59d48125",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/workerruntime/store_postgres_batch48_test.go",
+      "original_line": 164,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch15",
+      "change": "完整审读：分别提取轮询身份数据库时钟和心跳原子失败场景，保留原SQL参数、步骤顺序及回滚/副本断言。"
+    },
+    {
+      "key": "27e5593b-91be-4231-9fe8-8ec2b498c78b",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/workspace/service_batch24_test.go",
+      "original_line": 190,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch12",
+      "change": "分离工作区部分来源读取、阶段分母与导入提示场景，分离幂等响应持久化与严格过期接管场景；保留原读取/持久化次序及失败早停"
+    },
+    {
+      "key": "1aa9b875-a583-455d-9b54-bc237d776b46",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/workspace/service_batch24_test.go",
+      "original_line": 279,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch12",
+      "change": "分离工作区部分来源读取、阶段分母与导入提示场景，分离幂等响应持久化与严格过期接管场景；保留原读取/持久化次序及失败早停"
+    },
+    {
+      "key": "e7124775-f37d-4895-a2a7-b474fcf99603",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/workspace/service_test.go",
+      "original_line": 282,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch12",
+      "change": "分离工作区部分来源读取、阶段分母与导入提示场景，分离幂等响应持久化与严格过期接管场景；保留原读取/持久化次序及失败早停"
+    },
+    {
+      "key": "cf31e4be-a1c3-4c3c-a4ca-79ae869631e9",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+      "original_line": 82,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "6eb1de9a-c6f8-4662-9a79-01e20787127a",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+      "original_line": 168,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "8c30f034-c3ef-4e37-aa7e-51ee4c55cd16",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+      "original_line": 370,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "32ec19c6-7711-4694-b5dd-6577c7ecf0e9",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+      "original_line": 623,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "68d91f05-e509-4efc-a121-9b71f4ef6e5c",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+      "original_line": 686,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "df264dbb-86db-4740-8483-7c5a530c8bc5",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+      "original_line": 716,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "d9dbe665-f925-433f-bdd3-fd2c42c651fb",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/tools/story056-real-worker-e2e/main_batch50_test.go",
+      "original_line": 124,
+      "state": "changed_awaiting_sonar",
+      "batch": "go-batch15",
+      "change": "完整审读：提取注册完成受影响行数场景，保留资产绑定SQL原次序和仅一行成功的控制边界。"
+    }
+  ],
+  "files": [
+    {
+      "path": "services/api-gateway/cmd/reliability-repair/main_batch50_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "0797bc5077026e8319a8e90fd8e590be9b68cdc120127e8b40e852b879cf634f",
+      "maintenance_points": "按锁定/事务故障/回执重放/恢复代数的独立场景分解，保持SQL顺序、失败终止及原所有断言；中文维护注释已核对，新阶段函数使用t.Helper()。"
+    },
+    {
+      "path": "services/api-gateway/cmd/reliability-repair/main_batch51_coverage_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "82bee7e9de3c6326714d2397bf70f10b7e40436a4ecec6f677ac8eba3b7f7c8c",
+      "maintenance_points": "按锁定/事务故障/回执重放/恢复代数的独立场景分解，保持SQL顺序、失败终止及原所有断言；中文维护注释已核对，新阶段函数使用t.Helper()。"
+    },
+    {
+      "path": "services/api-gateway/internal/answergroup/store_test.go",
+      "review_state": "annotated",
+      "source_sha256": "d8c1ea3cacd3264b8305767307d6ef9a91f4a3de86019ab81239da1d900e48fb",
+      "maintenance_points": "将抽样前拒绝、所有样本通过后就绪和可回滚建议事实断言按阶段拆分，保留rollback结果。"
+    },
+    {
+      "path": "services/api-gateway/internal/apicontract/a14_a24_openapi_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "f9a42045b5aaebac7aaa44028c2d80a46c01fbcd155652ac8d39bdffa26078f4",
+      "maintenance_points": "提取鉴权操作契约，保留所有原路径及401/403检查；新阶段函数使用t.Helper()，相邻业务规则中文注释同步核对。"
+    },
+    {
+      "path": "services/api-gateway/internal/apicontract/exam_command_handler_schema_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "eb224124577abbdceb10cc2f9a43ac0db49260ec825755b623177d69b788780b",
+      "maintenance_points": "完整审读：按对象字段边界、数组递归及原始类型拆分实际响应合同验证器；保留引用/枚举/可空处理和原错误位置。"
+    },
+    {
+      "path": "services/api-gateway/internal/apicontract/math_understanding_openapi_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "1595af5f2feb8930479aa2049ba4ad2035bf8ffaca90f9de09a985c61ee4262e",
+      "maintenance_points": "完整审读：按评分建议权限、模型候选、不可变绑定、SDK证据和试点学科拆分合同核验；全部字段和原判断顺序保留。"
+    },
+    {
+      "path": "services/api-gateway/internal/apicontract/platform_schools_openapi_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "a3e6fa3303228e0508cb7adc7e830e34096e368e308bf1bc36c573836c79338d",
+      "maintenance_points": "提取学校路由操作契约校验，保留操作ID唯一性与响应码检查；新阶段函数使用t.Helper()，相邻业务规则中文注释同步核对。"
+    },
+    {
+      "path": "services/api-gateway/internal/apicontract/reliability_handler_schema_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "80ba5e5a431faecea97ceb08f1ca96972688166aff186e5e4fccc3bf1bf2c16c",
+      "maintenance_points": "8 参数导入命令闭包改为语义请求结构；7处调用保留逐字段原值、幂等键、OpenAPI 期望、资源绑定与原顺序。"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/handlers_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "c66d824b0989cb68e479f98860f95d84bae48fcec85e01b3bb21e328a0ab11c7",
+      "maintenance_points": "按意见移交、摘要读取权限、调分原子事实及学生作用域逐场景分离断言与执行；保留原检查顺序与失败短路；原隐私与指针隔离注释同步核对，新阶段函数t.Helper()。"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/published_question_opinion_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "6eb8f16bf408604586ccb09939220041d2c2365a448750f8956533ea6e05741e",
+      "maintenance_points": "按意见移交、摘要读取权限、调分原子事实及学生作用域逐场景分离断言与执行；保留原检查顺序与失败短路；原隐私与指针隔离注释同步核对，新阶段函数t.Helper()。"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/published_question_summary_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "2849566406ab4863add5a8226fb5b1215bf0efb9daee6a9d9e905443562bbb58",
+      "maintenance_points": "按意见移交、摘要读取权限、调分原子事实及学生作用域逐场景分离断言与执行；保留原检查顺序与失败短路；原隐私与指针隔离注释同步核对，新阶段函数t.Helper()。"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/store_memory_batch27_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "e44a9a2114ee96f8e93f1faee649234aebb00767e13420ba3dbd34f4414cc9ab",
+      "maintenance_points": "按意见移交、摘要读取权限、调分原子事实及学生作用域逐场景分离断言与执行；保留原检查顺序与失败短路；原隐私与指针隔离注释同步核对，新阶段函数t.Helper()。"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/unicode_test.go",
+      "review_state": "annotated",
+      "source_sha256": "85d773e9b39897f7375865ce5128031ea60a703d960ab92cf3f7706725304629",
+      "maintenance_points": "理由、决定文字和处理结果分开验证字符上限，保留原字段修改和先后顺序。"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/authorization_contract_postgres_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "816df5413809f08b2a75b9ff202147d29780c3095f5359e4848b59210556cc66",
+      "maintenance_points": "完整审读：提取按文件顺序执行迁移及单角色双向权限比较；保留隔离数据库清理和全局差异排序。"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/handlers_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "4efca66d48e62e87cbd651a18a8e7df4d5eb650e2c8e11da09ad8e822a1ab1e3",
+      "maintenance_points": "完整审读：提取公共电脑再认证三类审计事实核验；保留失败后成功请求、同一会话恢复和原断言时序。"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/lifecycle_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "dd67a33bcb64f2fb254d0313aa60864e866e37a6323c7cecdd25ac7aad54eda1",
+      "maintenance_points": "分离账户安全状态变更与恢复授权失效验证，保留状态变更顺序；新阶段函数使用t.Helper()，相邻业务规则中文注释同步核对。"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/login_service_batch21_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "599dbf89f80726bba018a1c4c189ca619e9cba4d8ad2a28a138a51e8e2b9a204",
+      "maintenance_points": "按登录CAS/会话退化、MFA安全事实、评分模式冻结、任务作用域与租约、批准策略运行门禁分解测试职责；中文维护注释已核对，新阶段函数使用t.Helper()。"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/mfa_security_changes_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "e58d8e492f5948ec1df53cae5537728ad43cde64f4880b278f49ee405a81a235",
+      "maintenance_points": "按登录CAS/会话退化、MFA安全事实、评分模式冻结、任务作用域与租约、批准策略运行门禁分解测试职责；中文维护注释已核对，新阶段函数使用t.Helper()。"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/mfa_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "11a71f5629b18dac6a6b30dcaf6787b9b968fd7fdd7ea2cb932fb10d83bda255",
+      "maintenance_points": "按登录CAS/会话退化、MFA安全事实、评分模式冻结、任务作用域与租约、批准策略运行门禁分解测试职责；中文维护注释已核对，新阶段函数使用t.Helper()。"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/migrations_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "1b412df683181c37eb0bb32b2e5dccae15686acf265a671125232e563de0f294",
+      "maintenance_points": "完整审读：提取角色管理权限与服务角色边界断言；保留权限范围先验检查和迁移SQL契约检查顺序。"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/store_postgres_batch50_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "8c0c169045c5b7f2a2516cddd312b6399900d4644a2907d27abc192928360f1f",
+      "maintenance_points": "完整审读：提取用户绑定事务场景；保留所有SQL步骤、晚失败回滚及成功返回副本断言。"
+    },
+    {
+      "path": "services/api-gateway/internal/backmark/handlers_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "cc731959b7d105489669fb99463f0c864f7ffb4f7540ead1bb3447b5ad5816dc",
+      "maintenance_points": "完整审读：拆分各HTTP路由与单游标页核验，保留跨页seen共享、先校验再推进游标及创建响应全部边界。"
+    },
+    {
+      "path": "services/api-gateway/internal/backmark/service_batch19_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "9aeec8fec9307a25a99e977710cb31e44dfd7b4cf3b037cddbbd0ed4ad78aa62",
+      "maintenance_points": "提取完整页游标夹具，保持精确ID收集与空尾页；新阶段函数使用t.Helper()，相邻业务规则中文注释同步核对。"
+    },
+    {
+      "path": "services/api-gateway/internal/backmark/validation_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "224cf75824ded00d49e545e7f2223bff7fca8e309ff2cd4c4cebe14e94c00fd6",
+      "maintenance_points": "按冻结量规场景校验提交与失败后的成绩和版本不变；新阶段函数使用t.Helper()，相邻业务规则中文注释同步核对。"
+    },
+    {
+      "path": "services/api-gateway/internal/calibration/service_batch41_test.go",
+      "review_state": "annotated",
+      "source_sha256": "69b8bffd1d6af3dbea64da602328c544b2f1e369209f8752bc7f492641cf889a",
+      "maintenance_points": "案例循环与每例Gold读取/首错/冻结参考集断言分开，保留读取次数、材料次序和失败不落库断言。"
+    },
+    {
+      "path": "services/api-gateway/internal/captureupload/service_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "71a94f71cfcbec9f6fbd8ab15f6215fe2a5147627e672b5ad25d344ce1e9df5c",
+      "maintenance_points": "完整审读：提取第173页检查点恢复/分块追加和对象字节核验，保留已确认偏移、过时重试、最终登记幂等全部判断。"
+    },
+    {
+      "path": "services/api-gateway/internal/dashboard/service_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "e31d1b1dfaa4cfbf926427b7ebceb22ef2f7b38ada4208529123dd8511030fdc",
+      "maintenance_points": "完整审读：提取十二场考试与跨租户干扰数据准备，保留统计单位、全量聚合及作用域时间断言。"
+    },
+    {
+      "path": "services/api-gateway/internal/exam/archive_release_policy_batch30_test.go",
+      "review_state": "annotated",
+      "source_sha256": "d4be453288aa5f98fe0b2972aa0e9808f21620387ff7386cb1a0d929349963c9",
+      "maintenance_points": "抽取有工作/已发布/申诉窗的脚本夹具，原checker调用、事务回滚和阻塞排序断言不变。"
+    },
+    {
+      "path": "services/api-gateway/internal/exam/management_archive_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "b8eedb235a056168b83185af19b1e5594481f0988435979f04c02da8e9bc4c98",
+      "maintenance_points": "完整审读：提取归档学科写入锁定核验，保持归档后检查、恢复后原阶段检查和所有原错误断言。"
+    },
+    {
+      "path": "services/api-gateway/internal/exam/session_postgres_batch49_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "df1b8ed27954136510c377f2a01a62c9c257caf295729827c4c37c36a5214814",
+      "maintenance_points": "完整审读：提取命令哈希重放、子科事务场景与名册元数据校验；保留行锁/唯一冲突恢复、完整SQL顺序和晚失败全回滚。"
+    },
+    {
+      "path": "services/api-gateway/internal/files/reconciliation_batch21_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "15d58ab872c78e834b0baca326458c111c91fa8ec598d42540b744be4e4156ac",
+      "maintenance_points": "完整审读：提取协调分支场景，保留对象/SQL顺序、失败补偿、租户身份和各finding的修复状态。"
+    },
+    {
+      "path": "services/api-gateway/internal/files/upload_batch31_test.go",
+      "review_state": "annotated",
+      "source_sha256": "683067666c4241cf85469c1419a6375096de9f524761f41cdeeb4db5ef603d9c",
+      "maintenance_points": "每种回读故障独立验证未激活/无成功审计和同资产同存储键重试。"
+    },
+    {
+      "path": "services/api-gateway/internal/graderdrift/service_batch18_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "39f1ffe467e4dc4214121612c08840525f178a416e952b7523896f9201c45d43",
+      "maintenance_points": "完整审读：提取相同时间逆序ID的双阅卷者观测准备，保留窗口排序、时钟调用、暂停失败及再次计算断言。"
+    },
+    {
+      "path": "services/api-gateway/internal/grading/engine_test.go",
+      "review_state": "annotated",
+      "source_sha256": "a716df642c0112e098672e1420a18adc091e8fb7ee45a60f8dfc79c764fc7ccc",
+      "maintenance_points": "将规则评分结果、上限、复核风险与真实来源断言独立，原表格所有题型保持不变。"
+    },
+    {
+      "path": "services/api-gateway/internal/grading/handlers_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "a99082fe326df24266fa58cee4141d1b48a44046bd6102d0d0bf64ebbebc3fdf",
+      "maintenance_points": "完整审读：提取取消完成后的失败任务重试阶段，保留实际HTTP调用、同一runtime任务重入队和最终审计顺序。"
+    },
+    {
+      "path": "services/api-gateway/internal/grading/rules_batch47_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "2167492c2fb9f152651734bfa8274c7f16ae9290c35cd1d6fa220d5d9180ae00",
+      "maintenance_points": "提取数值边界场景验证，保留验证与转换的先后次序；新阶段函数使用t.Helper()，相邻业务规则中文注释同步核对。"
+    },
+    {
+      "path": "services/api-gateway/internal/grading/scoring_assessment_mode_contract_test.go",
+      "review_state": "annotated",
+      "source_sha256": "2b75fbd21ef0022d5c7fa646660893f65c1371865f0aa457bd90d792077a6381",
+      "maintenance_points": "每种管理员评分模式独立执行配置/冻结/路由断言，保留默认AI模式和人工拒绝自动路径。"
+    },
+    {
+      "path": "services/api-gateway/internal/grading/scoring_capability_matrix_contract_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "314045b25ab6168d5d8a7dc5b09b54f5699ee7c5f465bc44cab7aae258eecf50",
+      "maintenance_points": "按登录CAS/会话退化、MFA安全事实、评分模式冻结、任务作用域与租约、批准策略运行门禁分解测试职责；中文维护注释已核对，新阶段函数使用t.Helper()。"
+    },
+    {
+      "path": "services/api-gateway/internal/gradingevaluation/service_test.go",
+      "review_state": "annotated",
+      "source_sha256": "7d28c92db1cdc9520da1ba93306ed2fee050664fffc33b741dd8967adae3af8c",
+      "maintenance_points": "将完整切片维度和单样本partial错误率/QWK不可用断言独立；难度与pipeline质量检查继续随后执行。"
+    },
+    {
+      "path": "services/api-gateway/internal/idempotency/middleware_batch29_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "426480c1e8e20ad7765b7eae0f31e9a0b140072826f84e8215f82bfe8fe52141",
+      "maintenance_points": "分离工作区部分来源读取、阶段分母与导入提示场景，分离幂等响应持久化与严格过期接管场景；保留原读取/持久化次序及失败早停；原未知分母、过期等值边界与数据库模拟限制注释保留，新阶段t.Helper()。"
+    },
+    {
+      "path": "services/api-gateway/internal/imagequality/result_order_batch30_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "17e273c3cfe44007f4b2360cb7edfa19663d2fee1f2193a70158654f39b59e36",
+      "maintenance_points": "完整审读：提取结果投影场景与worker回执核验；保留HTTP副作用顺序、失败短路及成功/失败回执条件。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/scorer_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "581d458a60153d3000a0ed4c16143b2ee3736f165c45b91a7b44de12f98e932d",
+      "maintenance_points": "完整审读：提取跟进及自我修正证据场景，保留前序矛盾/缺失/不确定及显式政策全部原评分断言。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/verification_runtime_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "53c734a6b5bda0d9a8c74696453a7dada6ce37158e195878e0e95acb5b3673f9",
+      "maintenance_points": "分离租约及订正版本场景执行与原子激活终态断言；新阶段函数使用t.Helper()，相邻业务规则中文注释同步核对。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/workbench_preview_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "6c64df530f2d761eb68e34092467f5ceb778fd98d6becf2e6e4b521ae407e4cf",
+      "maintenance_points": "分离保存与调度状态断言、失效切图逐场景验证；新阶段函数使用t.Helper()，相邻业务规则中文注释同步核对。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelcalibration/service_test.go",
+      "review_state": "annotated",
+      "source_sha256": "013501fc6fc4916b547ebed8d03b22031b8e006040d149f4406a93ec4779051c",
+      "maintenance_points": "将先完成对齐评测及校准完成/未审拒绝/审批证据阶段分开；后续候选、回放和来源撤回仍按原顺序执行。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/governance_routing_state_refactor_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/managed_agent_http_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/managed_chat_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/managed_config_probe_http_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/managed_governance_refactor_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/role_binding_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/ocr/runtime_coordinator_batch24_test.go",
+      "review_state": "annotated",
+      "source_sha256": "092e1869a3be1c0efe3b1c239b69a35ab15c52570278039b0e007fdf36df7122",
+      "maintenance_points": "双入口案例、runtime假绑定夹具和两侧无修改验证分开，保留租户/来源拒绝及钩子次数。"
+    },
+    {
+      "path": "services/api-gateway/internal/org/handlers_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "bb3e42172adbd5bb888351934159125c89233320e14c3235012ade9fd47ce823",
+      "maintenance_points": "完整审读：学校与班级编码冲突分别为具名场景，保留原t.Run、两次请求顺序、状态和明确错误码断言。"
+    },
+    {
+      "path": "services/api-gateway/internal/paper/document_import_batch23_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "c11e2bddc1d0906e561ec7db6e5534a433fbfba17fae7218ddc00aec2b770559",
+      "maintenance_points": "完整审读：提取来源读取失败场景，保留内存失败状态写入/持久化原读取错误分派和错误优先级。"
+    },
+    {
+      "path": "services/api-gateway/internal/paper/document_rubric_draft_batch42_test.go",
+      "review_state": "annotated",
+      "source_sha256": "51109528b43a90fdd5b3110d9dc3d3dae39e6e12be5cf62600da7c918e4c1810",
+      "maintenance_points": "表格案例与单次模型请求/证据位置验证分开；保留原得分指针、错误首项和身份断言。"
+    },
+    {
+      "path": "services/api-gateway/internal/paper/document_rubric_draft_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "d2b92b140a219e5ade087fdb64c09e66fa824e68c5b2f8997ef8b35dd72707ac",
+      "maintenance_points": "提取模型请求审阅字段校验，保留调用计数先增长和失败短路；新阶段函数使用t.Helper()，相邻业务规则中文注释同步核对。"
+    },
+    {
+      "path": "services/api-gateway/internal/paper/paper_import_candidates_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "3f71e57162492c78fd382581cab1dad98209d36f2776b6d9a5aa9683ff796574",
+      "maintenance_points": "完整审读：提取候选题目/答案/解析独立核验场景，保留组合矩阵和未匹配问题判断。"
+    },
+    {
+      "path": "services/api-gateway/internal/paper/paper_import_content_batch32_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "4a9915ec4c8d41326abeaaef4425e51ce9aa770f4391ba61e4396ab89b1eed88",
+      "maintenance_points": "完整审读：提取空内容字段补齐场景，保留已有答案/解析、蓝图分值和不可改写人工确认断言。"
+    },
+    {
+      "path": "services/api-gateway/internal/paper/paper_import_content_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "67c54282612e2e5c80025da8b06f4cbbc86225df6089edd36cb6069e3c87e958",
+      "maintenance_points": "完整审读：提取首次补齐后的幂等与状态边界核验；保留原版本、跨租户/代次/冻结错误及人工确认门禁。"
+    },
+    {
+      "path": "services/api-gateway/internal/paper/paper_import_parse_batch33_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "05c236034407b0ccef25ac43f603704fc42c51207d296a5dda98d9d967459711",
+      "maintenance_points": "完整审读：分离解析重试SQL场景准备与实际事务核验，保留全部11状态场景、锁定次序和提交后读取失败语义。"
+    },
+    {
+      "path": "services/api-gateway/internal/paper/paper_import_runtime_batch11_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "81f96a210ac55b679cff4a9552aebccbabc5cfee995c35d83f267bc7e63d9c48",
+      "maintenance_points": "按输入加载场景核对源顺序与哈希失败优先级；原脚本事件与错误短路完整保留。"
+    },
+    {
+      "path": "services/api-gateway/internal/paper/paper_import_structure_batch37_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "6a9e1152a6a6cade641ffbedf707f42961fdda05e6e9c1c66f99965faa459e09",
+      "maintenance_points": "分离内存/事务 guard 场景、回执身份校验和正式题目保护边界；保留 SQL 顺序、回滚、教师内容及跨租户隔离断言。"
+    },
+    {
+      "path": "services/api-gateway/internal/platformschools/handlers_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "e49120d54508fffd8ad99567ea1c46e7d00db867b02a5ab98bb5788732def646",
+      "maintenance_points": "完整审读：提取学校各只读模型请求核验，保留JSON字段、敏感字段拒绝与仲裁请求量存在断言。"
+    },
+    {
+      "path": "services/api-gateway/internal/processing/store_memory_batch28_test.go",
+      "review_state": "annotated",
+      "source_sha256": "4ebe06763427c823d1730deb57f183d0449f68e398991d32dd8198fddc6c5e9f",
+      "maintenance_points": "将各筛选条件与投影存在性断言独立，原分页与Details不回写继续随后验证。"
+    },
+    {
+      "path": "services/api-gateway/internal/qualitydashboard/adapters_batch47_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "430c682927403776c4273e089d8fdf24d39592c4432351c54610fa981f16c5cd",
+      "maintenance_points": "分离回填读取权限与默认分页投影验证；新阶段函数使用t.Helper()，相邻业务规则中文注释同步核对。"
+    },
+    {
+      "path": "services/api-gateway/internal/questionbank/acl_preservation_ux_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "4982687a5a7637645a9607add526fd6614fd30e22c17aa4e27610b546acb5602",
+      "maintenance_points": "提取历史自定义ACL夹具、搜索可见性夹具及排序筛选断言、评分失败阶段断言、事务持久化和原始收据场景；保留原先后与回滚检查；新断言阶段使用t.Helper()，历史SQL脚本的测试边界注释保持。"
+    },
+    {
+      "path": "services/api-gateway/internal/questionbank/content_acl_scoring_batch25_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "ff03f38ced430d465db8df92c57788e15ba537dc7a6808ea401285e2d6f54208",
+      "maintenance_points": "提取历史自定义ACL夹具、搜索可见性夹具及排序筛选断言、评分失败阶段断言、事务持久化和原始收据场景；保留原先后与回滚检查；新断言阶段使用t.Helper()，历史SQL脚本的测试边界注释保持。"
+    },
+    {
+      "path": "services/api-gateway/internal/questionbank/metadata_batch23_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "b65061bda7bdd8a8c770a180b346efdc68093fc4206f4c2bcb02d49d048bae93",
+      "maintenance_points": "提取历史自定义ACL夹具、搜索可见性夹具及排序筛选断言、评分失败阶段断言、事务持久化和原始收据场景；保留原先后与回滚检查；新断言阶段使用t.Helper()，历史SQL脚本的测试边界注释保持。"
+    },
+    {
+      "path": "services/api-gateway/internal/questionbank/postgres_batch22_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "c3b40d073bdd4bcedd5c65a10580f39df85979ed6f87ea964f69ddf5dbe10057",
+      "maintenance_points": "提取历史自定义ACL夹具、搜索可见性夹具及排序筛选断言、评分失败阶段断言、事务持久化和原始收据场景；保留原先后与回滚检查；新断言阶段使用t.Helper()，历史SQL脚本的测试边界注释保持。"
+    },
+    {
+      "path": "services/api-gateway/internal/questionbank/questionbank_test.go",
+      "review_state": "annotated",
+      "source_sha256": "d758544a05f33ed53c3a7a7010d1daf01c0beac9b1e942b99c01049892075f2a",
+      "maintenance_points": "将同命令四次并发克隆阶段独立，等待全部错误/版本结果后仍按原顺序检查修订和撤权后回放。"
+    },
+    {
+      "path": "services/api-gateway/internal/questionbank/scoring_batch19_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "bba799f9c07a4fdc696962225044650e28d7ca72d73b7a8aa82dec8362ba9964",
+      "maintenance_points": "提取历史自定义ACL夹具、搜索可见性夹具及排序筛选断言、评分失败阶段断言、事务持久化和原始收据场景；保留原先后与回滚检查；新断言阶段使用t.Helper()，历史SQL脚本的测试边界注释保持。"
+    },
+    {
+      "path": "services/api-gateway/internal/regrade/grader_context_test.go",
+      "review_state": "annotated",
+      "source_sha256": "bd4e3fbbfc1ee5870a05bb49d0237d53daa4c61bd6a7944a6acd3c1661cf33fc",
+      "maintenance_points": "将独立领取夹具和管理复核上下文生命周期分开，保留跨租户、修订冲突与接受后上下文/图片关闭。"
+    },
+    {
+      "path": "services/api-gateway/internal/regrade/service_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "7ebbb529ce239bc6de2390165c85e5994cc4ad6ea87d360827329e4952398354",
+      "maintenance_points": "完整审读：提取批准、启动、候选与人工确认阶段；保留幂等先验、冻结来源分数、终结和后续发布计划断言。"
+    },
+    {
+      "path": "services/api-gateway/internal/regrade/store_postgres_batch48_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "d65b750fdb5abbea12e0154e91fab8a6bf0eb6a358ec225750cac8a33f846b60",
+      "maintenance_points": "完整审读：提取重评状态重试和失败场景；保留行锁、写事件顺序及所有失败不提交断言。"
+    },
+    {
+      "path": "services/api-gateway/internal/review/review_workbench_batch38_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "ad37b954b8a34c2add3dd0fea7755c2ee3bc47856fbb8274f4da64583aeff504",
+      "maintenance_points": "按种子提交回退、意见历史与分数可见性、父运行锁、仲裁身份、并发提交退回及双评策略分离测试阶段；保留原断言、失败优先级和并发启动次序，新断言函数t.Helper()，附近中文维护注释已核对。"
+    },
+    {
+      "path": "services/api-gateway/internal/review/store_postgres_batch34_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "dc4bd2e130573ceb32a2b101a20d6baf48df1b68c77d9ca421c39bcffcb344c4",
+      "maintenance_points": "按种子提交回退、意见历史与分数可见性、父运行锁、仲裁身份、并发提交退回及双评策略分离测试阶段；保留原断言、失败优先级和并发启动次序，新断言函数t.Helper()，附近中文维护注释已核对。"
+    },
+    {
+      "path": "services/api-gateway/internal/review/store_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "736851a0693ead221241b6c2a99c8cafbadb9ad28fd4e3efb408ec0a382078a5",
+      "maintenance_points": "按种子提交回退、意见历史与分数可见性、父运行锁、仲裁身份、并发提交退回及双评策略分离测试阶段；保留原断言、失败优先级和并发启动次序，新断言函数t.Helper()，附近中文维护注释已核对。"
+    },
+    {
+      "path": "services/api-gateway/internal/review/task_aggregate_test.go",
+      "review_state": "annotated",
+      "source_sha256": "c28805b5b92c9bc1be0e3dfe9fdc7985f8647060b9f327bc79fb70dfda320e8a",
+      "maintenance_points": "将租户人员过滤的页读取、120任务夹具和三页游标链分开，额外抽取去重检查，保留转移后的新查询链。"
+    },
+    {
+      "path": "services/api-gateway/internal/schoolassistant/adapters_test.go",
+      "review_state": "annotated",
+      "source_sha256": "3046a0039394d86dcb04c6ce15b6aa6c9ca37c1eb117113b3ff5ac8f70d5ff55",
+      "maintenance_points": "将计数字段可用性检查抽为职责清楚的断言helper，分别验证空值/原因与真实零值。"
+    },
+    {
+      "path": "services/api-gateway/internal/schoolassistant/conversation_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "1000c3c9eb9291e0b32051697c126ee84b1ba14f192eb3e6a4838fa13bbd3e7d",
+      "maintenance_points": "提取用量及事件身份断言、重复批次与规划预算场景；新阶段函数使用t.Helper()，相邻业务规则中文注释同步核对。"
+    },
+    {
+      "path": "services/api-gateway/internal/schoolassistant/schoolassistant_batch40_test.go",
+      "review_state": "annotated",
+      "source_sha256": "b0c71600d99362de51f9d427a42ec7000d46193bc0681d2d9231b330a6f8c092",
+      "maintenance_points": "每个流写入失败边界独立执行，保留事件顺序、后续来源零读取和成功审计不发生。"
+    },
+    {
+      "path": "services/api-gateway/internal/scorerelease/anonymous_paper_test.go",
+      "review_state": "annotated",
+      "source_sha256": "343044c61e7436034e26bc42880a193e6fc92e5bc3e986685ccacc547f9f4605",
+      "maintenance_points": "将合成身份图构造和身份像素遮白断言独立；PNG尾部身份、答案像素和缺区域阻断仍在主测试。"
+    },
+    {
+      "path": "services/api-gateway/internal/scorerelease/store_postgres_batch48_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "55b72705e0a7abb42ea247e6896b65fa33c90a18eff1df5c8b9d493bf9a60e3a",
+      "maintenance_points": "完整审读：按来源类型提取草稿写入场景，保留SQL占位、策略与数据库拥有的ID/时间/状态核验。"
+    },
+    {
+      "path": "services/api-gateway/internal/scorerelease/store_postgres_batch50_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "06de586e92fc68258158d2f9a446471dee0c317e66b0f2be8ca70fbe05e6817a",
+      "maintenance_points": "完整审读：提取学生题目可见性和副本核验；保留共享几何引用、独立量规副本及后续答卷排序。"
+    },
+    {
+      "path": "services/api-gateway/internal/scorerelease/student_session_integration_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "eaf7f91a88b117a4b76ca9897ecdf2437fbbffc8792f1f6119a5f61b8a2bcad1",
+      "maintenance_points": "完整审读：拆分最小表、分科场景准备与冻结版本查询校验，保持连接清理生命周期、真实SQL和跨租户/统计隐私全部断言。"
+    },
+    {
+      "path": "services/api-gateway/internal/seedquality/service_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "d55ac0722bbab69767512eb7772caa638636db57790fbb9371b90a3579bb3601",
+      "maintenance_points": "完整审读：提取隐藏种子题提交及质量观察核验阶段，保留抽样、阅卷者保密和管理观察各原断言。"
+    },
+    {
+      "path": "services/api-gateway/internal/server/appeal_route_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_anonymous_paper_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_auth_security_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_business_command_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_core_workflow_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_exam_archive_commands_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_exam_management_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_file_reconciliation_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_idempotency_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_math_effective_evidence_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_math_grading_binding_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_math_rubric_score_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_math_verification_runtime_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_mfa_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_paper_import_reconciliation_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_question_bank_acl_ux_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_question_bank_import_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_question_bank_metadata_acl_search_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_question_bank_publication_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_question_bank_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_review_recovery_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_review_repairs_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_scoring_command_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_scoring_double_mark_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_story056_calibration_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_story056_lease_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_story060_capture_recovery_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_story060_provision_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_story060_roster_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_story060_sheet_identity_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_story061_governance_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_subjective_command_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_subjective_panel_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_worker_runtime_reliability_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/managed_config_postgres_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/migration_upgrade_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/platform_schools_route_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/readers_batch47_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/review_route_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/score_route_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/server_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/adapter_http_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "550e83b3cbd97b8d0ab7c52260094f9488f7a69598d444ce6d7bf43a7aaeb2ec",
+      "maintenance_points": "分离 HTTP 调用与对外契约/响应证据断言；保留鉴权、幂等、禁止身份字段、服务器评分权和遥测期望。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/grade_settlement_pipeline_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "ea770de079b5ab048a1f4611fbc9994cf00f63722ac63554d5d708e41a8447a0",
+      "maintenance_points": "按六种结算策略分离场景；保留校准回调、错误归类、注入风险和人工复核条件。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/grading_agent_v2_builder_batch35_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "7ed3e5c936cf2510e505d8dad9101b1bc9f122868b2317d93a266e782d6bdd45",
+      "maintenance_points": "提取具名场景保留原失败短路、版本/裁剪/角色治理边界与证据断言；不改变依赖创建与资源释放顺序。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/grading_agent_v2_contract_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "f6221744e1d8f5edcb9b979f573b4afbd1b79bd63a81ab3a176499d318f6fa67",
+      "maintenance_points": "V2 夹具请求/响应按治理字段、服务器评分权、数学证据、PNG 完整性及候选链接分解；保留原错误优先级、短路、边界、去重标记顺序。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/handlers_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "6538aad1f3db03f3903e303310a8d00d157555b584a50b82c94d0a633653207a",
+      "maintenance_points": "分离批次入队重放与租约执行/实时进度阶段；保留批次创建、请求变化冲突和重复 segment 拒绝断言。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/math_evidence_batch35_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "23427fd47bd5e794fd23d440842884d96eb189f01a286826198f230975d3605f",
+      "maintenance_points": "提取具名场景保留原失败短路、版本/裁剪/角色治理边界与证据断言；不改变依赖创建与资源释放顺序。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/math_grading_handler_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "f294cb95d4ded211c91df512dbd31f1e12ddce60fd072cb37fbe1d4a6362d3e6",
+      "maintenance_points": "数学直接/队列评分按场景和阶段拆分；保留证据先于推理、租约、版本修改锁、服务器重算、失败终态、原短路与缓存裁剪漂移断言。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/panel_agent_binding_batch48_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "bb946387febe62d05aa50b67438f617a9131747b4782a7dfbaaaf5f3c8eb4320",
+      "maintenance_points": "提取具名场景保留原失败短路、版本/裁剪/角色治理边界与证据断言；不改变依赖创建与资源释放顺序。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/panel_policy_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "f383441eeb2566141930c06931fab8f578c51bda625ed613efb4008ee64e1176",
+      "maintenance_points": "按登录CAS/会话退化、MFA安全事实、评分模式冻结、任务作用域与租约、批准策略运行门禁分解测试职责；中文维护注释已核对，新阶段函数使用t.Helper()。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/panel_shadow_runner_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "50ad355700ffb81d56273cfb9c23081f4cfcb7ab9e2ca81be79563ea4598b899",
+      "maintenance_points": "分离仲裁/人工升级场景；保留三角色执行、结论来源、最终分候选和存储指标顺序。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/panel_store_test.go",
+      "review_state": "annotated",
+      "source_sha256": "c3e0648d1aaa0f1d071c6b2fbf17827420081a3626190c4b223bb8fa4f51603d",
+      "maintenance_points": "将A角色独占领取、冻结答案版本和B未完成拒绝比较作为独立阶段，原B完成/解析/终态回放继续随后验证。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/scoring_run_batch_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "be38bd98397a305c0dbb3ff17488237525be061444fff9ea60613db35f1f0124",
+      "maintenance_points": "分离批次身份/租户隔离、失败候选与取消终态断言；保持创建、更新、读取与候选排序原执行顺序。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/worker_execution_service_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "2529aebfc04996815187ccc376b99b5710f5e756ceff0560acdb2d1dacfd1994",
+      "maintenance_points": "按任务/租约/数学证据/准入拒绝边界分离工作准备场景；保留领域运行与队列任务终止状态检查。"
+    },
+    {
+      "path": "services/api-gateway/internal/taskmaterials/management_scope_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "7fc6cbffd92ba6bfbbaf52263427c250999b5a15e7ae7e449cf47e86d63a53f1",
+      "maintenance_points": "完整审读：提取分组成员材料场景，保留成员/表示哈希/冻结题目SQL范围和外部成员拒绝断言。"
+    },
+    {
+      "path": "services/api-gateway/internal/workerruntime/handlers_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "c8a91968a4a7e7f9f2a0f47f55a2990cdce87faefc2cd8e73052d8cf7285ea8d",
+      "maintenance_points": "完整审读：按来源类型拆出托管任务完成场景，保留409拒绝、激活错误码和租约未完成断言。"
+    },
+    {
+      "path": "services/api-gateway/internal/workerruntime/scope_claim_metrics_batch26_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "1b88e6582e932091e7e5b9baa335273ba938542017d447609404c07c9469b6b3",
+      "maintenance_points": "按登录CAS/会话退化、MFA安全事实、评分模式冻结、任务作用域与租约、批准策略运行门禁分解测试职责；中文维护注释已核对，新阶段函数使用t.Helper()。"
+    },
+    {
+      "path": "services/api-gateway/internal/workerruntime/store_memory_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "eeb1beb875ee53060e67fb93f6061de51f2a7beb64d6e1dd06db71d4d93c1e90",
+      "maintenance_points": "完整审读：提取完成及重复租约检查阶段，先保留领取/心跳状态版本进度检查，再验证幂等完成和过期令牌拒绝。"
+    },
+    {
+      "path": "services/api-gateway/internal/workerruntime/store_postgres_batch48_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "c724dfafe36ac3d97c5b6acf85861b4e3c00b4061dba30a00a8f87428b534843",
+      "maintenance_points": "完整审读：分别提取轮询身份数据库时钟和心跳原子失败场景，保留原SQL参数、步骤顺序及回滚/副本断言。"
+    },
+    {
+      "path": "services/api-gateway/internal/workspace/service_batch24_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "28a8fe6e0c5ae6bc048d59d57524426e999810ed98c31d66268a91ba4d45f6bb",
+      "maintenance_points": "分离工作区部分来源读取、阶段分母与导入提示场景，分离幂等响应持久化与严格过期接管场景；保留原读取/持久化次序及失败早停；原未知分母、过期等值边界与数据库模拟限制注释保留，新阶段t.Helper()。"
+    },
+    {
+      "path": "services/api-gateway/internal/workspace/service_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "1a20951b92705022955fb01bd4f7e7a072938428858d7df6c523b2f2c3a74f7e",
+      "maintenance_points": "分离工作区部分来源读取、阶段分母与导入提示场景，分离幂等响应持久化与严格过期接管场景；保留原读取/持久化次序及失败早停；原未知分母、过期等值边界与数据库模拟限制注释保留，新阶段t.Helper()。"
+    },
+    {
+      "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/tools/story056-real-worker-e2e/main_batch50_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "5fe40315f58e7f51b92e966049938dbaedb6aef46eb204f2446381aa8c7ac48b",
+      "maintenance_points": "完整审读：提取注册完成受影响行数场景，保留资产绑定SQL原次序和仅一行成功的控制边界。"
+    }
+  ],
+  "batches": [
+    {
+      "id": "go-batch01",
+      "count": 7,
+      "test_execution": "go-batch01-tests.json",
+      "sonar_rescan": "pending"
+    },
+    {
+      "id": "go-batch02",
+      "count": 5,
+      "test_execution": "go-batch02-tests.json",
+      "sonar_rescan": "pending"
+    },
+    {
+      "id": "go-batch03",
+      "count": 5,
+      "test_execution": "go-batch03-tests.json",
+      "sonar_rescan": "pending"
+    },
+    {
+      "id": "go-batch04",
+      "count": 2,
+      "test_execution": "go-batch04-tests.json",
+      "sonar_rescan": "pending"
+    },
+    {
+      "id": "go-batch05",
+      "count": 6,
+      "test_execution": "go-batch05-tests.json",
+      "test_state": "passed",
+      "failed_attempts": [],
+      "sonar_rescan": "pending"
+    },
+    {
+      "id": "go-batch06",
+      "count": 3,
+      "test_execution": "go-batch06-retry1-tests.json",
+      "test_state": "passed",
+      "failed_attempts": [
+        "go-batch06-tests.json"
+      ],
+      "sonar_rescan": "pending"
+    },
+    {
+      "id": "go-batch07",
+      "count": 4,
+      "test_execution": "go-batch07-retry1-tests.json",
+      "test_state": "passed",
+      "failed_attempts": [
+        "go-batch07-tests.json"
+      ],
+      "sonar_rescan": "pending"
+    },
+    {
+      "id": "go-batch08",
+      "count": 7,
+      "test_execution": "go-batch08-tests.json",
+      "test_state": "passed",
+      "sonar_rescan": "pending"
+    },
+    {
+      "id": "go-batch09",
+      "count": 9,
+      "test_execution": "go-batch09-tests.json",
+      "test_state": "passed",
+      "sonar_rescan": "pending",
+      "failed_attempts": [
+        "go-batch09-tests.json"
+      ],
+      "tested_original_count": 9,
+      "test_executions": [
+        "go-batch09-tests.json",
+        "go-batch09-auth-retry1-tests.json"
+      ]
+    },
+    {
+      "id": "go-batch10",
+      "count": 8,
+      "test_execution": "go-batch10-11-tests.json",
+      "test_state": "passed",
+      "sonar_rescan": "pending"
+    },
+    {
+      "id": "go-batch11",
+      "count": 5,
+      "test_execution": "go-batch10-11-tests.json",
+      "test_state": "passed",
+      "sonar_rescan": "pending"
+    },
+    {
+      "id": "go-batch12",
+      "count": 5,
+      "test_execution": "go-batch12-tests.json",
+      "test_state": "passed",
+      "sonar_rescan": "pending"
+    },
+    {
+      "id": "go-batch13",
+      "count": 6,
+      "test_execution": null,
+      "test_state": "passed by actual package results; initial failure retained",
+      "sonar_rescan": "pending",
+      "test_executions": [
+        "go-batch13-21-tests.json",
+        "go-batch13-21-retry-taskmaterials-tests.json"
+      ]
+    },
+    {
+      "id": "go-batch14",
+      "count": 5,
+      "test_execution": null,
+      "test_state": "passed by actual package results; initial failure retained",
+      "sonar_rescan": "pending",
+      "test_executions": [
+        "go-batch13-21-tests.json",
+        "go-batch13-21-retry-taskmaterials-tests.json"
+      ]
+    },
+    {
+      "id": "go-batch15",
+      "count": 5,
+      "test_execution": null,
+      "test_state": "passed by actual package results; initial failure retained",
+      "sonar_rescan": "pending",
+      "test_executions": [
+        "go-batch13-21-tests.json",
+        "go-batch13-21-retry-taskmaterials-tests.json"
+      ]
+    },
+    {
+      "id": "go-batch16",
+      "count": 4,
+      "test_execution": null,
+      "test_state": "passed by actual package results; initial failure retained",
+      "sonar_rescan": "pending",
+      "test_executions": [
+        "go-batch13-21-tests.json",
+        "go-batch13-21-retry-taskmaterials-tests.json"
+      ]
+    },
+    {
+      "id": "go-batch17",
+      "count": 3,
+      "test_execution": null,
+      "test_state": "passed by actual package results; initial failure retained",
+      "sonar_rescan": "pending",
+      "test_executions": [
+        "go-batch13-21-tests.json",
+        "go-batch13-21-retry-taskmaterials-tests.json"
+      ]
+    },
+    {
+      "id": "go-batch18",
+      "count": 5,
+      "test_execution": null,
+      "test_state": "passed by actual package results; initial failure retained",
+      "sonar_rescan": "pending",
+      "test_executions": [
+        "go-batch13-21-tests.json",
+        "go-batch13-21-retry-taskmaterials-tests.json"
+      ]
+    },
+    {
+      "id": "go-batch19",
+      "count": 5,
+      "test_execution": null,
+      "test_state": "passed by actual package results; initial failure retained",
+      "sonar_rescan": "pending",
+      "test_executions": [
+        "go-batch13-21-tests.json",
+        "go-batch13-21-retry-taskmaterials-tests.json"
+      ]
+    },
+    {
+      "id": "go-batch20",
+      "count": 5,
+      "test_execution": null,
+      "test_state": "passed by actual package results; initial failure retained",
+      "sonar_rescan": "pending",
+      "test_executions": [
+        "go-batch13-21-tests.json",
+        "go-batch13-21-retry-taskmaterials-tests.json"
+      ]
+    },
+    {
+      "id": "go-batch21",
+      "count": 5,
+      "test_execution": null,
+      "test_state": "passed by actual package results; initial failure retained",
+      "sonar_rescan": "pending",
+      "test_executions": [
+        "go-batch13-21-tests.json",
+        "go-batch13-21-retry-taskmaterials-tests.json"
+      ]
+    },
+    {
+      "id": "go-batch22",
+      "count": 5,
+      "test_execution": "go-batch22-26-and-new-five-tests.json",
+      "test_state": "passed",
+      "sonar_rescan": "pending"
+    },
+    {
+      "id": "go-batch23",
+      "count": 7,
+      "test_execution": "go-batch22-26-and-new-five-tests.json",
+      "test_state": "passed",
+      "sonar_rescan": "pending"
+    },
+    {
+      "id": "go-batch24",
+      "count": 4,
+      "test_execution": "go-batch22-26-and-new-five-tests.json",
+      "test_state": "passed",
+      "sonar_rescan": "pending"
+    },
+    {
+      "id": "go-batch25",
+      "count": 3,
+      "test_execution": "go-batch22-26-and-new-five-tests.json",
+      "test_state": "passed",
+      "sonar_rescan": "pending"
+    },
+    {
+      "id": "go-batch26",
+      "count": 1,
+      "test_execution": "go-batch22-26-and-new-five-tests.json",
+      "test_state": "passed",
+      "sonar_rescan": "pending"
+    }
+  ],
+  "changed_awaiting_sonar": 129,
+  "pending": 80,
+  "platform_verified_resolved": 0,
+  "changed_awaiting_tests": 0,
+  "server_handoff": "go-server-handoff.json"
+}

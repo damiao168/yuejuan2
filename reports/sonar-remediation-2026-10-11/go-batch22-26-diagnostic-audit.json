@@ -1,0 +1,244 @@
+{
+  "updated_at": "2026-10-11T18:32:55.912785+08:00",
+  "files": [
+    {
+      "path": "services/api-gateway/internal/apicontract/reliability_handler_schema_test.go",
+      "checks": {
+        "fatal_diagnostic_strings": {
+          "before": 9,
+          "after": 9,
+          "removed": {},
+          "added": {}
+        },
+        "returned_error_strings": {
+          "before": 0,
+          "after": 0,
+          "removed": {},
+          "added": {}
+        }
+      }
+    },
+    {
+      "path": "services/api-gateway/internal/paper/paper_import_runtime_batch11_test.go",
+      "checks": {
+        "fatal_diagnostic_strings": {
+          "before": 10,
+          "after": 10,
+          "removed": {},
+          "added": {}
+        },
+        "returned_error_strings": {
+          "before": 1,
+          "after": 1,
+          "removed": {},
+          "added": {}
+        }
+      }
+    },
+    {
+      "path": "services/api-gateway/internal/paper/paper_import_structure_batch37_test.go",
+      "checks": {
+        "fatal_diagnostic_strings": {
+          "before": 37,
+          "after": 37,
+          "removed": {},
+          "added": {}
+        },
+        "returned_error_strings": {
+          "before": 11,
+          "after": 11,
+          "removed": {},
+          "added": {}
+        }
+      }
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/adapter_http_test.go",
+      "checks": {
+        "fatal_diagnostic_strings": {
+          "before": 23,
+          "after": 23,
+          "removed": {},
+          "added": {}
+        },
+        "returned_error_strings": {
+          "before": 0,
+          "after": 0,
+          "removed": {},
+          "added": {}
+        }
+      }
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/grade_settlement_pipeline_test.go",
+      "checks": {
+        "fatal_diagnostic_strings": {
+          "before": 8,
+          "after": 8,
+          "removed": {},
+          "added": {}
+        },
+        "returned_error_strings": {
+          "before": 1,
+          "after": 1,
+          "removed": {},
+          "added": {}
+        }
+      }
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/grading_agent_v2_builder_batch35_test.go",
+      "checks": {
+        "fatal_diagnostic_strings": {
+          "before": 4,
+          "after": 4,
+          "removed": {},
+          "added": {}
+        },
+        "returned_error_strings": {
+          "before": 0,
+          "after": 0,
+          "removed": {},
+          "added": {}
+        }
+      }
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/grading_agent_v2_contract_test.go",
+      "checks": {
+        "fatal_diagnostic_strings": {
+          "before": 15,
+          "after": 15,
+          "removed": {},
+          "added": {}
+        },
+        "returned_error_strings": {
+          "before": 38,
+          "after": 38,
+          "removed": {},
+          "added": {}
+        }
+      }
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/handlers_test.go",
+      "checks": {
+        "fatal_diagnostic_strings": {
+          "before": 53,
+          "after": 53,
+          "removed": {},
+          "added": {}
+        },
+        "returned_error_strings": {
+          "before": 1,
+          "after": 1,
+          "removed": {},
+          "added": {}
+        }
+      }
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/math_evidence_batch35_test.go",
+      "checks": {
+        "fatal_diagnostic_strings": {
+          "before": 11,
+          "after": 11,
+          "removed": {},
+          "added": {}
+        },
+        "returned_error_strings": {
+          "before": 1,
+          "after": 1,
+          "removed": {},
+          "added": {}
+        }
+      }
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/math_grading_handler_test.go",
+      "checks": {
+        "fatal_diagnostic_strings": {
+          "before": 23,
+          "after": 23,
+          "removed": {},
+          "added": {}
+        },
+        "returned_error_strings": {
+          "before": 1,
+          "after": 1,
+          "removed": {},
+          "added": {}
+        }
+      }
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/panel_agent_binding_batch48_test.go",
+      "checks": {
+        "fatal_diagnostic_strings": {
+          "before": 8,
+          "after": 8,
+          "removed": {},
+          "added": {}
+        },
+        "returned_error_strings": {
+          "before": 1,
+          "after": 1,
+          "removed": {},
+          "added": {}
+        }
+      }
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/panel_shadow_runner_test.go",
+      "checks": {
+        "fatal_diagnostic_strings": {
+          "before": 24,
+          "after": 24,
+          "removed": {},
+          "added": {}
+        },
+        "returned_error_strings": {
+          "before": 1,
+          "after": 1,
+          "removed": {},
+          "added": {}
+        }
+      }
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/scoring_run_batch_test.go",
+      "checks": {
+        "fatal_diagnostic_strings": {
+          "before": 21,
+          "after": 21,
+          "removed": {},
+          "added": {}
+        },
+        "returned_error_strings": {
+          "before": 0,
+          "after": 0,
+          "removed": {},
+          "added": {}
+        }
+      }
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/worker_execution_service_test.go",
+      "checks": {
+        "fatal_diagnostic_strings": {
+          "before": 9,
+          "after": 9,
+          "removed": {},
+          "added": {}
+        },
+        "returned_error_strings": {
+          "before": 0,
+          "after": 0,
+          "removed": {},
+          "added": {}
+        }
+      }
+    }
+  ],
+  "note": "比对原失败诊断和错误消息，无移除不等于逻辑完全等价；动态测试与平台复扫另有证据。"
+}

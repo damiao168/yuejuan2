@@ -32,8 +32,7 @@ func TestPublishedQuestionAppealPinsReleaseFactAndRequiresRegradeRelease(t *test
 		t.Fatalf("appeal did not freeze published source fact: %#v", item)
 	}
 
-	// The source fixture now represents a different later/current score. The
-	// submitted appeal must retain exactly what the student appealed.
+	// 来源夹具现在表示另一个后续或当前分数；已提交的申诉必须保留学生申诉时的事实。
 	store.SeedSource(PublishedQuestionAppealSource{
 		TenantID: "tenant-1", ExamID: "exam-1", StudentID: "student-1", SubmissionID: "submission-1",
 		ReleaseID: "release-1", ReleaseVersion: 1, Published: true, AppealEnabled: true,
@@ -55,7 +54,11 @@ func TestPublishedQuestionAppealPinsReleaseFactAndRequiresRegradeRelease(t *test
 		t.Fatalf("unlinked regrade job error = %v, want invalid input", err)
 	}
 
-	store.SeedRegradeJob("regrade-1", "tenant-1", "exam-1", "question-4", "release-1")
+	reviewedScore := 7.0
+	store.SeedRegradeJob("regrade-1", "tenant-1", "exam-1", "question-4", "release-1", PublishedQuestionAppealRegradeItemSource{
+		SubmissionID: "submission-1", OldFinalGradeID: "final-grade-original", OldScore: 4, MaxScore: 8,
+		ReviewedScore: &reviewedScore, ReviewedGradeID: "reviewed-grade-1", Status: "resolved",
+	})
 	item, err = service.Decide(context.Background(), "tenant-1", item.ID, "appeal-manager", DecideQuestionAppealInput{
 		Decision: QuestionAppealDecisionReferRegrade, PublicResponse: "将进入复核流程", PrivateNote: "staff only", RegradeJobID: "regrade-1", ExpectedRevision: item.Revision,
 	})
@@ -65,13 +68,19 @@ func TestPublishedQuestionAppealPinsReleaseFactAndRequiresRegradeRelease(t *test
 	if _, err := service.Resolve(context.Background(), "tenant-1", item.ID, "appeal-manager", ResolveQuestionAppealInput{NewReleaseID: "release-1", ExpectedRevision: item.Revision}); !errors.Is(err, ErrResolutionRelease) {
 		t.Fatalf("same release resolution error = %v, want resolution release", err)
 	}
-	store.SeedPublishedResolutionRelease("tenant-1", "exam-1", "release-2", 2)
+	store.SeedRegradeJobState("regrade-1", "ready_for_release", &now)
+	store.SeedSource(PublishedQuestionAppealSource{
+		TenantID: "tenant-1", ExamID: "exam-1", StudentID: "student-1", SubmissionID: "submission-1",
+		ReleaseID: "release-2", ReleaseVersion: 2, Published: true, ReleaseSource: "regrade", SourceReleaseID: "release-1", PublishedAt: &now,
+		QuestionID: "question-4", QuestionNo: "Q4", FinalGradeID: "final-grade-original", Score: 7, MaxScore: 8,
+		SourceType: "single_review", SourceID: "reviewed-grade-1",
+	})
 	item, err = service.Resolve(context.Background(), "tenant-1", item.ID, "appeal-manager", ResolveQuestionAppealInput{NewReleaseID: "release-2", PublicResponse: "已在新版成绩中处理", ExpectedRevision: item.Revision})
 	if err != nil || item.Status != QuestionAppealResolved || item.NewReleaseID != "release-2" {
 		t.Fatalf("resolve: item=%#v err=%v", item, err)
 	}
 	student := studentQuestionAppealView(item)
-	if student.PublicResponse == "" || student.NewReleaseID != "release-2" || student.ID == "" {
+	if student.PublicResponse == "" || student.NewReleaseID != "release-2" || student.NewReleaseVersion != 2 || student.ID == "" {
 		t.Fatalf("student view misses outcome: %#v", student)
 	}
 	encoded, err := json.Marshal(student)

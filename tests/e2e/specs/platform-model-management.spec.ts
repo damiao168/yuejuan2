@@ -1,5 +1,15 @@
 import { expect, test } from "@playwright/test";
-import { installApiMocks } from "../fixtures/apiMocks";
+import { installApiMocks as installBaseApiMocks } from "../fixtures/apiMocks";
+
+async function installApiMocks(...args: Parameters<typeof installBaseApiMocks>) {
+  await installBaseApiMocks(...args);
+  const [page] = args;
+  // 专用部署资料必须后注册；通用夹具会拒绝未配置的 API，避免误把缺失资料当成线上版本。
+  await page.route("**/api/v1/model-prompts/current", (route) => route.fulfill({ json: { prompt: {
+    prompt_version: "prompt-v1", bundle_sha256: "a".repeat(64), activation_mode: "deployment_manifest", mutable_at_runtime: false,
+    components: [{ key: "subject.mathematics.short_answer", filename: "mathematics.md", sha256: "b".repeat(64), content: "测试部署的简答题评分规则" }]
+  } } }));
+}
 
 test("学校模型与治理使用同一学校配置，旧治理地址转入模型管理", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -18,7 +28,8 @@ test("学校模型与治理使用同一学校配置，旧治理地址转入模�
   await page.route("**/api/v1/platform/panel-model-bindings?*", route => route.fulfill({ json: { bindings: [] } }));
   await page.route("**/api/v1/platform/panel-model-bindings", route => {
     bindingBody = route.request().postDataJSON();
-    return route.fulfill({ json: { binding: { ...bindingBody, id: "binding-a" } } });
+    expect(bindingBody?.expected_revision).toBe("absent");
+    return route.fulfill({ json: { binding: { ...bindingBody, id: "binding-a", revision: "10000000-0000-4000-8000-000000000010" } } });
   });
   const tenantsSeen: string[] = [];
   await page.route(/\/api\/v1\/(model-evaluation-runs|model-approvals|model-policy)(?:\?|$)/, route => {
@@ -56,7 +67,8 @@ test("学校模型与治理使用同一学校配置，旧治理地址转入模�
   await page.getByText("三智能体配置", { exact: true }).click();
   await page.getByRole("combobox", { name: "主评 A评分模型" }).click();
   await page.locator(".ant-select-dropdown:visible .ant-select-item-option-content", { hasText: "deepseek-v4" }).click();
-  await page.getByRole("textbox", { name: "主评 A Prompt 版本" }).fill("prompt-v1");
+  await page.getByRole("button", { name: "为 A/B/C 套用当前部署版本" }).click();
+  await expect(page.getByRole("textbox", { name: "主评 A Prompt 版本" })).toHaveCount(0);
   await page.getByRole("button", { name: "保存主评 A" }).click();
   await expect.poll(() => bindingBody?.managed_model_api_config_id).toBe("model-a");
   expect(bindingBody?.tenant_id).toBe("school-a");
@@ -99,7 +111,7 @@ test("治理操作只提交学校模型配置 ID", async ({ page }) => {
   await expect(page.getByRole("button", { name: "添加候选" })).toBeEnabled({ timeout: 20_000 });
   await page.getByRole("button", { name: "添加候选" }).click();
   await page.getByLabel("评测模型").click();
-  await page.locator(".ant-select-dropdown:visible .ant-select-item-option-content", { hasText: "deepseek-v4" }).click({ force: true });
+  await page.locator(".ant-select-dropdown:visible .ant-select-item-option-content", { hasText: "deepseek-v4" }).click();
   await page.getByLabel("提示词版本").fill("prompt-v1");
   await page.getByLabel("Rubric 版本").fill("rubric-v1");
   await page.getByLabel("录入原因").fill("学校模型评测证据");
@@ -109,9 +121,9 @@ test("治理操作只提交学校模型配置 ID", async ({ page }) => {
   await page.getByText("模型批准", { exact: true }).click();
   await page.getByRole("button", { name: "新建批准" }).click();
   await page.getByLabel("授权冻结集评测").click();
-  await page.locator(".ant-select-dropdown:visible .ant-select-item-option-content", { hasText: "已冻结" }).click({ force: true });
+  await page.locator(".ant-select-dropdown:visible .ant-select-item-option-content", { hasText: "已冻结" }).click();
   await page.getByLabel("评测模型").click();
-  await page.locator(".ant-select-dropdown:visible .ant-select-item-option-content", { hasText: "deepseek-v4" }).click({ force: true });
+  await page.locator(".ant-select-dropdown:visible .ant-select-item-option-content", { hasText: "deepseek-v4" }).click();
   await page.getByLabel("决策引用").fill("school-decision");
   await page.getByLabel("批准原因").fill("授权冻结集复核完成");
   await page.getByRole("button", { name: "确认批准" }).click();
@@ -122,7 +134,7 @@ test("治理操作只提交学校模型配置 ID", async ({ page }) => {
   await page.getByLabel("允许外部模型").click();
   await page.getByLabel("允许发送文本").click();
   await page.getByLabel("允许使用的学校模型").click();
-  await page.locator(".ant-select-dropdown:visible .ant-select-item-option-content", { hasText: "deepseek-v4" }).click({ force: true });
+  await page.locator(".ant-select-dropdown:visible .ant-select-item-option-content", { hasText: "deepseek-v4" }).click();
   await page.getByLabel("修改原因").fill("学校模型使用策略更新");
   await page.getByRole("button", { name: "保存策略" }).click();
   await expect.poll(() => policyBody?.allowed_model_config_ids).toEqual(["model-a"]);
@@ -183,7 +195,8 @@ test("从添加模型到三智能体、评测、批准和策略使用同一学�
     const body = route.request().postDataJSON();
     expect(body.tenant_id).toBe("school-a");
     expect(body).not.toHaveProperty("deployment_id");
-    const binding = { ...body, id: `binding-${body.agent_role}` };
+    expect(body.expected_revision).toBe("absent");
+    const binding = { ...body, id: `binding-${body.agent_role}`, revision: "10000000-0000-4000-8000-000000000011" };
     bindings.push(binding);
     return route.fulfill({ json: { binding } });
   });
@@ -207,7 +220,7 @@ test("从添加模型到三智能体、评测、批准和策略使用同一学�
     return route.fulfill({ status: 201, json: { candidate } });
   });
   await page.route("**/api/v1/model-evaluation-runs/run-full/complete?*", route => {
-    expect((runs[0].candidates as unknown[]).length).toBe(2);
+    expect(runs[0].candidates as unknown[]).toHaveLength(2);
     runs[0] = { ...runs[0], status: "completed" };
     return route.fulfill({ json: { evaluation_run: runs[0] } });
   });
@@ -244,10 +257,10 @@ test("从添加模型到三智能体、评测、批准和策略使用同一学�
   await expect.poll(() => probed).toBe(true);
 
   await page.getByText("三智能体配置", { exact: true }).click();
+  await page.getByRole("button", { name: "为 A/B/C 套用当前部署版本" }).click();
   for (const [role, model] of [["主评 A", "deepseek-v4"], ["主评 B", "qwen-vl"], ["仲裁 C", "glm-4.6v"]] as const) {
     await page.getByRole("combobox", { name: `${role}评分模型` }).click();
     await page.locator(".ant-select-dropdown:visible .ant-select-item-option-content", { hasText: model }).click();
-    await page.getByRole("textbox", { name: `${role} Prompt 版本` }).fill("prompt-v1");
     await page.getByRole("button", { name: `保存${role}` }).click();
   }
   await expect.poll(() => bindings.length).toBe(3);

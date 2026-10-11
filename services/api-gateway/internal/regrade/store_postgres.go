@@ -14,9 +14,8 @@ type PostgresStore struct{ db *sql.DB }
 
 func NewPostgresStore(db *sql.DB) *PostgresStore { return &PostgresStore{db: db} }
 
-// SourceItems reads only an immutable, published score-release snapshot. It
-// never follows final_grade, so a later operational grade change cannot alter
-// the population that a regrade preview or job means.
+// SourceItems 只读取不可变的已发布成绩快照。
+// 它不沿 final_grade 查询，因此后续业务成绩变化不会改变重评预览或作业所指的群体。
 func (s *PostgresStore) SourceItems(ctx context.Context, tenantID, examID, questionID, releaseID string, selector Selector) ([]SourceItem, error) {
 	return sourceItemsQuery(ctx, s.db, tenantID, examID, questionID, releaseID, selector)
 }
@@ -74,8 +73,7 @@ WHERE release.tenant_id = $1::uuid AND release.exam_id = $2::uuid AND release.id
 		return nil, err
 	}
 	if len(items) == 0 {
-		// Distinguish an invalid/mismatched release from a valid release whose
-		// selector simply has no matches, without leaking another tenant's ID.
+		// 区分无效或不匹配的发布与有效但选择器无匹配项的发布，同时避免泄漏其他租户的 ID。
 		var exists bool
 		err := sourceExists(ctx, querier, tenantID, examID, releaseID, &exists)
 		if err != nil {
@@ -128,10 +126,8 @@ func (s *PostgresStore) Create(ctx context.Context, tenantID, examID, questionID
 		}
 		return existing, items, nil
 	}
-	// A regrade must point at one immutable assessment snapshot. Resolve the
-	// latest snapshot at creation when an operator leaves the field empty, and
-	// validate a supplied ID against this exact exam/question. This prevents a
-	// later configuration edit from silently changing a running correction.
+	// 重评必须指向一个不可变评估快照。操作人员留空时，在创建时解析最新快照；
+	// 提供 ID 时则校验其确实属于该考试和题目，防止后续配置编辑静默改变进行中的修正。
 	if err := tx.QueryRowContext(ctx, `
 SELECT id::text
 FROM exam_question_snapshot
@@ -145,8 +141,7 @@ LIMIT 1
 		}
 		return Job{}, nil, err
 	}
-	// Releases are immutable.  Re-read the source in this transaction so the
-	// persisted item population is never based on current grade facts.
+	// 发布不可变。在此事务内重新读取来源，使持久化条目群体绝不基于当前成绩事实。
 	fresh, err := sourceItemsQuery(ctx, tx, tenantID, examID, questionID, input.SourceReleaseID, input.Selector)
 	if err != nil {
 		return Job{}, nil, err
@@ -154,7 +149,7 @@ LIMIT 1
 	if len(fresh) == 0 {
 		return Job{}, nil, ErrNoAffectedItems
 	}
-	_ = sources // Service preview inputs are intentionally non-authoritative.
+	_ = sources // 服务预览输入不作为权威依据。
 	selectorJSON, err := json.Marshal(input.Selector)
 	if err != nil {
 		return Job{}, nil, err
@@ -177,7 +172,7 @@ RETURNING `+itemReturning, tenantID, job.ID, source.SubmissionID, source.OldFina
 		}
 		items = append(items, item)
 	}
-	if err := addEventTx(ctx, tx, tenantID, job.ID, "", "created", actorID, map[string]any{"affected_count": len(items), "source_release_id": job.SourceReleaseID, "strategy": job.Strategy}); err != nil {
+	if err := addEventTx(ctx, tx, tenantID, Event{JobID: job.ID, Type: "created", ActorID: actorID, Payload: map[string]any{"affected_count": len(items), "source_release_id": job.SourceReleaseID, "strategy": job.Strategy}}); err != nil {
 		return Job{}, nil, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -245,12 +240,12 @@ WHERE item.tenant_id=$1::uuid AND item.assigned_to=$2::uuid
 }
 
 func (s *PostgresStore) Approve(ctx context.Context, tenantID, jobID, actorID string) (Job, error) {
-	return s.jobTransition(ctx, tenantID, jobID, actorID, StatusAwaitingApproval, StatusApproved, "approved", func(ctx context.Context, tx *sql.Tx) (Job, error) {
+	return s.jobTransition(ctx, tenantID, jobID, actorID, jobTransitionRule{expected: StatusAwaitingApproval, target: StatusApproved, eventType: "approved"}, func(ctx context.Context, tx *sql.Tx) (Job, error) {
 		return scanJob(tx.QueryRowContext(ctx, `UPDATE regrade_job SET status='approved',approved_by=$3::uuid,approved_at=now(),updated_at=now() WHERE tenant_id=$1::uuid AND id=$2::uuid RETURNING `+jobReturning, tenantID, jobID, actorID))
 	})
 }
 func (s *PostgresStore) Start(ctx context.Context, tenantID, jobID, actorID string) (Job, error) {
-	return s.jobTransition(ctx, tenantID, jobID, actorID, StatusApproved, StatusRunning, "started", func(ctx context.Context, tx *sql.Tx) (Job, error) {
+	return s.jobTransition(ctx, tenantID, jobID, actorID, jobTransitionRule{expected: StatusApproved, target: StatusRunning, eventType: "started"}, func(ctx context.Context, tx *sql.Tx) (Job, error) {
 		return scanJob(tx.QueryRowContext(ctx, `UPDATE regrade_job SET status='running',updated_at=now() WHERE tenant_id=$1::uuid AND id=$2::uuid RETURNING `+jobReturning, tenantID, jobID))
 	})
 }
@@ -274,7 +269,7 @@ func (s *PostgresStore) Pause(ctx context.Context, tenantID, jobID, actorID stri
 	if err != nil {
 		return Job{}, err
 	}
-	if err = addEventTx(ctx, tx, tenantID, jobID, "", "paused", actorID, map[string]any{}); err != nil {
+	if err = addEventTx(ctx, tx, tenantID, Event{JobID: jobID, Type: "paused", ActorID: actorID, Payload: map[string]any{}}); err != nil {
 		return Job{}, err
 	}
 	if err = tx.Commit(); err != nil {
@@ -283,13 +278,18 @@ func (s *PostgresStore) Pause(ctx context.Context, tenantID, jobID, actorID stri
 	return job, nil
 }
 func (s *PostgresStore) Resume(ctx context.Context, tenantID, jobID, actorID string) (Job, error) {
-	return s.jobTransition(ctx, tenantID, jobID, actorID, StatusPaused, StatusRunning, "resumed", func(ctx context.Context, tx *sql.Tx) (Job, error) {
+	return s.jobTransition(ctx, tenantID, jobID, actorID, jobTransitionRule{expected: StatusPaused, target: StatusRunning, eventType: "resumed"}, func(ctx context.Context, tx *sql.Tx) (Job, error) {
 		return scanJob(tx.QueryRowContext(ctx, `UPDATE regrade_job SET status='running',updated_at=now() WHERE tenant_id=$1::uuid AND id=$2::uuid RETURNING `+jobReturning, tenantID, jobID))
 	})
 }
 
+// 同一转换的允许状态、目标状态和事件类型一起声明，避免调整状态时漏改审计事件。
+type jobTransitionRule struct {
+	expected, target, eventType string
+}
+
 // jobTransition 在任务行锁内检查状态，并把状态变化与事件一起提交；已到目标状态的重试直接返回。
-func (s *PostgresStore) jobTransition(ctx context.Context, tenantID, jobID, actorID, expected, target, eventType string, update func(context.Context, *sql.Tx) (Job, error)) (Job, error) {
+func (s *PostgresStore) jobTransition(ctx context.Context, tenantID, jobID, actorID string, rule jobTransitionRule, update func(context.Context, *sql.Tx) (Job, error)) (Job, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return Job{}, err
@@ -299,17 +299,17 @@ func (s *PostgresStore) jobTransition(ctx context.Context, tenantID, jobID, acto
 	if err != nil {
 		return Job{}, err
 	}
-	if current.Status == target {
+	if current.Status == rule.target {
 		return current, nil
 	}
-	if current.Status != expected {
+	if current.Status != rule.expected {
 		return Job{}, ErrStateConflict
 	}
 	job, err := update(ctx, tx)
 	if err != nil {
 		return Job{}, err
 	}
-	if err = addEventTx(ctx, tx, tenantID, jobID, "", eventType, actorID, map[string]any{}); err != nil {
+	if err = addEventTx(ctx, tx, tenantID, Event{JobID: jobID, Type: rule.eventType, ActorID: actorID, Payload: map[string]any{}}); err != nil {
 		return Job{}, err
 	}
 	if err = tx.Commit(); err != nil {
@@ -344,7 +344,7 @@ func (s *PostgresStore) Claim(ctx context.Context, tenantID, itemID, actorID str
 	if err != nil {
 		return Item{}, err
 	}
-	if err = addEventTx(ctx, tx, tenantID, job.ID, item.ID, "item_claimed", actorID, map[string]any{}); err != nil {
+	if err = addEventTx(ctx, tx, tenantID, Event{JobID: job.ID, ItemID: item.ID, Type: "item_claimed", ActorID: actorID, Payload: map[string]any{}}); err != nil {
 		return Item{}, err
 	}
 	if err = tx.Commit(); err != nil {
@@ -398,7 +398,7 @@ WHERE tenant_id=$1::uuid AND id=$2::uuid RETURNING `+itemReturning,
 			return Item{}, err
 		}
 	}
-	if err = addEventTx(ctx, tx, tenantID, job.ID, item.ID, "candidate_recorded", actorID, map[string]any{"requires_manual_review": input.RequireManualReview}); err != nil {
+	if err = addEventTx(ctx, tx, tenantID, Event{JobID: job.ID, ItemID: item.ID, Type: "candidate_recorded", ActorID: actorID, Payload: map[string]any{"requires_manual_review": input.RequireManualReview}}); err != nil {
 		return Item{}, err
 	}
 	if err = tx.Commit(); err != nil {
@@ -453,7 +453,7 @@ func (s *PostgresStore) Review(ctx context.Context, tenantID, itemID, actorID st
 	if err != nil {
 		return Item{}, err
 	}
-	if err = addEventTx(ctx, tx, tenantID, job.ID, item.ID, "item_reviewed", actorID, map[string]any{"decision": input.Decision}); err != nil {
+	if err = addEventTx(ctx, tx, tenantID, Event{JobID: job.ID, ItemID: item.ID, Type: "item_reviewed", ActorID: actorID, Payload: map[string]any{"decision": input.Decision}}); err != nil {
 		return Item{}, err
 	}
 	if err = tx.Commit(); err != nil {
@@ -488,7 +488,7 @@ func (s *PostgresStore) Finalize(ctx context.Context, tenantID, jobID, actorID s
 	if err != nil {
 		return Job{}, err
 	}
-	if err = addEventTx(ctx, tx, tenantID, jobID, "", "finalized", actorID, map[string]any{"next": "create_new_score_release"}); err != nil {
+	if err = addEventTx(ctx, tx, tenantID, Event{JobID: jobID, Type: "finalized", ActorID: actorID, Payload: map[string]any{"next": "create_new_score_release"}}); err != nil {
 		return Job{}, err
 	}
 	if err = tx.Commit(); err != nil {
@@ -568,12 +568,14 @@ func itemAndJobForUpdate(ctx context.Context, tx *sql.Tx, tenantID, itemID strin
 	job, err := jobForUpdate(ctx, tx, tenantID, item.JobID)
 	return item, job, err
 }
-func addEventTx(ctx context.Context, tx *sql.Tx, tenantID, jobID, itemID, eventType, actorID string, payload map[string]any) error {
-	raw, err := json.Marshal(payload)
+
+// addEventTx 使用调用方事务，事件写入失败时不能单独保留任务或条目的变更。
+func addEventTx(ctx context.Context, tx *sql.Tx, tenantID string, event Event) error {
+	raw, err := json.Marshal(event.Payload)
 	if err != nil {
 		return err
 	}
-	_, err = tx.ExecContext(ctx, `INSERT INTO regrade_event (tenant_id,job_id,item_id,event_type,actor_id,payload) VALUES ($1::uuid,$2::uuid,NULLIF($3,'')::uuid,$4,$5::uuid,$6::jsonb)`, tenantID, jobID, itemID, eventType, actorID, string(raw))
+	_, err = tx.ExecContext(ctx, `INSERT INTO regrade_event (tenant_id,job_id,item_id,event_type,actor_id,payload) VALUES ($1::uuid,$2::uuid,NULLIF($3,'')::uuid,$4,$5::uuid,$6::jsonb)`, tenantID, event.JobID, event.ItemID, event.Type, event.ActorID, string(raw))
 	return err
 }
 
@@ -631,6 +633,5 @@ func scanItem(row scanner) (Item, error) {
 	return item, nil
 }
 
-// Compile-time shape checks make accidental replacement with a current-score
-// writer harder when A18 integrates a ReleasePlan consumer.
+// A18 接入 ReleasePlan 消费方时，编译期结构检查可减少误替换为当前成绩写入器的风险。
 var _ Store = (*PostgresStore)(nil)

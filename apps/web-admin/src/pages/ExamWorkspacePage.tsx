@@ -6,14 +6,14 @@ import { useExamWorkspace } from "../query/examWorkspace";
 import { getUserErrorMessage } from "../api/client";
 import { ExamWorkspaceLayout } from "../features/exams/workspace/ExamWorkspaceLayout";
 
-export function ExamWorkspacePage({ examId, section, moduleContent, onNavigate }: {
+export function ExamWorkspacePage({ examId, section, moduleContent, onNavigate }: Readonly<{
   examId: string;
   section: string;
   experience: ProductExperience;
   currentUser: SessionUser;
-  moduleContent?: ReactNode;
+  moduleContent?: ReactNode | ((readOnly: boolean) => ReactNode);
   onNavigate: (path: string) => void;
-}) {
+}>) {
   const { data, error, isPending, refetch } = useExamWorkspace(examId);
 
   if (!data && isPending) return <LoadingState label="正在加载考试工作区" />;
@@ -23,7 +23,7 @@ export function ExamWorkspacePage({ examId, section, moduleContent, onNavigate }
   return <ExamWorkspaceLayout
     data={data}
     section={section}
-    moduleContent={moduleContent}
+    moduleContent={typeof moduleContent === "function" ? moduleContent(Boolean(data.read_only) || data.exam_status === "archived") : moduleContent}
     onNavigate={onNavigate}
   />;
 }

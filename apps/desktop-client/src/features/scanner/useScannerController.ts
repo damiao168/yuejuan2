@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { getUserErrorMessage } from "../../api/userError";
 import { isTauriRuntime } from "../../lib/localRuntime";
 import {
@@ -35,7 +35,8 @@ export function useScannerController({ workspace, isOnline, durableScopeKey, log
   const { expectedPaperSize, expectedTemplatePreset, expectedDuplex, expectedDpi,
     scannerProfileName, scannerDeviceFingerprint } = draft;
   const setExpectedPaperSize = (value: ScannerProfile["paperSize"]) => dispatchDraft({ type: "patch", patch: { expectedPaperSize: value } });
-  const setExpectedTemplatePreset = (value: string) => dispatchDraft({ type: "patch", patch: { expectedTemplatePreset: value } });
+  // App 按授权批次同步模板，入口需稳定，避免每次渲染重新触发同步 effect。
+  const setExpectedTemplatePreset = useCallback((value: string) => dispatchDraft({ type: "patch", patch: { expectedTemplatePreset: value } }), []);
   const setExpectedDuplex = (value: boolean) => dispatchDraft({ type: "patch", patch: { expectedDuplex: value } });
   const setExpectedDpi = (value: number) => dispatchDraft({ type: "patch", patch: { expectedDpi: value } });
   const setScannerProfileName = (value: string) => dispatchDraft({ type: "patch", patch: { scannerProfileName: value } });
@@ -45,7 +46,7 @@ export function useScannerController({ workspace, isOnline, durableScopeKey, log
   const [isLoadingScannerDevices, setIsLoadingScannerDevices] = useState(false);
   const [isSavingScannerProfile, setIsSavingScannerProfile] = useState(false);
 
-  const handleLoadScannerProfiles = async () => {
+  const handleLoadScannerProfiles = useCallback(async () => {
     if (!isTauriRuntime() || !durableScopeKey) return;
     try {
       const [profiles, integration] = await Promise.all([listScannerProfiles(durableScopeKey), scannerIntegrationStatus()]);
@@ -56,14 +57,14 @@ export function useScannerController({ workspace, isOnline, durableScopeKey, log
     } catch (error) {
       if (scopeRef.current === durableScopeKey) setScannerPreflightError(getUserErrorMessage(error, "扫描设备配置无法读取"));
     }
-  };
+  }, [durableScopeKey]);
 
   useEffect(() => {
     setScannerProfiles([]);
     setSelectedScannerProfileId("");
     setScannerPreflight(null);
     if (workspace === "scan" && isTauriRuntime() && durableScopeKey) void handleLoadScannerProfiles();
-  }, [workspace, durableScopeKey]);
+  }, [durableScopeKey, handleLoadScannerProfiles, workspace]);
 
   const handleOpenScannerProfileSetup = async () => {
     if (!isTauriRuntime() || !durableScopeKey) return;
@@ -91,7 +92,7 @@ export function useScannerController({ workspace, isOnline, durableScopeKey, log
     const name = scannerProfileName.trim();
     const templatePreset = expectedTemplatePreset.trim();
     if (!name || !scannerDeviceFingerprint || !templatePreset) {
-      setScannerPreflightError("请填写档案名称，选择可用扫描设备，并填写锁定答题卡模板标识。");
+      setScannerPreflightError("请填写档案名称、选择可用扫描设备，并先读取当前批次已锁定的答题卡模板。");
       return;
     }
     setIsSavingScannerProfile(true);
@@ -128,7 +129,7 @@ export function useScannerController({ workspace, isOnline, durableScopeKey, log
   const handleScannerPreflight = async () => {
     if (!isTauriRuntime() || !durableScopeKey) return;
     if (!selectedScannerProfileId || !expectedTemplatePreset.trim()) {
-      setScannerPreflightError("请选择扫描设备 Profile，并填写锁定答题卡模板的 Profile 标识。");
+      setScannerPreflightError("请选择扫描设备档案，并先读取当前批次已锁定的答题卡模板。已有文件导入不需要设备检查。");
       return;
     }
     setScannerPreflightError(null);

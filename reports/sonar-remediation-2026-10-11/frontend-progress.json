@@ -1,0 +1,2281 @@
+{
+  "original_issue_count": 172,
+  "issues": [
+    {
+      "key": "9a98adb2-7f90-43b2-95c7-e79f982c6acc",
+      "rule": "typescript:S6582",
+      "severity": "MINOR",
+      "file": "apps/desktop-client/src/components/OfflineWorkbench.tsx",
+      "original_line": 487,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "218b39e8-f757-4c81-ad08-2aff2cc6cf35",
+      "rule": "typescript:S6551",
+      "severity": "MINOR",
+      "file": "apps/desktop-client/src/components/OfflineWorkbench.tsx",
+      "original_line": 1006,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "abe61f6d-8d14-432e-8433-52291f243dc3",
+      "rule": "typescript:S6551",
+      "severity": "MINOR",
+      "file": "apps/desktop-client/src/components/OfflineWorkbench.tsx",
+      "original_line": 1006,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "3601f60e-e329-4959-bde1-b66a11a0407a",
+      "rule": "typescript:S6582",
+      "severity": "MINOR",
+      "file": "apps/desktop-client/src/features/capture/useExamCaptureContext.ts",
+      "original_line": 124,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "f3aa6e72-dc9f-4eb8-b43e-0b6ced722622",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/desktop-client/src/features/upload/useUploadSync.ts",
+      "original_line": 1,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "b4f08151-4fb6-46f5-8735-5340e8d59f1a",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/desktop-client/src/features/upload/useUploadSync.ts",
+      "original_line": 33,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "8c6a67b0-7237-49ab-9937-a956a47b9074",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/desktop-client/src/features/upload/useUploadSync.ts",
+      "original_line": 34,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "8a11bd85-90bb-4685-b009-cb1342c15773",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/desktop-client/src/features/upload/useUploadSync.ts",
+      "original_line": 35,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "998e87b5-b006-438a-ac0a-2d04691b98c4",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/desktop-client/src/features/upload/useUploadSync.ts",
+      "original_line": 36,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "df41d980-b2cf-4809-8eb4-3ae77da6e76d",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/desktop-client/src/features/upload/useUploadSync.ts",
+      "original_line": 228,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "06b4a1d2-a94e-4dc4-8f56-b752cd62f7ce",
+      "rule": "typescript:S8980",
+      "severity": "MINOR",
+      "file": "apps/student-portal/src/App.paperRecovery.test.tsx",
+      "original_line": 26,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "5b38372b-69bc-461e-a2f8-c7cfba3cc461",
+      "rule": "typescript:S8980",
+      "severity": "MINOR",
+      "file": "apps/student-portal/src/App.paperRecovery.test.tsx",
+      "original_line": 43,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "53d83cb5-de5b-4947-afec-13d86cc28adc",
+      "rule": "typescript:S8980",
+      "severity": "MINOR",
+      "file": "apps/student-portal/src/App.releaseConsistency.test.tsx",
+      "original_line": 129,
+      "status": "needs_platform_disposition",
+      "reason": "外层 act 合并同一事件批次，用于测试同步 ref 在 disabled 重绘前阻止提交或退出。拆为各自 fireEvent 的 act 会提前刷新 UI，失去该时序保证。",
+      "source_sha256": "95c238c303b005740b70f697455bcbad2f83005f05f6486b7b47bca613e23469",
+      "evidence": [
+        "apps/student-portal/src/App.tsx",
+        "frontend-types-execution.json"
+      ]
+    },
+    {
+      "key": "e523e830-fd7b-4360-a4f2-b2d6260bf960",
+      "rule": "typescript:S8980",
+      "severity": "MINOR",
+      "file": "apps/student-portal/src/App.submissionReceipt.test.tsx",
+      "original_line": 318,
+      "status": "needs_platform_disposition",
+      "reason": "外层 act 合并同一事件批次，用于测试同步 ref 在 disabled 重绘前阻止提交或退出。拆为各自 fireEvent 的 act 会提前刷新 UI，失去该时序保证。",
+      "source_sha256": "0e42cd9b976a1fd22fb236fa0df96962abbc5214b221a36b19cf361b2c6c5de3",
+      "evidence": [
+        "apps/student-portal/src/App.tsx",
+        "frontend-types-execution.json"
+      ]
+    },
+    {
+      "key": "ab84da33-c3ed-4e22-8690-fe7c1b35cc99",
+      "rule": "typescript:S8980",
+      "severity": "MINOR",
+      "file": "apps/student-portal/src/App.submissionReceipt.test.tsx",
+      "original_line": 355,
+      "status": "needs_platform_disposition",
+      "reason": "外层 act 合并同一事件批次，用于测试同步 ref 在 disabled 重绘前阻止提交或退出。拆为各自 fireEvent 的 act 会提前刷新 UI，失去该时序保证。",
+      "source_sha256": "0e42cd9b976a1fd22fb236fa0df96962abbc5214b221a36b19cf361b2c6c5de3",
+      "evidence": [
+        "apps/student-portal/src/App.tsx",
+        "frontend-types-execution.json"
+      ]
+    },
+    {
+      "key": "c63b6dea-b29b-4ed5-963d-7ef17abc0336",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/student-portal/src/App.tsx",
+      "original_line": 1,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "cc475325-ef8b-4cd0-b0a9-5266eb0b7dfd",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/student-portal/src/App.tsx",
+      "original_line": 178,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "a2699602-abb2-43db-9d6c-a782e0e68cd5",
+      "rule": "typescript:S6819",
+      "severity": "MAJOR",
+      "file": "apps/student-portal/src/App.tsx",
+      "original_line": 590,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "c50749c0-1065-40ae-aabc-42a036c795ec",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/student-portal/src/App.tsx",
+      "original_line": 741,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "a1b41c46-05e4-4c07-9a43-c99e5ebf3bfc",
+      "rule": "javascript:S6594",
+      "severity": "MINOR",
+      "file": "apps/web-admin/scripts/check-production-routes.mjs",
+      "original_line": 87,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。",
+      "latest_current_sha": "3f6a5db9c86c12792d8a5976ef47e2fcd16bc9b9b124348fbc30fd580266b336",
+      "latest_current_sha_evidence": [
+        "frontend-production-contracts-current-01.json",
+        "frontend-production-contracts-current-01.tap",
+        "full-checkpoint-03/source-scope.json"
+      ]
+    },
+    {
+      "key": "4f79e760-f64a-4ff3-9664-15933b842496",
+      "rule": "javascript:S6594",
+      "severity": "MINOR",
+      "file": "apps/web-admin/scripts/check-production-routes.mjs",
+      "original_line": 143,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。",
+      "latest_current_sha": "3f6a5db9c86c12792d8a5976ef47e2fcd16bc9b9b124348fbc30fd580266b336",
+      "latest_current_sha_evidence": [
+        "frontend-production-contracts-current-01.json",
+        "frontend-production-contracts-current-01.tap",
+        "full-checkpoint-03/source-scope.json"
+      ]
+    },
+    {
+      "key": "4745b550-8222-457d-b7f3-2a72a6a6dd70",
+      "rule": "javascript:S6594",
+      "severity": "MINOR",
+      "file": "apps/web-admin/scripts/check-production-routes.mjs",
+      "original_line": 177,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。",
+      "latest_current_sha": "3f6a5db9c86c12792d8a5976ef47e2fcd16bc9b9b124348fbc30fd580266b336",
+      "latest_current_sha_evidence": [
+        "frontend-production-contracts-current-01.json",
+        "frontend-production-contracts-current-01.tap",
+        "full-checkpoint-03/source-scope.json"
+      ]
+    },
+    {
+      "key": "025bab65-78f8-425f-ac8f-238c4892fe53",
+      "rule": "javascript:S6594",
+      "severity": "MINOR",
+      "file": "apps/web-admin/scripts/measure-build.mjs",
+      "original_line": 38,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "5c5ad0fe-91b3-443c-af1a-e9f6611efeb6",
+      "rule": "javascript:S6594",
+      "severity": "MINOR",
+      "file": "apps/web-admin/scripts/measure-build.mjs",
+      "original_line": 38,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "01cb1380-dfd1-4684-b257-e68efec15d61",
+      "rule": "javascript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/scripts/production-route-contracts.mjs",
+      "original_line": 13,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "a0ef9fef-94d9-42d1-b2e3-8b2aa21b1a68",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/auth/stepUpContext.tsx",
+      "original_line": 1,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "8f0ea697-b87f-4138-add6-29d52c3947fb",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/auth/stepUpContext.tsx",
+      "original_line": 177,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "c00e57c8-64f1-4b4d-a951-6029413ca481",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/components/AppLayout.tsx",
+      "original_line": 1,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "5bf8ed73-f209-4b8a-866d-233f2e81e244",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/components/AppLayout.tsx",
+      "original_line": 144,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "a0224267-b6a2-44ef-9f6a-fa6fe6559c96",
+      "rule": "typescript:S6551",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/components/ResponsiveTable.tsx",
+      "original_line": 40,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。",
+      "latest_current_sha": "df949e3c3ed407f5f0fc1096639bf82c420b100dbaaa2589719e11460d0a656d",
+      "latest_current_sha_evidence": [
+        "frontend-web-retry-01-execution.json",
+        "frontend-web-current-typecheck-02.json",
+        "full-checkpoint-03/source-scope.json"
+      ]
+    },
+    {
+      "key": "ebbf07bc-b59d-4c1d-9f6f-c323abc27810",
+      "rule": "typescript:S6544",
+      "severity": "MAJOR",
+      "file": "apps/web-admin/src/components/ResponsiveTable.tsx",
+      "original_line": 93,
+      "status": "implemented_needs_rescan",
+      "reason": "复扫确认 Array.some 回调返回值联合类型可包含 Promise；回调内显式 Boolean 保持原真假值语义并限定为 boolean。此修改晚于 checkpoint02，待下轮平台复扫。",
+      "validation": {
+        "current_sha256": "df949e3c3ed407f5f0fc1096639bf82c420b100dbaaa2589719e11460d0a656d",
+        "typecheck": "frontend-web-current-typecheck-02.json",
+        "tests": "frontend-web-retry-01-execution.json",
+        "responsive_table_tests": 10,
+        "platform_rescan": "pending root checkpoint03"
+      },
+      "latest_current_sha": "df949e3c3ed407f5f0fc1096639bf82c420b100dbaaa2589719e11460d0a656d",
+      "latest_current_sha_evidence": [
+        "frontend-web-retry-01-execution.json",
+        "frontend-web-current-typecheck-02.json",
+        "full-checkpoint-03/source-scope.json"
+      ]
+    },
+    {
+      "key": "340766bb-0dae-4776-9cee-77f35f63d37c",
+      "rule": "typescript:S6551",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/components/ResponsiveTable.tsx",
+      "original_line": 152,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。",
+      "latest_current_sha": "df949e3c3ed407f5f0fc1096639bf82c420b100dbaaa2589719e11460d0a656d",
+      "latest_current_sha_evidence": [
+        "frontend-web-retry-01-execution.json",
+        "frontend-web-current-typecheck-02.json",
+        "full-checkpoint-03/source-scope.json"
+      ]
+    },
+    {
+      "key": "afc9fb40-fab3-436b-ad16-0be145cf3d82",
+      "rule": "typescript:S6551",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/components/ResponsiveTable.tsx",
+      "original_line": 169,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。",
+      "latest_current_sha": "df949e3c3ed407f5f0fc1096639bf82c420b100dbaaa2589719e11460d0a656d",
+      "latest_current_sha_evidence": [
+        "frontend-web-retry-01-execution.json",
+        "frontend-web-current-typecheck-02.json",
+        "full-checkpoint-03/source-scope.json"
+      ]
+    },
+    {
+      "key": "5bd76605-d430-4f70-ad0e-764bfb374193",
+      "rule": "typescript:S6551",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/components/ResponsiveTable.tsx",
+      "original_line": 182,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。",
+      "latest_current_sha": "df949e3c3ed407f5f0fc1096639bf82c420b100dbaaa2589719e11460d0a656d",
+      "latest_current_sha_evidence": [
+        "frontend-web-retry-01-execution.json",
+        "frontend-web-current-typecheck-02.json",
+        "full-checkpoint-03/source-scope.json"
+      ]
+    },
+    {
+      "key": "4d48b066-59dd-4dc7-b4e0-385487ae3bd2",
+      "rule": "typescript:S5906",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/components/appLayoutPresentation.test.tsx",
+      "original_line": 55,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "1153fe13-cde0-4437-a737-03047c482df9",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/components/features/review-annotation/CommentTemplateManager.tsx",
+      "original_line": 109,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "a9b23aea-f630-4dc6-8734-6cc5f6737ac2",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/components/model-governance/ModelApprovalWorkspace.tsx",
+      "original_line": 295,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "20f586f6-19ed-4b56-ad38-fc6a4438314e",
+      "rule": "typescript:S6819",
+      "severity": "MAJOR",
+      "file": "apps/web-admin/src/features/answer-groups/AnswerGroupSampleEvidence.tsx",
+      "original_line": 16,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "fe5e123f-904d-4ce5-ad26-364ffb0fd578",
+      "rule": "typescript:S5906",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/answer-groups/AnswerGroupingDrawer.test.tsx",
+      "original_line": 198,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "86b722ac-bc88-4f39-aa11-0f2bd0a190b4",
+      "rule": "typescript:S5906",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/answer-sheet-template/calibration/useOMRCalibration.batch7.test.tsx",
+      "original_line": 108,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "39c10844-13df-4aaa-82e9-49eb3e266c21",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/answer-sheet-template/editor/useRegionSuggestion.ts",
+      "original_line": 1,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "9ea5030d-b2aa-4664-a34a-b0c999cdb3ea",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/answer-sheet-template/editor/useRegionSuggestion.ts",
+      "original_line": 39,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "84d13b9a-2678-4027-9618-237e18fd3302",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/answer-sheet-template/editor/useTemplateEditor.ts",
+      "original_line": 1,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "efffb2b1-9e59-4db9-94e1-a00441f6ce4a",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/answer-sheet-template/editor/useTemplateEditor.ts",
+      "original_line": 24,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "f7da04de-23c9-41f1-9e98-5f25da175694",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/answer-sheet-template/view/OMRCalibrationView.tsx",
+      "original_line": 729,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "e9d3c5ce-b79d-4fd6-83be-10fc2b39f996",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/answer-sheet-template/view/TemplateWorkspaceView.tsx",
+      "original_line": 525,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "3afd6e77-2d14-4710-b966-446dab64823c",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/answer-sheet-template/view/TemplateWorkspaceView.tsx",
+      "original_line": 654,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "4e0bc743-2e70-4526-870d-038f39a7dbb5",
+      "rule": "typescript:S6551",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/capture/captureColumns.tsx",
+      "original_line": 99,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "eeb79d6b-397d-4bdb-89af-ddf40f52cb9a",
+      "rule": "typescript:S6551",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/capture/captureColumns.tsx",
+      "original_line": 103,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "6cca5622-ea13-4d76-bfd6-64cdc9b71c43",
+      "rule": "typescript:S6551",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/capture/captureColumns.tsx",
+      "original_line": 143,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "07066c1c-f382-4fe8-bb57-2ed09006aad4",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/exams/create/CreateExamComposer.tsx",
+      "original_line": 98,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "9206d899-b239-4b07-a0ff-716838818883",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/exams/create/CreateExamComposer.tsx",
+      "original_line": 103,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "e6d66112-36a1-425c-b272-3f45c0af8b6d",
+      "rule": "typescript:S6606",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/exams/management/ManagementExamArchiveDialog.tsx",
+      "original_line": 156,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "ba464b83-4a82-45bf-9480-ce9d2113bf2e",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/exams/management/ManagementExamEditDrawer.tsx",
+      "original_line": 67,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "1071a964-433a-40df-8a27-7535c7624b05",
+      "rule": "typescript:S6551",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/gold-papers/GoldPaperManagerDrawer.tsx",
+      "original_line": 36,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "2ef50a4a-fda5-499c-934b-48187d895204",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/gold-papers/GoldPaperManagerDrawer.tsx",
+      "original_line": 140,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "ee7af430-ea0f-4715-9f9f-88fad5b84a51",
+      "rule": "typescript:S6847",
+      "severity": "MAJOR",
+      "file": "apps/web-admin/src/features/grading/workbench/components/AnswerEvidencePane.tsx",
+      "original_line": 78,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "44d68c8c-15eb-4b52-8bda-611fce73f5b5",
+      "rule": "typescript:S6845",
+      "severity": "MAJOR",
+      "file": "apps/web-admin/src/features/grading/workbench/components/AnswerEvidencePane.tsx",
+      "original_line": 83,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "a1600a34-72bd-4cfe-808e-c07aac29ab59",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/grading/workbench/components/ExamScoringDialogs.tsx",
+      "original_line": 36,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "17f7c525-95ca-42b1-bea1-cd6a93cda5d6",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/grading/workbench/components/ExamScoringDialogs.tsx",
+      "original_line": 65,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "0cfcdb9a-9ba0-49a5-a65a-e54a4ea7b80a",
+      "rule": "typescript:S6582",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/grading/workbench/components/FastConfirmDrawer.tsx",
+      "original_line": 104,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "dfd398fb-d039-491f-87b2-e8e3952a5290",
+      "rule": "typescript:S6606",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/grading/workbench/components/MathRubricMatrix.tsx",
+      "original_line": 23,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "4b63ca73-a6c5-4c54-9086-be77593fecc4",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/grading/workbench/hooks/useAnswerViewer.ts",
+      "original_line": 1,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "fa066fb0-a2ba-46d2-8f5f-869084d3ba96",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/grading/workbench/hooks/useAnswerViewer.ts",
+      "original_line": 12,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "6b575235-04d4-41c0-aa12-74e88809a3ea",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/grading/workbench/hooks/useGradingMathActions.ts",
+      "original_line": 3,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "409f9e5c-f166-464d-ae62-24b48a468313",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/grading/workbench/hooks/useGradingMathActions.ts",
+      "original_line": 21,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "de180245-3542-48ea-9d38-c73419d286dc",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/grading/workbench/hooks/useGradingMathActions.ts",
+      "original_line": 22,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "8c07f3a4-f1c3-46a9-8e47-cc8533805a2e",
+      "rule": "typescript:S6582",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/grading/workbench/hooks/useGradingMathActions.ts",
+      "original_line": 83,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "cf9ea2b9-efe1-44ff-bdfc-da826fb9f359",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/grading/workbench/hooks/useGradingQueueActions.ts",
+      "original_line": 1,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "8463d963-0684-4949-8f61-1d4200d6f0fd",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/grading/workbench/hooks/useGradingQueueActions.ts",
+      "original_line": 23,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "aa21d6c5-5105-4618-8966-38cca0095e50",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/grading/workbench/hooks/useGradingQueueActions.ts",
+      "original_line": 24,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "a123dd45-6241-47d3-80e7-35b678fc11f0",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/grading/workbench/hooks/useGradingReviewActions.ts",
+      "original_line": 3,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "adb1c36d-bf32-435b-ad64-166b25728204",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/grading/workbench/hooks/useGradingReviewActions.ts",
+      "original_line": 79,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "a90ed19a-ab69-456b-adfe-df605c4149d4",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/grading/workbench/hooks/useGradingReviewActions.ts",
+      "original_line": 80,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "7b00d3a7-bfc2-4dc9-8c58-ac24b1673c8d",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/grading/workbench/hooks/useGradingReviewActions.ts",
+      "original_line": 81,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "38def9a8-62b7-4bae-a993-5cc1d1cd437d",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/grading/workbench/hooks/useGradingReviewActions.ts",
+      "original_line": 82,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "335142bb-0789-467c-82be-09c9f9e58bf6",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/grading/workbench/hooks/useGradingReviewActions.ts",
+      "original_line": 83,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "ac979567-835b-4e96-b880-eada020f6dc3",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/grading/workbench/hooks/useGradingReviewActions.ts",
+      "original_line": 84,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "77ac6353-ec86-4e84-8240-34264a5304e8",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/grading/workbench/hooks/useGradingReviewActions.ts",
+      "original_line": 85,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "b03ccc55-555b-4a4f-8b41-2c2f600d734b",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/grading/workbench/hooks/useGradingReviewActions.ts",
+      "original_line": 86,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "400d6765-80e6-45aa-8eae-b4fe539a98cf",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/grading/workbench/hooks/useGradingReviewActions.ts",
+      "original_line": 87,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "24e083d1-ba4e-449b-b0a1-b968bc959ed0",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/grading/workbench/hooks/useGradingReviewActions.ts",
+      "original_line": 88,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "974629f9-54ec-4fa3-97f5-10142bab4a29",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/grading/workbench/hooks/useGradingReviewActions.ts",
+      "original_line": 89,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "cbb0ad28-4945-4587-b5c2-ad7090f09d29",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/grading/workbench/hooks/useGradingReviewActions.ts",
+      "original_line": 90,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "08d7b32b-f2c6-4f02-95ba-c682699cf439",
+      "rule": "typescript:S6582",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/grading/workbench/hooks/useGradingReviewActions.ts",
+      "original_line": 276,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "b5f20aa9-e1f2-4438-8dec-5bd165815a14",
+      "rule": "typescript:S6582",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/grading/workbench/hooks/useGradingReviewActions.ts",
+      "original_line": 318,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "49199c7e-c26d-4c47-9700-7982bfd97ba0",
+      "rule": "typescript:S6582",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/grading/workbench/hooks/useGradingReviewActions.ts",
+      "original_line": 328,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "b045cc65-0807-4e5a-9b7a-ba492c934ffa",
+      "rule": "typescript:S7727",
+      "severity": "MAJOR",
+      "file": "apps/web-admin/src/features/grading/workbench/reviewContext.ts",
+      "original_line": 37,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "290b0d15-bcbd-46a1-bacc-108153224a03",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/grading/workbench/workbenchDraftLifecycle.ts",
+      "original_line": 1,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "03875fa2-b342-46d5-8902-ea5136cdf246",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/grading/workbench/workbenchDraftLifecycle.ts",
+      "original_line": 18,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "616c28c5-960f-4992-8aa9-e5661b6aca31",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/grading/workbench/workbenchDraftLifecycle.ts",
+      "original_line": 90,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "3862b24c-6109-4398-a72a-4f46069f47a9",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/grading/workbench/workbenchDraftLifecycle.ts",
+      "original_line": 91,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "66b4f8ea-0d5e-4ac6-90b3-3da34efefd13",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/grading/workbench/workbenchDraftLifecycle.ts",
+      "original_line": 92,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "c325ec23-3ca9-4f3e-b1ba-3faadbdb1472",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/grading/workbench/workbenchDraftLifecycle.ts",
+      "original_line": 93,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "0f3998fb-4361-4d41-a467-5ac4fd950753",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/grading/workbench/workbenchDraftLifecycle.ts",
+      "original_line": 94,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "fd2de23b-d4d0-46c3-bdee-2a83e7596d26",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/grading/workbench/workbenchDraftLifecycle.ts",
+      "original_line": 95,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "c09823b9-8772-4db6-8b9f-fa0325462b24",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/members/teachers/TeacherManagementPage.tsx",
+      "original_line": 131,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "57773d8f-5d49-4cac-bd22-f51f2809d114",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/members/teachers/TeacherManagementPage.tsx",
+      "original_line": 152,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "e96a1b3f-b343-4595-a771-48e4e7e766dc",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/members/teachers/TeacherManagementPage.tsx",
+      "original_line": 226,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "4b809bfc-c692-477e-9fd3-b5a8cc6274cf",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/paper-import/PaperStructurePanel.tsx",
+      "original_line": 130,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "37e61268-bd6a-4129-9bb3-7cd664f94074",
+      "rule": "typescript:S5906",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/question-bank/QuestionBankPage.batch45.test.tsx",
+      "original_line": 129,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "af4450a1-a334-46fc-b533-206093bf8b85",
+      "rule": "typescript:S6582",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/question-bank/QuestionBankPage.tsx",
+      "original_line": 485,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "f20dec37-3793-4b7a-a80a-d9b91aea5c3f",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/school-assistant/SchoolConversation.tsx",
+      "original_line": 1,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "8c7afdac-0eec-42ad-9aeb-97a5e37755bc",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/school-assistant/SchoolConversation.tsx",
+      "original_line": 186,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "807436f4-457f-44a1-aa3e-b97d85cb51e6",
+      "rule": "typescript:S6582",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/features/score-management/hooks/useRegradeWorkflow.tsx",
+      "original_line": 138,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "3cb50416-7927-4d34-8ec7-b79d9fd8883a",
+      "rule": "typescript:S6582",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/pages/AppealCenterPage.tsx",
+      "original_line": 295,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "bd06b499-0f04-44e6-a599-297a72dacb92",
+      "rule": "typescript:S6582",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/pages/AppealCenterPage.tsx",
+      "original_line": 326,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "03be4a29-b596-4f04-9d17-ff938db7f8da",
+      "rule": "typescript:S6582",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/pages/AppealCenterPage.tsx",
+      "original_line": 355,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "3ea8c773-5a14-4880-bc36-8b0adf2fda7f",
+      "rule": "typescript:S6822",
+      "severity": "MAJOR",
+      "file": "apps/web-admin/src/pages/ArbitrationTaskRail.tsx",
+      "original_line": 31,
+      "status": "needs_platform_disposition",
+      "reason": "listStyle:none 时 Safari 会从可访问性树移除原生列表；显式 role=list 保留列表语义，已有中文维护注释与 MDN 依据。",
+      "source_sha256": "205bf807531e5ace73d596bdd071f4761ad7ab18e9cb3bd4282eef8eb59ce4ba",
+      "evidence": [
+        "https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/list-style#accessibility",
+        "apps/web-admin/src/pages/ArbitrationTaskRail.tsx"
+      ]
+    },
+    {
+      "key": "bf6acc44-f3b5-4640-8983-9f276fb9f953",
+      "rule": "typescript:S6582",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/pages/CaptureBatchPage.tsx",
+      "original_line": 338,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "943656c9-899c-48f6-829c-2ab327d8f028",
+      "rule": "typescript:S6582",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/pages/CaptureBatchPage.tsx",
+      "original_line": 387,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "7abd1a76-9353-45c4-a4f6-25389f82aa52",
+      "rule": "typescript:S6582",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/pages/CaptureBatchPage.tsx",
+      "original_line": 487,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "f9986035-361c-47d4-b18f-5d67a3c730e5",
+      "rule": "typescript:S6582",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/pages/ExamPreparationPage.tsx",
+      "original_line": 109,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "0bf1757e-a351-414f-88a0-84ce3c212f86",
+      "rule": "typescript:S6582",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/pages/ExamPreparationPage.tsx",
+      "original_line": 123,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "165ef68f-91e1-4112-bd79-4ff44b4aa59e",
+      "rule": "typescript:S6582",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/pages/PaperRubricPage.tsx",
+      "original_line": 312,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "85e23b57-11bd-40bf-9fe8-27e56dce110a",
+      "rule": "typescript:S5906",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/pages/PlatformModelConfigPage.test.tsx",
+      "original_line": 213,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "34e325ed-d590-4a32-a3ee-c5a4a2d9239b",
+      "rule": "typescript:S5906",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/pages/PlatformModelConfigPage.test.tsx",
+      "original_line": 214,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "b9ceb32a-d819-45b3-a2bb-ef8632d1eabf",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/pages/PlatformModelConfigPage.tsx",
+      "original_line": 654,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "cc0723fe-a88f-4278-9b66-f9d0d06096ef",
+      "rule": "typescript:S6551",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/pages/QualityDashboardPage.tsx",
+      "original_line": 452,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "47dafbac-e965-45d3-8afc-fe76676e43d1",
+      "rule": "typescript:S1874",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/pages/SubjectiveGradingBatchPage.tsx",
+      "original_line": 187,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "2d3189ca-0132-4857-95f8-02ee584d79fa",
+      "rule": "typescript:S6582",
+      "severity": "MINOR",
+      "file": "apps/web-admin/src/pages/SubmissionCapturePage.tsx",
+      "original_line": 429,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "2d565b6b-d78a-4072-aaac-eac2640b6d70",
+      "rule": "javascript:S8786",
+      "severity": "MAJOR",
+      "file": "docs/architecture/evidence/extract-frontend-api.mjs",
+      "original_line": 30,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "d7aeb23d-efc3-4efe-8c64-f1bd0bb3e34c",
+      "rule": "javascript:S7780",
+      "severity": "MINOR",
+      "file": "docs/architecture/evidence/extract-frontend-api.mjs",
+      "original_line": 32,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "d49d1ec1-3bfd-47ec-ae10-1d8bd2c98ad0",
+      "rule": "javascript:S3776",
+      "severity": "CRITICAL",
+      "file": "docs/architecture/evidence/extract-frontend-api.mjs",
+      "original_line": 62,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "1e88b4e6-68c3-45df-ba72-13c086dcc290",
+      "rule": "javascript:S3776",
+      "severity": "CRITICAL",
+      "file": "docs/architecture/evidence/extract-frontend-api.mjs",
+      "original_line": 85,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "8f75c204-2877-45a9-9310-8f918f665084",
+      "rule": "javascript:S6557",
+      "severity": "MAJOR",
+      "file": "docs/architecture/evidence/extract-frontend-api.mjs",
+      "original_line": 89,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "4b6de80e-0e5f-4ae5-b1ab-7b4ec69c1631",
+      "rule": "javascript:S1874",
+      "severity": "MINOR",
+      "file": "docs/architecture/evidence/extract-frontend-api.mjs",
+      "original_line": 97,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "6315a57f-5b03-4537-9e33-785c03fdbd8f",
+      "rule": "javascript:S7744",
+      "severity": "MINOR",
+      "file": "docs/architecture/evidence/extract-frontend-api.mjs",
+      "original_line": 103,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "7961959c-4f01-425c-a3ad-6999b5b5032e",
+      "rule": "javascript:S7766",
+      "severity": "MINOR",
+      "file": "docs/architecture/evidence/extract-frontend-api.mjs",
+      "original_line": 121,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "8f899594-5609-42d0-b3da-2d588c4bf8e8",
+      "rule": "javascript:S7765",
+      "severity": "MINOR",
+      "file": "docs/architecture/evidence/extract-frontend-api.mjs",
+      "original_line": 121,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "996bd3a3-50ea-4484-8c43-a535a56e48ef",
+      "rule": "javascript:S2681",
+      "severity": "MAJOR",
+      "file": "docs/architecture/evidence/extract-frontend-api.mjs",
+      "original_line": 157,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "75ac3d77-53f0-47a5-9335-dc49df53ed13",
+      "rule": "javascript:S905",
+      "severity": "MAJOR",
+      "file": "docs/architecture/tools/capture_preview_qa.js",
+      "original_line": 2,
+      "status": "needs_platform_disposition",
+      "reason": "playwright-cli run-code 接收整个文件中的函数表达式，由工具传入真实 page 并执行；不能改成无人调用的模块导出或自行执行脚本。",
+      "source_sha256": "0606fe358d6e5a275781c02942c3207afb845616b21bf5f1d42dfbb419527eb1",
+      "evidence": [
+        "docs/architecture/DIAGRAM_MAINTENANCE.md",
+        "docs/architecture/evidence/acceptance-report.md",
+        "scripts/ci/architecture-audit-tools.test.mjs",
+        "frontend-scripts-0.log"
+      ],
+      "latest_current_sha": "47a3ce999f9b5b93993006ef6685d3c6670471ae66e1e667833d346891888496",
+      "latest_current_sha_evidence": [
+        "root-platform-disposition-results.json",
+        "delivery-independent-preflight-audit-python-agent.json",
+        "full-checkpoint-03/source-scope.json"
+      ]
+    },
+    {
+      "key": "0dfa4dab-a792-435c-a031-1959bdf5164c",
+      "rule": "javascript:S8786",
+      "severity": "MAJOR",
+      "file": "docs/architecture/tools/extract-frontend-api-recheck.mjs",
+      "original_line": 30,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "22cc34c4-cb42-4f16-8841-baf9fcf170c3",
+      "rule": "javascript:S7780",
+      "severity": "MINOR",
+      "file": "docs/architecture/tools/extract-frontend-api-recheck.mjs",
+      "original_line": 32,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "0efbe6e9-b494-4f4b-a336-279c4d76f5ad",
+      "rule": "javascript:S3776",
+      "severity": "CRITICAL",
+      "file": "docs/architecture/tools/extract-frontend-api-recheck.mjs",
+      "original_line": 62,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "b0fda38d-d2ce-4b60-9c6c-1eb6505a7bd6",
+      "rule": "javascript:S3776",
+      "severity": "CRITICAL",
+      "file": "docs/architecture/tools/extract-frontend-api-recheck.mjs",
+      "original_line": 85,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "80066563-075b-400f-9429-b62f743705fd",
+      "rule": "javascript:S6557",
+      "severity": "MAJOR",
+      "file": "docs/architecture/tools/extract-frontend-api-recheck.mjs",
+      "original_line": 89,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "f5593f69-a323-4803-af98-6f528fd74b2c",
+      "rule": "javascript:S1874",
+      "severity": "MINOR",
+      "file": "docs/architecture/tools/extract-frontend-api-recheck.mjs",
+      "original_line": 97,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "1b8bc06e-e12d-4011-a7dd-a6a6e7166452",
+      "rule": "javascript:S7744",
+      "severity": "MINOR",
+      "file": "docs/architecture/tools/extract-frontend-api-recheck.mjs",
+      "original_line": 103,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "341dda90-4f5e-4616-9a75-a201dd79d0fa",
+      "rule": "javascript:S7765",
+      "severity": "MINOR",
+      "file": "docs/architecture/tools/extract-frontend-api-recheck.mjs",
+      "original_line": 121,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "4eac06ab-fad2-4be6-884c-75b5eb3243d5",
+      "rule": "javascript:S7766",
+      "severity": "MINOR",
+      "file": "docs/architecture/tools/extract-frontend-api-recheck.mjs",
+      "original_line": 121,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "7ff6202a-54ba-459b-a4b0-5d2f5f6854cc",
+      "rule": "javascript:S2681",
+      "severity": "MAJOR",
+      "file": "docs/architecture/tools/extract-frontend-api-recheck.mjs",
+      "original_line": 157,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "e50a781b-1426-49d6-aa49-aa91cee217ae",
+      "rule": "javascript:S905",
+      "severity": "MAJOR",
+      "file": "docs/architecture/tools/render_native.js",
+      "original_line": 2,
+      "status": "needs_platform_disposition",
+      "reason": "playwright-cli run-code 接收整个文件中的函数表达式，由工具传入真实 page 并执行；不能改成无人调用的模块导出或自行执行脚本。",
+      "source_sha256": "0be6b4dbde9ebc8d7150140d5ae66a3aa755bd3376b43ed51ea13524dc43668a",
+      "evidence": [
+        "docs/architecture/DIAGRAM_MAINTENANCE.md",
+        "docs/architecture/evidence/acceptance-report.md",
+        "scripts/ci/architecture-audit-tools.test.mjs",
+        "frontend-scripts-0.log"
+      ],
+      "latest_current_sha": "85e0b8d9604713f3506c56758a3af02977ef66e35bc66ff7d3136e129eefac65",
+      "latest_current_sha_evidence": [
+        "root-new-js-tests-02.json",
+        "root-platform-disposition-results.json",
+        "root-platform-disposition-phase02-results.json",
+        "full-checkpoint-03/source-scope.json"
+      ]
+    },
+    {
+      "key": "c2e5af9d-f365-4e18-988f-07c5b4065bda",
+      "rule": "javascript:S3776",
+      "severity": "CRITICAL",
+      "file": "docs/architecture/tools/render_native.js",
+      "original_line": 28,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。",
+      "latest_current_sha": "85e0b8d9604713f3506c56758a3af02977ef66e35bc66ff7d3136e129eefac65",
+      "latest_current_sha_evidence": [
+        "root-new-js-tests-02.json",
+        "root-platform-disposition-results.json",
+        "root-platform-disposition-phase02-results.json",
+        "full-checkpoint-03/source-scope.json"
+      ]
+    },
+    {
+      "key": "814ef731-a3af-4cfa-8188-805dea752186",
+      "rule": "javascript:S6582",
+      "severity": "MINOR",
+      "file": "docs/architecture/tools/render_native.js",
+      "original_line": 44,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。",
+      "latest_current_sha": "85e0b8d9604713f3506c56758a3af02977ef66e35bc66ff7d3136e129eefac65",
+      "latest_current_sha_evidence": [
+        "root-new-js-tests-02.json",
+        "root-platform-disposition-results.json",
+        "root-platform-disposition-phase02-results.json",
+        "full-checkpoint-03/source-scope.json"
+      ]
+    },
+    {
+      "key": "3cf5b86d-d748-44d5-8c99-d404e5dd9dab",
+      "rule": "javascript:S6582",
+      "severity": "MINOR",
+      "file": "docs/architecture/tools/render_native.js",
+      "original_line": 51,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。",
+      "latest_current_sha": "85e0b8d9604713f3506c56758a3af02977ef66e35bc66ff7d3136e129eefac65",
+      "latest_current_sha_evidence": [
+        "root-new-js-tests-02.json",
+        "root-platform-disposition-results.json",
+        "root-platform-disposition-phase02-results.json",
+        "full-checkpoint-03/source-scope.json"
+      ]
+    },
+    {
+      "key": "552dfb13-20c0-4946-9c38-8544abd03d57",
+      "rule": "javascript:S6582",
+      "severity": "MINOR",
+      "file": "docs/architecture/tools/render_native.js",
+      "original_line": 51,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。",
+      "latest_current_sha": "85e0b8d9604713f3506c56758a3af02977ef66e35bc66ff7d3136e129eefac65",
+      "latest_current_sha_evidence": [
+        "root-new-js-tests-02.json",
+        "root-platform-disposition-results.json",
+        "root-platform-disposition-phase02-results.json",
+        "full-checkpoint-03/source-scope.json"
+      ]
+    },
+    {
+      "key": "b882e99c-d262-4704-89b9-ab0992662a49",
+      "rule": "javascript:S6582",
+      "severity": "MINOR",
+      "file": "docs/architecture/tools/render_native.js",
+      "original_line": 57,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。",
+      "latest_current_sha": "85e0b8d9604713f3506c56758a3af02977ef66e35bc66ff7d3136e129eefac65",
+      "latest_current_sha_evidence": [
+        "root-new-js-tests-02.json",
+        "root-platform-disposition-results.json",
+        "root-platform-disposition-phase02-results.json",
+        "full-checkpoint-03/source-scope.json"
+      ]
+    },
+    {
+      "key": "04ab9958-fbf5-47ce-8d12-2eba020e31fb",
+      "rule": "javascript:S7727",
+      "severity": "MAJOR",
+      "file": "lab/scripts/govern-dataset.js",
+      "original_line": 76,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "91581573-9274-4ca9-a903-eeb6aa6acb32",
+      "rule": "javascript:S6594",
+      "severity": "MINOR",
+      "file": "scripts/check-story049-ocr-worker.mjs",
+      "original_line": 28,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "152a2250-98d2-490a-83d9-3eee89810471",
+      "rule": "javascript:S6594",
+      "severity": "MINOR",
+      "file": "scripts/check-story049-ocr-worker.mjs",
+      "original_line": 29,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "505aaa43-82e1-4327-912b-62665baba8e1",
+      "rule": "javascript:S2871",
+      "severity": "CRITICAL",
+      "file": "scripts/check-story052-production-deployment.mjs",
+      "original_line": 70,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。",
+      "latest_current_sha": "688b7952d124a8208bd4f650c191862f6124993a471a66affa956420f3334676",
+      "latest_current_sha_evidence": [
+        "root-new-findings-progress.json",
+        "root-production-deployment-check-01.log",
+        "full-checkpoint-03/source-scope.json"
+      ]
+    },
+    {
+      "key": "e1279acc-b8c8-4f39-8969-0068ea39f933",
+      "rule": "javascript:S2871",
+      "severity": "CRITICAL",
+      "file": "scripts/ci/schema-version.mjs",
+      "original_line": 18,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "85c3e53f-9f0e-447e-b372-7a66575152d5",
+      "rule": "typescript:S9332",
+      "severity": "MAJOR",
+      "file": "tests/e2e/specs/account-security.spec.ts",
+      "original_line": 7,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "f4480850-f6f9-4a58-83d0-cb117632be0f",
+      "rule": "typescript:S9332",
+      "severity": "MAJOR",
+      "file": "tests/e2e/specs/account-security.spec.ts",
+      "original_line": 37,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "53399044-be39-4885-bb07-1c618b52830c",
+      "rule": "typescript:S9332",
+      "severity": "MAJOR",
+      "file": "tests/e2e/specs/dashboard-workbench.spec.ts",
+      "original_line": 20,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "ea8b118e-6c04-452d-ae8d-b29da13d8631",
+      "rule": "typescript:S9332",
+      "severity": "MAJOR",
+      "file": "tests/e2e/specs/dashboard-workbench.spec.ts",
+      "original_line": 48,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "fd9089be-0069-4ab0-859e-e28e475a8b23",
+      "rule": "typescript:S9332",
+      "severity": "MAJOR",
+      "file": "tests/e2e/specs/exam-create-flow.spec.ts",
+      "original_line": 13,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "c9c6fe66-b8d9-42cc-98a5-41a36e99264c",
+      "rule": "typescript:S9332",
+      "severity": "MAJOR",
+      "file": "tests/e2e/specs/exam-create-flow.spec.ts",
+      "original_line": 35,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "054489bf-5f92-40a5-854c-98606ba6d43d",
+      "rule": "typescript:S9332",
+      "severity": "MAJOR",
+      "file": "tests/e2e/specs/exam-create.visual.spec.ts",
+      "original_line": 17,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "71ae9984-db5a-4efc-85f8-2608ea69bdfb",
+      "rule": "typescript:S9332",
+      "severity": "MAJOR",
+      "file": "tests/e2e/specs/exam-workspace.spec.ts",
+      "original_line": 128,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "089ce19f-d4c2-49ee-b90e-c74b64fb43cc",
+      "rule": "typescript:S9332",
+      "severity": "MAJOR",
+      "file": "tests/e2e/specs/exam-workspace.visual.spec.ts",
+      "original_line": 20,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "368f5db5-df79-4319-bdee-defbde61bc04",
+      "rule": "typescript:S9332",
+      "severity": "MAJOR",
+      "file": "tests/e2e/specs/exam-workspace.visual.spec.ts",
+      "original_line": 63,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "e125e7fe-bdd0-4692-9071-c8511aafc6d0",
+      "rule": "typescript:S5906",
+      "severity": "MINOR",
+      "file": "tests/e2e/specs/grading-workbench-keyboard.spec.ts",
+      "original_line": 118,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "5dda8b4c-3d55-4f53-9cbe-38f6d95a7547",
+      "rule": "typescript:S8783",
+      "severity": "MAJOR",
+      "file": "tests/e2e/specs/platform-model-config.spec.ts",
+      "original_line": 103,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "d94be4e0-0288-4d14-bb0a-9524a9ffa488",
+      "rule": "typescript:S8783",
+      "severity": "MAJOR",
+      "file": "tests/e2e/specs/platform-model-config.spec.ts",
+      "original_line": 322,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "422f9c0e-569e-40ec-94ee-28bc66088e7b",
+      "rule": "typescript:S8783",
+      "severity": "MAJOR",
+      "file": "tests/e2e/specs/platform-model-config.spec.ts",
+      "original_line": 390,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "b88892b5-1200-4af9-a3a8-370a4861c14e",
+      "rule": "typescript:S8783",
+      "severity": "MAJOR",
+      "file": "tests/e2e/specs/platform-model-management.spec.ts",
+      "original_line": 114,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "460f20c6-5f30-4cdf-bfbb-ebba7424f9a9",
+      "rule": "typescript:S8783",
+      "severity": "MAJOR",
+      "file": "tests/e2e/specs/platform-model-management.spec.ts",
+      "original_line": 124,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "04a5d4eb-aa38-4618-8895-e8b7eb600e03",
+      "rule": "typescript:S8783",
+      "severity": "MAJOR",
+      "file": "tests/e2e/specs/platform-model-management.spec.ts",
+      "original_line": 126,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "f2dccbda-d55e-45a2-9486-9cd13a4a6ebe",
+      "rule": "typescript:S8783",
+      "severity": "MAJOR",
+      "file": "tests/e2e/specs/platform-model-management.spec.ts",
+      "original_line": 137,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    },
+    {
+      "key": "b3d12341-6134-4773-9d88-6899fabe4118",
+      "rule": "typescript:S5906",
+      "severity": "MINOR",
+      "file": "tests/e2e/specs/platform-model-management.spec.ts",
+      "original_line": 223,
+      "status": "implemented_needs_rescan",
+      "reason": "已修改当前源码；需串行补验证及统一 SonarQube 复扫确认。"
+    }
+  ],
+  "files": {
+    "apps/desktop-client/src/components/OfflineWorkbench.tsx": {
+      "sha256": "e7fabdc2bdcce63df8bb31664e463f2306eb2a8fe6d1e6cef881e7ef14786ba5",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "e7fabdc2bdcce63df8bb31664e463f2306eb2a8fe6d1e6cef881e7ef14786ba5"
+    },
+    "apps/desktop-client/src/features/capture/useExamCaptureContext.ts": {
+      "sha256": "89d0137a4d3d2b312d4bec036f10b664c1bc4ade8b1fbb6cee64c32e57a9d40c",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "89d0137a4d3d2b312d4bec036f10b664c1bc4ade8b1fbb6cee64c32e57a9d40c"
+    },
+    "apps/desktop-client/src/features/upload/useUploadSync.ts": {
+      "sha256": "be9d9fc6cb268cd51e2bb238e02c9831fec327853cfdd39b4c727fd19172da7d",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "be9d9fc6cb268cd51e2bb238e02c9831fec327853cfdd39b4c727fd19172da7d"
+    },
+    "apps/student-portal/src/App.paperRecovery.test.tsx": {
+      "sha256": "d22715848d38d4b78f04053977408edb01787809be5a37b5c4684e2338dbf7d0",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "d22715848d38d4b78f04053977408edb01787809be5a37b5c4684e2338dbf7d0"
+    },
+    "apps/student-portal/src/App.releaseConsistency.test.tsx": {
+      "sha256": "95c238c303b005740b70f697455bcbad2f83005f05f6486b7b47bca613e23469",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "95c238c303b005740b70f697455bcbad2f83005f05f6486b7b47bca613e23469"
+    },
+    "apps/student-portal/src/App.submissionReceipt.test.tsx": {
+      "sha256": "0e42cd9b976a1fd22fb236fa0df96962abbc5214b221a36b19cf361b2c6c5de3",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "0e42cd9b976a1fd22fb236fa0df96962abbc5214b221a36b19cf361b2c6c5de3"
+    },
+    "apps/student-portal/src/App.tsx": {
+      "sha256": "b6f723b49dcffeab510c01de046ccd6e7e280b0c42eb7bf228db99d2758867ed",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "b6f723b49dcffeab510c01de046ccd6e7e280b0c42eb7bf228db99d2758867ed"
+    },
+    "apps/web-admin/scripts/check-production-routes.mjs": {
+      "sha256": "469c5dce5e57dcd1d917b160d4bbf40e9d59fb6eb57cb19d3f150a4a46a1ccf9",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "469c5dce5e57dcd1d917b160d4bbf40e9d59fb6eb57cb19d3f150a4a46a1ccf9",
+      "latest_current_sha": "3f6a5db9c86c12792d8a5976ef47e2fcd16bc9b9b124348fbc30fd580266b336",
+      "latest_current_sha_evidence": [
+        "frontend-production-contracts-current-01.json",
+        "frontend-production-contracts-current-01.tap",
+        "full-checkpoint-03/source-scope.json"
+      ],
+      "historical_sha_fields_preserved": true
+    },
+    "apps/web-admin/scripts/measure-build.mjs": {
+      "sha256": "bf7d1b837caafabd00d4eab19592a74ceb176d42508aca018e11b230d15d190b",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "bf7d1b837caafabd00d4eab19592a74ceb176d42508aca018e11b230d15d190b"
+    },
+    "apps/web-admin/scripts/production-route-contracts.mjs": {
+      "sha256": "b60608b66e473713602a09903105154352045573e908ede05b94ed033b9883af",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "b60608b66e473713602a09903105154352045573e908ede05b94ed033b9883af"
+    },
+    "apps/web-admin/src/auth/stepUpContext.tsx": {
+      "sha256": "67c5fc6c89afb9e000bb023348ad1972969fbcf517a25bfff39406f7694fffcb",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "67c5fc6c89afb9e000bb023348ad1972969fbcf517a25bfff39406f7694fffcb"
+    },
+    "apps/web-admin/src/components/AppLayout.tsx": {
+      "sha256": "bf7aa4aeb517a16f5da96b429b703fa96922d749b56b4d307add4bf62476b9ad",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "bf7aa4aeb517a16f5da96b429b703fa96922d749b56b4d307add4bf62476b9ad"
+    },
+    "apps/web-admin/src/components/ResponsiveTable.tsx": {
+      "sha256": "44a76005937ecd809e7ac20b20e28a8ee690e986d0786c1d0c28724c8277d3b2",
+      "file_review_status": "existing_sufficient",
+      "review_scope": "已审读整文件和相关规则调用/测试",
+      "current_sha256": "44a76005937ecd809e7ac20b20e28a8ee690e986d0786c1d0c28724c8277d3b2",
+      "latest_current_sha": "df949e3c3ed407f5f0fc1096639bf82c420b100dbaaa2589719e11460d0a656d",
+      "latest_current_sha_evidence": [
+        "frontend-web-retry-01-execution.json",
+        "frontend-web-current-typecheck-02.json",
+        "full-checkpoint-03/source-scope.json"
+      ],
+      "historical_sha_fields_preserved": true
+    },
+    "apps/web-admin/src/components/appLayoutPresentation.test.tsx": {
+      "sha256": "0b45869fd271ee0d78ef957245f9284fbca9f523e972845fb7cd3a99df6e56eb",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "0b45869fd271ee0d78ef957245f9284fbca9f523e972845fb7cd3a99df6e56eb"
+    },
+    "apps/web-admin/src/components/features/review-annotation/CommentTemplateManager.tsx": {
+      "sha256": "7b85fa39cbec4993bfce75b9ba40a22fa7a6d7f8adab8f4db657b91df140bb29",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "7b85fa39cbec4993bfce75b9ba40a22fa7a6d7f8adab8f4db657b91df140bb29"
+    },
+    "apps/web-admin/src/components/model-governance/ModelApprovalWorkspace.tsx": {
+      "sha256": "1a3747563e39c86c5933df011eafaf26a207b4a0721227e90c9ef1820cda3f02",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "1a3747563e39c86c5933df011eafaf26a207b4a0721227e90c9ef1820cda3f02"
+    },
+    "apps/web-admin/src/features/answer-groups/AnswerGroupSampleEvidence.tsx": {
+      "sha256": "d5b68e849c1a2bd6287f4fddd16ece5bc391fb8f9194f7888a7277ef7eb83028",
+      "file_review_status": "existing_sufficient",
+      "review_scope": "已审读整文件和相关规则调用/测试",
+      "current_sha256": "d5b68e849c1a2bd6287f4fddd16ece5bc391fb8f9194f7888a7277ef7eb83028"
+    },
+    "apps/web-admin/src/features/answer-groups/AnswerGroupingDrawer.test.tsx": {
+      "sha256": "fe602ab98b82c6f78cd7c4f17c5da81c40f30ed3a4e1de00235b59bc1c2e23ba",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "fe602ab98b82c6f78cd7c4f17c5da81c40f30ed3a4e1de00235b59bc1c2e23ba"
+    },
+    "apps/web-admin/src/features/answer-sheet-template/calibration/useOMRCalibration.batch7.test.tsx": {
+      "sha256": "d5551ac8e989cb720ac92f7aa7778d7d93773a2de5a4916cf837841de5812974",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "d5551ac8e989cb720ac92f7aa7778d7d93773a2de5a4916cf837841de5812974"
+    },
+    "apps/web-admin/src/features/answer-sheet-template/editor/useRegionSuggestion.ts": {
+      "sha256": "e770276417e6446b3674ee4545131820ad142248c4ec89b63556d86f66ca635f",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "e770276417e6446b3674ee4545131820ad142248c4ec89b63556d86f66ca635f"
+    },
+    "apps/web-admin/src/features/answer-sheet-template/editor/useTemplateEditor.ts": {
+      "sha256": "a6e1a80c17dc05776d8c06c31eb134d74c66fa8cb142acf1137cd41080e0ccc4",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "a6e1a80c17dc05776d8c06c31eb134d74c66fa8cb142acf1137cd41080e0ccc4"
+    },
+    "apps/web-admin/src/features/answer-sheet-template/view/OMRCalibrationView.tsx": {
+      "sha256": "5ecc97041ed5588ea4f8e1d24da653ca9b1caa351c6b79a356ca4bdc7e2135d7",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "5ecc97041ed5588ea4f8e1d24da653ca9b1caa351c6b79a356ca4bdc7e2135d7"
+    },
+    "apps/web-admin/src/features/answer-sheet-template/view/TemplateWorkspaceView.tsx": {
+      "sha256": "3a33c07ac95894d74faaa0e7f674ee567ce31537bc59f081e937e4962b56e1ae",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "3a33c07ac95894d74faaa0e7f674ee567ce31537bc59f081e937e4962b56e1ae"
+    },
+    "apps/web-admin/src/features/capture/captureColumns.tsx": {
+      "sha256": "8848de7405911060124977f3e7e80f36964c2cb6d3848dc296baefa89bc23cb0",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "8848de7405911060124977f3e7e80f36964c2cb6d3848dc296baefa89bc23cb0"
+    },
+    "apps/web-admin/src/features/exams/create/CreateExamComposer.tsx": {
+      "sha256": "ee20208637f8aa175830ef8c879033a3a6bd5b6545aff4b09204bf1da6fcadd1",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "ee20208637f8aa175830ef8c879033a3a6bd5b6545aff4b09204bf1da6fcadd1"
+    },
+    "apps/web-admin/src/features/exams/management/ManagementExamArchiveDialog.tsx": {
+      "sha256": "b35d166b903bdbed8181496044907ab61880affe7e6486c7bd383879d3567927",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "b35d166b903bdbed8181496044907ab61880affe7e6486c7bd383879d3567927"
+    },
+    "apps/web-admin/src/features/exams/management/ManagementExamEditDrawer.tsx": {
+      "sha256": "3fe54f24f1e3271255bf091f861c688e181acff777ff3ed581647a4d56485f48",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "3fe54f24f1e3271255bf091f861c688e181acff777ff3ed581647a4d56485f48"
+    },
+    "apps/web-admin/src/features/gold-papers/GoldPaperManagerDrawer.tsx": {
+      "sha256": "c5c3e269d839e0523d97935f565a77f1c9248ec48b010bfda7209da8633e36df",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "c5c3e269d839e0523d97935f565a77f1c9248ec48b010bfda7209da8633e36df"
+    },
+    "apps/web-admin/src/features/grading/workbench/components/AnswerEvidencePane.tsx": {
+      "sha256": "964bc65c6c9b4eb51a9a704684e05a5a0cb3d60971acba77c62b7e6fea434ed7",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "964bc65c6c9b4eb51a9a704684e05a5a0cb3d60971acba77c62b7e6fea434ed7"
+    },
+    "apps/web-admin/src/features/grading/workbench/components/ExamScoringDialogs.tsx": {
+      "sha256": "de33717491c9163859a0df3bfe6818eddc11a19054a8dd6e5e51ed44e09138f1",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "de33717491c9163859a0df3bfe6818eddc11a19054a8dd6e5e51ed44e09138f1"
+    },
+    "apps/web-admin/src/features/grading/workbench/components/FastConfirmDrawer.tsx": {
+      "sha256": "3a637c5979367ade06c2353ccf561d7eee99cbbb14ca1f16d51c6704bc6666e0",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "3a637c5979367ade06c2353ccf561d7eee99cbbb14ca1f16d51c6704bc6666e0"
+    },
+    "apps/web-admin/src/features/grading/workbench/components/MathRubricMatrix.tsx": {
+      "sha256": "3676b5309e144a44b6a49ba810cd7e11815668e7fdf1b64c20ee8c0a5940c007",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "3676b5309e144a44b6a49ba810cd7e11815668e7fdf1b64c20ee8c0a5940c007"
+    },
+    "apps/web-admin/src/features/grading/workbench/hooks/useAnswerViewer.ts": {
+      "sha256": "445f6ac949acbb0772e4849d33bb743e87c424d9efdccc009f7fa64164921841",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "445f6ac949acbb0772e4849d33bb743e87c424d9efdccc009f7fa64164921841"
+    },
+    "apps/web-admin/src/features/grading/workbench/hooks/useGradingMathActions.ts": {
+      "sha256": "81a621e405e65e1152635f39441d0f4d92f1e3ec114eb9e5dcd7b6f4fe906eed",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "81a621e405e65e1152635f39441d0f4d92f1e3ec114eb9e5dcd7b6f4fe906eed"
+    },
+    "apps/web-admin/src/features/grading/workbench/hooks/useGradingQueueActions.ts": {
+      "sha256": "519e20d1a86d454aef2a508e380f6b582bf651c43fa530d296afdc7b3214c7d8",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "519e20d1a86d454aef2a508e380f6b582bf651c43fa530d296afdc7b3214c7d8"
+    },
+    "apps/web-admin/src/features/grading/workbench/hooks/useGradingReviewActions.ts": {
+      "sha256": "ba3ac82b6dedf8862d454fb6bfff5cab820fd2d194426a4fb318158cd7eebdd1",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "ba3ac82b6dedf8862d454fb6bfff5cab820fd2d194426a4fb318158cd7eebdd1"
+    },
+    "apps/web-admin/src/features/grading/workbench/reviewContext.ts": {
+      "sha256": "3463f3b9c7a95b10fd6ee831272567fc54ebcfea93c03ff7ad70bed3043b3425",
+      "file_review_status": "existing_sufficient",
+      "review_scope": "已审读整文件和相关规则调用/测试",
+      "current_sha256": "3463f3b9c7a95b10fd6ee831272567fc54ebcfea93c03ff7ad70bed3043b3425"
+    },
+    "apps/web-admin/src/features/grading/workbench/workbenchDraftLifecycle.ts": {
+      "sha256": "8207ecc75dbae8ca27fd4a9b4fcd5e072e8a03b9f1780547540f3683c5940ce1",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "8207ecc75dbae8ca27fd4a9b4fcd5e072e8a03b9f1780547540f3683c5940ce1"
+    },
+    "apps/web-admin/src/features/members/teachers/TeacherManagementPage.tsx": {
+      "sha256": "b1eef9f2ec4fbe62a0951c5a3549b2da527b9e442da916c67f7155e314f176aa",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "b1eef9f2ec4fbe62a0951c5a3549b2da527b9e442da916c67f7155e314f176aa"
+    },
+    "apps/web-admin/src/features/paper-import/PaperStructurePanel.tsx": {
+      "sha256": "3c8d15b5bc38bf5213fa7c2fdbe74ab84a7ee31e42e12fc319f0bfe1d3a2de04",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "3c8d15b5bc38bf5213fa7c2fdbe74ab84a7ee31e42e12fc319f0bfe1d3a2de04"
+    },
+    "apps/web-admin/src/features/question-bank/QuestionBankPage.batch45.test.tsx": {
+      "sha256": "d32b8b74e166caea8b07302f8362292d144a3389b7b8c89cfb50b8997073b5bf",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "d32b8b74e166caea8b07302f8362292d144a3389b7b8c89cfb50b8997073b5bf"
+    },
+    "apps/web-admin/src/features/question-bank/QuestionBankPage.tsx": {
+      "sha256": "76f6d8747ed3f602034691d6274646d387a2da294355005a6e4e6bbdca85a39f",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "76f6d8747ed3f602034691d6274646d387a2da294355005a6e4e6bbdca85a39f"
+    },
+    "apps/web-admin/src/features/school-assistant/SchoolConversation.tsx": {
+      "sha256": "99bcd2dd7a3720ae75a67833f83920311cd7d054d5e55b9dbe6b24710370b1cf",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "99bcd2dd7a3720ae75a67833f83920311cd7d054d5e55b9dbe6b24710370b1cf"
+    },
+    "apps/web-admin/src/features/score-management/hooks/useRegradeWorkflow.tsx": {
+      "sha256": "98b49ed44ae7537b33bfb0313dedc0315ceefdb3d56b84e0354c9bf7ce3bba6d",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "98b49ed44ae7537b33bfb0313dedc0315ceefdb3d56b84e0354c9bf7ce3bba6d"
+    },
+    "apps/web-admin/src/pages/AppealCenterPage.tsx": {
+      "sha256": "3aa091ba928f3c6f471d82cd7a213ff2c92b1666331fade9990070401a3fdeef",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "3aa091ba928f3c6f471d82cd7a213ff2c92b1666331fade9990070401a3fdeef"
+    },
+    "apps/web-admin/src/pages/ArbitrationTaskRail.tsx": {
+      "sha256": "205bf807531e5ace73d596bdd071f4761ad7ab18e9cb3bd4282eef8eb59ce4ba",
+      "file_review_status": "existing_sufficient",
+      "review_scope": "已审读整文件和相关规则调用/测试",
+      "current_sha256": "205bf807531e5ace73d596bdd071f4761ad7ab18e9cb3bd4282eef8eb59ce4ba"
+    },
+    "apps/web-admin/src/pages/CaptureBatchPage.tsx": {
+      "sha256": "ca4f1926b798b59557f0795a92abdb7700c431f4a0c429ffd41268aca44042f5",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "ca4f1926b798b59557f0795a92abdb7700c431f4a0c429ffd41268aca44042f5"
+    },
+    "apps/web-admin/src/pages/ExamPreparationPage.tsx": {
+      "sha256": "eeb24b7d2aa22a4c289a6c8140e4c9ea020ba3fc209317022f7c3f1ac548898e",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "eeb24b7d2aa22a4c289a6c8140e4c9ea020ba3fc209317022f7c3f1ac548898e"
+    },
+    "apps/web-admin/src/pages/PaperRubricPage.tsx": {
+      "sha256": "92daf82a35a427d8ce587093059ccf11951a8954ccd290f1d59753d5bfe500b2",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "92daf82a35a427d8ce587093059ccf11951a8954ccd290f1d59753d5bfe500b2"
+    },
+    "apps/web-admin/src/pages/PlatformModelConfigPage.test.tsx": {
+      "sha256": "04bcc051d62ea6793294d532f1f7e8d7dda10087b6cd42de62b9a307ac0913e9",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "04bcc051d62ea6793294d532f1f7e8d7dda10087b6cd42de62b9a307ac0913e9"
+    },
+    "apps/web-admin/src/pages/PlatformModelConfigPage.tsx": {
+      "sha256": "294b0d45c79c92c60b5e827d71737956d66930bb1edf1945c47ea32862bfd71e",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "294b0d45c79c92c60b5e827d71737956d66930bb1edf1945c47ea32862bfd71e"
+    },
+    "apps/web-admin/src/pages/QualityDashboardPage.tsx": {
+      "sha256": "8a4b0925351ec8e0c2e7c4ea5a16f19c212bb5991188ffc176d7b29110d7265a",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "8a4b0925351ec8e0c2e7c4ea5a16f19c212bb5991188ffc176d7b29110d7265a"
+    },
+    "apps/web-admin/src/pages/SubjectiveGradingBatchPage.tsx": {
+      "sha256": "3e2d454dd7acd6037ae92000a6045332b5e6d5236f9ec92c012e2d3ac85d3ba3",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "3e2d454dd7acd6037ae92000a6045332b5e6d5236f9ec92c012e2d3ac85d3ba3"
+    },
+    "apps/web-admin/src/pages/SubmissionCapturePage.tsx": {
+      "sha256": "03109efd236b478cf875c0b2114a477891b17ffd406d80939d6aaa7f4550c22c",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "03109efd236b478cf875c0b2114a477891b17ffd406d80939d6aaa7f4550c22c"
+    },
+    "docs/architecture/evidence/extract-frontend-api.mjs": {
+      "sha256": "bb0d80badad78f98f743328f126160815992a472811e12b593c103f212640a7f",
+      "file_review_status": "existing_sufficient",
+      "review_scope": "已审读整文件和相关规则调用/测试",
+      "current_sha256": "bb0d80badad78f98f743328f126160815992a472811e12b593c103f212640a7f"
+    },
+    "docs/architecture/tools/capture_preview_qa.js": {
+      "sha256": "0606fe358d6e5a275781c02942c3207afb845616b21bf5f1d42dfbb419527eb1",
+      "file_review_status": "existing_sufficient",
+      "review_scope": "已审读整文件和相关规则调用/测试",
+      "current_sha256": "0606fe358d6e5a275781c02942c3207afb845616b21bf5f1d42dfbb419527eb1",
+      "latest_current_sha": "47a3ce999f9b5b93993006ef6685d3c6670471ae66e1e667833d346891888496",
+      "latest_current_sha_evidence": [
+        "root-platform-disposition-results.json",
+        "delivery-independent-preflight-audit-python-agent.json",
+        "full-checkpoint-03/source-scope.json"
+      ],
+      "historical_sha_fields_preserved": true
+    },
+    "docs/architecture/tools/extract-frontend-api-recheck.mjs": {
+      "sha256": "31db2e3e73379507af6e443c2af8a4df9370ff1262acdb507e8711d10b3f4419",
+      "file_review_status": "existing_sufficient",
+      "review_scope": "已审读整文件和相关规则调用/测试",
+      "current_sha256": "31db2e3e73379507af6e443c2af8a4df9370ff1262acdb507e8711d10b3f4419"
+    },
+    "docs/architecture/tools/render_native.js": {
+      "sha256": "0be6b4dbde9ebc8d7150140d5ae66a3aa755bd3376b43ed51ea13524dc43668a",
+      "file_review_status": "existing_sufficient",
+      "review_scope": "已审读整文件和相关规则调用/测试",
+      "current_sha256": "0be6b4dbde9ebc8d7150140d5ae66a3aa755bd3376b43ed51ea13524dc43668a",
+      "latest_current_sha": "85e0b8d9604713f3506c56758a3af02977ef66e35bc66ff7d3136e129eefac65",
+      "latest_current_sha_evidence": [
+        "root-new-js-tests-02.json",
+        "root-platform-disposition-results.json",
+        "root-platform-disposition-phase02-results.json",
+        "full-checkpoint-03/source-scope.json"
+      ],
+      "historical_sha_fields_preserved": true
+    },
+    "lab/scripts/govern-dataset.js": {
+      "sha256": "c7786f376489e03c19c0961b5f3922bafb3276c1561b9594cf552906fd150e2a",
+      "file_review_status": "existing_sufficient",
+      "review_scope": "已审读整文件和相关规则调用/测试",
+      "current_sha256": "c7786f376489e03c19c0961b5f3922bafb3276c1561b9594cf552906fd150e2a"
+    },
+    "scripts/check-story049-ocr-worker.mjs": {
+      "sha256": "154f0dea2b843c7e90eb97ce1461226283c6449cc7bf2178241dca075eff5ceb",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "154f0dea2b843c7e90eb97ce1461226283c6449cc7bf2178241dca075eff5ceb"
+    },
+    "scripts/check-story052-production-deployment.mjs": {
+      "sha256": "20be91cc7b35b8df3a1284a678ed29231bf93359d5fbb66cddc868aa9e4161bb",
+      "file_review_status": "existing_sufficient",
+      "review_scope": "已审读整文件和相关规则调用/测试",
+      "current_sha256": "20be91cc7b35b8df3a1284a678ed29231bf93359d5fbb66cddc868aa9e4161bb",
+      "latest_current_sha": "688b7952d124a8208bd4f650c191862f6124993a471a66affa956420f3334676",
+      "latest_current_sha_evidence": [
+        "root-new-findings-progress.json",
+        "root-production-deployment-check-01.log",
+        "full-checkpoint-03/source-scope.json"
+      ],
+      "historical_sha_fields_preserved": true
+    },
+    "scripts/ci/schema-version.mjs": {
+      "sha256": "89f970c4defb7eff64f966320b4c6957076cf2a6f8af98b415118c0cef420c59",
+      "file_review_status": "existing_sufficient",
+      "review_scope": "已审读整文件和相关规则调用/测试",
+      "current_sha256": "89f970c4defb7eff64f966320b4c6957076cf2a6f8af98b415118c0cef420c59"
+    },
+    "tests/e2e/specs/account-security.spec.ts": {
+      "sha256": "afece037c3488cac25d74ff469840c44ee53366322f484bdad7da88898f37776",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "afece037c3488cac25d74ff469840c44ee53366322f484bdad7da88898f37776"
+    },
+    "tests/e2e/specs/dashboard-workbench.spec.ts": {
+      "sha256": "67664576c00bf956edda79642f91c4bb7fccfacb57863fbecb09f5932895945f",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "67664576c00bf956edda79642f91c4bb7fccfacb57863fbecb09f5932895945f"
+    },
+    "tests/e2e/specs/exam-create-flow.spec.ts": {
+      "sha256": "0484987d62b35ed231184a6c25d816e1aad60cbae994bb0d37430a8626f98c13",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "0484987d62b35ed231184a6c25d816e1aad60cbae994bb0d37430a8626f98c13"
+    },
+    "tests/e2e/specs/exam-create.visual.spec.ts": {
+      "sha256": "8dd072f3eae0ba078400a3bf97af2a82508e22f27c8dee172b2248b2258f96a6",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "8dd072f3eae0ba078400a3bf97af2a82508e22f27c8dee172b2248b2258f96a6"
+    },
+    "tests/e2e/specs/exam-workspace.spec.ts": {
+      "sha256": "0e1cb8aa6570f0c22478792d3ef8e13576facafeec6e0997e642b2885412ee04",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "0e1cb8aa6570f0c22478792d3ef8e13576facafeec6e0997e642b2885412ee04"
+    },
+    "tests/e2e/specs/exam-workspace.visual.spec.ts": {
+      "sha256": "a7e23c713f7c66f0999744fb12100da3b4f3b79a420181fb90e25b7ac15800eb",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "a7e23c713f7c66f0999744fb12100da3b4f3b79a420181fb90e25b7ac15800eb"
+    },
+    "tests/e2e/specs/grading-workbench-keyboard.spec.ts": {
+      "sha256": "6ae6af4bf348c993cc459e67cfc578b4b563017f66ad6e1168ad5590581ba328",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "6ae6af4bf348c993cc459e67cfc578b4b563017f66ad6e1168ad5590581ba328"
+    },
+    "tests/e2e/specs/platform-model-config.spec.ts": {
+      "sha256": "21019e35e5ed3f5aaa9d6158c6befa69662903cb05b463da81f274e81e58f9cf",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "21019e35e5ed3f5aaa9d6158c6befa69662903cb05b463da81f274e81e58f9cf"
+    },
+    "tests/e2e/specs/platform-model-management.spec.ts": {
+      "sha256": "8d7f8f0d940068f37c29d6ee8df5622b10b327d690ad8fac8712f1683f4f47ba",
+      "file_review_status": "pending",
+      "review_scope": "已审读告警所在函数、调用及相关测试；未完成整文件维护审读",
+      "current_sha256": "8d7f8f0d940068f37c29d6ee8df5622b10b327d690ad8fac8712f1683f4f47ba"
+    }
+  },
+  "validations": [
+    {
+      "name": "同一当前工作区输入下旧/新 AST 提取完整 JSON 比较",
+      "result": "passed",
+      "call_sites": 405,
+      "evidence": "frontend-comparison.json"
+    },
+    {
+      "name": "Node schema-version 与架构审计工具测试",
+      "result": "passed",
+      "tests": 5,
+      "evidence": "frontend-scripts-0.log"
+    },
+    {
+      "name": "desktop-client 四份现有测试",
+      "result": "passed",
+      "tests": 100,
+      "evidence": "frontend-desktop-execution.json"
+    },
+    {
+      "name": "student-portal 三份现有测试",
+      "result": "passed",
+      "tests": 48,
+      "evidence": "当前会话先前工具输出，未保存原始日志"
+    },
+    {
+      "name": "AnswerEvidencePane/useAnswerViewer 两份现有测试",
+      "result": "passed",
+      "tests": 10,
+      "evidence": "当前会话先前工具输出，未保存原始日志"
+    },
+    {
+      "name": "web-admin production-contracts 首次验证",
+      "result": "passed_before_additional_test_edits",
+      "tests": 17,
+      "evidence": "当前会话先前工具输出，未保存原始日志"
+    },
+    {
+      "name": "三个应用首轮类型检查",
+      "result": "passed_before_additional_test_edits",
+      "evidence": "当前会话先前工具输出；新改测试后仍需补跑"
+    },
+    {
+      "name": "Biome lint",
+      "result": "passed_with_warnings",
+      "warnings": 15,
+      "evidence": "frontend-lint-execution.json"
+    },
+    {
+      "name": "STORY049/052 静态门禁",
+      "result": "passed",
+      "evidence": "frontend-scripts-execution.json"
+    },
+    {
+      "name": "lab 现有测试",
+      "result": "passed",
+      "tests": 194,
+      "evidence": "frontend-scripts-4.log"
+    },
+    {
+      "name": "web-admin 38 份测试并行尝试",
+      "result": "incomplete_worker_crash",
+      "evidence": "frontend-web-execution.json",
+      "detail": "ERR_IPC_CHANNEL_CLOSED，不能计为完整通过"
+    },
+    {
+      "name": "第二轮类型检查",
+      "result": "partial_resource_failure",
+      "evidence": "frontend-types-execution.json",
+      "detail": "student-portal 成功；desktop/web 原生 OOM 退出 134，待串行重跑"
+    },
+    {
+      "name": "production-contracts 第二轮尝试",
+      "result": "resource_failure",
+      "evidence": "frontend-scripts-execution.json",
+      "detail": "Windows 0xC000012D 提交内存不足"
+    },
+    {
+      "name": "Playwright 9 份规格 47 项尝试",
+      "result": "interrupted_needs_serial_retry",
+      "evidence": "frontend-e2e-interrupted.json",
+      "detail": "浏览器资源不足后终止自有测试树；另有移动端截图差异必须单独复核"
+    },
+    {
+      "name": "web-admin 最新串行 38 份现有测试",
+      "result": "passed",
+      "evidence": "frontend-web-retry-01-execution.json",
+      "tests": 416,
+      "files": 38,
+      "skips": 0,
+      "source_sha_stable": true
+    },
+    {
+      "name": "web-admin 最新类型检查",
+      "result": "passed",
+      "evidence": "frontend-web-current-typecheck-02.json",
+      "source_sha_stable": true,
+      "prior_failure_preserved": "frontend-web-current-typecheck-01.json"
+    },
+    {
+      "name": "Playwright 失败只读独立归因",
+      "result": "reviewed_with_open_acceptance_failures",
+      "evidence": "frontend-e2e-independent-review-python-agent.json",
+      "detail": "390x844 布局/文案与原工作区一致，旧快照仍验收失败；移动壳/确认页 trace 资源错误待复验。"
+    },
+    {
+      "name": "最新生产路由契约与 measure-build 现有测试",
+      "result": "passed_for_current_frozen_sha",
+      "tests": 17,
+      "skips": 0,
+      "exit_code": 0,
+      "source_sha_stable": true,
+      "evidence": "frontend-production-contracts-current-01.json",
+      "test_output": "frontend-production-contracts-current-01.tap",
+      "scope": "生产路由契约与 measure-build；不扩大到浏览器验收或未运行的其他测试"
+    }
+  ],
+  "summary": {
+    "implemented_needs_rescan": 166,
+    "needs_platform_disposition": 6
+  }
+}

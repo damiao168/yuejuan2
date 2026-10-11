@@ -3,7 +3,8 @@ import type { ExamTemplateSubject } from "../../../api/examTemplates";
 import type { BlueprintSectionDraft, CreateExamDraft, SubjectExamDraft } from "./types";
 
 function localId(prefix: string) {
-  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  // 编辑器 ID 只用于区分尚未提交的分区，不是安全凭据；使用 CSPRNG 避免同一毫秒创建重复 ID。
+  return `${prefix}-${crypto.randomUUID()}`;
 }
 
 export function createSubjectDraft(subject: string): SubjectExamDraft {

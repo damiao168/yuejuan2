@@ -85,9 +85,9 @@ if (process.argv[2] === "--worker") {
       assert.equal(measured.bytesRead, measured.size);
       assert.ok(measured.largestRead <= 4 * MiB);
       assert.ok(measured.rssGrowth < 128 * MiB, `RSS grew ${measured.rssGrowth} bytes`);
-      // Includes transient Blob copies awaiting GC, not only the live chunk.
-      // Keep a fixed ceiling below half the large fixture; never scale it
-      // with file size or force GC to manufacture a low measurement.
+      // 计入等待 GC 的临时 Blob 副本，不只统计当前活动分块。
+      // 固定上限应低于大测试文件的一半，不能随文件大小
+      // 提高，也不能强制 GC 来制造偏低的测量值。
       assert.ok(measured.arrayBufferGrowth < 128 * MiB, `array buffers grew ${measured.arrayBufferGrowth} bytes`);
       results.push({ phase: sizeMiB === 256 ? "fresh-process-recovery" : "baseline-size", ...measured });
     }

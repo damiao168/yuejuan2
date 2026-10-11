@@ -1,0 +1,131 @@
+{
+  "audited_at_utc": "2026-10-11T11:34:36.198223+00:00",
+  "reviewer": "/root/sonar_python_fix",
+  "analysis_id": "a741715d-5427-49a6-ac74-7dd92ad5cfa1",
+  "scope": "两份当前/冻结源码全文审读，逐 key 对照原始平台告警；本机已安装 CLI loader 只读审读和函数输入解析。不修改源码、生成产物、平台状态，不启动浏览器。",
+  "source_files": [
+    {
+      "file": "docs/architecture/tools/build_preview.py",
+      "full_file_read": true,
+      "current_sha256": "56d94138d0123f4ae3f7beba356fbde9703403ba955aa85638871ed6e9bdc9bd",
+      "scan_scope_sha256": "56d94138d0123f4ae3f7beba356fbde9703403ba955aa85638871ed6e9bdc9bd",
+      "actual_frozen_sha256": "56d94138d0123f4ae3f7beba356fbde9703403ba955aa85638871ed6e9bdc9bd",
+      "current_matches_scanned": true,
+      "frozen_matches_recorded": true,
+      "line_count": 52
+    },
+    {
+      "file": "docs/architecture/tools/check_preview_typography.js",
+      "full_file_read": true,
+      "current_sha256": "1ef9d115d07883936333d8c4b77cbd46832e3a01f563b4c5da45e3a7841714b2",
+      "scan_scope_sha256": "1ef9d115d07883936333d8c4b77cbd46832e3a01f563b4c5da45e3a7841714b2",
+      "actual_frozen_sha256": "1ef9d115d07883936333d8c4b77cbd46832e3a01f563b4c5da45e3a7841714b2",
+      "current_matches_scanned": true,
+      "frozen_matches_recorded": true,
+      "line_count": 37
+    }
+  ],
+  "issue_records": [
+    {
+      "key": "eb390af3-af14-4c27-b33c-0b1442f95181",
+      "rule": "python:S125",
+      "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/build_preview.py",
+      "line": 17,
+      "issueStatus": "OPEN",
+      "message": "Remove this commented out code."
+    },
+    {
+      "key": "98688ff8-f75e-4bbb-897a-2eaf11ee1c8f",
+      "rule": "javascript:S905",
+      "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/check_preview_typography.js",
+      "line": 2,
+      "issueStatus": "OPEN",
+      "message": "Expected an assignment or function call and instead saw an expression."
+    }
+  ],
+  "python_s125": {
+    "key": "eb390af3-af14-4c27-b33c-0b1442f95181",
+    "line_17_18_comment_tokens": [
+      {
+        "line": 17,
+        "text": "# 原生导出只指定微软雅黑；离线阅读机未安装该字体时使用系统无衬线字体。"
+      },
+      {
+        "line": 18,
+        "text": "# 仅补齐HTML内嵌副本的字体栈，不改原生SVG的尺寸、图形或可编辑图纸。"
+      }
+    ],
+    "ast_unchanged_if_comments_removed": true,
+    "reviewed_code": "    for i,p in enumerate(pages):\n        svg=(BASE/p['preview']).read_text(encoding='utf-8')\n        # 原生导出只指定微软雅黑；离线阅读机未安装该字体时使用系统无衬线字体。\n        # 仅补齐HTML内嵌副本的字体栈，不改原生SVG的尺寸、图形或可编辑图纸。\n        svg=svg.replace(\"font-family: 'Microsoft YaHei';\", \"font-family: 'Microsoft YaHei',sans-serif;\")\n        # 保留原生尺寸；大页默认按 100% 阅读，只有主动选择适应页面时才缩小。\n        # 离线预览只需 SVG 图形和尺寸；拒绝 DTD 或实体声明，不把展开后的内容嵌入 HTML。\n        root=safe_xml.fromstring(svg, forbid_dtd=True)\n        width=float(root.attrib['width'].removesuffix('px'))",
+    "reason": "第17–18行是解释离线机器字体回退及只修改内嵌副本边界的中文说明。实际替换 SVG font-family 的代码在第19行运行；说明并非被注释掉的 Python 语句。删除正确维护说明不能修复真实缺陷，保留并做平台 FALSE_POSITIVE 处置有具体源码依据。",
+    "provenance": "本代理未修改 root 所有的 build_preview.py；保留已有 XML 安全解析等外部变更，不将其记为本代理修复。"
+  },
+  "javascript_s905": {
+    "key": "98688ff8-f75e-4bbb-897a-2eaf11ee1c8f",
+    "reason": "该脚本是 playwright-cli run-code --filename 的单函数输入。CLI 将文件内容在括号内求值成 __fn__，再 await __fn__(page)，所以 async(page)=>表达式的值被运行器使用，不是普通 Node 模块的无用语句。自行改为 IIFE 会丢失 runner 注入的 page，违背该入口协议。",
+    "documented_invocation": "playwright-cli run-code --filename=docs/architecture/tools/check_preview_typography.js",
+    "installed_cli_version": "0.1.18",
+    "installed_playwright_core_version": "1.63.0-alpha-2026-08-05",
+    "loader_source": [
+      {
+        "file": "C:\\Users\\pc\\AppData\\Roaming\\npm\\node_modules\\@playwright\\cli\\node_modules\\playwright-core\\lib\\coreBundle.js",
+        "start_line": 67013,
+        "end_line": 67071,
+        "source": "// packages/playwright-core/src/tools/backend/runCode.ts\nvar import_fs56, import_vm, z20, codeSchema, runCode, runCode_default;\nvar init_runCode = __esm({\n  \"packages/playwright-core/src/tools/backend/runCode.ts\"() {\n    \"use strict\";\n    import_fs56 = __toESM(require(\"fs\"));\n    import_vm = __toESM(require(\"vm\"));\n    init_manualPromise();\n    init_tool();\n    z20 = require(\"./utilsBundle\").z;\n    codeSchema = z20.object({\n      code: z20.string().optional().describe(`A JavaScript function containing Playwright code to execute. It will be invoked with a single argument, page, which you can use for any page interaction. For example: \\`async (page) => { await page.getByRole('button', { name: 'Submit' }).click(); return await page.title(); }\\``),\n      filename: z20.string().optional().describe(\"Load code from the specified file. If both code and filename are provided, code will be ignored.\")\n    });\n    runCode = defineTabTool({\n      capability: \"core\",\n      schema: {\n        name: \"browser_run_code_unsafe\",\n        title: \"Run Playwright code (unsafe)\",\n        description: \"Run a Playwright code snippet. Unsafe: executes arbitrary JavaScript in the Playwright server process and is RCE-equivalent.\",\n        inputSchema: codeSchema,\n        type: \"action\"\n      },\n      handle: async (tab2, params2, response2) => {\n        let code = params2.code;\n        if (params2.filename) {\n          const resolvedPath = await response2.resolveClientFilename(params2.filename);\n          code = await import_fs56.default.promises.readFile(resolvedPath, \"utf-8\");\n        }\n        response2.addCode(`await (${code})(page);`);\n        const __end__ = new ManualPromise();\n        const context2 = {\n          page: tab2.page,\n          __end__\n        };\n        import_vm.default.createContext(context2);\n        const unsubscribe = tab2.context.onUnhandledRejection((reason) => {\n          if (!__end__.isDone())\n            __end__.reject(reason instanceof Error ? reason : new Error(String(reason)));\n        });\n        try {\n          await tab2.waitForCompletion(async () => {\n            context2.__fn__ = import_vm.default.runInContext(\"(\" + code + \")\", context2);\n            const snippet = \"(async () => {\\n  try {\\n    const result = await __fn__(page);\\n    __end__.resolve(JSON.stringify(result));\\n  } catch (e) {\\n    __end__.reject(e);\\n  }\\n})()\";\n            const iifePromise = import_vm.default.runInContext(snippet, context2);\n            await Promise.race([iifePromise, __end__]);\n            const result2 = await __end__;\n            if (typeof result2 === \"string\")\n              response2.addTextResult(result2);\n          });\n        } finally {\n          unsubscribe();\n        }\n      }\n    });\n    runCode_default = [\n      runCode\n    ];\n  }"
+      },
+      {
+        "file": "C:\\Users\\pc\\AppData\\Roaming\\npm\\node_modules\\@playwright\\cli\\node_modules\\playwright-core\\lib\\coreBundle.js",
+        "start_line": 68416,
+        "end_line": 68428,
+        "source": "    runCode2 = declareCommand({\n      name: \"run-code\",\n      description: \"Run Playwright code snippet\",\n      category: \"devtools\",\n      args: z30.object({\n        code: z30.string().optional().describe(\"A JavaScript function containing Playwright code to execute. It will be invoked with a single argument, page, which you can use for any page interaction.\")\n      }),\n      options: z30.object({\n        filename: z30.string().optional().describe(\"Load code from the specified file.\")\n      }),\n      toolName: \"browser_run_code_unsafe\",\n      toolParams: ({ code, filename }) => ({ code, filename })\n    });"
+      }
+    ],
+    "reference_file": "C:\\Users\\pc\\AppData\\Roaming\\npm\\node_modules\\@playwright\\cli\\skills\\playwright-cli\\references\\running-code.md",
+    "reference_lines_14_23": "You can also load the function from a file:\n\n```bash\nplaywright-cli run-code --filename=./my-script.js\n```\n\n\nThe code must be a single function expression, it is wrapped in `(...)` and evaluated.\nimport/export/require syntax is not supported.\n",
+    "filename_read_vm_parse_page_call_confirmed": true,
+    "expression_validation": {
+      "exit_code": 0,
+      "stdout": "{\"expression_value_type\":\"function\",\"argument_count\":1,\"constructor_name\":\"AsyncFunction\",\"body_invoked\":false,\"browser_started\":false}\n",
+      "stderr": "",
+      "command": "node -e [只读 vm 函数输入解析；函数体不调用] check_preview_typography.js",
+      "result": {
+        "expression_value_type": "function",
+        "argument_count": 1,
+        "constructor_name": "AsyncFunction",
+        "body_invoked": false,
+        "browser_started": false
+      }
+    },
+    "baseline_only_error_constructor_changes": true,
+    "business_effects_read": "page.goto 仅指向127.0.0.1:8766本地图纸；检查深链接、100%原生尺寸、换页150%缩放、fit和9页联系表；POST本地预览检查JSON并写一张截图。",
+    "limitations": "本批仅解析函数输入并审读 loader，不调用函数体。本轮真实浏览器/字体/尺寸验收未执行；旧 preview-typography-validation.json 是历史证据，未回写到当前 SHA 或作为本轮 pass。"
+  },
+  "evidence_files": [
+    {
+      "file": "C:\\Users\\pc\\AppData\\Roaming\\npm\\node_modules\\@playwright\\cli\\node_modules\\playwright-core\\lib\\coreBundle.js",
+      "sha256": "adf9246486a03bee08b2895db057ba470c62377911d291693fe783d91d6fec52"
+    },
+    {
+      "file": "C:\\Users\\pc\\AppData\\Roaming\\npm\\node_modules\\@playwright\\cli\\package.json",
+      "sha256": "184ed53662eadeeb6923f2890a87b3699ed5b09fc11ed5297ca7abd5356f3c09"
+    },
+    {
+      "file": "C:\\Users\\pc\\AppData\\Roaming\\npm\\node_modules\\@playwright\\cli\\node_modules\\playwright-core\\package.json",
+      "sha256": "cc20d8407732820e1a334b890b204360aabf5e675ebfe0d2881bc2f54d32e681"
+    },
+    {
+      "file": "C:\\Users\\pc\\AppData\\Roaming\\npm\\node_modules\\@playwright\\cli\\skills\\playwright-cli\\references\\running-code.md",
+      "sha256": "d95c539a5990b71d02d8bdf1d9414df16191eb6cff95b0063820518b7a13dcb2"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\reports\\sonar-remediation-2026-10-11\\full-checkpoint-03\\pre-disposition-checkpoint02-new-statuses.json",
+      "sha256": "51fbfed31b38226371c144c4e0295b97d6454fdc79ae9b5f7189c9e44a5eba2f"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\reports\\sonar-remediation-2026-10-11\\full-checkpoint-03\\source-scope.json",
+      "sha256": "06d9de7b8a42d7c024da1f2ddc6b0e085cdd713eab984031c6e5c2464459ea24"
+    }
+  ],
+  "platform_action": "review_recommends_false_positive_for_two_keys_only_root_may_execute",
+  "passed": true
+}

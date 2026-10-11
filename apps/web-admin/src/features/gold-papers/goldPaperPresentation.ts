@@ -2,8 +2,8 @@ export interface GoldRubricPoint {
   id: string;
   description: string;
   score: number;
-  // Frozen rubric snapshots predate the editor-only flag. Calibration and
-  // nomination controls can still share the same scoring component safely.
+  // 冻结的评分细则快照早于仅供编辑器使用的标记；校准和
+  // 提名控件仍可安全地共用同一个评分组件。
   required: boolean;
 }
 

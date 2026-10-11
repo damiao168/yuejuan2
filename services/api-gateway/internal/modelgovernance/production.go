@@ -5,7 +5,8 @@ import (
 	"strings"
 )
 
-// 启动前只检查会被路由的供应商和部署；外部配置的密钥、价格计量和健康状态任一不完整都阻止上线。
+// ValidateProductionInventory 检查未禁用的外部配置；未验证供应商可暂存不支持的密钥引用。
+// 供应商检查先于部署检查，返回遇到的第一个元数据、密钥或计量错误。
 func ValidateProductionInventory(
 	providers []Provider,
 	deployments []Deployment,
@@ -14,21 +15,8 @@ func ValidateProductionInventory(
 	providerByTenantAndKey := make(map[string]Provider, len(providers))
 	for _, provider := range providers {
 		providerByTenantAndKey[provider.TenantID+"|"+provider.Key] = provider
-		if provider.Kind != ProviderExternal || provider.Status == "disabled" {
-			continue
-		}
-		if ValidateProvider(provider) != nil {
-			return fmt.Errorf("%w: provider %s metadata is invalid", ErrProductionUnsafe, provider.Key)
-		}
-		probe, err := secrets.Probe(provider.CredentialRef)
-		if err != nil {
-			return fmt.Errorf("%w: provider %s has an invalid secret reference", ErrProductionUnsafe, provider.Key)
-		}
-		if probe.ResolverSupported && (!probe.Configured || !probe.MeetsMinimumStrength) {
-			return fmt.Errorf("%w: provider %s secret is missing or weak", ErrProductionUnsafe, provider.Key)
-		}
-		if provider.Status != "unverified" && !probe.ResolverSupported {
-			return fmt.Errorf("%w: provider %s has no installed secret resolver", ErrProductionUnsafe, provider.Key)
+		if err := validateProductionProvider(provider, secrets); err != nil {
+			return err
 		}
 	}
 	for _, deployment := range deployments {
@@ -36,17 +24,44 @@ func ValidateProductionInventory(
 		if !exists || provider.Kind != ProviderExternal || deployment.Status == "disabled" {
 			continue
 		}
-		if ValidateDeployment(deployment, provider) != nil {
-			return fmt.Errorf("%w: deployment %s metadata is invalid", ErrProductionUnsafe, deployment.Key)
+		if err := validateProductionDeployment(deployment, provider); err != nil {
+			return err
 		}
-		meter := strings.TrimSpace(stringValue(deployment.PricingPolicy["meter"]))
-		if meter == "" || meter == "not_configured" {
-			return fmt.Errorf("%w: deployment %s has no pricing meter", ErrProductionUnsafe, deployment.Key)
-		}
-		if deployment.Status == "shadow_only" &&
-			(provider.Status != "active" || deployment.HealthState != "available") {
-			return fmt.Errorf("%w: routable deployment %s is not fully verified", ErrProductionUnsafe, deployment.Key)
-		}
+	}
+	return nil
+}
+
+func validateProductionProvider(provider Provider, secrets SecretReferenceResolver) error {
+	if provider.Kind != ProviderExternal || provider.Status == "disabled" {
+		return nil
+	}
+	if ValidateProvider(provider) != nil {
+		return fmt.Errorf("%w: provider %s metadata is invalid", ErrProductionUnsafe, provider.Key)
+	}
+	probe, err := secrets.Probe(provider.CredentialRef)
+	if err != nil {
+		return fmt.Errorf("%w: provider %s has an invalid secret reference", ErrProductionUnsafe, provider.Key)
+	}
+	if probe.ResolverSupported && (!probe.Configured || !probe.MeetsMinimumStrength) {
+		return fmt.Errorf("%w: provider %s secret is missing or weak", ErrProductionUnsafe, provider.Key)
+	}
+	if provider.Status != "unverified" && !probe.ResolverSupported {
+		return fmt.Errorf("%w: provider %s has no installed secret resolver", ErrProductionUnsafe, provider.Key)
+	}
+	return nil
+}
+
+func validateProductionDeployment(deployment Deployment, provider Provider) error {
+	if ValidateDeployment(deployment, provider) != nil {
+		return fmt.Errorf("%w: deployment %s metadata is invalid", ErrProductionUnsafe, deployment.Key)
+	}
+	meter := strings.TrimSpace(stringValue(deployment.PricingPolicy["meter"]))
+	if meter == "" || meter == "not_configured" {
+		return fmt.Errorf("%w: deployment %s has no pricing meter", ErrProductionUnsafe, deployment.Key)
+	}
+	if deployment.Status == "shadow_only" &&
+		(provider.Status != "active" || deployment.HealthState != "available") {
+		return fmt.Errorf("%w: routable deployment %s is not fully verified", ErrProductionUnsafe, deployment.Key)
 	}
 	return nil
 }

@@ -45,7 +45,7 @@ func (h *Handler) wechatRepository() (WechatLoginRepository, bool) {
 }
 
 func (h *Handler) StartWechatLogin(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set(authCacheControlHeader, authNoStore)
 	if !h.wechatEnabled || h.wechatAppID == "" || h.wechatAppSecret == "" || h.wechatRedirectURL == "" {
 		httpx.Error(w, r, http.StatusServiceUnavailable, "wechat_login_unavailable", "wechat login is not configured")
 		return
@@ -105,7 +105,7 @@ func (h *Handler) StartWechatLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) WechatCallback(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set(authCacheControlHeader, authNoStore)
 	if !h.wechatEnabled {
 		h.wechatCallbackPage(w, http.StatusServiceUnavailable, "微信登录暂不可用", "请返回电脑端改用账号密码登录。")
 		return
@@ -176,7 +176,7 @@ func (h *Handler) exchangeWechatCode(r *http.Request, code string) (wechatTokenR
 }
 
 func (h *Handler) PollWechatLogin(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set(authCacheControlHeader, authNoStore)
 	repository, ok := h.wechatRepository()
 	if !h.wechatEnabled || !ok {
 		httpx.Error(w, r, http.StatusServiceUnavailable, "wechat_login_unavailable", "wechat login is unavailable")

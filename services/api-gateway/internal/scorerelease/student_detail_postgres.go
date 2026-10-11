@@ -6,8 +6,7 @@ import (
 	"errors"
 )
 
-// Resolve the immutable release once, without loading any question payloads.
-// Cohort totals are needed only when the visibility policy asks for them.
+// 只解析一次不可变发布，不加载任何题目载荷。只有可见性策略要求时才需要同组群体总数。
 func (s *PostgresStore) studentDetail(ctx context.Context, tenantID, examID, studentID string) (Detail, error) {
 	var id string
 	err := s.db.QueryRowContext(ctx, `SELECT release_id::text FROM score_release_current WHERE tenant_id=$1 AND exam_id=$2::uuid`, tenantID, examID).Scan(&id)

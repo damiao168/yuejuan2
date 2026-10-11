@@ -76,6 +76,7 @@ func (s *PostgresStore) ListMembers(ctx context.Context, tenantID string) ([]Mem
 SELECT u.id::text,u.username,u.display_name,
   CASE WHEN COALESCE(u.phone,'')='' THEN '' WHEN char_length(u.phone)<=7 THEN repeat('*',char_length(u.phone)) ELSE left(u.phone,3)||repeat('*',char_length(u.phone)-7)||right(u.phone,4) END,
   COALESCE(u.employee_no,''),u.status,COALESCE(u.school_id::text,''),u.created_at,u.activated_at,u.last_login_at,
+  (SELECT a.expires_at FROM auth_activation a WHERE a.tenant_id=u.tenant_id AND a.user_id=u.id AND a.used_at IS NULL ORDER BY a.created_at DESC,a.id DESC LIMIT 1),
   COALESCE((SELECT jsonb_agg(DISTINCT r.code ORDER BY r.code) FROM user_role ur JOIN role r ON r.tenant_id=ur.tenant_id AND r.id=ur.role_id WHERE ur.tenant_id=u.tenant_id AND ur.user_id=u.id AND ur.deleted_at IS NULL AND r.deleted_at IS NULL),'[]'::jsonb)
 FROM app_user u
 WHERE u.tenant_id=$1::uuid AND u.deleted_at IS NULL
@@ -99,13 +100,17 @@ ORDER BY u.created_at,u.id`, tenantID)
 	items := []Member{}
 	for rows.Next() {
 		var item Member
-		var activated, lastLogin sql.NullTime
+		var activated, lastLogin, activationExpires sql.NullTime
 		var roles []byte
-		if err := rows.Scan(&item.ID, &item.Username, &item.DisplayName, &item.PhoneMasked, &item.EmployeeNo, &item.Status, &item.SchoolID, &item.CreatedAt, &activated, &lastLogin, &roles); err != nil {
+		if err := rows.Scan(&item.ID, &item.Username, &item.DisplayName, &item.PhoneMasked, &item.EmployeeNo, &item.Status, &item.SchoolID, &item.CreatedAt, &activated, &lastLogin, &activationExpires, &roles); err != nil {
 			return nil, err
 		}
 		item.ActivatedAt = nullableTime(activated)
 		item.LastLoginAt = nullableTime(lastLogin)
+		// 只返回未使用邀请的有效期，不向平台只读视图暴露激活令牌或哈希。
+		if item.Status == "invited" {
+			item.ActivationExpiresAt = nullableTime(activationExpires)
+		}
 		_ = json.Unmarshal(roles, &item.Roles)
 		if item.Roles == nil {
 			item.Roles = []string{}

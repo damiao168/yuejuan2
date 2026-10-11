@@ -452,38 +452,44 @@ func TestOCRAvailabilityUsesScopedPermissionsAndResponse(t *testing.T) {
 	}
 	for _, permission := range allowedPermissions {
 		t.Run(permission, func(t *testing.T) {
-			router := NewRouter(testConfig(), logger.New(io.Discard, "error"), nil, testAuthStoreWithPermissions(t, []string{permission}), org.NewMemoryStore(), exam.NewMemoryStore(), paper.NewMemoryStore())
-			req := httptest.NewRequest(http.MethodGet, "/api/v1/ocr/availability", nil)
-			req.Header.Set("Authorization", "Bearer "+serverLogin(t, router))
-			rec := httptest.NewRecorder()
-
-			router.ServeHTTP(rec, req)
-
-			if rec.Code != http.StatusOK {
-				t.Fatalf("%s should read OCR availability, got %d %s", permission, rec.Code, rec.Body.String())
-			}
-			var response map[string]json.RawMessage
-			if err := json.NewDecoder(rec.Body).Decode(&response); err != nil {
-				t.Fatalf("decode OCR availability: %v", err)
-			}
-			if len(response) != 2 || response["generated_at"] == nil || response["worker"] == nil {
-				t.Fatalf("OCR availability must only expose generated_at and worker: %#v", response)
-			}
-			var worker map[string]any
-			if err := json.Unmarshal(response["worker"], &worker); err != nil {
-				t.Fatalf("decode OCR worker status: %v", err)
-			}
-			for _, field := range []string{"name", "availability", "automation_available", "queued_tasks", "in_flight_tasks", "dead_letter_tasks", "impact_code", "impact", "action"} {
-				if _, ok := worker[field]; !ok {
-					t.Fatalf("OCR availability missing %s: %#v", field, worker)
-				}
-			}
-			for _, forbidden := range []string{"service", "environment", "dependencies", "observability"} {
-				if _, ok := response[forbidden]; ok {
-					t.Fatalf("OCR availability exposed system field %s: %#v", forbidden, response)
-				}
-			}
+			assertOCRAvailabilityForPermission(t, permission)
 		})
+	}
+}
+
+// OCR 消费权限只返回生成时间和 worker 字段，不得扩展到完整系统状态。
+func assertOCRAvailabilityForPermission(t *testing.T, permission string) {
+	t.Helper()
+	router := NewRouter(testConfig(), logger.New(io.Discard, "error"), nil, testAuthStoreWithPermissions(t, []string{permission}), org.NewMemoryStore(), exam.NewMemoryStore(), paper.NewMemoryStore())
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/ocr/availability", nil)
+	req.Header.Set("Authorization", "Bearer "+serverLogin(t, router))
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("%s should read OCR availability, got %d %s", permission, rec.Code, rec.Body.String())
+	}
+	var response map[string]json.RawMessage
+	if err := json.NewDecoder(rec.Body).Decode(&response); err != nil {
+		t.Fatalf("decode OCR availability: %v", err)
+	}
+	if len(response) != 2 || response["generated_at"] == nil || response["worker"] == nil {
+		t.Fatalf("OCR availability must only expose generated_at and worker: %#v", response)
+	}
+	var worker map[string]any
+	if err := json.Unmarshal(response["worker"], &worker); err != nil {
+		t.Fatalf("decode OCR worker status: %v", err)
+	}
+	for _, field := range []string{"name", "availability", "automation_available", "queued_tasks", "in_flight_tasks", "dead_letter_tasks", "impact_code", "impact", "action"} {
+		if _, ok := worker[field]; !ok {
+			t.Fatalf("OCR availability missing %s: %#v", field, worker)
+		}
+	}
+	for _, forbidden := range []string{"service", "environment", "dependencies", "observability"} {
+		if _, ok := response[forbidden]; ok {
+			t.Fatalf("OCR availability exposed system field %s: %#v", forbidden, response)
+		}
 	}
 }
 

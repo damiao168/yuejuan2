@@ -1,0 +1,727 @@
+{
+  "platform": "SonarQube Community Build",
+  "server_version": "26.9.0.129388",
+  "scanner": "SonarScanner CLI 8.1.0.6389",
+  "scan_started_at": "2026-10-11T11:41:41.118535+08:00",
+  "exported_at": "2026-10-11T12:21:23.729040+08:00",
+  "scanner_exit": null,
+  "compute_engine_status": "SUCCESS",
+  "metrics": {
+    "complexity": "58301",
+    "duplicated_lines_density": "1.5",
+    "duplicated_lines": "3821",
+    "functions": "15804",
+    "classes": "2019",
+    "sqale_index": "6898",
+    "sqale_rating": "1.0",
+    "bugs": "1653",
+    "lines_to_cover": "82679",
+    "duplicated_files": "103",
+    "ncloc": "227136",
+    "lines": "250362",
+    "coverage": "0.0",
+    "reliability_rating": "4.0",
+    "code_smells": "560",
+    "ncloc_language_distribution": "css=10503;docker=249;go=125947;js=7462;py=19113;rust=4426;ts=58107;web=1329",
+    "security_rating": "3.0",
+    "security_hotspots": "0",
+    "security_review_rating": "1.0",
+    "alert_status": "OK",
+    "uncovered_lines": "82679",
+    "cognitive_complexity": "36400",
+    "duplicated_blocks": "310",
+    "files": "1339",
+    "vulnerabilities": "10"
+  },
+  "quality_gate": {
+    "status": "OK",
+    "conditions": [],
+    "ignoredConditions": false,
+    "caycStatus": "compliant"
+  },
+  "issue_count": 2223,
+  "hotspot_count": 0,
+  "by_severity": {
+    "MAJOR": 1829,
+    "MINOR": 164,
+    "CRITICAL": 230
+  },
+  "by_type": {
+    "CODE_SMELL": 560,
+    "VULNERABILITY": 10,
+    "BUG": 1653
+  },
+  "top_rules": [
+    [
+      "css:S4649",
+      1645
+    ],
+    [
+      "go:S3776",
+      201
+    ],
+    [
+      "python:S5778",
+      79
+    ],
+    [
+      "typescript:S1874",
+      65
+    ],
+    [
+      "python:S7498",
+      23
+    ],
+    [
+      "typescript:S6582",
+      19
+    ],
+    [
+      "python:S9073",
+      18
+    ],
+    [
+      "python:S125",
+      15
+    ],
+    [
+      "python:S3358",
+      15
+    ],
+    [
+      "python:S3776",
+      14
+    ],
+    [
+      "typescript:S6551",
+      11
+    ],
+    [
+      "typescript:S9332",
+      10
+    ],
+    [
+      "typescript:S5906",
+      8
+    ],
+    [
+      "go:S107",
+      8
+    ],
+    [
+      "javascript:S6594",
+      7
+    ],
+    [
+      "python:S1192",
+      7
+    ],
+    [
+      "typescript:S8783",
+      7
+    ],
+    [
+      "python:S2245",
+      6
+    ],
+    [
+      "typescript:S8980",
+      5
+    ],
+    [
+      "javascript:S3776",
+      5
+    ],
+    [
+      "javascript:S6582",
+      4
+    ],
+    [
+      "python:S5332",
+      3
+    ],
+    [
+      "javascript:S1874",
+      3
+    ],
+    [
+      "javascript:S7766",
+      3
+    ],
+    [
+      "javascript:S2681",
+      3
+    ]
+  ],
+  "by_module": [
+    [
+      "docs/architecture",
+      1741
+    ],
+    [
+      "services/api-gateway",
+      209
+    ],
+    [
+      "apps/web-admin",
+      102
+    ],
+    [
+      "ai-services/tests",
+      48
+    ],
+    [
+      "services/ocr-worker",
+      33
+    ],
+    [
+      "services/page-processing-worker",
+      22
+    ],
+    [
+      "tests/e2e",
+      19
+    ],
+    [
+      "apps/desktop-client",
+      10
+    ],
+    [
+      "apps/student-portal",
+      9
+    ],
+    [
+      "ai-services/grading_agent",
+      6
+    ],
+    [
+      "scripts/generate-fujian-2024-math-simulation.py",
+      6
+    ],
+    [
+      "frontend-review-report/前端代码审查报告.html",
+      3
+    ],
+    [
+      "lab/evals",
+      3
+    ],
+    [
+      "scripts/check-story049-ocr-worker.mjs",
+      2
+    ],
+    [
+      "tests/ai-evaluation",
+      2
+    ],
+    [
+      "frontend-review-report/前端UI优化方案-对标成熟产品.html",
+      1
+    ],
+    [
+      "frontend-review-report/前端UI设计分析.html",
+      1
+    ],
+    [
+      "lab/scripts",
+      1
+    ],
+    [
+      "scripts/check-story052-production-deployment.mjs",
+      1
+    ],
+    [
+      "scripts/ci",
+      1
+    ],
+    [
+      "services/image-quality-worker",
+      1
+    ],
+    [
+      "services/math-verification-worker",
+      1
+    ],
+    [
+      "services/subjective-grading-worker",
+      1
+    ]
+  ],
+  "top_complexity_files": [
+    {
+      "path": "apps/student-portal/src/App.tsx",
+      "code_smells": 4.0,
+      "cognitive_complexity": 428.0,
+      "complexity": 517.0,
+      "ncloc": 971.0
+    },
+    {
+      "path": "services/api-gateway/internal/auth/store_memory.go",
+      "cognitive_complexity": 355.0,
+      "complexity": 441.0,
+      "ncloc": 1164.0
+    },
+    {
+      "path": "services/api-gateway/internal/paper/paper_import_reconcile.go",
+      "cognitive_complexity": 337.0,
+      "complexity": 383.0,
+      "ncloc": 1074.0
+    },
+    {
+      "path": "services/api-gateway/internal/paper/paper_import_runtime_postgres.go",
+      "cognitive_complexity": 288.0,
+      "complexity": 407.0,
+      "ncloc": 1155.0
+    },
+    {
+      "path": "services/api-gateway/internal/review/store_memory.go",
+      "cognitive_complexity": 276.0,
+      "complexity": 337.0,
+      "ncloc": 1207.0
+    },
+    {
+      "path": "apps/desktop-client/src/components/OfflineWorkbench.tsx",
+      "code_smells": 3.0,
+      "cognitive_complexity": 268.0,
+      "complexity": 502.0,
+      "ncloc": 1048.0
+    },
+    {
+      "path": "lab/src/schemas/gradingSchema.js",
+      "cognitive_complexity": 202.0,
+      "complexity": 203.0,
+      "ncloc": 387.0
+    },
+    {
+      "path": "services/api-gateway/internal/capture/store_memory.go",
+      "cognitive_complexity": 195.0,
+      "complexity": 223.0,
+      "ncloc": 735.0
+    },
+    {
+      "path": "docs/architecture/tools/extract-frontend-api-recheck.mjs",
+      "code_smells": 10.0,
+      "cognitive_complexity": 191.0,
+      "complexity": 175.0,
+      "duplicated_lines_density": 95.5,
+      "ncloc": 193.0
+    },
+    {
+      "path": "docs/architecture/evidence/extract-frontend-api.mjs",
+      "code_smells": 10.0,
+      "cognitive_complexity": 191.0,
+      "complexity": 175.0,
+      "duplicated_lines_density": 95.9,
+      "ncloc": 193.0
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/store_memory.go",
+      "cognitive_complexity": 191.0,
+      "complexity": 230.0,
+      "ncloc": 833.0
+    },
+    {
+      "path": "docs/architecture/tools/extract_database_catalog.py",
+      "code_smells": 4.0,
+      "cognitive_complexity": 186.0,
+      "complexity": 84.0,
+      "ncloc": 140.0
+    },
+    {
+      "path": "services/api-gateway/internal/paper/store_memory.go",
+      "cognitive_complexity": 184.0,
+      "complexity": 233.0,
+      "ncloc": 762.0
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useGradingQueue.ts",
+      "cognitive_complexity": 184.0,
+      "complexity": 218.0,
+      "ncloc": 348.0
+    },
+    {
+      "path": "apps/web-admin/src/pages/PlatformModelConfigPage.tsx",
+      "code_smells": 1.0,
+      "cognitive_complexity": 182.0,
+      "complexity": 254.0,
+      "ncloc": 737.0
+    },
+    {
+      "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main.go",
+      "cognitive_complexity": 172.0,
+      "complexity": 322.0,
+      "duplicated_lines_density": 1.8,
+      "ncloc": 1896.0
+    },
+    {
+      "path": "services/api-gateway/internal/score/store_memory.go",
+      "cognitive_complexity": 170.0,
+      "complexity": 191.0,
+      "duplicated_lines_density": 4.0,
+      "ncloc": 784.0
+    },
+    {
+      "path": "services/api-gateway/internal/modelcalibration/service.go",
+      "cognitive_complexity": 166.0,
+      "complexity": 227.0,
+      "ncloc": 549.0
+    },
+    {
+      "path": "ai-services/grading_agent/paper_compact/anchors.py",
+      "code_smells": 2.0,
+      "cognitive_complexity": 164.0,
+      "complexity": 171.0,
+      "ncloc": 538.0
+    },
+    {
+      "path": "services/api-gateway/internal/gradingevaluation/service.go",
+      "cognitive_complexity": 160.0,
+      "complexity": 243.0,
+      "ncloc": 537.0
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/usePaperImportWorkflow.ts",
+      "cognitive_complexity": 153.0,
+      "complexity": 230.0,
+      "ncloc": 568.0
+    },
+    {
+      "path": "apps/desktop-client/src/features/session/useDesktopSession.ts",
+      "cognitive_complexity": 152.0,
+      "complexity": 120.0,
+      "ncloc": 367.0
+    },
+    {
+      "path": "services/api-gateway/internal/paper/paper_import_postgres.go",
+      "cognitive_complexity": 150.0,
+      "complexity": 285.0,
+      "duplicated_lines_density": 8.5,
+      "ncloc": 1001.0
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/store_memory.go",
+      "cognitive_complexity": 150.0,
+      "complexity": 163.0,
+      "ncloc": 470.0
+    },
+    {
+      "path": "apps/desktop-client/src/features/scan-queue/useScanQueue.ts",
+      "cognitive_complexity": 150.0,
+      "complexity": 198.0,
+      "ncloc": 373.0
+    },
+    {
+      "path": "services/api-gateway/internal/review/handlers.go",
+      "cognitive_complexity": 149.0,
+      "complexity": 230.0,
+      "duplicated_lines_density": 3.5,
+      "ncloc": 898.0
+    },
+    {
+      "path": "services/api-gateway/internal/scorerelease/store_postgres.go",
+      "cognitive_complexity": 146.0,
+      "complexity": 262.0,
+      "duplicated_lines_density": 5.9,
+      "ncloc": 1221.0
+    },
+    {
+      "path": "ai-services/grading_agent/contract.py",
+      "cognitive_complexity": 144.0,
+      "complexity": 165.0,
+      "ncloc": 464.0
+    },
+    {
+      "path": "services/api-gateway/internal/regrade/store_memory.go",
+      "cognitive_complexity": 142.0,
+      "complexity": 176.0,
+      "duplicated_lines_density": 4.6,
+      "ncloc": 588.0
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/rubric.go",
+      "cognitive_complexity": 141.0,
+      "complexity": 149.0,
+      "ncloc": 377.0
+    }
+  ],
+  "findings_are_tool_candidates": true,
+  "remote_github_access": false,
+  "cloud_upload": false,
+  "coverage_imported": false,
+  "execution_status": {
+    "status": "complete_via_official_local_report_recovery",
+    "completed_at": "2026-10-11T12:21:23.786944+08:00",
+    "current_results_valid": true,
+    "compute_engine_status": "SUCCESS",
+    "original_scanner_standard_publish_success": false,
+    "submission_method": "completed official Scanner report directory zipped and submitted through official local /api/ce/submit"
+  },
+  "export_validation": {
+    "issues_expected": 2223,
+    "issues_exported": 2223,
+    "issue_keys_unique": 2223,
+    "files_expected": 1339,
+    "files_exported": 1339,
+    "file_keys_unique": 1339,
+    "hotspots_expected": 0,
+    "hotspots_exported": 0,
+    "rules_expected": 51,
+    "rules_exported": 51,
+    "all_counts_reconciled": true
+  },
+  "compute_engine_task_warnings": [
+    "Inconsistent highlighting data detected on some files (2 in total). File source may have been modified while analysis was running.\n   ° docs/architecture/tools/verify_delivery.py\n   ° services/api-gateway/internal/releasegate/service.go",
+    "Inconsistent symbol data detected on file 'docs/architecture/tools/verify_delivery.py'. File source may have been modified while analysis was running."
+  ],
+  "quality_gate_definition": {
+    "name": "Sonar way",
+    "conditions": [
+      {
+        "id": "ff6a7f10-d2aa-4349-ac44-a913e0747244",
+        "metric": "new_violations",
+        "op": "GT",
+        "error": "0",
+        "isCaycCondition": true
+      },
+      {
+        "id": "851ac743-2463-4599-8fe3-831f6280cf36",
+        "metric": "new_coverage",
+        "op": "LT",
+        "error": "80",
+        "isCaycCondition": true
+      },
+      {
+        "id": "4fe802be-294d-46c8-8e16-443aa5a0b30b",
+        "metric": "new_duplicated_lines_density",
+        "op": "GT",
+        "error": "3",
+        "isCaycCondition": true
+      },
+      {
+        "id": "c3326073-0b54-42f8-9492-cb9de5d4f221",
+        "metric": "new_security_hotspots_reviewed",
+        "op": "LT",
+        "error": "100",
+        "isCaycCondition": true
+      }
+    ],
+    "isBuiltIn": true,
+    "actions": {
+      "rename": false,
+      "setAsDefault": false,
+      "copy": true,
+      "associateProjects": false,
+      "delete": false,
+      "manageConditions": false,
+      "delegate": false,
+      "manageAiCodeAssurance": false
+    },
+    "caycStatus": "compliant",
+    "isDefault": true,
+    "hasStandardConditions": false,
+    "hasMQRConditions": false,
+    "isAiCodeSupported": false
+  },
+  "rating_letters": {
+    "maintainability": "A",
+    "reliability": "D",
+    "security": "C"
+  },
+  "candidate_composition": {
+    "css_font_fallback_rule": 1645,
+    "bugs_except_css_font_fallback_rule": 8,
+    "docs_architecture_candidates": 1741,
+    "triggered_rule_types": 51
+  },
+  "submission_recovery": {
+    "recovered_at": "2026-10-11T12:08:08.536058+08:00",
+    "original_scanner_completed_standard_publish": false,
+    "original_scanner_termination": "interrupted during compression; no fresh report-task.txt",
+    "official_report_generated_at": "2026-10-11T11:53:06.087+08:00",
+    "generated_report_files": 12029,
+    "generated_report_bytes": 45721127,
+    "archive_path": "D:\\tools\\sonarqube-yuejuan\\20261010\\scanner-report-recovered-20261011.zip",
+    "archive_bytes": 24401500,
+    "archive_sha256": "224793c52cf5476eafdaf51c052befbfab3493d33ba56d6111f26f5836545307",
+    "crc_verified": true,
+    "all_entries_sha256_verified": true,
+    "receipt": {
+      "taskId": "14bfcea9-251b-472e-bc01-1ece81c736f0",
+      "projectId": "2bb938e2-4c1a-469c-89c9-bf89d9d2cbbf",
+      "submitted_at": "2026-10-11T12:08:10.583917+08:00",
+      "official_api": "POST /api/ce/submit",
+      "local_url": "http://127.0.0.1:19000",
+      "archive_sha256": "224793c52cf5476eafdaf51c052befbfab3493d33ba56d6111f26f5836545307"
+    }
+  },
+  "analyzer_warnings_and_errors": [
+    "11:44:00.586 WARN  No Cargo manifest found, skipping Clippy analysis",
+    "11:44:02.807 ERROR Invalid highlighting: HighlightTokens[tokenType=COMMENT, location=Location[startLine=18, startColumn=4, endLine=18, endColumn=33]]. Reason: 33 is not a valid line offset for pointer. File apps/desktop-client/src-tauri/src/durable_store/queue.rs has 32 character(s) at line 18",
+    "11:44:02.808 ERROR Invalid highlighting: HighlightTokens[tokenType=COMMENT, location=Location[startLine=143, startColumn=4, endLine=143, endColumn=43]]. Reason: 43 is not a valid line offset for pointer. File apps/desktop-client/src-tauri/src/durable_store/queue.rs has 42 character(s) at line 143",
+    "11:44:02.808 ERROR Invalid highlighting: HighlightTokens[tokenType=COMMENT, location=Location[startLine=21, startColumn=4, endLine=21, endColumn=31]]. Reason: 31 is not a valid line offset for pointer. File apps/desktop-client/src-tauri/src/durable_store/queue.rs has 30 character(s) at line 21",
+    "11:44:02.809 ERROR Invalid highlighting: HighlightTokens[tokenType=COMMENT, location=Location[startLine=19, startColumn=4, endLine=19, endColumn=51]]. Reason: 51 is not a valid line offset for pointer. File apps/desktop-client/src-tauri/src/durable_store/queue.rs has 50 character(s) at line 19",
+    "11:44:02.809 ERROR Invalid highlighting: HighlightTokens[tokenType=COMMENT, location=Location[startLine=80, startColumn=4, endLine=80, endColumn=45]]. Reason: 45 is not a valid line offset for pointer. File apps/desktop-client/src-tauri/src/durable_store/queue.rs has 44 character(s) at line 80",
+    "11:44:02.810 ERROR Invalid highlighting: HighlightTokens[tokenType=COMMENT, location=Location[startLine=20, startColumn=4, endLine=20, endColumn=31]]. Reason: 31 is not a valid line offset for pointer. File apps/desktop-client/src-tauri/src/durable_store/queue.rs has 30 character(s) at line 20",
+    "11:44:02.810 ERROR Invalid highlighting: HighlightTokens[tokenType=COMMENT, location=Location[startLine=216, startColumn=4, endLine=216, endColumn=37]]. Reason: 37 is not a valid line offset for pointer. File apps/desktop-client/src-tauri/src/durable_store/queue.rs has 36 character(s) at line 216",
+    "11:44:02.810 ERROR Invalid highlighting: HighlightTokens[tokenType=COMMENT, location=Location[startLine=17, startColumn=4, endLine=17, endColumn=35]]. Reason: 35 is not a valid line offset for pointer. File apps/desktop-client/src-tauri/src/durable_store/queue.rs has 34 character(s) at line 17",
+    "11:44:02.895 ERROR Invalid highlighting: HighlightTokens[tokenType=COMMENT, location=Location[startLine=37, startColumn=4, endLine=37, endColumn=43]]. Reason: 43 is not a valid line offset for pointer. File apps/desktop-client/src-tauri/src/durable_store/spool.rs has 42 character(s) at line 37",
+    "11:44:02.896 ERROR Invalid highlighting: HighlightTokens[tokenType=COMMENT, location=Location[startLine=343, startColumn=8, endLine=343, endColumn=32]]. Reason: 32 is not a valid line offset for pointer. File apps/desktop-client/src-tauri/src/durable_store/spool.rs has 31 character(s) at line 343",
+    "11:44:02.897 ERROR Invalid highlighting: HighlightTokens[tokenType=COMMENT, location=Location[startLine=180, startColumn=4, endLine=180, endColumn=46]]. Reason: 46 is not a valid line offset for pointer. File apps/desktop-client/src-tauri/src/durable_store/spool.rs has 45 character(s) at line 180",
+    "11:44:02.897 ERROR Invalid highlighting: HighlightTokens[tokenType=COMMENT, location=Location[startLine=342, startColumn=8, endLine=342, endColumn=33]]. Reason: 33 is not a valid line offset for pointer. File apps/desktop-client/src-tauri/src/durable_store/spool.rs has 32 character(s) at line 342",
+    "11:44:02.898 ERROR Invalid highlighting: HighlightTokens[tokenType=COMMENT, location=Location[startLine=236, startColumn=4, endLine=236, endColumn=44]]. Reason: 44 is not a valid line offset for pointer. File apps/desktop-client/src-tauri/src/durable_store/spool.rs has 43 character(s) at line 236",
+    "11:45:25.733 WARN  Unable to analyze file: services/ocr-worker/tests/test_config.py"
+  ],
+  "compute_engine_warnings_and_errors": [
+    "2026.10.11 12:18:19 WARN  ce[14bfcea9-251b-472e-bc01-1ece81c736f0][o.s.c.t.p.s.l.SymbolsLineReader] Inconsistency detected in Symbols data. Symbols will be ignored for file 'yuejuan-local-workspace-20261010:docs/architecture/tools/verify_delivery.py'"
+  ],
+  "analyzer_scope": {
+    "manifest_files": 2502,
+    "preprocessed_files": 2498,
+    "indexed_files": 2495,
+    "detected_languages": 10,
+    "go_reported_files": 1026,
+    "go_reported_folders": 74,
+    "python_reported_files": 182,
+    "python_file_with_analysis_failure": "services/ocr-worker/tests/test_config.py",
+    "javascript_typescript_css_reported_files": 1015,
+    "javascript_typescript_cache_miss_files": 954,
+    "text_and_secrets_reported_files": 2293,
+    "docker_reported_files": 10,
+    "cpd_files": 1200,
+    "rust_clippy_executed": false
+  },
+  "project_visibility": {
+    "project": "yuejuan-local-workspace-20261010",
+    "visibility": "private",
+    "previous_visibility": "public",
+    "recorded_at": "2026-10-11T12:21:36.737214+08:00",
+    "other_projects_changed": false,
+    "listener": "127.0.0.1:19000"
+  },
+  "source_drift": {
+    "recorded_at": "2026-10-11T12:07:15.242302+08:00",
+    "manifest": "../source-manifest-resume-2026-10-11.csv",
+    "input_manifest_files": 2502,
+    "recorded_files": 2502,
+    "changed": [
+      {
+        "path": ".github/workflows/ci.yml",
+        "manifest_sha256": "2cfe292e8cb3b0294c5325811a32b7e5ab80a9c52df73a20244cf7b93c30a8bf",
+        "after_sha256": "0080fdb3fd7ff33c24b3c48e51374687cde7a8b8694b7b7ce8bc32bf74e53e47"
+      },
+      {
+        "path": "ai-services/grading_agent/config.py",
+        "manifest_sha256": "4827d926bdb1c09ff323311bfc54ec3da8c5ade1fe08f390f34f70b8fa92597e",
+        "after_sha256": "2ff9cbe6105aa62ab6098f53cc5d8cf0bde0d858e8bf7bc5992ec48648d3b460"
+      },
+      {
+        "path": "ai-services/grading_agent/server.py",
+        "manifest_sha256": "2394f6fff31c0cdd0af06a413a9abcba639dc385a9e4dc156097724eae3e79cd",
+        "after_sha256": "62c2b234657f1f29d444968d8ce815647f820b1b8c7b3eb7d6a6db6d617c637e"
+      },
+      {
+        "path": "ai-services/tests/test_config.py",
+        "manifest_sha256": "7dbcc1a49737890cbaedd4e12e311f9e65c5b4a1e8c94434ac074c16e25c7de0",
+        "after_sha256": "adab58404249d7ae9a86e09a2c42b7c02937cf0a2c9fb8faf72fb2eeacbf8529"
+      },
+      {
+        "path": "ai-services/tests/test_server_tls.py",
+        "manifest_sha256": "fead1bd4c8b4483a35d29c7c581802fc494158eea81906fb8a39966e1f4ee725",
+        "after_sha256": "8a1b347ce43f3c08af267595ea199cb52c674cec6f08b21947b384f57096e693"
+      },
+      {
+        "path": "apps/desktop-client/src/components/OfflineWorkbench.test.tsx",
+        "manifest_sha256": "317b6dda979ba302eff1b29be240b750f91d375f275f4b7ede4b42abf5d8ad64",
+        "after_sha256": "da030c3b0d9ff1b03a49f6d2c2aaca007c0ec52d4a0f7fcf0f10e7c037cbed40"
+      },
+      {
+        "path": "apps/desktop-client/src/components/OfflineWorkbench.tsx",
+        "manifest_sha256": "5c41e3e4d4ee974e8a49bc5c04a7204c168fb69347fd313d2c9674f531fedfa6",
+        "after_sha256": "d4bc67fb9e21a876a18f3d92daa63bb23c7a0f00d7d40c062db9e44b0f345fe3"
+      },
+      {
+        "path": "docs/architecture/previews/index.html",
+        "manifest_sha256": "7823b8f45f095ab98aab682c861565b470dfe5a07028e32aeb7818f2640ef92f",
+        "after_sha256": "6b9c135838b21eb4bf332e18bb2811c5dd01c7aa8840bb77a3861f98bc044bf7"
+      },
+      {
+        "path": "docs/architecture/tools/simplify_diagrams.py",
+        "manifest_sha256": "3d83822d3934659622537677a83242019241f61959fa2a0fe80ba08b312d0dda",
+        "after_sha256": "eefa17ee93e0c9c6b0067b58cc14c1bdc11f449100daf0fbdc8b1671080d2fba"
+      },
+      {
+        "path": "docs/architecture/tools/verify_delivery.py",
+        "manifest_sha256": "a8261cbdf6ba61acf045abe50b1a83902d507b2a36fc80f0a16e992ffb7c7572",
+        "after_sha256": "db7a6e7b8924cf4eaf67d352dd2cdc2e7a8619f11096069d934b8630d7e87e78"
+      },
+      {
+        "path": "infra/docker-compose/docker-compose.story060-e2e.yml",
+        "manifest_sha256": "e547e80d8c6e96781b65d95c3a717a393e563d7fc3501fe7c33b40f69ce05c72",
+        "after_sha256": "0909839aa2debd2f8df2fa28b3e73459e57a7639f12c56405ff205c8bf9fda40"
+      },
+      {
+        "path": "infra/docker-compose/docker-compose.yml",
+        "manifest_sha256": "18773e940caab52f25d572754034a426d4238425e605a31956e00b26a22451f3",
+        "after_sha256": "e3bf76a592b30e82e2d6534b943710e453db9f8fb2c8e0bf5f1b415e3cc43067"
+      },
+      {
+        "path": "infra/docker-compose/scripts/preflight.ps1",
+        "manifest_sha256": "0e96f038fa5a04f43b94ec117a450f7820d2641e9056addaa1c7b1731bdf8ec6",
+        "after_sha256": "78cc6e4ba5c5356c159bc12716b0b6f51ae7fa7b86725a00553e8f704de3557b"
+      },
+      {
+        "path": "scripts/ci/trusted-executable.mjs",
+        "manifest_sha256": "ced88f2d565af2e592c064a17c422da6a5248e4e21b29d2eba2b2b3650fdf97c",
+        "after_sha256": "bf375adbaad7b66348fe93ac473b6bde1bb43a94095a0e402ffb342cbd0e3af8"
+      },
+      {
+        "path": "scripts/ci/trusted-executable.test.mjs",
+        "manifest_sha256": "cc257b861cc730aa84a3b5b3c907e567077030c948fac88f9241ba5d53e046b0",
+        "after_sha256": "cbbbcb3de887a90e471730bb0aa05369eccfd9ed3618b261ef161c749a2ca860"
+      },
+      {
+        "path": "services/api-gateway/internal/releasegate/service.go",
+        "manifest_sha256": "71cedb7f514c86f18bf6831832debe2980a0efb5ae035b8b1cb4c05bd6ddd33d",
+        "after_sha256": "1a66121cfe3df61d7be016e0b85dc7a99a2c1991ec66531e77958127fd5ac05b"
+      },
+      {
+        "path": "services/api-gateway/tools/story056-postgres-e2e/Dockerfile",
+        "manifest_sha256": "32826aade9794a0a0f050f031d06af93ef371b3f50aa0cb515ce83a9656fff74",
+        "after_sha256": "20c9fbae828ab0c478929582e614253844e1f5ad5deb0a003af7962d99e8485e"
+      },
+      {
+        "path": "services/math-verification-worker/Dockerfile",
+        "manifest_sha256": "32cd813a931ae01433963052e0c00224ec028b0ec2e66adc54b5519f08eaa367",
+        "after_sha256": "ccc5dd806d314670d00671f82abdb409b1c5fadd892a973b36c356645f14ab4d"
+      },
+      {
+        "path": "services/math-verification-worker/math_verification_worker/server.py",
+        "manifest_sha256": "4fda507b4bb88ed41323febf606801808b4432e7b36b26754cd5f821186aae82",
+        "after_sha256": "d9d6a02c89cea615738f507e3462e185e4c9992537acdb6b93ce28427f9a4f1f"
+      },
+      {
+        "path": "services/math-verification-worker/tests/test_server.py",
+        "manifest_sha256": "f3365c0466ee6aafc93bcbcad044cdcadbb92f89beea3bc495be13d89b529ff3",
+        "after_sha256": "a81b66cdc60aab230e148ef153e5086980c09a045b26ad289bc104cf7c929538"
+      },
+      {
+        "path": "services/ocr-worker/ocr_worker/config.py",
+        "manifest_sha256": "249da52e184b9461a7ff8919a5d78a00f868047aace9909189c085e3d8453ae7",
+        "after_sha256": "d49444a1ead2f5f5c3d8277cd75c2a7823e5e6b7c200a91b5ef496292d0ecc59"
+      },
+      {
+        "path": "services/ocr-worker/tests/test_config.py",
+        "manifest_sha256": "cd9b8a4c4fb8adcefd5228b859a3c0cbfdc51053e591d37b40d419b44b1e3ceb",
+        "after_sha256": "93a1f82542e76efb159eb3bc1bce5ea3a5a8b89c18354b8a6de2db665c4267c0"
+      },
+      {
+        "path": "tests/e2e/story060_grading_agent.py",
+        "manifest_sha256": "e8810f3e0e6d1f35003c705b45a65526727469a2e21d2862e7e6e9ba850ae77c",
+        "after_sha256": "aa7978bb3fbb8e658314abd1bc595b6381edf739eb4731e0b30214cea9870f69"
+      }
+    ],
+    "missing": [],
+    "snapshot_frozen": false,
+    "limitation": "Scanner read the live workspace during its execution interval; this after-hash cannot establish each file's exact read-time content or cross-tool snapshot identity. Other tasks' edits were not reverted."
+  }
+}

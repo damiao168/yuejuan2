@@ -1,0 +1,98 @@
+{
+  "original_count": 6,
+  "issue_states": [
+    {
+      "key": "cf31e4be-a1c3-4c3c-a4ca-79ae869631e9",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+      "original_line": 82,
+      "state": "changed_awaiting_sonar",
+      "change": "按连接/身份/数据模式、页面/区域几何、注册事务、导入名册、评分路由、裁剪跳过及更新等业务阶段拆分；保留全部原断言与中止顺序。",
+      "evidence": [
+        "root-go-equivalence.json"
+      ]
+    },
+    {
+      "key": "6eb1de9a-c6f8-4662-9a79-01e20787127a",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+      "original_line": 168,
+      "state": "changed_awaiting_sonar",
+      "change": "按连接/身份/数据模式、页面/区域几何、注册事务、导入名册、评分路由、裁剪跳过及更新等业务阶段拆分；保留全部原断言与中止顺序。",
+      "evidence": [
+        "root-go-equivalence.json"
+      ]
+    },
+    {
+      "key": "8c30f034-c3ef-4e37-aa7e-51ee4c55cd16",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+      "original_line": 370,
+      "state": "changed_awaiting_sonar",
+      "change": "按连接/身份/数据模式、页面/区域几何、注册事务、导入名册、评分路由、裁剪跳过及更新等业务阶段拆分；保留全部原断言与中止顺序。",
+      "evidence": [
+        "root-go-equivalence.json"
+      ]
+    },
+    {
+      "key": "32ec19c6-7711-4694-b5dd-6577c7ecf0e9",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+      "original_line": 623,
+      "state": "changed_awaiting_sonar",
+      "change": "按连接/身份/数据模式、页面/区域几何、注册事务、导入名册、评分路由、裁剪跳过及更新等业务阶段拆分；保留全部原断言与中止顺序。",
+      "evidence": [
+        "root-go-equivalence.json"
+      ]
+    },
+    {
+      "key": "68d91f05-e509-4efc-a121-9b71f4ef6e5c",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+      "original_line": 686,
+      "state": "changed_awaiting_sonar",
+      "change": "按连接/身份/数据模式、页面/区域几何、注册事务、导入名册、评分路由、裁剪跳过及更新等业务阶段拆分；保留全部原断言与中止顺序。",
+      "evidence": [
+        "root-go-equivalence.json"
+      ]
+    },
+    {
+      "key": "df264dbb-86db-4740-8483-7c5a530c8bc5",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+      "original_line": 716,
+      "state": "changed_awaiting_sonar",
+      "change": "按连接/身份/数据模式、页面/区域几何、注册事务、导入名册、评分路由、裁剪跳过及更新等业务阶段拆分；保留全部原断言与中止顺序。",
+      "evidence": [
+        "root-go-equivalence.json"
+      ]
+    }
+  ],
+  "files": {
+    "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go": {
+      "file_review_status": "annotated",
+      "review_scope": "整文件、相关签名适配和生产配置入口已审读；分阶段保留事务结果和断言，新增提交失败事实说明。"
+    }
+  },
+  "validation": {
+    "same_test_counts": true,
+    "same_complete_business_proofs": true,
+    "proof_count": 46,
+    "test_counts": {
+      "pass": 58
+    },
+    "baseline_overlay_only": true,
+    "workspace_sha256": "2f62dba38f567106e5701c0ede4812b83a026f170a8658cf8248a3cd3e9db04f",
+    "evidence": [
+      "root-go-02-baseline-result.json",
+      "root-go-02-current-result.json"
+    ],
+    "sonar_confirmation": "pending"
+  }
+}

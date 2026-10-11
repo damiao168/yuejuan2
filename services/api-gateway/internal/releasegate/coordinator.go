@@ -8,18 +8,15 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/scorerelease"
 )
 
-// ScoreReleasePublisher is intentionally the narrow A18 publish operation.
-// The coordinator never sees score facts and cannot publish a mutable result.
+// ScoreReleasePublisher 只提供范围受限的 A18 发布操作。
+// 协调器看不到成绩事实，也不能发布可变结果。
 type ScoreReleasePublisher interface {
 	Publish(context.Context, string, string, string) (scorerelease.Release, error)
 }
 
-// PublicationCoordinator is the A20 composition point for the existing A18
-// endpoint. The host must first resolve releaseID -> examID under the same
-// tenant scope, then call this coordinator instead of Store.Publish directly.
-// A18's Postgres publish transaction still recomputes its own source gate;
-// therefore a concurrent score change can only fail closed, never publish on
-// stale evidence.
+// PublicationCoordinator 是既有 A18 端点的 A20 组装点。
+// 宿主必须先在同一租户作用域内解析 releaseID -> examID，再调用此协调器，而非直接调用 Store.Publish。
+// A18 的 Postgres 发布事务仍重新计算自身来源门禁，因此并发成绩变化只能导致拒绝，不能凭过时证据发布。
 type PublicationCoordinator struct {
 	gates    *Service
 	releases ScoreReleasePublisher
@@ -36,8 +33,7 @@ func (c *PublicationCoordinator) Publish(ctx context.Context, tenantID, examID, 
 	evidence, err := c.gates.RecheckForPublish(ctx, tenantID, examID, releaseID, actorID)
 	if err != nil {
 		if errors.Is(err, ErrGateBlocked) {
-			// Surface A18's common sentinel so its HTTP boundary can return a
-			// precise conflict while A20 keeps its append-only evidence.
+			// 传出 A18 的通用哨兵错误，让其 HTTP 边界返回明确冲突，同时 A20 保留只追加的证据。
 			return scorerelease.Release{}, evidence, fmt.Errorf("%w: %v", scorerelease.ErrGateBlocked, err)
 		}
 		return scorerelease.Release{}, evidence, err

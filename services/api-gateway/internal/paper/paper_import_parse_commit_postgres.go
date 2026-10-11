@@ -9,6 +9,8 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/workerruntime"
 )
 
+// CompletePaperImportParseTask 在同一事务内提交任务回执与导入待核对结果。
+// 当前代次改变后只能核对相同历史成功回执，不能把旧结果写到新代次。
 func (s *PostgresStore) CompletePaperImportParseTask(ctx context.Context, tenantID, taskID, leaseToken string, binding PaperImportRunBinding, parsed PaperImportParseResult, durationMS int) (PaperImportJob, error) {
 	if binding.CommandType == "add_sources" {
 		previous, err := s.GetPaperImport(ctx, tenantID, binding.ImportID)
@@ -28,6 +30,9 @@ func (s *PostgresStore) CompletePaperImportParseTask(ctx context.Context, tenant
 	resultPayload["run_id"] = binding.RunID
 	resultPayload["generation"] = binding.Generation
 	resultHash := contentHash(mustJSON(resultPayload))
+	completion := workerruntime.CompleteInput{
+		LeaseToken: leaseToken, ResultSchemaVersion: "paper-import-parse-result-v2", Result: resultPayload, DurationMS: durationMS,
+	}
 
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -51,7 +56,7 @@ WHERE tenant_id=$1 AND id=$2::uuid AND paper_import_id=$3::uuid AND run_id=$4::u
 	}
 	// 代次已变化时只允许确认历史上相同任务、相同结果的成功回执，不把旧结果写到当前代次。
 	if runID != binding.RunID || generation != binding.Generation || revision != binding.SourceRevision {
-		if err = confirmHistoricalPaperImportParseResult(ctx, tx, tenantID, taskID, leaseToken, binding, resultPayload, resultHash, durationMS); err != nil {
+		if err = confirmHistoricalPaperImportParseResult(ctx, tx, tenantID, taskID, binding, completion, resultHash); err != nil {
 			return PaperImportJob{}, err
 		}
 		if err = tx.Commit(); err != nil {
@@ -59,13 +64,11 @@ WHERE tenant_id=$1 AND id=$2::uuid AND paper_import_id=$3::uuid AND run_id=$4::u
 		}
 		return s.GetPaperImport(ctx, tenantID, binding.ImportID)
 	}
-	if err = validatePaperImportStageBinding(ctx, tx, tenantID, taskID, runID, generation, "paper_parse", "paper_import_parse", binding.InputID); err != nil {
+	if err = validatePaperImportStageBinding(ctx, tx, tenantID, taskID, runID, generation, paperImportTaskStage{taskType: "paper_parse", sourceType: "paper_import_parse", sourceID: binding.InputID}); err != nil {
 		return PaperImportJob{}, err
 	}
 	// 任务完成与待核对结果共用事务；后续校验失败也会回滚此处，避免任务成功却没有业务结果。
-	if _, err = workerruntime.CompleteTaskInTx(ctx, tx, tenantID, taskID, workerruntime.CompleteInput{
-		LeaseToken: leaseToken, ResultSchemaVersion: "paper-import-parse-result-v2", Result: resultPayload, DurationMS: durationMS,
-	}); err != nil {
+	if _, err = workerruntime.CompleteTaskInTx(ctx, tx, tenantID, taskID, completion); err != nil {
 		if errors.Is(err, workerruntime.ErrConflict) {
 			return PaperImportJob{}, ErrConflict
 		}
@@ -120,41 +123,11 @@ WHERE tenant_id=$1 AND id=$2::uuid AND current_generation=$3 AND source_revision
 	if rows != 1 {
 		return PaperImportJob{}, ErrConflict
 	}
-	if parsed.ModelUsage.RequestCount > 0 || parsed.ModelUsage.TotalTokens > 0 || parsed.ModelUsage.InputTokens > 0 || parsed.ModelUsage.OutputTokens > 0 || parsed.ModelUsage.CachedInputTokens > 0 || parsed.ModelUsage.ReasoningTokens > 0 {
-		if _, err = tx.ExecContext(ctx, `
-INSERT INTO model_usage_event(
-  tenant_id,school_id,request_id,feature,provider_key,model_name,
-  request_count,input_tokens,output_tokens,cached_input_tokens,reasoning_tokens,total_tokens,status,metadata
-)
-SELECT job.tenant_id,exam.school_id,$3,'paper_import',
-  COALESCE(NULLIF($11,''),config.provider_key,'document_parser'),COALESCE(NULLIF($12,''),config.model_name,'document-parser'),
-  CASE WHEN $13::bigint > 0 THEN $13::bigint ELSE 1 END,
-  $4,$5,$6,$7,CASE WHEN $8::bigint > 0 THEN $8::bigint ELSE $4::bigint+$5::bigint END,
-  'succeeded',jsonb_build_object('paper_import_id',$2::text,'generation',$9::bigint,'run_id',$10::text,'provider_request_count',CASE WHEN $13::bigint > 0 THEN $13::bigint ELSE 1 END)
-FROM paper_import_job job
-JOIN exam ON exam.tenant_id=job.tenant_id AND exam.id=job.exam_id
-LEFT JOIN LATERAL (
-  SELECT provider_key,model_name FROM managed_model_api_config
-  WHERE tenant_id=job.tenant_id AND is_default AND deleted_at IS NULL
-  ORDER BY updated_at DESC LIMIT 1
-) config ON true
-WHERE job.tenant_id=$1::uuid AND job.id=$2::uuid
-ON CONFLICT (tenant_id,request_id,feature) DO NOTHING`, tenantID, binding.ImportID, "paper-import:"+binding.RunID,
-			parsed.ModelUsage.InputTokens, parsed.ModelUsage.OutputTokens, parsed.ModelUsage.CachedInputTokens, parsed.ModelUsage.ReasoningTokens, parsed.ModelUsage.TotalTokens, binding.Generation, binding.RunID,
-			parsed.ModelUsage.ProviderKey, parsed.ModelUsage.ModelName, parsed.ModelUsage.RequestCount); err != nil {
-			return PaperImportJob{}, err
-		}
-	}
-	if _, err = tx.ExecContext(ctx, `UPDATE paper_import_source SET processing_status='processed',updated_at=now() WHERE tenant_id=$1 AND paper_import_id=$2::uuid AND deleted_at IS NULL`, tenantID, binding.ImportID); err != nil {
+	if err = recordPaperImportParseUsageTx(ctx, tx, tenantID, binding, parsed.ModelUsage); err != nil {
 		return PaperImportJob{}, err
 	}
-	for _, item := range parsed.Documents {
-		if !validPaperImportRole(item.DetectedRole, false) {
-			continue
-		}
-		if _, err = tx.ExecContext(ctx, `UPDATE paper_import_source SET detected_role=$4,role_confidence=$5,updated_at=now() WHERE tenant_id=$1 AND paper_import_id=$2::uuid AND id=$3::uuid AND deleted_at IS NULL`, tenantID, binding.ImportID, item.SourceID, item.DetectedRole, item.RoleConfidence); err != nil {
-			return PaperImportJob{}, err
-		}
+	if err = updatePaperImportParsedSourcesTx(ctx, tx, tenantID, binding.ImportID, parsed.Documents); err != nil {
+		return PaperImportJob{}, err
 	}
 	result, err := tx.ExecContext(ctx, `UPDATE paper_import_run SET status='review_required',result_task_id=$4::uuid,result_payload_hash=$5,completed_at=now(),updated_at=now() WHERE tenant_id=$1 AND id=$2::uuid AND generation=$3 AND status='processing'`, tenantID, binding.RunID, binding.Generation, taskID, resultHash)
 	if err != nil {
@@ -173,7 +146,8 @@ ON CONFLICT (tenant_id,request_id,feature) DO NOTHING`, tenantID, binding.Import
 	return s.GetPaperImport(ctx, tenantID, binding.ImportID)
 }
 
-func confirmHistoricalPaperImportParseResult(ctx context.Context, tx *sql.Tx, tenantID, taskID, leaseToken string, binding PaperImportRunBinding, resultPayload map[string]any, resultHash string, durationMS int) error {
+// 历史回执必须同时匹配运行版本、任务和结果；完成输入沿用当前提交的同一租约与 payload。
+func confirmHistoricalPaperImportParseResult(ctx context.Context, tx *sql.Tx, tenantID, taskID string, binding PaperImportRunBinding, completion workerruntime.CompleteInput, resultHash string) error {
 	var sourceRevision, status, persistedTaskID, persistedHash string
 	err := tx.QueryRowContext(ctx, `SELECT source_revision,status,COALESCE(result_task_id::text,''),COALESCE(result_payload_hash,'')
 FROM paper_import_run
@@ -188,14 +162,57 @@ FOR UPDATE`, tenantID, binding.RunID, binding.ImportID, binding.Generation).Scan
 	if sourceRevision != binding.SourceRevision || (status != "review_required" && status != "applied") || persistedTaskID != taskID || persistedHash != resultHash {
 		return ErrConflict
 	}
-	if err = validatePaperImportStageBinding(ctx, tx, tenantID, taskID, binding.RunID, binding.Generation, "paper_parse", "paper_import_parse", binding.InputID); err != nil {
+	if err = validatePaperImportStageBinding(ctx, tx, tenantID, taskID, binding.RunID, binding.Generation, paperImportTaskStage{taskType: "paper_parse", sourceType: "paper_import_parse", sourceID: binding.InputID}); err != nil {
 		return err
 	}
-	_, err = workerruntime.CompleteTaskInTx(ctx, tx, tenantID, taskID, workerruntime.CompleteInput{
-		LeaseToken: leaseToken, ResultSchemaVersion: "paper-import-parse-result-v2", Result: resultPayload, DurationMS: durationMS,
-	})
+	_, err = workerruntime.CompleteTaskInTx(ctx, tx, tenantID, taskID, completion)
 	if errors.Is(err, workerruntime.ErrConflict) {
 		return ErrConflict
 	}
 	return err
+}
+
+// 用量事件与业务结果使用调用方事务；请求 ID 沿用 run，重复结果不会新增同一事件。
+func recordPaperImportParseUsageTx(ctx context.Context, tx *sql.Tx, tenantID string, binding PaperImportRunBinding, usage PaperImportModelUsage) error {
+	if usage.RequestCount > 0 || usage.TotalTokens > 0 || usage.InputTokens > 0 || usage.OutputTokens > 0 || usage.CachedInputTokens > 0 || usage.ReasoningTokens > 0 {
+		_, err := tx.ExecContext(ctx, `
+INSERT INTO model_usage_event(
+  tenant_id,school_id,request_id,feature,provider_key,model_name,
+  request_count,input_tokens,output_tokens,cached_input_tokens,reasoning_tokens,total_tokens,status,metadata
+)
+SELECT job.tenant_id,exam.school_id,$3,'paper_import',
+  COALESCE(NULLIF($11,''),config.provider_key,'document_parser'),COALESCE(NULLIF($12,''),config.model_name,'document-parser'),
+  CASE WHEN $13::bigint > 0 THEN $13::bigint ELSE 1 END,
+  $4,$5,$6,$7,CASE WHEN $8::bigint > 0 THEN $8::bigint ELSE $4::bigint+$5::bigint END,
+  'succeeded',jsonb_build_object('paper_import_id',$2::text,'generation',$9::bigint,'run_id',$10::text,'provider_request_count',CASE WHEN $13::bigint > 0 THEN $13::bigint ELSE 1 END)
+FROM paper_import_job job
+JOIN exam ON exam.tenant_id=job.tenant_id AND exam.id=job.exam_id
+LEFT JOIN LATERAL (
+  SELECT provider_key,model_name FROM managed_model_api_config
+  WHERE tenant_id=job.tenant_id AND is_default AND deleted_at IS NULL
+  ORDER BY updated_at DESC LIMIT 1
+) config ON true
+WHERE job.tenant_id=$1::uuid AND job.id=$2::uuid
+ON CONFLICT (tenant_id,request_id,feature) DO NOTHING`, tenantID, binding.ImportID, "paper-import:"+binding.RunID,
+			usage.InputTokens, usage.OutputTokens, usage.CachedInputTokens, usage.ReasoningTokens, usage.TotalTokens, binding.Generation, binding.RunID,
+			usage.ProviderKey, usage.ModelName, usage.RequestCount)
+		return err
+	}
+	return nil
+}
+
+// 先标记全部来源处理完成，再按解析结果顺序更新合法角色；失败仍由外层整批回滚。
+func updatePaperImportParsedSourcesTx(ctx context.Context, tx *sql.Tx, tenantID, importID string, documents []PaperImportDetectedDocument) error {
+	if _, err := tx.ExecContext(ctx, `UPDATE paper_import_source SET processing_status='processed',updated_at=now() WHERE tenant_id=$1 AND paper_import_id=$2::uuid AND deleted_at IS NULL`, tenantID, importID); err != nil {
+		return err
+	}
+	for _, item := range documents {
+		if !validPaperImportRole(item.DetectedRole, false) {
+			continue
+		}
+		if _, err := tx.ExecContext(ctx, `UPDATE paper_import_source SET detected_role=$4,role_confidence=$5,updated_at=now() WHERE tenant_id=$1 AND paper_import_id=$2::uuid AND id=$3::uuid AND deleted_at IS NULL`, tenantID, importID, item.SourceID, item.DetectedRole, item.RoleConfidence); err != nil {
+			return err
+		}
+	}
+	return nil
 }

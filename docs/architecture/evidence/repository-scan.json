@@ -1,0 +1,7 @@
+{
+  "inventory": 3396,
+  "go_internal_modules": 68,
+  "unique_import_edges": 351,
+  "cycles": [],
+  "tests": 921
+}

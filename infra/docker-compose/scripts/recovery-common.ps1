@@ -38,7 +38,7 @@ function Get-RecoveryWriters($Context) {
     if ([string]::IsNullOrWhiteSpace($id)) { continue }
     $service = (& docker inspect --format '{{index .Config.Labels "com.docker.compose.service"}}' $id).Trim()
     if ($LASTEXITCODE -ne 0 -or -not $service) { throw 'Cannot identify a running Compose container; refusing an inconsistent backup.' }
-    # Unknown/new services are writers by default. These infrastructure services hold data but do not initiate application writes.
+    # 未知或新增服务默认视为写入方；下列基础设施服务存储数据，但不主动发起应用写入。
     if ($service -notin @('postgres', 'redis', 'minio', 'qdrant')) { $writers += $id.Trim() }
   }
   return $writers
@@ -72,7 +72,7 @@ function Invoke-RecoverySQL($Context, [string]$User, [string]$Database, [string]
 }
 
 function Get-RecoveryReferences($Context, [string]$User, [string]$Database) {
-  # Only these states promise that object bytes exist. In-flight/deleted/quarantined rows remain in the dump for reconciliation.
+  # 只有这些状态表示对象字节已存在；进行中、已删除和隔离的记录仍保留在导出文件中，供后续核对。
   $query = "SELECT COALESCE(json_agg(x ORDER BY x.id), '[]'::json)::text FROM (SELECT id::text, storage_bucket, storage_key, size_bytes, hash_sha256 FROM file_asset WHERE deleted_at IS NULL AND lifecycle_status IN ('active','orphan_recovered')) x"
   $json = Invoke-RecoverySQL $Context $User $Database $query
   return @($json | ConvertFrom-Json)
@@ -107,8 +107,8 @@ function Get-RecoveryBucketRemapSQL([string]$SourceBucket, [string]$TargetBucket
   foreach ($bucket in @($SourceBucket, $TargetBucket)) {
     if ($bucket -notmatch '^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$') { throw 'Invalid bucket for database remapping.' }
   }
-  # DDL and UPDATE share one transaction. Only the immutable bank-asset guard is suspended;
-  # every other constraint remains active, and rollback restores both metadata and trigger mode.
+  # DDL 和 UPDATE 在同一个事务中执行，只暂停题库资产的不可变保护；
+  # 其他约束仍然生效，回滚会同时恢复元数据和触发器模式。
   return @"
 BEGIN;
 LOCK TABLE file_asset IN ACCESS EXCLUSIVE MODE;

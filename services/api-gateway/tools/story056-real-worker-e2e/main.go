@@ -1,9 +1,6 @@
-// Command story056-real-worker-e2e seeds and verifies the smallest useful OMR
-// page-processing worker acceptance path for STORY-056. It is intentionally a
-// test-only harness: it talks to the public API and uses a disposable
-// PostgreSQL database to fabricate a completed upstream capture/registration
-// boundary. It deliberately does not accept the capture or registration worker
-// pipelines, and never addresses a developer or production Compose project.
+// Command story056-real-worker-e2e 为 STORY-056 预置并验证最小且有用的 OMR 页面处理 worker 验收路径。
+// 它只是测试工具：调用公开 API，并使用可丢弃的 PostgreSQL 数据库构造已完成的上游捕获与配准边界。
+// 它不验收捕获或配准 worker 流水线，也绝不访问开发者或生产 Compose 项目。
 package main
 
 import (
@@ -30,6 +27,12 @@ import (
 )
 
 const (
+	examRoutePrefix   = "/api/v1/exams/"
+	jsonContentType   = "application/json"
+	bearerTokenPrefix = "Bearer "
+)
+
+const (
 	defaultAPIBaseURL = "http://api-gateway:8080"
 	defaultRunKey     = "story056-real-worker-e2e-v1"
 )
@@ -49,6 +52,19 @@ type registrationFixture struct {
 	submissionID      string
 	submissionPageID  string
 	registrationRunID string
+}
+
+// 捕获范围和已锁定模板分别来自同一次预置；命名字段避免多个 UUID 或内容哈希传错位置。
+type registrationSeedScope struct {
+	tenantID, adminID, examID, studentID string
+}
+
+type lockedTemplate struct {
+	id, contentHash string
+}
+
+type registrationAssets struct {
+	registered, crop map[string]any
 }
 
 type apiClient struct {
@@ -194,14 +210,14 @@ func seed(ctx context.Context, cfg settings, client *apiClient) error {
 	if err != nil {
 		return fmt.Errorf("upload real template asset: %w", err)
 	}
-	paper, err := client.json(ctx, http.MethodPost, "/api/v1/exams/"+examID+"/papers", map[string]any{
+	paper, err := client.json(ctx, http.MethodPost, examRoutePrefix+examID+"/papers", map[string]any{
 		"file_asset_id": stringField(paperAsset, "id"),
 	}, http.StatusCreated)
 	if err != nil {
 		return fmt.Errorf("create E2E paper: %w", err)
 	}
 	paperID := nestedStringField(paper, "paper", "id")
-	question, err := client.json(ctx, http.MethodPost, "/api/v1/exams/"+examID+"/questions", map[string]any{
+	question, err := client.json(ctx, http.MethodPost, examRoutePrefix+examID+"/questions", map[string]any{
 		"exam_paper_id": paperID, "question_no": "Q1", "question_type": "single_choice", "score": 1,
 		"stem": "STORY-056 real worker fixture", "knowledge_points": []string{"story056"}, "answer_area": map[string]any{}, "sort_order": 1,
 		"answer_key": map[string]any{"standard_answer": "B", "equivalent_answers": []any{}, "tolerance": map[string]any{}},
@@ -241,7 +257,7 @@ func seed(ctx context.Context, cfg settings, client *apiClient) error {
 			},
 		},
 	}
-	template, err := client.json(ctx, http.MethodPost, "/api/v1/exams/"+examID+"/answer-sheet-templates", map[string]any{
+	template, err := client.json(ctx, http.MethodPost, examRoutePrefix+examID+"/answer-sheet-templates", map[string]any{
 		"exam_paper_id": paperID,
 		"name":          "STORY-056 real-worker OMR template",
 		"page_count":    1,
@@ -256,10 +272,10 @@ func seed(ctx context.Context, cfg settings, client *apiClient) error {
 		return fmt.Errorf("lock answer-sheet template: %w", err)
 	}
 	templateHash := nestedStringField(locked, "template", "content_hash")
-	if _, err = client.json(ctx, http.MethodPost, "/api/v1/exams/"+examID+"/readiness/confirm", map[string]any{}, http.StatusOK); err != nil {
+	if _, err = client.json(ctx, http.MethodPost, examRoutePrefix+examID+"/readiness/confirm", map[string]any{}, http.StatusOK); err != nil {
 		return fmt.Errorf("confirm E2E readiness: %w", err)
 	}
-	if _, err = client.json(ctx, http.MethodPost, "/api/v1/exams/"+examID+"/start-collection", map[string]any{}, http.StatusOK); err != nil {
+	if _, err = client.json(ctx, http.MethodPost, examRoutePrefix+examID+"/start-collection", map[string]any{}, http.StatusOK); err != nil {
 		return fmt.Errorf("start E2E collection: %w", err)
 	}
 
@@ -269,7 +285,8 @@ func seed(ctx context.Context, cfg settings, client *apiClient) error {
 	if err != nil {
 		return fmt.Errorf("upload real answer source asset: %w", err)
 	}
-	registration, err := seedRegistrationFixture(ctx, cfg.postgresDSN, tenantID, adminID, examID, studentID, templateID, templateHash, sourceAsset)
+	templateIdentity := lockedTemplate{id: templateID, contentHash: templateHash}
+	registration, err := seedRegistrationFixture(ctx, cfg.postgresDSN, registrationSeedScope{tenantID: tenantID, adminID: adminID, examID: examID, studentID: studentID}, templateIdentity, sourceAsset)
 	if err != nil {
 		return err
 	}
@@ -285,12 +302,12 @@ func seed(ctx context.Context, cfg settings, client *apiClient) error {
 	if err != nil {
 		return fmt.Errorf("upload registered answer crop evidence: %w", err)
 	}
-	segmentID, err := completeRegistrationAndSeedSegment(ctx, cfg.postgresDSN, tenantID, questionID, templateID, templateHash, registration, registeredAsset, cropAsset)
+	segmentID, err := completeRegistrationAndSeedSegment(ctx, cfg.postgresDSN, tenantID, questionID, templateIdentity, registration, registrationAssets{registered: registeredAsset, crop: cropAsset})
 	if err != nil {
 		return err
 	}
 
-	run, err := client.json(ctx, http.MethodPost, "/api/v1/exams/"+examID+"/scoring-runs", map[string]any{
+	run, err := client.json(ctx, http.MethodPost, examRoutePrefix+examID+"/scoring-runs", map[string]any{
 		"idempotency_key": cfg.runKey,
 	}, http.StatusCreated)
 	if err != nil {
@@ -376,13 +393,17 @@ WHERE t.code='platform' AND r.idempotency_key=$1 AND r.deleted_at IS NULL
 	return nil
 }
 
-func seedRegistrationFixture(ctx context.Context, dsn, tenantID, adminID, examID, studentID, templateID, templateHash string, source map[string]any) (registrationFixture, error) {
+func seedRegistrationFixture(ctx context.Context, dsn string, scope registrationSeedScope, template lockedTemplate, source map[string]any) (registrationFixture, error) {
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
 		return registrationFixture{}, fmt.Errorf("open isolated PostgreSQL database: %w", err)
 	}
 	defer db.Close()
+	return seedRegistrationFixtureDB(ctx, db, scope, template, source)
+}
 
+// 只构造已完成上游捕获的测试事实；各步保持原先独立写入，失败时保留部分预置供诊断。
+func seedRegistrationFixtureDB(ctx context.Context, db *sql.DB, scope registrationSeedScope, template lockedTemplate, source map[string]any) (registrationFixture, error) {
 	sourceID := stringField(source, "id")
 	sourceHash := stringField(source, "hash_sha256")
 	sourceBytes := int64(intField(source, "size_bytes"))
@@ -390,7 +411,7 @@ func seedRegistrationFixture(ctx context.Context, dsn, tenantID, adminID, examID
 		return registrationFixture{}, errors.New("source asset lacks id, hash, or size")
 	}
 	var submissionID string
-	err = db.QueryRowContext(ctx, `
+	err := db.QueryRowContext(ctx, `
 INSERT INTO submission (
   tenant_id, exam_id, student_id, candidate_no, source_type, status,
   expected_page_count, actual_page_count, quality_status, quality_issues, collected_by,
@@ -398,7 +419,7 @@ INSERT INTO submission (
 )
 VALUES ($1::uuid,$2::uuid,$3::uuid,'S056-E2E-001','scanner_upload','ready_for_ocr',1,1,'passed','[]'::jsonb,$4::uuid,'matched','{}'::jsonb)
 RETURNING id::text
-`, tenantID, examID, studentID, adminID).Scan(&submissionID)
+`, scope.tenantID, scope.examID, scope.studentID, scope.adminID).Scan(&submissionID)
 	if err != nil {
 		return registrationFixture{}, fmt.Errorf("seed isolated submission: %w", err)
 	}
@@ -407,7 +428,7 @@ RETURNING id::text
 INSERT INTO submission_page (tenant_id,submission_id,file_asset_id,page_no,status,quality_status)
 VALUES ($1::uuid,$2::uuid,$3::uuid,1,'accepted','passed')
 RETURNING id::text
-`, tenantID, submissionID, sourceID).Scan(&pageID)
+`, scope.tenantID, submissionID, sourceID).Scan(&pageID)
 	if err != nil {
 		return registrationFixture{}, fmt.Errorf("seed isolated submission page: %w", err)
 	}
@@ -416,7 +437,7 @@ RETURNING id::text
 INSERT INTO capture_batch (tenant_id,exam_id,name,source_type,status,operator_id)
 VALUES ($1::uuid,$2::uuid,'STORY-056 real-worker fixture','scanner_upload','ready',$3::uuid)
 RETURNING id::text
-`, tenantID, examID, adminID).Scan(&batchID)
+`, scope.tenantID, scope.examID, scope.adminID).Scan(&batchID)
 	if err != nil {
 		return registrationFixture{}, fmt.Errorf("seed isolated capture batch: %w", err)
 	}
@@ -425,7 +446,7 @@ RETURNING id::text
 INSERT INTO capture_file (tenant_id,capture_batch_id,file_asset_id,original_name,content_type,sha256,byte_size,status,idempotency_key,uploaded_by)
 VALUES ($1::uuid,$2::uuid,$3::uuid,'story056-source-answer.png','image/png',$4,$5,'completed','story056-real-worker-source',$6::uuid)
 RETURNING id::text
-`, tenantID, batchID, sourceID, sourceHash, sourceBytes, adminID).Scan(&captureFileID)
+`, scope.tenantID, batchID, sourceID, sourceHash, sourceBytes, scope.adminID).Scan(&captureFileID)
 	if err != nil {
 		return registrationFixture{}, fmt.Errorf("seed isolated capture file: %w", err)
 	}
@@ -437,7 +458,7 @@ INSERT INTO capture_page (
 )
 VALUES ($1::uuid,$2::uuid,$3::uuid,1,$4::uuid,$5::uuid,1,1,$6::uuid,'ready','{}'::jsonb,'[]'::jsonb)
 RETURNING id::text
-`, tenantID, batchID, captureFileID, submissionID, pageID, sourceID).Scan(&capturePageID)
+`, scope.tenantID, batchID, captureFileID, submissionID, pageID, sourceID).Scan(&capturePageID)
 	if err != nil {
 		return registrationFixture{}, fmt.Errorf("seed isolated capture page: %w", err)
 	}
@@ -449,23 +470,27 @@ INSERT INTO page_registration_run (
 )
 VALUES ($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5,$6::uuid,$7,1,'processing','fixture-identity-v1',now())
 RETURNING id::text
-`, tenantID, capturePageID, pageID, sourceID, sourceHash, templateID, templateHash).Scan(&registrationRunID)
+`, scope.tenantID, capturePageID, pageID, sourceID, sourceHash, template.id, template.contentHash).Scan(&registrationRunID)
 	if err != nil {
 		return registrationFixture{}, fmt.Errorf("seed isolated registration run: %w", err)
 	}
 	return registrationFixture{submissionID: submissionID, submissionPageID: pageID, registrationRunID: registrationRunID}, nil
 }
 
-func completeRegistrationAndSeedSegment(ctx context.Context, dsn, tenantID, questionID, templateID, templateHash string, registration registrationFixture, registered, crop map[string]any) (string, error) {
+func completeRegistrationAndSeedSegment(ctx context.Context, dsn, tenantID, questionID string, template lockedTemplate, registration registrationFixture, assets registrationAssets) (string, error) {
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
 		return "", fmt.Errorf("open isolated PostgreSQL database: %w", err)
 	}
 	defer db.Close()
+	return completeRegistrationAndSeedSegmentDB(ctx, db, tenantID, questionID, template, registration, assets)
+}
 
-	registeredID := stringField(registered, "id")
-	cropID := stringField(crop, "id")
-	cropHash := stringField(crop, "hash_sha256")
+// 配准只允许从 processing 完成一行；后续片段继续引用同一模板版本和两类输出资产。
+func completeRegistrationAndSeedSegmentDB(ctx context.Context, db *sql.DB, tenantID, questionID string, template lockedTemplate, registration registrationFixture, assets registrationAssets) (string, error) {
+	registeredID := stringField(assets.registered, "id")
+	cropID := stringField(assets.crop, "id")
+	cropHash := stringField(assets.crop, "hash_sha256")
 	if registeredID == "" || cropID == "" || cropHash == "" {
 		return "", errors.New("registration assets lack required identity or hash")
 	}
@@ -495,7 +520,7 @@ VALUES (
   1,'completed',0.99
 )
 RETURNING id::text
-`, tenantID, registration.submissionID, registration.submissionPageID, questionID, templateID, templateHash, registration.registrationRunID, cropID, cropHash).Scan(&segmentID)
+`, tenantID, registration.submissionID, registration.submissionPageID, questionID, template.id, template.contentHash, registration.registrationRunID, cropID, cropHash).Scan(&segmentID)
 	if err != nil {
 		return "", fmt.Errorf("seed isolated answer segment: %w", err)
 	}
@@ -521,8 +546,7 @@ func (c *apiClient) currentUser() map[string]any {
 	return nestedMap(c.loginResponse, "user")
 }
 
-// loginResponse is retained only for immutable identity values needed to seed
-// the isolated fixture. It never contains a password.
+// loginResponse 只保留预置隔离夹具所需的不可变身份值，绝不包含密码。
 func (c *apiClient) json(ctx context.Context, method, path string, body any, want int) (map[string]any, error) {
 	var payload io.Reader
 	if body != nil {
@@ -536,12 +560,12 @@ func (c *apiClient) json(ctx context.Context, method, path string, body any, wan
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Accept", jsonContentType)
 	if body != nil {
-		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Content-Type", jsonContentType)
 	}
 	if c.token != "" {
-		req.Header.Set("Authorization", "Bearer "+c.token)
+		req.Header.Set("Authorization", bearerTokenPrefix+c.token)
 	}
 	response, err := c.client.Do(req)
 	if err != nil {
@@ -589,8 +613,8 @@ func (c *apiClient) uploadPNG(ctx context.Context, filename string, content []by
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Authorization", "Bearer "+c.token)
+	req.Header.Set("Accept", jsonContentType)
+	req.Header.Set("Authorization", bearerTokenPrefix+c.token)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	response, err := c.client.Do(req)
 	if err != nil {
@@ -620,7 +644,7 @@ func (c *apiClient) bytes(ctx context.Context, path string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Authorization", "Bearer "+c.token)
+	req.Header.Set("Authorization", bearerTokenPrefix+c.token)
 	response, err := c.client.Do(req)
 	if err != nil {
 		return nil, err
@@ -642,7 +666,7 @@ func (c *apiClient) expectStatus(ctx context.Context, method, path string, want 
 		return err
 	}
 	if c.token != "" {
-		req.Header.Set("Authorization", "Bearer "+c.token)
+		req.Header.Set("Authorization", bearerTokenPrefix+c.token)
 	}
 	response, err := c.client.Do(req)
 	if err != nil {
@@ -665,9 +689,8 @@ func syntheticOMRImages() ([]byte, []byte, error) {
 	for _, x := range []int{20, 70, 120} {
 		drawOutline(base, image.Rect(x, 20, x+28, 48), color.Black, 2)
 	}
-	// This simulates printed form content inside option A. Raw fill-ratio OMR
-	// would treat it as a second mark; the template-difference worker must
-	// remove it using the frozen blank reference before selecting B.
+	// 此处模拟选项 A 内的印刷表单内容。原始填涂比例 OMR 会把它当作第二个标记；
+	// 模板差分 worker 必须先按冻结空白参考去除它，再选择 B。
 	draw.Draw(base, image.Rect(27, 27, 41, 41), &image.Uniform{C: color.Black}, image.Point{}, draw.Src)
 	template, err := encodePNG(base)
 	if err != nil {

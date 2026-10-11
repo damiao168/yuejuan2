@@ -103,16 +103,14 @@ func (s *Service) Complete(ctx context.Context, tenantID, actorID, uploadID stri
 	if !shouldMaterialize {
 		return session, nil
 	}
-	// Best-effort recovery also runs when the request context has expired.
-	// The token prevents an old finalizer from resetting a newer lease.
+	// 请求上下文过期后仍尝试恢复；令牌防止旧完成器重置较新的租约。
 	defer func() {
 		cleanup, stop := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 		defer stop()
 		_ = s.store.Resume(cleanup, tenantID, uploadID, "completion_interrupted", session.CompletionToken)
 	}()
 
-	// First hash the exact persisted chunk sequence.  This prevents a partial
-	// or corrupted upload from being materialized as a capture source asset.
+	// 先对实际持久化的分块序列计算哈希，防止未完成或损坏的上传被具化为采集来源资源。
 	digest := sha256.New()
 	sample := make([]byte, 0, 512)
 	if err := s.store.ReadChunks(ctx, tenantID, uploadID, func(chunk []byte) error {

@@ -65,9 +65,7 @@ type ScoringReadiness struct {
 	Checks                 []ScoringReadinessCheck `json:"checks"`
 }
 
-// ScoringRunItem is the operator-facing state of one answer segment in a run.
-// It intentionally contains no student identity; the grading workspace remains
-// the only place that resolves an anonymous task to protected answer assets.
+// ScoringRunItem 是运行中单个答案片段面向操作员的状态，不包含学生身份；只有评分工作区将匿名任务解析为受保护答案资源。
 type ScoringRunItem struct {
 	AnswerSegmentID       string             `json:"answer_segment_id"`
 	SubmissionID          string             `json:"submission_id"`
@@ -178,9 +176,7 @@ type ScoringRunStore interface {
 	ProcessRuleCandidates(context.Context, string, string, string, *Engine) error
 }
 
-// ScoringRecoveryStore holds the operations that coordinate scoring facts with
-// Worker Runtime recovery. It is separate from normal grading operations so a
-// caller cannot accidentally invoke recovery behavior through a basic store.
+// ScoringRecoveryStore 包含协调评分事实与 Worker Runtime 恢复的操作，与常规评分操作分开，避免调用方通过基础存储意外触发恢复行为。
 type ScoringRecoveryStore interface {
 	GetScoringRunDetail(context.Context, string, string) (ScoringRunDetail, error)
 	GetExamAutomationResults(context.Context, string, string) (ExamAutomationResults, error)

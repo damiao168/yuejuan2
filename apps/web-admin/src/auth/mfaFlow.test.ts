@@ -5,7 +5,7 @@ import { type mfaAPI } from "../api/mfa";
 import { MFAFlowController, safeTOTPQRCode, validMFACode, validMFAStatus } from "./mfaFlow";
 
 const baseNow = Date.parse("2026-09-14T00:00:00Z");
-const challengeID = "x".repeat(43); // Synthetic data only; never real provisioning artifacts.
+const challengeID = "x".repeat(43); // 仅使用合成测试数据，不使用真实的注册凭据。
 const enrollment: TOTPEnrollmentResponse = {
   enrollment_id: "11111111-1111-4111-8111-111111111111",
   secret: "A".repeat(32),

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"strings"
+	"time"
 )
 
 func (s *PostgresStore) CreatePaperImport(ctx context.Context, tenantID, examID, userID string, input CreatePaperImportInput) (PaperImportJob, error) {
@@ -34,8 +35,7 @@ func (s *PostgresStore) CreatePaperImport(ctx context.Context, tenantID, examID,
 	if subjectErr != nil {
 		return PaperImportJob{}, ErrInvalidInput
 	}
-	// The browser value is only a consistency assertion. Persist the canonical
-	// subject read from the exam record so a forged/stale request cannot route OCR.
+	// 浏览器值只用于一致性断言。持久化考试记录中的标准学科，避免伪造或过时请求控制 OCR 路由。
 	input.Subject = canonicalSubject
 	requestHash := paperImportCommandHash(input)
 	if existingID, existingHash, replayErr := findPaperImportCommandInTx(ctx, tx, tenantID, userID, input.CommandID); replayErr == nil {
@@ -59,23 +59,8 @@ func (s *PostgresStore) CreatePaperImport(ctx context.Context, tenantID, examID,
 	if err = ensureExamPaperMutableTx(ctx, tx, tenantID, examID); err != nil {
 		return PaperImportJob{}, err
 	}
-	if input.ExamPaperID != "" {
-		var valid bool
-		if err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM exam_paper WHERE tenant_id=$1 AND exam_id=$2 AND id=$3::uuid AND deleted_at IS NULL)`, tenantID, examID, input.ExamPaperID).Scan(&valid); err != nil {
-			return PaperImportJob{}, err
-		}
-		if !valid {
-			return PaperImportJob{}, ErrInvalidInput
-		}
-	}
-	for _, source := range sources {
-		var valid bool
-		if err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM file_asset WHERE tenant_id=$1 AND id=$2::uuid AND deleted_at IS NULL AND (exam_id IS NULL OR exam_id=$3::uuid))`, tenantID, source.FileAssetID, examID).Scan(&valid); err != nil {
-			return PaperImportJob{}, err
-		}
-		if !valid {
-			return PaperImportJob{}, ErrInvalidInput
-		}
+	if err = validatePaperImportAssetsInTx(ctx, tx, tenantID, examID, input.ExamPaperID, sources); err != nil {
+		return PaperImportJob{}, err
 	}
 	row := tx.QueryRowContext(ctx, `INSERT INTO paper_import_job
 (tenant_id, exam_id, exam_paper_id, paper_file_asset_id, answer_file_asset_id, status, subject, created_by)
@@ -112,6 +97,29 @@ VALUES($1,$2::uuid,1,$3,'create',$4,$5::uuid,$6,'processing','pending') RETURNIN
 		return PaperImportJob{}, err
 	}
 	return job, nil
+}
+
+func validatePaperImportAssetsInTx(ctx context.Context, tx *sql.Tx, tenantID, examID, paperID string, sources []CreatePaperImportSourceInput) error {
+	// 所有资产都在创建事务内按原顺序核验；考试关联不能由客户端提供的学科代替。
+	if paperID != "" {
+		var valid bool
+		if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM exam_paper WHERE tenant_id=$1 AND exam_id=$2 AND id=$3::uuid AND deleted_at IS NULL)`, tenantID, examID, paperID).Scan(&valid); err != nil {
+			return err
+		}
+		if !valid {
+			return ErrInvalidInput
+		}
+	}
+	for _, source := range sources {
+		var valid bool
+		if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM file_asset WHERE tenant_id=$1 AND id=$2::uuid AND deleted_at IS NULL AND (exam_id IS NULL OR exam_id=$3::uuid))`, tenantID, source.FileAssetID, examID).Scan(&valid); err != nil {
+			return err
+		}
+		if !valid {
+			return ErrInvalidInput
+		}
+	}
+	return nil
 }
 
 // AddPaperImportSources 先识别已接受命令的重放，再校验代次；否则首次成功后的客户端重试会被当成过期请求。
@@ -155,21 +163,8 @@ func (s *PostgresStore) AddPaperImportSources(ctx context.Context, tenantID, id,
 	if input.ExpectedGeneration > 0 && input.ExpectedGeneration != generation {
 		return PaperImportJob{}, ErrConflict
 	}
-	for _, source := range input.Sources {
-		if source.FileAssetID == "" || source.DocumentIndex < 0 || !validPaperImportRole(source.RoleHint, true) {
-			return PaperImportJob{}, ErrInvalidInput
-		}
-		result, insertErr := tx.ExecContext(ctx, `INSERT INTO paper_import_source(tenant_id,paper_import_id,file_asset_id,document_index,role_hint) SELECT $1,$2::uuid,$3::uuid,$4,$5 WHERE EXISTS(SELECT 1 FROM file_asset f JOIN paper_import_job j ON j.tenant_id=f.tenant_id AND j.id=$2::uuid WHERE f.tenant_id=$1 AND f.id=$3::uuid AND f.deleted_at IS NULL AND (f.exam_id IS NULL OR f.exam_id=j.exam_id))`, tenantID, id, source.FileAssetID, source.DocumentIndex, defaultRoleHint(source.RoleHint))
-		if insertErr != nil {
-			return PaperImportJob{}, ErrInvalidInput
-		}
-		affected, affectedErr := result.RowsAffected()
-		if affectedErr != nil {
-			return PaperImportJob{}, affectedErr
-		}
-		if affected != 1 {
-			return PaperImportJob{}, ErrInvalidInput
-		}
+	if err = addPaperImportSourcesInTx(ctx, tx, tenantID, id, input.Sources); err != nil {
+		return PaperImportJob{}, err
 	}
 	if _, err = tx.ExecContext(ctx, `UPDATE paper_import_job SET status='processing',error_code='',issues='[]'::jsonb,structured_issues='[]'::jsonb,updated_at=now() WHERE tenant_id=$1 AND id=$2::uuid`, tenantID, id); err != nil {
 		return PaperImportJob{}, err
@@ -199,6 +194,26 @@ VALUES($1,$2::uuid,$3,$4,'add_sources',$5,$6::uuid,$7,'processing','pending') RE
 		return PaperImportJob{}, err
 	}
 	return s.GetPaperImport(ctx, tenantID, id)
+}
+
+func addPaperImportSourcesInTx(ctx context.Context, tx *sql.Tx, tenantID, id string, sources []CreatePaperImportSourceInput) error {
+	for _, source := range sources {
+		if source.FileAssetID == "" || source.DocumentIndex < 0 || !validPaperImportRole(source.RoleHint, true) {
+			return ErrInvalidInput
+		}
+		result, insertErr := tx.ExecContext(ctx, `INSERT INTO paper_import_source(tenant_id,paper_import_id,file_asset_id,document_index,role_hint) SELECT $1,$2::uuid,$3::uuid,$4,$5 WHERE EXISTS(SELECT 1 FROM file_asset f JOIN paper_import_job j ON j.tenant_id=f.tenant_id AND j.id=$2::uuid WHERE f.tenant_id=$1 AND f.id=$3::uuid AND f.deleted_at IS NULL AND (f.exam_id IS NULL OR f.exam_id=j.exam_id))`, tenantID, id, source.FileAssetID, source.DocumentIndex, defaultRoleHint(source.RoleHint))
+		if insertErr != nil {
+			return ErrInvalidInput
+		}
+		affected, affectedErr := result.RowsAffected()
+		if affectedErr != nil {
+			return affectedErr
+		}
+		if affected != 1 {
+			return ErrInvalidInput
+		}
+	}
+	return nil
 }
 
 func (s *PostgresStore) ReplacePaperImportSources(ctx context.Context, tenantID, id, userID string, input ReplacePaperImportSourcesInput) (PaperImportJob, error) {
@@ -241,24 +256,8 @@ func (s *PostgresStore) ReplacePaperImportSources(ctx context.Context, tenantID,
 	if input.ExpectedGeneration > 0 && input.ExpectedGeneration != generation {
 		return PaperImportJob{}, ErrConflict
 	}
-	rows, err := tx.QueryContext(ctx, `SELECT id::text FROM paper_import_source WHERE tenant_id=$1 AND paper_import_id=$2::uuid AND deleted_at IS NULL FOR UPDATE`, tenantID, id)
+	active, err := lockActivePaperImportSourcesInTx(ctx, tx, tenantID, id)
 	if err != nil {
-		return PaperImportJob{}, err
-	}
-	active := map[string]bool{}
-	for rows.Next() {
-		var sourceID string
-		if err = rows.Scan(&sourceID); err != nil {
-			rows.Close()
-			return PaperImportJob{}, err
-		}
-		active[sourceID] = true
-	}
-	if err = rows.Err(); err != nil {
-		rows.Close()
-		return PaperImportJob{}, err
-	}
-	if err = rows.Close(); err != nil {
 		return PaperImportJob{}, err
 	}
 	if err = validateReplacePaperImportSources(input.Sources, active); err != nil {
@@ -267,18 +266,8 @@ func (s *PostgresStore) ReplacePaperImportSources(ctx context.Context, tenantID,
 	if _, err = tx.ExecContext(ctx, `UPDATE paper_import_source SET deleted_at=now(),updated_at=now() WHERE tenant_id=$1 AND paper_import_id=$2::uuid AND deleted_at IS NULL`, tenantID, id); err != nil {
 		return PaperImportJob{}, err
 	}
-	for _, source := range input.Sources {
-		result, updateErr := tx.ExecContext(ctx, `UPDATE paper_import_source SET document_index=$4,role_hint=$5,detected_role='unknown',role_confidence=0,processing_status='pending',deleted_at=NULL,updated_at=now() WHERE tenant_id=$1 AND paper_import_id=$2::uuid AND id=$3::uuid`, tenantID, id, source.ID, source.DocumentIndex, defaultRoleHint(source.RoleHint))
-		if updateErr != nil {
-			return PaperImportJob{}, updateErr
-		}
-		affected, affectedErr := result.RowsAffected()
-		if affectedErr != nil {
-			return PaperImportJob{}, affectedErr
-		}
-		if affected != 1 {
-			return PaperImportJob{}, ErrConflict
-		}
+	if err = restorePaperImportSourcesInTx(ctx, tx, tenantID, id, input.Sources); err != nil {
+		return PaperImportJob{}, err
 	}
 	// 删除全部来源仍生成新代次并作废旧任务，但不派发空输入，避免旧识别结果重新出现。
 	if len(input.Sources) == 0 {
@@ -321,11 +310,52 @@ VALUES($1,$2::uuid,$3,$4,'replace_sources',$5,$6::uuid,$7,$8,$9,CASE WHEN $8='fa
 	return s.GetPaperImport(ctx, tenantID, id)
 }
 
-func (s *PostgresStore) CompletePaperImportCandidates(ctx context.Context, tenantID, id string, detected []PaperImportDetectedDocument, questions []QuestionCandidate, answers []AnswerCandidate, solutions []SolutionCandidate, rubrics []RubricCandidate, issues []PaperImportIssue) (PaperImportJob, error) {
-	// PostgreSQL imports must publish through CompletePaperImportParseTask, which
-	// verifies protocol v2, run/generation/input binding and the active lease in
-	// one transaction. Keeping this interface method for the memory store avoids
-	// a broad API break, while rejecting every legacy unversioned database write.
+// 来源集合已经验证并软删除；只按请求顺序恢复所选来源，任何行数异常都由调用方回滚整次替换。
+func restorePaperImportSourcesInTx(ctx context.Context, tx *sql.Tx, tenantID, id string, sources []ReplacePaperImportSourceInput) error {
+	for _, source := range sources {
+		result, err := tx.ExecContext(ctx, `UPDATE paper_import_source SET document_index=$4,role_hint=$5,detected_role='unknown',role_confidence=0,processing_status='pending',deleted_at=NULL,updated_at=now() WHERE tenant_id=$1 AND paper_import_id=$2::uuid AND id=$3::uuid`, tenantID, id, source.ID, source.DocumentIndex, defaultRoleHint(source.RoleHint))
+		if err != nil {
+			return err
+		}
+		affected, err := result.RowsAffected()
+		if err != nil {
+			return err
+		}
+		if affected != 1 {
+			return ErrConflict
+		}
+	}
+	return nil
+}
+
+func lockActivePaperImportSourcesInTx(ctx context.Context, tx *sql.Tx, tenantID, id string) (map[string]bool, error) {
+	rows, err := tx.QueryContext(ctx, `SELECT id::text FROM paper_import_source WHERE tenant_id=$1 AND paper_import_id=$2::uuid AND deleted_at IS NULL FOR UPDATE`, tenantID, id)
+	if err != nil {
+		return nil, err
+	}
+	active := map[string]bool{}
+	for rows.Next() {
+		var sourceID string
+		if err = rows.Scan(&sourceID); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		active[sourceID] = true
+	}
+	if err = rows.Err(); err != nil {
+		rows.Close()
+		return nil, err
+	}
+	if err = rows.Close(); err != nil {
+		return nil, err
+	}
+	return active, nil
+}
+
+func (s *PostgresStore) CompletePaperImportCandidates(ctx context.Context, tenantID, id string, parsed PaperImportParseResult) (PaperImportJob, error) {
+	// PostgreSQL 导入必须通过 CompletePaperImportParseTask 发布，该方法在一个事务中核验
+	// 协议 v2、运行/代次/输入绑定与有效租约。保留此接口方法供内存存储使用，
+	// 避免大范围 API 破坏，同时拒绝全部旧版无版本数据库写入。
 	return PaperImportJob{}, ErrConflict
 }
 
@@ -369,6 +399,10 @@ func (s *PostgresStore) SavePaperImportReview(ctx context.Context, tenantID, id,
 	if input.ExpectedGeneration <= 0 {
 		return PaperImportJob{}, ErrConflict
 	}
+	expectedUpdatedAt, err := time.Parse(time.RFC3339Nano, input.ExpectedUpdatedAt)
+	if err != nil || expectedUpdatedAt.IsZero() {
+		return PaperImportJob{}, ErrInvalidInput
+	}
 	if err := s.applyPaperImportAssessmentArchetypes(ctx, tenantID, id, input.Questions); err != nil {
 		return PaperImportJob{}, err
 	}
@@ -377,16 +411,8 @@ func (s *PostgresStore) SavePaperImportReview(ctx context.Context, tenantID, id,
 		return PaperImportJob{}, err
 	}
 	defer tx.Rollback()
-	var currentGeneration int64
-	var status string
-	if err = tx.QueryRowContext(ctx, `SELECT current_generation,status FROM paper_import_job WHERE tenant_id=$1 AND id=$2::uuid AND deleted_at IS NULL FOR UPDATE`, tenantID, id).Scan(&currentGeneration, &status); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return PaperImportJob{}, ErrNotFound
-		}
+	if err = lockPaperImportReviewVersion(ctx, tx, tenantID, id, input.ExpectedGeneration, expectedUpdatedAt); err != nil {
 		return PaperImportJob{}, err
-	}
-	if status != "review_required" || currentGeneration != input.ExpectedGeneration {
-		return PaperImportJob{}, ErrConflict
 	}
 	job, err := getPaperImportInTx(ctx, tx, tenantID, id)
 	if err != nil {
@@ -408,7 +434,8 @@ func (s *PostgresStore) SavePaperImportReview(ctx context.Context, tenantID, id,
 	q, _ := json.Marshal(input.Questions)
 	si, _ := json.Marshal(structured)
 	messages, _ := json.Marshal(issueMessages(structured))
-	result, err := tx.ExecContext(ctx, `UPDATE paper_import_job SET draft_questions=$3,structured_issues=$4,issues=$5,updated_at=now() WHERE tenant_id=$1 AND id=$2::uuid AND current_generation=$6 AND status='review_required' AND deleted_at IS NULL`, tenantID, id, q, si, messages, input.ExpectedGeneration)
+	// now()是事务开始时间；等待行锁后也必须生成更大的内容时间，避免旧CAS令牌再次有效。
+	result, err := tx.ExecContext(ctx, `UPDATE paper_import_job SET draft_questions=$3,structured_issues=$4,issues=$5,updated_at=GREATEST(clock_timestamp(),updated_at+interval '1 microsecond') WHERE tenant_id=$1 AND id=$2::uuid AND current_generation=$6 AND updated_at=$7 AND status='review_required' AND deleted_at IS NULL`, tenantID, id, q, si, messages, input.ExpectedGeneration, expectedUpdatedAt)
 	if err != nil {
 		return PaperImportJob{}, err
 	}
@@ -419,10 +446,54 @@ func (s *PostgresStore) SavePaperImportReview(ctx context.Context, tenantID, id,
 	if n != 1 {
 		return PaperImportJob{}, ErrConflict
 	}
+	// 在仍持行锁时读取本次写入回执；提交后重读可能把其他人的下一次保存冒充成本次结果。
+	saved, err := getPaperImportInTx(ctx, tx, tenantID, id)
+	if err != nil {
+		return PaperImportJob{}, err
+	}
 	if err = tx.Commit(); err != nil {
 		return PaperImportJob{}, err
 	}
-	return s.GetPaperImport(ctx, tenantID, id)
+	return saved, nil
+}
+
+// generation 只标记资料代次，核对内容时间也必须精确匹配；调用方事务持有行锁直到提交或回滚。
+func lockPaperImportReviewVersion(ctx context.Context, tx *sql.Tx, tenantID, id string, expectedGeneration int64, expectedUpdatedAt time.Time) error {
+	var currentGeneration int64
+	var status string
+	var updatedAt time.Time
+	if err := tx.QueryRowContext(ctx, `SELECT current_generation,status,updated_at FROM paper_import_job WHERE tenant_id=$1 AND id=$2::uuid AND deleted_at IS NULL FOR UPDATE`, tenantID, id).Scan(&currentGeneration, &status, &updatedAt); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNotFound
+		}
+		return err
+	}
+	if status != "review_required" || currentGeneration != expectedGeneration || !updatedAt.Equal(expectedUpdatedAt) {
+		return ErrConflict
+	}
+	return nil
+}
+
+type paperImportBlueprintSection struct {
+	title, kind string
+	count       int
+	score       float64
+}
+
+func (s *PostgresStore) paperImportBlueprintSections(ctx context.Context, tenantID, examID string) []paperImportBlueprintSection {
+	sections := []paperImportBlueprintSection{}
+	rows, err := s.db.QueryContext(ctx, `SELECT title,question_type,question_count,score_per_question::float8 FROM exam_blueprint_section WHERE tenant_id=$1 AND exam_id=$2::uuid AND deleted_at IS NULL ORDER BY sort_order`, tenantID, examID)
+	// Blueprint 是补充核对信息；沿用查询或单行读取失败时忽略该信息的行为。
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var item paperImportBlueprintSection
+			if rows.Scan(&item.title, &item.kind, &item.count, &item.score) == nil {
+				sections = append(sections, item)
+			}
+		}
+	}
+	return sections
 }
 
 func (s *PostgresStore) appendPaperImportBlueprintIssues(ctx context.Context, tenantID, importID string, questions []QuestionCandidate, issues []PaperImportIssue) []PaperImportIssue {
@@ -431,22 +502,7 @@ func (s *PostgresStore) appendPaperImportBlueprintIssues(ctx context.Context, te
 	if err := s.db.QueryRowContext(ctx, `SELECT exam_id::text,total_score::float8 FROM exam JOIN paper_import_job j ON j.exam_id=exam.id AND j.tenant_id=exam.tenant_id WHERE j.tenant_id=$1 AND j.id=$2::uuid AND exam.deleted_at IS NULL`, tenantID, importID).Scan(&examID, &total); err != nil {
 		return issues
 	}
-	type section struct {
-		title, kind string
-		count       int
-		score       float64
-	}
-	sections := []section{}
-	rows, err := s.db.QueryContext(ctx, `SELECT title,question_type,question_count,score_per_question::float8 FROM exam_blueprint_section WHERE tenant_id=$1 AND exam_id=$2::uuid AND deleted_at IS NULL ORDER BY sort_order`, tenantID, examID)
-	if err == nil {
-		defer rows.Close()
-		for rows.Next() {
-			var item section
-			if rows.Scan(&item.title, &item.kind, &item.count, &item.score) == nil {
-				sections = append(sections, item)
-			}
-		}
-	}
+	sections := s.paperImportBlueprintSections(ctx, tenantID, examID)
 	knownTotal := 0.0
 	byType := map[string]int{}
 	for _, q := range questions {
@@ -483,8 +539,8 @@ func (s *PostgresStore) appendPaperImportBlueprintIssues(ctx context.Context, te
 }
 
 func (s *PostgresStore) CompletePaperImport(ctx context.Context, tenantID, id string, questions []PaperImportDraftQuestion, issues []string) (PaperImportJob, error) {
-	// This pre-v2 completion hook has no run/input/task/lease identity. Production
-	// PostgreSQL callers must use CompletePaperImportParseTask instead.
+	// 这个 v2 之前的完成钩子缺少运行、输入、任务和租约身份。
+	// 生产 PostgreSQL 调用方必须改用 CompletePaperImportParseTask。
 	return PaperImportJob{}, ErrConflict
 }
 
@@ -706,7 +762,7 @@ func (s *PostgresStore) loadPaperImportDetails(ctx context.Context, tenantID str
 		return PaperImportJob{}, err
 	}
 	var q, a, so, r, si, usage []byte
-	if err := s.db.QueryRowContext(ctx, `SELECT question_candidates,answer_candidates,solution_candidates,rubric_candidates,structured_issues,model_usage FROM paper_import_job WHERE tenant_id=$1 AND id=$2::uuid`, tenantID, job.ID).Scan(&q, &a, &so, &r, &si, &usage); err != nil {
+	if err := s.db.QueryRowContext(ctx, `SELECT question_candidates,answer_candidates,solution_candidates,rubric_candidates,structured_issues,model_usage,COALESCE(structure_confirmed_generation,0) FROM paper_import_job WHERE tenant_id=$1 AND id=$2::uuid`, tenantID, job.ID).Scan(&q, &a, &so, &r, &si, &usage, &job.StructureConfirmedGeneration); err != nil {
 		return PaperImportJob{}, err
 	}
 	_ = json.Unmarshal(q, &job.QuestionCandidates)
@@ -764,6 +820,14 @@ FOR UPDATE OF run`, tenantID, id).Scan(&generation, &resultGeneration, &jobResul
 	if runStatus != "review_required" || (!verifiedResult && !legacyHumanReview) {
 		return PaperImportJob{}, ErrConflict
 	}
+	var structureConfirmed bool
+	if err := tx.QueryRowContext(ctx, `SELECT COALESCE(structure_confirmed_generation=current_generation,false) FROM paper_import_job WHERE tenant_id=$1 AND id=$2::uuid`, tenantID, id).Scan(&structureConfirmed); err != nil {
+		return PaperImportJob{}, err
+	}
+	// 已采用结构后只在正式题目中核对，旧候选整批导入会覆盖后来保存的答案和分值。
+	if structureConfirmed {
+		return PaperImportJob{}, ErrConflict
+	}
 	var structured, candidateQuestions []byte
 	if err := tx.QueryRowContext(ctx, `SELECT structured_issues,question_candidates FROM paper_import_job WHERE tenant_id=$1 AND id=$2::uuid`, tenantID, id).Scan(&structured, &candidateQuestions); err != nil {
 		return PaperImportJob{}, err
@@ -784,65 +848,8 @@ FOR UPDATE OF run`, tenantID, id).Scan(&generation, &resultGeneration, &jobResul
 	if paperImportHasBlockingIssues(job) {
 		return PaperImportJob{}, ErrInvalidInput
 	}
-	for index := range job.Questions {
-		draft := &job.Questions[index]
-		if err := validateQuestionInput(draft.QuestionNo, draft.QuestionType, draft.Score); err != nil {
-			return PaperImportJob{}, ErrInvalidInput
-		}
-		if existing > 0 {
-			if draft.MatchedQuestionID == "" || draft.MatchStatus == "extra" || draft.MatchStatus == "ambiguous" {
-				continue
-			}
-			kp, _ := json.Marshal(draft.KnowledgePoints)
-			refs, _ := json.Marshal(draft.SourceRefs)
-			options, _ := json.Marshal(wireList(draft.Options))
-			result, updateErr := tx.ExecContext(ctx, `UPDATE question SET exam_paper_id=NULLIF($3,'')::uuid,stem=$4,knowledge_points=$5,paper_import_id=$7::uuid,paper_import_candidate_id=NULLIF($8,''),paper_import_source_refs=$9,question_type=$10,score=$11,assessment_archetype=$12,parent_question_no=$13,subquestion_no=$14,options=$15,updated_at=now() WHERE tenant_id=$1 AND id=$2::uuid AND exam_id=$6::uuid AND deleted_at IS NULL AND status<>'deleted'`, tenantID, draft.MatchedQuestionID, job.ExamPaperID, draft.Stem, kp, job.ExamID, job.ID, draft.CandidateID, refs, draft.QuestionType, draft.Score, draft.AssessmentArchetype, draft.ParentQuestionNo, draft.SubquestionNo, options)
-			if updateErr != nil {
-				return PaperImportJob{}, updateErr
-			}
-			affected, affectedErr := result.RowsAffected()
-			if affectedErr != nil {
-				return PaperImportJob{}, affectedErr
-			}
-			if affected != 1 {
-				return PaperImportJob{}, ErrConflict
-			}
-			// Applying reviewed material replaces the question's grading context.
-			// Keep historical rules for audit, but never let a rule published for
-			// the previous question version grade the newly imported content.
-			if _, err := tx.ExecContext(ctx, `UPDATE scoring_rule SET status='retired',updated_at=now() WHERE tenant_id=$1::uuid AND question_id=$2::uuid AND status='published' AND deleted_at IS NULL`, tenantID, draft.MatchedQuestionID); err != nil {
-				return PaperImportJob{}, err
-			}
-			if err := s.applyImportedAnswerSolutionAndRubric(ctx, tx, tenantID, job.ID, draft.MatchedQuestionID, userID, *draft); err != nil {
-				return PaperImportJob{}, err
-			}
-			if err := insertImportedObjectiveRuleDraft(ctx, tx, tenantID, job.ExamID, draft.MatchedQuestionID, userID, *draft); err != nil {
-				return PaperImportJob{}, err
-			}
-			if err := syncQuestionAssessmentArchetypeTx(ctx, tx, tenantID, job.ExamID, draft.MatchedQuestionID, draftAssessmentArchetype(*draft)); err != nil {
-				return PaperImportJob{}, err
-			}
-			continue
-		}
-		kp, _ := json.Marshal(draft.KnowledgePoints)
-		refs, _ := json.Marshal(draft.SourceRefs)
-		options, _ := json.Marshal(wireList(draft.Options))
-		area := []byte(`{}`)
-		var questionID string
-		if err := tx.QueryRowContext(ctx, `INSERT INTO question (tenant_id,exam_id,exam_paper_id,question_no,question_type,score,stem,knowledge_points,answer_area,sort_order,status,paper_import_id,paper_import_candidate_id,paper_import_source_refs,assessment_archetype,parent_question_no,subquestion_no,options) VALUES ($1,$2,NULLIF($3,'')::uuid,$4,$5,$6,$7,$8,$9,$10,'active',$11::uuid,NULLIF($12,''),$13,$14,$15,$16,$17) RETURNING id::text`, tenantID, job.ExamID, job.ExamPaperID, draft.QuestionNo, draft.QuestionType, draft.Score, draft.Stem, kp, area, index+1, job.ID, draft.CandidateID, refs, draft.AssessmentArchetype, draft.ParentQuestionNo, draft.SubquestionNo, options).Scan(&questionID); err != nil {
-			return PaperImportJob{}, err
-		}
-		draft.MatchedQuestionID = questionID
-		draft.MatchStatus = "matched"
-		if err := s.applyImportedAnswerSolutionAndRubric(ctx, tx, tenantID, job.ID, questionID, userID, *draft); err != nil {
-			return PaperImportJob{}, err
-		}
-		if err := insertImportedObjectiveRuleDraft(ctx, tx, tenantID, job.ExamID, questionID, userID, *draft); err != nil {
-			return PaperImportJob{}, err
-		}
-		if err := syncQuestionAssessmentArchetypeTx(ctx, tx, tenantID, job.ExamID, questionID, draftAssessmentArchetype(*draft)); err != nil {
-			return PaperImportJob{}, err
-		}
+	if err = s.applyReviewedPaperImportQuestions(ctx, tx, tenantID, userID, job, existing); err != nil {
+		return PaperImportJob{}, err
 	}
 	questionsJSON, _ := json.Marshal(job.Questions)
 	issuesJSON, _ := json.Marshal(job.Issues)
@@ -865,6 +872,86 @@ FOR UPDATE OF run`, tenantID, id).Scan(&generation, &resultGeneration, &jobResul
 		return PaperImportJob{}, err
 	}
 	return job, nil
+}
+
+func (s *PostgresStore) applyReviewedPaperImportQuestions(ctx context.Context, tx *sql.Tx, tenantID, userID string, job PaperImportJob, existing int) error {
+	// 新建题目的身份写回共享草稿切片；与已有题目的更新都在调用方事务中按原顺序完成。
+	for index := range job.Questions {
+		draft := &job.Questions[index]
+		if err := validateQuestionInput(draft.QuestionNo, draft.QuestionType, draft.Score); err != nil {
+			return ErrInvalidInput
+		}
+		if existing > 0 {
+			if draft.MatchedQuestionID == "" || draft.MatchStatus == "extra" || draft.MatchStatus == "ambiguous" {
+				continue
+			}
+			if err := s.updateReviewedPaperImportQuestion(ctx, tx, tenantID, userID, job, *draft); err != nil {
+				return err
+			}
+			continue
+		}
+		if err := s.createReviewedPaperImportQuestion(ctx, tx, tenantID, userID, job, index); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *PostgresStore) updateReviewedPaperImportQuestion(ctx context.Context, tx *sql.Tx, tenantID, userID string, job PaperImportJob, draft PaperImportDraftQuestion) error {
+	kp, _ := json.Marshal(draft.KnowledgePoints)
+	refs, _ := json.Marshal(draft.SourceRefs)
+	options, _ := json.Marshal(wireList(draft.Options))
+	result, updateErr := tx.ExecContext(ctx, `UPDATE question SET exam_paper_id=NULLIF($3,'')::uuid,stem=$4,knowledge_points=$5,paper_import_id=$7::uuid,paper_import_candidate_id=NULLIF($8,''),paper_import_source_refs=$9,question_type=$10,score=$11,assessment_archetype=$12,parent_question_no=$13,subquestion_no=$14,options=$15,updated_at=now() WHERE tenant_id=$1 AND id=$2::uuid AND exam_id=$6::uuid AND deleted_at IS NULL AND status<>'deleted'`, tenantID, draft.MatchedQuestionID, job.ExamPaperID, draft.Stem, kp, job.ExamID, job.ID, draft.CandidateID, refs, draft.QuestionType, draft.Score, draft.AssessmentArchetype, draft.ParentQuestionNo, draft.SubquestionNo, options)
+	if updateErr != nil {
+		return updateErr
+	}
+	affected, affectedErr := result.RowsAffected()
+	if affectedErr != nil {
+		return affectedErr
+	}
+	if affected != 1 {
+		return ErrConflict
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE question SET score_source=$3 WHERE tenant_id=$1 AND id=$2::uuid`, tenantID, draft.MatchedQuestionID, importedScoreSource(draft)); err != nil {
+		return err
+	}
+	// 应用已复核材料会替换题目的评分上下文。
+	// 历史规则保留用于审计，但为之前题目版本发布的规则绝不能用于评分新导入内容。
+	if _, err := tx.ExecContext(ctx, `UPDATE scoring_rule SET status='retired',updated_at=now() WHERE tenant_id=$1::uuid AND question_id=$2::uuid AND status='published' AND deleted_at IS NULL`, tenantID, draft.MatchedQuestionID); err != nil {
+		return err
+	}
+	if err := s.applyImportedAnswerSolutionAndRubric(ctx, tx, tenantID, job.ID, draft.MatchedQuestionID, userID, draft); err != nil {
+		return err
+	}
+	if err := insertImportedObjectiveRuleDraft(ctx, tx, tenantID, job.ExamID, draft.MatchedQuestionID, userID, draft); err != nil {
+		return err
+	}
+	return syncQuestionAssessmentArchetypeTx(ctx, tx, tenantID, job.ExamID, draft.MatchedQuestionID, draftAssessmentArchetype(draft))
+}
+
+func (s *PostgresStore) createReviewedPaperImportQuestion(ctx context.Context, tx *sql.Tx, tenantID, userID string, job PaperImportJob, index int) error {
+	// job 的副本仍共享 Questions 切片；新题绑定按原阶段写回待持久化的草稿。
+	draft := &job.Questions[index]
+	kp, _ := json.Marshal(draft.KnowledgePoints)
+	refs, _ := json.Marshal(draft.SourceRefs)
+	options, _ := json.Marshal(wireList(draft.Options))
+	area := []byte(`{}`)
+	var questionID string
+	if err := tx.QueryRowContext(ctx, `INSERT INTO question (tenant_id,exam_id,exam_paper_id,question_no,question_type,score,stem,knowledge_points,answer_area,sort_order,status,paper_import_id,paper_import_candidate_id,paper_import_source_refs,assessment_archetype,parent_question_no,subquestion_no,options) VALUES ($1,$2,NULLIF($3,'')::uuid,$4,$5,$6,$7,$8,$9,$10,'active',$11::uuid,NULLIF($12,''),$13,$14,$15,$16,$17) RETURNING id::text`, tenantID, job.ExamID, job.ExamPaperID, draft.QuestionNo, draft.QuestionType, draft.Score, draft.Stem, kp, area, index+1, job.ID, draft.CandidateID, refs, draft.AssessmentArchetype, draft.ParentQuestionNo, draft.SubquestionNo, options).Scan(&questionID); err != nil {
+		return err
+	}
+	draft.MatchedQuestionID = questionID
+	if _, err := tx.ExecContext(ctx, `UPDATE question SET score_source=$3 WHERE tenant_id=$1 AND id=$2::uuid`, tenantID, questionID, importedScoreSource(*draft)); err != nil {
+		return err
+	}
+	draft.MatchStatus = "matched"
+	if err := s.applyImportedAnswerSolutionAndRubric(ctx, tx, tenantID, job.ID, questionID, userID, *draft); err != nil {
+		return err
+	}
+	if err := insertImportedObjectiveRuleDraft(ctx, tx, tenantID, job.ExamID, questionID, userID, *draft); err != nil {
+		return err
+	}
+	return syncQuestionAssessmentArchetypeTx(ctx, tx, tenantID, job.ExamID, questionID, draftAssessmentArchetype(*draft))
 }
 
 func (s *PostgresStore) applyImportedAnswerSolutionAndRubric(ctx context.Context, tx *sql.Tx, tenantID, importID, questionID, userID string, draft PaperImportDraftQuestion) error {

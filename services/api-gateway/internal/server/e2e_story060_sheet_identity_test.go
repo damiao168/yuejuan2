@@ -3,6 +3,7 @@ package server
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -64,31 +65,145 @@ LIMIT 1
 		t.Fatalf("lookup roster student: %v", err)
 	}
 
+	scenario := sheetIdentityScenario{DB: db, Router: router, AdminToken: adminToken, Acceptance: fixture, Suffix: suffix}
 	issue := func(label, targetStudentID string) (string, string, map[int]string) {
-		t.Helper()
-		issued := e2ePostJSON(
-			t, router, http.MethodPost,
-			"/api/v1/answer-sheet-templates/"+fixture.TemplateID+"/student-barcodes",
-			adminToken,
-			story056JSON(t, map[string]any{
-				"student_ids":     []string{targetStudentID},
-				"idempotency_key": "story060-" + label + "-" + suffix,
-			}),
-			http.StatusOK,
-		)["barcodes"].(map[string]any)
-		student := issued["students"].([]any)[0].(map[string]any)
-		pageValues := map[int]string{}
-		for _, raw := range student["pages"].([]any) {
-			page := raw.(map[string]any)
-			pageValues[int(e2eFloat(t, page, "page_no"))] = e2eString(t, page, "value")
-		}
-		if len(pageValues) != 3 {
-			t.Fatalf("expected three immutable print pages: %#v", issued)
-		}
-		return e2eString(t, issued, "print_batch_id"), e2eString(t, student, "sheet_serial"), pageValues
+		return e2eIssueThreePageSheet(t, scenario, label, targetStudentID)
 	}
 
 	printBatchID, insertedSheetSerial, insertedBarcodes := issue("inserted", studentID)
+	e2eAssertThreePagePrintPackage(t, scenario, studentID, printBatchID)
+	store := capture.NewPostgresStoreWithBarcodeKeyring(db, e2eBarcodeKeyring())
+	scenario.Capture = store
+	createCapture := func(label string, barcodes []string) string {
+		return e2eCreateControlledMultiPageCapture(t, scenario, label, barcodes)
+	}
+
+	insertedFileID := createCapture("inserted-page", []string{
+		insertedBarcodes[1], "", insertedBarcodes[2], insertedBarcodes[3],
+	})
+	e2eAssertInsertedPageAndFrozenTemplate(t, scenario, studentID, insertedFileID, insertedSheetSerial)
+	rows, err := db.Query(`
+SELECT cp.source_index,cp.assigned_page_no,sp.page_no,cp.status,
+       COALESCE(cp.page_identity->>'barcode_conflict_code','')
+FROM capture_page cp
+JOIN submission_page sp
+  ON sp.tenant_id=cp.tenant_id AND sp.id=cp.submission_page_id
+WHERE cp.tenant_id=$1::uuid AND cp.capture_file_id=$2::uuid
+ORDER BY cp.source_index
+`, fixture.TenantID, insertedFileID)
+	if err != nil {
+		t.Fatalf("query inserted-page ordering: %v", err)
+	}
+	defer rows.Close()
+	semanticPages := []int{}
+	physicalPages := []int{}
+	for rows.Next() {
+		var sourceIndex, semanticPage, physicalPage int
+		var status, code string
+		if err = rows.Scan(&sourceIndex, &semanticPage, &physicalPage, &status, &code); err != nil {
+			t.Fatalf("scan inserted-page ordering: %v", err)
+		}
+		semanticPages = append(semanticPages, semanticPage)
+		physicalPages = append(physicalPages, physicalPage)
+		if sourceIndex == 2 && (status != "needs_review" || code != "unbound_page_in_controlled_sheet") {
+			t.Fatalf("inserted uncontrolled page must be isolated for review: status=%s code=%s", status, code)
+		}
+	}
+	if !slices.Equal(semanticPages, []int{1, 2, 2, 3}) ||
+		!slices.Equal(physicalPages, []int{1, 2, 3, 4}) {
+		t.Fatalf("inserted page shifted controlled semantics: semantic=%v physical=%v", semanticPages, physicalPages)
+	}
+	e2eAssertObservedSheetPackageUnavailable(t, scenario, printBatchID)
+	e2eAssertMissingAndRepeatedSheetPages(t, scenario, studentID, insertedSheetSerial, issue, createCapture)
+}
+
+type sheetIdentityScenario struct {
+	DB                 *sql.DB
+	Router             http.Handler
+	AdminToken, Suffix string
+	Acceptance         story056AcceptanceFixture
+	Capture            *capture.PostgresStore
+}
+
+// 三页发行仍持久化同一打印批次和卡片序列，逐页值保持原页码对应。
+func e2eIssueThreePageSheet(t *testing.T, scenario sheetIdentityScenario, label, targetStudentID string) (string, string, map[int]string) {
+	t.Helper()
+	router, adminToken, fixture, suffix := scenario.Router, scenario.AdminToken, scenario.Acceptance, scenario.Suffix
+	issued := e2ePostJSON(
+		t, router, http.MethodPost,
+		"/api/v1/answer-sheet-templates/"+fixture.TemplateID+"/student-barcodes",
+		adminToken,
+		story056JSON(t, map[string]any{
+			"student_ids":     []string{targetStudentID},
+			"idempotency_key": "story060-" + label + "-" + suffix,
+		}),
+		http.StatusOK,
+	)["barcodes"].(map[string]any)
+	student := issued["students"].([]any)[0].(map[string]any)
+	pageValues := map[int]string{}
+	for _, raw := range student["pages"].([]any) {
+		page := raw.(map[string]any)
+		pageValues[int(e2eFloat(t, page, "page_no"))] = e2eString(t, page, "value")
+	}
+	if len(pageValues) != 3 {
+		t.Fatalf("expected three immutable print pages: %#v", issued)
+	}
+	return e2eString(t, issued, "print_batch_id"), e2eString(t, student, "sheet_serial"), pageValues
+
+}
+
+// 物理页按扫描顺序注册，只有受控条码赋予逻辑页身份；插页仍保留为没有受控条码的页面。
+func e2eCreateControlledMultiPageCapture(t *testing.T, scenario sheetIdentityScenario, label string, barcodes []string) string {
+	t.Helper()
+	db, router, adminToken, fixture, suffix, store := scenario.DB, scenario.Router, scenario.AdminToken, scenario.Acceptance, scenario.Suffix, scenario.Capture
+	assetID := e2eUploadSyntheticPDF(
+		t, router, adminToken, "story060-"+label+"-"+suffix+".pdf",
+		"%PDF-1.4\n% STORY-060 "+label+" "+suffix+"\n",
+	)
+	batch := e2ePostJSON(t, router, http.MethodPost, "/api/v1/exams/"+fixture.ExamID+"/capture-batches", adminToken, story056JSON(t, map[string]any{
+		"name":            "STORY-060 " + label,
+		"source_type":     "web_upload",
+		"idempotency_key": "story060-capture-" + label + "-" + suffix,
+	}), http.StatusCreated)["batch"].(map[string]any)
+	file := e2ePostJSON(t, router, http.MethodPost, "/api/v1/capture-batches/"+e2eString(t, batch, "id")+"/files", adminToken, story056JSON(t, map[string]any{
+		"file_asset_id":   assetID,
+		"idempotency_key": "story060-file-" + label + "-" + suffix,
+	}), http.StatusCreated)["file"].(map[string]any)
+	e2ePostJSON(t, router, http.MethodPost, "/api/v1/capture-batches/"+e2eString(t, batch, "id")+"/process", adminToken, `{}`, http.StatusOK)
+	var hash string
+	if err := db.QueryRow(`
+SELECT hash_sha256 FROM file_asset
+WHERE tenant_id=$1::uuid AND id=$2::uuid AND deleted_at IS NULL
+`, fixture.TenantID, assetID).Scan(&hash); err != nil {
+		t.Fatalf("lookup synthetic page hash: %v", err)
+	}
+	decoded := make([]capture.DecodedPageInput, 0, len(barcodes))
+	for index, value := range barcodes {
+		page := capture.DecodedPageInput{
+			SourceIndex: index + 1, FileAssetID: assetID, SHA256: hash, Width: 1000, Height: 1400,
+		}
+		if value != "" {
+			page.Barcodes = []capture.BarcodeObservation{{
+				Format: "QR_CODE", Text: value,
+				Polygon: []map[string]int{
+					{"x": 10, "y": 10}, {"x": 110, "y": 10},
+					{"x": 110, "y": 110}, {"x": 10, "y": 110},
+				},
+			}}
+		}
+		decoded = append(decoded, page)
+	}
+	if _, err := store.ApplyFileResult(context.Background(), fixture.TenantID, e2eString(t, file, "id"), decoded); err != nil {
+		t.Fatalf("apply %s multi-page result: %v", label, err)
+	}
+	return e2eString(t, file, "id")
+
+}
+
+// 发行后上下文防止重复发行，打印包可以重复下载且字节、类型及审计哈希保持一致。
+func e2eAssertThreePagePrintPackage(t *testing.T, scenario sheetIdentityScenario, studentID, printBatchID string) {
+	t.Helper()
+	router, adminToken, fixture := scenario.Router, scenario.AdminToken, scenario.Acceptance
 	printContext := e2eGetJSON(
 		t, router,
 		"/api/v1/answer-sheet-templates/"+fixture.TemplateID+"/print-context",
@@ -135,55 +250,12 @@ LIMIT 1
 		t.Fatalf("print package must be a deterministic auditable PDF: headers=%v", firstPackage.Header())
 	}
 
-	store := capture.NewPostgresStoreWithBarcodeKeyring(db, e2eBarcodeKeyring())
-	createCapture := func(label string, barcodes []string) string {
-		t.Helper()
-		assetID := e2eUploadSyntheticPDF(
-			t, router, adminToken, "story060-"+label+"-"+suffix+".pdf",
-			"%PDF-1.4\n% STORY-060 "+label+" "+suffix+"\n",
-		)
-		batch := e2ePostJSON(t, router, http.MethodPost, "/api/v1/exams/"+fixture.ExamID+"/capture-batches", adminToken, story056JSON(t, map[string]any{
-			"name":            "STORY-060 " + label,
-			"source_type":     "web_upload",
-			"idempotency_key": "story060-capture-" + label + "-" + suffix,
-		}), http.StatusCreated)["batch"].(map[string]any)
-		file := e2ePostJSON(t, router, http.MethodPost, "/api/v1/capture-batches/"+e2eString(t, batch, "id")+"/files", adminToken, story056JSON(t, map[string]any{
-			"file_asset_id":   assetID,
-			"idempotency_key": "story060-file-" + label + "-" + suffix,
-		}), http.StatusCreated)["file"].(map[string]any)
-		e2ePostJSON(t, router, http.MethodPost, "/api/v1/capture-batches/"+e2eString(t, batch, "id")+"/process", adminToken, `{}`, http.StatusOK)
-		var hash string
-		if err := db.QueryRow(`
-SELECT hash_sha256 FROM file_asset
-WHERE tenant_id=$1::uuid AND id=$2::uuid AND deleted_at IS NULL
-`, fixture.TenantID, assetID).Scan(&hash); err != nil {
-			t.Fatalf("lookup synthetic page hash: %v", err)
-		}
-		decoded := make([]capture.DecodedPageInput, 0, len(barcodes))
-		for index, value := range barcodes {
-			page := capture.DecodedPageInput{
-				SourceIndex: index + 1, FileAssetID: assetID, SHA256: hash, Width: 1000, Height: 1400,
-			}
-			if value != "" {
-				page.Barcodes = []capture.BarcodeObservation{{
-					Format: "QR_CODE", Text: value,
-					Polygon: []map[string]int{
-						{"x": 10, "y": 10}, {"x": 110, "y": 10},
-						{"x": 110, "y": 110}, {"x": 10, "y": 110},
-					},
-				}}
-			}
-			decoded = append(decoded, page)
-		}
-		if _, err := store.ApplyFileResult(context.Background(), fixture.TenantID, e2eString(t, file, "id"), decoded); err != nil {
-			t.Fatalf("apply %s multi-page result: %v", label, err)
-		}
-		return e2eString(t, file, "id")
-	}
+}
 
-	insertedFileID := createCapture("inserted-page", []string{
-		insertedBarcodes[1], "", insertedBarcodes[2], insertedBarcodes[3],
-	})
+// 插页不能增加受控页计数；后来的锁定模板也不能替换已打印卡片的冻结模板身份。
+func e2eAssertInsertedPageAndFrozenTemplate(t *testing.T, scenario sheetIdentityScenario, studentID, insertedFileID, insertedSheetSerial string) {
+	t.Helper()
+	db, fixture, suffix, store := scenario.DB, scenario.Acceptance, scenario.Suffix, scenario.Capture
 	var insertedStudentID, insertedIdentityStatus string
 	var insertedExpected, insertedActual int
 	if err := db.QueryRow(`
@@ -272,48 +344,23 @@ WHERE tenant_id=$1::uuid AND capture_file_id=$2::uuid AND sheet_serial=$3::uuid
 			t.Fatalf("printed v1 sheet must keep v1 identity after v2 exists: %#v", run)
 		}
 	}
-	rows, err := db.Query(`
-SELECT cp.source_index,cp.assigned_page_no,sp.page_no,cp.status,
-       COALESCE(cp.page_identity->>'barcode_conflict_code','')
-FROM capture_page cp
-JOIN submission_page sp
-  ON sp.tenant_id=cp.tenant_id AND sp.id=cp.submission_page_id
-WHERE cp.tenant_id=$1::uuid AND cp.capture_file_id=$2::uuid
-ORDER BY cp.source_index
-`, fixture.TenantID, insertedFileID)
-	if err != nil {
-		t.Fatalf("query inserted-page ordering: %v", err)
-	}
-	defer rows.Close()
-	semanticPages := []int{}
-	physicalPages := []int{}
-	for rows.Next() {
-		var sourceIndex, semanticPage, physicalPage int
-		var status, code string
-		if err = rows.Scan(&sourceIndex, &semanticPage, &physicalPage, &status, &code); err != nil {
-			t.Fatalf("scan inserted-page ordering: %v", err)
-		}
-		semanticPages = append(semanticPages, semanticPage)
-		physicalPages = append(physicalPages, physicalPage)
-		if sourceIndex == 2 && (status != "needs_review" || code != "unbound_page_in_controlled_sheet") {
-			t.Fatalf("inserted uncontrolled page must be isolated for review: status=%s code=%s", status, code)
-		}
-	}
-	if !slices.Equal(semanticPages, []int{1, 2, 2, 3}) ||
-		!slices.Equal(physicalPages, []int{1, 2, 3, 4}) {
-		t.Fatalf("inserted page shifted controlled semantics: semantic=%v physical=%v", semanticPages, physicalPages)
-	}
+}
+
+// 卡片被观察后打印包不能再次下载，上下文也必须明确显示不可下载和观察数量。
+func e2eAssertObservedSheetPackageUnavailable(t *testing.T, scenario sheetIdentityScenario, printBatchID string) {
+	t.Helper()
+	router, adminToken, fixture := scenario.Router, scenario.AdminToken, scenario.Acceptance
 	e2eExpectStatus(
 		t, router, http.MethodGet,
 		"/api/v1/answer-sheet-print-batches/"+printBatchID+"/package.pdf",
 		adminToken, "", http.StatusConflict,
 	)
-	printContext = e2eGetJSON(
+	printContext := e2eGetJSON(
 		t, router,
 		"/api/v1/answer-sheet-templates/"+fixture.TemplateID+"/print-context",
 		adminToken, http.StatusOK,
 	)["print_context"].(map[string]any)
-	batches = printContext["batches"].([]any)
+	batches := printContext["batches"].([]any)
 	var observedBatchFound bool
 	for _, raw := range batches {
 		batch := raw.(map[string]any)
@@ -326,6 +373,12 @@ ORDER BY cp.source_index
 		t.Fatalf("observed package must become non-downloadable in the Web context: %#v", batches)
 	}
 
+}
+
+// 缺页保留逻辑页 3 的原页码；同一学生再次提交进入冲突，三份不可变卡片台账都仍存在。
+func e2eAssertMissingAndRepeatedSheetPages(t *testing.T, scenario sheetIdentityScenario, studentID, insertedSheetSerial string, issue func(string, string) (string, string, map[int]string), createCapture func(string, []string) string) {
+	t.Helper()
+	db, fixture := scenario.DB, scenario.Acceptance
 	_, missingSheetSerial, missingBarcodes := issue("missing", studentID)
 	missingFileID := createCapture("missing-page", []string{missingBarcodes[1], missingBarcodes[3]})
 	var missingExpected, missingActual int
@@ -398,6 +451,7 @@ SELECT
 	if insertedSheetCount != 1 || missingSheetCount != 1 || repeatedSheetCount != 1 {
 		t.Fatal("multi-page captures lost their immutable sheet ledgers")
 	}
+
 }
 
 func TestStory060StudentSheetIdentityE2EWithPostgresTestDatabase(t *testing.T) {
@@ -456,6 +510,77 @@ LIMIT 1
 		http.StatusBadRequest,
 	)
 
+	scenario := sheetIdentityScenario{DB: db, Router: router, AdminToken: adminToken, Acceptance: fixture, Suffix: suffix}
+	sheetSerial, barcodeValue := e2eAssertSinglePageSheetIssuance(t, scenario, rosterStudentID, outsideStudentID)
+	firstAssetID := e2eUploadSyntheticPDF(
+		t, router, adminToken, "story060-sheet-first-"+suffix+".pdf",
+		"%PDF-1.4\n% STORY-060 first physical page "+suffix+"\n",
+	)
+	secondAssetID := e2eUploadSyntheticPDF(
+		t, router, adminToken, "story060-sheet-duplicate-"+suffix+".pdf",
+		"%PDF-1.4\n% STORY-060 duplicate physical page "+suffix+"\n",
+	)
+	batch := e2ePostJSON(t, router, http.MethodPost, "/api/v1/exams/"+fixture.ExamID+"/capture-batches", adminToken, story056JSON(t, map[string]any{
+		"name":            "STORY-060 答题卡序列冲突验收",
+		"source_type":     "web_upload",
+		"idempotency_key": "story060-capture-" + suffix,
+	}), http.StatusCreated)["batch"].(map[string]any)
+	batchID := e2eString(t, batch, "id")
+	firstFile := e2ePostJSON(t, router, http.MethodPost, "/api/v1/capture-batches/"+batchID+"/files", adminToken, story056JSON(t, map[string]any{
+		"file_asset_id":   firstAssetID,
+		"idempotency_key": "story060-file-first-" + suffix,
+	}), http.StatusCreated)["file"].(map[string]any)
+	secondFile := e2ePostJSON(t, router, http.MethodPost, "/api/v1/capture-batches/"+batchID+"/files", adminToken, story056JSON(t, map[string]any{
+		"file_asset_id":   secondAssetID,
+		"idempotency_key": "story060-file-duplicate-" + suffix,
+	}), http.StatusCreated)["file"].(map[string]any)
+	e2ePostJSON(t, router, http.MethodPost, "/api/v1/capture-batches/"+batchID+"/process", adminToken, `{}`, http.StatusOK)
+
+	store := capture.NewPostgresStoreWithBarcodeKeyring(db, e2eBarcodeKeyring())
+	applyPage := func(label string, file map[string]any, assetID string) {
+		t.Helper()
+		var hash string
+		if err := db.QueryRow(`
+SELECT hash_sha256
+FROM file_asset
+WHERE tenant_id=$1::uuid AND id=$2::uuid AND deleted_at IS NULL
+`, fixture.TenantID, assetID).Scan(&hash); err != nil {
+			t.Fatalf("lookup capture asset hash: %v", err)
+		}
+		_, err := store.ApplyFileResult(context.Background(), fixture.TenantID, e2eString(t, file, "id"), []capture.DecodedPageInput{{
+			SourceIndex: 1,
+			FileAssetID: assetID,
+			SHA256:      hash,
+			Width:       1000,
+			Height:      1400,
+			Barcodes: []capture.BarcodeObservation{{
+				Format: "QR_CODE",
+				Text:   barcodeValue,
+				Polygon: []map[string]int{
+					{"x": 10, "y": 10},
+					{"x": 110, "y": 10},
+					{"x": 110, "y": 110},
+					{"x": 10, "y": 110},
+				},
+			}},
+		}})
+		if err != nil {
+			t.Fatalf("apply %s captured student sheet page: %v", label, err)
+		}
+	}
+	applyPage("first", firstFile, firstAssetID)
+	applyPage("duplicate", secondFile, secondAssetID)
+
+	secondPage := e2eAssertDuplicatePhysicalSheetConflict(t, scenario, batchID, sheetSerial)
+	e2eDeleteAndRestoreDuplicateSheetPage(t, scenario, batchID, sheetSerial, secondPage)
+	e2eRevokeObservedSheet(t, scenario, batchID, sheetSerial)
+	e2eAssertSheetReprintIdentityAndLineage(t, scenario, sheetSerial)
+}
+
+// 相同发行请求重放打印批次、卡片序列和条码；改变学生集合则冲突，台账仍仅一份。
+func e2eAssertSinglePageSheetIssuance(t *testing.T, scenario sheetIdentityScenario, rosterStudentID, outsideStudentID string) (string, string) {
+	t.Helper()
+	db, router, adminToken, fixture, suffix := scenario.DB, scenario.Router, scenario.AdminToken, scenario.Acceptance, scenario.Suffix
 	issueBody := story056JSON(t, map[string]any{
 		"student_ids":     []string{rosterStudentID},
 		"idempotency_key": "story060-issue-" + suffix,
@@ -519,65 +644,13 @@ SELECT
 		t.Fatalf("unexpected print ledger counts: batch=%d sheet=%d page=%d", printBatchCount, printSheetCount, printPageCount)
 	}
 
-	firstAssetID := e2eUploadSyntheticPDF(
-		t, router, adminToken, "story060-sheet-first-"+suffix+".pdf",
-		"%PDF-1.4\n% STORY-060 first physical page "+suffix+"\n",
-	)
-	secondAssetID := e2eUploadSyntheticPDF(
-		t, router, adminToken, "story060-sheet-duplicate-"+suffix+".pdf",
-		"%PDF-1.4\n% STORY-060 duplicate physical page "+suffix+"\n",
-	)
-	batch := e2ePostJSON(t, router, http.MethodPost, "/api/v1/exams/"+fixture.ExamID+"/capture-batches", adminToken, story056JSON(t, map[string]any{
-		"name":            "STORY-060 答题卡序列冲突验收",
-		"source_type":     "web_upload",
-		"idempotency_key": "story060-capture-" + suffix,
-	}), http.StatusCreated)["batch"].(map[string]any)
-	batchID := e2eString(t, batch, "id")
-	firstFile := e2ePostJSON(t, router, http.MethodPost, "/api/v1/capture-batches/"+batchID+"/files", adminToken, story056JSON(t, map[string]any{
-		"file_asset_id":   firstAssetID,
-		"idempotency_key": "story060-file-first-" + suffix,
-	}), http.StatusCreated)["file"].(map[string]any)
-	secondFile := e2ePostJSON(t, router, http.MethodPost, "/api/v1/capture-batches/"+batchID+"/files", adminToken, story056JSON(t, map[string]any{
-		"file_asset_id":   secondAssetID,
-		"idempotency_key": "story060-file-duplicate-" + suffix,
-	}), http.StatusCreated)["file"].(map[string]any)
-	e2ePostJSON(t, router, http.MethodPost, "/api/v1/capture-batches/"+batchID+"/process", adminToken, `{}`, http.StatusOK)
+	return sheetSerial, barcodeValue
+}
 
-	store := capture.NewPostgresStoreWithBarcodeKeyring(db, e2eBarcodeKeyring())
-	applyPage := func(label string, file map[string]any, assetID string) {
-		t.Helper()
-		var hash string
-		if err := db.QueryRow(`
-SELECT hash_sha256
-FROM file_asset
-WHERE tenant_id=$1::uuid AND id=$2::uuid AND deleted_at IS NULL
-`, fixture.TenantID, assetID).Scan(&hash); err != nil {
-			t.Fatalf("lookup capture asset hash: %v", err)
-		}
-		_, err := store.ApplyFileResult(context.Background(), fixture.TenantID, e2eString(t, file, "id"), []capture.DecodedPageInput{{
-			SourceIndex: 1,
-			FileAssetID: assetID,
-			SHA256:      hash,
-			Width:       1000,
-			Height:      1400,
-			Barcodes: []capture.BarcodeObservation{{
-				Format: "QR_CODE",
-				Text:   barcodeValue,
-				Polygon: []map[string]int{
-					{"x": 10, "y": 10},
-					{"x": 110, "y": 10},
-					{"x": 110, "y": 110},
-					{"x": 10, "y": 110},
-				},
-			}},
-		}})
-		if err != nil {
-			t.Fatalf("apply %s captured student sheet page: %v", label, err)
-		}
-	}
-	applyPage("first", firstFile, firstAssetID)
-	applyPage("duplicate", secondFile, secondAssetID)
-
+// 两份物理页都保留可见并进入冲突；台账序列、重复链接和两个提交的冲突事实分别核对。
+func e2eAssertDuplicatePhysicalSheetConflict(t *testing.T, scenario sheetIdentityScenario, batchID, sheetSerial string) map[string]any {
+	t.Helper()
+	db, router, adminToken, fixture := scenario.DB, scenario.Router, scenario.AdminToken, scenario.Acceptance
 	pages := e2eGetJSON(t, router, "/api/v1/capture-batches/"+batchID+"/pages", adminToken, http.StatusOK)["pages"].([]any)
 	if len(pages) != 2 {
 		t.Fatalf("expected both repeated physical pages to remain visible for review: %#v", pages)
@@ -622,6 +695,13 @@ WHERE p.tenant_id=$1::uuid AND p.sheet_serial=$2::uuid
 		t.Fatalf("duplicate scan must persist a sheet and submission conflict: sheet=%s submissions=%d", sheetStatus, conflictingSubmissions)
 	}
 
+	return secondPage
+}
+
+// 明确删除重复页后恢复剩余页身份，随后原页恢复必须重新计算两侧冲突，不能沿用删除时的通过状态。
+func e2eDeleteAndRestoreDuplicateSheetPage(t *testing.T, scenario sheetIdentityScenario, batchID, sheetSerial string, secondPage map[string]any) {
+	t.Helper()
+	db, router, adminToken, fixture := scenario.DB, scenario.Router, scenario.AdminToken, scenario.Acceptance
 	deletedPage := e2ePostJSON(
 		t,
 		router,
@@ -634,8 +714,8 @@ WHERE p.tenant_id=$1::uuid AND p.sheet_serial=$2::uuid
 		}),
 		http.StatusOK,
 	)["page"].(map[string]any)
-	pages = e2eGetJSON(t, router, "/api/v1/capture-batches/"+batchID+"/pages", adminToken, http.StatusOK)["pages"].([]any)
-	firstPage = pages[0].(map[string]any)
+	pages := e2eGetJSON(t, router, "/api/v1/capture-batches/"+batchID+"/pages", adminToken, http.StatusOK)["pages"].([]any)
+	firstPage := pages[0].(map[string]any)
 	secondPage = pages[1].(map[string]any)
 	firstIdentity := firstPage["page_identity"].(map[string]any)
 	if firstPage["status"] != "quality_checking" ||
@@ -645,6 +725,7 @@ WHERE p.tenant_id=$1::uuid AND p.sheet_serial=$2::uuid
 		t.Fatalf("deleting the confirmed duplicate must resolve the remaining serial conflict: %#v", pages)
 	}
 	var unassignedSubmissions int
+	var sheetStatus string
 	if err := db.QueryRow(`
 SELECT count(DISTINCT s.id)
 FROM capture_page p
@@ -686,6 +767,12 @@ WHERE tenant_id=$1::uuid AND id=$2::uuid
 		}
 	}
 
+}
+
+// 撤销保留原因，并使旧序列的所有已观察页重新需要复核。
+func e2eRevokeObservedSheet(t *testing.T, scenario sheetIdentityScenario, batchID, sheetSerial string) {
+	t.Helper()
+	router, adminToken := scenario.Router, scenario.AdminToken
 	revoked := e2ePostJSON(
 		t,
 		router,
@@ -698,7 +785,7 @@ WHERE tenant_id=$1::uuid AND id=$2::uuid
 	if revoked["status"] != "revoked" || revoked["revoke_reason"] != "STORY-060 physical sheet damaged" {
 		t.Fatalf("sheet revocation metadata is incomplete: %#v", revoked)
 	}
-	pages = e2eGetJSON(t, router, "/api/v1/capture-batches/"+batchID+"/pages", adminToken, http.StatusOK)["pages"].([]any)
+	pages := e2eGetJSON(t, router, "/api/v1/capture-batches/"+batchID+"/pages", adminToken, http.StatusOK)["pages"].([]any)
 	for _, rawPage := range pages {
 		page := rawPage.(map[string]any)
 		identity := page["page_identity"].(map[string]any)
@@ -707,6 +794,12 @@ WHERE tenant_id=$1::uuid AND id=$2::uuid
 		}
 	}
 
+}
+
+// 补打只生成一个新物理序列并可原请求重放；再次替代冲突，数据库保留旧序列、操作及原因谱系。
+func e2eAssertSheetReprintIdentityAndLineage(t *testing.T, scenario sheetIdentityScenario, sheetSerial string) {
+	t.Helper()
+	db, router, adminToken, fixture, suffix := scenario.DB, scenario.Router, scenario.AdminToken, scenario.Acceptance, scenario.Suffix
 	reprintBody := story056JSON(t, map[string]any{
 		"reason":          "STORY-060 replace damaged physical sheet",
 		"idempotency_key": "story060-reprint-" + suffix,
@@ -762,4 +855,5 @@ WHERE s.tenant_id=$1::uuid AND s.id=$2::uuid
 		reprintReason != "STORY-060 replace damaged physical sheet" {
 		t.Fatalf("replacement lineage is incomplete: supersedes=%s operation=%s reason=%s", supersedesSerial, operation, reprintReason)
 	}
+
 }

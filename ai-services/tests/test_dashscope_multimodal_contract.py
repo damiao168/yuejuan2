@@ -92,35 +92,17 @@ class DashScopeMultimodalContractTests(unittest.TestCase):
             self.assertNotIn(value, serialized)
 
     def test_cross_question_crop_binding_is_rejected(self):
-        with self.assertRaisesRegex(ValueError, "not bound"):
-            build_dashscope_multimodal_payload(
-                model="qwen3-vl-plus",
-                system_message="Return JSON.",
-                user_message="Inspect the synthetic crop and return JSON.",
-                crop=approved_crop(),
-                expected_binding="b" * 64,
-                max_completion_tokens=384,
-            )
+        crop = approved_crop()
+        with self.assertRaisesRegex(ValueError, 'not bound'):
+            build_dashscope_multimodal_payload(model='qwen3-vl-plus', system_message='Return JSON.', user_message='Inspect the synthetic crop and return JSON.', crop=crop, expected_binding='b' * 64, max_completion_tokens=384)
 
     def test_whole_page_and_wrong_scope_are_rejected(self):
-        with self.assertRaisesRegex(ValueError, "near-whole-page"):
-            build_dashscope_multimodal_payload(
-                model="qwen3-vl-plus",
-                system_message="Return JSON.",
-                user_message="Inspect the synthetic crop and return JSON.",
-                crop=approved_crop(normalized_bbox=(0.0, 0.0, 1.0, 1.0)),
-                expected_binding=CROP_BINDING,
-                max_completion_tokens=384,
-            )
-        with self.assertRaisesRegex(ValueError, "answer-segment crops"):
-            build_dashscope_multimodal_payload(
-                model="qwen3-vl-plus",
-                system_message="Return JSON.",
-                user_message="Inspect the synthetic crop and return JSON.",
-                crop=approved_crop(scope="submission_page"),
-                expected_binding=CROP_BINDING,
-                max_completion_tokens=384,
-            )
+        crop = approved_crop(normalized_bbox=(0.0, 0.0, 1.0, 1.0))
+        with self.assertRaisesRegex(ValueError, 'near-whole-page'):
+            build_dashscope_multimodal_payload(model='qwen3-vl-plus', system_message='Return JSON.', user_message='Inspect the synthetic crop and return JSON.', crop=crop, expected_binding=CROP_BINDING, max_completion_tokens=384)
+        crop = approved_crop(scope='submission_page')
+        with self.assertRaisesRegex(ValueError, 'answer-segment crops'):
+            build_dashscope_multimodal_payload(model='qwen3-vl-plus', system_message='Return JSON.', user_message='Inspect the synthetic crop and return JSON.', crop=crop, expected_binding=CROP_BINDING, max_completion_tokens=384)
 
     def test_mime_content_hash_and_base64_are_verified(self):
         cases = (
@@ -140,26 +122,37 @@ class DashScopeMultimodalContractTests(unittest.TestCase):
                 )
 
     def test_attested_dimensions_must_match_decoded_png(self):
-        with self.assertRaisesRegex(ValueError, "decoded PNG"):
-            build_dashscope_multimodal_payload(
-                model="qwen3-vl-plus",
-                system_message="Return JSON.",
-                user_message="Inspect the synthetic crop and return JSON.",
-                crop=approved_crop(width_pixels=2),
-                expected_binding=CROP_BINDING,
-                max_completion_tokens=384,
-            )
+        crop = approved_crop(width_pixels=2)
+        with self.assertRaisesRegex(ValueError, 'decoded PNG'):
+            build_dashscope_multimodal_payload(model='qwen3-vl-plus', system_message='Return JSON.', user_message='Inspect the synthetic crop and return JSON.', crop=crop, expected_binding=CROP_BINDING, max_completion_tokens=384)
 
     def test_oversized_crop_dimensions_are_rejected(self):
-        with self.assertRaisesRegex(ValueError, "dimensions"):
-            build_dashscope_multimodal_payload(
-                model="qwen3-vl-plus",
-                system_message="Return JSON.",
-                user_message="Inspect the synthetic crop and return JSON.",
-                crop=approved_crop(width_pixels=4000, height_pixels=4000),
-                expected_binding=CROP_BINDING,
-                max_completion_tokens=384,
-            )
+        crop = approved_crop(width_pixels=4000, height_pixels=4000)
+        with self.assertRaisesRegex(ValueError, 'dimensions'):
+            build_dashscope_multimodal_payload(model='qwen3-vl-plus', system_message='Return JSON.', user_message='Inspect the synthetic crop and return JSON.', crop=crop, expected_binding=CROP_BINDING, max_completion_tokens=384)
+
+    # 同时放入多种无效事实，保护先检查题目绑定、再检查几何、最后解码图像的失败顺序。
+    def test_crop_rejects_first_invalid_fact_before_decoding_or_hash_checks(self):
+        cases = (
+            (approved_crop(scope="submission_page", binding="invalid", width_pixels=0), CROP_BINDING,
+             "answer-segment crops"),
+            (approved_crop(media_type="image/jpeg", width_pixels=0, data_base64="invalid"), "b" * 64,
+             "not bound"),
+            (approved_crop(width_pixels=0, normalized_bbox=(), data_base64="invalid"), CROP_BINDING,
+             "dimensions are invalid"),
+            (approved_crop(normalized_bbox=(0, 0, 1, 1), data_base64="invalid"), CROP_BINDING,
+             "near-whole-page"),
+            (approved_crop(data_base64=base64.b64encode(b"not a PNG" * 4).decode("ascii"), sha256="0" * 64),
+             CROP_BINDING, "declared media type"),
+            (approved_crop(width_pixels=2, sha256="0" * 64), CROP_BINDING, "decoded PNG"),
+        )
+        for crop, expected_binding, message in cases:
+            with self.subTest(message=message), self.assertRaisesRegex(ValueError, message):
+                build_dashscope_multimodal_payload(
+                    model="qwen3-vl-plus", system_message="Return JSON.",
+                    user_message="Inspect synthetic crop and return JSON.", crop=crop,
+                    expected_binding=expected_binding, max_completion_tokens=384,
+                )
 
     def test_multimodal_response_preserves_usage_and_passes_grading_contract(self):
         response = fixture("response-image.json")

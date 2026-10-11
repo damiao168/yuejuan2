@@ -1,0 +1,76 @@
+{
+  "records": [
+    {
+      "file": "docs/architecture/tools/write_frontend_specs.py",
+      "line": 14,
+      "before": "dict(id=id_, label=label, x=x, y=y, w=w, h=h, status=status, kind=kind, evidence=evidence)",
+      "after": "{'id': id_, 'label': label, 'x': x, 'y': y, 'w': w, 'h': h, 'status': status, 'kind': kind, 'evidence': evidence}"
+    },
+    {
+      "file": "docs/architecture/tools/write_frontend_specs.py",
+      "line": 18,
+      "before": "dict(source=source, target=target, label=label, evidence=evidence, **options)",
+      "after": "{'source': source, 'target': target, 'label': label, 'evidence': evidence, **options}"
+    },
+    {
+      "file": "docs/architecture/tools/write_frontend_specs.py",
+      "line": 145,
+      "before": "dict(id=id_, title=title, width=1800, height=1320, note=note, nodes=[], edges=[])",
+      "after": "{'id': id_, 'title': title, 'width': 1800, 'height': 1320, 'note': note, 'nodes': [], 'edges': []}"
+    },
+    {
+      "file": "docs/architecture/tools/write_frontend_specs.py",
+      "line": 154,
+      "before": "dict(id=\"api-overview\", title=\"01 API 全局入口、统计口径与数据边界\", width=1800, height=1500,\r\n                    note=\"536 个 Handle 字面量注册是静态目录；另有 3 个健康 HandleFunc。目录不证明全部条件模块在每个环境启用。\", nodes=[], edges=[])",
+      "after": "{'id': 'api-overview', 'title': '01 API 全局入口、统计口径与数据边界', 'width': 1800, 'height': 1500, 'note': '536 个 Handle 字面量注册是静态目录；另有 3 个健康 HandleFunc。目录不证明全部条件模块在每个环境启用。', 'nodes': [], 'edges': []}"
+    },
+    {
+      "file": "docs/architecture/tools/write_frontend_specs.py",
+      "line": 213,
+      "before": "dict(id=\"files-workers\", title=\"07 文件、对象存储与后台任务的数据流\", width=1800, height=1470,\r\n                    note=\"文件元数据与二进制对象分开持久化；浏览器不直接获取 MinIO 密钥。worker 必须恢复持久任务作用域再下载。\", nodes=[], edges=[])",
+      "after": "{'id': 'files-workers', 'title': '07 文件、对象存储与后台任务的数据流', 'width': 1800, 'height': 1470, 'note': '文件元数据与二进制对象分开持久化；浏览器不直接获取 MinIO 密钥。worker 必须恢复持久任务作用域再下载。', 'nodes': [], 'edges': []}"
+    },
+    {
+      "file": "docs/architecture/tools/write_frontend_specs.py",
+      "line": 243,
+      "before": "dict(id=\"auth-order\", title=\"08 重要 API 的鉴权顺序与缓存重放\", width=1800, height=1500,\r\n                    note=\"顺序从左至右。权限检查位置因 guard 不同而不同；浏览器导航授权不能替代服务端授权。\", nodes=[], edges=[])",
+      "after": "{'id': 'auth-order', 'title': '08 重要 API 的鉴权顺序与缓存重放', 'width': 1800, 'height': 1500, 'note': '顺序从左至右。权限检查位置因 guard 不同而不同；浏览器导航授权不能替代服务端授权。', 'nodes': [], 'edges': []}"
+    },
+    {
+      "file": "docs/architecture/tools/write_frontend_specs.py",
+      "line": 182,
+      "before": "dict(frontend=frontend,frontend_ref=frontend_ref,apilabel=api,endpoints=endpoints,handlerlabel=handler,handler_ref=handler_ref,datalabel=data,data_ref=data_ref,permission=permission,status=status)",
+      "after": "{'frontend': frontend, 'frontend_ref': frontend_ref, 'apilabel': api, 'endpoints': endpoints, 'handlerlabel': handler, 'handler_ref': handler_ref, 'datalabel': data, 'data_ref': data_ref, 'permission': permission, 'status': status}"
+    },
+    {
+      "file": "docs/architecture/tools/write_frontend_specs.py",
+      "line": 23,
+      "before": "dict(file=file, title=title, pages=pages)",
+      "after": "{'file': file, 'title': title, 'pages': pages}"
+    },
+    {
+      "file": "docs/architecture/tools/write_root_specs.py",
+      "line": 9,
+      "before": "dict(id=id,label=label,x=x,y=y,w=w,h=h,status=status,kind=kind,evidence=evidence)",
+      "after": "{'id': id, 'label': label, 'x': x, 'y': y, 'w': w, 'h': h, 'status': status, 'kind': kind, 'evidence': evidence}"
+    },
+    {
+      "file": "docs/architecture/tools/write_root_specs.py",
+      "line": 12,
+      "before": "dict(source=source,target=target,label=label,**kwargs)",
+      "after": "{'source': source, 'target': target, 'label': label, **kwargs}"
+    },
+    {
+      "file": "docs/architecture/tools/write_root_specs.py",
+      "line": 15,
+      "before": "dict(id=id,title=title,nodes=nodes,edges=edges,width=width,height=height,note=note)",
+      "after": "{'id': id, 'title': title, 'nodes': nodes, 'edges': edges, 'width': width, 'height': height, 'note': note}"
+    },
+    {
+      "file": "docs/architecture/tools/write_root_specs.py",
+      "line": 19,
+      "before": "dict(file=f\"{number}-{name}.drawio\",title=title,pages=pages)",
+      "after": "{'file': f'{number}-{name}.drawio', 'title': title, 'pages': pages}"
+    }
+  ]
+}

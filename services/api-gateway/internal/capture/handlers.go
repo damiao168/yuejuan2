@@ -18,11 +18,18 @@ import (
 )
 
 type Handler struct {
-	store   Store
-	files   files.Store
-	exams   exam.Store
-	runtime workerruntime.Store
-	audit   auth.Store
+	store         Store
+	files         files.Store
+	exams         exam.Store
+	runtime       workerruntime.Store
+	audit         auth.Store
+	scanTemplates ScanTemplateReader
+}
+
+// WithScanTemplates 只用于采集任务的模板投影，不开放模板配置或文件管理能力。
+func (h *Handler) WithScanTemplates(reader ScanTemplateReader) *Handler {
+	h.scanTemplates = reader
+	return h
 }
 
 func NewHandler(store Store, fileStore files.Store, examStore exam.Store, runtime workerruntime.Store, audit auth.Store) *Handler {

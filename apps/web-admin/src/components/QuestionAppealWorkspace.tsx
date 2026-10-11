@@ -1,46 +1,64 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert, Button, Drawer, Empty, Input, List, Select, Space, Tag, Typography } from "antd";
-import { Eye, FileCheck2, RotateCcw } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Alert, App, Button, Drawer, Typography } from "antd";
 import {
   decideQuestionAppeal,
   getQuestionAppealAnswerImage,
   getQuestionAppealContext,
   listQuestionAppeals,
+  resolveQuestionAppeal,
   startQuestionAppealReview,
+  submitQuestionAppealReviewOpinion,
   type PublishedQuestionAppeal,
   type PublishedQuestionAppealContext
 } from "../api/questionAppeals";
-import { getUserErrorMessage } from "../api/client";
+import { ApiClientError, getUserErrorMessage } from "../api/client";
 import { listManagedUsers, type ManagedUser } from "../api/users";
-
-const statusLabels: Record<string, string> = {
-  submitted: "待处理", under_review: "处理中", rejected: "已答复", upheld_pending_regrade: "已转复评", resolved: "已完成"
-};
-const reasonLabels: Record<string, string> = {
-  recognition_error: "识别有误", missing_step_credit: "过程分遗漏", rubric_disagreement: "评分要点异议",
-  calculation_error: "分数计算有误", annotation_issue: "批注或反馈问题", other: "其他"
-};
+import { listRegradeJobs, type RegradeJob } from "../api/scoreReleases";
+import { listStudents } from "../api/org";
+import { QuestionAppealActions, QuestionAppealEvidence, QuestionAppealFeedback, QuestionAppealIdentityHeader, QuestionAppealQueue, QuestionAppealResolution, QuestionAppealSummary, questionAppealBusinessSummary } from "./QuestionAppealViews";
+import { questionAppealRubricPoints } from "./questionAppealPresentation";
+import { QuestionAppealRegradeLaunch } from "./QuestionAppealRegradeLaunch";
+import { useUnsavedChangesGuard } from "../router/useUnsavedChangesGuard";
+import { QuestionAppealReviewOpinionPanel, type ReviewOpinionChoice } from "./QuestionAppealReviewOpinionPanel";
 
 function messageFor(error: unknown) {
   return getUserErrorMessage(error, "操作失败，请稍后重试");
 }
 
-function formatScore(value: number) {
-  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+function reviewOpinionMessage(error: unknown) {
+  if (error instanceof ApiClientError && error.code === "appeal_source_release_invalid") return "学校已更新当前公布成绩，意见未提交，填写内容已保留。请联系学校管理员重新核对本申请的成绩版本。";
+  if (error instanceof ApiClientError && error.code === "resource_version_conflict") return "本申请已被其他人更新，意见未提交，填写内容已保留。请先复制说明，再刷新申请核对当前分派与处理状态。";
+  return messageFor(error);
 }
 
-function rubricPoints(snapshot: Record<string, unknown> | undefined): Array<{ key: string; label: string; score?: number }> {
-  const points = snapshot?.points;
-  if (!Array.isArray(points)) return [];
-  return points.flatMap((point, index) => {
-    if (!point || typeof point !== "object") return [];
-    const item = point as Record<string, unknown>;
-    const label = [item.code, item.description, item.name].find((value): value is string => typeof value === "string" && Boolean(value.trim())) ?? `评分点 ${index + 1}`;
-    return [{ key: String(item.id ?? item.code ?? index), label, score: typeof item.score === "number" ? item.score : typeof item.points === "number" ? item.points : undefined }];
-  });
+function canSubmitTeacherOpinion(appeal: PublishedQuestionAppeal | undefined, canManage: boolean, canWork: boolean, currentUserId: string) {
+  // 教师只可对分派给本人且仍在复核中的申请提交意见；管理员走独立结论入口。
+  return !canManage && canWork && Boolean(currentUserId) && appeal?.assigned_to === currentUserId && appeal.status === "under_review";
 }
 
-export function QuestionAppealWorkspace({ examId = "", canManage, canWork, onChanged }: { examId?: string; canManage: boolean; canWork: boolean; onChanged?: () => void }) {
+async function loadQuestionAppealReviewers(isCurrentRequest: () => boolean): Promise<ManagedUser[]> {
+  const allUsers: ManagedUser[] = [];
+  const seenCursors = new Set<string>();
+  let cursor: string | undefined;
+  do {
+    const page = await listManagedUsers(cursor ? { limit: 100, cursor } : { limit: 100 });
+    // 每页返回后核对刷新版本；过期请求不继续分页，调用方仍须在写入前复核版本。
+    if (!isCurrentRequest()) return [];
+    allUsers.push(...page.users);
+    if (!page.has_more) break;
+    if (!page.next_cursor || seenCursors.has(page.next_cursor)) throw new Error("复核人员分页异常，请刷新后重试");
+    seenCursors.add(page.next_cursor); cursor = page.next_cursor;
+  } while (cursor);
+  return allUsers.filter((user) => user.status === "active" && user.roles.some((role) => ["teacher", "grader", "arbitrator"].includes(role)));
+}
+
+export function QuestionAppealWorkspace({ examId = "", canManage, canWork, canRead = canManage || canWork, canManageScores = false, canReadIdentities = false, examLabels = {}, currentUserId = "", personalScope = false, onNavigate, onChanged, onEditorStateChange }: Readonly<{
+  examId?: string; canManage: boolean; canWork: boolean; canRead?: boolean; canManageScores?: boolean;
+  currentUserId?: string; personalScope?: boolean; onNavigate?: (path: string) => void; onChanged?: () => void;
+  canReadIdentities?: boolean; examLabels?: Readonly<Record<string, string>>;
+  onEditorStateChange?: (state: { dirty: boolean; busy: boolean }) => void;
+}>) {
+  const { modal } = App.useApp();
   const [appeals, setAppeals] = useState<PublishedQuestionAppeal[]>([]);
   const [reviewers, setReviewers] = useState<ManagedUser[]>([]);
   const [loading, setLoading] = useState(false);
@@ -54,98 +72,224 @@ export function QuestionAppealWorkspace({ examId = "", canManage, canWork, onCha
   const [notice, setNotice] = useState("");
   const [contextRevision, setContextRevision] = useState(0);
   const [answerImageURL, setAnswerImageURL] = useState("");
+  const [publicResponse, setPublicResponse] = useState("");
+  const [reviewOpinion, setReviewOpinion] = useState<ReviewOpinionChoice | "">("");
+  const [suggestedScore, setSuggestedScore] = useState<number | undefined>();
+  const [reviewExplanation, setReviewExplanation] = useState("");
+  const [resolutionID, setResolutionID] = useState("");
+  const [regradeJobs, setRegradeJobs] = useState<RegradeJob[]>([]);
+  const [regradeRevision, setRegradeRevision] = useState(0);
+  const [regradeError, setRegradeError] = useState("");
+  const [draftTouched, setDraftTouched] = useState(false);
+  const [studentLabels, setStudentLabels] = useState<Record<string, string>>({});
+  const [identityError, setIdentityError] = useState("");
+  const [reviewersError, setReviewersError] = useState("");
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const summaryRequestRef = useRef(0);
+  const selectedIdRef = useRef(selectedId);
+  selectedIdRef.current = selectedId;
+  const busyRef = useRef(false);
+  const refreshRequestRef = useRef(0);
+  useUnsavedChangesGuard({ dirty: draftTouched, busy: actioning, description: "复核意见、给学生的回复或本题复评选择尚未提交，离开后无法恢复。" });
+  useEffect(() => { onEditorStateChange?.({ dirty: draftTouched, busy: actioning }); }, [draftTouched, actioning, onEditorStateChange]);
+  useEffect(() => () => { refreshRequestRef.current += 1; summaryRequestRef.current++; }, []);
+  useEffect(() => { summaryRequestRef.current++; setSummaryLoading(false); }, [selectedId]);
+
+  const changeSelection = (next: () => void) => {
+    if (busyRef.current) return;
+    if (!draftTouched) { next(); return; }
+    modal.confirm({ title: "放弃未提交的复核内容？", content: "当前意见、回复和复评选择只保存在本页，离开后无法恢复。", okText: "放弃并继续", cancelText: "继续编辑", onOk: () => { setDraftTouched(false); next(); } });
+  };
 
   const refresh = useCallback(async () => {
-    if (!canManage && !canWork) { setAppeals([]); return; }
+    if (!canRead) { setAppeals([]); return; }
+    const requestID = ++refreshRequestRef.current;
     setLoading(true); setError("");
     try {
       const response = await listQuestionAppeals(examId);
-      setAppeals(response.appeals);
-      setSelectedId((current) => response.appeals.some((appeal) => appeal.id === current) ? current : response.appeals[0]?.id ?? "");
+      if (requestID !== refreshRequestRef.current) return;
+      // 双角色账号的服务端读权限可能覆盖全校；教师视角仍只呈现分派给当前账号的任务。
+      const scopedAppeals = personalScope ? response.appeals.filter((appeal) => appeal.assigned_to === currentUserId) : response.appeals;
+      setAppeals(scopedAppeals);
+      setSelectedId((current) => scopedAppeals.some((appeal) => appeal.id === current) ? current : scopedAppeals[0]?.id ?? "");
       if (canManage) {
-        const users = await listManagedUsers({ limit: 100 });
-        setReviewers(users.users.filter((user) => user.status === "active" && user.roles.some((role) => ["teacher", "grader", "arbitrator"].includes(role))));
+        setReviewersError("");
+        try {
+          const activeReviewers = await loadQuestionAppealReviewers(() => requestID === refreshRequestRef.current);
+          if (requestID !== refreshRequestRef.current) return;
+          setReviewers(activeReviewers);
+        } catch (cause) { if (requestID === refreshRequestRef.current) { setReviewers([]); setReviewersError(messageFor(cause)); } }
       }
-    } catch (failure) { setError(messageFor(failure)); }
-    finally { setLoading(false); }
-  }, [canManage, canWork, examId]);
+    } catch (error_) { if (requestID === refreshRequestRef.current) setError(messageFor(error_)); }
+    finally { if (requestID === refreshRequestRef.current) setLoading(false); }
+  }, [canRead, canManage, examId, personalScope, currentUserId]);
 
   useEffect(() => { void refresh(); }, [refresh]);
   useEffect(() => {
-    if (!selectedId) { setContext(null); return; }
+    setStudentLabels({}); setIdentityError("");
+    if (!canReadIdentities || personalScope) return;
     let active = true;
-    setContext(null); setContextError("");
-    void getQuestionAppealContext(selectedId).then((response) => { if (active) { setContext(response.context); setAssignedTo(response.context.appeal.assigned_to ?? ""); } }).catch((failure) => { if (active) setContextError(messageFor(failure)); });
+    const ids = [...new Set(appeals.flatMap((appeal) => appeal.student_id ? [appeal.student_id] : []))];
+    const batches = Array.from({ length: Math.ceil(ids.length / 200) }, (_, index) => ids.slice(index * 200, (index + 1) * 200));
+    // 身份目录只为学校管理视角辅助核对对象；教师视角不请求学生姓名与学号。
+    void Promise.all(batches.map((batch) => listStudents({ ids: batch, limit: 200 }))).then((pages) => {
+      if (active) setStudentLabels(Object.fromEntries(pages.flatMap((page) => page.students.map((student) => [student.id, `${student.name} · ${student.student_no}`]))));
+    }).catch((cause) => { if (active) setIdentityError(messageFor(cause)); });
+    return () => { active = false; };
+  }, [appeals, canReadIdentities, personalScope]);
+  useEffect(() => {
+    if (!selectedId) { setContext(null); return; }
+    // 选择或刷新版本变化后，上一轮详情不能覆盖当前申诉和分派选择。
+    // contextRevision 用于重读同一申诉，不能因 effect 内未读取它而删除依赖。
+    let active = true;
+    setContext(null); setContextError(""); setPublicResponse(""); setRegradeJobID(""); setResolutionID(""); setDraftTouched(false);
+    setReviewOpinion(""); setSuggestedScore(undefined); setReviewExplanation("");
+    void getQuestionAppealContext(selectedId).then((response) => { if (active) {
+      setContext(response.context); setAssignedTo(response.context.appeal.assigned_to ?? ""); setPublicResponse(response.context.appeal.public_response ?? "");
+      setReviewOpinion(response.context.appeal.review_opinion?.opinion ?? ""); setSuggestedScore(response.context.appeal.review_opinion?.suggested_score); setReviewExplanation(response.context.appeal.review_opinion?.explanation ?? "");
+    } }).catch((error_) => { if (active) setContextError(messageFor(error_)); });
     return () => { active = false; };
   }, [selectedId, contextRevision]);
   useEffect(() => {
+    // 开始下载新申请图像前清掉旧 URL，不能用旧图核对新申请。
+    setAnswerImageURL("");
     if (!context?.answer_image_ready) { setAnswerImageURL(""); return; }
+    // active 只阻止迟到图像写入界面；清理时撤销本轮已经创建的 URL。
     let active = true;
     let objectURL = "";
     void getQuestionAppealAnswerImage(context.appeal.id).then((asset) => {
       objectURL = URL.createObjectURL(asset.blob);
       if (active) setAnswerImageURL(objectURL);
+      else URL.revokeObjectURL(objectURL);
     }).catch(() => { if (active) setAnswerImageURL(""); });
     return () => { active = false; if (objectURL) URL.revokeObjectURL(objectURL); };
   }, [context?.appeal.id, context?.answer_image_ready]);
 
+  useEffect(() => {
+    if (!canManageScores || !context) { setRegradeJobs([]); return; }
+    // regradeRevision 只重读任务列表，保留同一申请的公开回复；不能随列表刷新重置详情草稿。
+    let active = true;
+    setRegradeError(""); setRegradeJobs([]);
+    void listRegradeJobs(context.appeal.exam_id).then((result) => {
+      if (active) setRegradeJobs(result.regrade_jobs.filter((job) => {
+        const submissions = job.selector?.submission_ids;
+        const band = job.selector?.score_band;
+        return job.status !== "cancelled" && job.question_id === context.appeal.question_id && job.source_release_id === context.appeal.source_release_id
+          && (!submissions?.length || submissions.includes(context.appeal.submission_id))
+          && (band?.min == null || context.appeal.source_score >= band.min)
+          && (band?.max == null || context.appeal.source_score <= band.max);
+      }));
+    }).catch((cause) => { if (active) setRegradeError(messageFor(cause)); });
+    return () => { active = false; };
+  }, [canManageScores, context, regradeRevision]);
+
   const selected = useMemo(() => appeals.find((appeal) => appeal.id === selectedId), [appeals, selectedId]);
-  const points = rubricPoints(context?.rubric_snapshot);
+  const points = questionAppealRubricPoints(context?.rubric_snapshot);
+  // 结论仅由管理员提交；教师通过独立意见入口移交，不以工作权限直接结案。
+  const canDecide = canManage;
+  const canSubmitOpinion = canSubmitTeacherOpinion(context?.appeal, canManage, canWork, currentUserId);
+  const resolutionOptions = context?.release_history.filter((release) => release.id && release.source === "regrade" && release.status === "published" && release.version > context.appeal.source_release_version).map((release) => ({ value: release.id, label: `第 ${release.version} 版 · ${release.reason}` })) ?? [];
   const refreshSelected = async () => {
+    // 先等列表和管理端人员刷新，再触发详情重读并通知父页面；此处不等待详情请求完成。
     await refresh(); setContextRevision((value) => value + 1); onChanged?.();
   };
-  const assign = async () => {
-    if (!selected || !assignedTo) return;
-    setActioning(true);
+  const rereadSelectedSummary = async () => {
+    if (!context || busyRef.current || summaryLoading) return;
+    const appealID = context.appeal.id;
+    const summaryExamID = context.appeal.exam_id;
+    const requestID = ++summaryRequestRef.current;
+    setSummaryLoading(true);
     try {
+      const response = await getQuestionAppealContext(appealID);
+      if (requestID !== summaryRequestRef.current || selectedIdRef.current !== appealID || response.context.appeal.id !== appealID || response.context.appeal.exam_id !== summaryExamID) return;
+      // 此重读只更新辨认任务的名称和学科；不能回填新版评分、分派或修订号而悄悄替换教师核对过的证据与输入。
+      const summary = { exam_name: response.context.appeal.exam_name, exam_subject: response.context.appeal.exam_subject };
+      setContext((current) => current?.appeal.id === appealID ? { ...current, appeal: { ...current.appeal, ...summary } } : current);
+      setAppeals((current) => current.map((item) => item.id === appealID ? { ...item, ...summary } : item));
+    } catch {
+      // 名称读取失败仍保留冻结材料和草稿；缺名称的持久提示继续提供同页重读。
+    } finally {
+      if (requestID === summaryRequestRef.current) setSummaryLoading(false);
+    }
+  };
+  const assign = async () => {
+    if (!selected || !assignedTo || !canManage || busyRef.current) return;
+    busyRef.current = true; setActioning(true);
+    try {
+      // 分派依据当前队列版本，独立加载的详情不能替代 selected.revision。
       await startQuestionAppealReview(selected.id, { assigned_to: assignedTo, expected_revision: selected.revision });
       setNotice("已分派给阅卷教师处理。"); await refreshSelected();
-    } catch (failure) { setContextError(messageFor(failure)); }
-    finally { setActioning(false); }
+    } catch (error_) { setContextError(messageFor(error_)); }
+    finally { busyRef.current = false; setActioning(false); }
   };
   const decide = async (decision: "reject" | "refer_regrade") => {
-    if (!context) return;
-    if (decision === "refer_regrade" && !regradeJobID.trim()) { setContextError("请先在题目级复评中创建该题的任务，再填入任务编号完成关联。"); return; }
-    setActioning(true);
+    if (!context || !canDecide || busyRef.current) return;
+    if (!publicResponse.trim()) { setContextError("请填写给学生的复核回复。"); return; }
+    if (decision === "refer_regrade" && (!canManageScores || !regradeJobs.some((job) => job.id === regradeJobID))) { setContextError("请先创建或选择同题同发布版本的复评任务。"); return; }
+    const appealID = context.appeal.id;
+    busyRef.current = true; setActioning(true);
     try {
+      // 处理结论依据当前展示的详情版本，不使用可能已经刷新的队列版本。
       await decideQuestionAppeal(context.appeal.id, {
         decision,
-        public_response: decision === "reject" ? "已复核本题答卷、评分要点和发布版本依据，当前成绩保持不变。" : "已受理，正在按题目级复评流程处理。",
+        public_response: publicResponse.trim(),
         ...(decision === "refer_regrade" ? { regrade_job_id: regradeJobID.trim() } : {}),
         expected_revision: context.appeal.revision
       });
-      setNotice(decision === "reject" ? "已答复学生，原成绩保持不变。" : "已关联受治理的题目级复评任务。"); await refreshSelected();
-    } catch (failure) { setContextError(messageFor(failure)); }
-    finally { setActioning(false); }
+      if (selectedIdRef.current !== appealID) return;
+      setDraftTouched(false); setNotice(decision === "reject" ? "已答复学生，原成绩保持不变。" : "已关联受治理的题目级复评任务。"); await refreshSelected();
+    } catch (error_) { setContextError(messageFor(error_)); }
+    finally { busyRef.current = false; setActioning(false); }
   };
 
-  if (!canManage && !canWork) return null;
+  const submitOpinion = async () => {
+    if (!context || !canSubmitOpinion || busyRef.current) return;
+    if (!reviewOpinion || !reviewExplanation.trim()) { setContextError("请选择复核意见并填写依据与说明。"); return; }
+    if (suggestedScore !== undefined && (!Number.isFinite(suggestedScore) || suggestedScore < 0 || suggestedScore > context.appeal.source_max_score)) { setContextError("建议分值必须在本题零分与满分之间。"); return; }
+    const appealID = context.appeal.id;
+    busyRef.current = true; setActioning(true); setContextError("");
+    try {
+      // 按教师实际核对的详情修订提交；冲突或当前成绩换版时保留输入，不自动改用新版重发意见。
+      const response = await submitQuestionAppealReviewOpinion(appealID, { opinion: reviewOpinion, ...(suggestedScore === undefined ? {} : { suggested_score: suggestedScore }), explanation: reviewExplanation.trim(), expected_revision: context.appeal.revision });
+      if (selectedIdRef.current !== appealID) return;
+      setContext((current) => current?.appeal.id === appealID ? { ...current, appeal: response.appeal } : current);
+      setAppeals((current) => current.map((item) => item.id === appealID ? response.appeal : item));
+      setDraftTouched(false); setNotice(`${questionAppealBusinessSummary(response.appeal, examLabels)}：复核意见已保存并移交学校管理员。成绩尚未改变，请等待管理员继续处理。`); onChanged?.();
+    } catch (cause) { setContextError(reviewOpinionMessage(cause)); }
+    finally { busyRef.current = false; setActioning(false); }
+  };
+
+  const resolve = async () => {
+    if (!context || !canManage || busyRef.current || !resolutionID || !publicResponse.trim()) return;
+    busyRef.current = true; setActioning(true);
+    try {
+      await resolveQuestionAppeal(context.appeal.id, { new_release_id: resolutionID, public_response: publicResponse.trim(), expected_revision: context.appeal.revision });
+      setDraftTouched(false); setNotice("结果已公布，学生可以在我的复核申请中查看回复和成绩版本。"); await refreshSelected();
+    } catch (cause) { setContextError(messageFor(cause)); }
+    finally { busyRef.current = false; setActioning(false); }
+  };
+
+  if (!canRead) return null;
   return <section className="question-appeal-workspace" aria-labelledby="question-appeal-title">
-    <header className="question-appeal-heading"><div><h2 id="question-appeal-title">题目申诉</h2><p>只处理已发布版本中的题目异议；需要更正时进入题目级复评，再生成新的成绩版本。</p></div><Button icon={<RotateCcw size={15} />} loading={loading} onClick={() => void refresh()}>刷新</Button></header>
-    {error ? <Alert type="error" showIcon message="题目申诉暂时无法加载" description={error} /> : null}
-    {!loading && appeals.length === 0 ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="当前考试没有题目申诉" /> : null}
-    {appeals.length > 0 ? <List size="small" className="question-appeal-list" dataSource={appeals} renderItem={(appeal) => <List.Item className={appeal.id === selectedId ? "is-selected" : ""} actions={[<Button key="open" size="small" onClick={() => setSelectedId(appeal.id)}>查看</Button>]}><div><strong>{appeal.question_no} · {reasonLabels[appeal.reason_code] ?? "其他原因"}</strong><span>原分 {formatScore(appeal.source_score)} / {formatScore(appeal.source_max_score)} · 发布 V{appeal.source_release_version}</span></div><Tag color={appeal.status === "submitted" ? "orange" : appeal.status === "resolved" ? "green" : "blue"}>{statusLabels[appeal.status] ?? "处理中"}</Tag></List.Item>} /> : null}
-    <Drawer width={760} open={Boolean(selectedId)} title={selected ? `${selected.question_no} 题目申诉` : "题目申诉"} onClose={() => setSelectedId("")}>
+    <QuestionAppealSummary appeals={appeals} loading={loading} actioning={actioning} error={error} identityError={identityError} examLabels={examLabels} onRefresh={() => changeSelection(() => { void refreshSelected(); })} />
+    <QuestionAppealQueue appeals={appeals} selectedId={selectedId} personalScope={personalScope} examLabels={examLabels} studentLabels={studentLabels} onSelect={(id) => changeSelection(() => setSelectedId(id))} />
+    <Drawer width={760} open={Boolean(selectedId)} title={selected ? `${questionAppealBusinessSummary(selected, examLabels)}复核材料` : "复核材料"} onClose={() => changeSelection(() => setSelectedId(""))}>
       {contextError ? <Alert type="error" showIcon message="无法处理此申诉" description={contextError} /> : null}
       {!context && !contextError ? <Typography.Text type="secondary">正在加载发布版本依据…</Typography.Text> : null}
       {context ? <div className="question-appeal-context">
-        <section className="question-appeal-facts"><div><span>学生说明</span><strong>{context.appeal.reason}</strong></div><div><span>原评分来源</span><strong>{context.source_type || "已冻结评分事实"}</strong></div><div><span>发布版本</span><strong>V{context.appeal.source_release_version}</strong></div></section>
-        {context.appeal.selected_region ? <Alert type="info" showIcon message="学生已圈选争议区域" description="红框只用于定位答题位置，不会修改原始答题图或成绩。" /> : null}
-        {context.answer_image_ready && answerImageURL ? <section><h3><Eye size={16} /> 答题图</h3><div className="question-appeal-image"><img src={answerImageURL} alt={`${context.appeal.question_no} 答题区域`} />{context.appeal.selected_region ? <RegionOverlay region={context.appeal.selected_region} /> : null}</div></section> : <Alert type="warning" showIcon message="答题图暂不可用" description="申诉与发布版本依据仍可查看；请从阅卷证据链确认图像状态。" />}
-        <section><h3><FileCheck2 size={16} /> 冻结评分要点</h3>{points.length ? <List size="small" dataSource={points} renderItem={(point) => <List.Item><span>{point.label}</span>{point.score !== undefined ? <Tag>{formatScore(point.score)} 分</Tag> : null}</List.Item>} /> : <Typography.Text type="secondary">本题没有可展示的结构化评分要点。</Typography.Text>}</section>
-        <section><h3>版本历史</h3><List size="small" dataSource={context.release_history} renderItem={(version) => <List.Item><span>V{version.version} · {version.source === "initial" ? "首次发布" : version.source === "regrade" ? "重评发布" : "其他来源"}</span><Tag color={version.status === "published" ? "green" : "default"}>{version.status === "published" ? "已发布" : version.status === "superseded" ? "已被替代" : "未知状态"}</Tag></List.Item>} /></section>
-        {notice ? <Alert type="success" showIcon message={notice} /> : null}
-        {context.appeal.status === "submitted" && canManage ? <section className="question-appeal-actions"><h3>分派处理</h3><Space wrap><Select className="question-appeal-reviewer" placeholder="选择阅卷教师" value={assignedTo || undefined} options={reviewers.map((user) => ({ value: user.id, label: user.display_name || user.username }))} onChange={setAssignedTo} /><Button type="primary" loading={actioning} disabled={!assignedTo} onClick={() => void assign()}>开始复核</Button></Space></section> : null}
-        {context.appeal.status === "under_review" ? <section className="question-appeal-actions"><h3>处理结论</h3><Space wrap><Button loading={actioning} onClick={() => void decide("reject")}>答复并维持原成绩</Button>{canManage ? <><Input className="question-appeal-regrade-id" placeholder="已创建的复评任务编号" value={regradeJobID} onChange={(event) => setRegradeJobID(event.target.value)} /><Button type="primary" loading={actioning} onClick={() => void decide("refer_regrade")}>关联题目级复评</Button></> : null}</Space><Typography.Paragraph type="secondary">关联后不会直接改分；复评完成后仍需生成并发布新的成绩版本。</Typography.Paragraph></section> : null}
+        <QuestionAppealIdentityHeader appeal={context.appeal} examLabels={examLabels} studentLabels={studentLabels} personalScope={personalScope} summaryLoading={summaryLoading} onReloadSummary={() => void rereadSelectedSummary()} />
+        <QuestionAppealEvidence context={context} answerImageURL={answerImageURL} points={points} />
+        <QuestionAppealFeedback notice={notice} reviewersError={reviewersError} publicResponse={context.appeal.public_response} />
+        <QuestionAppealReviewOpinionPanel saved={context.appeal.review_opinion} pending={context.appeal.status === "under_review"} canSubmit={canSubmitOpinion} opinion={reviewOpinion} suggestedScore={suggestedScore} explanation={reviewExplanation} maxScore={context.appeal.source_max_score} busy={actioning}
+          onOpinionChange={(value) => { setReviewOpinion(value); setDraftTouched(true); }} onScoreChange={(value) => { setSuggestedScore(value); setDraftTouched(true); }} onExplanationChange={(value) => { setReviewExplanation(value); setDraftTouched(true); }} onSubmit={() => void submitOpinion()} />
+        <QuestionAppealActions status={context.appeal.status} canManage={canManage} assignedTo={assignedTo} reviewers={reviewers}
+          canDecide={canDecide} canManageScores={canManageScores} publicResponse={publicResponse} onPublicResponseChange={(value) => { setPublicResponse(value); setDraftTouched(true); }} onReloadRegrades={() => setRegradeRevision((value) => value + 1)} regradeOptions={regradeJobs.map((job) => ({ value: job.id, label: `${job.reason_text} · ${job.affected_count} 份答卷` }))} regradeError={regradeError}
+          actioning={actioning} regradeJobID={regradeJobID} onAssignedToChange={setAssignedTo} onRegradeJobIDChange={(id) => { setRegradeJobID(id); setDraftTouched(true); }}
+          onAssign={() => { void assign(); }} onDecide={(decision) => { void decide(decision); }} />
+        {canManage && canManageScores && context.appeal.status === "under_review" ? <QuestionAppealRegradeLaunch key={context.appeal.id} appeal={context.appeal} reviewers={reviewers} response={publicResponse} busy={actioning} onWorkingChange={(working) => { busyRef.current = working; setActioning(working); }} onCreated={(id) => { setRegradeJobID(id); setRegradeRevision((value) => value + 1); setDraftTouched(true); setNotice("复评任务已创建，请填写回复并关联任务，再到考试成绩工作台完成复评和发布。"); }} /> : null}
+        {canManage && context.appeal.status === "upheld_pending_regrade" ? <QuestionAppealResolution options={resolutionOptions} resolutionID={resolutionID} publicResponse={publicResponse} actioning={actioning} onResolutionChange={(value) => { setResolutionID(value); setDraftTouched(true); }} onPublicResponseChange={(value) => { setPublicResponse(value); setDraftTouched(true); }} onResolve={() => void resolve()} /> : null}
+        {canManageScores && onNavigate && ["under_review", "upheld_pending_regrade"].includes(context.appeal.status) ? <Button onClick={() => onNavigate(`/exams/${encodeURIComponent(context.appeal.exam_id)}/scores`)}>前往本考试成绩工作台完成复评与发布</Button> : null}
       </div> : null}
     </Drawer>
   </section>;
-}
-
-function RegionOverlay({ region }: { region: Record<string, unknown> }) {
-  // 只接受标准答题图的归一化框；其他坐标系不能直接按图片百分比定位。
-  const values = [region.x, region.y, region.width, region.height];
-  if (region.coordinate_space !== "canonical_image_normalized" || values.some((value) => typeof value !== "number")) return null;
-  const [x, y, width, height] = values as number[];
-  return <span className="question-appeal-region" style={{ left: `${x * 100}%`, top: `${y * 100}%`, width: `${width * 100}%`, height: `${height * 100}%` }} />;
 }

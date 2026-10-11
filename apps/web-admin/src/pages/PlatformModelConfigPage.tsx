@@ -6,16 +6,14 @@ import {
   AutoComplete,
   Button,
   Drawer,
-  Dropdown,
   Form,
   Input,
   Segmented,
   Select,
   Space,
-  Tooltip,
-  type TableColumnsType
+  Tooltip
 } from "antd";
-import { KeyRound, MoreHorizontal, Pencil, Plus, RefreshCw, Zap } from "lucide-react";
+import { KeyRound, Plus, RefreshCw, Zap } from "lucide-react";
 import {
   autoCreateManagedModelAPIConfig,
   deleteManagedModelAPIConfig,
@@ -30,20 +28,23 @@ import {
 } from "../api/modelApiConfig";
 import { ApiClientError, getUserErrorMessage } from "../api/client";
 import type { Tenant } from "../api/org";
-import { StatusTag } from "../components/StatusTag";
 import { onboardingQueryKey } from "../features/onboarding/queries";
 import { SchoolModelSelector } from "../features/platform-model-config/components/SchoolModelSelector";
 import { SchoolModelTable } from "../features/platform-model-config/components/SchoolModelTable";
+import { modelConfigColumns } from "../features/platform-model-config/components/modelConfigColumns";
 import { useModelConfigDrafts } from "../features/platform-model-config/hooks/useModelConfigDrafts";
 import {
   supplierOptions,
   supplierDefaults,
-  formatDateTime,
   presetForConfig,
   modelConfigDraftKey,
-  capabilityVerified,
   isTransientProbeError,
-  connectionStatusLabel,
+  applySavedModelConfig,
+  modelUsageMessage,
+  modelSaveLabel,
+  hasModelFormChanges,
+  capabilityDialogPresentation,
+  capabilityVerified,
   probeFormatLabel,
   loadAllSchoolTenants,
   type SupplierPreset,
@@ -52,6 +53,41 @@ import {
 import { PanelModelBindingsSection } from "./PanelModelBindingsSection";
 import { ManagedGovernanceWorkspace } from "../components/model-governance/ManagedGovernanceWorkspace";
 import { hashQueryParam } from "../router/query";
+import { rememberModelConfigLocation, selectModelSchool } from "../features/platform-model-config/lib/modelConfigLocation";
+import { useUnsavedChangesGuard } from "../router/useUnsavedChangesGuard";
+
+type ModelFailureNotice = { kind: "warning" | "error"; text: string };
+
+function modelDiscoveryFailure(error: unknown, hasSavedCredential: boolean): ModelFailureNotice {
+  const temporarilyUnavailable = error instanceof ApiClientError && isTransientProbeError(error.code);
+  return {
+    kind: temporarilyUnavailable ? "warning" : "error",
+    text: `${managedModelDiscoveryErrorMessage(error, hasSavedCredential)}${temporarilyUnavailable ? "（本次暂时无法验证，不代表 API Key 无效）" : ""}`
+  };
+}
+
+function modelSaveFailure(error: unknown, editing: ManagedModelAPIConfig | null): ModelFailureNotice {
+  const temporarilyUnavailable = error instanceof ApiClientError && isTransientProbeError(error.code);
+  return {
+    kind: temporarilyUnavailable ? "warning" : "error",
+    text: `${getUserErrorMessage(error, editing ? "配置更新失败" : "配置保存失败")}${temporarilyUnavailable ? "（本次暂时无法验证，已保留当前填写内容）" : ""}`
+  };
+}
+
+function modelProbeFailure(config: ManagedModelAPIConfig, result: ManagedAPIProbeResult): ModelFailureNotice {
+  // 供应商暂不可用只表示本次未能验证，不能把模型或密钥显示为已失效。
+  const temporarilyUnavailable = isTransientProbeError(result.error_code);
+  return {
+    kind: temporarilyUnavailable ? "warning" : "error",
+    text: `${config.display_name}：${result.message}${temporarilyUnavailable ? "（本次暂时无法验证，不代表模型已失效）" : ""}`
+  };
+}
+
+function savedModelAccessDescription(config?: ManagedModelAPIConfig) {
+  // 访问检查通过不等于评分能力已验证；只认当前协议的能力检测结果。
+  if (config && capabilityVerified(config)) return "该配置已通过当前结构化能力检测。正式评分仍需要角色绑定、真实评测、人工批准和使用策略。";
+  return "此次保存未生成回复，尚未验证回复与结构化能力。检测会发送合成测试内容并产生少量用量，供应商可能收费。正式评分还需要角色绑定、真实评测、人工批准和使用策略。";
+}
 
 export function PlatformModelConfigPage() {
   const queryClient = useQueryClient();
@@ -64,6 +100,19 @@ export function PlatformModelConfigPage() {
     const requested = hashQueryParam("tab");
     return requested === "bindings" || requested === "governance" ? requested : "models";
   });
+  const [bindingsDirty, setBindingsDirty] = useState(false);
+  const [governanceDirty, setGovernanceDirty] = useState(false);
+  const [governanceSaving, setGovernanceSaving] = useState(false);
+  const governanceSavingRef = useRef(false);
+  const handleGovernanceSaving = useCallback((busy: boolean) => { governanceSavingRef.current = busy; setGovernanceSaving(busy); }, []);
+  const [modelFilter, setModelFilter] = useState<"all" | "enabled" | "connection" | "capability">("all");
+  const [savedAccess, setSavedAccess] = useState<{ tenantID: string; config: ManagedModelAPIConfig }>();
+  const [bindingsSaving, setBindingsSaving] = useState(false);
+  const bindingsSavingRef = useRef(false);
+  const handleBindingsSaving = useCallback((busy: boolean) => {
+    bindingsSavingRef.current = busy;
+    setBindingsSaving(busy);
+  }, []);
   const [configs, setConfigs] = useState<ManagedModelAPIConfig[]>([]);
   const [configLoading, setConfigLoading] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -71,6 +120,11 @@ export function PlatformModelConfigPage() {
   const [credentialSource, setCredentialSource] = useState<ManagedModelAPIConfig | null>(null);
   const [saving, setSaving] = useState(false);
   const [probingID, setProbingID] = useState("");
+  const [batchProbeProgress, setBatchProbeProgress] = useState<{ completed: number; total: number } | null>(null);
+  const [updatingID, setUpdatingID] = useState("");
+  // ref 在 React 重绘前阻止重复提交；state 同时锁住学校选择和配置操作。
+  const modelOperationRef = useRef(false);
+  const modelBusy = Boolean(probingID || batchProbeProgress || updatingID) || saving;
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [modelOptionsOpen, setModelOptionsOpen] = useState(false);
   const [filterAvailableModels, setFilterAvailableModels] = useState(false);
@@ -78,6 +132,19 @@ export function PlatformModelConfigPage() {
   const configRequestRef = useRef(0);
   const { clearFormDraft, saveFormDraft, restoreFormDraft } = useModelConfigDrafts(form);
   const watchedSupplier = Form.useWatch("supplier", form);
+  useUnsavedChangesGuard({ dirty: (activeTab === "bindings" && bindingsDirty) || governanceDirty, busy: bindingsSaving || governanceSaving || saving, description: "模型角色或学校使用策略尚未保存，离开后将重新读取服务端版本。" });
+  // 三智能体角色配置只在点击各自保存按钮后写入服务端；离开当前学校或标签前先处理未保存输入。
+  const changeBindingContext = (action: () => void) => {
+    // 子组件开始保存即同步通知；排队的学校切换和先前打开的确认不能在保存中卸载它。
+    if (bindingsSavingRef.current || governanceSavingRef.current) return;
+    const proceed = () => { if (!bindingsSavingRef.current && !governanceSavingRef.current) action(); };
+    if ((activeTab !== "bindings" || !bindingsDirty) && !governanceDirty) { proceed(); return; }
+    modal.confirm({
+      title: "放弃未保存的模型设置？",
+      content: "切换学校或标签后，当前输入不会保留。",
+      okText: "放弃并继续", cancelText: "继续编辑", okButtonProps: { danger: true }, onOk: proceed
+    });
+  };
   // 切换学校立即递增请求代次，旧学校配置不得回填到当前模型列表。
   const selectedSchool = useMemo(
     () => schools.find((school) => school.id === selectedTenantID),
@@ -94,9 +161,10 @@ export function PlatformModelConfigPage() {
       const items = await loadAllSchoolTenants();
       setSchools(items);
       const requestedTenantID = new URLSearchParams(window.location.hash.split("?")[1] ?? "").get("tenant_id");
-      setSelectedTenantID((current) => current && items.some((school) => school.id === current)
-        ? current
-        : items.find((school) => school.id === requestedTenantID)?.id ?? items.find((school) => school.status === "active")?.id ?? items[0]?.id ?? "");
+      setSelectedTenantID((current) => !current && !requestedTenantID && hashQueryParam("choose_school") === "1" ? "" : selectModelSchool(items, current, requestedTenantID ?? ""));
+      if (requestedTenantID && !items.some((school) => school.id === requestedTenantID)) {
+        message.warning("地址中的学校已不可用，请重新选择配置学校。");
+      }
     } catch {
       message.error("学校列表加载失败");
     } finally {
@@ -248,9 +316,9 @@ export function PlatformModelConfigPage() {
     } catch (error) {
       setModelOptionsOpen(false);
       setFilterAvailableModels(false);
-      const temporarilyUnavailable = error instanceof ApiClientError && isTransientProbeError(error.code);
-      const notify = temporarilyUnavailable ? message.warning : message.error;
-      notify(`${managedModelDiscoveryErrorMessage(error, credentialSource !== null || Boolean(editing))}${temporarilyUnavailable ? "（本次暂时无法验证，不代表 API Key 无效）" : ""}`);
+      const notice = modelDiscoveryFailure(error, credentialSource !== null || Boolean(editing));
+      const notify = message[notice.kind];
+      notify(notice.text);
     } finally {
       setModelsLoading(false);
     }
@@ -280,9 +348,7 @@ export function PlatformModelConfigPage() {
           status: editing.status,
           is_default: editing.is_default
         });
-        setConfigs((current) => current.map((item) => item.id === response.config.id
-          ? response.config
-          : response.config.is_default ? { ...item, is_default: false } : item));
+        setConfigs((current) => applySavedModelConfig(current, response.config));
         message.success(apiKey ? "配置和密钥已更新" : "配置已更新");
       } else {
         const response = await autoCreateManagedModelAPIConfig({
@@ -293,8 +359,8 @@ export function PlatformModelConfigPage() {
           base_url: values.supplier === "custom" ? values.base_url?.trim() : undefined
         });
         setConfigs((current) => [response.config, ...current.map((item) => response.config.is_default ? { ...item, is_default: false } : item)]);
-        const validationSummary = `API Key 有效 · 模型可用 · 0 生成 Token · ${response.validation.latency_ms}ms`;
-        message.success(`${response.config.display_name} 已保存为备用模型（${validationSummary}）`);
+        setSavedAccess({ tenantID: selectedTenantID, config: response.config });
+        message.success(`${response.config.display_name} 已保存；密钥及模型访问权限检查通过，尚未验证回复能力。`);
       }
       clearFormDraft(draftKey);
       setDrawerOpen(false);
@@ -302,9 +368,9 @@ export function PlatformModelConfigPage() {
       form.resetFields();
       void queryClient.invalidateQueries({ queryKey: onboardingQueryKey });
     } catch (error) {
-      const temporarilyUnavailable = error instanceof ApiClientError && isTransientProbeError(error.code);
-      const notify = temporarilyUnavailable ? message.warning : message.error;
-      notify(`${getUserErrorMessage(error, editing ? "配置更新失败" : "配置保存失败")}${temporarilyUnavailable ? "（本次暂时无法验证，已保留当前填写内容）" : ""}`);
+      const notice = modelSaveFailure(error, editing);
+      const notify = message[notice.kind];
+      notify(notice.text);
     } finally {
       setSaving(false);
     }
@@ -313,14 +379,7 @@ export function PlatformModelConfigPage() {
   const closeDrawer = () => {
     if (saving) return;
     const values = form.getFieldsValue(true) as ConfigFormValues;
-    const apiKey = String(values.api_key ?? "").trim();
-    const baseURL = String(values.base_url ?? "").trim();
-    const modelName = String(values.model_name ?? "").trim();
-    const hasChanges = editing
-      ? apiKey !== "" || baseURL !== editing.base_url || modelName !== editing.model_name
-      : credentialSource
-        ? modelName !== ""
-        : Boolean(values.supplier || apiKey || baseURL || modelName);
+    const hasChanges = hasModelFormChanges(values, editing, credentialSource);
     const draftKey = modelConfigDraftKey(selectedTenantID, editing?.id, credentialSource?.id);
     if (hasChanges) {
       saveFormDraft(draftKey, values);
@@ -339,10 +398,9 @@ export function PlatformModelConfigPage() {
     const usage = result?.usage ?? config.last_capability_usage;
     const temporarilyUnavailable = Boolean(result && isTransientProbeError(result.error_code));
     const failed = result ? !result.ok && !temporarilyUnavailable : config.last_capability_status === "failed";
-    modal[temporarilyUnavailable ? "warning" : failed ? "error" : "info"]({
-      title: temporarilyUnavailable
-        ? `${config.display_name}：能力检测暂时无法完成`
-        : failed ? `${config.display_name}：结构化输出检测未通过` : `${config.display_name}：能力检测详情`,
+    const presentation = capabilityDialogPresentation(config.display_name, temporarilyUnavailable, failed);
+    modal[presentation.kind]({
+      title: presentation.title,
       width: 560,
       content: (
         <div className="platform-model-diagnostic">
@@ -363,6 +421,8 @@ export function PlatformModelConfigPage() {
   }, [modal]);
 
   const probe = useCallback(async (config: ManagedModelAPIConfig, mode: ManagedAPIProbeMode = "quick") => {
+    if (modelOperationRef.current) return;
+    modelOperationRef.current = true;
     setProbingID(config.id);
     try {
       const response = await probeManagedModelAPIConfig(config.id, selectedTenantID, mode, mode === "capability");
@@ -375,8 +435,9 @@ export function PlatformModelConfigPage() {
         void queryClient.invalidateQueries({ queryKey: onboardingQueryKey });
       }
       else {
-        const notify = isTransientProbeError(response.result.error_code) ? message.warning : message.error;
-        notify(`${config.display_name}：${response.result.message}${isTransientProbeError(response.result.error_code) ? "（本次暂时无法验证，不代表模型已失效）" : ""}`);
+        const notice = modelProbeFailure(config, response.result);
+        const notify = message[notice.kind];
+        notify(notice.text);
         if (mode === "capability") showCapabilityDetails(response.config, response.result);
       }
     } catch (error) {
@@ -384,11 +445,68 @@ export function PlatformModelConfigPage() {
       const notify = error instanceof ApiClientError && isTransientProbeError(error.code) ? message.warning : message.error;
       notify(getUserErrorMessage(error, `${config.display_name}连接失败`));
     } finally {
+      modelOperationRef.current = false;
       setProbingID("");
     }
   }, [loadConfigs, message, queryClient, selectedTenantID, showCapabilityDetails]);
 
+  const probeAll = useCallback(async () => {
+    if (!selectedTenantID || configLoading || configs.length === 0 || modelOperationRef.current) return;
+    modelOperationRef.current = true;
+    const tenantID = selectedTenantID;
+    const requestID = configRequestRef.current;
+    const targets = [...configs];
+    let nextIndex = 0;
+    let completed = 0;
+    let healthy = 0;
+    let temporary = 0;
+    let failed = 0;
+    let requestFailed = false;
+    setBatchProbeProgress({ completed, total: targets.length });
+    // 暂不可用单独计数，批量汇总不能把本次无法验证当成模型失效。
+    const countProbeResult = (result: ManagedAPIProbeResult) => {
+      if (result.ok) healthy += 1;
+      else if (isTransientProbeError(result.error_code)) temporary += 1;
+      else failed += 1;
+    };
+    // 每份配置的密钥和模型权限都可能不同，已停用配置也检测；最多并发三个，单项失败不终止整批。
+    const worker = async () => {
+      while (nextIndex < targets.length) {
+        const config = targets[nextIndex++];
+        try {
+          const response = await probeManagedModelAPIConfig(config.id, tenantID, "quick");
+          if (requestID !== configRequestRef.current) return;
+          setConfigs((current) => current.map((item) => item.id === response.config.id ? response.config : item));
+          countProbeResult(response.result);
+        } catch (error) {
+          requestFailed = true;
+          if (error instanceof ApiClientError && isTransientProbeError(error.code)) temporary += 1;
+          else failed += 1;
+        }
+        if (requestID !== configRequestRef.current) return;
+        completed += 1;
+        setBatchProbeProgress({ completed, total: targets.length });
+      }
+    };
+    try {
+      await Promise.all(Array.from({ length: Math.min(3, targets.length) }, worker));
+      if (requestID !== configRequestRef.current) return;
+      const summary = `全部连接检测完成：${healthy} 个正常，${temporary} 个暂时无法验证，${failed} 个失败`;
+      if (temporary || failed) message.warning(summary);
+      else message.success(summary);
+      void queryClient.invalidateQueries({ queryKey: onboardingQueryKey });
+      // HTTP 错误也可能已在服务端记录检测状态，整批结束后重新读取一次。
+      if (requestFailed) await loadConfigs(tenantID);
+    } finally {
+      modelOperationRef.current = false;
+      setBatchProbeProgress(null);
+    }
+  }, [configLoading, configs, loadConfigs, message, queryClient, selectedTenantID]);
+
   const updateUsage = useCallback(async (config: ManagedModelAPIConfig, status: "active" | "disabled", isDefault: boolean) => {
+    if (modelOperationRef.current) return;
+    modelOperationRef.current = true;
+    setUpdatingID(config.id);
     try {
       const response = await updateManagedModelAPIConfig(config.id, selectedTenantID, {
         display_name: config.display_name,
@@ -401,143 +519,157 @@ export function PlatformModelConfigPage() {
         status,
         is_default: isDefault
       });
-      setConfigs((current) => current.map((item) => item.id === response.config.id
-        ? response.config
-        : response.config.is_default ? { ...item, is_default: false } : item));
-      message.success(isDefault
-        ? `${config.display_name} 已设为日常对话模型`
-        : config.is_default ? "日常对话已切回本地模型"
-        : status === "disabled" ? `${config.display_name} 已停用` : `${config.display_name} 已启用`);
+      setConfigs((current) => applySavedModelConfig(current, response.config));
+      message.success(modelUsageMessage(config, status, isDefault));
       void queryClient.invalidateQueries({ queryKey: onboardingQueryKey });
     } catch (error) {
       message.error(getUserErrorMessage(error));
+    } finally {
+      modelOperationRef.current = false;
+      setUpdatingID("");
     }
   }, [message, queryClient, selectedTenantID]);
 
   const removeConfig = useCallback((config: ManagedModelAPIConfig) => {
+    if (modelOperationRef.current || config.is_default) return;
+    const tenantID = selectedTenantID;
     modal.confirm({
       title: `删除 ${config.display_name}？`,
-      content: "删除后无法恢复，已保存的 API Key 也会一并移除。",
+      content: "删除后该配置无法在此恢复，已保存的 API Key 将不再可用。被评分角色或治理配置引用的模型无法删除。",
       okText: "删除",
       okButtonProps: { danger: true },
       cancelText: "取消",
       onOk: async () => {
+        if (modelOperationRef.current) return;
+        modelOperationRef.current = true;
+        setUpdatingID(config.id);
+        const requestID = configRequestRef.current;
         try {
-          await deleteManagedModelAPIConfig(config.id, selectedTenantID);
+          await deleteManagedModelAPIConfig(config.id, tenantID);
+          if (requestID !== configRequestRef.current) return;
           setConfigs((current) => current.filter((item) => item.id !== config.id));
           message.success(`${config.display_name} 已删除`);
           void queryClient.invalidateQueries({ queryKey: onboardingQueryKey });
         } catch (error) {
           message.error(getUserErrorMessage(error));
+        } finally {
+          modelOperationRef.current = false;
+          setUpdatingID("");
         }
       }
     });
   }, [message, modal, queryClient, selectedTenantID]);
 
-  const columns = useMemo<TableColumnsType<ManagedModelAPIConfig>>(() => [
-    {
-      title: "模型",
-      key: "identity",
-      render: (_value, config) => (
-        <div className="platform-model-identity">
-          <span className={config.status === "active" ? "active" : "disabled"}><Zap size={16} /></span>
-          <div>
-            <strong>{config.display_name}</strong>
-            <small>{config.model_name}</small>
-            <small>配置 {config.id.slice(0, 8)}</small>
-          </div>
-        </div>
-      )
-    },
-    {
-      title: "密钥",
-      key: "credential",
-      width: 130,
-      render: (_value, config) => (
-        <div className="platform-model-secret">
-          <KeyRound size={14} />
-          <span>已配置 · {config.credential_hint || "已加密"}</span>
-        </div>
-      )
-    },
-    {
-      title: "连接状态",
-      key: "probe",
-      width: 210,
-      render: (_value, config) => (
-        <div className="platform-model-probe">
-          <StatusTag tone={config.last_test_status === "success" ? "success" : config.last_test_status === "temporary_unavailable" ? "warning" : config.last_test_status === "failed" ? "danger" : "neutral"}>
-            {config.last_test_status === "success" ? "连接正常" : connectionStatusLabel(config)}
-          </StatusTag>
-          <small title={config.last_test_message}>{(config.last_test_status === "failed" || config.last_test_status === "temporary_unavailable") && config.last_test_message
-            ? config.last_test_message
-            : <>{config.last_test_latency_ms ? `${config.last_test_latency_ms}ms · ` : ""}{formatDateTime(config.last_tested_at)}</>}</small>
-          {config.last_test_status === "temporary_unavailable" ? <small>上次连接正常：{config.last_successful_tested_at ? formatDateTime(config.last_successful_tested_at) : "暂无记录"}</small> : null}
-          <small title={config.last_capability_message}>结构化能力：{config.last_capability_status === "success"
-            ? config.last_capability_probe_version === "structured-json-v3"
-              ? `已验证 · ${formatDateTime(config.last_capability_tested_at)}`
-              : "待按新策略复验"
-            : config.last_capability_status === "failed" ? "验证失败" : "未验证"}</small>
-          {config.last_capability_status === "failed" ? <Button className="platform-model-detail-link" type="link" size="small" onClick={() => showCapabilityDetails(config)}>查看原因</Button> : null}
-        </div>
-      )
-    },
-    {
-      title: "用途",
-      key: "assignment",
-      width: 120,
-      render: (_value, config) => config.is_default
-        ? <StatusTag tone="info">日常对话</StatusTag>
-        : <StatusTag tone={config.status === "active" ? "success" : "neutral"}>{config.status === "active" ? "备用" : "已停用"}</StatusTag>
-    },
-    {
-      title: "操作",
-      key: "actions",
-      width: 270,
-      render: (_value, config) => (
-        <Space size={6}>
-          <Tooltip title="只检查接口、密钥和模型权限，不发送模型生成请求">
-            <Button size="small" icon={<Zap size={14} />} loading={probingID === config.id} onClick={() => void probe(config, "quick")}>检测连接</Button>
-          </Tooltip>
-          {config.status === "active" ? <Button size="small" icon={<Plus size={14} />} onClick={() => openCreateWithKey(config)}>同 Key 模型</Button> : null}
-          <Tooltip title="编辑配置或更换密钥">
-            <Button size="small" type="text" icon={<Pencil size={14} />} aria-label={`编辑${config.display_name}`} onClick={() => openEdit(config)} />
-          </Tooltip>
-          <Dropdown
-            trigger={["click"]}
-            menu={{ items: [
-              { key: "capability", label: "完整能力检测" },
-              ...(config.status === "active" && !config.is_default ? [{
-                key: "current",
-                label: capabilityVerified(config) ? "设为日常对话模型" : "设为日常对话模型（需先完整检测）",
-                disabled: !capabilityVerified(config)
-              }] : []),
-              ...(config.is_default ? [{ key: "local", label: "日常对话切回本地模型" }] : []),
-              ...(!config.is_default ? [{ key: config.status === "active" ? "disable" : "enable", label: config.status === "active" ? "停用" : "启用" }] : []),
-              ...(config.status === "disabled" ? [{ key: "delete", label: "删除", danger: true }] : [])
-            ], onClick: async ({ key }) => {
-              if (key === "capability") {
-                await probe(config, "capability");
-                return;
-              }
-              if (key === "delete") {
-                removeConfig(config);
-                return;
-              }
-              const status = key === "disable" ? "disabled" : "active";
-              await updateUsage(config, status, key === "current" ? true : key === "local" ? false : config.is_default);
-            } }}
-          >
-            <Button size="small" type="text" icon={<MoreHorizontal size={15} />} aria-label={`${config.display_name}更多操作`} />
-          </Dropdown>
-        </Space>
-      )
-    }
-  ], [openCreateWithKey, openEdit, probe, probingID, removeConfig, showCapabilityDetails, updateUsage]);
+  const columns = useMemo(() => modelConfigColumns({
+    configLoading, modelBusy, openCreateWithKey, openEdit, probe, probingID,
+    removeConfig, showCapabilityDetails, updateUsage, updatingID
+  }), [configLoading, modelBusy, openCreateWithKey, openEdit, probe, probingID, removeConfig, showCapabilityDetails, updateUsage, updatingID]);
 
   const activeCount = configs.filter((config) => config.status === "active").length;
-  const healthyCount = configs.filter((config) => config.last_test_status === "success").length;
+  const healthyCount = configs.filter((config) => config.status === "active" && config.last_test_status === "success").length;
+  const capabilityCount = configs.filter((config) => config.status === "active" && config.last_capability_status === "success" && config.last_capability_probe_version === "structured-json-v3").length;
+  const visibleConfigs = configs.filter((config) => modelFilter === "all" || (config.status === "active" && (modelFilter === "enabled" || (modelFilter === "connection" ? config.last_test_status === "success" : config.last_capability_status === "success" && config.last_capability_probe_version === "structured-json-v3"))));
   const temporarilyUnavailableCount = configs.filter((config) => config.last_test_status === "temporary_unavailable").length;
+
+  const renderCredentialField = () => {
+    if (credentialSource) {
+      return <Alert type="info" showIcon message={`沿用已保存的密钥（${credentialSource.credential_hint || "已加密"}）`} description="新模型会单独验证并加密保存；后续更换密钥需逐个更新模型配置。" />;
+    }
+    return <Form.Item
+      name="api_key"
+      label={editing ? `API Key（当前 ${editing.credential_hint ?? "已配置"}）` : "API Key"}
+      dependencies={editing ? ["base_url"] : undefined}
+      rules={editing ? [
+        { min: 16, message: "密钥至少 16 个字符" },
+        ({ getFieldValue }) => ({
+          validator: async (_rule, value) => {
+            const endpointChanged = presetForConfig(editing) === "custom" &&
+              String(getFieldValue("base_url") ?? "").trim() !== editing.base_url;
+            if (endpointChanged && !String(value ?? "").trim()) {
+              throw new Error("更换 API 地址时请输入新 API Key");
+            }
+          }
+        })
+      ] : [{ required: true, message: "请输入 API Key" }, { min: 16, message: "密钥至少 16 个字符" }]}
+      extra={editing ? "原密钥不会回显；留空则继续使用。更换 API 地址时必须输入新密钥。" : "密钥将加密保存；保存只做零生成 Token 连接检测。"}
+    >
+      <Input.Password
+        prefix={<KeyRound size={15} />}
+        maxLength={1024}
+        autoComplete="new-password"
+        placeholder={editing ? `当前 ${editing.credential_hint ?? "已配置"}` : "输入供应商密钥"}
+        onChange={() => {
+          setAvailableModels([]);
+          setModelOptionsOpen(false);
+          setFilterAvailableModels(false);
+        }}
+      />
+    </Form.Item>;
+  };
+
+  const renderModelForm = () => (
+    <Form form={form} layout="vertical" requiredMark={false} className="platform-model-form">
+      <Form.Item
+        name="supplier"
+        label="供应商"
+        rules={[{ required: true, message: "请选择供应商" }]}
+        extra={editing ? "供应商决定密钥归属；如需更换供应商，请新建模型配置。" : undefined}
+      >
+        <Select options={supplierOptions} onChange={changeSupplier} disabled={Boolean(credentialSource || editing)} placeholder="选择 API Key 所属供应商" />
+      </Form.Item>
+      {renderCredentialField()}
+      {watchedSupplier === "custom" && !credentialSource ? (
+        <Form.Item
+          name="base_url"
+          label="API 地址"
+          rules={[{ required: true, message: "请输入 API 地址" }, { pattern: /^https:\/\/[^\s]+$/i, message: "第三方接口必须使用 HTTPS" }]}
+          extra="填写到 API 版本层级，例如 https://api.example.com/v1。"
+        >
+          <Input
+            placeholder="https://api.example.com/v1"
+            autoComplete="url"
+            onChange={() => {
+              setAvailableModels([]);
+              setModelOptionsOpen(false);
+              setFilterAvailableModels(false);
+            }}
+          />
+        </Form.Item>
+      ) : null}
+      <Form.Item
+        name="model_name"
+        label="模型名称"
+        rules={[{ required: true, message: "请输入模型名称" }]}
+        extra={<span className="platform-model-field-help">{credentialSource || editing ? "可使用已保存的密钥" : "选择供应商并填写 API Key"}，零 Token 获取模型列表。<Button type="link" size="small" loading={modelsLoading} onClick={() => {
+          if (availableModels.length > 0) {
+            setFilterAvailableModels(false);
+            setModelOptionsOpen(true);
+          }
+          else void fetchAvailableModels();
+        }}>{availableModels.length > 0 ? `已找到 ${availableModels.length} 个，点击选择` : "获取可用模型"}</Button></span>}
+      >
+        <AutoComplete
+          options={availableModels.map((model) => ({ value: model }))}
+          open={modelOptionsOpen && availableModels.length > 0}
+          onOpenChange={(open) => setModelOptionsOpen(open && availableModels.length > 0)}
+          onFocus={() => setModelOptionsOpen(availableModels.length > 0)}
+          placeholder="获取后选择，也可手工输入模型名称"
+          onChange={(value) => {
+            if (availableModels.includes(value)) {
+              setModelOptionsOpen(false);
+              setFilterAvailableModels(false);
+            } else if (availableModels.length > 0) {
+              setFilterAvailableModels(true);
+              setModelOptionsOpen(true);
+            }
+          }}
+          filterOption={filterAvailableModels
+            ? (value, option) => String(option?.value ?? "").toLowerCase().includes(value.toLowerCase())
+            : false}
+        />
+      </Form.Item>
+    </Form>
+  );
 
   return (
     <div className="platform-model-page">
@@ -547,8 +679,12 @@ export function PlatformModelConfigPage() {
           <p>选择学校，管理学校模型、三智能体评分和模型治理。</p>
         </div>
         <Space>
-          <Button icon={<RefreshCw size={16} />} loading={schoolLoading || configLoading} onClick={() => { void loadSchools(); void loadConfigs(selectedTenantID); }}>刷新</Button>
-          {activeTab === "models" ? <Button type="primary" icon={<Plus size={16} />} disabled={!selectedTenantID || configLoading} onClick={openCreate}>添加模型</Button> : null}
+          <Button icon={<RefreshCw size={16} />} disabled={modelBusy || bindingsSaving} loading={schoolLoading || configLoading} onClick={() => {
+            if (bindingsSavingRef.current || modelOperationRef.current) return;
+            void loadSchools();
+            void loadConfigs(selectedTenantID);
+          }}>刷新</Button>
+          {activeTab === "models" ? <Button type="primary" icon={<Plus size={16} />} disabled={!selectedTenantID || configLoading || modelBusy} onClick={openCreate}>添加模型</Button> : null}
         </Space>
       </section>
 
@@ -557,16 +693,20 @@ export function PlatformModelConfigPage() {
         selectedTenantID={selectedTenantID}
         currentConfig={currentConfig}
         loading={schoolLoading}
-        disabled={drawerOpen || saving || Boolean(probingID)}
+        disabled={drawerOpen || bindingsSaving || governanceSaving || modelBusy}
         activeCount={activeCount}
         healthyCount={healthyCount}
+        capabilityCount={capabilityCount}
+        onFilter={(filter) => changeBindingContext(() => { setModelFilter(filter); setActiveTab("models"); rememberModelConfigLocation(selectedTenantID, "models"); })}
         temporarilyUnavailableCount={temporarilyUnavailableCount}
-        onChange={(tenantID) => {
+        onChange={(tenantID) => changeBindingContext(() => {
           configRequestRef.current += 1;
+          setSavedAccess(undefined); setModelFilter("all");
           setConfigs([]);
           setConfigLoading(true);
+          rememberModelConfigLocation(tenantID, activeTab);
           setSelectedTenantID(tenantID);
-        }}
+        })}
       />
 
       <Alert
@@ -578,19 +718,42 @@ export function PlatformModelConfigPage() {
 
       <Segmented
         value={activeTab}
+        disabled={bindingsSaving}
         options={[{ value: "models", label: "学校模型" }, { value: "bindings", label: "三智能体配置" }, { value: "governance", label: "治理与评测" }]}
         onChange={(value) => {
           const next = value as "models" | "bindings" | "governance";
-          setActiveTab(next);
-          window.location.hash = `/admin/platform/model-config?tab=${next}`;
+          changeBindingContext(() => {
+            setActiveTab(next);
+            rememberModelConfigLocation(selectedTenantID, next);
+          });
         }}
       />
 
-      {activeTab === "models" ? <><h2 className="platform-model-section-title">学校模型库</h2>
-      <SchoolModelTable tenantID={selectedTenantID} loading={configLoading} columns={columns} configs={configs} />
+      {activeTab === "models" ? <><div className="platform-model-library-heading">
+        <h2 className="platform-model-section-title">学校模型库</h2>
+        <Tooltip title="检测当前学校所有厂商的模型配置（含已停用配置），只检查连接，不发送模型生成请求">
+          <Button icon={<Zap size={16} />} loading={Boolean(batchProbeProgress)}
+            disabled={!selectedTenantID || configLoading || configs.length === 0 || modelBusy}
+            onClick={() => void probeAll()}>
+            {batchProbeProgress ? `检测中 ${batchProbeProgress.completed}/${batchProbeProgress.total}` : "检测全部连接"}
+          </Button>
+        </Tooltip>
+      </div>
+      {savedAccess?.tenantID === selectedTenantID ? <Alert type="success" showIcon message={`${savedAccess.config.display_name}：密钥及模型访问权限检查通过`} description={savedModelAccessDescription(configs.find((item) => item.id === savedAccess.config.id))} action={<Button disabled={modelBusy} onClick={() => void probe(savedAccess.config, "capability")}>检测回复与结构化能力</Button>} /> : null}
+      <Space><span>{({ all: "全部配置", enabled: "已启用配置", connection: "已启用且访问检查通过", capability: "已启用且结构化能力已验证" })[modelFilter]} · {visibleConfigs.length} 个</span>{modelFilter !== "all" ? <Button onClick={() => setModelFilter("all")}>显示全部</Button> : null}</Space>
+      <SchoolModelTable tenantID={selectedTenantID} loading={configLoading} columns={columns} configs={visibleConfigs} />
       </> : null}
-      {activeTab === "bindings" ? <PanelModelBindingsSection tenantID={selectedTenantID} configs={configs} loadingConfigs={configLoading} /> : null}
-      {activeTab === "governance" ? <ManagedGovernanceWorkspace tenantID={selectedTenantID} configs={configs} /> : null}
+      {activeTab === "bindings" ? <PanelModelBindingsSection tenantID={selectedTenantID} configs={configs} loadingConfigs={configLoading} onDirtyChange={setBindingsDirty} onSavingChange={handleBindingsSaving} onOpenGovernance={(view, scope) => changeBindingContext(() => {
+        rememberModelConfigLocation(selectedTenantID, "governance");
+        const [path, query = ""] = window.location.hash.split("?");
+        const params = new URLSearchParams(query); params.set("view", view);
+        // 评分组合入口没有题目风险事实；旧地址中的风险不能沿用为新组合的检查范围。
+        params.delete("risk");
+        if (scope) { params.set("stage", scope.stage); params.set("subject", scope.subject); params.set("archetype", scope.archetype); }
+        window.history.replaceState(window.history.state, "", `${window.location.pathname}${window.location.search}${path}?${params}`);
+        setActiveTab("governance");
+      })} /> : null}
+      {activeTab === "governance" ? <ManagedGovernanceWorkspace key={selectedTenantID} tenantID={selectedTenantID} schoolName={selectedSchool?.name} configs={configs} onDirtyChange={setGovernanceDirty} onSavingChange={handleGovernanceSaving} /> : null}
 
       <Drawer
         title={editing ? `编辑 ${editing.display_name}` : `为${selectedSchool?.name ?? "学校"}添加模型`}
@@ -600,99 +763,10 @@ export function PlatformModelConfigPage() {
         maskClosable={!saving}
         keyboard={!saving}
         onClose={closeDrawer}
-        extra={<Space><Button disabled={saving} onClick={closeDrawer}>关闭</Button><Button type="primary" loading={saving} onClick={() => void save()}>{editing?.is_default ? "验证并更新" : editing ? "检测连接并更新" : "检测连接并保存"}</Button></Space>}
+        extra={<Space><Button disabled={saving} onClick={closeDrawer}>关闭</Button><Button type="primary" loading={saving} onClick={() => void save()}>{modelSaveLabel(editing)}</Button></Space>}
         destroyOnHidden
       >
-        <Form form={form} layout="vertical" requiredMark={false} className="platform-model-form">
-          <Form.Item
-            name="supplier"
-            label="供应商"
-            rules={[{ required: true, message: "请选择供应商" }]}
-            extra={editing ? "供应商决定密钥归属；如需更换供应商，请新建模型配置。" : undefined}
-          >
-            <Select options={supplierOptions} onChange={changeSupplier} disabled={Boolean(credentialSource || editing)} placeholder="选择 API Key 所属供应商" />
-          </Form.Item>
-          {credentialSource ? <Alert type="info" showIcon message={`沿用已保存的密钥（${credentialSource.credential_hint || "已加密"}）`} description="新模型会单独验证并加密保存；后续更换密钥需逐个更新模型配置。" /> : <Form.Item
-            name="api_key"
-            label={editing ? `API Key（当前 ${editing.credential_hint ?? "已配置"}）` : "API Key"}
-            dependencies={editing ? ["base_url"] : undefined}
-            rules={editing ? [
-              { min: 16, message: "密钥至少 16 个字符" },
-              ({ getFieldValue }) => ({
-                validator: async (_rule, value) => {
-                  const endpointChanged = presetForConfig(editing) === "custom" &&
-                    String(getFieldValue("base_url") ?? "").trim() !== editing.base_url;
-                  if (endpointChanged && !String(value ?? "").trim()) {
-                    throw new Error("更换 API 地址时请输入新 API Key");
-                  }
-                }
-              })
-            ] : [{ required: true, message: "请输入 API Key" }, { min: 16, message: "密钥至少 16 个字符" }]}
-            extra={editing ? "原密钥不会回显；留空则继续使用。更换 API 地址时必须输入新密钥。" : "密钥将加密保存；保存只做零生成 Token 连接检测。"}
-          >
-            <Input.Password
-              prefix={<KeyRound size={15} />}
-              maxLength={1024}
-              autoComplete="new-password"
-              placeholder={editing ? `当前 ${editing.credential_hint ?? "已配置"}` : "输入供应商密钥"}
-              onChange={() => {
-                setAvailableModels([]);
-                setModelOptionsOpen(false);
-                setFilterAvailableModels(false);
-              }}
-            />
-          </Form.Item>}
-          {watchedSupplier === "custom" && !credentialSource ? (
-            <Form.Item
-              name="base_url"
-              label="API 地址"
-              rules={[{ required: true, message: "请输入 API 地址" }, { pattern: /^https:\/\/[^\s]+$/i, message: "第三方接口必须使用 HTTPS" }]}
-              extra="填写到 API 版本层级，例如 https://api.example.com/v1。"
-            >
-              <Input
-                placeholder="https://api.example.com/v1"
-                autoComplete="url"
-                onChange={() => {
-                  setAvailableModels([]);
-                  setModelOptionsOpen(false);
-                  setFilterAvailableModels(false);
-                }}
-              />
-            </Form.Item>
-          ) : null}
-          <Form.Item
-            name="model_name"
-            label="模型名称"
-            rules={[{ required: true, message: "请输入模型名称" }]}
-            extra={<span className="platform-model-field-help">{credentialSource || editing ? "可使用已保存的密钥" : "选择供应商并填写 API Key"}，零 Token 获取模型列表。<Button type="link" size="small" loading={modelsLoading} onClick={() => {
-              if (availableModels.length > 0) {
-                setFilterAvailableModels(false);
-                setModelOptionsOpen(true);
-              }
-              else void fetchAvailableModels();
-            }}>{availableModels.length > 0 ? `已找到 ${availableModels.length} 个，点击选择` : "获取可用模型"}</Button></span>}
-          >
-            <AutoComplete
-              options={availableModels.map((model) => ({ value: model }))}
-              open={modelOptionsOpen && availableModels.length > 0}
-              onDropdownVisibleChange={(open) => setModelOptionsOpen(open && availableModels.length > 0)}
-              onFocus={() => setModelOptionsOpen(availableModels.length > 0)}
-              placeholder="获取后选择，也可手工输入模型名称"
-              onChange={(value) => {
-                if (availableModels.includes(value)) {
-                  setModelOptionsOpen(false);
-                  setFilterAvailableModels(false);
-                } else if (availableModels.length > 0) {
-                  setFilterAvailableModels(true);
-                  setModelOptionsOpen(true);
-                }
-              }}
-              filterOption={filterAvailableModels
-                ? (value, option) => String(option?.value ?? "").toLowerCase().includes(value.toLowerCase())
-                : false}
-            />
-          </Form.Item>
-        </Form>
+        {renderModelForm()}
       </Drawer>
     </div>
   );

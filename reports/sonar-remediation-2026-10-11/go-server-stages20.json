@@ -1,0 +1,25 @@
+{
+  "files": [
+    {
+      "file": "services/api-gateway/internal/server/e2e_review_repairs_test.go",
+      "sha256": "6a4981db82de96d0df822075d7c1f395bdcc75a6db0d91b49f03b660a3422054",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_review_repairs_test.go"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_review_repairs_test.go",
+      "sha256": "c56b65baa4ada312d3c77abd582f2dccfd940db955f79ef03a050bf7c23097e8",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_review_repairs_test.go"
+    }
+  ],
+  "issue_functions": [
+    {
+      "file": "services/api-gateway/internal/server/e2e_review_repairs_test.go",
+      "function": "TestReviewRepairsReleaseAndStudentReadWithPostgresTestDatabase"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_review_repairs_test.go",
+      "function": "TestReleaseFeedbackUsesFinalArbitrationAndFreezesIt"
+    }
+  ],
+  "checkpoint_relation": "after checkpoint02; requires subsequent scan"
+}

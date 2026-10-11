@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { executeBusinessCommand, setBusinessCommandScope } from "./businessCommand";
+import { captureBusinessCommandSession, executeBusinessCommand, resumePersistedBusinessCommand, setBusinessCommandScope } from "./businessCommand";
 import { apiClient, ApiClientError } from "./client";
 
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
@@ -98,4 +98,93 @@ it("clears a command rejected before execution by recent-auth so step-up can ret
   expect(values.size).toBe(0);
   await expect(executeBusinessCommand("score.publish", "exam", { reason: "approved" }, send, value => value)).resolves.toEqual({ status: "published" });
   expect(send).toHaveBeenCalledTimes(2);
+});
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason: unknown) => void;
+  const promise = new Promise<T>((onResolve, onReject) => { resolve = onResolve; reject = onReject; });
+  return { promise, resolve, reject };
+}
+
+it.each(["takeover_ready", "not_accepted", "succeeded", "rejected"])("keeps the original receipt and never continues %s recovery after an account switch", async (status) => {
+  const values = setup();
+  const oldKey = "business-command:tenant:actor:score.publish:exam";
+  const newKey = "business-command:tenant:another-actor:score.publish:exam";
+  values.set(oldKey, JSON.stringify({ id: "old-command", payload: { reason: "old-payload" } }));
+  const response = deferred<unknown>();
+  vi.spyOn(apiClient, "request").mockImplementation(() => response.promise as Promise<never>);
+  const send = vi.fn();
+  const recover = vi.fn();
+  const work = executeBusinessCommand("score.publish", "exam", { reason: "edited" }, send, recover);
+  const result = expect(work).rejects.toMatchObject({ name: "BusinessCommandSessionChangedError" });
+  setBusinessCommandScope("tenant", "another-actor");
+  values.set(newKey, JSON.stringify({ id: "new-command" }));
+  response.resolve({ command_id: "old-command", status, payload: { reason: "frozen" }, result: { published: true } });
+  await result;
+  expect(send).not.toHaveBeenCalled();
+  expect(recover).not.toHaveBeenCalled();
+  expect(JSON.parse(values.get(oldKey)!)).toEqual({ id: "old-command" });
+  expect(JSON.parse(values.get(newKey)!)).toEqual({ id: "new-command" });
+});
+
+it.each(["success", "rejection"])("does not remove a later command when an old %s arrives after the same account logs in again", async (outcome) => {
+  const values = setup();
+  const key = "business-command:tenant:actor:review.submit:task";
+  const response = deferred<{ score: number }>();
+  const send = vi.fn(() => response.promise);
+  const old = executeBusinessCommand("review.submit", "task", { score: 4 }, send, value => value);
+  const result = expect(old).rejects.toMatchObject({ name: "BusinessCommandSessionChangedError" });
+  setBusinessCommandScope("", "");
+  setBusinessCommandScope("tenant", "actor");
+  values.set(key, JSON.stringify({ id: "later-command" }));
+  if (outcome === "success") response.resolve({ score: 4 });
+  else response.reject(new ApiClientError(400, "bad_input", "rejected"));
+  await result;
+  expect(JSON.parse(values.get(key)!)).toEqual({ id: "later-command" });
+  expect(send).toHaveBeenCalledTimes(1);
+});
+
+it("clears only the matching persisted command identity even without a session change", async () => {
+  const values = setup();
+  const key = "business-command:tenant:actor:review.submit:task";
+  const response = deferred<{ score: number }>();
+  const work = executeBusinessCommand("review.submit", "task", { score: 4 }, () => response.promise, value => value);
+  values.set(key, JSON.stringify({ id: "another-command" }));
+  response.resolve({ score: 4 });
+  await expect(work).resolves.toEqual({ score: 4 });
+  expect(JSON.parse(values.get(key)!)).toEqual({ id: "another-command" });
+});
+
+it("shares a pending recovery between the business page and the global recovery entry", async () => {
+  const values = setup();
+  values.set("business-command:tenant:actor:score.publish:exam", JSON.stringify({ id: "pending-command" }));
+  const response = deferred<unknown>();
+  const request = vi.spyOn(apiClient, "request").mockImplementation(() => response.promise as Promise<never>);
+  const send = vi.fn(async () => ({ published: true }));
+  const page = executeBusinessCommand("score.publish", "exam", { reason: "new" }, send, value => value);
+  const global = resumePersistedBusinessCommand("score.publish", "exam", send, value => value, captureBusinessCommandSession());
+  expect(global).toBe(page);
+  response.resolve({ command_id: "pending-command", status: "takeover_ready", payload: { reason: "frozen" } });
+  await expect(global).resolves.toEqual({ published: true });
+  expect(request).toHaveBeenCalledTimes(1);
+  expect(send).toHaveBeenCalledExactlyOnceWith("pending-command", { reason: "frozen" });
+});
+
+it("does not join the old session promise when the same account returns", async () => {
+  const values = setup();
+  const oldResponse = deferred<unknown>();
+  const old = executeBusinessCommand("score.publish", "exam", null, () => oldResponse.promise, value => value);
+  const result = expect(old).rejects.toMatchObject({ name: "BusinessCommandSessionChangedError" });
+  const stored = JSON.parse([...values.values()][0]) as { id: string };
+  setBusinessCommandScope("", "");
+  setBusinessCommandScope("tenant", "actor");
+  vi.spyOn(apiClient, "request").mockResolvedValue({ command_id: stored.id, status: "succeeded", result: { published: true } });
+  const send = vi.fn();
+  const current = executeBusinessCommand("score.publish", "exam", null, send, value => value);
+  expect(current).not.toBe(old);
+  await expect(current).resolves.toEqual({ published: true });
+  oldResponse.resolve({ published: true });
+  await result;
+  expect(send).not.toHaveBeenCalled();
 });

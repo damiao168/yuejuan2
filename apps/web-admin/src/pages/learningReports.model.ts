@@ -121,7 +121,8 @@ export function flattenErrors(questions: QuestionAnalysis[], classes: ClassRepor
   );
   // 题目级线索存在时优先使用它；仅在完全缺失时退回班级高频错题，避免重复展示两种口径。
   if (fromQuestions.length > 0) {
-    return fromQuestions.sort((a, b) => b.count - a.count).slice(0, 8);
+    fromQuestions.sort((a, b) => b.count - a.count);
+    return fromQuestions.slice(0, 8);
   }
   return classes
     .flatMap((classReport) =>

@@ -15,11 +15,9 @@ import (
 )
 
 func registerReviewRoutes(mux *http.ServeMux, ctx routerContext) {
-	// Gold sets, answer-group reference cases, Seed observations and drift
-	// evidence are quality-management facts.  A grader receives only the
-	// current calibration/Seed task through the ordinary review flow; exposing
-	// these lists to review:work would reveal reference scores or make dark
-	// samples identifiable.
+	// Gold 集合、答案组参考案例、Seed 观察和漂移证据属于质量管理事实。
+	// 阅卷人员通过普通复核流程只接收当前校准或 Seed 任务；
+	// 将这些列表开放给 review:work 会泄漏参考分数，或使暗样本可被识别。
 	goldpaper.RegisterRoutes(mux, ctx.modules.Grading.GoldPaperHandler, ctx.guards.requireReviewManage, ctx.guards.requireReviewManage)
 	calibration.RegisterRoutes(mux, ctx.modules.Grading.CalibrationHandler, ctx.guards.requireReviewWork, ctx.guards.requireReviewManage, ctx.guards.requireReviewWork)
 	answergroup.RegisterRoutes(mux, ctx.modules.Grading.AnswerGroupHandler, ctx.guards.requireReviewManage, ctx.guards.requireReviewManage)
@@ -32,6 +30,7 @@ func registerReviewRoutes(mux *http.ServeMux, ctx routerContext) {
 		qualitydashboard.RegisterRoutes(mux, ctx.modules.Grading.QualityDashboardHandler, ctx.guards.requireReviewManage)
 	}
 	mux.Handle("POST /api/v1/review-tasks", ctx.guards.requireReviewManage(ctx.modules.Grading.ReviewHandler.CreateTask))
+	mux.Handle("GET /api/v1/exams/{examId}/review-actors", ctx.guards.requireReviewManage(ctx.guards.withScopedExam(ctx.modules.Grading.ReviewHandler.ListReviewActors)))
 	mux.Handle("GET /api/v1/review-tasks", ctx.guards.requireReviewWork(ctx.modules.Grading.ReviewHandler.ListTasks))
 	mux.Handle("POST /api/v1/review-tasks/next", ctx.guards.requireReviewWork(ctx.modules.Grading.ReviewHandler.ClaimNextTask))
 	mux.Handle("POST /api/v1/review-tasks/batch-assign", ctx.guards.requireReviewManage(ctx.modules.Grading.ReviewHandler.BatchAssignTasks))

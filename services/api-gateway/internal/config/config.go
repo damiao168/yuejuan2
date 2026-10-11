@@ -166,7 +166,7 @@ type BarcodeConfig struct {
 	HMACKeys    map[string][]byte
 }
 
-// 配置按环境读取默认值，并在生产类环境最后执行严格校验，禁止不安全配置悄悄启动。
+// Load 按环境读取默认值，先返回解析或基础校验错误，再执行对应环境的启动限制。
 func Load(envFile string) (Config, error) {
 	if envFile != "" {
 		if err := loadDotEnv(envFile); err != nil {
@@ -177,7 +177,8 @@ func Load(envFile string) (Config, error) {
 	environment := getEnv("EDUGRADE_ENV", "development")
 	parser := envParser{strict: isProductionLike(environment)}
 	secretDefaults := map[string]string{
-		"EDUGRADE_POSTGRES_DSN":                "postgres://edugrade:edugrade_dev@127.0.0.1:5432/edugrade?sslmode=disable",
+		// 开发环境只提供无凭据的连接地址；实际数据库凭据必须通过环境变量或 *_FILE 注入，避免把可复制的口令提交到源码。
+		"EDUGRADE_POSTGRES_DSN":                "postgres://edugrade@127.0.0.1:5432/edugrade?sslmode=disable",
 		"EDUGRADE_REDIS_PASSWORD":              "",
 		"EDUGRADE_MINIO_APP_ACCESS_KEY":        "edugrade-app",
 		"EDUGRADE_MINIO_APP_SECRET_KEY":        "edugrade_app_dev_secret",
@@ -333,75 +334,10 @@ func parseBarcodeKeys(raw string) map[string][]byte {
 	return keys
 }
 
-// 这里集中检查密钥、传输加密、限流和 AI 服务边界；任一项不满足就拒绝生产启动。
+// 所有环境先按固定顺序返回首个基础错误；生产类环境再汇总问题，最后才检查模型主密钥。
 func validateProductionConfig(cfg Config) error {
-	if cfg.Auth.MFAEnabled {
-		key, err := base64.StdEncoding.DecodeString(strings.TrimSpace(cfg.Auth.MFAMasterKey))
-		if err != nil || len(key) != 32 {
-			return fmt.Errorf("EDUGRADE_MFA_MASTER_KEY must be a base64-encoded 32-byte independent key when MFA is enabled")
-		}
-		if strings.TrimSpace(cfg.Auth.MFAMasterKey) == strings.TrimSpace(cfg.ModelSecrets.MasterKey) {
-			return fmt.Errorf("EDUGRADE_MFA_MASTER_KEY must not reuse EDUGRADE_MODEL_CREDENTIAL_MASTER_KEY")
-		}
-	}
-	if cfg.Auth.WechatEnabled {
-		if len(cfg.Auth.WechatAppID) < 6 || len(cfg.Auth.WechatAppID) > 128 || len(cfg.Auth.WechatAppSecret) < 16 {
-			return fmt.Errorf("EDUGRADE_WECHAT_APP_ID and EDUGRADE_WECHAT_APP_SECRET are required when WeChat login is enabled")
-		}
-		redirect, err := url.Parse(cfg.Auth.WechatRedirectURL)
-		if err != nil || redirect.Scheme != "https" || redirect.Host == "" {
-			return fmt.Errorf("EDUGRADE_WECHAT_REDIRECT_URL must be an absolute HTTPS URL when WeChat login is enabled")
-		}
-		if cfg.Auth.WechatChallengeTTL < time.Minute || cfg.Auth.WechatChallengeTTL > 10*time.Minute {
-			return fmt.Errorf("EDUGRADE_WECHAT_CHALLENGE_TTL must be between 1m and 10m")
-		}
-	}
-	if cfg.Auth.RiskMode != "off" && cfg.Auth.RiskMode != "shadow" {
-		return fmt.Errorf("EDUGRADE_AUTH_RISK_MODE must be off or shadow until business step-up and recovery policies are complete")
-	}
-	if cfg.Auth.DeviceBindingTTL < 24*time.Hour || cfg.Auth.DeviceBindingTTL > 365*24*time.Hour {
-		return fmt.Errorf("EDUGRADE_DEVICE_BINDING_TTL must be between 24h and 8760h")
-	}
-	if err := validatePostgresCapacity(cfg.Postgres); err != nil {
+	if err := validateInitialConfig(cfg); err != nil {
 		return err
-	}
-	internalTLSConfigured := cfg.Service.InternalTLSPort > 0 || cfg.Service.InternalTLSCertFile != "" || cfg.Service.InternalTLSKeyFile != ""
-	if internalTLSConfigured && (cfg.Service.InternalTLSPort <= 0 || cfg.Service.InternalTLSCertFile == "" || cfg.Service.InternalTLSKeyFile == "") {
-		return fmt.Errorf("EDUGRADE_INTERNAL_TLS_PORT, EDUGRADE_INTERNAL_TLS_CERT_FILE, and EDUGRADE_INTERNAL_TLS_KEY_FILE must be configured together")
-	}
-	if cfg.Service.InternalTLSPort < 0 || cfg.Service.InternalTLSPort > 65535 || cfg.Service.InternalTLSPort == cfg.Service.Port {
-		return fmt.Errorf("EDUGRADE_INTERNAL_TLS_PORT must be 0 or a distinct port between 1 and 65535")
-	}
-	for _, cidr := range cfg.Security.TrustedProxyCIDRs {
-		if _, _, err := net.ParseCIDR(cidr); err != nil {
-			return fmt.Errorf("invalid EDUGRADE_TRUSTED_PROXY_CIDRS entry %q", cidr)
-		}
-	}
-	if cfg.AIService.MathGradingV2 && !cfg.AIService.Enabled {
-		return fmt.Errorf("EDUGRADE_MATH_GRADING_V2_ENABLED requires EDUGRADE_AI_GRADING_ENABLED")
-	}
-	if cfg.AIService.Enabled && strings.TrimSpace(cfg.AIService.URL) != "" {
-		if len(cfg.AIService.Token) < 32 {
-			return fmt.Errorf("unsafe AI service configuration: EDUGRADE_GRADING_AGENT_TOKEN must contain at least 32 characters")
-		}
-		if cfg.AIService.Timeout <= 0 || cfg.AIService.MaxRetries < 0 || cfg.AIService.MaxRetries > 1 || cfg.AIService.MinConfidence < 0 || cfg.AIService.MinConfidence > 1 {
-			return fmt.Errorf("invalid AI service timeout, retry, or confidence configuration")
-		}
-		if cfg.Service.WriteTimeout <= cfg.AIService.Timeout {
-			return fmt.Errorf("EDUGRADE_HTTP_WRITE_TIMEOUT must exceed EDUGRADE_AI_SERVICE_TIMEOUT")
-		}
-		identity := map[string]string{
-			"EDUGRADE_AI_PROVIDER_KEY":       cfg.AIService.ProviderKey,
-			"EDUGRADE_AI_DEPLOYMENT_KEY":     cfg.AIService.DeploymentKey,
-			"EDUGRADE_AI_ADAPTER_TYPE":       cfg.AIService.AdapterType,
-			"EDUGRADE_AI_DEPLOYMENT_REGION":  cfg.AIService.DeploymentRegion,
-			"EDUGRADE_AI_CAPABILITY_PROFILE": cfg.AIService.CapabilityProfile,
-		}
-		for name, value := range identity {
-			if strings.TrimSpace(value) == "" || len(value) > 128 || strings.ContainsAny(value, " \t\r\n") {
-				return fmt.Errorf("invalid AI service identity: %s must be a non-empty bounded identifier", name)
-			}
-		}
 	}
 	environment := strings.ToLower(strings.TrimSpace(cfg.Service.Environment))
 	if environment == "demo" {
@@ -413,51 +349,8 @@ func validateProductionConfig(cfg Config) error {
 	if !isProductionLike(cfg.Service.Environment) {
 		return nil
 	}
-	var problems []string
-	if cfg.AIService.AllowMock {
-		problems = append(problems, "EDUGRADE_ALLOW_MOCK_AI must be false in production-like environments")
-	}
-	if !cfg.Auth.LoginLimiterFailClosed {
-		problems = append(problems, "EDUGRADE_AUTH_LIMITER_FAIL_CLOSED must be true")
-	}
-	if cfg.AIService.Enabled && strings.TrimSpace(cfg.AIService.URL) == "" {
-		problems = append(problems, "EDUGRADE_AI_SERVICE_URL must be configured when AI grading is enabled")
-	}
-	if cfg.Service.InternalTLSPort <= 0 {
-		problems = append(problems, "internal API TLS listener must be configured")
-	}
-	if cfg.AIService.Enabled {
-		if err := validateServiceURL("EDUGRADE_AI_SERVICE_URL", cfg.AIService.URL, cfg.Service.Environment); err != nil {
-			problems = append(problems, err.Error())
-		}
-	}
-	if !cfg.Auth.SessionCookieSecure {
-		problems = append(problems, "EDUGRADE_SESSION_COOKIE_SECURE must be true")
-	}
-	if strings.Contains(cfg.Postgres.DSN, "edugrade_dev") || strings.Contains(cfg.Postgres.DSN, "sslmode=disable") {
-		problems = append(problems, "EDUGRADE_POSTGRES_DSN must not use development credentials or disabled TLS")
-	}
-	if !cfg.Postgres.TenantRLSEnabled {
-		problems = append(problems, "EDUGRADE_POSTGRES_TENANT_RLS must be true")
-	}
-	if strings.TrimSpace(cfg.Redis.Username) == "" {
-		problems = append(problems, "EDUGRADE_REDIS_USERNAME must be configured")
-	}
-	if strings.TrimSpace(cfg.Redis.Password) == "" {
-		problems = append(problems, "EDUGRADE_REDIS_PASSWORD must be configured")
-	}
-	if !cfg.Redis.TLSEnabled {
-		problems = append(problems, "EDUGRADE_REDIS_TLS_ENABLED must be true")
-	}
-	if cfg.MinIO.AccessKey == "edugrade-app" || cfg.MinIO.SecretKey == "edugrade_app_dev_secret" {
-		problems = append(problems, "MinIO application development credentials must be replaced")
-	}
-	if !cfg.MinIO.UseSSL {
-		problems = append(problems, "EDUGRADE_MINIO_USE_SSL must be true")
-	}
-	if len(cfg.Barcode.HMACKeys[cfg.Barcode.ActiveKeyID]) < 32 {
-		problems = append(problems, "EDUGRADE_BARCODE_HMAC_KEYS must contain the active key with at least 32 characters")
-	}
+	problems := productionServiceProblems(cfg.Service, cfg.Auth, cfg.AIService)
+	problems = append(problems, productionStorageProblems(cfg.Postgres, cfg.Redis, cfg.MinIO, cfg.Barcode)...)
 	for _, origin := range cfg.Security.CORSAllowedOrigins {
 		if strings.Contains(origin, "localhost") || strings.Contains(origin, "127.0.0.1") {
 			problems = append(problems, "EDUGRADE_CORS_ALLOWED_ORIGINS must not contain local development origins")
@@ -471,6 +364,169 @@ func validateProductionConfig(cfg Config) error {
 		return fmt.Errorf("unsafe production configuration: EDUGRADE_MODEL_CREDENTIAL_MASTER_KEY must be a unique secret with at least 32 characters")
 	}
 	return nil
+}
+
+func validateInitialConfig(cfg Config) error {
+	if err := validateMFAConfig(cfg.Auth, cfg.ModelSecrets); err != nil {
+		return err
+	}
+	if err := validateWechatConfig(cfg.Auth); err != nil {
+		return err
+	}
+	if err := validateAuthPolicyConfig(cfg.Auth); err != nil {
+		return err
+	}
+	if err := validatePostgresCapacity(cfg.Postgres); err != nil {
+		return err
+	}
+	if err := validateListenerProxyConfig(cfg.Service, cfg.Security); err != nil {
+		return err
+	}
+	return validateAIServiceConfig(cfg.AIService, cfg.Service)
+}
+
+func validateMFAConfig(auth AuthConfig, modelSecrets ModelSecretConfig) error {
+	if auth.MFAEnabled {
+		key, err := base64.StdEncoding.DecodeString(strings.TrimSpace(auth.MFAMasterKey))
+		if err != nil || len(key) != 32 {
+			return fmt.Errorf("EDUGRADE_MFA_MASTER_KEY must be a base64-encoded 32-byte independent key when MFA is enabled")
+		}
+		if strings.TrimSpace(auth.MFAMasterKey) == strings.TrimSpace(modelSecrets.MasterKey) {
+			return fmt.Errorf("EDUGRADE_MFA_MASTER_KEY must not reuse EDUGRADE_MODEL_CREDENTIAL_MASTER_KEY")
+		}
+	}
+	return nil
+}
+
+func validateWechatConfig(auth AuthConfig) error {
+	if auth.WechatEnabled {
+		if len(auth.WechatAppID) < 6 || len(auth.WechatAppID) > 128 || len(auth.WechatAppSecret) < 16 {
+			return fmt.Errorf("EDUGRADE_WECHAT_APP_ID and EDUGRADE_WECHAT_APP_SECRET are required when WeChat login is enabled")
+		}
+		redirect, err := url.Parse(auth.WechatRedirectURL)
+		if err != nil || redirect.Scheme != "https" || redirect.Host == "" {
+			return fmt.Errorf("EDUGRADE_WECHAT_REDIRECT_URL must be an absolute HTTPS URL when WeChat login is enabled")
+		}
+		if auth.WechatChallengeTTL < time.Minute || auth.WechatChallengeTTL > 10*time.Minute {
+			return fmt.Errorf("EDUGRADE_WECHAT_CHALLENGE_TTL must be between 1m and 10m")
+		}
+	}
+	return nil
+}
+
+func validateAuthPolicyConfig(auth AuthConfig) error {
+	if auth.RiskMode != "off" && auth.RiskMode != "shadow" {
+		return fmt.Errorf("EDUGRADE_AUTH_RISK_MODE must be off or shadow until business step-up and recovery policies are complete")
+	}
+	if auth.DeviceBindingTTL < 24*time.Hour || auth.DeviceBindingTTL > 365*24*time.Hour {
+		return fmt.Errorf("EDUGRADE_DEVICE_BINDING_TTL must be between 24h and 8760h")
+	}
+	return nil
+}
+
+func validateListenerProxyConfig(service ServiceConfig, security SecurityConfig) error {
+	internalTLSConfigured := service.InternalTLSPort > 0 || service.InternalTLSCertFile != "" || service.InternalTLSKeyFile != ""
+	if internalTLSConfigured && (service.InternalTLSPort <= 0 || service.InternalTLSCertFile == "" || service.InternalTLSKeyFile == "") {
+		return fmt.Errorf("EDUGRADE_INTERNAL_TLS_PORT, EDUGRADE_INTERNAL_TLS_CERT_FILE, and EDUGRADE_INTERNAL_TLS_KEY_FILE must be configured together")
+	}
+	if service.InternalTLSPort < 0 || service.InternalTLSPort > 65535 || service.InternalTLSPort == service.Port {
+		return fmt.Errorf("EDUGRADE_INTERNAL_TLS_PORT must be 0 or a distinct port between 1 and 65535")
+	}
+	for _, cidr := range security.TrustedProxyCIDRs {
+		if _, _, err := net.ParseCIDR(cidr); err != nil {
+			return fmt.Errorf("invalid EDUGRADE_TRUSTED_PROXY_CIDRS entry %q", cidr)
+		}
+	}
+	return nil
+}
+
+func validateAIServiceConfig(ai AIServiceConfig, service ServiceConfig) error {
+	if ai.MathGradingV2 && !ai.Enabled {
+		return fmt.Errorf("EDUGRADE_MATH_GRADING_V2_ENABLED requires EDUGRADE_AI_GRADING_ENABLED")
+	}
+	if ai.Enabled && strings.TrimSpace(ai.URL) != "" {
+		if len(ai.Token) < 32 {
+			return fmt.Errorf("unsafe AI service configuration: EDUGRADE_GRADING_AGENT_TOKEN must contain at least 32 characters")
+		}
+		if ai.Timeout <= 0 || ai.MaxRetries < 0 || ai.MaxRetries > 1 || ai.MinConfidence < 0 || ai.MinConfidence > 1 {
+			return fmt.Errorf("invalid AI service timeout, retry, or confidence configuration")
+		}
+		if service.WriteTimeout <= ai.Timeout {
+			return fmt.Errorf("EDUGRADE_HTTP_WRITE_TIMEOUT must exceed EDUGRADE_AI_SERVICE_TIMEOUT")
+		}
+		return validateAIServiceIdentity(ai)
+	}
+	return nil
+}
+
+func validateAIServiceIdentity(ai AIServiceConfig) error {
+	identity := map[string]string{
+		"EDUGRADE_AI_PROVIDER_KEY":       ai.ProviderKey,
+		"EDUGRADE_AI_DEPLOYMENT_KEY":     ai.DeploymentKey,
+		"EDUGRADE_AI_ADAPTER_TYPE":       ai.AdapterType,
+		"EDUGRADE_AI_DEPLOYMENT_REGION":  ai.DeploymentRegion,
+		"EDUGRADE_AI_CAPABILITY_PROFILE": ai.CapabilityProfile,
+	}
+	for name, value := range identity {
+		if strings.TrimSpace(value) == "" || len(value) > 128 || strings.ContainsAny(value, " \t\r\n") {
+			return fmt.Errorf("invalid AI service identity: %s must be a non-empty bounded identifier", name)
+		}
+	}
+	return nil
+}
+
+func productionServiceProblems(service ServiceConfig, auth AuthConfig, ai AIServiceConfig) []string {
+	var problems []string
+	if ai.AllowMock {
+		problems = append(problems, "EDUGRADE_ALLOW_MOCK_AI must be false in production-like environments")
+	}
+	if !auth.LoginLimiterFailClosed {
+		problems = append(problems, "EDUGRADE_AUTH_LIMITER_FAIL_CLOSED must be true")
+	}
+	if ai.Enabled && strings.TrimSpace(ai.URL) == "" {
+		problems = append(problems, "EDUGRADE_AI_SERVICE_URL must be configured when AI grading is enabled")
+	}
+	if service.InternalTLSPort <= 0 {
+		problems = append(problems, "internal API TLS listener must be configured")
+	}
+	if ai.Enabled {
+		if err := validateServiceURL("EDUGRADE_AI_SERVICE_URL", ai.URL, service.Environment); err != nil {
+			problems = append(problems, err.Error())
+		}
+	}
+	if !auth.SessionCookieSecure {
+		problems = append(problems, "EDUGRADE_SESSION_COOKIE_SECURE must be true")
+	}
+	return problems
+}
+
+func productionStorageProblems(postgres PostgresConfig, redis RedisConfig, minio MinIOConfig, barcode BarcodeConfig) []string {
+	var problems []string
+	if strings.Contains(postgres.DSN, "edugrade_dev") || strings.Contains(postgres.DSN, "sslmode=disable") {
+		problems = append(problems, "EDUGRADE_POSTGRES_DSN must not use development credentials or disabled TLS")
+	}
+	if !postgres.TenantRLSEnabled {
+		problems = append(problems, "EDUGRADE_POSTGRES_TENANT_RLS must be true")
+	}
+	if strings.TrimSpace(redis.Username) == "" {
+		problems = append(problems, "EDUGRADE_REDIS_USERNAME must be configured")
+	}
+	if strings.TrimSpace(redis.Password) == "" {
+		problems = append(problems, "EDUGRADE_REDIS_PASSWORD must be configured")
+	}
+	if !redis.TLSEnabled {
+		problems = append(problems, "EDUGRADE_REDIS_TLS_ENABLED must be true")
+	}
+	if minio.AccessKey == "edugrade-app" || minio.SecretKey == "edugrade_app_dev_secret" {
+		problems = append(problems, "MinIO application development credentials must be replaced")
+	}
+	if !minio.UseSSL {
+		problems = append(problems, "EDUGRADE_MINIO_USE_SSL must be true")
+	}
+	if len(barcode.HMACKeys[barcode.ActiveKeyID]) < 32 {
+		problems = append(problems, "EDUGRADE_BARCODE_HMAC_KEYS must contain the active key with at least 32 characters")
+	}
+	return problems
 }
 
 func validatePostgresCapacity(cfg PostgresConfig) error {
@@ -607,7 +663,7 @@ func (p *envParser) invalid(key, expected string) {
 		p.problems = append(p.problems, fmt.Sprintf("%s must be a valid %s", key, expected))
 		return
 	}
-	// Do not log raw values: configuration may come from shared secret files.
+	// 不要记录原始值：配置可能来自共享密钥文件。
 	slog.Warn("invalid configuration value; using development default", "key", key, "expected", expected)
 }
 

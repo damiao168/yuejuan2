@@ -110,9 +110,9 @@ class PaperVisualParser:
             route="visual_model",
             message="原图识别已返回，正在校验页面来源和结构",
         )
-        # Older saved fixtures use the durable representation. Keeping replay
-        # compatibility costs nothing in provider traffic; live requests use
-        # the compact contract above and are expanded deterministically here.
+        # 旧的已保存测试样本使用持久化表示。保留回放
+        # 兼容性不会增加供应商流量；实时请求使用上面的
+        # 紧凑契约，并在此按确定规则展开。
         if "question_candidates" not in output:
             output = self._expand_visual_output(output)
         self._normalize_visual_refs(output, documents, request_id)
@@ -267,55 +267,52 @@ class PaperVisualParser:
             "issues",
         ):
             for item in output.get(collection, []):
-                if not isinstance(item, dict):
-                    continue
-                for ref in item.get("source_refs", []):
-                    if not isinstance(ref, dict):
-                        continue
-                    document = documents_by_id.get(str(ref.get("source_id", "")))
-                    if document is None:
-                        raise AgentError(
-                            "model_output_invalid",
-                            "visual provenance used an unknown source",
-                            status=502,
-                            request_id=request_id,
-                        )
-                    allowed_pages = document.get("_visual_page_nos", [])
-                    page_no = ref.get("page_no")
-                    if allowed_pages:
-                        if page_no is None and len(allowed_pages) == 1:
-                            page_no = allowed_pages[0]
-                        if (
-                            isinstance(page_no, bool)
-                            or not isinstance(page_no, int)
-                            or page_no not in allowed_pages
-                        ):
-                            raise AgentError(
-                                "model_output_invalid",
-                                "visual provenance did not match a supplied page",
-                                status=502,
-                                request_id=request_id,
-                            )
-                        text_start = None
-                        text_end = None
-                    else:
-                        page_no = None
-                        text_start = 0
-                        text_end = len(document["content"])
-                    # 文件标识与文档序号来自可信输入；视觉模型只负责选择来源与已提供的页码。
-                    ref.update(
-                        {
-                            "source_id": document["source_id"],
-                            "file_asset_id": str(document.get("file_asset_id", "")),
-                            "document_index": document["document_index"],
-                            "page_no": page_no,
-                            "block_id": None,
-                            "bbox": None,
-                            "text_start": text_start,
-                            "text_end": text_end,
-                            "ocr_confidence": None,
-                        }
-                    )
+                PaperVisualParser._normalize_visual_candidate_refs(item, documents_by_id, request_id)
+
+    @staticmethod
+    def _normalize_visual_candidate_refs(item, documents_by_id, request_id):
+        if not isinstance(item, dict):
+            return
+        for ref in item.get("source_refs", []):
+            PaperVisualParser._normalize_visual_ref(ref, documents_by_id, request_id)
+
+    @staticmethod
+    def _normalize_visual_ref(ref, documents_by_id, request_id):
+        if not isinstance(ref, dict):
+            return
+        document = documents_by_id.get(str(ref.get("source_id", "")))
+        if document is None:
+            raise AgentError(
+                "model_output_invalid", "visual provenance used an unknown source", status=502, request_id=request_id,
+            )
+        page_no, text_start, text_end = PaperVisualParser._visual_ref_location(document, ref, request_id)
+        # 文件标识与文档序号来自可信输入；视觉模型只负责选择来源与已提供的页码。
+        ref.update({
+            "source_id": document["source_id"],
+            "file_asset_id": str(document.get("file_asset_id", "")),
+            "document_index": document["document_index"],
+            "page_no": page_no,
+            "block_id": None,
+            "bbox": None,
+            "text_start": text_start,
+            "text_end": text_end,
+            "ocr_confidence": None,
+        })
+
+    @staticmethod
+    def _visual_ref_location(document, ref, request_id):
+        allowed_pages = document.get("_visual_page_nos", [])
+        if not allowed_pages:
+            return None, 0, len(document["content"])
+        page_no = ref.get("page_no")
+        # 仅单页来源能补默认页；多页来源必须显式选择，不能猜测或退回 OCR 定位。
+        if page_no is None and len(allowed_pages) == 1:
+            page_no = allowed_pages[0]
+        if isinstance(page_no, bool) or not isinstance(page_no, int) or page_no not in allowed_pages:
+            raise AgentError(
+                "model_output_invalid", "visual provenance did not match a supplied page", status=502, request_id=request_id,
+            )
+        return page_no, None, None
 
     @staticmethod
     def _comparison_text(value):

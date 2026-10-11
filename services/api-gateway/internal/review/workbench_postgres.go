@@ -81,9 +81,8 @@ func (s *PostgresStore) RenewTaskClaim(ctx context.Context, tenantID, taskID, re
 	return nil
 }
 
-// ReleaseTaskClaim ends the short-lived workbench lease. assigned_to is the
-// durable manager assignment used for queue visibility and progress totals, so
-// releasing a browser session must not return the task to the pending pool.
+// ReleaseTaskClaim 结束短期工作台租约。assigned_to 是队列可见性和进度总数所用的持久管理员分配，
+// 因此释放浏览器会话不能将任务退回待处理池。
 func (s *PostgresStore) ReleaseTaskClaim(ctx context.Context, tenantID, taskID, reviewerID string) (ReviewTask, error) {
 	task, err := scanTask(s.db.QueryRowContext(ctx, `
 UPDATE review_task

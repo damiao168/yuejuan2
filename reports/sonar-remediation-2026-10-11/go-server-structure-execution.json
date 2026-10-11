@@ -1,0 +1,25 @@
+[
+  {
+    "command": [
+      "C:\\Users\\pc\\AppData\\Local\\Programs\\Python\\Python311\\python.exe",
+      "D:\\project\\yuejuan\\reports\\sonar-remediation-2026-10-11\\go_server_format_atomic.py"
+    ],
+    "started_at": "2026-10-11T11:16:42.760000+00:00",
+    "completed_at": "2026-10-11T11:16:44.311395+00:00",
+    "exit_code": 0,
+    "log": "go-server-structure-0.log",
+    "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "command": [
+      "D:/tools/go/bin/go.exe",
+      "run",
+      "D:\\project\\yuejuan\\reports\\sonar-remediation-2026-10-11\\go-structure-check.go"
+    ],
+    "started_at": "2026-10-11T11:16:44.311395+00:00",
+    "completed_at": "2026-10-11T11:16:46.081604+00:00",
+    "exit_code": 0,
+    "log": "go-server-structure-1.log",
+    "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+]

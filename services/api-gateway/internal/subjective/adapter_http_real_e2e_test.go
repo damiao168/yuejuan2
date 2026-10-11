@@ -7,8 +7,8 @@ import (
 	"time"
 )
 
-// TestHTTPAdapterRealLocalAgent is opt-in because it invokes the pinned local
-// llama.cpp model and can take several minutes on a CPU-only workstation.
+// TestHTTPAdapterRealLocalAgent 需显式启用，因为它调用固定版本的本地 llama.cpp 模型，
+// 在仅有 CPU 的工作站上可能耗时数分钟。
 func TestHTTPAdapterRealLocalAgent(t *testing.T) {
 	baseURL := os.Getenv("EDUGRADE_REAL_GRADING_AGENT_URL")
 	token := os.Getenv("EDUGRADE_REAL_GRADING_AGENT_TOKEN")
@@ -29,8 +29,7 @@ func TestHTTPAdapterRealLocalAgent(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 260*time.Second)
 	defer cancel()
 	input := validHTTPAdapterInput()
-	// Keep this request id distinct from the contract fixture requests used
-	// while exercising the same long-lived local agent process.
+	// 测试同一个长期运行的本地 agent 进程时，保持此请求 ID 与契约夹具请求不同。
 	input.RequestID = "sg-real-e2e-0001"
 	output, err := adapter.Grade(ctx, input)
 	if err != nil {

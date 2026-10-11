@@ -4,6 +4,8 @@ import type { Question, RubricPoint } from "../api/papers";
 import type { ArbitrationTask } from "../api/review";
 import { EmptyState, ErrorState, LoadingState } from "../components/PageState";
 import { StatusTag } from "../components/StatusTag";
+import { MathMarkdown } from "../components/MathMarkdown";
+import { QuestionReferenceContent, referenceText } from "../features/grading/workbench/components/FrozenQuestionReference";
 import { formatScore, formatTime, pointLabel } from "./arbitrationPresentation.model";
 
 type AiSuggestion = NonNullable<ArbitrationTask["context"]>["ai_suggestion"];
@@ -21,7 +23,7 @@ const auditTargetLabels: Record<string, string> = {
   final_grade: "最终分"
 };
 
-export function ArbitrationContextTab({ task }: { task: ArbitrationTask }) {
+export function ArbitrationContextTab({ task }: Readonly<{ task: ArbitrationTask }>) {
   return (
     <div className="arbitration-text-grid">
       <div>
@@ -36,7 +38,7 @@ export function ArbitrationContextTab({ task }: { task: ArbitrationTask }) {
   );
 }
 
-export function ArbitrationAiTab({ suggestion }: { suggestion: AiSuggestion }) {
+export function ArbitrationAiTab({ suggestion }: Readonly<{ suggestion: AiSuggestion }>) {
   if (!suggestion || Object.keys(suggestion).length === 0) {
     return <EmptyState title="暂无 AI 建议" description="该任务没有 AI 评分建议。" />;
   }
@@ -66,14 +68,15 @@ export function ArbitrationAiTab({ suggestion }: { suggestion: AiSuggestion }) {
   );
 }
 
-export function ArbitrationRubricTab({ question, rubricPoints }: { question?: Question; rubricPoints: RubricPoint[] }) {
-  if (!question) {
-    return <EmptyState title="未获取到评分标准" description="请刷新重试，或联系管理员核对该题设置。" />;
-  }
-  if (rubricPoints.length === 0) {
-    return <EmptyState title="该题未设置评分点" description="可按题目满分直接给出仲裁最终分。" />;
+export function ArbitrationRubricTab({ question, rubricPoints }: Readonly<{ question?: Question; rubricPoints: RubricPoint[] }>) {
+  if (!question?.rubric || question.rubric.status === "missing") {
+    return <EmptyState title="本题冻结评分标准缺失" description="暂不能提交仲裁，请联系本场考试负责人补齐材料后重新读取任务。" />;
   }
   return (
+    <div className="arbitration-frozen-materials">
+      <p>本任务冻结标准 · 满分 {formatScore(question.rubric.max_score)} · 版本 {question.rubric.version || "未标注"}</p>
+      <QuestionReferenceContent question={question} />
+      {rubricPoints.length === 0 ? <EmptyState title="该题未设置评分点" description="可按题目满分直接给出仲裁最终分。" /> :
     <List
       size="small"
       dataSource={rubricPoints}
@@ -86,11 +89,14 @@ export function ArbitrationRubricTab({ question, rubricPoints }: { question?: Qu
           </div>
         </List.Item>
       )}
-    />
+    />}
+    {question.rubric.deductions?.length ? <section><h3>扣分说明</h3><MathMarkdown>{referenceText(question.rubric.deductions)}</MathMarkdown></section> : null}
+    {question.rubric.examples?.length ? <section><h3>评分示例</h3><MathMarkdown>{referenceText(question.rubric.examples)}</MathMarkdown></section> : null}
+    </div>
   );
 }
 
-export function ArbitrationScoreComparison({ task }: { task: ArbitrationTask }) {
+export function ArbitrationScoreComparison({ task }: Readonly<{ task: ArbitrationTask }>) {
   return (
     <div className="arbitration-score-compare">
       <div>
@@ -111,7 +117,7 @@ export function ArbitrationScoreComparison({ task }: { task: ArbitrationTask }) 
   );
 }
 
-export function ArbitrationAuditList({ loading, error, logs, onRetry }: { loading: boolean; error: string | null; logs: AuditLog[]; onRetry: () => void }) {
+export function ArbitrationAuditList({ loading, error, logs, onRetry }: Readonly<{ loading: boolean; error: string | null; logs: AuditLog[]; onRetry: () => void }>) {
   if (loading) {
     return <LoadingState label="正在读取审计记录" />;
   }

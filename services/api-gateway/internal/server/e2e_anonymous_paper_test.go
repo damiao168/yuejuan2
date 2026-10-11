@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"database/sql"
 	"fmt"
 	"image"
 	"image/color"
@@ -34,8 +35,48 @@ func TestHighScorePaperShareRedactsAndRevokesWithPostgresTestDatabase(t *testing
 	if _, err := service.Publish(ctx, f.TenantID, release.ID, f.AdminID); err != scorerelease.ErrAnonymousPaperUnavailable {
 		t.Fatalf("missing identity regions and registration must block publish: %v", err)
 	}
+	top, other := e2eSelectAnonymousShareCandidates(t, ctx, db, f, release.ID, answers)
+	sourceAssetID, imageData := e2eSeedAnonymousRegisteredPage(t, ctx, db, fileStore, objects, f, top)
+	if _, err := service.Publish(ctx, f.TenantID, release.ID, f.AdminID); err != nil {
+		t.Fatalf("publish with verified anonymous page: %v", err)
+	}
+	studentView, err := store.StudentResult(ctx, f.TenantID, f.ExamID, other.student)
+	if err != nil || studentView.HighScorePaper == nil || !studentView.HighScorePaper.Available ||
+		len(studentView.HighScorePaper.Pages) != 1 || studentView.HighScorePaper.Pages[0].SubmissionPageID != "" {
+		t.Fatalf("student result did not expose only anonymous page metadata: %+v %v", studentView.HighScorePaper, err)
+	}
+	questionID := f.QuestionIDs["single_choice"]
+	e2eActivatePostgresDemoUsers(t, db, []string{"student"})
+	studentUsername := "anonymous_other_" + uuid.NewString()
+	e2eSeedPostgresStudentScopes(t, db, top.student, other.student, studentUsername)
+	studentToken := e2eLoginWithTenant(t, router, "demo", studentUsername, "ChangeMe123!")
+	request := func() *httptest.ResponseRecorder {
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/student/exams/"+f.ExamID+"/questions/"+questionID+"/page-image?variant=high_score", nil)
+		req.Header.Set("Authorization", "Bearer "+studentToken)
+		res := httptest.NewRecorder()
+		router.ServeHTTP(res, req)
+		return res
+	}
+	response := request()
+	e2eAssertAnonymousIdentityMask(t, response, imageData)
+	e2eAssertAnonymousSourceAuthorization(t, ctx, db, router, store, anonymousSourceIdentity{Fixture: f, Top: top, Other: other, QuestionID: questionID, SourceAssetID: sourceAssetID, StudentToken: studentToken})
+	if err := service.RevokeHighScorePaper(ctx, f.TenantID, release.ID, f.AdminID); err != nil {
+		t.Fatal(err)
+	}
+	if response := request(); response.Code != http.StatusNotFound {
+		t.Fatalf("revoked share status=%d, want 404", response.Code)
+	}
+	result, err := store.StudentResult(ctx, f.TenantID, f.ExamID, other.student)
+	if err != nil || result.HighScorePaper != nil {
+		t.Fatalf("revoked share still listed: %+v %v", result.HighScorePaper, err)
+	}
+}
+
+// 先从本次冻结发布项目选最高分提交，再从原合成答案中找两名不同学生；不复用客户端传入的同学身份。
+func e2eSelectAnonymousShareCandidates(t *testing.T, ctx context.Context, db *sql.DB, f story056AcceptanceFixture, releaseID string, answers []repairAnswer) (repairAnswer, repairAnswer) {
+	t.Helper()
 	var highestSubmission string
-	if err := db.QueryRowContext(ctx, `SELECT submission_id::text FROM score_release_item WHERE tenant_id=$1::uuid AND release_id=$2::uuid ORDER BY total_score DESC,submission_id LIMIT 1`, f.TenantID, release.ID).Scan(&highestSubmission); err != nil {
+	if err := db.QueryRowContext(ctx, `SELECT submission_id::text FROM score_release_item WHERE tenant_id=$1::uuid AND release_id=$2::uuid ORDER BY total_score DESC,submission_id LIMIT 1`, f.TenantID, releaseID).Scan(&highestSubmission); err != nil {
 		t.Fatal(err)
 	}
 	var top, other repairAnswer
@@ -49,29 +90,13 @@ func TestHighScorePaperShareRedactsAndRevokesWithPostgresTestDatabase(t *testing
 	if top.page == "" || other.page == "" {
 		t.Fatal("expected two distinct synthetic candidates")
 	}
-	// The registered image is template aligned. Colored synthetic identity
-	// strokes and a QR-like checkerboard are confined to the identity region.
-	imageData := image.NewRGBA(image.Rect(0, 0, 100, 140))
-	for y := 0; y < 140; y++ {
-		for x := 0; x < 100; x++ {
-			imageData.Set(x, y, color.RGBA{R: 40, G: 140, B: 210, A: 255})
-		}
-	}
-	for y := 3; y < 24; y++ {
-		for x := 3; x < 48; x++ {
-			if (x/3+y/3)%2 == 0 {
-				imageData.Set(x, y, color.Black)
-			} else {
-				imageData.Set(x, y, color.RGBA{R: 240, G: 20, B: 20, A: 255})
-			}
-		}
-	}
-	var source bytes.Buffer
-	if err := png.Encode(&source, imageData); err != nil {
-		t.Fatal(err)
-	}
-	source.WriteString("SYNTHETIC-NAME-STUDENT-NUMBER-QR-SECRET")
-	sourceBytes := source.Bytes()
+	return top, other
+}
+
+// 合成来源先完成身份区域模板和配准，只有这个已核对来源才能参与匿名页面发布。
+func e2eSeedAnonymousRegisteredPage(t *testing.T, ctx context.Context, db *sql.DB, fileStore *files.PostgresStore, objects *files.MemoryObjectStorage, f story056AcceptanceFixture, top repairAnswer) (string, *image.RGBA) {
+	t.Helper()
+	sourceBytes, imageData := e2eAnonymousIdentityImage(t)
 	sourceHash := fmt.Sprintf("%x", sha256.Sum256(sourceBytes))
 	sourceOwner := uuid.NewString()
 	sourceKey := "tenant/" + f.TenantID + "/synthetic-registration/" + sourceOwner + ".png"
@@ -121,27 +146,72 @@ VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5,$6::uuid,$7,1,'completed','matched
 		f.TenantID, capturePageID, top.page, sourceAsset.ID, sourceHash, templateID, templateHash); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := service.Publish(ctx, f.TenantID, release.ID, f.AdminID); err != nil {
-		t.Fatalf("publish with verified anonymous page: %v", err)
+	return sourceAsset.ID, imageData
+}
+
+type anonymousSourceIdentity struct {
+	Fixture                                 story056AcceptanceFixture
+	Top, Other                              repairAnswer
+	QuestionID, SourceAssetID, StudentToken string
+}
+
+// 普通页面仍只解析本人答案；匿名分享不能借用原文件下载路由越过同学间隔离。
+func e2eAssertAnonymousSourceAuthorization(t *testing.T, ctx context.Context, db *sql.DB, router http.Handler, store *scorerelease.PostgresStore, identity anonymousSourceIdentity) {
+	t.Helper()
+	f, top, other, questionID, studentToken := identity.Fixture, identity.Top, identity.Other, identity.QuestionID, identity.StudentToken
+
+	// 普通页面路由仍解析请求学生自己的分段；公开路径不能指定高分学生的提交。
+	own, err := store.StudentPaperPageImage(ctx, f.TenantID, f.ExamID, other.student, questionID, false)
+	if err != nil || own.AnswerSegmentID == "" {
+		t.Fatalf("own page authorization: %+v %v", own, err)
 	}
-	studentView, err := store.StudentResult(ctx, f.TenantID, f.ExamID, other.student)
-	if err != nil || studentView.HighScorePaper == nil || !studentView.HighScorePaper.Available ||
-		len(studentView.HighScorePaper.Pages) != 1 || studentView.HighScorePaper.Pages[0].SubmissionPageID != "" {
-		t.Fatalf("student result did not expose only anonymous page metadata: %+v %v", studentView.HighScorePaper, err)
+	var topSegment string
+	if err := db.QueryRowContext(ctx, `SELECT id::text FROM answer_segment WHERE tenant_id=$1::uuid AND submission_id=$2::uuid AND question_id=$3::uuid LIMIT 1`, f.TenantID, top.submission, questionID).Scan(&topSegment); err != nil {
+		t.Fatal(err)
 	}
-	questionID := f.QuestionIDs["single_choice"]
-	e2eActivatePostgresDemoUsers(t, db, []string{"student"})
-	studentUsername := "anonymous_other_" + uuid.NewString()
-	e2eSeedPostgresStudentScopes(t, db, top.student, other.student, studentUsername)
-	studentToken := e2eLoginWithTenant(t, router, "demo", studentUsername, "ChangeMe123!")
-	request := func() *httptest.ResponseRecorder {
-		req := httptest.NewRequest(http.MethodGet, "/api/v1/student/exams/"+f.ExamID+"/questions/"+questionID+"/page-image?variant=high_score", nil)
-		req.Header.Set("Authorization", "Bearer "+studentToken)
-		res := httptest.NewRecorder()
-		router.ServeHTTP(res, req)
-		return res
+	if own.AnswerSegmentID == topSegment {
+		t.Fatal("ordinary page route resolved a peer's source segment")
 	}
-	response := request()
+	fileRequest := httptest.NewRequest(http.MethodGet, "/api/v1/files/"+identity.SourceAssetID+"/download", nil)
+	fileRequest.Header.Set("Authorization", "Bearer "+studentToken)
+	fileResponse := httptest.NewRecorder()
+	router.ServeHTTP(fileResponse, fileRequest)
+	if fileResponse.Code != http.StatusForbidden {
+		t.Fatalf("student fetched peer source asset: status=%d", fileResponse.Code)
+	}
+}
+
+// 把彩色身份笔画、棋盘码和 PNG 尾随秘密都放进合成来源，供后续脱敏验证。
+func e2eAnonymousIdentityImage(t *testing.T) ([]byte, *image.RGBA) {
+	t.Helper()
+	// 配准图像已与模板对齐。彩色合成身份笔画和类似二维码的棋盘图案都限制在身份区域内。
+	imageData := image.NewRGBA(image.Rect(0, 0, 100, 140))
+	for y := 0; y < 140; y++ {
+		for x := 0; x < 100; x++ {
+			imageData.Set(x, y, color.RGBA{R: 40, G: 140, B: 210, A: 255})
+		}
+	}
+	for y := 3; y < 24; y++ {
+		for x := 3; x < 48; x++ {
+			if (x/3+y/3)%2 == 0 {
+				imageData.Set(x, y, color.Black)
+			} else {
+				imageData.Set(x, y, color.RGBA{R: 240, G: 20, B: 20, A: 255})
+			}
+		}
+	}
+	var source bytes.Buffer
+	if err := png.Encode(&source, imageData); err != nil {
+		t.Fatal(err)
+	}
+	source.WriteString("SYNTHETIC-NAME-STUDENT-NUMBER-QR-SECRET")
+	sourceBytes := source.Bytes()
+	return sourceBytes, imageData
+}
+
+// 检查身份区域三个像素与尾随秘密被去除，同时保留区域外的一处答题像素。
+func e2eAssertAnonymousIdentityMask(t *testing.T, response *httptest.ResponseRecorder, imageData *image.RGBA) {
+	t.Helper()
 	if response.Code != http.StatusOK || response.Header().Get("Content-Type") != "image/png" || bytes.Contains(response.Body.Bytes(), []byte("QR-SECRET")) {
 		t.Fatalf("anonymous sharing response: status=%d content_type=%q", response.Code, response.Header().Get("Content-Type"))
 	}
@@ -157,35 +227,5 @@ VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5,$6::uuid,$7,1,'completed','matched
 	}
 	if shared.At(80, 100) != imageData.At(80, 100) {
 		t.Fatal("answer region changed")
-	}
-	// The ordinary page route still resolves the requesting student's own
-	// segment; the public path cannot name the top student's submission.
-	own, err := store.StudentPaperPageImage(ctx, f.TenantID, f.ExamID, other.student, questionID, false)
-	if err != nil || own.AnswerSegmentID == "" {
-		t.Fatalf("own page authorization: %+v %v", own, err)
-	}
-	var topSegment string
-	if err := db.QueryRowContext(ctx, `SELECT id::text FROM answer_segment WHERE tenant_id=$1::uuid AND submission_id=$2::uuid AND question_id=$3::uuid LIMIT 1`, f.TenantID, top.submission, questionID).Scan(&topSegment); err != nil {
-		t.Fatal(err)
-	}
-	if own.AnswerSegmentID == topSegment {
-		t.Fatal("ordinary page route resolved a peer's source segment")
-	}
-	fileRequest := httptest.NewRequest(http.MethodGet, "/api/v1/files/"+sourceAsset.ID+"/download", nil)
-	fileRequest.Header.Set("Authorization", "Bearer "+studentToken)
-	fileResponse := httptest.NewRecorder()
-	router.ServeHTTP(fileResponse, fileRequest)
-	if fileResponse.Code != http.StatusForbidden {
-		t.Fatalf("student fetched peer source asset: status=%d", fileResponse.Code)
-	}
-	if err := service.RevokeHighScorePaper(ctx, f.TenantID, release.ID, f.AdminID); err != nil {
-		t.Fatal(err)
-	}
-	if response := request(); response.Code != http.StatusNotFound {
-		t.Fatalf("revoked share status=%d, want 404", response.Code)
-	}
-	result, err := store.StudentResult(ctx, f.TenantID, f.ExamID, other.student)
-	if err != nil || result.HighScorePaper != nil {
-		t.Fatalf("revoked share still listed: %+v %v", result.HighScorePaper, err)
 	}
 }

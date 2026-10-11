@@ -5,7 +5,7 @@ import { getGoldCoverage } from "../../api/goldPapers";
 import { listQuestions } from "../../api/papers";
 import { goldCoverageGapLabel } from "./goldPaperPresentation";
 
-export function GoldCoverageGaps({ examId }: { examId?: string }) {
+export function GoldCoverageGaps({ examId }: Readonly<{ examId?: string }>) {
   const [items, setItems] = useState<Array<{ questionNo: string; coverage: GoldCoverage }>>([]);
   const [unavailableCount, setUnavailableCount] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -22,7 +22,7 @@ export function GoldCoverageGaps({ examId }: { examId?: string }) {
       }));
       setUnavailableCount(results.filter((item) => item === null).length);
       // 读取失败的题目单独计为无法判断，不能和没有覆盖缺口的题目混为一谈。
-      setItems(results.flatMap((item) => item && item.coverage.gaps.length ? [item] : []));
+      setItems(results.flatMap((item) => item?.coverage.gaps.length ? [item] : []));
     } catch { setFailed(true); setUnavailableCount(0); }
     finally { setLoading(false); }
   };
@@ -33,11 +33,12 @@ export function GoldCoverageGaps({ examId }: { examId?: string }) {
   if (failed) return <Alert type="warning" showIcon message="标准卷覆盖暂时无法读取" action={<Button size="small" onClick={() => void load()}>重试</Button>} />;
   if (unavailableCount > 0 && !items.length) return <Alert type="warning" showIcon message={`${unavailableCount} 道题尚无冻结评估快照，无法判断标准卷覆盖`} />;
   if (!items.length) return <Alert type="success" showIcon message="标准卷覆盖暂无阻断缺口" />;
+  const unavailableMessage = unavailableCount ? `；另有 ${unavailableCount} 道题无法判断` : "";
   return (
     <Alert
       type="warning"
       showIcon
-      message={`${items.length} 道题的标准卷覆盖不完整${unavailableCount ? `；另有 ${unavailableCount} 道题无法判断` : ""}`}
+      message={`${items.length} 道题的标准卷覆盖不完整${unavailableMessage}`}
       description={<List size="small" dataSource={items} renderItem={(item) => <List.Item><strong>{item.questionNo}</strong><span>{item.coverage.gaps.map((gap) => <Tag key={gap}>{goldCoverageGapLabel(gap)}</Tag>)}</span></List.Item>} />}
     />
   );

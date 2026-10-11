@@ -1,0 +1,1086 @@
+{
+  "recorded_at_utc": "2026-10-11T09:27:42.843955+00:00",
+  "count": 25,
+  "platform_actions_performed": false,
+  "no_source_exclusion_or_threshold_change": true,
+  "records": [
+    {
+      "key": "a5cf89b8-f3ae-4680-8f63-01958c369345",
+      "rule": "python:S125",
+      "severity": "MAJOR",
+      "file": "ai-services/grading_agent/paper_compact/anchors.py",
+      "original_line": 22,
+      "message": "Remove this commented out code.",
+      "current_sha256": "7c0280d45533f9411587c5116bf0d46cb9a91c9614707cc801abf3dafa0b6251",
+      "remediation_baseline_sha256": "7c0280d45533f9411587c5116bf0d46cb9a91c9614707cc801abf3dafa0b6251",
+      "changed_since_remediation_baseline": false,
+      "source_excerpt": {
+        "start_line": 17,
+        "end_line": 30,
+        "text": "    _SECTION_START,\n    _SOLUTION_MARKER,\n)\n\n_NUMBER = r\"\\d+(?:\\.\\d+)?\"\n# 考试分值必须关联题目标题或分节说明。\n# 题干中单独出现的“4分”可能是游戏得分，不是该题的分值。\n_QUESTION_MARK = re.compile(\n    rf\"(?:本(?:小)?题|此题)\\s*(?:满分|共|计|为)?\\s*[:：]?\\s*({_NUMBER})\\s*分\"\n)\n_LEADING_MARK = re.compile(rf\"^\\s*[（(]\\s*({_NUMBER})\\s*分\\s*[）)]\")\n_SECTION_MARK = re.compile(rf\"每\\s*(?:小)?题\\s*(?:共|计|为)?\\s*({_NUMBER})\\s*分\")\n_RUBRIC_HEADING = re.compile(r\"^\\s*[【\\[]?(?:评分标准|评分细则|评分参考|给分点|采分点)[】\\]]?\\s*[:：]?\")\n_MARK_CLAUSE = re.compile(rf\"^\\s*(.+?)\\s*(?:可)?得\\s*({_NUMBER})\\s*分\\s*$\")"
+      },
+      "platform_disposition": "pending_root",
+      "full_file_review_claim": false,
+      "verdict": "false_positive_natural_language_comment",
+      "reason": "说明考试题目分值与题干游戏得分的业务区分，紧接分值正则；没有被注释的可执行代码。",
+      "actual_comment_lines": [
+        {
+          "line": 22,
+          "text": "# 考试分值必须关联题目标题或分节说明。"
+        },
+        {
+          "line": 23,
+          "text": "# 题干中单独出现的“4分”可能是游戏得分，不是该题的分值。"
+        }
+      ],
+      "recommended_platform_disposition": "false_positive",
+      "existing_tests": {
+        "group": "grading-agent",
+        "exit_code": 0,
+        "log": "python-grading-agent-pytest.log",
+        "junit": "python-grading-agent-junit.xml",
+        "counts": {
+          "tests": 483,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      }
+    },
+    {
+      "key": "a5251f36-bdc6-4beb-a7cf-019745e959b8",
+      "rule": "python:S125",
+      "severity": "MAJOR",
+      "file": "ai-services/grading_agent/paper_compact/anchors.py",
+      "original_line": 170,
+      "message": "Remove this commented out code.",
+      "current_sha256": "7c0280d45533f9411587c5116bf0d46cb9a91c9614707cc801abf3dafa0b6251",
+      "remediation_baseline_sha256": "7c0280d45533f9411587c5116bf0d46cb9a91c9614707cc801abf3dafa0b6251",
+      "changed_since_remediation_baseline": false,
+      "source_excerpt": {
+        "start_line": 165,
+        "end_line": 178,
+        "text": "            self.current_section_entry = entry\n            return\n        match = _QUESTION_NUMBER.match(text)\n        if match:\n            number = int(match.group(1))\n            # 编号的解题步骤不是新题目。真正的下一题\n            # 会推进试卷中单调递增的题号序列。\n            if not self.current or (\n                number > self.current_number\n                and not (self.in_solution and number <= self.current_number)\n            ):\n                self._start_question(entry, number)\n                return\n        if self.current:"
+      },
+      "platform_disposition": "pending_root",
+      "full_file_review_claim": false,
+      "verdict": "false_positive_natural_language_comment",
+      "reason": "说明解题步骤编号与递增题号的边界，紧接新题判定；属于自然语言规则说明。",
+      "actual_comment_lines": [
+        {
+          "line": 170,
+          "text": "            # 编号的解题步骤不是新题目。真正的下一题"
+        },
+        {
+          "line": 171,
+          "text": "            # 会推进试卷中单调递增的题号序列。"
+        }
+      ],
+      "recommended_platform_disposition": "false_positive",
+      "existing_tests": {
+        "group": "grading-agent",
+        "exit_code": 0,
+        "log": "python-grading-agent-pytest.log",
+        "junit": "python-grading-agent-junit.xml",
+        "counts": {
+          "tests": 483,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      }
+    },
+    {
+      "key": "b523973f-f539-44bf-87b0-4747ebd41917",
+      "rule": "python:S125",
+      "severity": "MAJOR",
+      "file": "ai-services/grading_agent/paper_compact/layout.py",
+      "original_line": 181,
+      "message": "Remove this commented out code.",
+      "current_sha256": "27f26e4177784b8849943b9dd84439be5bab766c92363983324052bb7d77791c",
+      "remediation_baseline_sha256": "27f26e4177784b8849943b9dd84439be5bab766c92363983324052bb7d77791c",
+      "changed_since_remediation_baseline": false,
+      "source_excerpt": {
+        "start_line": 176,
+        "end_line": 183,
+        "text": "    return box[1] + box[3] / 2 if box else float(item[0])\n\n\ndef _geometric_key(item):\n    box = _box(item)\n    # 公式裁剪刻意留有边距，顶部可能高于所属文本行。\n    # 相比顶边，竖直中心更适合用来估计基线。\n    return (box[1] + box[3] / 2, box[0], item[0]) if box else (float(\"inf\"), 0, item[0])"
+      },
+      "platform_disposition": "pending_root",
+      "full_file_review_claim": false,
+      "verdict": "false_positive_natural_language_comment",
+      "reason": "解释公式裁剪边距使顶边失真，竖直中心排序更接近基线的原因。",
+      "actual_comment_lines": [
+        {
+          "line": 181,
+          "text": "    # 公式裁剪刻意留有边距，顶部可能高于所属文本行。"
+        },
+        {
+          "line": 182,
+          "text": "    # 相比顶边，竖直中心更适合用来估计基线。"
+        }
+      ],
+      "recommended_platform_disposition": "false_positive",
+      "existing_tests": {
+        "group": "grading-agent",
+        "exit_code": 0,
+        "log": "python-grading-agent-pytest.log",
+        "junit": "python-grading-agent-junit.xml",
+        "counts": {
+          "tests": 483,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      }
+    },
+    {
+      "key": "c5cc5438-00f5-45c5-a3da-0633b87d17fc",
+      "rule": "python:S125",
+      "severity": "MAJOR",
+      "file": "ai-services/grading_agent/paper_validation.py",
+      "original_line": 9,
+      "message": "Remove this commented out code.",
+      "current_sha256": "c348d45ea41b46aef2fe900c667eebb859ab1905cda53e79bf4c4dbb490c20d3",
+      "remediation_baseline_sha256": "c348d45ea41b46aef2fe900c667eebb859ab1905cda53e79bf4c4dbb490c20d3",
+      "changed_since_remediation_baseline": false,
+      "source_excerpt": {
+        "start_line": 4,
+        "end_line": 17,
+        "text": "import re\n\nfrom .errors import AgentError\nfrom .paper_schema import FORMULA_SUBJECTS, QUESTION_TYPES, ROLES\n\n# 模型仍可能把应用题中的得分误认为考试分值。\n# 这个保守的直接文本检查仅在所有引用文档都没有\n# 明确的题目或分节分值标记时，才清除建议分值。\n_EXPLICIT_EXAM_MARK = re.compile(\n    r\"(?:本(?:小)?题|第\\s*\\d+\\s*题)\\s*(?:满分|共|计|为)?\\s*[:：]?\\s*\\d+(?:\\.\\d+)?\\s*分\"\n    r\"|每\\s*(?:小)?题\\s*(?:共|计|为)?\\s*\\d+(?:\\.\\d+)?\\s*分\"\n    r\"|[（(]\\s*\\d+(?:\\.\\d+)?\\s*分\\s*[）)]\"\n)\n"
+      },
+      "platform_disposition": "pending_root",
+      "full_file_review_claim": false,
+      "verdict": "false_positive_natural_language_comment",
+      "reason": "解释缺少明确考试分值时清除模型建议分值的保守条件，紧接允许的文本标记正则。",
+      "actual_comment_lines": [
+        {
+          "line": 9,
+          "text": "# 模型仍可能把应用题中的得分误认为考试分值。"
+        },
+        {
+          "line": 10,
+          "text": "# 这个保守的直接文本检查仅在所有引用文档都没有"
+        },
+        {
+          "line": 11,
+          "text": "# 明确的题目或分节分值标记时，才清除建议分值。"
+        }
+      ],
+      "recommended_platform_disposition": "false_positive",
+      "existing_tests": {
+        "group": "grading-agent",
+        "exit_code": 0,
+        "log": "python-grading-agent-pytest.log",
+        "junit": "python-grading-agent-junit.xml",
+        "counts": {
+          "tests": 483,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      }
+    },
+    {
+      "key": "48bf073b-9633-452f-bfc0-13ca6afaefea",
+      "rule": "python:S125",
+      "severity": "MAJOR",
+      "file": "ai-services/grading_agent/paper_visual.py",
+      "original_line": 113,
+      "message": "Remove this commented out code.",
+      "current_sha256": "79db5147de6c10be006a2ecb6ebff05c5bf378a0b63b9ad483627b62427275da",
+      "remediation_baseline_sha256": "79db5147de6c10be006a2ecb6ebff05c5bf378a0b63b9ad483627b62427275da",
+      "changed_since_remediation_baseline": false,
+      "source_excerpt": {
+        "start_line": 108,
+        "end_line": 121,
+        "text": "            completed=len(visual_pages),\n            total=len(visual_pages),\n            route=\"visual_model\",\n            message=\"原图识别已返回，正在校验页面来源和结构\",\n        )\n        # 旧的已保存测试样本使用持久化表示。保留回放\n        # 兼容性不会增加供应商流量；实时请求使用上面的\n        # 紧凑契约，并在此按确定规则展开。\n        if \"question_candidates\" not in output:\n            output = self._expand_visual_output(output)\n        self._normalize_visual_refs(output, documents, request_id)\n        result = self._validate(output, request_id, subject, documents)\n        usage_reader = getattr(self.model, \"last_usage\", None)\n        if callable(usage_reader):"
+      },
+      "platform_disposition": "pending_root",
+      "full_file_review_claim": false,
+      "verdict": "false_positive_natural_language_comment",
+      "reason": "解释旧保存样本回放兼容、紧凑契约展开与供应商流量边界，紧接本地表示转换。",
+      "actual_comment_lines": [
+        {
+          "line": 113,
+          "text": "        # 旧的已保存测试样本使用持久化表示。保留回放"
+        },
+        {
+          "line": 114,
+          "text": "        # 兼容性不会增加供应商流量；实时请求使用上面的"
+        },
+        {
+          "line": 115,
+          "text": "        # 紧凑契约，并在此按确定规则展开。"
+        }
+      ],
+      "recommended_platform_disposition": "false_positive",
+      "existing_tests": {
+        "group": "grading-agent",
+        "exit_code": 0,
+        "log": "python-grading-agent-pytest.log",
+        "junit": "python-grading-agent-junit.xml",
+        "counts": {
+          "tests": 483,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      }
+    },
+    {
+      "key": "47e8a60e-b39d-4658-8498-58cee45877da",
+      "rule": "python:S2245",
+      "severity": "MAJOR",
+      "file": "scripts/generate-fujian-2024-math-simulation.py",
+      "original_line": 270,
+      "message": "Make sure that using this pseudorandom number generator is safe here.",
+      "current_sha256": "1eaf5a87ea828f9e6069cbec7445b62889497720528ba74506becc01970790bd",
+      "remediation_baseline_sha256": "1eaf5a87ea828f9e6069cbec7445b62889497720528ba74506becc01970790bd",
+      "changed_since_remediation_baseline": false,
+      "source_excerpt": {
+        "start_line": 265,
+        "end_line": 278,
+        "text": "        return\n    rng = random.Random(seed)\n    fnt = font(FONT_HAND if seed % 2 == 0 else FONT_KAI, size)\n    scratch = Image.new(\"RGBA\", (1100, size * 2 + 30), (255, 255, 255, 0))\n    sdraw = ImageDraw.Draw(scratch)\n    color = (22 + rng.randint(0, 12), 36 + rng.randint(0, 16), 55 + rng.randint(0, 18), 245)\n    sdraw.text((12, 3), text, font=fnt, fill=color)\n    angle = rng.uniform(-2.0, 2.0)\n    scratch = scratch.rotate(angle, resample=Image.Resampling.BICUBIC, expand=True)\n    if blur:\n        scratch = scratch.filter(ImageFilter.GaussianBlur(blur))\n    canvas.alpha_composite(scratch, xy)\n\n"
+      },
+      "platform_disposition": "pending_root",
+      "full_file_review_claim": false,
+      "verdict": "false_positive_non_security_synthetic_randomness",
+      "reason": "种子驱动的仿真字体颜色、角度、选择题笔画和扫描噪声，不用于密码、令牌、权限、真实考生身份或密钥。改为密码学随机源将破坏可复现的仿真与已有种子契约。",
+      "synthetic_output_contract": {
+        "synthetic": true,
+        "simulation_only": true,
+        "training_allowed": false,
+        "contains_real_student_identity": false
+      },
+      "synthetic_contract_excerpt": {
+        "start_line": 599,
+        "end_line": 609,
+        "text": "        \"dataset_id\": \"fujian-2024-junior-math-v1\",\n        \"title\": \"2024福建中考数学真实流程匿名仿真数据集\",\n        \"version\": \"1.0.0\",\n        \"created_at\": \"2026-07-16T00:00:00+08:00\",\n        \"synthetic\": True,\n        \"simulation_only\": True,\n        \"training_allowed\": False,\n        \"contains_real_student_identity\": False,\n        \"candidate_count\": len(candidate_records),\n        \"page_count\": len(candidate_records) * 2,\n        \"question_count\": len(questions),"
+      },
+      "existing_tests": {
+        "group": "simulation-generator",
+        "exit_code": 0,
+        "log": "python-simulation-generator-pytest.log",
+        "junit": "python-simulation-generator-junit.xml",
+        "counts": {
+          "tests": 19,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "scope": "已有测试校验选项顺序、独立种子和笔画轨迹；不宣称覆盖所有图像噪声函数"
+      },
+      "recommended_platform_disposition": "false_positive"
+    },
+    {
+      "key": "714b91a4-a04d-48cf-b395-8ea5b285612e",
+      "rule": "python:S2245",
+      "severity": "MAJOR",
+      "file": "scripts/generate-fujian-2024-math-simulation.py",
+      "original_line": 270,
+      "message": "Make sure that using this pseudorandom number generator is safe here.",
+      "current_sha256": "1eaf5a87ea828f9e6069cbec7445b62889497720528ba74506becc01970790bd",
+      "remediation_baseline_sha256": "1eaf5a87ea828f9e6069cbec7445b62889497720528ba74506becc01970790bd",
+      "changed_since_remediation_baseline": false,
+      "source_excerpt": {
+        "start_line": 265,
+        "end_line": 278,
+        "text": "        return\n    rng = random.Random(seed)\n    fnt = font(FONT_HAND if seed % 2 == 0 else FONT_KAI, size)\n    scratch = Image.new(\"RGBA\", (1100, size * 2 + 30), (255, 255, 255, 0))\n    sdraw = ImageDraw.Draw(scratch)\n    color = (22 + rng.randint(0, 12), 36 + rng.randint(0, 16), 55 + rng.randint(0, 18), 245)\n    sdraw.text((12, 3), text, font=fnt, fill=color)\n    angle = rng.uniform(-2.0, 2.0)\n    scratch = scratch.rotate(angle, resample=Image.Resampling.BICUBIC, expand=True)\n    if blur:\n        scratch = scratch.filter(ImageFilter.GaussianBlur(blur))\n    canvas.alpha_composite(scratch, xy)\n\n"
+      },
+      "platform_disposition": "pending_root",
+      "full_file_review_claim": false,
+      "verdict": "false_positive_non_security_synthetic_randomness",
+      "reason": "种子驱动的仿真字体颜色、角度、选择题笔画和扫描噪声，不用于密码、令牌、权限、真实考生身份或密钥。改为密码学随机源将破坏可复现的仿真与已有种子契约。",
+      "synthetic_output_contract": {
+        "synthetic": true,
+        "simulation_only": true,
+        "training_allowed": false,
+        "contains_real_student_identity": false
+      },
+      "synthetic_contract_excerpt": {
+        "start_line": 599,
+        "end_line": 609,
+        "text": "        \"dataset_id\": \"fujian-2024-junior-math-v1\",\n        \"title\": \"2024福建中考数学真实流程匿名仿真数据集\",\n        \"version\": \"1.0.0\",\n        \"created_at\": \"2026-07-16T00:00:00+08:00\",\n        \"synthetic\": True,\n        \"simulation_only\": True,\n        \"training_allowed\": False,\n        \"contains_real_student_identity\": False,\n        \"candidate_count\": len(candidate_records),\n        \"page_count\": len(candidate_records) * 2,\n        \"question_count\": len(questions),"
+      },
+      "existing_tests": {
+        "group": "simulation-generator",
+        "exit_code": 0,
+        "log": "python-simulation-generator-pytest.log",
+        "junit": "python-simulation-generator-junit.xml",
+        "counts": {
+          "tests": 19,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "scope": "已有测试校验选项顺序、独立种子和笔画轨迹；不宣称覆盖所有图像噪声函数"
+      },
+      "recommended_platform_disposition": "false_positive"
+    },
+    {
+      "key": "93ebff75-53e8-459e-bc8b-e76b2a9dcda5",
+      "rule": "python:S2245",
+      "severity": "MAJOR",
+      "file": "scripts/generate-fujian-2024-math-simulation.py",
+      "original_line": 270,
+      "message": "Make sure that using this pseudorandom number generator is safe here.",
+      "current_sha256": "1eaf5a87ea828f9e6069cbec7445b62889497720528ba74506becc01970790bd",
+      "remediation_baseline_sha256": "1eaf5a87ea828f9e6069cbec7445b62889497720528ba74506becc01970790bd",
+      "changed_since_remediation_baseline": false,
+      "source_excerpt": {
+        "start_line": 265,
+        "end_line": 278,
+        "text": "        return\n    rng = random.Random(seed)\n    fnt = font(FONT_HAND if seed % 2 == 0 else FONT_KAI, size)\n    scratch = Image.new(\"RGBA\", (1100, size * 2 + 30), (255, 255, 255, 0))\n    sdraw = ImageDraw.Draw(scratch)\n    color = (22 + rng.randint(0, 12), 36 + rng.randint(0, 16), 55 + rng.randint(0, 18), 245)\n    sdraw.text((12, 3), text, font=fnt, fill=color)\n    angle = rng.uniform(-2.0, 2.0)\n    scratch = scratch.rotate(angle, resample=Image.Resampling.BICUBIC, expand=True)\n    if blur:\n        scratch = scratch.filter(ImageFilter.GaussianBlur(blur))\n    canvas.alpha_composite(scratch, xy)\n\n"
+      },
+      "platform_disposition": "pending_root",
+      "full_file_review_claim": false,
+      "verdict": "false_positive_non_security_synthetic_randomness",
+      "reason": "种子驱动的仿真字体颜色、角度、选择题笔画和扫描噪声，不用于密码、令牌、权限、真实考生身份或密钥。改为密码学随机源将破坏可复现的仿真与已有种子契约。",
+      "synthetic_output_contract": {
+        "synthetic": true,
+        "simulation_only": true,
+        "training_allowed": false,
+        "contains_real_student_identity": false
+      },
+      "synthetic_contract_excerpt": {
+        "start_line": 599,
+        "end_line": 609,
+        "text": "        \"dataset_id\": \"fujian-2024-junior-math-v1\",\n        \"title\": \"2024福建中考数学真实流程匿名仿真数据集\",\n        \"version\": \"1.0.0\",\n        \"created_at\": \"2026-07-16T00:00:00+08:00\",\n        \"synthetic\": True,\n        \"simulation_only\": True,\n        \"training_allowed\": False,\n        \"contains_real_student_identity\": False,\n        \"candidate_count\": len(candidate_records),\n        \"page_count\": len(candidate_records) * 2,\n        \"question_count\": len(questions),"
+      },
+      "existing_tests": {
+        "group": "simulation-generator",
+        "exit_code": 0,
+        "log": "python-simulation-generator-pytest.log",
+        "junit": "python-simulation-generator-junit.xml",
+        "counts": {
+          "tests": 19,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "scope": "已有测试校验选项顺序、独立种子和笔画轨迹；不宣称覆盖所有图像噪声函数"
+      },
+      "recommended_platform_disposition": "false_positive"
+    },
+    {
+      "key": "da5b8565-5fa8-4f5c-9615-f19c729b4513",
+      "rule": "python:S2245",
+      "severity": "MAJOR",
+      "file": "scripts/generate-fujian-2024-math-simulation.py",
+      "original_line": 328,
+      "message": "Make sure that using this pseudorandom number generator is safe here.",
+      "current_sha256": "1eaf5a87ea828f9e6069cbec7445b62889497720528ba74506becc01970790bd",
+      "remediation_baseline_sha256": "1eaf5a87ea828f9e6069cbec7445b62889497720528ba74506becc01970790bd",
+      "changed_since_remediation_baseline": false,
+      "source_excerpt": {
+        "start_line": 323,
+        "end_line": 336,
+        "text": "            draw_centered(draw, (cx, cy - 14), option, font(FONT_SANS, 20), (70, 70, 70))\n            if option in selected_options:\n                # 每个选项独立取种子并画七笔；合并随机源会改变其他题目的仿真外观。\n                rng = random.Random(candidate_index * 100 + index * 9 + option_index)\n                for _ in range(7):\n                    dx = rng.randint(-13, 13)\n                    draw.line((cx - 12, cy + dx // 3, cx + 12, cy + dx), fill=(28, 37, 45), width=3)\n        regions[question_no] = {\n            \"x\": x0 / WIDTH,\n            \"y\": (y0 - 20) / HEIGHT,\n            \"width\": 270 / WIDTH,\n            \"height\": 105 / HEIGHT,\n        }\n"
+      },
+      "platform_disposition": "pending_root",
+      "full_file_review_claim": false,
+      "verdict": "false_positive_non_security_synthetic_randomness",
+      "reason": "种子驱动的仿真字体颜色、角度、选择题笔画和扫描噪声，不用于密码、令牌、权限、真实考生身份或密钥。改为密码学随机源将破坏可复现的仿真与已有种子契约。",
+      "synthetic_output_contract": {
+        "synthetic": true,
+        "simulation_only": true,
+        "training_allowed": false,
+        "contains_real_student_identity": false
+      },
+      "synthetic_contract_excerpt": {
+        "start_line": 599,
+        "end_line": 609,
+        "text": "        \"dataset_id\": \"fujian-2024-junior-math-v1\",\n        \"title\": \"2024福建中考数学真实流程匿名仿真数据集\",\n        \"version\": \"1.0.0\",\n        \"created_at\": \"2026-07-16T00:00:00+08:00\",\n        \"synthetic\": True,\n        \"simulation_only\": True,\n        \"training_allowed\": False,\n        \"contains_real_student_identity\": False,\n        \"candidate_count\": len(candidate_records),\n        \"page_count\": len(candidate_records) * 2,\n        \"question_count\": len(questions),"
+      },
+      "existing_tests": {
+        "group": "simulation-generator",
+        "exit_code": 0,
+        "log": "python-simulation-generator-pytest.log",
+        "junit": "python-simulation-generator-junit.xml",
+        "counts": {
+          "tests": 19,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "scope": "已有测试校验选项顺序、独立种子和笔画轨迹；不宣称覆盖所有图像噪声函数"
+      },
+      "recommended_platform_disposition": "false_positive"
+    },
+    {
+      "key": "98f898f4-db4f-4c79-80d0-7879c792590d",
+      "rule": "python:S2245",
+      "severity": "MAJOR",
+      "file": "scripts/generate-fujian-2024-math-simulation.py",
+      "original_line": 448,
+      "message": "Make sure that using this pseudorandom number generator is safe here.",
+      "current_sha256": "1eaf5a87ea828f9e6069cbec7445b62889497720528ba74506becc01970790bd",
+      "remediation_baseline_sha256": "1eaf5a87ea828f9e6069cbec7445b62889497720528ba74506becc01970790bd",
+      "changed_since_remediation_baseline": false,
+      "source_excerpt": {
+        "start_line": 443,
+        "end_line": 456,
+        "text": "    angle = float(scan[\"angle\"])\n    rgb = rgb.rotate(angle, resample=Image.Resampling.BICUBIC, expand=False, fillcolor=(244, 243, 239))\n    pixels = rgb.load()\n    noise = float(scan[\"noise\"])\n    for _ in range(int(WIDTH * HEIGHT * 0.0025)):\n        x = rng.randrange(WIDTH)\n        y = rng.randrange(HEIGHT)\n        r, g, b = pixels[x, y]\n        delta = int(rng.gauss(0, noise * 3))\n        pixels[x, y] = (\n            max(0, min(255, r + delta)),\n            max(0, min(255, g + delta)),\n            max(0, min(255, b + delta)),\n        )"
+      },
+      "platform_disposition": "pending_root",
+      "full_file_review_claim": false,
+      "verdict": "false_positive_non_security_synthetic_randomness",
+      "reason": "种子驱动的仿真字体颜色、角度、选择题笔画和扫描噪声，不用于密码、令牌、权限、真实考生身份或密钥。改为密码学随机源将破坏可复现的仿真与已有种子契约。",
+      "synthetic_output_contract": {
+        "synthetic": true,
+        "simulation_only": true,
+        "training_allowed": false,
+        "contains_real_student_identity": false
+      },
+      "synthetic_contract_excerpt": {
+        "start_line": 599,
+        "end_line": 609,
+        "text": "        \"dataset_id\": \"fujian-2024-junior-math-v1\",\n        \"title\": \"2024福建中考数学真实流程匿名仿真数据集\",\n        \"version\": \"1.0.0\",\n        \"created_at\": \"2026-07-16T00:00:00+08:00\",\n        \"synthetic\": True,\n        \"simulation_only\": True,\n        \"training_allowed\": False,\n        \"contains_real_student_identity\": False,\n        \"candidate_count\": len(candidate_records),\n        \"page_count\": len(candidate_records) * 2,\n        \"question_count\": len(questions),"
+      },
+      "existing_tests": {
+        "group": "simulation-generator",
+        "exit_code": 0,
+        "log": "python-simulation-generator-pytest.log",
+        "junit": "python-simulation-generator-junit.xml",
+        "counts": {
+          "tests": 19,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "scope": "已有测试校验选项顺序、独立种子和笔画轨迹；不宣称覆盖所有图像噪声函数"
+      },
+      "recommended_platform_disposition": "false_positive"
+    },
+    {
+      "key": "14fc6509-b17c-4aca-9639-d962135439c3",
+      "rule": "python:S2245",
+      "severity": "MAJOR",
+      "file": "scripts/generate-fujian-2024-math-simulation.py",
+      "original_line": 449,
+      "message": "Make sure that using this pseudorandom number generator is safe here.",
+      "current_sha256": "1eaf5a87ea828f9e6069cbec7445b62889497720528ba74506becc01970790bd",
+      "remediation_baseline_sha256": "1eaf5a87ea828f9e6069cbec7445b62889497720528ba74506becc01970790bd",
+      "changed_since_remediation_baseline": false,
+      "source_excerpt": {
+        "start_line": 444,
+        "end_line": 457,
+        "text": "    rgb = rgb.rotate(angle, resample=Image.Resampling.BICUBIC, expand=False, fillcolor=(244, 243, 239))\n    pixels = rgb.load()\n    noise = float(scan[\"noise\"])\n    for _ in range(int(WIDTH * HEIGHT * 0.0025)):\n        x = rng.randrange(WIDTH)\n        y = rng.randrange(HEIGHT)\n        r, g, b = pixels[x, y]\n        delta = int(rng.gauss(0, noise * 3))\n        pixels[x, y] = (\n            max(0, min(255, r + delta)),\n            max(0, min(255, g + delta)),\n            max(0, min(255, b + delta)),\n        )\n    if noise >= 3:"
+      },
+      "platform_disposition": "pending_root",
+      "full_file_review_claim": false,
+      "verdict": "false_positive_non_security_synthetic_randomness",
+      "reason": "种子驱动的仿真字体颜色、角度、选择题笔画和扫描噪声，不用于密码、令牌、权限、真实考生身份或密钥。改为密码学随机源将破坏可复现的仿真与已有种子契约。",
+      "synthetic_output_contract": {
+        "synthetic": true,
+        "simulation_only": true,
+        "training_allowed": false,
+        "contains_real_student_identity": false
+      },
+      "synthetic_contract_excerpt": {
+        "start_line": 599,
+        "end_line": 609,
+        "text": "        \"dataset_id\": \"fujian-2024-junior-math-v1\",\n        \"title\": \"2024福建中考数学真实流程匿名仿真数据集\",\n        \"version\": \"1.0.0\",\n        \"created_at\": \"2026-07-16T00:00:00+08:00\",\n        \"synthetic\": True,\n        \"simulation_only\": True,\n        \"training_allowed\": False,\n        \"contains_real_student_identity\": False,\n        \"candidate_count\": len(candidate_records),\n        \"page_count\": len(candidate_records) * 2,\n        \"question_count\": len(questions),"
+      },
+      "existing_tests": {
+        "group": "simulation-generator",
+        "exit_code": 0,
+        "log": "python-simulation-generator-pytest.log",
+        "junit": "python-simulation-generator-junit.xml",
+        "counts": {
+          "tests": 19,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "scope": "已有测试校验选项顺序、独立种子和笔画轨迹；不宣称覆盖所有图像噪声函数"
+      },
+      "recommended_platform_disposition": "false_positive"
+    },
+    {
+      "key": "50e8770b-7ffa-48fd-b9bf-1ccd9fccf672",
+      "rule": "python:S125",
+      "severity": "MAJOR",
+      "file": "services/image-quality-worker/image_quality/geometry.py",
+      "original_line": 197,
+      "message": "Remove this commented out code.",
+      "current_sha256": "03e0ba6c7c21e4646bbfdb4da281114b893bf4bf774cebb694adf9fa0711e129",
+      "remediation_baseline_sha256": "03e0ba6c7c21e4646bbfdb4da281114b893bf4bf774cebb694adf9fa0711e129",
+      "changed_since_remediation_baseline": false,
+      "source_excerpt": {
+        "start_line": 192,
+        "end_line": 205,
+        "text": "    if detected_sides:\n        confidence = _clamp(0.2 + 0.15 * detected_sides + 0.2 * completeness)\n        status = \"complete\" if completeness >= 0.8 else \"partial\"\n        return status, confidence, completeness, None\n\n    # 平板扫描中的纸张可能延伸到画布各边，因此\n    # 看不到外部轮廓。此时报告中等完整度和低置信度，\n    # 而不虚构可靠的边框观测结果。\n    edge_band = max(2, int(min(width, height) * 0.015))\n    edge_pixels = np.concatenate(\n        (\n            gray[:edge_band, :].ravel(),\n            gray[-edge_band:, :].ravel(),\n            gray[:, :edge_band].ravel(),"
+      },
+      "platform_disposition": "pending_root",
+      "full_file_review_claim": false,
+      "verdict": "false_positive_natural_language_comment",
+      "reason": "解释平板扫描无可见外轮廓时降低置信度的原因，没有虚构边框可靠性。",
+      "actual_comment_lines": [
+        {
+          "line": 197,
+          "text": "    # 平板扫描中的纸张可能延伸到画布各边，因此"
+        },
+        {
+          "line": 198,
+          "text": "    # 看不到外部轮廓。此时报告中等完整度和低置信度，"
+        },
+        {
+          "line": 199,
+          "text": "    # 而不虚构可靠的边框观测结果。"
+        }
+      ],
+      "recommended_platform_disposition": "false_positive",
+      "existing_tests": {
+        "group": "image-quality-worker",
+        "status": "not_run_in_this_batch"
+      }
+    },
+    {
+      "key": "e5ef3e47-9d26-44f2-aa67-b07f348fcbba",
+      "rule": "python:S125",
+      "severity": "MAJOR",
+      "file": "services/ocr-worker/ocr_worker/formula_validation.py",
+      "original_line": 70,
+      "message": "Remove this commented out code.",
+      "current_sha256": "51ffd42ae6dc7fbb99a3077075ca0f38b38f651fa97a8b1143300fd39815641e",
+      "remediation_baseline_sha256": "51ffd42ae6dc7fbb99a3077075ca0f38b38f651fa97a8b1143300fd39815641e",
+      "changed_since_remediation_baseline": false,
+      "source_excerpt": {
+        "start_line": 65,
+        "end_line": 78,
+        "text": "    }\n)\n_SUPERSCRIPTS = str.maketrans(\"⁰¹²³⁴⁵⁶⁷⁸⁹\", \"0123456789\")\n_SUBSCRIPTS = str.maketrans(\"₀₁₂₃₄₅₆₇₈₉\", \"0123456789\")\n\n# 这里刻意为初高中印刷数学内容采用较宽的\n# 允许列表。未知宏会被拒绝，不会交给可能解释\n# 文件或进程命令的渲染器。\n_ALLOWED_MACROS = {\n    \"alpha\", \"beta\", \"gamma\", \"delta\", \"epsilon\", \"varepsilon\", \"zeta\", \"eta\", \"theta\",\n    \"vartheta\", \"iota\", \"kappa\", \"lambda\", \"mu\", \"nu\", \"xi\", \"pi\", \"varpi\", \"rho\",\n    \"varrho\", \"sigma\", \"varsigma\", \"tau\", \"upsilon\", \"phi\", \"varphi\", \"chi\", \"psi\", \"omega\",\n    \"Gamma\", \"Delta\", \"Theta\", \"Lambda\", \"Xi\", \"Pi\", \"Sigma\", \"Upsilon\", \"Phi\", \"Psi\", \"Omega\",\n    \"frac\", \"sqrt\", \"overline\", \"underline\", \"widehat\", \"widetilde\", \"hat\", \"bar\", \"vec\", \"dot\", \"ddot\","
+      },
+      "platform_disposition": "pending_root",
+      "full_file_review_claim": false,
+      "verdict": "false_positive_natural_language_comment",
+      "reason": "解释数学宏白名单及未知宏拒绝的安全边界，紧接允许列表。",
+      "actual_comment_lines": [
+        {
+          "line": 70,
+          "text": "# 这里刻意为初高中印刷数学内容采用较宽的"
+        },
+        {
+          "line": 71,
+          "text": "# 允许列表。未知宏会被拒绝，不会交给可能解释"
+        },
+        {
+          "line": 72,
+          "text": "# 文件或进程命令的渲染器。"
+        }
+      ],
+      "recommended_platform_disposition": "false_positive",
+      "existing_tests": {
+        "group": "ocr-worker",
+        "exit_code": 0,
+        "log": "python-ocr-worker-pytest.log",
+        "junit": "python-ocr-worker-junit.xml",
+        "counts": {
+          "tests": 388,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      }
+    },
+    {
+      "key": "84a92061-284f-42a2-9701-2c8b6bbe4cb2",
+      "rule": "python:S125",
+      "severity": "MAJOR",
+      "file": "services/ocr-worker/ocr_worker/math_layout.py",
+      "original_line": 164,
+      "message": "Remove this commented out code.",
+      "current_sha256": "3d05ca211492c96a33c1ad534ec9cf306a470054187cc22513c328a8432993cb",
+      "remediation_baseline_sha256": "3d05ca211492c96a33c1ad534ec9cf306a470054187cc22513c328a8432993cb",
+      "changed_since_remediation_baseline": false,
+      "source_excerpt": {
+        "start_line": 159,
+        "end_line": 172,
+        "text": "    max_padding: int = 96,\n    max_padding_height_ratio: float = 0.75,\n    edge_threshold: float = FORMULA_EDGE_INK_THRESHOLD,\n) -> tuple[bytes, list[float], float, int, bool]:\n    current_padding = max(0, padding)\n    # 对大型独立公式适用的绝对扩展量，可能会\n    # 把周围文字纳入小型行内公式。扩展范围应同时\n    # 受配置上限和检测框高度约束。\n    detected_height = max(1.0, abs(float(bbox[3])))\n    proportional_limit = math.ceil(detected_height * max(0.25, max_padding_height_ratio))\n    max_padding = max(current_padding, min(max_padding, proportional_limit))\n    recrop_count = 0\n    while True:\n        crop, padded_bbox, edge_ink = crop_formula(image, bbox, current_padding)"
+      },
+      "platform_disposition": "pending_root",
+      "full_file_review_claim": false,
+      "verdict": "false_positive_natural_language_comment",
+      "reason": "解释行内小公式裁剪扩展同时受配置和检测框高度约束的原因。",
+      "actual_comment_lines": [
+        {
+          "line": 164,
+          "text": "    # 对大型独立公式适用的绝对扩展量，可能会"
+        },
+        {
+          "line": 165,
+          "text": "    # 把周围文字纳入小型行内公式。扩展范围应同时"
+        },
+        {
+          "line": 166,
+          "text": "    # 受配置上限和检测框高度约束。"
+        }
+      ],
+      "recommended_platform_disposition": "false_positive",
+      "existing_tests": {
+        "group": "ocr-worker",
+        "exit_code": 0,
+        "log": "python-ocr-worker-pytest.log",
+        "junit": "python-ocr-worker-junit.xml",
+        "counts": {
+          "tests": 388,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      }
+    },
+    {
+      "key": "29a146e2-0e55-416b-b7af-fa375edd2c62",
+      "rule": "python:S125",
+      "severity": "MAJOR",
+      "file": "services/ocr-worker/ocr_worker/paper_formula.py",
+      "original_line": 544,
+      "message": "Remove this commented out code.",
+      "current_sha256": "547e2ffc4d91dd3e67d91c72a81fb833444353f88353c0593c91f0408385e2f5",
+      "remediation_baseline_sha256": "547e2ffc4d91dd3e67d91c72a81fb833444353f88353c0593c91f0408385e2f5",
+      "changed_since_remediation_baseline": false,
+      "source_excerpt": {
+        "start_line": 539,
+        "end_line": 552,
+        "text": "        \"reason_codes\": list(validation.reason_codes),\n    }\n\n\ndef _needs_fallback(primary: Any, detector_score: float, edge_ink: float) -> bool:\n    # 检测分数低属于分类问题，边缘有墨迹属于裁剪\n    # 问题。更大的识别模型无法修复这两类问题。\n    return (\n        detector_score >= FORMULA_DETECTOR_ACCEPT_SCORE\n        and edge_ink <= FORMULA_EDGE_INK_THRESHOLD\n        and not _valid_formula(primary.canonical_latex)\n    )\n\n"
+      },
+      "platform_disposition": "pending_root",
+      "full_file_review_claim": false,
+      "verdict": "false_positive_natural_language_comment",
+      "reason": "解释检测分类和边缘裁剪异常不能通过升级识别模型修复，紧接备用模型触发条件。",
+      "actual_comment_lines": [
+        {
+          "line": 544,
+          "text": "    # 检测分数低属于分类问题，边缘有墨迹属于裁剪"
+        },
+        {
+          "line": 545,
+          "text": "    # 问题。更大的识别模型无法修复这两类问题。"
+        }
+      ],
+      "recommended_platform_disposition": "false_positive",
+      "existing_tests": {
+        "group": "ocr-worker",
+        "exit_code": 0,
+        "log": "python-ocr-worker-pytest.log",
+        "junit": "python-ocr-worker-junit.xml",
+        "counts": {
+          "tests": 388,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      }
+    },
+    {
+      "key": "80edea87-9b8d-41db-a7c9-1a79d1431f39",
+      "rule": "python:S125",
+      "severity": "MAJOR",
+      "file": "services/ocr-worker/ocr_worker/symbolic_runner.py",
+      "original_line": 90,
+      "message": "Remove this commented out code.",
+      "current_sha256": "13abbbb6d5695c5df85d4c2c3505decb2f406528f225ec75d162b9684c801929",
+      "remediation_baseline_sha256": "13abbbb6d5695c5df85d4c2c3505decb2f406528f225ec75d162b9684c801929",
+      "changed_since_remediation_baseline": false,
+      "source_excerpt": {
+        "start_line": 85,
+        "end_line": 98,
+        "text": "\ndef _normalize_symbolic_formulas(\n    formulas: dict[str, dict[str, Any]], verifier: Any, heartbeat: Any, checks: list[dict[str, Any]],\n) -> dict[str, dict[str, Any]]:\n    normalized_asts: dict[str, dict[str, Any]] = {}\n    # 在第二阶段重新规范化，避免第一阶段解析器或服务\n    # 暂时不可用后，永久阻断数学验证。\n    for formula_id, formula in formulas.items():\n        if heartbeat is not None:\n            heartbeat.raise_if_failed()\n        ast = formula.get(\"ast\")\n        if not isinstance(ast, dict):\n            result = verifier.normalize(formula.get(\"canonical_latex\") or formula.get(\"raw_latex\") or \"\")\n            ast = result.get(\"ast\")"
+      },
+      "platform_disposition": "pending_root",
+      "full_file_review_claim": false,
+      "verdict": "false_positive_natural_language_comment",
+      "reason": "解释第二阶段重试规范化用于从第一阶段短暂失败恢复的顺序。",
+      "actual_comment_lines": [
+        {
+          "line": 90,
+          "text": "    # 在第二阶段重新规范化，避免第一阶段解析器或服务"
+        },
+        {
+          "line": 91,
+          "text": "    # 暂时不可用后，永久阻断数学验证。"
+        }
+      ],
+      "recommended_platform_disposition": "false_positive",
+      "existing_tests": {
+        "group": "ocr-worker",
+        "exit_code": 0,
+        "log": "python-ocr-worker-pytest.log",
+        "junit": "python-ocr-worker-junit.xml",
+        "counts": {
+          "tests": 388,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      }
+    },
+    {
+      "key": "4da2ff58-ea55-4887-896e-9493efc2131a",
+      "rule": "python:S125",
+      "severity": "MAJOR",
+      "file": "services/ocr-worker/ocr_worker/symbolic_runner.py",
+      "original_line": 172,
+      "message": "Remove this commented out code.",
+      "current_sha256": "13abbbb6d5695c5df85d4c2c3505decb2f406528f225ec75d162b9684c801929",
+      "remediation_baseline_sha256": "13abbbb6d5695c5df85d4c2c3505decb2f406528f225ec75d162b9684c801929",
+      "changed_since_remediation_baseline": false,
+      "source_excerpt": {
+        "start_line": 167,
+        "end_line": 180,
+        "text": "        if len(symbols) != 1:\n            continue\n        if heartbeat is not None:\n            heartbeat.raise_if_failed()\n        result = verifier.solve(ast, next(iter(symbols)))\n        # 算出一个集合不能证明学生结论完整。\n        # 将其保留为约束事实，不作为评分细则的得分依据。\n        check = _check(f\"sympy-solve-{formula_id}\", \"constraint\", result,\n                       formula_id=formula_id, step_id=step[\"id\"])\n        check[\"reason_code\"] = result.get(\"reason_code\", \"solution_set_computed\")\n        checks.append(check)\n\n\ndef _symbols(ast: dict[str, Any]) -> set[str]:"
+      },
+      "platform_disposition": "pending_root",
+      "full_file_review_claim": false,
+      "verdict": "false_positive_natural_language_comment",
+      "reason": "解释求解集合只保存为约束事实，不能直接证明学生结论完整并计分。",
+      "actual_comment_lines": [
+        {
+          "line": 172,
+          "text": "        # 算出一个集合不能证明学生结论完整。"
+        },
+        {
+          "line": 173,
+          "text": "        # 将其保留为约束事实，不作为评分细则的得分依据。"
+        }
+      ],
+      "recommended_platform_disposition": "false_positive",
+      "existing_tests": {
+        "group": "ocr-worker",
+        "exit_code": 0,
+        "log": "python-ocr-worker-pytest.log",
+        "junit": "python-ocr-worker-junit.xml",
+        "counts": {
+          "tests": 388,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      }
+    },
+    {
+      "key": "0fbb4e62-ce85-4424-87b4-ff54ab0e5979",
+      "rule": "python:S3415",
+      "severity": "MAJOR",
+      "file": "services/ocr-worker/tests/test_startup_batch36.py",
+      "original_line": 129,
+      "message": "Unify assertion argument order in this file; both \"actual first\" and \"expected first\" conventions are used.",
+      "current_sha256": "cd7b9032a685d25b2c39b9a57d96ccaa18ad136af15f4aaed1cbec0005802cde",
+      "remediation_baseline_sha256": "cd7b9032a685d25b2c39b9a57d96ccaa18ad136af15f4aaed1cbec0005802cde",
+      "changed_since_remediation_baseline": false,
+      "source_excerpt": {
+        "start_line": 121,
+        "end_line": 134,
+        "text": "        stack.enter_context(patch.object(profile, \"formula_software_descriptor\", return_value=self.software))\n\n    def test_file_profile_keeps_original_byte_digest(self):\n        raw = json.dumps(self.payload, indent=2).encode()\n        with patch.object(profile.Path, \"read_bytes\", return_value=raw) as read_bytes:\n            plan = profile.resolve_formula_runtime_plan(self.settings)\n        read_bytes.assert_called_once_with()\n        self.assertEqual((plan.lifecycle, plan.batch_size, plan.source), (\"resident\", 4, \"measured_profile\"))\n        self.assertEqual(plan.reason, \"compatible_measured_profile\")\n        self.assertEqual(plan.profile_sha256, hashlib.sha256(raw).hexdigest())\n        self.assertEqual(plan.hardware_fingerprint, self.payload[\"hardware_fingerprint\"])\n\n    def test_supplied_profile_keeps_canonical_digest_without_file_read(self):\n        canonical = json.dumps(self.payload, ensure_ascii=False, sort_keys=True, separators=(\",\", \":\")).encode()"
+      },
+      "platform_disposition": "pending_root",
+      "full_file_review_claim": false,
+      "verdict": "false_positive_correct_actual_expected_order",
+      "reason": "第一个参数 plan.profile_sha256 是被测 resolve_formula_runtime_plan 的实际输出；第二个参数 hashlib.sha256(raw).hexdigest() 是由固定输入字节独立计算的预期值，符合本文件统一的 actual-first unittest 约定。",
+      "actual_expression": "plan.profile_sha256",
+      "expected_expression": "hashlib.sha256(raw).hexdigest()",
+      "test": "FormulaProfileBatch36Tests.test_file_profile_keeps_original_byte_digest",
+      "existing_tests": {
+        "group": "ocr-worker",
+        "exit_code": 0,
+        "log": "python-ocr-worker-pytest.log",
+        "junit": "python-ocr-worker-junit.xml",
+        "counts": {
+          "tests": 388,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      },
+      "recommended_platform_disposition": "false_positive"
+    },
+    {
+      "key": "2674ad9e-690b-4a95-a569-05ee335514b7",
+      "rule": "python:S125",
+      "severity": "MAJOR",
+      "file": "services/page-processing-worker/page_processing/config.py",
+      "original_line": 36,
+      "message": "Remove this commented out code.",
+      "current_sha256": "65e6299c54efbfa79f2479a4ffcc06a0c028364955ae32ac446fec3fd45f74d4",
+      "remediation_baseline_sha256": "65e6299c54efbfa79f2479a4ffcc06a0c028364955ae32ac446fec3fd45f74d4",
+      "changed_since_remediation_baseline": false,
+      "source_excerpt": {
+        "start_line": 31,
+        "end_line": 44,
+        "text": "\n    def __post_init__(self) -> None:\n        validate_service_url(\"EDUGRADE_API_BASE_URL\", self.base_url, os.getenv(\"EDUGRADE_ENV\", \"development\"))\n        if not self.tenant_code.strip() or not self.worker_id.strip():\n            raise ValueError(\"tenant_code and worker_id must not be empty\")\n        # 只有处理任务时才启动心跳。提前领取多个\n        # 任务可能导致后续租约在长时间解码期间过期。\n        if self.batch_size != 1:\n            raise ValueError(\"batch_size must be 1 for the sequential page-processing worker\")\n        # 与运行时自身的边界一致（internal/workerruntime/validation.go）：\n        # 越界的租约会被静默调整为 300 秒，因此若用\n        # 未调整的值校验心跳频率，就会拿服务端\n        # 从未授予的租约进行比较。\n        validate_lease_timing(self.lease_seconds, self.heartbeat_interval, self.heartbeat_timeout)"
+      },
+      "platform_disposition": "pending_root",
+      "full_file_review_claim": false,
+      "verdict": "false_positive_natural_language_comment",
+      "reason": "解释顺序处理且只给当前任务发心跳，批量提前领任务会造成后续租约失效。",
+      "actual_comment_lines": [
+        {
+          "line": 36,
+          "text": "        # 只有处理任务时才启动心跳。提前领取多个"
+        },
+        {
+          "line": 37,
+          "text": "        # 任务可能导致后续租约在长时间解码期间过期。"
+        }
+      ],
+      "recommended_platform_disposition": "false_positive",
+      "existing_tests": {
+        "group": "page-processing-worker",
+        "exit_code": 0,
+        "log": "python-page-processing-worker-pytest.log",
+        "junit": "python-page-processing-worker-junit.xml",
+        "counts": {
+          "tests": 124,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      }
+    },
+    {
+      "key": "89cc6e21-a251-4e66-8504-04944e1ae32f",
+      "rule": "python:S125",
+      "severity": "MAJOR",
+      "file": "services/page-processing-worker/page_processing/omr.py",
+      "original_line": 68,
+      "message": "Remove this commented out code.",
+      "current_sha256": "2abd891a47f7d46e4298900f20a62e642c1772e33f10fe8e2c808cca00ab6808",
+      "remediation_baseline_sha256": "2abd891a47f7d46e4298900f20a62e642c1772e33f10fe8e2c808cca00ab6808",
+      "changed_since_remediation_baseline": false,
+      "source_excerpt": {
+        "start_line": 63,
+        "end_line": 76,
+        "text": "            reference_page_height,\n        )\n        if reference.shape != image.shape:\n            reference = _align_reference_crop(reference, image.shape)\n        reference_foreground = _foreground_mask(reference)\n        # 配准会在印刷文字和填涂框轮廓周围引入\n        # 亚像素抗锯齿。测量学生新增墨迹前，只去除\n        # 空白页中很窄的一圈光晕。\n        kernel_size = max(1, int(profile.reference_mask_dilation_pixels) * 2 + 1)\n        reference_mask = cv2.dilate(reference_foreground, np.ones((kernel_size, kernel_size), dtype=np.uint8))\n        binary = cv2.bitwise_and(foreground, cv2.bitwise_not(reference_mask))\n    else:\n        binary = foreground\n"
+      },
+      "platform_disposition": "pending_root",
+      "full_file_review_claim": false,
+      "verdict": "false_positive_natural_language_comment",
+      "reason": "解释空白参考图配准产生窄光晕，测量新增墨迹前去除该光晕的边界。",
+      "actual_comment_lines": [
+        {
+          "line": 68,
+          "text": "        # 配准会在印刷文字和填涂框轮廓周围引入"
+        },
+        {
+          "line": 69,
+          "text": "        # 亚像素抗锯齿。测量学生新增墨迹前，只去除"
+        },
+        {
+          "line": 70,
+          "text": "        # 空白页中很窄的一圈光晕。"
+        }
+      ],
+      "recommended_platform_disposition": "false_positive",
+      "existing_tests": {
+        "group": "page-processing-worker",
+        "exit_code": 0,
+        "log": "python-page-processing-worker-pytest.log",
+        "junit": "python-page-processing-worker-junit.xml",
+        "counts": {
+          "tests": 124,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      }
+    },
+    {
+      "key": "3800c8aa-b10c-4729-8558-c3b6289ae013",
+      "rule": "python:S125",
+      "severity": "MAJOR",
+      "file": "services/page-processing-worker/page_processing/omr_acceptance.py",
+      "original_line": 84,
+      "message": "Remove this commented out code.",
+      "current_sha256": "895fc941df4007b0a0af4b26e6cac72a858a4b83db2fc440652afed3b84d38ed",
+      "remediation_baseline_sha256": "895fc941df4007b0a0af4b26e6cac72a858a4b83db2fc440652afed3b84d38ed",
+      "changed_since_remediation_baseline": false,
+      "source_excerpt": {
+        "start_line": 79,
+        "end_line": 92,
+        "text": "            # 内方块刻意设置在模糊阈值与已填涂阈值之间。\n            draw.rectangle((x + 11, y + 11, x + 18, y + 18), fill=\"black\")\n        else:\n            draw.ellipse((x + 6, y + 6, x + width - 6, y + height - 6), fill=\"black\")\n\n    # 在答案内部以外添加确定的低强度扫描噪声，\n    # 避免验收流程只处理与单张图像字节完全相同的副本。\n    pixels = np.asarray(image).copy()\n    seed = sum(ord(char) for char in case.sample_id)\n    rng = np.random.default_rng(seed)\n    for x, y in rng.integers([0, 0], [180, 70], size=(12, 2)):\n        if y < 15 or y > 55:\n            pixels[y, x] = (220, 220, 220)\n    output = io.BytesIO()"
+      },
+      "platform_disposition": "pending_root",
+      "full_file_review_claim": false,
+      "verdict": "false_positive_natural_language_comment",
+      "reason": "解释确定性扫描噪声必须放在答案内部以外，避免验收只处理相同图像副本。",
+      "actual_comment_lines": [
+        {
+          "line": 84,
+          "text": "    # 在答案内部以外添加确定的低强度扫描噪声，"
+        },
+        {
+          "line": 85,
+          "text": "    # 避免验收流程只处理与单张图像字节完全相同的副本。"
+        }
+      ],
+      "recommended_platform_disposition": "false_positive",
+      "existing_tests": {
+        "group": "page-processing-worker",
+        "exit_code": 0,
+        "log": "python-page-processing-worker-pytest.log",
+        "junit": "python-page-processing-worker-junit.xml",
+        "counts": {
+          "tests": 124,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      }
+    },
+    {
+      "key": "11d11e79-e1bd-4e27-a449-377dd9f6d43b",
+      "rule": "python:S125",
+      "severity": "MAJOR",
+      "file": "services/page-processing-worker/page_processing/runner.py",
+      "original_line": 128,
+      "message": "Remove this commented out code.",
+      "current_sha256": "32d236c9d4fa337d61ac403cd1d9b8e3a05d5f5dcbd0a1330284ad778694041e",
+      "remediation_baseline_sha256": "32d236c9d4fa337d61ac403cd1d9b8e3a05d5f5dcbd0a1330284ad778694041e",
+      "changed_since_remediation_baseline": false,
+      "source_excerpt": {
+        "start_line": 123,
+        "end_line": 136,
+        "text": "                    handler(task, heartbeat)\n            except Exception as exc:  # noqa: BLE001 - 每个任务必须隔离处理并报告结果，再继续循环。\n                try:\n                    self._fail(task, exc)\n                except Exception as fail_exc:  # noqa: BLE001 - 租约失效或网关故障后，报告也可能失败。\n                    # 租约丢失或网关故障不能导致工作进程循环崩溃：\n                    # 租约过期后，运行时会重新分配任务。也要记录\n                    # 原始失败，因为报告没有送达，日志就成了\n                    # 任务失败原因仅存的记录。\n                    print(\n                        f\"page-processing task {task.get('id')} failed: {type(exc).__name__}: {exc}; \"\n                        f\"fail-report also failed: {type(fail_exc).__name__}: {fail_exc}\",\n                        file=sys.stderr,\n                        flush=True,"
+      },
+      "platform_disposition": "pending_root",
+      "full_file_review_claim": false,
+      "verdict": "false_positive_natural_language_comment",
+      "reason": "解释失败报告也失败时仍维持工作循环及记录原始失败原因的恢复边界。",
+      "actual_comment_lines": [
+        {
+          "line": 128,
+          "text": "                    # 租约丢失或网关故障不能导致工作进程循环崩溃："
+        },
+        {
+          "line": 129,
+          "text": "                    # 租约过期后，运行时会重新分配任务。也要记录"
+        },
+        {
+          "line": 130,
+          "text": "                    # 原始失败，因为报告没有送达，日志就成了"
+        },
+        {
+          "line": 131,
+          "text": "                    # 任务失败原因仅存的记录。"
+        }
+      ],
+      "recommended_platform_disposition": "false_positive",
+      "existing_tests": {
+        "group": "page-processing-worker",
+        "exit_code": 0,
+        "log": "python-page-processing-worker-pytest.log",
+        "junit": "python-page-processing-worker-junit.xml",
+        "counts": {
+          "tests": 124,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      }
+    },
+    {
+      "key": "7f939914-9bb6-4005-80a0-4c2efe12eedb",
+      "rule": "python:S5332",
+      "severity": "MINOR",
+      "file": "ai-services/grading_agent/server.py",
+      "original_line": 291,
+      "message": "Using HTTP protocol is insecure. Use HTTPS instead.",
+      "current_sha256": "62c2b234657f1f29d444968d8ce815647f820b1b8c7b3eb7d6a6db6d617c637e",
+      "remediation_baseline_sha256": "62c2b234657f1f29d444968d8ce815647f820b1b8c7b3eb7d6a6db6d617c637e",
+      "changed_since_remediation_baseline": false,
+      "source_excerpt": {
+        "start_line": 286,
+        "end_line": 294,
+        "text": "        if settings.tls_cert_file:\n            context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)\n            context.minimum_version = ssl.TLSVersion.TLSv1_2\n            context.load_cert_chain(settings.tls_cert_file, settings.tls_key_file)\n            server.socket = context.wrap_socket(server.socket, server_side=True)\n        server.serve_forever()\n    finally:\n        # 证书加载失败或服务退出时也要清理；就绪线程先收到退出信号，再关闭监听。\n        server.server_close()"
+      },
+      "platform_disposition": "pending_root",
+      "full_file_review_claim": false,
+      "verdict": "preexisting_tls_remediation_requires_actual_rescan",
+      "reason": "整改基线中已有TLS监听策略，创建监听器前验证证书/环境/布尔opt-in/IPv4字面回环约束，配置证书时用最低TLS1.2包装socket；本智能体未修改该业务源码。是否关闭原HTTP告警以主智能体实际复扫结果为准。",
+      "contains_http_literal": false,
+      "existing_tests": {
+        "group": "grading-agent",
+        "exit_code": 0,
+        "log": "python-grading-agent-pytest.log",
+        "junit": "python-grading-agent-junit.xml",
+        "counts": {
+          "tests": 483,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      },
+      "tls_policy_file": "ai-services/grading_agent/config.py",
+      "tls_regression_tests": [
+        "ai-services/tests/test_config.py",
+        "ai-services/tests/test_server_tls.py",
+        "ai-services/tests/test_server_tls_handshake.py"
+      ],
+      "recommended_platform_disposition": "rescan_first_do_not_force_close"
+    },
+    {
+      "key": "60b4486b-ab39-42bd-914d-ebe6e345921f",
+      "rule": "python:S5332",
+      "severity": "MINOR",
+      "file": "docs/architecture/tools/preview_server.py",
+      "original_line": 36,
+      "message": "Using HTTP protocol is insecure. Use HTTPS instead.",
+      "current_sha256": "72ef85e9f65e34f899ea8dcefb2c14ffdfaa7bc8c40e9a7f4890f586d464e08d",
+      "remediation_baseline_sha256": "4fef834f6f2785e9ca07e21581bff4a48c28fefb84839c92698d806b88fa2a6f",
+      "changed_since_remediation_baseline": true,
+      "source_excerpt": {
+        "start_line": 1,
+        "end_line": 37,
+        "text": "\"\"\"仅在回环地址提供架构产物并接收渲染结果，不开放业务目录或任意文件写入。\"\"\"\nfrom http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer\nfrom pathlib import Path\nimport re\nfrom urllib.parse import unquote, urlparse\n\nBASE = Path(__file__).resolve().parents[1]\n\nclass Handler(SimpleHTTPRequestHandler):\n    def __init__(self, *args, **kwargs):\n        super().__init__(*args, directory=str(BASE), **kwargs)\n\n    def log_message(self, *args):\n        # 本地预览批量加载图纸时不逐请求打印日志；HTTP 错误仍由响应状态返回。\n        pass\n\n    def do_POST(self):\n        path = unquote(urlparse(self.path).path)\n        if not re.fullmatch(r\"/(previews/[0-9A-Za-z_.-]+\\.(?:svg|png|html)|evidence/[0-9A-Za-z_.-]+\\.json)\", path):\n            self.send_error(400)\n            return\n        size = int(self.headers.get(\"Content-Length\", \"0\"))\n        if not 0 < size <= 20 * 1024 * 1024:\n            self.send_error(413)\n            return\n        target = (BASE / path[1:]).resolve()\n        if not target.is_relative_to(BASE):\n            self.send_error(400)\n            return\n        target.parent.mkdir(exist_ok=True, parents=True)\n        target.write_bytes(self.rfile.read(size))\n        self.send_response(200)\n        self.end_headers()\n        self.wfile.write(b\"saved\")\n\nif __name__ == \"__main__\":\n    ThreadingHTTPServer((\"127.0.0.1\", 8766), Handler).serve_forever()"
+      },
+      "platform_disposition": "pending_root",
+      "full_file_review_claim": false,
+      "verdict": "intentional_local_document_preview_http",
+      "reason": "静态架构预览与渲染结果回写监听固定 IPv4 回环 127.0.0.1:8766；不是生产阅卷接口。路径允许列表、20MiB上传上限及 resolve 后的 BASE 范围检查在同一文件。当前选择保留本机预览 HTTP，需平台按上下文记录接受，而非声称已升级TLS。",
+      "recommended_platform_disposition": "accepted_contextual_local_only_http",
+      "existing_tests": {
+        "report": "python-tools-equivalence.json",
+        "scope": "log_message 方法和原业务行为输出等价，不是HTTP监听集成测试"
+      }
+    },
+    {
+      "key": "0cb24e71-bce5-4ed4-b2c5-ca9aac275754",
+      "rule": "python:S5332",
+      "severity": "MINOR",
+      "file": "services/math-verification-worker/math_verification_worker/server.py",
+      "original_line": 186,
+      "message": "Using HTTP protocol is insecure. Use HTTPS instead.",
+      "current_sha256": "d9d6a02c89cea615738f507e3462e185e4c9992537acdb6b93ce28427f9a4f1f",
+      "remediation_baseline_sha256": "d9d6a02c89cea615738f507e3462e185e4c9992537acdb6b93ce28427f9a4f1f",
+      "changed_since_remediation_baseline": false,
+      "source_excerpt": {
+        "start_line": 181,
+        "end_line": 189,
+        "text": "        if cert_file:\n            context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)\n            context.minimum_version = ssl.TLSVersion.TLSv1_2\n            context.load_cert_chain(cert_file, key_file)\n            server.socket = context.wrap_socket(server.socket, server_side=True)\n        server.serve_forever()\n    finally:\n        # TLS 初始化失败仍需释放监听端口，避免下一次启动被旧套接字阻塞。\n        server.server_close()"
+      },
+      "platform_disposition": "pending_root",
+      "full_file_review_claim": false,
+      "verdict": "preexisting_tls_remediation_requires_actual_rescan",
+      "reason": "整改基线中已有TLS监听策略，创建监听器前验证证书/环境/布尔opt-in/IPv4字面回环约束，配置证书时用最低TLS1.2包装socket；本智能体未修改该业务源码。是否关闭原HTTP告警以主智能体实际复扫结果为准。",
+      "contains_http_literal": false,
+      "existing_tests": {
+        "group": "math-verifier",
+        "exit_code": 0,
+        "log": "python-math-verifier-pytest.log",
+        "junit": "python-math-verifier-junit.xml",
+        "counts": {
+          "tests": 156,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      },
+      "tls_policy_file": "services/math-verification-worker/math_verification_worker/server.py",
+      "tls_regression_tests": [
+        "services/math-verification-worker/tests/test_server_tls_batch54.py"
+      ],
+      "recommended_platform_disposition": "rescan_first_do_not_force_close"
+    }
+  ]
+}

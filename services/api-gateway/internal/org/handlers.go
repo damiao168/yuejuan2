@@ -15,6 +15,10 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	schoolScopeForbidden = "school is outside the current data access scope"
+)
+
 type Handler struct {
 	store Store
 	audit auth.Store
@@ -184,7 +188,7 @@ func (h *Handler) ListAcademicYears(w http.ResponseWriter, r *http.Request) {
 	scope, _ := auth.AccessScopeFromContext(r.Context())
 	schoolID := strings.TrimSpace(r.URL.Query().Get("school_id"))
 	if schoolID != "" && !allowsSchool(scope, schoolID) {
-		httpx.Error(w, r, http.StatusForbidden, "organization_scope_forbidden", "school is outside the current data access scope")
+		httpx.Error(w, r, http.StatusForbidden, "organization_scope_forbidden", schoolScopeForbidden)
 		return
 	}
 	out, err := h.store.ListAcademicYears(r.Context(), user.TenantID, schoolID)
@@ -206,7 +210,7 @@ func (h *Handler) ListGradeCohorts(w http.ResponseWriter, r *http.Request) {
 	scope, _ := auth.AccessScopeFromContext(r.Context())
 	schoolID := strings.TrimSpace(r.URL.Query().Get("school_id"))
 	if schoolID != "" && !allowsSchool(scope, schoolID) {
-		httpx.Error(w, r, http.StatusForbidden, "organization_scope_forbidden", "school is outside the current data access scope")
+		httpx.Error(w, r, http.StatusForbidden, "organization_scope_forbidden", schoolScopeForbidden)
 		return
 	}
 	out, err := h.store.ListGradeCohorts(r.Context(), user.TenantID, schoolID)
@@ -234,7 +238,7 @@ func (h *Handler) CreateGrade(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if scope, _ := auth.AccessScopeFromContext(r.Context()); !allowsSchool(scope, input.SchoolID) {
-		httpx.Error(w, r, http.StatusForbidden, "organization_scope_forbidden", "school is outside the current data access scope")
+		httpx.Error(w, r, http.StatusForbidden, "organization_scope_forbidden", schoolScopeForbidden)
 		return
 	}
 	if input.EducationStage != "" && input.EducationStage != "junior" && input.EducationStage != "senior" {
@@ -255,7 +259,7 @@ func (h *Handler) ListGrades(w http.ResponseWriter, r *http.Request) {
 	scope, _ := auth.AccessScopeFromContext(r.Context())
 	schoolID := strings.TrimSpace(r.URL.Query().Get("school_id"))
 	if schoolID != "" && !allowsSchool(scope, schoolID) {
-		httpx.Error(w, r, http.StatusForbidden, "organization_scope_forbidden", "school is outside the current data access scope")
+		httpx.Error(w, r, http.StatusForbidden, "organization_scope_forbidden", schoolScopeForbidden)
 		return
 	}
 	out, err := h.store.ListGrades(r.Context(), user.TenantID, schoolID)
@@ -283,7 +287,7 @@ func (h *Handler) CreateClass(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if scope, _ := auth.AccessScopeFromContext(r.Context()); !allowsSchool(scope, input.SchoolID) {
-		httpx.Error(w, r, http.StatusForbidden, "organization_scope_forbidden", "school is outside the current data access scope")
+		httpx.Error(w, r, http.StatusForbidden, "organization_scope_forbidden", schoolScopeForbidden)
 		return
 	}
 	out, err := h.store.CreateClass(r.Context(), user.TenantID, input)

@@ -260,7 +260,7 @@ func testRouter(authStore *auth.MemoryStore, fileStore files.Store, submissionSt
 		Service: config.ServiceConfig{Name: "test", Environment: "test", ReadinessTimeout: time.Millisecond},
 		Auth:    config.AuthConfig{SessionTTL: time.Hour},
 	}
-	return server.NewRouterFull(cfg, logger.New(io.Discard, "error"), nil, authStore, org.NewMemoryStore(), exam.NewMemoryStore(), paper.NewMemoryStore(), fileStore, files.NewMemoryObjectStorage(), submissionStore)
+	return server.NewRouterFull(cfg, logger.New(io.Discard, "error"), nil, server.IdentityStores{Auth: authStore, Org: org.NewMemoryStore()}, server.ExamPreparationStores{Exam: exam.NewMemoryStore(), Paper: paper.NewMemoryStore(), Files: fileStore, Submissions: submissionStore}, files.NewMemoryObjectStorage())
 }
 
 func authStoreWithPermissions(t *testing.T, permissions []string) *auth.MemoryStore {

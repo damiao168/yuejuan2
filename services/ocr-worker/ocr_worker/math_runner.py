@@ -7,7 +7,7 @@ from urllib import error, request
 
 from edugrade_worker_runtime import ResponseValidationError, read_json_response
 
-from .api import APIError
+from .api import APIError, _open_request
 from .recognition_router import RecognitionRouter, RegionKind
 from .runner import WorkerConfig, _LeaseHeartbeat
 
@@ -38,7 +38,7 @@ class MathVerificationClient:
             method="POST",
         )
         try:
-            with request.urlopen(req, timeout=self.timeout) as response:
+            with _open_request(req, timeout=self.timeout) as response:
                 return json.loads(read_json_response(response).decode())
         except error.HTTPError as exc:
             if exc.code == 422:
@@ -74,10 +74,9 @@ class MathUnderstandingRunner:
         started = time.monotonic()
         runtime_id = str(runtime_task.get("id", ""))
         lease = str(runtime_task.get("lease_token", ""))
-        tenant_id = str(runtime_task.get("tenant_id", ""))
         self.api.activate_task(runtime_task, self.config.worker_id)
         if runtime_task.get("source_type") != "answer_segment" or not runtime_id or not lease:
-            self.api.fail_runtime_task(runtime_id, lease, "invalid_math_runtime_payload", False, 0, tenant_id)
+            self.api.fail_runtime_task(runtime_id, lease, "invalid_math_runtime_payload", False, 0)
             return
         with _LeaseHeartbeat(
             api=self.api,
@@ -87,15 +86,14 @@ class MathUnderstandingRunner:
             interval=self.config.heartbeat_interval,
             lease_seconds=self.config.lease_seconds,
             request_timeout=self.config.heartbeat_timeout,
-            tenant_id=tenant_id,
         ) as heartbeat:
             try:
-                task_input = self.api.get_math_task_input(runtime_id, tenant_id)
+                task_input = self.api.get_math_task_input(runtime_id)
                 task = task_input["task"]
                 subject = str(task["subject_code"])
                 if subject not in {"mathematics", "physics", "chemistry"}:
                     raise ValueError("formula recognition is not enabled for this subject")
-                image = self.api.download(str(task_input["image_url"]), tenant_id)
+                image = self.api.download(str(task_input["image_url"]))
                 kind = RegionKind(str(task.get("region_kind", "unknown")))
                 routed = self.router.recognize(subject, kind, image)
                 artifact = _build_artifact(task, routed, self.verifier)
@@ -105,7 +103,6 @@ class MathUnderstandingRunner:
                     lease,
                     artifact,
                     int((time.monotonic() - started) * 1000),
-                    tenant_id,
                 )
             except (APIError, KeyError, TypeError, ValueError):
                 heartbeat.stop()
@@ -115,7 +112,6 @@ class MathUnderstandingRunner:
                     "math_understanding_failed",
                     True,
                     int((time.monotonic() - started) * 1000),
-                    tenant_id,
                 )
 
 
@@ -129,90 +125,15 @@ def _build_artifact(task: dict[str, Any], routed: Any, verifier: MathVerificatio
     image_size = routed.image_size if getattr(routed, "image_size", None) else None
 
     if routed.kind in {RegionKind.TEXT, RegionKind.MIXED}:
-        for index, text_block in enumerate(routed.text_blocks, start=1):
-            block_id = f"block-text-{index}" if routed.kind is RegionKind.MIXED else f"block-{index}"
-            blocks.append(
-                {
-                    "id": block_id,
-                    "kind": "text",
-                    "status": "active",
-                    "bbox": _box(text_block.bbox, image_size),
-                    "text": text_block.text,
-                    "normalized": " ".join(text_block.text.split()),
-                    "recognition_engine": "paddleocr",
-                    "recognition_version": "pp-ocrv5",
-                    "recognition_confidence": _confidence(text_block.confidence),
-                    "structure_confidence": _confidence(text_block.confidence),
-                    "source_image_hash": input_hash,
-                    "source_refs": ["mixed-layout:text"] if routed.kind is RegionKind.MIXED else [],
-                }
-            )
+        blocks.extend(_text_artifact_blocks(routed, input_hash, image_size))
     if routed.kind is RegionKind.MIXED:
-        for index, region in enumerate(routed.formula_regions, start=1):
-            formula = region.formula
-            block_id = f"block-formula-{index}"
-            bbox = _box(region.bbox, image_size)
-            recognition_confidence = _confidence(formula.confidence if formula else 0.0)
-            structure_confidence = _confidence(region.detector_confidence)
-            blocks.append(
-                {
-                    "id": block_id,
-                    "kind": "formula" if formula else "unknown",
-                    "status": "active" if formula else "uncertain",
-                    "bbox": bbox,
-                    "normalized": formula.canonical_latex if formula else "",
-                    "recognition_engine": formula.engine if formula else "formula-layout",
-                    "recognition_version": formula.engine_version if formula else (routed.layout_version or "layout-v1"),
-                    "recognition_confidence": recognition_confidence,
-                    "structure_confidence": structure_confidence,
-                    "source_image_hash": input_hash,
-                    "source_refs": ["mixed-layout:formula", *region.warnings],
-                }
-            )
-            if formula:
-                _append_formula_artifact(
-                    formulas,
-                    verifications,
-                    verifier,
-                    formula=formula,
-                    block_id=block_id,
-                    bbox=bbox,
-                    warnings=region.warnings,
-                    candidates=region.candidates,
-                    selected_candidate=region.selected_candidate,
-                )
+        _append_mixed_artifacts(routed, input_hash, image_size, verifier, blocks, formulas, verifications)
     elif routed.kind is not RegionKind.TEXT:
-        formula = routed.formula
-        confidence = _confidence(formula.confidence if formula else 0.0)
-        blocks.append(
-            {
-                "id": "block-1",
-                "kind": "formula" if formula else "unknown",
-                "status": "active",
-                "bbox": full_box,
-                "normalized": formula.canonical_latex if formula else "",
-                "recognition_engine": formula.engine if formula else "formula-router",
-                "recognition_version": formula.engine_version if formula else "v1",
-                "recognition_confidence": confidence,
-                "structure_confidence": confidence,
-                "source_image_hash": input_hash,
-            }
-        )
-        if formula:
-            _append_formula_artifact(
-                formulas,
-                verifications,
-                verifier,
-                formula=formula,
-                block_id="block-1",
-                bbox=full_box,
-                warnings=formula.warnings,
-                candidates=(formula,),
-                selected_candidate=0,
-            )
+        _append_single_formula_artifact(routed, input_hash, full_box, verifier, blocks, formulas, verifications)
 
     if not blocks:
         raise ValueError("recognition produced no evidence")
+    # 几何排序只改变展示顺序；公式和核验编号保留识别顺序，不能随 blocks 重排。
     blocks.sort(key=lambda block: (block["bbox"]["y"], block["bbox"]["x"], block["id"]))
     step_formula_ids = [formula["id"] for formula in formulas]
     overall = min(block["recognition_confidence"] for block in blocks)
@@ -249,6 +170,123 @@ def _build_artifact(task: dict[str, Any], routed: Any, verifier: MathVerificatio
     }
 
 
+def _text_artifact_blocks(routed: Any, input_hash: str, image_size: tuple[int, int] | None) -> list[dict[str, Any]]:
+    blocks: list[dict[str, Any]] = []
+    for index, text_block in enumerate(routed.text_blocks, start=1):
+        block_id = f"block-text-{index}" if routed.kind is RegionKind.MIXED else f"block-{index}"
+        blocks.append(
+            {
+                "id": block_id,
+                "kind": "text",
+                "status": "active",
+                "bbox": _box(text_block.bbox, image_size),
+                "text": text_block.text,
+                "normalized": " ".join(text_block.text.split()),
+                "recognition_engine": "paddleocr",
+                "recognition_version": "pp-ocrv5",
+                "recognition_confidence": _confidence(text_block.confidence),
+                "structure_confidence": _confidence(text_block.confidence),
+                "source_image_hash": input_hash,
+                "source_refs": ["mixed-layout:text"] if routed.kind is RegionKind.MIXED else [],
+            }
+        )
+    return blocks
+
+
+def _mixed_formula_block(
+    region: Any,
+    formula: Any,
+    block_id: str,
+    input_hash: str,
+    image_size: tuple[int, int] | None,
+    routed: Any,
+) -> dict[str, Any]:
+    bbox = _box(region.bbox, image_size)
+    recognition_confidence = _confidence(formula.confidence if formula else 0.0)
+    structure_confidence = _confidence(region.detector_confidence)
+    return {
+        "id": block_id,
+        "kind": "formula" if formula else "unknown",
+        "status": "active" if formula else "uncertain",
+        "bbox": bbox,
+        "normalized": formula.canonical_latex if formula else "",
+        "recognition_engine": formula.engine if formula else "formula-layout",
+        "recognition_version": formula.engine_version if formula else (routed.layout_version or "layout-v1"),
+        "recognition_confidence": recognition_confidence,
+        "structure_confidence": structure_confidence,
+        "source_image_hash": input_hash,
+        "source_refs": ["mixed-layout:formula", *region.warnings],
+    }
+
+
+def _append_mixed_artifacts(
+    routed: Any,
+    input_hash: str,
+    image_size: tuple[int, int] | None,
+    verifier: MathVerificationClient,
+    blocks: list[dict[str, Any]],
+    formulas: list[dict[str, Any]],
+    verifications: list[dict[str, Any]],
+) -> None:
+    for index, region in enumerate(routed.formula_regions, start=1):
+        formula = region.formula
+        block_id = f"block-formula-{index}"
+        block = _mixed_formula_block(region, formula, block_id, input_hash, image_size, routed)
+        blocks.append(block)
+        # 未选中候选的区域仍保留 block，但不占用 formula/verification 的连续编号。
+        if formula:
+            _append_formula_artifact(
+                formulas,
+                verifications,
+                verifier,
+                formula=formula,
+                block_id=block_id,
+                bbox=block["bbox"],
+                warnings=region.warnings,
+                candidates=region.candidates,
+                selected_candidate=region.selected_candidate,
+            )
+
+
+def _append_single_formula_artifact(
+    routed: Any,
+    input_hash: str,
+    full_box: dict[str, float],
+    verifier: MathVerificationClient,
+    blocks: list[dict[str, Any]],
+    formulas: list[dict[str, Any]],
+    verifications: list[dict[str, Any]],
+) -> None:
+    formula = routed.formula
+    confidence = _confidence(formula.confidence if formula else 0.0)
+    blocks.append(
+        {
+            "id": "block-1",
+            "kind": "formula" if formula else "unknown",
+            "status": "active",
+            "bbox": full_box,
+            "normalized": formula.canonical_latex if formula else "",
+            "recognition_engine": formula.engine if formula else "formula-router",
+            "recognition_version": formula.engine_version if formula else "v1",
+            "recognition_confidence": confidence,
+            "structure_confidence": confidence,
+            "source_image_hash": input_hash,
+        }
+    )
+    if formula:
+        _append_formula_artifact(
+            formulas,
+            verifications,
+            verifier,
+            formula=formula,
+            block_id="block-1",
+            bbox=full_box,
+            warnings=formula.warnings,
+            candidates=(formula,),
+            selected_candidate=0,
+        )
+
+
 def _append_formula_artifact(
     formulas: list[dict[str, Any]],
     verifications: list[dict[str, Any]],
@@ -264,7 +302,7 @@ def _append_formula_artifact(
     try:
         normalized = verifier.normalize(formula.canonical_latex) if formula.canonical_latex else {}
     except APIError:
-        # Recognition evidence remains useful while the symbolic service is down.
+        # 符号计算服务不可用时，识别证据仍然有用。
         normalized = {"status": "uncertain", "reason_code": "verification_unavailable"}
     ast = normalized.get("ast") if isinstance(normalized.get("ast"), dict) else None
     parsed = ast is not None

@@ -23,31 +23,40 @@ func BuildSpatialRelations(blocks []MathAnswerBlock, options SpatialGraphOptions
 			if i == j || blocks[i].Status == "crossed_out" || blocks[j].Status == "crossed_out" {
 				continue
 			}
-			from, to := blocks[i], blocks[j]
-			geometry, evidence := transitionGeometry(from.BoundingBox, to.BoundingBox)
-			connector := 0.0
-			if from.Kind == "connector" || strings.ContainsAny(from.Text, "→↓⇒") {
-				connector = 1
-				evidence = append(evidence, "connector")
+			if relation, accepted := spatialRelationCandidate(blocks[i], blocks[j], minimum); accepted {
+				out = append(out, relation)
 			}
-			dependency := sharedSymbolScore(from.Normalized+from.Text, to.Normalized+to.Text)
-			final := clamp(.65*geometry + .2*connector + .15*dependency)
-			if final < minimum {
-				continue
-			}
-			out = append(out, SpatialRelation{ID: fmt.Sprintf("spatial-%s-%s", from.ID, to.ID), FromID: from.ID, ToID: to.ID, Kind: "continues", GeometryScore: geometry, ConnectorScore: connector, MathDependencyScore: dependency, Confidence: final, Evidence: evidence})
 		}
 	}
 	sort.Slice(out, func(i, j int) bool {
-		if out[i].FromID == out[j].FromID {
-			if out[i].Confidence == out[j].Confidence {
-				return out[i].ToID < out[j].ToID
-			}
-			return out[i].Confidence > out[j].Confidence
-		}
-		return out[i].FromID < out[j].FromID
+		return spatialRelationPrecedes(out[i], out[j])
 	})
 	return out
+}
+
+func spatialRelationPrecedes(left, right SpatialRelation) bool {
+	if left.FromID == right.FromID {
+		if left.Confidence == right.Confidence {
+			return left.ToID < right.ToID
+		}
+		return left.Confidence > right.Confidence
+	}
+	return left.FromID < right.FromID
+}
+
+func spatialRelationCandidate(from, to MathAnswerBlock, minimum float64) (SpatialRelation, bool) {
+	geometry, evidence := transitionGeometry(from.BoundingBox, to.BoundingBox)
+	connector := 0.0
+	if from.Kind == "connector" || strings.ContainsAny(from.Text, "→↓⇒") {
+		connector = 1
+		evidence = append(evidence, "connector")
+	}
+	dependency := sharedSymbolScore(from.Normalized+from.Text, to.Normalized+to.Text)
+	final := clamp(.65*geometry + .2*connector + .15*dependency)
+	if final < minimum {
+		return SpatialRelation{}, false
+	}
+	return SpatialRelation{ID: fmt.Sprintf("spatial-%s-%s", from.ID, to.ID), FromID: from.ID, ToID: to.ID, Kind: "continues", GeometryScore: geometry, ConnectorScore: connector, MathDependencyScore: dependency, Confidence: final, Evidence: evidence}, true
 }
 
 // transitionGeometry 按输入图像的 0–1 坐标计算；向上或同行向左的候选不给几何分。

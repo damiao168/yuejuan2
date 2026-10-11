@@ -1,0 +1,83 @@
+{
+  "packs": [
+    {
+      "pack": "golang",
+      "rule_count": 42,
+      "missed": 71,
+      "sha256": "c14e8e157fe1f797fc2bd8ca005e8fdc8b656c16b9eeca268a5c2e2764dcc84d",
+      "source": "https://semgrep.dev/c/p/golang"
+    },
+    {
+      "pack": "javascript",
+      "rule_count": 74,
+      "missed": 242,
+      "sha256": "ccd47b2aeb2ff490520818ce956776b45ad701439f1e6221939bded1f53f242e",
+      "source": "https://semgrep.dev/c/p/javascript"
+    },
+    {
+      "pack": "owasp-top-ten",
+      "rule_count": 560,
+      "missed": 1800,
+      "sha256": "558c0192555caf78fe48be2afd0a7e3e5e1705fb217260145e8e4b92890707fd",
+      "source": "https://semgrep.dev/c/p/owasp-top-ten"
+    },
+    {
+      "pack": "python",
+      "rule_count": 151,
+      "missed": 923,
+      "sha256": "084e9272b4297bbdc7afcd0b8ece70816f2e9c9973639b26eab2c071456ccc6b",
+      "source": "https://semgrep.dev/c/p/python"
+    },
+    {
+      "pack": "secrets",
+      "rule_count": 52,
+      "missed": 218,
+      "sha256": "7c0b0163d7cbfe44f16cec78556662655bedeec1d41c6e091ddef5d85c1d5eff",
+      "source": "https://semgrep.dev/c/p/secrets"
+    },
+    {
+      "pack": "security-audit",
+      "rule_count": 225,
+      "missed": 0,
+      "sha256": "5509b33efc0c08e2134ccb76f2c7172065f7ba4a89f28799661029e274c306c7",
+      "source": "https://semgrep.dev/c/p/security-audit"
+    },
+    {
+      "pack": "typescript",
+      "rule_count": 74,
+      "missed": 242,
+      "sha256": "6248ea7477e6da0db10305c0281f7cd908485691747f4fd641275145075f3b22",
+      "source": "https://semgrep.dev/c/p/typescript"
+    }
+  ],
+  "unique_rules": 735,
+  "languages": {
+    "go": 53,
+    "javascript": 80,
+    "typescript": 82,
+    "ts": 4,
+    "js": 1,
+    "generic": 36,
+    "regex": 38,
+    "java": 86,
+    "kt": 9,
+    "json": 4,
+    "php": 23,
+    "python": 198,
+    "ruby": 53,
+    "hcl": 59,
+    "C#": 8,
+    "yaml": 30,
+    "bash": 1,
+    "scala": 12,
+    "csharp": 19,
+    "terraform": 3,
+    "dockerfile": 4,
+    "html": 1,
+    "clojure": 3,
+    "swift": 1,
+    "solidity": 1,
+    "kotlin": 1,
+    "c": 9
+  }
+}

@@ -10,9 +10,7 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/auth"
 )
 
-// tenantOnlyScope reproduces the data_scope that CreateManagedUser writes for
-// every account created through POST /api/v1/users: a role-keyed object with no
-// student_id at any nesting level, so ScopedStudentID cannot resolve a student.
+// tenantOnlyScope 复现 CreateManagedUser 为经 POST /api/v1/users 创建的账户写入的 data_scope：按角色索引的对象，各层都没有 student_id，因此 ScopedStudentID 无法解析学生。
 func tenantOnlyScope() map[string]any {
 	return map[string]any{"student": map[string]any{"scope": "tenant"}}
 }
@@ -33,8 +31,7 @@ func scopedUser(id string, scope map[string]any, permissions ...string) auth.Use
 func newScopeHandler(t *testing.T) (*Handler, map[string]Appeal) {
 	t.Helper()
 	store := seededAppealStore()
-	// seededAppealStore leaves student-2 unpublished; publish it so both
-	// students can hold an appeal and cross-student leaks are observable.
+	// seededAppealStore 中 student-2 尚未发布；先发布它，使两名学生都可发起申诉，并能观察到跨学生泄露。
 	store.AddSubmissionGrade(SubmissionGradeSeed{
 		ID:            "submission-grade-2",
 		ExamID:        "exam-1",
@@ -85,13 +82,7 @@ func listAppeals(t *testing.T, handler *Handler, user auth.User, query string) (
 func TestListAppealsDeniesUnresolvableStudentScope(t *testing.T) {
 	handler, _ := newScopeHandler(t)
 
-	cases := []struct {
-		name         string
-		user         auth.User
-		query        string
-		wantStatus   int
-		wantStudents []string
-	}{
+	cases := []appealStudentScopeCase{
 		{
 			name:       "tenant only scope cannot list any appeal",
 			user:       scopedUser("student-user-1", tenantOnlyScope()),
@@ -141,23 +132,7 @@ func TestListAppealsDeniesUnresolvableStudentScope(t *testing.T) {
 
 	for _, testCase := range cases {
 		t.Run(testCase.name, func(t *testing.T) {
-			status, items := listAppeals(t, handler, testCase.user, testCase.query)
-			if status != testCase.wantStatus {
-				t.Fatalf("status = %d, want %d", status, testCase.wantStatus)
-			}
-			if len(items) != len(testCase.wantStudents) {
-				t.Fatalf("returned %d appeals %v, want %d", len(items), studentIDsOf(items), len(testCase.wantStudents))
-			}
-			for _, wanted := range testCase.wantStudents {
-				if !containsString(studentIDsOf(items), wanted) {
-					t.Fatalf("appeals %v missing student %s", studentIDsOf(items), wanted)
-				}
-			}
-			for _, item := range items {
-				if len(testCase.wantStudents) == 1 && item.StudentID != testCase.wantStudents[0] {
-					t.Fatalf("leaked appeal for student %s", item.StudentID)
-				}
-			}
+			assertStudentAppealListScope(t, handler, testCase)
 		})
 	}
 }
@@ -232,4 +207,33 @@ func containsString(values []string, target string) bool {
 		}
 	}
 	return false
+}
+
+type appealStudentScopeCase struct {
+	name         string
+	user         auth.User
+	query        string
+	wantStatus   int
+	wantStudents []string
+}
+
+func assertStudentAppealListScope(t *testing.T, handler *Handler, testCase appealStudentScopeCase) {
+	t.Helper()
+	status, items := listAppeals(t, handler, testCase.user, testCase.query)
+	if status != testCase.wantStatus {
+		t.Fatalf("status = %d, want %d", status, testCase.wantStatus)
+	}
+	if len(items) != len(testCase.wantStudents) {
+		t.Fatalf("returned %d appeals %v, want %d", len(items), studentIDsOf(items), len(testCase.wantStudents))
+	}
+	for _, wanted := range testCase.wantStudents {
+		if !containsString(studentIDsOf(items), wanted) {
+			t.Fatalf("appeals %v missing student %s", studentIDsOf(items), wanted)
+		}
+	}
+	for _, item := range items {
+		if len(testCase.wantStudents) == 1 && item.StudentID != testCase.wantStudents[0] {
+			t.Fatalf("leaked appeal for student %s", item.StudentID)
+		}
+	}
 }

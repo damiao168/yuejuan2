@@ -1,0 +1,111 @@
+{
+  "generated_at": "2026-10-11T19:55:07.627710+08:00",
+  "checkpoint": "full-checkpoint-04",
+  "analysis_id": "07c1210c-b44c-49f6-a3fe-c2bb211a0ce3",
+  "original_status_counts": {
+    "FALSE_POSITIVE": 30,
+    "FIXED": 2192,
+    "ACCEPTED": 1
+  },
+  "checkpoint02_new_status_counts": {
+    "FIXED": 43,
+    "FALSE_POSITIVE": 4
+  },
+  "all_tracked_status_counts": {
+    "FALSE_POSITIVE": 34,
+    "FIXED": 2235,
+    "ACCEPTED": 1
+  },
+  "tracked_count": 2270,
+  "active_count": 0,
+  "quality_gate": {
+    "status": "ERROR",
+    "conditions": [
+      {
+        "status": "ERROR",
+        "metricKey": "new_coverage",
+        "comparator": "LT",
+        "errorThreshold": "80",
+        "actualValue": "0.0"
+      },
+      {
+        "status": "OK",
+        "metricKey": "new_duplicated_lines_density",
+        "comparator": "GT",
+        "errorThreshold": "3",
+        "actualValue": "0.48845"
+      },
+      {
+        "status": "OK",
+        "metricKey": "new_violations",
+        "comparator": "GT",
+        "errorThreshold": "0",
+        "actualValue": "0"
+      }
+    ],
+    "ignoredConditions": false,
+    "period": {
+      "mode": "PREVIOUS_VERSION",
+      "date": "2026-10-11T11:43:02+0800",
+      "parameter": "2026-10-11-local-uncommitted"
+    },
+    "caycStatus": "compliant"
+  },
+  "coverage_imported": false,
+  "all_issue_work_complete": true,
+  "original_issues_sha256_unchanged": "d8d5948f1f6694d45419cdfd4abcd98f3c321fb4d844c42bc6aebd66e2198cd8",
+  "old_metrics": {
+    "complexity": "58301",
+    "duplicated_lines_density": "1.5",
+    "duplicated_lines": "3821",
+    "functions": "15804",
+    "classes": "2019",
+    "sqale_index": "6898",
+    "sqale_rating": "1.0",
+    "bugs": "1653",
+    "lines_to_cover": "82679",
+    "duplicated_files": "103",
+    "ncloc": "227136",
+    "lines": "250362",
+    "coverage": "0.0",
+    "reliability_rating": "4.0",
+    "code_smells": "560",
+    "ncloc_language_distribution": "css=10503;docker=249;go=125947;js=7462;py=19113;rust=4426;ts=58107;web=1329",
+    "security_rating": "3.0",
+    "security_hotspots": "0",
+    "security_review_rating": "1.0",
+    "alert_status": "OK",
+    "uncovered_lines": "82679",
+    "cognitive_complexity": "36400",
+    "duplicated_blocks": "310",
+    "files": "1339",
+    "vulnerabilities": "10"
+  },
+  "final_metrics": {
+    "complexity": "58339",
+    "duplicated_lines_density": "1.4",
+    "duplicated_lines": "3577",
+    "functions": "15882",
+    "classes": "2024",
+    "sqale_index": "0",
+    "sqale_rating": "1.0",
+    "bugs": "0",
+    "lines_to_cover": "83229",
+    "duplicated_files": "102",
+    "ncloc": "227943",
+    "lines": "251493",
+    "coverage": "0.0",
+    "reliability_rating": "1.0",
+    "code_smells": "0",
+    "ncloc_language_distribution": "css=10503;docker=255;go=126013;js=7446;py=19835;rust=4426;ts=58119;web=1346",
+    "security_rating": "1.0",
+    "security_hotspots": "0",
+    "security_review_rating": "1.0",
+    "alert_status": "ERROR",
+    "uncovered_lines": "83229",
+    "cognitive_complexity": "36080",
+    "duplicated_blocks": "319",
+    "files": "1349",
+    "vulnerabilities": "0"
+  }
+}

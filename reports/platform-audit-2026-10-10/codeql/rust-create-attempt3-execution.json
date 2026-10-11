@@ -1,0 +1,31 @@
+{
+  "language": "rust",
+  "stage": "create",
+  "started": "2026-10-11T14:09:16+08:00",
+  "command": [
+    "D:\\tools\\audit-codeql-20261010\\codeql\\codeql.exe",
+    "database",
+    "create",
+    "D:\\tools\\audit-codeql-20261010\\databases\\rust-20261011-low-memory",
+    "--language=rust",
+    "--source-root=D:\\tools\\audit-codeql-20261010\\source-20261011",
+    "--threads=1",
+    "--ram=3072",
+    "--build-mode=none",
+    "--working-dir=D:\\tools\\audit-codeql-20261010\\source-20261011\\apps\\desktop-client\\src-tauri",
+    "--extractor-option=rust.cargo_target_dir=D:\\tools\\audit-codeql-20261010\\databases\\rust-20261011-toolchain-ready\\working\\target",
+    "--extractor-option=rust.trap.compression=gzip",
+    "--common-caches=D:\\tools\\audit-codeql-20261010\\common-caches"
+  ],
+  "log": "D:\\project\\yuejuan\\reports\\platform-audit-2026-10-10\\codeql\\rust-create.log",
+  "environment_overrides": {
+    "RAYON_NUM_THREADS": "1",
+    "CARGO_BUILD_JOBS": "1",
+    "CARGO_NET_OFFLINE": "true",
+    "TEMP": "D:\\tools\\audit-codeql-20261010\\rust-low-memory-temp",
+    "TMP": "D:\\tools\\audit-codeql-20261010\\rust-low-memory-temp"
+  },
+  "exit_code": 0,
+  "finished": "2026-10-11T14:21:53+08:00",
+  "elapsed_seconds": 756.56
+}

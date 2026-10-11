@@ -77,8 +77,8 @@ func (s *Service) GetPolicy(ctx context.Context, tenantID, examID, questionID st
 	return s.store.GetPolicy(ctx, tenantID, examID, questionID)
 }
 
-// MaybeIssue is the claim hook. Call it before claiming an ordinary review task.
-// false means the caller should continue with the normal queue unchanged.
+// MaybeIssue 是领取钩子，须在领取普通复核任务前调用。
+// false 表示调用方应继续原有正常队列流程。
 func (s *Service) MaybeIssue(ctx context.Context, tenantID, examID, questionID, questionNo, graderID string) (Task, bool, error) {
 	if tenantID == "" || examID == "" || questionID == "" || graderID == "" {
 		return Task{}, false, ErrInvalidInput
@@ -118,8 +118,8 @@ func (s *Service) MaybeIssue(ctx context.Context, tenantID, examID, questionID, 
 	})
 }
 
-// TrySubmit is the submit hook. handled=false means id is an ordinary review
-// task. A handled Seed returns only an unrevealing receipt.
+// TrySubmit 是提交钩子。handled=false 表示 id 属于普通复核任务。
+// 已处理的 Seed 只返回不泄漏信息的收据。
 func (s *Service) TrySubmit(ctx context.Context, tenantID, taskID, graderID string, input SubmitInput) (SubmitReceipt, bool, error) {
 	if tenantID == "" || taskID == "" || graderID == "" || !validScore(input.Score) || input.ExpectedRevision <= 0 {
 		return SubmitReceipt{}, false, ErrInvalidInput
@@ -169,8 +169,8 @@ func (s *Service) ListObservations(ctx context.Context, tenantID string, filter 
 	return s.store.ListObservations(ctx, tenantID, filter)
 }
 
-// GetTaskForGrader is the context/image hook used by the normal workbench
-// routes. JSON still omits all Seed-only fields.
+// GetTaskForGrader 是正常工作台路由所用的上下文和图像钩子。
+// JSON 仍省略全部 Seed 专有字段。
 func (s *Service) GetTaskForGrader(ctx context.Context, tenantID, taskID, graderID string) (Task, bool, error) {
 	task, err := s.store.GetTask(ctx, tenantID, taskID)
 	if errors.Is(err, ErrNotFound) {

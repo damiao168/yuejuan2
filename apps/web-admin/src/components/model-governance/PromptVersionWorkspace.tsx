@@ -83,7 +83,7 @@ export function PromptVersionWorkspace() {
 
   useEffect(() => {
     void load();
-    // Runtime content refreshes only on entry or explicit action.
+    // 运行内容只在进入页面或显式操作时刷新。
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

@@ -80,7 +80,7 @@ class EvaluationMetricsTest(unittest.TestCase):
             exact_tolerance=1e-9,
         )
 
-        self.assertEqual(report["dataset"]["synthetic_only"], True)
+        self.assertIs(report["dataset"]["synthetic_only"], True)
         self.assertEqual(len(report["by_variant"]), 3)
         self.assertEqual({item["model_version"] for item in report["by_model_version"]}, {"m1", "m2"})
         self.assertEqual({item["prompt_version"] for item in report["by_prompt_version"]}, {"p1", "p2"})
@@ -109,8 +109,9 @@ class EvaluationMetricsTest(unittest.TestCase):
             self.assertIn("Variant Comparison", markdown)
 
     def test_rejects_non_synthetic_samples(self):
-        with self.assertRaisesRegex(ValueError, "must be explicitly synthetic"):
-            evaluate.validate_samples([{**sample("s1", 5, 5), "synthetic": False}])
+        synthetic_sample = sample('s1', 5, 5)
+        with self.assertRaisesRegex(ValueError, 'must be explicitly synthetic'):
+            evaluate.validate_samples([{**synthetic_sample, 'synthetic': False}])
 
 
 def sample(sample_id, human_score, max_score):

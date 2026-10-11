@@ -8,8 +8,7 @@ import (
 	"time"
 )
 
-// MemoryStore mirrors append-only evidence/decision behaviour. It is used by
-// deterministic service and handler tests; production writes use Postgres.
+// MemoryStore 对应证据和决定只追加的行为，用于确定性服务与 handler 测试；生产写入使用 Postgres。
 type MemoryStore struct {
 	mu        sync.Mutex
 	now       func() time.Time

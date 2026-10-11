@@ -21,10 +21,8 @@ var (
 	shadowFingerprintPattern       = regexp.MustCompile(`^[a-f0-9]{64}$`)
 )
 
-// PanelShadowSample keeps the answer and human reference in separate fields.
-// Only the anonymous identity, human-adjudicated score and server-calculated
-// panel scores are written to the evaluation store; the reference is never
-// passed to an A/B/C adapter.
+// PanelShadowSample 将答案与人工参考分开保存。
+// 评估存储只写入匿名身份、人工裁决分数和服务器计算的评审组分数；参考绝不传给 A/B/C 适配器。
 type PanelShadowSample struct {
 	Context              Context
 	ResponseKey          string
@@ -43,9 +41,8 @@ type PanelShadowEvaluationStore interface {
 	AddPanelObservation(context.Context, string, string, gradingevaluation.PanelObservation) (gradingevaluation.PanelObservation, error)
 }
 
-// PanelModelSetReference is the immutable, role-ordered model/prompt identity
-// to put in the evaluation run's model_reference. A changed role model or
-// prompt must start a new run; a strength rank alone is not quality evidence.
+// PanelModelSetReference 是写入评估运行 model_reference 的不可变模型和提示词身份，按角色排序。
+// 角色模型或提示词改变时必须开始新运行；单靠能力排序不能作为质量证据。
 func PanelModelSetReference(agents PanelAgents) string {
 	type identity struct {
 		Policy        ModelPolicy `json:"policy"`
@@ -78,10 +75,8 @@ func NewPanelShadowRunner(panel *PanelOrchestrator, store PanelShadowEvaluationS
 	return &PanelShadowRunner{panel: panel, store: store}, nil
 }
 
-// RunBatch is an internal, resumable Shadow-only path. It never completes an
-// evaluation run, approves a policy, or publishes a student score. Every
-// sample is checked before the first model call. On a later operational error,
-// previously written observations remain available for an idempotent retry.
+// RunBatch 是内部可恢复、仅用于影子运行的路径，绝不完成评估运行、批准策略或发布学生成绩。
+// 首次模型调用前检查每个样本；后续运维错误发生时，已写观察仍可用于幂等重试。
 func (r *PanelShadowRunner) RunBatch(ctx context.Context, tenantID, actorID, evaluationRunID string, config PanelDecisionConfig, samples []PanelShadowSample) ([]gradingevaluation.PanelObservation, error) {
 	if r == nil || r.panel == nil || r.store == nil || strings.TrimSpace(tenantID) == "" || strings.TrimSpace(actorID) == "" ||
 		strings.TrimSpace(evaluationRunID) == "" || len(samples) == 0 || strings.TrimSpace(config.PolicyVersion) == "" ||
@@ -108,17 +103,8 @@ func (r *PanelShadowRunner) RunBatch(ctx context.Context, tenantID, actorID, eva
 		}
 		fingerprints[item.ResponseFingerprint] = item.ResponseKey
 	}
-	seenKeys := map[string]bool{}
-	for _, sample := range samples {
-		if !validShadowPanelSample(sample, tenantID, run.RubricVersion) || seenKeys[sample.ResponseKey] ||
-			(fingerprints[sample.ResponseFingerprint] != "" && fingerprints[sample.ResponseFingerprint] != sample.ResponseKey) {
-			return nil, ErrInvalidInput
-		}
-		if saved, exists := byKey[sample.ResponseKey]; exists && !shadowReferenceMatches(saved, sample) {
-			return nil, gradingevaluation.ErrConflict
-		}
-		seenKeys[sample.ResponseKey] = true
-		fingerprints[sample.ResponseFingerprint] = sample.ResponseKey
+	if err := validateShadowPanelSamples(tenantID, run.RubricVersion, samples, byKey, fingerprints); err != nil {
+		return nil, err
 	}
 	observations := make([]gradingevaluation.PanelObservation, 0, len(samples))
 	for _, sample := range samples {
@@ -141,6 +127,24 @@ func (r *PanelShadowRunner) RunBatch(ctx context.Context, tenantID, actorID, eva
 		observations = append(observations, saved)
 	}
 	return observations, nil
+}
+
+// 整批预检必须在模型调用前完成；逐样本先拒绝无效输入，再检查已存参考冲突。
+// 沿用已存 fingerprint 索引并按原样本顺序更新，保留批内重复与冲突的错误首位。
+func validateShadowPanelSamples(tenantID, rubricVersion string, samples []PanelShadowSample, byKey map[string]gradingevaluation.PanelObservation, fingerprints map[string]string) error {
+	seenKeys := map[string]bool{}
+	for _, sample := range samples {
+		if !validShadowPanelSample(sample, tenantID, rubricVersion) || seenKeys[sample.ResponseKey] ||
+			(fingerprints[sample.ResponseFingerprint] != "" && fingerprints[sample.ResponseFingerprint] != sample.ResponseKey) {
+			return ErrInvalidInput
+		}
+		if saved, exists := byKey[sample.ResponseKey]; exists && !shadowReferenceMatches(saved, sample) {
+			return gradingevaluation.ErrConflict
+		}
+		seenKeys[sample.ResponseKey] = true
+		fingerprints[sample.ResponseFingerprint] = sample.ResponseKey
+	}
+	return nil
 }
 
 func validShadowPanelSample(sample PanelShadowSample, tenantID, rubricVersion string) bool {

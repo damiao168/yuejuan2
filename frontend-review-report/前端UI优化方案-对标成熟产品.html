@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>EduGrade 前端 UI 优化方案 · 对标成熟产品</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231667d8'/%3E%3Cpath d='M21 20h22M21 32h22M21 44h15' stroke='white' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E" />
+<style>
+  :root{
+    --bg:#f5f7fa;--panel:#fff;--ink:#1b2432;--ink-2:#4a5568;--ink-3:#7a8699;
+    --line:#e4e8ef;--line-2:#eef1f6;--brand:#1667d8;--brand-soft:#eaf2fe;
+    --p0:#d92d3a;--p0-soft:#fdecee;--p1:#d97706;--p1-soft:#fdf3e3;--p2:#2f9e44;--p2-soft:#e9f7ec;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei","Noto Sans CJK SC",Arial,sans-serif;
+    --shadow:0 1px 2px rgba(16,24,40,.05),0 1px 3px rgba(16,24,40,.06);
+  }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.7;-webkit-font-smoothing:antialiased}
+  a{color:var(--brand);text-decoration:none}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+  header.hero{background:linear-gradient(180deg,#10233f,#16335c);color:#fff;padding:56px 0 48px}
+  header.hero .kicker{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:#9fc0ee;margin:0 0 14px}
+  header.hero h1{font-size:34px;margin:0 0 14px;font-weight:700}
+  header.hero p.sub{font-size:16px;color:#cdd9ea;max-width:780px;margin:0}
+  .meta-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}
+  .meta-chip{background:#2d476c;border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:6px 14px;font-size:13px;color:#e7eef9}
+  section.block{padding:42px 0 8px}
+  h2.sec{font-size:23px;margin:0 0 6px;font-weight:700;display:flex;gap:12px;align-items:center}
+  h2.sec .no{width:30px;height:30px;border-radius:8px;background:var(--brand-soft);color:var(--brand);display:inline-flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex:none}
+  p.sec-desc{color:var(--ink-2);margin:0 0 20px;max-width:860px}
+  h3{font-size:16.5px;margin:26px 0 10px;font-weight:700}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:20px 22px;margin-bottom:16px}
+  /* benchmark */
+  .bm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:13px}
+  .bm{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:15px 16px;box-shadow:var(--shadow)}
+  .bm .ph{display:flex;align-items:center;gap:10px;margin-bottom:7px}
+  .bm .av{width:30px;height:30px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#fff;flex:none}
+  .bm .nm{font-weight:700;font-size:14.5px}
+  .bm .role{font-size:11.5px;color:var(--ink-3)}
+  .bm p{margin:0;font-size:13px;color:var(--ink-2);line-height:1.6}
+  /* topic */
+  .topic{border:1px solid var(--line);border-radius:12px;background:var(--panel);box-shadow:var(--shadow);margin-bottom:18px;overflow:hidden}
+  .topic> .hd{padding:15px 20px;border-bottom:1px solid var(--line-2);background:#fcfdfe;display:flex;gap:11px;align-items:center}
+  .topic> .hd .ti{font-weight:700;font-size:16px;flex:1}
+  .topic> .bd{padding:16px 20px}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-bottom:13px}
+  .box{border-radius:10px;padding:13px 15px;font-size:13.5px;line-height:1.65}
+  .box.now{background:#f6f7f9;border:1px solid var(--line)}
+  .box.bench{background:var(--brand-soft);border:1px solid #d4e4fb;color:#1c3f73}
+  .box .h{display:block;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-bottom:6px}
+  .box.now .h{color:var(--ink-3)}.box.bench .h{color:#1450a0}
+  .do{background:var(--p2-soft);border:1px solid #cdeccf;border-radius:10px;padding:13px 15px}
+  .do .h{display:block;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#1f7a32;margin-bottom:7px}
+  .do ul,.box ul{margin:0;padding-left:19px}.do li,.box li{margin-bottom:5px}
+  pre{background:#0f1b2d;color:#d7e2f0;border-radius:10px;padding:14px 16px;overflow-x:auto;font-family:var(--mono);font-size:12.5px;line-height:1.65;margin:12px 0 4px}
+  pre .c{color:#7d93b2}pre .k{color:#7cc0ff}pre .v{color:#a7e0b8}
+  code{font-family:var(--mono);font-size:12.5px;background:#f1f4f9;border:1px solid var(--line-2);border-radius:5px;padding:1px 6px;color:#33415c}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--line-2);vertical-align:top}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-3);font-weight:600;background:#fafbfd}
+  ul.tight{margin:5px 0;padding-left:21px;color:var(--ink-2);font-size:14px}ul.tight li{margin-bottom:6px}
+  .sw-line{display:flex;gap:0;border-radius:8px;overflow:hidden;border:1px solid var(--line);margin:10px 0}
+  .sw-line div{flex:1;height:42px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:4px;font-size:10px;color:rgba(0,0,0,.55);font-family:var(--mono)}
+  .tag{display:inline-block;border-radius:6px;padding:2px 9px;font-size:12px;font-weight:600;white-space:nowrap}
+  .t0{background:var(--p0-soft);color:var(--p0)}.t1{background:var(--p1-soft);color:var(--p1)}.t2{background:var(--p2-soft);color:var(--p2)}
+  .road{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+  .phase{border:1px solid var(--line);border-radius:12px;background:var(--panel);box-shadow:var(--shadow);overflow:hidden}
+  .phase .ph{padding:12px 17px;font-weight:700;color:#fff;font-size:14px}
+  .phase.m0 .ph{background:var(--p0)}.phase.m1 .ph{background:var(--p1)}.phase.m2 .ph{background:var(--brand)}.phase.m3 .ph{background:var(--p2)}
+  .phase ul{margin:0;padding:13px 17px 15px 32px;font-size:13px;color:var(--ink-2)}.phase li{margin-bottom:7px}
+  .layout{display:grid;grid-template-columns:196px 1fr;gap:32px;align-items:start}
+  .toc{position:sticky;top:16px}
+  .toc a{display:block;padding:5px 10px;border-radius:7px;color:var(--ink-2);font-size:13px;margin-bottom:2px}
+  .toc a:hover{background:var(--brand-soft);color:var(--brand)}
+  .toc .tg{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin:13px 10px 3px;font-weight:600}
+  .note{font-size:12.5px;color:var(--ink-3);margin:6px 2px 0}
+  .hl-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+  .hl{border:1px solid var(--line);border-left:3px solid var(--brand);border-radius:10px;background:#fff;padding:12px 15px;box-shadow:var(--shadow)}
+  .hl b{font-size:14px}.hl span{display:block;font-size:12.5px;color:var(--ink-2);margin-top:3px}
+  main{min-width:0}
+  .card,.topic,.topic .bd,.box,.do,.bm,.phase,.hl,figure,.sw-line{min-width:0}
+  p,li{overflow-wrap:break-word}
+  :not(pre)>code{overflow-wrap:anywhere}
+  footer{padding:38px 0 56px;color:var(--ink-3);font-size:13px;text-align:center}
+  @media(max-width:860px){
+    .layout{grid-template-columns:1fr}.toc{display:none}header.hero h1{font-size:26px}.row2{grid-template-columns:1fr}
+    #refs table,#refs tbody,#refs tr,#refs td{display:block;width:100%}
+    #refs thead{display:none}
+    #refs tr{border:1px solid var(--line);border-radius:10px;margin-bottom:10px;padding:4px 12px}
+    #refs td{border:0;padding:3px 0}
+    #refs td:first-child{font-weight:700;color:var(--ink)}
+    #refs td a{display:block;min-height:40px;padding:9px 0;line-height:1.4}
+  }
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <p class="kicker">UI Optimization Playbook · Benchmarked · 只读评审</p>
+    <h1>前端 UI 优化方案 · 对标成熟产品</h1>
+    <p class="sub">在《UI 设计分析》基础上，给出<b>可落地</b>的优化方案：每个主题按“现状 → 成熟产品怎么做 → EduGrade 具体怎么做（含建议设计值 / token / 组件改造）”组织，并附分阶段路线图。所有色值与代码均为<b>建议示例</b>，本次未改动任何源码。</p>
+    <div class="meta-row">
+      <span class="meta-chip">对标 Linear / Stripe / Vercel</span>
+      <span class="meta-chip">Atlassian / IBM Carbon / Polaris</span>
+      <span class="meta-chip">飞书 Arco / AntD Pro</span>
+      <span class="meta-chip">Figma / Notion / GitHub</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap layout" style="padding-top:34px">
+  <nav class="toc">
+    <div class="tg">总览</div>
+    <a href="#strategy">优化策略</a><a href="#benchmap">对标产品地图</a>
+    <div class="tg">十大主题</div>
+    <a href="#brand">品牌视觉</a><a href="#color">色彩治理</a><a href="#type">排版数字</a>
+    <a href="#density">布局密度</a><a href="#component">组件规范</a><a href="#dataviz">数据可视化</a>
+    <a href="#motion">交互反馈</a><a href="#nav">导航 IA</a><a href="#a11y">可访问性</a><a href="#ds">设计系统</a>
+    <div class="tg">落地</div>
+    <a href="#highlights">亮点功能</a><a href="#roadmap">路线图</a>
+  </nav>
+
+  <main>
+  <section class="block" id="strategy" style="padding-top:4px">
+    <h2 class="sec"><span class="no">1</span>总体优化策略</h2>
+    <p class="sec-desc">目标不是“换皮”，而是把一套完成度不错的 AntD 后台，升级为<b>有品牌识别、信息密度可调、高信任、键盘友好</b>的专业阅卷工具。成熟产品的共性经验可归纳为四条主线：</p>
+    <div class="card">
+      <ul class="tight">
+        <li><b>先立“地基”再谈“好看”：</b>Linear、Stripe、Atlassian 的精致都建立在<b>单一数据源的设计令牌</b>之上。先把 token 三层化、主题单点收敛，品牌与暗色才有承载。</li>
+        <li><b>为高频路径做极致优化：</b>阅卷是“每天重复上千次”的操作。对标 Linear/Figma 的高密度、键盘流、即时反馈，把每次评分的点击与等待降到最低。</li>
+        <li><b>用“信任”设计支撑 AI：</b>AI 给分必须可解释、可追溯、可推翻。对标 Stripe 对数据口径的标注、GitHub 对状态的多通道表达，让老师敢用、能纠错。</li>
+        <li><b>把规范变成系统：</b>对标 Atlassian/Carbon/Polaris，组件、文档、用法（Do/Don’t）、可访问性一体化，避免“靠人记住规范”。</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="block" id="benchmap">
+    <h2 class="sec"><span class="no">2</span>对标产品地图</h2>
+    <p class="sec-desc">按“学什么”选择对标，而非整体照搬。首字母色块仅作产品标识。</p>
+    <div class="bm-grid">
+      <div class="bm"><div class="ph"><span class="av" style="background:#5e6ad2">L</span><div><div class="nm">Linear</div><div class="role">高密度工作台 · 键盘流</div></div></div><p>极致排印与密度、命令面板、乐观更新、克制细腻的动效与品牌质感。</p></div>
+      <div class="bm"><div class="ph"><span class="av" style="background:#635bff">S</span><div><div class="nm">Stripe</div><div class="role">SaaS 控制台 · 数据</div></div></div><p>指标卡与图表联动、数字排版、数据口径标注、品牌色克制使用。</p></div>
+      <div class="bm"><div class="ph"><span class="av" style="background:#000">V</span><div><div class="nm">Vercel</div><div class="role">部署/分析仪表盘</div></div></div><p>状态页范式、sparkline 指标卡、时间范围、骨架屏与空态。</p></div>
+      <div class="bm"><div class="ph"><span class="av" style="background:#0052cc">A</span><div><div class="nm">Atlassian</div><div class="role">Jira · 设计系统</div></div></div><p>工作台与步骤条、Banner/空状态、token 分层与组件文档。</p></div>
+      <div class="bm"><div class="ph"><span class="av" style="background:#0f62fe">C</span><div><div class="nm">IBM Carbon</div><div class="role">企业设计体系</div></div></div><p>primitive→component 令牌架构、暗色同源、严格可访问性。</p></div>
+      <div class="bm"><div class="ph"><span class="av" style="background:#95bf47">P</span><div><div class="nm">Polaris</div><div class="role">Shopify 设计系统</div></div></div><p>资源列表、空状态叙事、Badge 与反馈模式。</p></div>
+      <div class="bm"><div class="ph"><span class="av" style="background:#165dff">飞</span><div><div class="nm">飞书 / Arco</div><div class="role">中文 B 端 · 移动办公</div></div></div><p>中文排版与密度、温和专业气质、移动端与文档协作。</p></div>
+      <div class="bm"><div class="ph"><span class="av" style="background:#f24e1e">F</span><div><div class="nm">Figma</div><div class="role">画布 + 检查器</div></div></div><p>可收起面板、画布最大化、图层-画布联动、快捷键体系。</p></div>
+      <div class="bm"><div class="ph"><span class="av" style="background:#24292f">G</span><div><div class="nm">GitHub</div><div class="role">数据密集 · a11y</div></div></div><p>密度切换、状态多通道表达、键盘与可访问性、批量操作条。</p></div>
+      <div class="bm"><div class="ph"><span class="av" style="background:#000">N</span><div><div class="nm">Notion</div><div class="role">文档 · 空状态</div></div></div><p>就地编辑、自动保存状态、空状态引导与长文档层级。</p></div>
+    </div>
+  </section>
+  <!-- ===== 主题 A 品牌 ===== -->
+  <div class="topic" id="brand">
+    <div class="hd"><span class="tag t2">主题 A</span><span class="ti">品牌与视觉个性</span><span class="tag k">Linear · Stripe · 飞书</span></div>
+    <div class="bd">
+      <div class="row2">
+        <div class="box now"><span class="h">现状</span>整体接近“标准 AntD 模板”，主色蓝、卡片白底；登录页简洁但记忆点弱，缺少能一眼认出“这是 EduGrade”的品牌符号与质感。</div>
+        <div class="box bench"><span class="h">成熟产品怎么做</span><b>Linear</b> 的品牌感来自极致排印、微妙边框光与克制动效，而非大 Logo；<b>Stripe</b> 把品牌色只压在关键处、大量中性色衬托；<b>飞书</b>用统一圆角、留白、图标与空状态形成温和专业的中文气质。</div>
+      </div>
+      <div class="do"><span class="h">EduGrade 落地建议</span>
+        <ul>
+          <li>把品牌主张（建议关键词：<b>准确 · 高效 · 可信赖</b>）转成视觉语言：阅卷强调“精确”，走理性、几何、清晰路线，而非活泼多彩。</li>
+          <li>统一主蓝：选定 AntD 6 号 <code>#1677ff</code> 为品牌主色，7 号 <code>#0958d9</code> 为 hover/按下，Logo 的 <code>#1667d8</code> 向其对齐，避免“两个蓝”。</li>
+          <li>登录页升级为<b>左右分屏</b>：左侧品牌叙事（产品价值 + 一张真实阅卷场景或抽象数据纹理），右侧表单；窄屏回落为居中卡片。</li>
+          <li>图标统一 lucide（已做），定尺寸/描边规范；关键品牌入口可定制；质感用“1px 边框 + 极轻阴影 + 仅 hero/主按钮的微渐变”，禁止大面积渐变滥用。</li>
+        </ul>
+      </div>
+      <pre><span class="c">/* 建议：品牌蓝色阶（Ant Design Blue 公开色阶，6=主色） */</span>
+<span class="k">--brand-1</span>:<span class="v">#e6f4ff</span>; <span class="k">--brand-2</span>:<span class="v">#bae0ff</span>; <span class="k">--brand-3</span>:<span class="v">#91caff</span>;
+<span class="k">--brand-4</span>:<span class="v">#69b1ff</span>; <span class="k">--brand-5</span>:<span class="v">#4096ff</span>; <span class="k">--brand-6</span>:<span class="v">#1677ff</span>;
+<span class="k">--brand-7</span>:<span class="v">#0958d9</span>; <span class="k">--brand-8</span>:<span class="v">#003eb3</span>; <span class="k">--brand-9</span>:<span class="v">#002c8c</span>;
+<span class="c">/* soft 浅底统一由色阶浅色派生，不再手写 */</span>
+<span class="k">--brand-bg</span>: <span class="k">var</span>(<span class="v">--brand-1</span>);</pre>
+    </div>
+  </div>
+
+  <!-- ===== 主题 B 色彩 ===== -->
+  <div class="topic" id="color">
+    <div class="hd"><span class="tag t2">主题 B</span><span class="ti">色彩系统治理</span><span class="tag k">Carbon · Atlassian · Arco</span></div>
+    <div class="bd">
+      <div class="row2">
+        <div class="box now"><span class="h">现状</span>蓝（#1677ff）与青（#13c2c2）两套强调色职责不清；存在 #c9363e / #c81424 / #d92d3a 等多个近似红；仅有浅色，无暗色。</div>
+        <div class="box bench"><span class="h">成熟产品怎么做</span><b>Carbon</b> 令牌“跨主题名称不变、只改值”，并有 base/layer01–03 的分层模型；<b>Arco</b> 用 CSS 变量内置亮/暗两套色板、暗色由亮色算法生成；<b>Atlassian</b> surface 亮 #FFFFFF / 暗 #1D2125 成对定义。</div>
+      </div>
+      <div class="do"><span class="h">EduGrade 落地建议</span>
+        <ul>
+          <li><b>强调色分工</b>：蓝=全局导航/主操作；青=仅“采集/质检”业务域，其余场景禁用青做强调，写入规范。</li>
+          <li><b>红色归并</b>：通用危险/失败 <code>#c9363e</code>，人工推翻用更深的 <code>#c81424</code>；删除 #d92d3a 等临时值。</li>
+          <li><b>三层令牌</b>：primitive（原始色值）→ semantic（surface/text/border/状态）→ component；亮/暗只重映射 semantic（详见主题 J）。</li>
+          <li><b>暗色模式</b>：服务教师夜间长时间阅卷；<b>色盲友好</b>：图表默认蓝/橙组合（见主题 F），状态=颜色+图标+文字。</li>
+        </ul>
+      </div>
+      <pre><span class="c">/* 建议：暗色语义层（参考 GitHub Dark / Atlassian Dark 成对值） */</span>
+<span class="k">--bg-page</span>:<span class="v">#0d1117</span>;   <span class="k">--surface</span>:<span class="v">#161b22</span>;  <span class="k">--surface-raised</span>:<span class="v">#1c2128</span>;
+<span class="k">--border</span>:<span class="v">#2a313c</span>;     <span class="k">--text</span>:<span class="v">#e6edf3</span>;     <span class="k">--text-muted</span>:<span class="v">#9aa6b2</span>;
+<span class="c">/* 遮罩：对标 Arco #1D2129 @ 60% */</span>
+<span class="k">--overlay</span>: <span class="v">rgba(13,17,23,.60)</span>;</pre>
+    </div>
+  </div>
+  <!-- ===== 主题 C 排版数字 ===== -->
+  <div class="topic" id="type">
+    <div class="hd"><span class="tag t2">主题 C</span><span class="ti">字体排版与数字</span><span class="tag k">Stripe · GitHub · Linear</span></div>
+    <div class="bd">
+      <div class="row2">
+        <div class="box now"><span class="h">现状</span>系统字体栈中文渲染稳妥、零字体加载；正文 14px、行距 1.6；但分数/计数用比例数字，相邻宽度不一、纵向难对齐。</div>
+        <div class="box bench"><span class="h">成熟产品怎么做</span><b>Stripe</b> 数据表用横向分隔线、大写表头、状态码窄列、左对齐，并提供 dense 版；数字用等宽/表格数字。<b>Linear</b> 以字重对比（400 vs 600）建立层级、最多 2 个字体族，密度高仍清晰。</div>
+      </div>
+      <div class="do"><span class="h">EduGrade 落地建议</span>
+        <ul>
+          <li><b>数字全局策略</b>：指标、分数、计数、数字列启用 <code>tabular-nums</code>；表格数字列右对齐、单位统一；可仅对数字引入等宽字体。</li>
+          <li>保留 13/14/16/18/24/26 字号；正文默认 14，配合“舒适/紧凑”密度档；大字模式继续推广。</li>
+          <li>行高：正文 1.6 / 表格 1.5 / 标题 1.3；字重只用 400/500/600/700。</li>
+          <li>统一<b>页面标题区</b>：主标题 + 副标题 + 右侧操作区；中西文混排统一间距与数字字体。</li>
+        </ul>
+      </div>
+      <pre><span class="c">/* 建议：数字与排版 */</span>
+<span class="k">.num, .stat, td.num</span> {
+  <span class="k">font-variant-numeric</span>: <span class="v">tabular-nums</span>;
+  <span class="k">font-feature-settings</span>: <span class="v">"tnum" 1</span>;
+  <span class="k">text-align</span>: <span class="v">right</span>;
+}
+<span class="c">/* 仅数字用等宽（系统等宽兜底，无需外部字体） */</span>
+<span class="k">--font-num</span>: <span class="v">ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas</span>;</pre>
+    </div>
+  </div>
+
+  <!-- ===== 主题 D 布局密度 ===== -->
+  <div class="topic" id="density">
+    <div class="hd"><span class="tag t2">主题 D</span><span class="ti">布局与信息密度</span><span class="tag k">Linear · Figma · Jira</span></div>
+    <div class="bd">
+      <div class="row2">
+        <div class="box now"><span class="h">现状</span>三栏工作台范式成熟，但质检右栏同屏堆叠环形/七指标/问题/门控/元信息，负荷高；移动端为“堆叠缩放”，图标按钮触控偏小。</div>
+        <div class="box bench"><span class="h">成熟产品怎么做</span><b>Linear</b> 三栏可折叠、并把侧栏调暗让主工作区突出；<b>Figma</b> 左右面板可收起、中央画布最大化；<b>Jira/GitHub</b> 提供 comfortable/compact 密度切换并记忆偏好。</div>
+      </div>
+      <div class="do"><span class="h">EduGrade 落地建议</span>
+        <ul>
+          <li><b>三栏标准化</b>：定义各栏宽度区间，左队列可收起、右详情可关闭，中央自适应最大化；记忆用户布局。</li>
+          <li><b>密度两档</b>：comfortable / compact（影响行高、内边距），阅卷高强度场景默认 compact。</li>
+          <li><b>右栏减负</b>：按“结论 / 分项指标 / 触发问题 / 门控 / 元信息”分组，元信息默认折叠；“结论 + 主操作”sticky 常驻。</li>
+          <li><b>移动端定位</b>：监看/轻处理，重操作引导桌面；触控目标 ≥44px（WCAG AAA），最低不小于 24px（AA 2.5.8）。</li>
+        </ul>
+      </div>
+      <pre><span class="c">/* 建议：密度档（compact 用于高强度阅卷） */</span>
+<span class="k">:root</span>{ <span class="k">--row-h</span>:<span class="v">44px</span>; <span class="k">--card-pad</span>:<span class="v">20px</span>; }      <span class="c">/* comfortable */</span>
+<span class="k">[data-density="compact"]</span>{ <span class="k">--row-h</span>:<span class="v">34px</span>; <span class="k">--card-pad</span>:<span class="v">14px</span>; }
+<span class="c">/* 触控热区：图标按钮最小 44×44，间距避免与相邻目标重叠 */</span></pre>
+    </div>
+  </div>
+  <!-- ===== 主题 E 组件 ===== -->
+  <div class="topic" id="component">
+    <div class="hd"><span class="tag t2">主题 E</span><span class="ti">组件视觉规范</span><span class="tag k">Polaris · Atlassian · AntD Pro</span></div>
+    <div class="bd">
+      <div class="row2">
+        <div class="box now"><span class="h">现状</span>“轻边框 + 圆角 + 极轻阴影”统一；但同一考试阶段有两套步骤条、空状态都用同一个文件盒线稿、浮层层级弱、长数字串会横向溢出。</div>
+        <div class="box bench"><span class="h">成熟产品怎么做</span><b>Polaris</b> 空状态用于“引导下一步”、Badge 仅 1–2 词且 tone 全局一致；<b>Atlassian</b> 有统一步骤条与 Banner；<b>AntD Pro/Arco Pro</b> 提供页面容器与业务组件模板。</div>
+      </div>
+      <div class="do"><span class="h">EduGrade 落地建议</span>
+        <ul>
+          <li><b>步骤条统一</b>：工作台用“横向卡片式步骤”（状态图标、可点击已完成步），窄空间用紧凑圆点版；定 API（currentStep/statuses/onStepClick）。</li>
+          <li><b>空状态体系</b>：无任务/无数据/无权限/出错/搜索无结果各一种，含图示 + 一句说明 + 主行动按钮；首次使用加引导或示例。</li>
+          <li><b>表格</b>：数字右对齐 + tnum、表头固定、长文本省略 + tooltip、行操作收“更多”、批量操作浮条、加载/空/错误三态。</li>
+          <li><b>浮层与防护</b>：统一 floating 阴影与 z-index 层级；长 ID/文本统一换行、截断或横向滚动，杜绝溢出。</li>
+        </ul>
+      </div>
+      <pre><span class="c">/* 建议：浮层阴影（当前阴影过轻，层级靠遮罩） */</span>
+<span class="k">--shadow-floating</span>: <span class="v">0 8px 24px rgba(16,24,40,.12), 0 2px 6px rgba(16,24,40,.10)</span>;
+<span class="k">--shadow-modal</span>: <span class="v">0 12px 32px rgba(16,24,40,.18), 0 4px 10px rgba(16,24,40,.12)</span>;
+<span class="c">/* 长内容防护 */</span>
+<span class="k">.cell</span>{ <span class="k">overflow</span>:<span class="v">hidden</span>; <span class="k">text-overflow</span>:<span class="v">ellipsis</span>; <span class="k">white-space</span>:<span class="v">nowrap</span>; }</pre>
+    </div>
+  </div>
+
+  <!-- ===== 主题 F 可视化 ===== -->
+  <div class="topic" id="dataviz">
+    <div class="hd"><span class="tag t2">主题 F</span><span class="ti">数据可视化</span><span class="tag k">Vercel · Stripe · Okabe-Ito</span></div>
+    <div class="bd">
+      <div class="row2">
+        <div class="box now"><span class="h">现状</span>质量分环形、七维指标条、答卷热区、红色批注定位是强项，直接支撑人工决策；但图表配色未统一、无数据态与口径说明不足。</div>
+        <div class="box bench"><span class="h">成熟产品怎么做</span><b>Vercel</b> 指标卡 = 大数字 + sparkline + 状态；<b>Stripe</b> 图表与表格联动、时间范围、首页可自定义 widget，并标注“估算/口径”；色盲安全首选 <b>Okabe-Ito</b> 色板与蓝橙组合，顺序数据用 viridis/cividis。</div>
+      </div>
+      <div class="do"><span class="h">EduGrade 落地建议</span>
+        <ul>
+          <li><b>统一图表主题</b>：一套基于 token 的 ECharts/recharts theme（色板、网格线、字号、tooltip、空态），全局共用。</li>
+          <li><b>指标卡标准</b>：大数字（tnum）+ 标签 + 同比/环比（方向箭头）+ sparkline，点击下钻。</li>
+          <li><b>环形质量分</b>：中心分值 + 等级，A 绿/B 蓝/C 橙/D 红固定映射并配图例，标注计算口径。</li>
+          <li><b>热区联动</b>：问题列表与热区互相定位（点问题跳到热区，对标 Figma 图层-画布）；AI 结论标注“AI 生成，需人工确认”。</li>
+        </ul>
+      </div>
+      <pre><span class="c">/* 建议：色盲安全分类色（Okabe-Ito/Wong，三类色觉障碍下可区分） */</span>
+<span class="k">--cat</span>: <span class="v">#0072B2</span> <span class="c">/*蓝*/</span>, <span class="v">#E69F00</span> <span class="c">/*橙*/</span>, <span class="v">#009E73</span> <span class="c">/*蓝绿*/</span>,
+        <span class="v">#D55E00</span> <span class="c">/*朱*/</span>, <span class="v">#CC79A7</span> <span class="c">/*粉紫*/</span>, <span class="v">#56B4E9</span> <span class="c">/*天蓝*/</span>;
+<span class="c">/* 状态不仅靠颜色：直接标注 + 不同形状标记 */</span></pre>
+    </div>
+  </div>
+  <!-- ===== 主题 G 交互 ===== -->
+  <div class="topic" id="motion">
+    <div class="hd"><span class="tag t2">主题 G</span><span class="ti">交互反馈与微交互</span><span class="tag k">Linear · Notion · Figma</span></div>
+    <div class="bd">
+      <div class="row2">
+        <div class="box now"><span class="h">现状</span>具备 toast、确认弹窗、自动保存提示；但加载多为转圈、高频评分存在等待感、快捷键分散且无可视化清单。</div>
+        <div class="box bench"><span class="h">成熟产品怎么做</span><b>Linear</b> 乐观更新（先改本地、后台同步、出错才提示）+ 行/卡形骨架屏；<b>Notion</b> 就地编辑、保存状态常驻可见；<b>Gmail/Figma</b> 危险操作可撤销（undo）、快捷键体系完整。</div>
+      </div>
+      <div class="do"><span class="h">EduGrade 落地建议</span>
+        <ul>
+          <li><b>加载三态</b>：页面/卡片用骨架屏（队列用行形、指标用卡形、文档用块形），按钮用 loading，避免白屏与转圈。</li>
+          <li><b>乐观更新 + 回滚</b>：评分/标签先更新 UI，失败 toast 并回滚（react-query onMutate 已支持）。</li>
+          <li><b>Toast</b>：成功轻提示自动消失，错误可读 + 重试，危险操作给“撤销”。</li>
+          <li><b>快捷键</b>：J/K 切换、数字键评分、Enter 确认、Cmd+Enter 提交、<code>?</code> 打开速查面板；动效 150–250ms 并尊重 reduced-motion。</li>
+        </ul>
+      </div>
+      <pre><span class="c">/* 建议：阅卷快捷键（对标 Linear/Figma/Gmail） */</span>
+J/K      <span class="c">/* 上一份 / 下一份答卷 */</span>
+1 2 3 4  <span class="c">/* 评分档位（正确/部分/错误…） */</span>
+Enter    <span class="c">/* 确认 AI 建议 */</span>   Cmd+Enter <span class="c">/* 提交本份 */</span>
+?        <span class="c">/* 快捷键速查浮层 */</span>  Cmd+K <span class="c">/* 命令面板 */</span></pre>
+    </div>
+  </div>
+
+  <!-- ===== 主题 H 导航 ===== -->
+  <div class="topic" id="nav">
+    <div class="hd"><span class="tag t2">主题 H</span><span class="ti">导航与信息架构</span><span class="tag k">Linear · 飞书 · Slack</span></div>
+    <div class="bd">
+      <div class="row2">
+        <div class="box now"><span class="h">现状</span>分组侧栏 + 面包屑基本清晰；但路由双轨（TanStack 占位 + 自研解析，见代码审查 P0），导航高亮/面包屑存在两套来源风险。</div>
+        <div class="box bench"><span class="h">成熟产品怎么做</span><b>Linear/Notion/Vercel</b> 都以 Cmd+K 命令面板为高频入口（fuzzy、分类、最近、内联快捷键、上下文感知）；<b>Slack/飞书</b> 用多级工作区导航与可折叠收藏。</div>
+      </div>
+      <div class="do"><span class="h">EduGrade 落地建议</span>
+        <ul>
+          <li><b>命令面板（Cmd+K）</b>：搜考试/答卷/学生、跳转功能、执行命令；打开时显示最近/建议而非空输入，结果内联快捷键。</li>
+          <li>侧栏分组可折叠、当前项高亮、常用可固定；面包屑显示“平台/学校/考试/题目”。</li>
+          <li>多答卷可用标签页（tabs）减少来回；提供全局搜索与最近访问。</li>
+          <li>路由收敛后，高亮与面包屑统一由路由状态派生（与代码 P0 一并解决）。</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <!-- ===== 主题 I 可访问性 ===== -->
+  <div class="topic" id="a11y">
+    <div class="hd"><span class="tag t2">主题 I</span><span class="ti">可访问性与包容性</span><span class="tag k">WCAG 2.2 · Carbon · GitHub</span></div>
+    <div class="bd">
+      <div class="row2">
+        <div class="box now"><span class="h">现状</span>已有“跳到主要内容”、focus-visible、大字模式、reduced-motion、主区 tabIndex，基础不错；自定义查看器/快捷键的键盘路径与 ARIA 待补。</div>
+        <div class="box bench"><span class="h">成熟产品怎么做</span><b>WCAG 2.2</b>：文字对比 ≥4.5:1（大字 3:1）、目标尺寸 AA ≥24×24（2.5.8）/AAA ≥44×44（2.5.5）、焦点指示对比 ≥3:1 且达 2px 周长；<b>Carbon/GitHub</b> 提供完整键盘与读屏模式。</div>
+      </div>
+      <div class="do"><span class="h">EduGrade 落地建议</span>
+        <ul>
+          <li>核对次要文字/图标/图表细线对比度达 AA；焦点保持 2px outline + offset、对比 ≥3:1。</li>
+          <li>所有操作可键盘完成；弹窗焦点陷阱；自定义查看器支持方向键/缩放，快捷键可查看与关闭。</li>
+          <li>图标按钮加 aria-label；toast/队列变化用 live region；tabs/dialog/menu 遵循 WAI-ARIA APG。</li>
+          <li>状态 = 颜色 + 图标 + 文字；支持 200% 缩放不破；预留 i18n 与日期/数字本地化。</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 主题 J 设计系统 ===== -->
+  <div class="topic" id="ds">
+    <div class="hd"><span class="tag t2">主题 J</span><span class="ti">设计系统工程化</span><span class="tag k">Carbon · Atlassian · Polaris</span></div>
+    <div class="bd">
+      <div class="row2">
+        <div class="box now"><span class="h">现状</span>令牌分层与共享 UI 包底座完整；但 grading.ts/reading.ts 注释编码乱码、--eg 与 antd token 双映射、两处 ConfigProvider、ui 包仅约 6 处使用、缺规范文档。</div>
+        <div class="box bench"><span class="h">成熟产品怎么做</span><b>Carbon</b> 用 primitive→semantic→component 令牌；<b>Atlassian</b> 令牌单点、把设计系统当产品运营，并用便携 DESIGN.md（机器可读 token + 人类可读 rationale）；<b>Arco</b> 遵循“粒子变量→基础组件→复杂组件”。</div>
+      </div>
+      <div class="do"><span class="h">EduGrade 落地建议</span>
+        <ul>
+          <li><b>令牌三层</b>并由 design-tokens 单点生成 CSS 变量与 antd 主题，消除双映射、合并为一处 ConfigProvider。</li>
+          <li>修复乱码、统一 UTF-8；token 版本化 + changelog。</li>
+          <li>ui 包收口基础组件（Button/Badge/Empty/Steps/PageHeader/Stat 等），补用法、Do/Don’t、a11y 与视觉回归；“要么推广要么精简”。</li>
+          <li>建文档站（Storybook）；Figma token 同步（Tokens Studio）；PR 禁止硬编码 hex；以覆盖率/复用率/axe 审计度量。</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <!-- ===== 亮点功能 ===== -->
+  <section class="block" id="highlights">
+    <h2 class="sec"><span class="no">3</span>建议新增的“成熟产品标配”</h2>
+    <p class="sec-desc">这些功能在 Linear/Stripe/Vercel/飞书等产品中已成为专业用户预期，对阅卷这类高频场景收益显著。</p>
+    <div class="hl-grid">
+      <div class="hl"><b>命令面板 Cmd+K</b><span>搜索 + 跳转 + 执行命令，高频入口统一。</span></div>
+      <div class="hl"><b>主题 / 密度切换</b><span>亮·暗·跟随系统；舒适·紧凑两档密度。</span></div>
+      <div class="hl"><b>可记忆工作台</b><span>面板宽度、折叠状态、筛选预设随账号保存。</span></div>
+      <div class="hl"><b>快捷键速查（?）</b><span>可视化全部快捷键，帮助新手成长为专家。</span></div>
+      <div class="hl"><b>通知中心 + 待办聚合</b><span>申诉、待确认、异常集中一处，对标飞书/GitHub。</span></div>
+      <div class="hl"><b>新手引导 + 示例</b><span>首次进入用示例答卷走一遍，降低上手门槛。</span></div>
+    </div>
+  </section>
+
+  <!-- ===== 路线图 ===== -->
+  <section class="block" id="roadmap">
+    <h2 class="sec"><span class="no">4</span>落地路线图</h2>
+    <p class="sec-desc">遵循成熟产品经验：先打地基（令牌/高频路径），再统一组件与核心体验，最后做品牌与系统治理。</p>
+    <div class="road">
+      <div class="phase m0"><div class="ph">M0 · 0–2 周｜地基</div>
+        <ul><li>令牌三层 + 主题单点、合并 ConfigProvider</li><li>修复乱码、统一 UTF-8</li><li>数字 tabular-nums、色彩收敛</li><li>骨架屏、floating 阴影、超长内容防护</li></ul></div>
+      <div class="phase m1"><div class="ph">M1 · 2–6 周｜核心体验</div>
+        <ul><li>命令面板、快捷键速查</li><li>密度 / 主题切换</li><li>统一步骤条/空状态/表格/Badge</li><li>图表主题、乐观更新 + undo</li></ul></div>
+      <div class="phase m2"><div class="ph">M2 · 6–12 周｜系统与品牌</div>
+        <ul><li>组件库推广 + 文档站</li><li>暗色模式全量</li><li>品牌升级（登录页/图标/质感）</li><li>移动端轻处理、a11y 全量审计</li></ul></div>
+      <div class="phase m3"><div class="ph">M3 · 持续｜运营度量</div>
+        <ul><li>自定义工作台、新手引导</li><li>通知中心、筛选/视图保存</li><li>视觉回归、覆盖率与 axe 度量</li></ul></div>
+    </div>
+  </section>
+
+  <!-- ===== 参考来源 ===== -->
+  <section class="block" id="refs">
+    <h2 class="sec"><span class="no">5</span>参考来源（联网核实）</h2>
+    <p class="sec-desc">以下为本次对标所引用的官方设计系统与标准，建议团队据此深入阅读。</p>
+    <div class="card">
+      <table>
+        <thead><tr><th style="width:22%">体系</th><th>官方依据</th></tr></thead>
+        <tbody>
+          <tr><td>IBM Carbon</td><td><a href="https://carbondesignsystem.com/elements/themes/overview/">Themes / 令牌跨主题不变</a> · <a href="https://carbondesignsystem.com/elements/color/tokens/">Color tokens</a> · <a href="https://carbondesignsystem.com/elements/color/usage/">分层 base/layer01–03</a></td></tr>
+          <tr><td>Atlassian</td><td><a href="https://atlassian.design/foundations/spacing">Spacing（8px 基准）</a> · <a href="https://atlassian.design/llms-tokens.txt">Tokens（surface 亮/暗值）</a> · <a href="https://atlassian.design/foundations/radius">Radius</a></td></tr>
+          <tr><td>Linear</td><td><a href="https://linear.app/features/level-up">键盘优先 / Cmd+K</a> · <a href="https://linear.app/now/behind-the-latest-design-refresh">侧栏让位于主内容</a> · <a href="https://keyshortcuts.net/linear-shortcuts">快捷键速查</a></td></tr>
+          <tr><td>Stripe</td><td><a href="https://docs.stripe.com/stripe-apps/components">DataTable / Sparkline / Meter</a> · <a href="https://support.stripe.com/questions/dashboard-home-page-charts-for-business-insights">首页可自定义 widget</a></td></tr>
+          <tr><td>Shopify Polaris</td><td><a href="https://shopify.dev/docs/api/app-home/polaris-web-components/feedback-and-status-indicators/badge">Badge 规范</a> · <a href="https://shopify.dev/docs/api/pos-ui-extensions/latest/polaris-web-components/layout-and-structure/emptystate">Empty State</a></td></tr>
+          <tr><td>Vercel Geist</td><td><a href="https://vercel.com/geist/empty-state">Empty State（指令而非装饰）</a> · <a href="https://vercel.com/geist/badge">Badge</a></td></tr>
+          <tr><td>飞书 Arco</td><td><a href="https://arco.design/react/docs/dark">暗色（CSS 变量/双套色板）</a> · <a href="https://arco.design/react/en-US/docs/token">Design Tokens</a> · <a href="https://arco.design/react/docs/palette">色板（6 号主色）</a></td></tr>
+          <tr><td>色盲安全图表</td><td><a href="https://rgblind.com/blog/color-blindness-friendly-chart-colors">Okabe-Ito/Wong 色板</a> · <a href="https://analysisfunction.civilservice.gov.uk/policy-store/data-visualisation-colours-in-charts/">UK Gov：深蓝/蓝橙</a></td></tr>
+          <tr><td>WCAG 2.2</td><td><a href="https://www.w3.org/TR/WCAG/">正文（对比 4.5:1）</a> · <a href="https://www.w3.org/WAI/standards-guidelines/wcag/new-in-22/">新增目标尺寸 24×24（AA）</a> · <a href="https://www.w3.org/WAI/WCAG22/Understanding/focus-appearance.html">焦点外观</a></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">说明：本方案所有色值、阴影、字号、快捷键均为“建议示例”，用于评审与讨论，未写入项目源码。落地时请结合真实数据与品牌决策微调。</p>
+  </section>
+  </main>
+</div>
+<footer><div class="wrap">EduGrade 前端 UI 优化方案（只读）· 建议值非源码 · 2026-10-04</div></footer>
+</body>
+</html>

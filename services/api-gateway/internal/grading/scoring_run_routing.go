@@ -12,26 +12,21 @@ const (
 	scoringRouteOMR          = "omr"
 	scoringRouteManualReview = "manual_review"
 
-	// reviewSourceHumanGraded marks work that is human graded by design, as
-	// opposed to an automated result waiting for confirmation.
+	// reviewSourceHumanGraded 标记设计上由人工评分的工作，区别于等待确认的自动结果。
 	reviewSourceHumanGraded = "subjective_default_review"
 	reviewSourceRuleReview  = "rule_review_required"
 
 	reviewReasonRuleReviewRequired = "rule_review_required"
 	reviewReasonRuleNotConfirmed   = "rule_not_auto_confirmed"
 
-	// reviewReasonManualOnlyQuestionType marks a segment whose question type has
-	// no automated scoring path at all. Paper configuration accepts such types
-	// and the readiness gate reports them as an advisory, so the scoring run has
-	// to hand them to a human instead of treating them as a scoring defect.
+	// reviewReasonManualOnlyQuestionType 标记题型完全没有自动评分路径的片段。
+	// 试卷配置接受这些题型，就绪门禁将其作为提示报告，因此评分运行应转交人工，不能视为评分缺陷。
 	reviewReasonManualOnlyQuestionType = "manual_only_question_type"
-	// reviewReasonRuleGradingUnsupported marks a rule-grading input for a type
-	// the rule engine does not implement but another automated path does.
+	// reviewReasonRuleGradingUnsupported 标记规则引擎未实现、但其他自动路径支持的题型评分输入。
 	reviewReasonRuleGradingUnsupported = "rule_grading_unsupported"
 )
 
-// scoringSegmentRoute is the durable next action for one answer segment: queue
-// automated work, or open a human task with a reason an operator can act on.
+// scoringSegmentRoute 是单个答案片段的持久化后续动作：排入自动处理队列，或创建带有可操作原因的人工任务。
 type scoringSegmentRoute struct {
 	Kind   string
 	Source string
@@ -60,9 +55,7 @@ func routeScoringSegment(questionType string, hasPublishedRule bool, hasRecorded
 	return scoringSegmentRoute{Kind: scoringRouteManualReview, Source: reviewSourceRuleReview, Reason: reason}
 }
 
-// The frozen question policy takes precedence over the presence of a rule.
-// A configured human path must not silently become an automatic score just
-// because a rule was published for the same question.
+// 冻结的题目策略优先于规则是否存在；不能仅因同一题目发布了规则，就将已配置的人工路径静默改成自动评分。
 func routeScoringSegmentForMode(questionType, mode string, hasPublishedRule, hasRecordedAnswer bool, optionRegionCount int) scoringSegmentRoute {
 	switch assessment.ScoringMode(mode) {
 	case assessment.ScoringHumanPrimary, assessment.ScoringDualHuman, assessment.ScoringManualOnly:
@@ -79,9 +72,7 @@ func routeScoringSegmentForMode(questionType, mode string, hasPublishedRule, has
 	}
 }
 
-// scoringRunStatusForCounts is the run state a start produces. A run whose
-// segments all became human tasks still started successfully: only a run with
-// nothing to score is a failure.
+// scoringRunStatusForCounts 表示启动操作产生的运行状态。所有片段都转成人工任务的运行仍算启动成功；只有无可评分内容的运行才失败。
 func scoringRunStatusForCounts(total int, queued int, review int) string {
 	if total == 0 {
 		return "failed"
@@ -96,10 +87,8 @@ func manualOnlyQuestionTypeRoute() scoringSegmentRoute {
 	return scoringSegmentRoute{Kind: scoringRouteManualReview, Source: reviewSourceHumanGraded, Reason: reviewReasonManualOnlyQuestionType}
 }
 
-// manualReviewRouteForGradeError keeps a question type the rule engine cannot
-// score from failing the whole scoring run. Every other grading error is still
-// fatal: it means the run itself is unhealthy, not that this one segment needs a
-// human.
+// manualReviewRouteForGradeError 防止规则引擎不支持的题型导致整个评分运行失败。
+// 其他评分错误仍是致命错误，表示运行本身异常，不只是某个片段需要人工处理。
 func manualReviewRouteForGradeError(err error, questionType string) (scoringSegmentRoute, bool) {
 	if !errors.Is(err, ErrUnsupportedQuestionType) {
 		return scoringSegmentRoute{}, false

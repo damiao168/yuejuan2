@@ -1,0 +1,1464 @@
+ M .dockerignore
+ M .env.example
+ M .github/CODEOWNERS
+ M .github/workflows/ci.yml
+ M ai-services/grading_agent/app.py
+ M ai-services/grading_agent/app_v2.py
+ M ai-services/grading_agent/config.py
+ M ai-services/grading_agent/contract.py
+ M ai-services/grading_agent/contract_v2.py
+ M ai-services/grading_agent/dashscope_native_contract.py
+ M ai-services/grading_agent/dashscope_native_transport.py
+ M ai-services/grading_agent/guardrails.py
+ M ai-services/grading_agent/managed_model.py
+ M ai-services/grading_agent/math_rubric_draft.py
+ M ai-services/grading_agent/model.py
+ M ai-services/grading_agent/paper_compact/anchors.py
+ M ai-services/grading_agent/paper_compact/chunks.py
+ M ai-services/grading_agent/paper_compact/expand.py
+ M ai-services/grading_agent/paper_compact/layout.py
+ M ai-services/grading_agent/paper_compact/schema.py
+ M ai-services/grading_agent/paper_input.py
+ M ai-services/grading_agent/paper_validation.py
+ M ai-services/grading_agent/paper_visual.py
+ M ai-services/grading_agent/provider_adapter.py
+ M ai-services/grading_agent/server.py
+ M ai-services/tests/test_application_v2.py
+ M ai-services/tests/test_config.py
+ M ai-services/tests/test_contract.py
+ M ai-services/tests/test_contract_v2.py
+ M ai-services/tests/test_dashscope_multimodal_contract.py
+ M ai-services/tests/test_dashscope_native_transport.py
+ M ai-services/tests/test_managed_model.py
+ M ai-services/tests/test_math_rubric_draft.py
+ M ai-services/tests/test_math_v2_production.py
+ M ai-services/tests/test_model.py
+ M ai-services/tests/test_paper_compact.py
+ M apps/desktop-client/scripts/check-security-config.mjs
+ M apps/desktop-client/src-tauri/capabilities/default.json
+ M apps/desktop-client/src-tauri/src/durable_store/claim.rs
+ M apps/desktop-client/src-tauri/src/durable_store/crypto.rs
+ M apps/desktop-client/src-tauri/src/durable_store/drafts.rs
+ M apps/desktop-client/src-tauri/src/durable_store/mod.rs
+ M apps/desktop-client/src-tauri/src/durable_store/paths.rs
+ M apps/desktop-client/src-tauri/src/durable_store/queue.rs
+ M apps/desktop-client/src-tauri/src/durable_store/spool.rs
+ M apps/desktop-client/src-tauri/src/lib.rs
+ M apps/desktop-client/src-tauri/src/scanner.rs
+ M apps/desktop-client/src-tauri/tauri.conf.json
+ M apps/desktop-client/src/App.tsx
+ M apps/desktop-client/src/api/captureUploads.test.ts
+ M apps/desktop-client/src/api/captureUploads.ts
+ M apps/desktop-client/src/api/client.ts
+ M apps/desktop-client/src/api/exams.ts
+ M apps/desktop-client/src/api/review.test.ts
+ M apps/desktop-client/src/api/review.ts
+ M apps/desktop-client/src/api/submissions.ts
+ M apps/desktop-client/src/components/DesktopStatusViews.tsx
+ M apps/desktop-client/src/components/OfflineWorkbench.test.tsx
+ M apps/desktop-client/src/components/OfflineWorkbench.tsx
+ M apps/desktop-client/src/features/capture/useExamCaptureContext.test.tsx
+ M apps/desktop-client/src/features/capture/useExamCaptureContext.ts
+ M apps/desktop-client/src/features/quality/useSubmissionQuality.test.tsx
+ M apps/desktop-client/src/features/quality/useSubmissionQuality.ts
+ M apps/desktop-client/src/features/runtime/useRuntimeDiagnostics.ts
+ M apps/desktop-client/src/features/scan-queue/useScanQueue.test.tsx
+ M apps/desktop-client/src/features/scan-queue/useScanQueue.ts
+ M apps/desktop-client/src/features/scan/ScanWorkspace.tsx
+ M apps/desktop-client/src/features/scanner/useScannerController.ts
+ M apps/desktop-client/src/features/session/useDesktopSession.ts
+ M apps/desktop-client/src/features/tasks/useReviewTasks.ts
+ M apps/desktop-client/src/features/upload/useUploadSync.test.tsx
+ M apps/desktop-client/src/features/upload/useUploadSync.ts
+ M apps/desktop-client/src/lib/durableStore.test.ts
+ M apps/desktop-client/src/lib/durableStore.ts
+ M apps/desktop-client/src/lib/offlineStore.ts
+ M apps/desktop-client/src/lib/scanFiles.ts
+ M apps/desktop-client/src/lib/scanQueueWorkflow.ts
+ M apps/desktop-client/src/lib/scannerProfile.ts
+ M apps/desktop-client/src/statusLabels.test.ts
+ M apps/desktop-client/src/statusLabels.ts
+ M apps/desktop-client/src/styles.css
+ M apps/desktop-client/src/types.ts
+ M apps/student-portal/package.json
+ M apps/student-portal/src/App.test.tsx
+ M apps/student-portal/src/App.tsx
+ M apps/student-portal/src/api.ts
+ M apps/student-portal/src/experience.css
+ M apps/student-portal/src/features/questions/AnswerReview.tsx
+ M apps/student-portal/src/features/results/ResultOverview.tsx
+ M apps/student-portal/src/features/results/SubjectPerformance.tsx
+ M apps/student-portal/src/styles.css
+ M apps/student-portal/src/test/setup.ts
+ M apps/web-admin/index.html
+ M apps/web-admin/nginx.conf
+ M apps/web-admin/package.json
+ M apps/web-admin/scripts/check-production-routes.mjs
+ M apps/web-admin/src/AppShell.tsx
+ M apps/web-admin/src/api/answerGroups.ts
+ M apps/web-admin/src/api/appeals.ts
+ M apps/web-admin/src/api/assessment.ts
+ M apps/web-admin/src/api/backmark.ts
+ M apps/web-admin/src/api/businessCommand.test.ts
+ M apps/web-admin/src/api/businessCommand.ts
+ M apps/web-admin/src/api/calibration.ts
+ M apps/web-admin/src/api/capture.ts
+ M apps/web-admin/src/api/client.ts
+ M apps/web-admin/src/api/configuration.ts
+ M apps/web-admin/src/api/exams.test.ts
+ M apps/web-admin/src/api/exams.ts
+ M apps/web-admin/src/api/goldPapers.ts
+ M apps/web-admin/src/api/graderDrift.ts
+ M apps/web-admin/src/api/mathUnderstanding.ts
+ M apps/web-admin/src/api/mfa.ts
+ M apps/web-admin/src/api/modelApiConfig.test.ts
+ M apps/web-admin/src/api/modelApiConfig.ts
+ M apps/web-admin/src/api/modelGovernance.ts
+ M apps/web-admin/src/api/papers.ts
+ M apps/web-admin/src/api/platformSchools.ts
+ M apps/web-admin/src/api/printing.ts
+ M apps/web-admin/src/api/processing.ts
+ M apps/web-admin/src/api/qualityDashboard.ts
+ M apps/web-admin/src/api/qualityOperations.ts
+ M apps/web-admin/src/api/questionAppeals.ts
+ M apps/web-admin/src/api/regrade.ts
+ M apps/web-admin/src/api/review.ts
+ M apps/web-admin/src/api/reviewAnnotations.ts
+ M apps/web-admin/src/api/schoolAiChat.ts
+ M apps/web-admin/src/api/scoreReleases.ts
+ M apps/web-admin/src/api/scoringAssurance.ts
+ M apps/web-admin/src/api/userError.test.ts
+ M apps/web-admin/src/api/userError.ts
+ M apps/web-admin/src/api/users.test.ts
+ M apps/web-admin/src/api/users.ts
+ M apps/web-admin/src/api/workspace.ts
+ M apps/web-admin/src/auth/loginSecurity.ts
+ M apps/web-admin/src/auth/mfaFlow.test.ts
+ M apps/web-admin/src/auth/mfaFlow.ts
+ M apps/web-admin/src/auth/reviewDraftFallback.ts
+ M apps/web-admin/src/auth/stepUpContext.test.tsx
+ M apps/web-admin/src/auth/stepUpContext.tsx
+ M apps/web-admin/src/components/AppLayout.tsx
+ M apps/web-admin/src/components/BackmarkQueue.tsx
+ M apps/web-admin/src/components/ErrorBoundary.tsx
+ M apps/web-admin/src/components/MathMarkdown.test.ts
+ M apps/web-admin/src/components/MathMarkdown.tsx
+ M apps/web-admin/src/components/MockBadge.tsx
+ M apps/web-admin/src/components/OcrWorkerAlert.tsx
+ M apps/web-admin/src/components/PageState.tsx
+ M apps/web-admin/src/components/PendingBusinessCommands.tsx
+ M apps/web-admin/src/components/ProcessingOperationsPanel.tsx
+ M apps/web-admin/src/components/QuestionAppealWorkspace.tsx
+ M apps/web-admin/src/components/RegistrationCorrectionWorkspace.tsx
+ M apps/web-admin/src/components/RegradeQueue.tsx
+ M apps/web-admin/src/components/ResponsiveTable.tsx
+ M apps/web-admin/src/components/ScoringPaperMonitor.tsx
+ M apps/web-admin/src/components/StatusTag.tsx
+ M apps/web-admin/src/components/TOTPManagement.tsx
+ M apps/web-admin/src/components/features/assessment/AssessmentProfileEditor.tsx
+ M apps/web-admin/src/components/features/review-annotation/CommentTemplateManager.tsx
+ M apps/web-admin/src/components/features/review-annotation/ReviewAnnotationWorkspace.tsx
+ M apps/web-admin/src/components/features/review-annotation/StudentAnnotationOverlay.tsx
+ M apps/web-admin/src/components/features/review-annotation/reviewAnnotations.css
+ M apps/web-admin/src/components/features/review-annotation/templateShortcuts.ts
+ M apps/web-admin/src/components/features/review-annotation/useReviewAnnotations.ts
+ M apps/web-admin/src/components/model-governance/ManagedGovernanceWorkspace.tsx
+ M apps/web-admin/src/components/model-governance/ModelApprovalWorkspace.tsx
+ M apps/web-admin/src/components/model-governance/ModelEvaluationWorkspace.tsx
+ M apps/web-admin/src/components/model-governance/PromptVersionWorkspace.tsx
+ M apps/web-admin/src/components/model-governance/ScoringAssuranceWorkspace.tsx
+ M apps/web-admin/src/experience.css
+ M apps/web-admin/src/features/answer-groups/AnswerGroupingDrawer.tsx
+ M apps/web-admin/src/features/answer-sheet-template/binding/useTemplateBinding.ts
+ M apps/web-admin/src/features/answer-sheet-template/calibration/useOMRCalibration.ts
+ M apps/web-admin/src/features/answer-sheet-template/editor/templateLayoutReducer.ts
+ M apps/web-admin/src/features/answer-sheet-template/editor/useRegionEditor.ts
+ M apps/web-admin/src/features/answer-sheet-template/editor/useRegionSuggestion.ts
+ M apps/web-admin/src/features/answer-sheet-template/editor/useTemplateEditor.ts
+ M apps/web-admin/src/features/answer-sheet-template/editor/useTemplateLifecycle.test.tsx
+ M apps/web-admin/src/features/answer-sheet-template/editor/useTemplateLifecycle.ts
+ M apps/web-admin/src/features/answer-sheet-template/editor/useTemplatePreview.ts
+ M apps/web-admin/src/features/answer-sheet-template/printing/useStudentPrinting.ts
+ M apps/web-admin/src/features/calibration/CalibrationDrawer.tsx
+ M apps/web-admin/src/features/capture/ImageQualityWorkspace.tsx
+ M apps/web-admin/src/features/capture/MatchingWorkspace.tsx
+ M apps/web-admin/src/features/capture/SubmissionCaptureSummary.tsx
+ M apps/web-admin/src/features/capture/batchCreateCommand.ts
+ M apps/web-admin/src/features/capture/captureColumns.tsx
+ M apps/web-admin/src/features/capture/submissionColumns.tsx
+ M apps/web-admin/src/features/capture/useCaptureBatchDetail.ts
+ M apps/web-admin/src/features/capture/useCaptureMatchActions.ts
+ M apps/web-admin/src/features/dashboard/SchoolDashboard.tsx
+ M apps/web-admin/src/features/exams/create/CreateExamComposer.tsx
+ M apps/web-admin/src/features/exams/create/CreateExamPage.tsx
+ M apps/web-admin/src/features/exams/create/createExamDraft.ts
+ M apps/web-admin/src/features/exams/create/createExamValidation.test.ts
+ M apps/web-admin/src/features/exams/create/createExamValidation.ts
+ M apps/web-admin/src/features/exams/create/exam-create.css
+ M apps/web-admin/src/features/exams/create/examCreateCommand.ts
+ M apps/web-admin/src/features/exams/create/presentation.ts
+ M apps/web-admin/src/features/exams/examGroups.test.ts
+ M apps/web-admin/src/features/exams/examGroups.ts
+ M apps/web-admin/src/features/exams/preparation/preparationModel.ts
+ M apps/web-admin/src/features/exams/workspace/ExamWorkspaceLayout.tsx
+ M apps/web-admin/src/features/exams/workspace/defaultExamWorkspaceRoute.test.ts
+ M apps/web-admin/src/features/exams/workspace/defaultExamWorkspaceRoute.ts
+ M apps/web-admin/src/features/gold-papers/GoldCoverageGaps.tsx
+ M apps/web-admin/src/features/gold-papers/GoldPaperManagerDrawer.tsx
+ M apps/web-admin/src/features/gold-papers/GoldPaperNominationDrawer.tsx
+ M apps/web-admin/src/features/gold-papers/goldPaperPresentation.ts
+ M apps/web-admin/src/features/grading/SharedScoreControl.tsx
+ M apps/web-admin/src/features/grading/subjectiveBatchCommand.ts
+ M apps/web-admin/src/features/grading/workbench/AIContextPanel.tsx
+ M apps/web-admin/src/features/grading/workbench/GradingWorkbench.tsx
+ M apps/web-admin/src/features/grading/workbench/MathEvidenceInspector.test.ts
+ M apps/web-admin/src/features/grading/workbench/MathEvidenceInspector.tsx
+ M apps/web-admin/src/features/grading/workbench/ReviewContextInspector.tsx
+ M apps/web-admin/src/features/grading/workbench/SubjectToolPanel.tsx
+ M apps/web-admin/src/features/grading/workbench/components/AnswerEvidencePane.tsx
+ M apps/web-admin/src/features/grading/workbench/components/DraftConflictModal.tsx
+ M apps/web-admin/src/features/grading/workbench/components/EvidenceInspector.tsx
+ M apps/web-admin/src/features/grading/workbench/components/ExamScoringPanel.tsx
+ M apps/web-admin/src/features/grading/workbench/components/FastConfirmDrawer.tsx
+ M apps/web-admin/src/features/grading/workbench/components/MathRubricMatrix.tsx
+ M apps/web-admin/src/features/grading/workbench/components/ScoreEditor.tsx
+ M apps/web-admin/src/features/grading/workbench/components/TaskRail.tsx
+ M apps/web-admin/src/features/grading/workbench/components/WorkbenchHeader.tsx
+ M apps/web-admin/src/features/grading/workbench/components/WorkbenchOverlays.tsx
+ M apps/web-admin/src/features/grading/workbench/draftConflict.ts
+ M apps/web-admin/src/features/grading/workbench/fastConfirm.ts
+ M apps/web-admin/src/features/grading/workbench/grading-workbench.css
+ M apps/web-admin/src/features/grading/workbench/gradingTaskContext.ts
+ M apps/web-admin/src/features/grading/workbench/gradingWorkbench.model.ts
+ M apps/web-admin/src/features/grading/workbench/hooks/scoringCommand.ts
+ M apps/web-admin/src/features/grading/workbench/hooks/taskDraftSaveQueue.ts
+ M apps/web-admin/src/features/grading/workbench/hooks/useAnswerViewer.ts
+ M apps/web-admin/src/features/grading/workbench/hooks/useExamScoring.ts
+ M apps/web-admin/src/features/grading/workbench/hooks/useGradingKeyboard.ts
+ M apps/web-admin/src/features/grading/workbench/hooks/useGradingMathActions.ts
+ M apps/web-admin/src/features/grading/workbench/hooks/useGradingPrefetch.ts
+ M apps/web-admin/src/features/grading/workbench/hooks/useGradingQueue.ts
+ M apps/web-admin/src/features/grading/workbench/hooks/useGradingQueueActions.ts
+ M apps/web-admin/src/features/grading/workbench/hooks/useGradingReviewActions.test.tsx
+ M apps/web-admin/src/features/grading/workbench/hooks/useGradingReviewActions.ts
+ M apps/web-admin/src/features/grading/workbench/hooks/useMathWorkbenchEvidence.ts
+ M apps/web-admin/src/features/grading/workbench/keyboardShortcuts.test.ts
+ M apps/web-admin/src/features/grading/workbench/keyboardShortcuts.ts
+ M apps/web-admin/src/features/grading/workbench/mathEffectiveEvidence.ts
+ M apps/web-admin/src/features/grading/workbench/mathEvidenceSubjects.ts
+ M apps/web-admin/src/features/grading/workbench/mathWorkbenchEvidence.test.ts
+ M apps/web-admin/src/features/grading/workbench/mathWorkbenchEvidence.ts
+ M apps/web-admin/src/features/grading/workbench/reviewContext.ts
+ M apps/web-admin/src/features/grading/workbench/scoringAIBatches.ts
+ M apps/web-admin/src/features/grading/workbench/scoringPlan.test.ts
+ M apps/web-admin/src/features/grading/workbench/scoringPlan.ts
+ M apps/web-admin/src/features/grading/workbench/taskPaging.test.ts
+ M apps/web-admin/src/features/grading/workbench/taskPaging.ts
+ M apps/web-admin/src/features/members/classes/ClassManagementPage.tsx
+ M apps/web-admin/src/features/members/teachers/TeacherManagementPage.tsx
+ M apps/web-admin/src/features/onboarding/AISetupCard.tsx
+ M apps/web-admin/src/features/onboarding/DataPolicyCard.tsx
+ M apps/web-admin/src/features/onboarding/FirstSchoolCard.tsx
+ M apps/web-admin/src/features/onboarding/NextActionCard.tsx
+ M apps/web-admin/src/features/onboarding/OnboardingCheckCard.tsx
+ M apps/web-admin/src/features/onboarding/OnboardingGate.tsx
+ M apps/web-admin/src/features/onboarding/OnboardingProgress.tsx
+ M apps/web-admin/src/features/onboarding/ReadinessBanner.tsx
+ M apps/web-admin/src/features/onboarding/SystemReadinessCard.tsx
+ M apps/web-admin/src/features/paper-import/PaperImportReviewPanel.tsx
+ M apps/web-admin/src/features/paper-import/PaperImportWorkspace.tsx
+ M apps/web-admin/src/features/paper-import/RubricReviewEditor.tsx
+ M apps/web-admin/src/features/paper-import/answerShape.ts
+ M apps/web-admin/src/features/paper-import/materials.ts
+ M apps/web-admin/src/features/paper-import/usePaperConfigData.ts
+ M apps/web-admin/src/features/paper-import/usePaperImportPolling.test.ts
+ M apps/web-admin/src/features/paper-import/usePaperImportPolling.ts
+ M apps/web-admin/src/features/paper-import/usePaperImportWorkflow.test.tsx
+ M apps/web-admin/src/features/paper-import/usePaperImportWorkflow.ts
+ M apps/web-admin/src/features/paper-import/useScoringRules.ts
+ M apps/web-admin/src/features/paper-rubric/hooks/useQuestionEditor.test.ts
+ M apps/web-admin/src/features/paper-rubric/hooks/useQuestionEditor.ts
+ M apps/web-admin/src/features/paper-rubric/hooks/useRubricEditor.ts
+ M apps/web-admin/src/features/platform-model-config/components/SchoolModelSelector.tsx
+ M apps/web-admin/src/features/platform-model-config/components/SchoolModelTable.tsx
+ M apps/web-admin/src/features/platform-model-config/lib/modelConfig.ts
+ M apps/web-admin/src/features/platform/schools/CreateSchoolForm.tsx
+ M apps/web-admin/src/features/platform/schools/SchoolActivityTab.tsx
+ M apps/web-admin/src/features/platform/schools/SchoolDetailDrawer.tsx
+ M apps/web-admin/src/features/platform/schools/SchoolManagementToolbar.tsx
+ M apps/web-admin/src/features/platform/schools/SchoolMembersTab.tsx
+ M apps/web-admin/src/features/platform/schools/SchoolModelsTab.tsx
+ M apps/web-admin/src/features/platform/schools/SchoolOverviewTab.tsx
+ M apps/web-admin/src/features/platform/schools/SchoolSummaryTable.tsx
+ M apps/web-admin/src/features/platform/schools/SchoolUsageTab.tsx
+ M apps/web-admin/src/features/question-bank/BankQuestionPicker.tsx
+ M apps/web-admin/src/features/question-bank/ContentFields.tsx
+ M apps/web-admin/src/features/question-bank/HistoryQuestionImporter.tsx
+ M apps/web-admin/src/features/question-bank/QuestionBankDialogs.tsx
+ M apps/web-admin/src/features/question-bank/QuestionBankPage.tsx
+ M apps/web-admin/src/features/question-bank/QuestionBankWorkspace.tsx
+ M apps/web-admin/src/features/question-bank/ScoringEditor.tsx
+ M apps/web-admin/src/features/question-bank/question-bank.css
+ M apps/web-admin/src/features/question-bank/questionBankTypes.ts
+ M apps/web-admin/src/features/score-management/components/AuditPanel.tsx
+ M apps/web-admin/src/features/score-management/components/QualityPanel.tsx
+ M apps/web-admin/src/features/score-management/components/ScoreReleaseWorkspace.tsx
+ M apps/web-admin/src/features/score-management/components/ScoreWorkflowModals.tsx
+ M apps/web-admin/src/features/score-management/hooks/scoreWorkspaceState.ts
+ M apps/web-admin/src/features/score-management/hooks/useRegradeWorkflow.tsx
+ M apps/web-admin/src/features/score-management/hooks/useScoreReleaseWorkflow.tsx
+ M apps/web-admin/src/features/score-management/hooks/useScoreWorkspaceData.test.tsx
+ M apps/web-admin/src/features/score-management/hooks/useScoreWorkspaceData.ts
+ M apps/web-admin/src/features/score-management/scorePresentation.ts
+ M apps/web-admin/src/features/shared/latestRequest.ts
+ M apps/web-admin/src/pages/ActivationPage.tsx
+ M apps/web-admin/src/pages/AdminGradingOperationsPage.test.ts
+ M apps/web-admin/src/pages/AdminGradingOperationsPage.tsx
+ M apps/web-admin/src/pages/AnswerSheetTemplatePage.tsx
+ M apps/web-admin/src/pages/AppealCenterPage.test.tsx
+ M apps/web-admin/src/pages/AppealCenterPage.tsx
+ M apps/web-admin/src/pages/ArbitrationPage.tsx
+ M apps/web-admin/src/pages/ArbitrationPage.ui.test.tsx
+ M apps/web-admin/src/pages/ArbitrationPanels.tsx
+ M apps/web-admin/src/pages/AuditLogPage.tsx
+ M apps/web-admin/src/pages/CaptureBatchPage.tsx
+ M apps/web-admin/src/pages/DashboardPage.tsx
+ M apps/web-admin/src/pages/ExamManagementPage.tsx
+ M apps/web-admin/src/pages/ExamPreparationPage.tsx
+ M apps/web-admin/src/pages/ExamWorkspacePage.tsx
+ M apps/web-admin/src/pages/GradingWorkbenchPage.tsx
+ M apps/web-admin/src/pages/IdentityLandingPage.tsx
+ M apps/web-admin/src/pages/LearningReportsPage.tsx
+ M apps/web-admin/src/pages/LoginPage.tsx
+ M apps/web-admin/src/pages/ModulePage.tsx
+ M apps/web-admin/src/pages/OrganizationSetupPage.tsx
+ M apps/web-admin/src/pages/PanelModelBindingsSection.tsx
+ M apps/web-admin/src/pages/PaperRubricPage.tsx
+ M apps/web-admin/src/pages/PlatformGettingStartedPage.tsx
+ M apps/web-admin/src/pages/PlatformModelConfigPage.tsx
+ M apps/web-admin/src/pages/PlatformSchoolsPage.tsx
+ M apps/web-admin/src/pages/QualityDashboardPage.tsx
+ M apps/web-admin/src/pages/RecoveryPage.tsx
+ M apps/web-admin/src/pages/SchoolAIChatPage.tsx
+ M apps/web-admin/src/pages/ScoreManagementPage.tsx
+ M apps/web-admin/src/pages/SessionManagementPage.tsx
+ M apps/web-admin/src/pages/StudentManagementPage.tsx
+ M apps/web-admin/src/pages/SubjectiveGradingBatchPage.tsx
+ M apps/web-admin/src/pages/SubmissionCapturePage.tsx
+ M apps/web-admin/src/pages/SystemStatusPage.tsx
+ M apps/web-admin/src/pages/TeacherDashboardPage.tsx
+ M apps/web-admin/src/pages/school-ai-chat.css
+ M apps/web-admin/src/query/reviewTaskContext.ts
+ M apps/web-admin/src/router/appRouter.tsx
+ M apps/web-admin/src/router/experience.ts
+ M apps/web-admin/src/router/navigation.test.ts
+ M apps/web-admin/src/router/navigation.ts
+ M apps/web-admin/src/router/routes.tsx
+ M apps/web-admin/src/styles/features/appeals-workspace.css
+ M apps/web-admin/src/styles/features/appeals.css
+ M apps/web-admin/src/styles/features/arbitration.css
+ M apps/web-admin/src/styles/features/audit-system.css
+ M apps/web-admin/src/styles/features/capture.css
+ M apps/web-admin/src/styles/features/dashboard-operations.css
+ M apps/web-admin/src/styles/features/dashboard-workbench.css
+ M apps/web-admin/src/styles/features/dashboard.css
+ M apps/web-admin/src/styles/features/exam-management.css
+ M apps/web-admin/src/styles/features/exam-preparation.css
+ M apps/web-admin/src/styles/features/exam.css
+ M apps/web-admin/src/styles/features/immersive.css
+ M apps/web-admin/src/styles/features/member-management.css
+ M apps/web-admin/src/styles/features/model-config.css
+ M apps/web-admin/src/styles/features/model-governance.css
+ M apps/web-admin/src/styles/features/onboarding.css
+ M apps/web-admin/src/styles/features/paper-editor.css
+ M apps/web-admin/src/styles/features/platform-schools.css
+ M apps/web-admin/src/styles/features/print-and-scope.css
+ M apps/web-admin/src/styles/features/question-appeal.css
+ M apps/web-admin/src/styles/features/question-bank.css
+ M apps/web-admin/src/styles/features/reports.css
+ M apps/web-admin/src/styles/features/scoring-paper-monitor.css
+ M apps/web-admin/src/styles/features/scoring.css
+ M apps/web-admin/src/styles/features/student-management.css
+ M apps/web-admin/src/styles/layout.css
+ M apps/web-admin/src/styles/tables.css
+ M apps/web-admin/vite.config.ts
+ M contracts/grading-agent/v2/request.schema.json
+ M contracts/openapi/edugrade-api.breaking-baseline.json
+ M contracts/openapi/registered-route-exceptions.json
+ M contracts/openapi/route-debt-budget.json
+ M docs/api/arbitration.md
+ M docs/api/paper-question.md
+ M docs/api/question-bank.md
+ M docs/api/school-model-api.md
+ M infra/docker-compose/.env.example
+ M infra/docker-compose/docker-compose.story056-e2e.yml
+ M infra/docker-compose/docker-compose.story060-e2e.yml
+ M infra/docker-compose/docker-compose.yml
+ M infra/docker-compose/nginx/nginx.conf
+ M infra/docker-compose/scripts/preflight.ps1
+ M infra/docker-compose/scripts/recovery-common.ps1
+ M infra/docker-compose/scripts/run-story056-real-worker-e2e.ps1
+ M infra/docker-compose/scripts/tests/recovery-docker.tests.ps1
+ M infra/docker-compose/scripts/tests/recovery-postgres.tests.ps1
+ M infra/docker-compose/scripts/tests/recovery.tests.ps1
+ M lab/evals/math-recognition/generate_synthetic_fixtures.py
+ M lab/evals/math-recognition/run_math_bench.py
+ M lab/evals/math-recognition/test_math_bench.py
+ M lab/scripts/build-gold-dataset.js
+ M lab/scripts/import-jorgpt.js
+ M lab/scripts/run-annotation-workflow-demo.js
+ M lab/scripts/run-graduation-audit.js
+ M lab/scripts/run-model-selection.js
+ M lab/src/adapters/localModelAdapter.js
+ M lab/src/annotations/gold.js
+ M lab/src/annotations/workflow.js
+ M lab/src/datasets/governance.js
+ M lab/src/datasets/jorgpt.js
+ M lab/src/evaluators/adversarial.js
+ M lab/src/evaluators/fairness.js
+ M lab/src/evaluators/gateChecker.js
+ M lab/src/evaluators/modelSelection.js
+ M lab/src/evaluators/runEval.js
+ M lab/src/evidenceVerifier.js
+ M lab/src/rubric.js
+ M lab/src/runtime/localRuntime.js
+ M lab/src/runtime/modelCandidates.js
+ M lab/src/schemas/gradingSchema.js
+ M lab/src/training/decision.js
+ M lab/tests/annotation-workflow.test.js
+ M lab/tests/dataset-governance.test.js
+ M lab/tests/eval-gate.test.js
+ M lab/tests/gold-annotation.test.js
+ M lab/tests/local-runtime.test.js
+ M lab/tests/model-candidates.test.js
+ M lab/tests/model-selection.test.js
+ M lab/tests/schema.test.js
+ M package-lock.json
+ M package.json
+ M packages/design-tokens/src/grading.ts
+ M packages/design-tokens/src/reading.ts
+ M packages/sdk/src/generated/client.ts
+ M packages/sdk/src/generated/types.ts
+ M packages/ui/src/workspace/DataTableShell.tsx
+ M packages/ui/src/workspace/ExamStageIndicator.tsx
+ M packages/ui/src/workspace/FilterBar.tsx
+ M packages/ui/src/workspace/MetricCard.tsx
+ M packages/ui/src/workspace/PageHeader.tsx
+ M packages/ui/src/workspace/QualityIndicator.tsx
+ M packages/ui/src/workspace/RiskBanner.tsx
+ M packages/ui/src/workspace/RubricCriterion.tsx
+ M packages/ui/src/workspace/StageNav.tsx
+ M packages/ui/src/workspace/StatusBadge.tsx
+ M packages/ui/src/workspace/WorkspaceLayout.tsx
+ M packages/ui/src/workspace/WorkspaceMetricStrip.tsx
+ M packages/ui/src/workspace/WorkspaceNoticeList.tsx
+ M packages/ui/src/workspace/WorkspaceStageRail.tsx
+ M packages/ui/src/workspace/types.ts
+ M packages/worker-runtime-python/edugrade_worker_runtime/lease.py
+ M scripts/check-architecture-boundaries.mjs
+ M scripts/check-authorization-contract.mjs
+ M scripts/check-openapi-breaking.mjs
+ M scripts/check-user-facing-copy.mjs
+ M scripts/ci/architecture-boundaries.test.mjs
+ M scripts/ci/check-generated-contracts.mjs
+ M scripts/ci/contract-gates.test.mjs
+ M scripts/ci/desktop-digest-memory.mjs
+ M scripts/generate-fujian-2024-math-simulation.py
+ M scripts/launch-local.ps1
+ M scripts/lib/openapi-sdk.mjs
+ M scripts/start-local-ocr-fast.ps1
+ M scripts/start-local.ps1
+ M scripts/test-compose-deployment.ps1
+ M scripts/update-api-route-coverage.mjs
+ M services/api-gateway/cmd/reliability-repair/main.go
+ M services/api-gateway/internal/aidisagreement/handlers.go
+ M services/api-gateway/internal/aidisagreement/service.go
+ M services/api-gateway/internal/aidisagreement/store_memory.go
+ M services/api-gateway/internal/aidisagreement/store_postgres.go
+ M services/api-gateway/internal/aidisagreement/types.go
+ M services/api-gateway/internal/aieligibility/handlers.go
+ M services/api-gateway/internal/aieligibility/service.go
+ M services/api-gateway/internal/aieligibility/store_postgres.go
+ M services/api-gateway/internal/aieligibility/types.go
+ M services/api-gateway/internal/answergroup/algorithm.go
+ M services/api-gateway/internal/answergroup/handlers.go
+ M services/api-gateway/internal/answergroup/store_memory.go
+ M services/api-gateway/internal/answergroup/store_postgres.go
+ M services/api-gateway/internal/answergroup/types.go
+ M services/api-gateway/internal/apicontract/a14_a24_openapi_test.go
+ M services/api-gateway/internal/apicontract/business_command_handler_schema_test.go
+ M services/api-gateway/internal/apicontract/paper_import_openapi_test.go
+ M services/api-gateway/internal/apicontract/reliability_handler_schema_test.go
+ M services/api-gateway/internal/appeal/handlers.go
+ M services/api-gateway/internal/appeal/handlers_test.go
+ M services/api-gateway/internal/appeal/published_question_handlers.go
+ M services/api-gateway/internal/appeal/published_question_service.go
+ M services/api-gateway/internal/appeal/published_question_service_test.go
+ M services/api-gateway/internal/appeal/published_question_store_memory.go
+ M services/api-gateway/internal/appeal/published_question_store_postgres.go
+ M services/api-gateway/internal/appeal/published_question_types.go
+ M services/api-gateway/internal/appeal/store_memory.go
+ M services/api-gateway/internal/appeal/store_postgres.go
+ M services/api-gateway/internal/assessment/snapshot.go
+ M services/api-gateway/internal/assessment/summary.go
+ M services/api-gateway/internal/auth/access_scope.go
+ M services/api-gateway/internal/auth/activation.go
+ M services/api-gateway/internal/auth/authorization_contract_postgres_test.go
+ M services/api-gateway/internal/auth/cookies.go
+ M services/api-gateway/internal/auth/handlers.go
+ M services/api-gateway/internal/auth/handlers_session.go
+ M services/api-gateway/internal/auth/login_limiter.go
+ M services/api-gateway/internal/auth/login_limiter_redis.go
+ M services/api-gateway/internal/auth/login_service.go
+ M services/api-gateway/internal/auth/mfa.go
+ M services/api-gateway/internal/auth/mfa_handlers.go
+ M services/api-gateway/internal/auth/mfa_http_test.go
+ M services/api-gateway/internal/auth/mfa_memory.go
+ M services/api-gateway/internal/auth/mfa_postgres.go
+ M services/api-gateway/internal/auth/mfa_security_changes.go
+ M services/api-gateway/internal/auth/mfa_test.go
+ M services/api-gateway/internal/auth/middleware.go
+ M services/api-gateway/internal/auth/password.go
+ M services/api-gateway/internal/auth/recovery.go
+ M services/api-gateway/internal/auth/resource_scope.go
+ M services/api-gateway/internal/auth/resource_scope_test.go
+ M services/api-gateway/internal/auth/risk.go
+ M services/api-gateway/internal/auth/scope.go
+ M services/api-gateway/internal/auth/security_events.go
+ M services/api-gateway/internal/auth/step_up.go
+ M services/api-gateway/internal/auth/store_memory.go
+ M services/api-gateway/internal/auth/store_postgres.go
+ M services/api-gateway/internal/auth/types.go
+ M services/api-gateway/internal/auth/user_admin.go
+ M services/api-gateway/internal/auth/validation.go
+ M services/api-gateway/internal/auth/wechat.go
+ M services/api-gateway/internal/backmark/handlers.go
+ M services/api-gateway/internal/backmark/service.go
+ M services/api-gateway/internal/backmark/service_test.go
+ M services/api-gateway/internal/backmark/store_memory.go
+ M services/api-gateway/internal/backmark/store_postgres_test.go
+ M services/api-gateway/internal/backmark/types.go
+ M services/api-gateway/internal/binaryresource/resource.go
+ M services/api-gateway/internal/binaryresourcehttp/serve.go
+ M services/api-gateway/internal/buildinfo/buildinfo.go
+ M services/api-gateway/internal/calibration/handlers.go
+ M services/api-gateway/internal/calibration/service.go
+ M services/api-gateway/internal/calibration/service_test.go
+ M services/api-gateway/internal/calibration/store_memory.go
+ M services/api-gateway/internal/calibration/types.go
+ M services/api-gateway/internal/capture/barcode.go
+ M services/api-gateway/internal/capture/barcode_store.go
+ M services/api-gateway/internal/capture/barcode_test.go
+ M services/api-gateway/internal/capture/batch_command_postgres.go
+ M services/api-gateway/internal/capture/matching_store_postgres.go
+ M services/api-gateway/internal/capture/organization_store_postgres.go
+ M services/api-gateway/internal/capture/print_context_store.go
+ M services/api-gateway/internal/capture/print_package_pdf.go
+ M services/api-gateway/internal/capture/print_package_store.go
+ M services/api-gateway/internal/capture/registration_store_postgres.go
+ M services/api-gateway/internal/capture/sheet_identity_store.go
+ M services/api-gateway/internal/capture/store_memory.go
+ M services/api-gateway/internal/capture/store_postgres.go
+ M services/api-gateway/internal/capture/template_match_store_postgres.go
+ M services/api-gateway/internal/capture/types.go
+ M services/api-gateway/internal/captureupload/handlers.go
+ M services/api-gateway/internal/captureupload/service.go
+ M services/api-gateway/internal/captureupload/service_test.go
+ M services/api-gateway/internal/captureupload/store_postgres.go
+ M services/api-gateway/internal/captureupload/types.go
+ M services/api-gateway/internal/commandreceipt/receipt.go
+ M services/api-gateway/internal/config/config.go
+ M services/api-gateway/internal/csvsafe/csvsafe.go
+ M services/api-gateway/internal/dashboard/activity_store.go
+ M services/api-gateway/internal/dashboard/organization_postgres.go
+ M services/api-gateway/internal/db/tenant_context.go
+ M services/api-gateway/internal/deps/deps.go
+ M services/api-gateway/internal/evidence/engine.go
+ M services/api-gateway/internal/exam/handlers.go
+ M services/api-gateway/internal/exam/handlers_test.go
+ M services/api-gateway/internal/exam/session_memory.go
+ M services/api-gateway/internal/exam/session_postgres.go
+ M services/api-gateway/internal/exam/status.go
+ M services/api-gateway/internal/exam/status_test.go
+ M services/api-gateway/internal/exam/store_memory.go
+ M services/api-gateway/internal/exam/store_postgres.go
+ M services/api-gateway/internal/exam/types.go
+ M services/api-gateway/internal/files/downloads.go
+ M services/api-gateway/internal/files/handlers.go
+ M services/api-gateway/internal/files/handlers_test.go
+ M services/api-gateway/internal/files/reconciliation.go
+ M services/api-gateway/internal/files/store_postgres.go
+ M services/api-gateway/internal/files/types.go
+ M services/api-gateway/internal/files/validation.go
+ M services/api-gateway/internal/goldpaper/coverage.go
+ M services/api-gateway/internal/goldpaper/handlers.go
+ M services/api-gateway/internal/goldpaper/store_memory.go
+ M services/api-gateway/internal/goldpaper/types.go
+ M services/api-gateway/internal/graderdrift/handlers.go
+ M services/api-gateway/internal/graderdrift/service.go
+ M services/api-gateway/internal/graderdrift/service_test.go
+ M services/api-gateway/internal/graderdrift/types.go
+ M services/api-gateway/internal/grading/engine.go
+ M services/api-gateway/internal/grading/engine_test.go
+ M services/api-gateway/internal/grading/handlers.go
+ M services/api-gateway/internal/grading/json.go
+ M services/api-gateway/internal/grading/omr_calibration.go
+ M services/api-gateway/internal/grading/omr_calibration_test.go
+ M services/api-gateway/internal/grading/rules.go
+ M services/api-gateway/internal/grading/scoring_run_omr.go
+ M services/api-gateway/internal/grading/scoring_run_query.go
+ M services/api-gateway/internal/grading/scoring_run_routing.go
+ M services/api-gateway/internal/grading/scoring_run_start.go
+ M services/api-gateway/internal/grading/scoring_run_types.go
+ M services/api-gateway/internal/grading/scoring_runs_manual_only_test.go
+ M services/api-gateway/internal/gradingdisagreement/engine.go
+ M services/api-gateway/internal/gradingevaluation/handlers.go
+ M services/api-gateway/internal/gradingevaluation/panel_metrics.go
+ M services/api-gateway/internal/gradingevaluation/panel_readiness.go
+ M services/api-gateway/internal/gradingevaluation/service.go
+ M services/api-gateway/internal/gradingevaluation/types.go
+ M services/api-gateway/internal/handlers/handlers.go
+ M services/api-gateway/internal/idempotency/command_identity.go
+ M services/api-gateway/internal/idempotency/middleware.go
+ M services/api-gateway/internal/idempotency/store_memory.go
+ M services/api-gateway/internal/idempotency/store_postgres.go
+ M services/api-gateway/internal/imagequality/handlers.go
+ M services/api-gateway/internal/imagequality/types.go
+ M services/api-gateway/internal/logger/logger.go
+ M services/api-gateway/internal/logger/logger_test.go
+ M services/api-gateway/internal/mathunderstanding/correction_test.go
+ M services/api-gateway/internal/mathunderstanding/handlers.go
+ M services/api-gateway/internal/mathunderstanding/rubric.go
+ M services/api-gateway/internal/mathunderstanding/scorer.go
+ M services/api-gateway/internal/mathunderstanding/scorer_test.go
+ M services/api-gateway/internal/mathunderstanding/scoring_handler.go
+ M services/api-gateway/internal/mathunderstanding/solution_builder.go
+ M services/api-gateway/internal/mathunderstanding/spatial.go
+ M services/api-gateway/internal/mathunderstanding/step_segmenter.go
+ M services/api-gateway/internal/mathunderstanding/store_memory.go
+ M services/api-gateway/internal/mathunderstanding/types.go
+ M services/api-gateway/internal/mathunderstanding/verification_runtime.go
+ M services/api-gateway/internal/mathunderstanding/verification_runtime_test.go
+ M services/api-gateway/internal/middleware/middleware.go
+ M services/api-gateway/internal/middleware/middleware_test.go
+ M services/api-gateway/internal/minioadapter/client.go
+ M services/api-gateway/internal/modelcalibration/gradingevaluation_adapter.go
+ M services/api-gateway/internal/modelcalibration/handlers.go
+ M services/api-gateway/internal/modelcalibration/service.go
+ M services/api-gateway/internal/modelcalibration/store_memory.go
+ M services/api-gateway/internal/modelcalibration/store_postgres.go
+ M services/api-gateway/internal/modelcalibration/types.go
+ M services/api-gateway/internal/modelgovernance/evaluation.go
+ M services/api-gateway/internal/modelgovernance/governance.go
+ M services/api-gateway/internal/modelgovernance/handlers.go
+ M services/api-gateway/internal/modelgovernance/managed_chat.go
+ M services/api-gateway/internal/modelgovernance/managed_config.go
+ M services/api-gateway/internal/modelgovernance/managed_config_auto.go
+ M services/api-gateway/internal/modelgovernance/managed_config_auto_test.go
+ M services/api-gateway/internal/modelgovernance/managed_config_handlers.go
+ M services/api-gateway/internal/modelgovernance/managed_config_probe.go
+ M services/api-gateway/internal/modelgovernance/managed_config_probe_http_test.go
+ M services/api-gateway/internal/modelgovernance/managed_config_store_memory.go
+ M services/api-gateway/internal/modelgovernance/managed_config_store_postgres.go
+ M services/api-gateway/internal/modelgovernance/managed_config_test.go
+ M services/api-gateway/internal/modelgovernance/managed_production.go
+ M services/api-gateway/internal/modelgovernance/managed_production_test.go
+ M services/api-gateway/internal/modelgovernance/production.go
+ M services/api-gateway/internal/modelgovernance/provider_registry.go
+ M services/api-gateway/internal/modelgovernance/role_binding.go
+ M services/api-gateway/internal/modelgovernance/role_binding_handlers.go
+ M services/api-gateway/internal/modelgovernance/role_binding_handlers_test.go
+ M services/api-gateway/internal/modelgovernance/role_binding_store_memory.go
+ M services/api-gateway/internal/modelgovernance/role_binding_store_postgres.go
+ M services/api-gateway/internal/modelgovernance/role_binding_test.go
+ M services/api-gateway/internal/modelgovernance/runtime_prompt.go
+ M services/api-gateway/internal/modelgovernance/sandbox_admission.go
+ M services/api-gateway/internal/modelgovernance/store_memory.go
+ M services/api-gateway/internal/observability/metrics.go
+ M services/api-gateway/internal/ocr/handlers.go
+ M services/api-gateway/internal/ocr/idempotency.go
+ M services/api-gateway/internal/ocr/runtime_contract.go
+ M services/api-gateway/internal/ocr/runtime_coordinator.go
+ M services/api-gateway/internal/ocr/runtime_coordinator_postgres.go
+ M services/api-gateway/internal/ocr/store_memory_atomic.go
+ M services/api-gateway/internal/ocr/store_postgres.go
+ M services/api-gateway/internal/ocr/validation.go
+ M services/api-gateway/internal/onboarding/service.go
+ M services/api-gateway/internal/org/handlers.go
+ M services/api-gateway/internal/org/readiness.go
+ M services/api-gateway/internal/org/store_memory.go
+ M services/api-gateway/internal/outbox/publisher_log.go
+ M services/api-gateway/internal/pagination/cursor.go
+ M services/api-gateway/internal/paper/configuration_handlers.go
+ M services/api-gateway/internal/paper/configuration_validation_postgres.go
+ M services/api-gateway/internal/paper/document_import.go
+ M services/api-gateway/internal/paper/document_parser_client.go
+ M services/api-gateway/internal/paper/document_rubric_draft.go
+ M services/api-gateway/internal/paper/document_rubric_draft_test.go
+ M services/api-gateway/internal/paper/document_source_loader.go
+ M services/api-gateway/internal/paper/document_visual_loader.go
+ M services/api-gateway/internal/paper/handlers.go
+ M services/api-gateway/internal/paper/handlers_test.go
+ M services/api-gateway/internal/paper/materialize_bank.go
+ M services/api-gateway/internal/paper/objective_scoring_rule.go
+ M services/api-gateway/internal/paper/omr_profile.go
+ M services/api-gateway/internal/paper/omr_profile_test.go
+ M services/api-gateway/internal/paper/paper_import_append_merge.go
+ M services/api-gateway/internal/paper/paper_import_cancel_test.go
+ M services/api-gateway/internal/paper/paper_import_candidates_test.go
+ M services/api-gateway/internal/paper/paper_import_exhaustion_postgres.go
+ M services/api-gateway/internal/paper/paper_import_json.go
+ M services/api-gateway/internal/paper/paper_import_parse_commit_postgres.go
+ M services/api-gateway/internal/paper/paper_import_parse_retry_postgres.go
+ M services/api-gateway/internal/paper/paper_import_postgres.go
+ M services/api-gateway/internal/paper/paper_import_reconcile.go
+ M services/api-gateway/internal/paper/paper_import_reconcile_test.go
+ M services/api-gateway/internal/paper/paper_import_run_postgres.go
+ M services/api-gateway/internal/paper/paper_import_runtime_postgres.go
+ M services/api-gateway/internal/paper/paper_postgres.go
+ M services/api-gateway/internal/paper/parse_task_executor.go
+ M services/api-gateway/internal/paper/question_postgres.go
+ M services/api-gateway/internal/paper/readiness_snapshot.go
+ M services/api-gateway/internal/paper/recognition_policy.go
+ M services/api-gateway/internal/paper/scoring_coverage.go
+ M services/api-gateway/internal/paper/store_memory.go
+ M services/api-gateway/internal/paper/store_memory_configuration.go
+ M services/api-gateway/internal/paper/store_postgres_configuration.go
+ M services/api-gateway/internal/paper/template_validation.go
+ M services/api-gateway/internal/paper/types.go
+ M services/api-gateway/internal/platformschools/service.go
+ M services/api-gateway/internal/platformschools/store_memory.go
+ M services/api-gateway/internal/platformschools/store_postgres.go
+ M services/api-gateway/internal/platformschools/types.go
+ M services/api-gateway/internal/processing/handlers.go
+ M services/api-gateway/internal/processing/retry_postgres.go
+ M services/api-gateway/internal/processing/service.go
+ M services/api-gateway/internal/processing/store_memory.go
+ M services/api-gateway/internal/processing/store_postgres.go
+ M services/api-gateway/internal/processing/types.go
+ M services/api-gateway/internal/qualitydashboard/adapters.go
+ M services/api-gateway/internal/qualitydashboard/handlers.go
+ M services/api-gateway/internal/qualitydashboard/postgres.go
+ M services/api-gateway/internal/qualitydashboard/service.go
+ M services/api-gateway/internal/qualitydashboard/types.go
+ M services/api-gateway/internal/questionbank/import_postgres.go
+ M services/api-gateway/internal/questionbank/metadata.go
+ M services/api-gateway/internal/questionbank/metadata_acl_search_memory.go
+ M services/api-gateway/internal/questionbank/metadata_acl_search_postgres.go
+ M services/api-gateway/internal/questionbank/publication_memory.go
+ M services/api-gateway/internal/questionbank/publication_postgres.go
+ M services/api-gateway/internal/questionbank/scoring.go
+ M services/api-gateway/internal/questionbank/service.go
+ M services/api-gateway/internal/questionbank/store_memory.go
+ M services/api-gateway/internal/questionbank/store_postgres.go
+ M services/api-gateway/internal/questionbank/types.go
+ M services/api-gateway/internal/regrade/grader_context_postgres.go
+ M services/api-gateway/internal/regrade/grader_context_test.go
+ M services/api-gateway/internal/regrade/handlers.go
+ M services/api-gateway/internal/regrade/service.go
+ M services/api-gateway/internal/regrade/service_test.go
+ M services/api-gateway/internal/regrade/store_memory.go
+ M services/api-gateway/internal/regrade/store_postgres.go
+ M services/api-gateway/internal/regrade/types.go
+ M services/api-gateway/internal/regraderelease/service.go
+ M services/api-gateway/internal/regraderelease/service_test.go
+ M services/api-gateway/internal/releasegate/coordinator.go
+ M services/api-gateway/internal/releasegate/service.go
+ M services/api-gateway/internal/releasegate/store_memory.go
+ M services/api-gateway/internal/releasegate/store_postgres.go
+ M services/api-gateway/internal/releasegate/types.go
+ M services/api-gateway/internal/report/handlers.go
+ M services/api-gateway/internal/report/handlers_test.go
+ M services/api-gateway/internal/report/store_memory.go
+ M services/api-gateway/internal/report/store_postgres.go
+ M services/api-gateway/internal/review/handlers.go
+ M services/api-gateway/internal/review/json.go
+ M services/api-gateway/internal/review/store_memory.go
+ M services/api-gateway/internal/review/store_postgres_arbitration.go
+ M services/api-gateway/internal/review/store_postgres_context.go
+ M services/api-gateway/internal/review/store_postgres_resolution.go
+ M services/api-gateway/internal/review/store_postgres_tasks.go
+ M services/api-gateway/internal/review/task_aggregate_test.go
+ M services/api-gateway/internal/review/task_context.go
+ M services/api-gateway/internal/review/task_context_handler.go
+ M services/api-gateway/internal/review/types.go
+ M services/api-gateway/internal/review/workbench_memory.go
+ M services/api-gateway/internal/review/workbench_postgres.go
+ M services/api-gateway/internal/reviewannotation/handlers.go
+ M services/api-gateway/internal/reviewannotation/store_memory.go
+ M services/api-gateway/internal/reviewannotation/store_postgres.go
+ M services/api-gateway/internal/reviewannotation/types.go
+ M services/api-gateway/internal/score/store_memory.go
+ M services/api-gateway/internal/score/store_postgres.go
+ M services/api-gateway/internal/scorerelease/anonymous_paper.go
+ M services/api-gateway/internal/scorerelease/anonymous_paper_postgres.go
+ M services/api-gateway/internal/scorerelease/anonymous_paper_test.go
+ M services/api-gateway/internal/scorerelease/handlers.go
+ M services/api-gateway/internal/scorerelease/service.go
+ M services/api-gateway/internal/scorerelease/service_test.go
+ M services/api-gateway/internal/scorerelease/store_memory.go
+ M services/api-gateway/internal/scorerelease/store_postgres.go
+ M services/api-gateway/internal/scorerelease/student_analytics.go
+ M services/api-gateway/internal/scorerelease/student_detail_postgres.go
+ M services/api-gateway/internal/scorerelease/types.go
+ M services/api-gateway/internal/seedquality/context.go
+ M services/api-gateway/internal/seedquality/handlers.go
+ M services/api-gateway/internal/seedquality/service.go
+ M services/api-gateway/internal/seedquality/service_test.go
+ M services/api-gateway/internal/seedquality/store_postgres.go
+ M services/api-gateway/internal/seedquality/types.go
+ M services/api-gateway/internal/segment/handlers.go
+ M services/api-gateway/internal/segment/images.go
+ M services/api-gateway/internal/segment/store_postgres.go
+ M services/api-gateway/internal/server/application_modules.go
+ M services/api-gateway/internal/server/application_stores.go
+ M services/api-gateway/internal/server/e2e_anonymous_paper_test.go
+ M services/api-gateway/internal/server/e2e_auth_security_test.go
+ M services/api-gateway/internal/server/e2e_business_command_test.go
+ M services/api-gateway/internal/server/e2e_compose_bootstrap_test.go
+ M services/api-gateway/internal/server/e2e_math_effective_evidence_test.go
+ M services/api-gateway/internal/server/e2e_math_grading_binding_test.go
+ M services/api-gateway/internal/server/e2e_math_rubric_score_test.go
+ M services/api-gateway/internal/server/e2e_math_verification_runtime_test.go
+ M services/api-gateway/internal/server/e2e_mfa_test.go
+ M services/api-gateway/internal/server/e2e_paper_import_reconciliation_test.go
+ M services/api-gateway/internal/server/e2e_postgres_test.go
+ M services/api-gateway/internal/server/e2e_question_bank_import_test.go
+ M services/api-gateway/internal/server/e2e_question_bank_publication_test.go
+ M services/api-gateway/internal/server/e2e_question_bank_test.go
+ M services/api-gateway/internal/server/e2e_reliability_command_test.go
+ M services/api-gateway/internal/server/e2e_review_recovery_test.go
+ M services/api-gateway/internal/server/e2e_review_repairs_test.go
+ M services/api-gateway/internal/server/e2e_scoring_double_mark_test.go
+ M services/api-gateway/internal/server/e2e_story056_calibration_test.go
+ M services/api-gateway/internal/server/e2e_story056_lease_test.go
+ M services/api-gateway/internal/server/e2e_story056_test.go
+ M services/api-gateway/internal/server/e2e_subjective_command_test.go
+ M services/api-gateway/internal/server/e2e_subjective_panel_test.go
+ M services/api-gateway/internal/server/e2e_worker_runtime_reliability_test.go
+ M services/api-gateway/internal/server/infrastructure.go
+ M services/api-gateway/internal/server/managed_config_postgres_test.go
+ M services/api-gateway/internal/server/migration_upgrade_test.go
+ M services/api-gateway/internal/server/module_capture.go
+ M services/api-gateway/internal/server/module_exam.go
+ M services/api-gateway/internal/server/module_grading.go
+ M services/api-gateway/internal/server/module_release.go
+ M services/api-gateway/internal/server/review_route_test.go
+ M services/api-gateway/internal/server/router_guards.go
+ M services/api-gateway/internal/server/routes_auth.go
+ M services/api-gateway/internal/server/routes_capture.go
+ M services/api-gateway/internal/server/routes_exam.go
+ M services/api-gateway/internal/server/routes_paper.go
+ M services/api-gateway/internal/server/routes_questionbank.go
+ M services/api-gateway/internal/server/routes_release.go
+ M services/api-gateway/internal/server/routes_review.go
+ M services/api-gateway/internal/server/routes_system.go
+ M services/api-gateway/internal/server/server.go
+ M services/api-gateway/internal/studentportal/handlers.go
+ M services/api-gateway/internal/studentportal/service.go
+ M services/api-gateway/internal/studentportal/store_memory.go
+ M services/api-gateway/internal/studentportal/types.go
+ M services/api-gateway/internal/subjective/active_crop_resolver.go
+ M services/api-gateway/internal/subjective/adapter_http.go
+ M services/api-gateway/internal/subjective/adapter_http_real_e2e_test.go
+ M services/api-gateway/internal/subjective/adapter_http_v2.go
+ M services/api-gateway/internal/subjective/adapter_usage_metrics_test.go
+ M services/api-gateway/internal/subjective/batch_command.go
+ M services/api-gateway/internal/subjective/eligibility.go
+ M services/api-gateway/internal/subjective/grade_settlement_pipeline.go
+ M services/api-gateway/internal/subjective/grading_agent_v2_builder.go
+ M services/api-gateway/internal/subjective/grading_reference.go
+ M services/api-gateway/internal/subjective/grading_reference_test.go
+ M services/api-gateway/internal/subjective/handlers.go
+ M services/api-gateway/internal/subjective/handlers_batch.go
+ M services/api-gateway/internal/subjective/handlers_grade.go
+ M services/api-gateway/internal/subjective/handlers_worker.go
+ M services/api-gateway/internal/subjective/math_evidence.go
+ M services/api-gateway/internal/subjective/math_grading.go
+ M services/api-gateway/internal/subjective/panel_agent_binding.go
+ M services/api-gateway/internal/subjective/panel_disagreement.go
+ M services/api-gateway/internal/subjective/panel_orchestrator.go
+ M services/api-gateway/internal/subjective/panel_orchestrator_test.go
+ M services/api-gateway/internal/subjective/panel_policy.go
+ M services/api-gateway/internal/subjective/panel_shadow_runner.go
+ M services/api-gateway/internal/subjective/panel_store.go
+ M services/api-gateway/internal/subjective/panel_types.go
+ M services/api-gateway/internal/subjective/scoring_coverage_test.go
+ M services/api-gateway/internal/subjective/store_memory.go
+ M services/api-gateway/internal/subjective/store_postgres.go
+ M services/api-gateway/internal/subjective/store_postgres_batch.go
+ M services/api-gateway/internal/subjective/types.go
+ M services/api-gateway/internal/subjective/validation.go
+ M services/api-gateway/internal/subjective/worker_completion_service.go
+ M services/api-gateway/internal/subjective/worker_execution_service.go
+ M services/api-gateway/internal/submission/store_memory.go
+ M services/api-gateway/internal/submission/store_postgres.go
+ M services/api-gateway/internal/submission/types.go
+ M services/api-gateway/internal/workerruntime/handlers.go
+ M services/api-gateway/internal/workerruntime/scope_middleware.go
+ M services/api-gateway/internal/workerruntime/scope_middleware_test.go
+ M services/api-gateway/internal/workerruntime/store_memory.go
+ M services/api-gateway/internal/workerruntime/store_postgres.go
+ M services/api-gateway/internal/workspace/handlers.go
+ M services/api-gateway/internal/workspace/service.go
+ M services/api-gateway/internal/workspace/types.go
+ M services/api-gateway/openapi/edugrade-api.openapi.json
+ M services/api-gateway/openapi/route-coverage.json
+ M services/api-gateway/tools/file-reconcile/main.go
+ M services/api-gateway/tools/import-fujian-2024-math-simulation/main.go
+ M services/api-gateway/tools/story056-real-worker-e2e/main.go
+ M services/image-quality-worker/image_quality/config.py
+ M services/image-quality-worker/image_quality/engine.py
+ M services/image-quality-worker/image_quality/geometry.py
+ M services/image-quality-worker/image_quality/metrics.py
+ M services/image-quality-worker/image_quality/policy.py
+ M services/image-quality-worker/image_quality/report.py
+ M services/image-quality-worker/image_quality/runner.py
+ M services/math-verification-worker/math_verification_worker/parser.py
+ M services/math-verification-worker/math_verification_worker/server.py
+ M services/math-verification-worker/math_verification_worker/verifier.py
+ M services/math-verification-worker/tests/test_server.py
+ M services/ocr-worker/Dockerfile
+ M services/ocr-worker/benchmarks/benchmark_local.py
+ M services/ocr-worker/ocr_worker/__main__.py
+ M services/ocr-worker/ocr_worker/api.py
+ M services/ocr-worker/ocr_worker/config.py
+ M services/ocr-worker/ocr_worker/deployment_profile.py
+ M services/ocr-worker/ocr_worker/engine.py
+ M services/ocr-worker/ocr_worker/formula_calibration.py
+ M services/ocr-worker/ocr_worker/formula_validation.py
+ M services/ocr-worker/ocr_worker/math_layout.py
+ M services/ocr-worker/ocr_worker/math_runner.py
+ M services/ocr-worker/ocr_worker/paper_formula.py
+ M services/ocr-worker/ocr_worker/recognition_router.py
+ M services/ocr-worker/ocr_worker/runner.py
+ M services/ocr-worker/ocr_worker/symbolic_runner.py
+ M services/page-processing-worker/Dockerfile
+ M services/page-processing-worker/page_processing/api.py
+ M services/page-processing-worker/page_processing/config.py
+ M services/page-processing-worker/page_processing/decoder.py
+ M services/page-processing-worker/page_processing/omr.py
+ M services/page-processing-worker/page_processing/omr_acceptance.py
+ M services/page-processing-worker/page_processing/runner.py
+ M services/page-processing-worker/tests/test_runner_heartbeat.py
+ M services/page-processing-worker/tools/evaluate_external_omr.py
+ M services/subjective-grading-worker/Dockerfile
+ M services/subjective-grading-worker/subjective_grading_worker/config.py
+ M services/subjective-grading-worker/subjective_grading_worker/healthcheck.py
+ M tests/e2e/fixtures/apiMocks.ts
+ M tests/e2e/fixtures/gradingWorkbenchMocks.ts
+ M tests/e2e/fixtures/qualityDashboardMocks.ts
+ M tests/e2e/specs/dashboard-workbench.spec.ts
+ M tests/e2e/specs/exam-workspace.spec.ts
+ M tests/e2e/specs/exam-workspace.visual.spec.ts
+ M tests/e2e/specs/grading-workbench-keyboard.spec.ts
+ M tests/e2e/specs/grading-workbench-paging.spec.ts
+ M tests/e2e/specs/onboarding.spec.ts
+ M tests/e2e/specs/platform-model-config.spec.ts
+ M tests/e2e/specs/platform-model-management.spec.ts
+ M tests/e2e/specs/platform-schools.spec.ts
+ M tests/integration/exam-command-client.ts
+?? ai-services/tests/test_guardrails.py
+?? ai-services/tests/test_paper_compact_markers_batch34.py
+?? ai-services/tests/test_paper_input.py
+?? ai-services/tests/test_paper_validation.py
+?? ai-services/tests/test_paper_visual.py
+?? ai-services/tests/test_server_tls.py
+?? apps/desktop-client/src-tauri/src/durable_store/offline_access.rs
+?? apps/desktop-client/src-tauri/src/durable_store/storage.rs
+?? apps/desktop-client/src/App.batch33.test.tsx
+?? apps/desktop-client/src/api/client.filename.batch10.test.ts
+?? apps/desktop-client/src/api/listQueries.batch11.test.ts
+?? apps/desktop-client/src/components/AnswerDocumentViewer.test.tsx
+?? apps/desktop-client/src/components/AnswerDocumentViewer.tsx
+?? apps/desktop-client/src/components/DesktopStatusViews.test.tsx
+?? apps/desktop-client/src/components/NativeStoragePanel.test.tsx
+?? apps/desktop-client/src/components/NativeStoragePanel.tsx
+?? apps/desktop-client/src/components/OfflineWorkbench.batch40.test.tsx
+?? apps/desktop-client/src/features/runtime/useRuntimeDiagnostics.test.tsx
+?? apps/desktop-client/src/features/scan/ScanWorkspace.batch34.test.tsx
+?? apps/desktop-client/src/features/session/useDesktopSession.batch33.test.tsx
+?? apps/desktop-client/src/features/upload/useUploadSync.batch35.test.tsx
+?? apps/desktop-client/src/lib/offlineReviewCommand.batch35.test.ts
+?? apps/desktop-client/src/lib/offlineReviewCommand.test.ts
+?? apps/desktop-client/src/lib/offlineReviewCommand.ts
+?? apps/desktop-client/src/lib/offlineStore.test.ts
+?? apps/desktop-client/src/lib/scanningQuality.batch34.test.ts
+?? apps/student-portal/src/App.appealAvailability.test.tsx
+?? apps/student-portal/src/App.appealDisplay.batch41.test.tsx
+?? apps/student-portal/src/App.appealPresentation.batch29.test.tsx
+?? apps/student-portal/src/App.batch8.test.tsx
+?? apps/student-portal/src/App.evidence.batch22.test.tsx
+?? apps/student-portal/src/App.output.batch8.test.tsx
+?? apps/student-portal/src/App.paperRecovery.test.tsx
+?? apps/student-portal/src/App.presentation.batch19.test.tsx
+?? apps/student-portal/src/App.productUx.test.tsx
+?? apps/student-portal/src/App.questionConflict.test.tsx
+?? apps/student-portal/src/App.reauthentication.test.tsx
+?? apps/student-portal/src/App.releaseConsistency.test.tsx
+?? apps/student-portal/src/App.resultNotice.batch45.test.tsx
+?? apps/student-portal/src/App.studentNextBatch.test.tsx
+?? apps/student-portal/src/App.submissionReceipt.test.tsx
+?? apps/student-portal/src/App.volatileReceipt.test.tsx
+?? apps/student-portal/src/appealDrafts.ts
+?? apps/student-portal/src/errors.ts
+?? apps/student-portal/src/features/questions/PaperViewer.tsx
+?? apps/student-portal/src/features/questions/StudentText.batch18.test.tsx
+?? apps/student-portal/src/features/questions/StudentText.tsx
+?? apps/student-portal/src/features/results/OldAppealDrafts.tsx
+?? apps/student-portal/src/features/results/results.batch6.test.tsx
+?? apps/student-portal/src/studentSession.tsx
+?? apps/student-portal/src/test/studentAppBatch8Fixtures.ts
+?? apps/web-admin/scripts/build-budget.json
+?? apps/web-admin/scripts/measure-build.mjs
+?? apps/web-admin/scripts/measure-build.test.mjs
+?? apps/web-admin/scripts/production-route-contracts.mjs
+?? apps/web-admin/scripts/production-route-contracts.test.mjs
+?? apps/web-admin/src/AppShell.session.test.tsx
+?? apps/web-admin/src/api/client.filename.batch10.test.ts
+?? apps/web-admin/src/api/configuration.confirm.test.ts
+?? apps/web-admin/src/api/schoolAssistant.ts
+?? apps/web-admin/src/api/workflowActors.ts
+?? apps/web-admin/src/auth/loginError.test.ts
+?? apps/web-admin/src/auth/loginError.ts
+?? apps/web-admin/src/auth/sessionLifecycle.test.ts
+?? apps/web-admin/src/auth/sessionLifecycle.ts
+?? apps/web-admin/src/components/AppLayout.test.tsx
+?? apps/web-admin/src/components/IndependentReviewQueue.batch32.test.tsx
+?? apps/web-admin/src/components/IndependentReviewQueue.test.tsx
+?? apps/web-admin/src/components/InteractionMaterialEvidence.test.tsx
+?? apps/web-admin/src/components/MarkdownCodeBlock.tsx
+?? apps/web-admin/src/components/MathMarkdown.interaction.test.tsx
+?? apps/web-admin/src/components/PendingBusinessCommands.batch42.test.tsx
+?? apps/web-admin/src/components/PendingBusinessCommands.test.tsx
+?? apps/web-admin/src/components/ProcessingExceptionEvidence.batch43.test.tsx
+?? apps/web-admin/src/components/ProcessingExceptionEvidence.tsx
+?? apps/web-admin/src/components/ProcessingOperationsPanel.presentation.test.tsx
+?? apps/web-admin/src/components/QuestionAppealRegradeLaunch.test.tsx
+?? apps/web-admin/src/components/QuestionAppealRegradeLaunch.tsx
+?? apps/web-admin/src/components/QuestionAppealReviewOpinionPanel.tsx
+?? apps/web-admin/src/components/QuestionAppealViews.tsx
+?? apps/web-admin/src/components/QuestionAppealWorkspace.batch10.test.tsx
+?? apps/web-admin/src/components/RegistrationCorrectionWorkspace.batch9.test.tsx
+?? apps/web-admin/src/components/ResponsiveTable.test.tsx
+?? apps/web-admin/src/components/ScoringExamples.ux.test.tsx
+?? apps/web-admin/src/components/ScoringPaperMonitor.test.tsx
+?? apps/web-admin/src/components/StructuredTeacherFields.batch41.test.tsx
+?? apps/web-admin/src/components/StructuredTeacherFields.tsx
+?? apps/web-admin/src/components/StructuredTeacherFields.ux.test.tsx
+?? apps/web-admin/src/components/TaskScoringReference.tsx
+?? apps/web-admin/src/components/appLayoutPresentation.test.tsx
+?? apps/web-admin/src/components/appLayoutPresentation.tsx
+?? apps/web-admin/src/components/features/assessment/AssessmentProfileEditor.productUx.test.tsx
+?? apps/web-admin/src/components/features/assessment/ExamScoringPreparation.test.tsx
+?? apps/web-admin/src/components/features/assessment/ExamScoringPreparation.tsx
+?? apps/web-admin/src/components/features/assessment/assessmentPreparation.ts
+?? apps/web-admin/src/components/features/assessment/assessmentScoringDefaults.test.ts
+?? apps/web-admin/src/components/features/assessment/assessmentScoringDefaults.ts
+?? apps/web-admin/src/components/features/assessment/assessmentSubjectScope.test.ts
+?? apps/web-admin/src/components/features/assessment/assessmentSubjectScope.ts
+?? apps/web-admin/src/components/features/review-annotation/CommentTemplateManager.ux.test.tsx
+?? apps/web-admin/src/components/features/review-annotation/ReviewAnnotationWorkspace.keyboard.test.tsx
+?? apps/web-admin/src/components/math-markdown.css
+?? apps/web-admin/src/components/mathMarkdownNormalization.ts
+?? apps/web-admin/src/components/mathMarkdownRenderers.tsx
+?? apps/web-admin/src/components/model-governance/ManagedGovernanceWorkspace.ux.test.tsx
+?? apps/web-admin/src/components/model-governance/ModelEvaluationWorkspace.test.tsx
+?? apps/web-admin/src/components/model-governance/ScoringAssuranceViews.tsx
+?? apps/web-admin/src/components/model-governance/ScoringAssuranceWorkspace.batch11.test.tsx
+?? apps/web-admin/src/components/model-governance/ScoringSetupChecklist.test.tsx
+?? apps/web-admin/src/components/model-governance/ScoringSetupChecklist.tsx
+?? apps/web-admin/src/components/model-governance/costUnits.test.ts
+?? apps/web-admin/src/components/model-governance/costUnits.ts
+?? apps/web-admin/src/components/model-governance/governanceMaterials.ts
+?? apps/web-admin/src/components/model-governance/scoringAssurancePresentation.batch11.test.ts
+?? apps/web-admin/src/components/model-governance/scoringAssurancePresentation.ts
+?? apps/web-admin/src/components/questionAppealPresentation.batch10.test.ts
+?? apps/web-admin/src/components/questionAppealPresentation.ts
+?? apps/web-admin/src/components/responsiveTableInteraction.test.tsx
+?? apps/web-admin/src/components/responsiveTableInteraction.tsx
+?? apps/web-admin/src/components/structuredTeacherFieldRows.ts
+?? apps/web-admin/src/components/totpManagementPresentation.test.tsx
+?? apps/web-admin/src/components/totpManagementPresentation.tsx
+?? apps/web-admin/src/features/answer-groups/AnswerGroupManualHandoff.test.tsx
+?? apps/web-admin/src/features/answer-groups/AnswerGroupManualHandoff.tsx
+?? apps/web-admin/src/features/answer-groups/AnswerGroupSampleEvidence.tsx
+?? apps/web-admin/src/features/answer-groups/AnswerGroupingDrawer.test.tsx
+?? apps/web-admin/src/features/answer-groups/answer-grouping.css
+?? apps/web-admin/src/features/answer-sheet-template/answerSheetTemplatePage.batch7.test.tsx
+?? apps/web-admin/src/features/answer-sheet-template/calibration/useOMRCalibration.batch7.test.tsx
+?? apps/web-admin/src/features/answer-sheet-template/calibration/useOMRCalibration.request-generation.batch7.test.tsx
+?? apps/web-admin/src/features/answer-sheet-template/editor/templateLayoutReducer.batch7.test.ts
+?? apps/web-admin/src/features/answer-sheet-template/editor/useAnswerSheetSourceUpload.test.tsx
+?? apps/web-admin/src/features/answer-sheet-template/editor/useAnswerSheetSourceUpload.ts
+?? apps/web-admin/src/features/answer-sheet-template/editor/useRegionEditor.batch7.test.tsx
+?? apps/web-admin/src/features/answer-sheet-template/editor/useRegionSuggestion.batch7.test.tsx
+?? apps/web-admin/src/features/answer-sheet-template/editor/useTemplateEditor.test.tsx
+?? apps/web-admin/src/features/answer-sheet-template/editor/useTemplatePreview.ux.test.tsx
+?? apps/web-admin/src/features/answer-sheet-template/printing/useStudentPrinting.ux.test.tsx
+?? apps/web-admin/src/features/answer-sheet-template/testing/
+?? apps/web-admin/src/features/answer-sheet-template/view/
+?? apps/web-admin/src/features/appeals/
+?? apps/web-admin/src/features/calibration/CalibrationDrawer.test.tsx
+?? apps/web-admin/src/features/calibration/calibrationPresentation.test.ts
+?? apps/web-admin/src/features/capture/ExamCapturePage.test.tsx
+?? apps/web-admin/src/features/capture/ExamCapturePage.tsx
+?? apps/web-admin/src/features/capture/ImageQualityWorkspace.batch12.test.tsx
+?? apps/web-admin/src/features/capture/MatchingWorkspace.batch38.test.tsx
+?? apps/web-admin/src/features/capture/MatchingWorkspace.ux.test.tsx
+?? apps/web-admin/src/features/capture/captureColumns.batch38.test.tsx
+?? apps/web-admin/src/features/capture/submissionColumns.batch14.test.tsx
+?? apps/web-admin/src/features/capture/useCaptureBatchDetail.ux.test.tsx
+?? apps/web-admin/src/features/capture/useCaptureMatchActions.ux.test.tsx
+?? apps/web-admin/src/features/exams/create/CreateExamComposer.batch37.test.tsx
+?? apps/web-admin/src/features/exams/management/
+?? apps/web-admin/src/features/exams/workspace/ExamWorkspaceLayout.test.tsx
+?? apps/web-admin/src/features/grading/workbench/GradingWorkbench.batch8.test.tsx
+?? apps/web-admin/src/features/grading/workbench/aiAdoption.test.ts
+?? apps/web-admin/src/features/grading/workbench/aiAdoption.ts
+?? apps/web-admin/src/features/grading/workbench/assignmentPlan.ts
+?? apps/web-admin/src/features/grading/workbench/components/AnswerEvidencePane.batch13.test.tsx
+?? apps/web-admin/src/features/grading/workbench/components/AssignmentPreview.tsx
+?? apps/web-admin/src/features/grading/workbench/components/ExamScoringDialogs.tsx
+?? apps/web-admin/src/features/grading/workbench/components/ExamScoringOverview.tsx
+?? apps/web-admin/src/features/grading/workbench/components/ExamScoringPanel.batch8.test.tsx
+?? apps/web-admin/src/features/grading/workbench/components/FastConfirmDrawer.batch21.test.tsx
+?? apps/web-admin/src/features/grading/workbench/components/FastConfirmDrawer.session.test.tsx
+?? apps/web-admin/src/features/grading/workbench/components/FrozenQuestionReference.batch18.test.tsx
+?? apps/web-admin/src/features/grading/workbench/components/FrozenQuestionReference.test.tsx
+?? apps/web-admin/src/features/grading/workbench/components/FrozenQuestionReference.tsx
+?? apps/web-admin/src/features/grading/workbench/components/GradingViews.batch17.test.tsx
+?? apps/web-admin/src/features/grading/workbench/components/WorkbenchHeader.test.tsx
+?? apps/web-admin/src/features/grading/workbench/components/WorkbenchTaskContent.tsx
+?? apps/web-admin/src/features/grading/workbench/gradingUtilities.batch28.test.ts
+?? apps/web-admin/src/features/grading/workbench/hooks/gradingHooks.batch30.test.tsx
+?? apps/web-admin/src/features/grading/workbench/hooks/scoringCommand.defaultTransport.batch31.test.ts
+?? apps/web-admin/src/features/grading/workbench/hooks/useAnswerViewer.test.tsx
+?? apps/web-admin/src/features/grading/workbench/hooks/useGradingKeyboard.test.tsx
+?? apps/web-admin/src/features/grading/workbench/hooks/useGradingMathActions.session.test.tsx
+?? apps/web-admin/src/features/grading/workbench/hooks/useGradingQueue.productUx.test.tsx
+?? apps/web-admin/src/features/grading/workbench/hooks/useGradingQueueActions.session.test.tsx
+?? apps/web-admin/src/features/grading/workbench/hooks/useIndependentReviewGuard.ts
+?? apps/web-admin/src/features/grading/workbench/hooks/useMathWorkbenchEvidence.test.tsx
+?? apps/web-admin/src/features/grading/workbench/productUx.test.ts
+?? apps/web-admin/src/features/grading/workbench/shortcutPreference.ts
+?? apps/web-admin/src/features/grading/workbench/teacher-product-ux.css
+?? apps/web-admin/src/features/grading/workbench/workbenchDraftLifecycle.batch8.test.ts
+?? apps/web-admin/src/features/grading/workbench/workbenchDraftLifecycle.ts
+?? apps/web-admin/src/features/grading/workbench/workbenchPresentation.batch30.test.tsx
+?? apps/web-admin/src/features/grading/workbench/workbenchReviewState.batch8.test.ts
+?? apps/web-admin/src/features/grading/workbench/workbenchReviewState.ts
+?? apps/web-admin/src/features/members/teachers/TeacherManagementPage.batch10.test.tsx
+?? apps/web-admin/src/features/members/teachers/TeacherManagementPage.batch37.test.tsx
+?? apps/web-admin/src/features/members/teachers/TeacherManagementViews.tsx
+?? apps/web-admin/src/features/paper-import/PaperImportResults.tsx
+?? apps/web-admin/src/features/paper-import/PaperImportReviewComparison.tsx
+?? apps/web-admin/src/features/paper-import/PaperImportSourceList.tsx
+?? apps/web-admin/src/features/paper-import/PaperImportTextModal.tsx
+?? apps/web-admin/src/features/paper-import/PaperImportWorkspace.test.tsx
+?? apps/web-admin/src/features/paper-import/PaperStructurePanel.tsx
+?? apps/web-admin/src/features/paper-import/materials.progress.batch27.test.ts
+?? apps/web-admin/src/features/paper-import/paperImportPresentation.ts
+?? apps/web-admin/src/features/paper-import/reviewConfirmation.ts
+?? apps/web-admin/src/features/paper-import/usePaperConfigData.ux.test.tsx
+?? apps/web-admin/src/features/paper-import/usePaperImportWorkflow.batch43.test.tsx
+?? apps/web-admin/src/features/paper-import/usePaperImportWorkflow.conflict.test.tsx
+?? apps/web-admin/src/features/paper-import/useScoringRules.batch44.test.tsx
+?? apps/web-admin/src/features/paper-rubric/PaperQuestionDetail.tsx
+?? apps/web-admin/src/features/paper-rubric/PaperQuestionForm.tsx
+?? apps/web-admin/src/features/paper-rubric/PaperQuestionIndex.tsx
+?? apps/web-admin/src/features/paper-rubric/PaperRubricView.tsx
+?? apps/web-admin/src/features/paper-rubric/PaperScoringConfiguration.capability.test.tsx
+?? apps/web-admin/src/features/paper-rubric/PaperScoringConfiguration.tsx
+?? apps/web-admin/src/features/paper-rubric/hooks/useQuestionEditor.batch15.test.ts
+?? apps/web-admin/src/features/paper-rubric/paperQuestionPresentation.test.ts
+?? apps/web-admin/src/features/paper-rubric/paperQuestionPresentation.ts
+?? apps/web-admin/src/features/paper-rubric/paperRubricViewTypes.ts
+?? apps/web-admin/src/features/platform-model-config/components/modelConfigColumns.tsx
+?? apps/web-admin/src/features/platform-model-config/lib/modelConfigLocation.ts
+?? apps/web-admin/src/features/platform/schools/SchoolCreatedReceipt.tsx
+?? apps/web-admin/src/features/platform/schools/SchoolMembersUx.test.tsx
+?? apps/web-admin/src/features/platform/schools/SchoolModelsTab.test.tsx
+?? apps/web-admin/src/features/platform/schools/SchoolSummaryTable.test.tsx
+?? apps/web-admin/src/features/platform/schools/SchoolTabs.batch16.test.tsx
+?? apps/web-admin/src/features/platform/schools/SchoolUsageUx.test.tsx
+?? apps/web-admin/src/features/platform/schools/schoolCreatedReceipt.css
+?? apps/web-admin/src/features/question-bank/HistoryImportPresentation.tsx
+?? apps/web-admin/src/features/question-bank/QuestionBankACL.ux.test.tsx
+?? apps/web-admin/src/features/question-bank/QuestionBankClassificationFields.tsx
+?? apps/web-admin/src/features/question-bank/QuestionBankClassificationFields.ux.test.tsx
+?? apps/web-admin/src/features/question-bank/QuestionBankPage.batch45.test.tsx
+?? apps/web-admin/src/features/question-bank/QuestionBankPage.recovery.test.tsx
+?? apps/web-admin/src/features/question-bank/QuestionBankPanels.tsx
+?? apps/web-admin/src/features/question-bank/historyImportCommands.ts
+?? apps/web-admin/src/features/question-bank/questionBank.batch7.test.tsx
+?? apps/web-admin/src/features/question-bank/questionBankMembers.ts
+?? apps/web-admin/src/features/question-bank/questionBankWorkspaceTypes.ts
+?? apps/web-admin/src/features/school-assistant/
+?? apps/web-admin/src/features/score-management/components/RegradeCandidateEvidence.tsx
+?? apps/web-admin/src/features/score-management/components/ScoreActionsPanel.test.tsx
+?? apps/web-admin/src/features/score-management/components/ScoreActionsPanel.tsx
+?? apps/web-admin/src/features/score-management/components/ScoreReleaseWorkspace.test.tsx
+?? apps/web-admin/src/features/score-management/components/StudentScorePreviewDialog.test.tsx
+?? apps/web-admin/src/features/score-management/components/StudentScorePreviewDialog.tsx
+?? apps/web-admin/src/features/score-management/components/student-score-preview.css
+?? apps/web-admin/src/features/score-management/hooks/scoreReleaseVisibility.test.ts
+?? apps/web-admin/src/features/score-management/hooks/scoreWorkspaceState.batch36.test.ts
+?? apps/web-admin/src/features/score-management/hooks/useRegradeWorkflow.batch36.test.tsx
+?? apps/web-admin/src/features/score-management/hooks/useScoreAction.test.tsx
+?? apps/web-admin/src/features/score-management/hooks/useScoreAction.ts
+?? apps/web-admin/src/features/score-management/hooks/useScoreReleaseWorkflow.appeal.test.tsx
+?? apps/web-admin/src/features/score-management/scoreColumns.test.tsx
+?? apps/web-admin/src/features/score-management/scoreColumns.tsx
+?? apps/web-admin/src/features/score-management/scorePresentation.test.ts
+?? apps/web-admin/src/pages/AdminGradingOperationsPage.batch22.test.tsx
+?? apps/web-admin/src/pages/ArbitrationDecisionPanel.tsx
+?? apps/web-admin/src/pages/ArbitrationPage.batch9.test.tsx
+?? apps/web-admin/src/pages/ArbitrationPage.semantic.batch9.test.tsx
+?? apps/web-admin/src/pages/ArbitrationPanels.ux.test.tsx
+?? apps/web-admin/src/pages/ArbitrationTaskRail.tsx
+?? apps/web-admin/src/pages/ArbitrationWorkspaceMain.tsx
+?? apps/web-admin/src/pages/AuditLogPage.batch20.test.tsx
+?? apps/web-admin/src/pages/CaptureBatchPage.batch16.test.tsx
+?? apps/web-admin/src/pages/ExamManagementPage.test.tsx
+?? apps/web-admin/src/pages/ExamReadinessFreeze.test.tsx
+?? apps/web-admin/src/pages/LearningReportsPage.ux.test.tsx
+?? apps/web-admin/src/pages/OrganizationSetupPage.test.tsx
+?? apps/web-admin/src/pages/PanelModelBindingsSection.test.tsx
+?? apps/web-admin/src/pages/PaperRubricPage.batch42.test.tsx
+?? apps/web-admin/src/pages/PaperRubricPage.test.tsx
+?? apps/web-admin/src/pages/PlatformModelConfigPage.test.tsx
+?? apps/web-admin/src/pages/QualityDashboardPage.batch11.test.tsx
+?? apps/web-admin/src/pages/QualityDashboardViews.tsx
+?? apps/web-admin/src/pages/QuestionAppealCenterPage.test.tsx
+?? apps/web-admin/src/pages/QuestionAppealCenterPage.tsx
+?? apps/web-admin/src/pages/SubmissionCapturePage.batch9.test.tsx
+?? apps/web-admin/src/pages/SubmissionCaptureViews.tsx
+?? apps/web-admin/src/pages/SystemStatusPage.batch10.test.tsx
+?? apps/web-admin/src/pages/TeacherDashboardPage.batch12.test.tsx
+?? apps/web-admin/src/pages/arbitrationQueue.batch9.test.ts
+?? apps/web-admin/src/pages/arbitrationQueue.model.ts
+?? apps/web-admin/src/query/reviewTaskContext.test.ts
+?? apps/web-admin/src/router/pageRendering.test.tsx
+?? apps/web-admin/src/router/pageRendering.tsx
+?? apps/web-admin/src/router/routerBoundary.batch44.test.tsx
+?? apps/web-admin/src/router/useUnsavedChangesGuard.test.tsx
+?? apps/web-admin/src/router/useUnsavedChangesGuard.ts
+?? apps/web-admin/vitest.config.ts
+?? docs/api/exam-management.md
+?? docs/api/school-assistant.md
+?? docs/design-reviews/2026-09-30-role-ui-implementation.md
+?? docs/design-reviews/2026-10-01-school-admin-ai-assistant.md
+?? docs/design-reviews/2026-10-02-school-admin-ai-assistant-implementation.md
+?? docs/design-reviews/2026-10-02-school-admin-ai-conversation.md
+?? docs/design-reviews/2026-10-06-role-ux-fixes.md
+?? docs/design-reviews/2026-10-06-role-ux-follow-up-fixes.md
+?? docs/design-reviews/2026-10-06-role-ux-r1-r4-fixes.md
+?? docs/design-reviews/2026-10-06-role-ux-r11-r13-fixes.md
+?? docs/design-reviews/2026-10-06-role-ux-r5-r7-fixes.md
+?? docs/design-reviews/2026-10-06-role-ux-r8-r10-fixes.md
+?? docs/design-reviews/2026-10-08-ux-remediation-file-status.csv
+?? docs/design-reviews/2026-10-08-ux-remediation-status.md
+?? docs/design-reviews/2026-10-09-ux-followup-contract-notes.md
+?? docs/engineering/markdown-rendering.md
+?? docs/engineering/material-paper-structure.md
+?? docs/engineering/recognized-answer-content.md
+?? docs/engineering/school-assistant-integration.md
+?? frontend-review-report/
+?? lab/evals/math-recognition/test_math_batch28.py
+?? lab/tests/quality-gates.batch25.test.js
+?? lab/tests/script-redaction.batch27.test.js
+?? lab/tests/verification.batch26.test.js
+?? scripts/ci/openapi-sdk.batch20.test.mjs
+?? scripts/ci/user-facing-copy.test.mjs
+?? scripts/test_fujian_math_batch29.py
+?? services/api-gateway/internal/aidisagreement/service_batch25_test.go
+?? services/api-gateway/internal/aieligibility/service_batch25_test.go
+?? services/api-gateway/internal/answergroup/algorithm_test.go
+?? services/api-gateway/internal/answergroup/member_context.go
+?? services/api-gateway/internal/answergroup/member_manual_review_test.go
+?? services/api-gateway/internal/apicontract/question_appeal_opinion_handler_schema_test.go
+?? services/api-gateway/internal/apicontract/school_conversation_openapi_test.go
+?? services/api-gateway/internal/appeal/published_question_opinion.go
+?? services/api-gateway/internal/appeal/published_question_opinion_test.go
+?? services/api-gateway/internal/appeal/published_question_store_postgres_test.go
+?? services/api-gateway/internal/appeal/published_question_workflow_regression_test.go
+?? services/api-gateway/internal/appeal/store_memory_batch27_test.go
+?? services/api-gateway/internal/auth/archive_boundary.go
+?? services/api-gateway/internal/auth/archive_boundary_test.go
+?? services/api-gateway/internal/auth/handler_options_batch30_test.go
+?? services/api-gateway/internal/auth/login_service_batch21_test.go
+?? services/api-gateway/internal/auth/managed_access_batch17_test.go
+?? services/api-gateway/internal/auth/managed_access_handler.go
+?? services/api-gateway/internal/auth/managed_access_policy.go
+?? services/api-gateway/internal/auth/managed_access_store.go
+?? services/api-gateway/internal/auth/managed_access_test.go
+?? services/api-gateway/internal/auth/messages.go
+?? services/api-gateway/internal/auth/store_memory_filters_test.go
+?? services/api-gateway/internal/backmark/service_batch19_test.go
+?? services/api-gateway/internal/backmark/store_memory_batch27_test.go
+?? services/api-gateway/internal/calibration/service_batch25_test.go
+?? services/api-gateway/internal/calibration/service_batch41_test.go
+?? services/api-gateway/internal/capture/store_memory_batch_cursor_test.go
+?? services/api-gateway/internal/capture/store_refactor_test.go
+?? services/api-gateway/internal/capture/target.go
+?? services/api-gateway/internal/commandreceipt/receipt_batch31_test.go
+?? services/api-gateway/internal/evidence/engine_boundaries_test.go
+?? services/api-gateway/internal/exam/archive_release_policy_batch30_test.go
+?? services/api-gateway/internal/exam/management_archive_bulk.go
+?? services/api-gateway/internal/exam/management_archive_handlers.go
+?? services/api-gateway/internal/exam/management_archive_memory.go
+?? services/api-gateway/internal/exam/management_archive_postgres.go
+?? services/api-gateway/internal/exam/management_archive_test.go
+?? services/api-gateway/internal/exam/management_archive_types.go
+?? services/api-gateway/internal/exam/management_handlers.go
+?? services/api-gateway/internal/exam/management_memory.go
+?? services/api-gateway/internal/exam/management_postgres.go
+?? services/api-gateway/internal/exam/management_progress.go
+?? services/api-gateway/internal/exam/management_progress_batch8_test.go
+?? services/api-gateway/internal/exam/management_result.go
+?? services/api-gateway/internal/exam/management_result_test.go
+?? services/api-gateway/internal/exam/management_test.go
+?? services/api-gateway/internal/exam/management_types.go
+?? services/api-gateway/internal/exam/management_validation_batch9_test.go
+?? services/api-gateway/internal/exam/store_archive_memory_batch29_test.go
+?? services/api-gateway/internal/files/reconciliation_batch21_test.go
+?? services/api-gateway/internal/files/upload_batch31_test.go
+?? services/api-gateway/internal/goldpaper/coverage_batch26_test.go
+?? services/api-gateway/internal/graderdrift/service_batch18_test.go
+?? services/api-gateway/internal/grading/scoring_assessment_mode_contract_test.go
+?? services/api-gateway/internal/grading/scoring_capability_matrix_contract_test.go
+?? services/api-gateway/internal/gradingdisagreement/engine_batch26_test.go
+?? services/api-gateway/internal/gradingevaluation/panel_batch27_test.go
+?? services/api-gateway/internal/gradingevaluation/service_batch18_test.go
+?? services/api-gateway/internal/idempotency/middleware_batch29_test.go
+?? services/api-gateway/internal/imagequality/result_order_batch30_test.go
+?? services/api-gateway/internal/mathunderstanding/graphs_batch26_test.go
+?? services/api-gateway/internal/mathunderstanding/rubric_batch7_test.go
+?? services/api-gateway/internal/mathunderstanding/spatial_batch27_test.go
+?? services/api-gateway/internal/mathunderstanding/symbolic_projection_batch30_test.go
+?? services/api-gateway/internal/mathunderstanding/types_batch20_test.go
+?? services/api-gateway/internal/mathunderstanding/verification_runtime_batch8_test.go
+?? services/api-gateway/internal/modelgovernance/governance_routing_state_refactor_test.go
+?? services/api-gateway/internal/modelgovernance/managed_agent.go
+?? services/api-gateway/internal/modelgovernance/managed_agent_http.go
+?? services/api-gateway/internal/modelgovernance/managed_agent_http_test.go
+?? services/api-gateway/internal/modelgovernance/managed_agent_refactor_test.go
+?? services/api-gateway/internal/modelgovernance/managed_agent_stream.go
+?? services/api-gateway/internal/modelgovernance/managed_governance_refactor_test.go
+?? services/api-gateway/internal/modelgovernance/role_binding_concurrency_test.go
+?? services/api-gateway/internal/ocr/handlers_atomicity_batch45_test.go
+?? services/api-gateway/internal/ocr/runtime_coordinator_batch24_test.go
+?? services/api-gateway/internal/org/readiness_batch27_test.go
+?? services/api-gateway/internal/org/store_memory_batch24_test.go
+?? services/api-gateway/internal/paper/document_import_batch23_test.go
+?? services/api-gateway/internal/paper/document_import_batch24_test.go
+?? services/api-gateway/internal/paper/document_import_batch25_test.go
+?? services/api-gateway/internal/paper/document_parser_client_batch43_test.go
+?? services/api-gateway/internal/paper/document_rubric_draft_batch42_test.go
+?? services/api-gateway/internal/paper/document_visual_loader_batch43_test.go
+?? services/api-gateway/internal/paper/paper_import_batch42_test.go
+?? services/api-gateway/internal/paper/paper_import_content.go
+?? services/api-gateway/internal/paper/paper_import_content_batch32_test.go
+?? services/api-gateway/internal/paper/paper_import_content_handlers_test.go
+?? services/api-gateway/internal/paper/paper_import_content_postgres.go
+?? services/api-gateway/internal/paper/paper_import_content_test.go
+?? services/api-gateway/internal/paper/paper_import_parse_batch33_test.go
+?? services/api-gateway/internal/paper/paper_import_postgres_batch10_test.go
+?? services/api-gateway/internal/paper/paper_import_reconcile_refactor_test.go
+?? services/api-gateway/internal/paper/paper_import_review_cas_test.go
+?? services/api-gateway/internal/paper/paper_import_runtime_batch11_test.go
+?? services/api-gateway/internal/paper/paper_import_structure.go
+?? services/api-gateway/internal/paper/paper_import_structure_batch37_test.go
+?? services/api-gateway/internal/paper/paper_import_structure_handlers.go
+?? services/api-gateway/internal/paper/paper_import_structure_handlers_test.go
+?? services/api-gateway/internal/paper/paper_import_structure_postgres.go
+?? services/api-gateway/internal/paper/paper_import_structure_test.go
+?? services/api-gateway/internal/paper/paper_purpose.go
+?? services/api-gateway/internal/paper/paper_purpose_handlers_test.go
+?? services/api-gateway/internal/paper/paper_purpose_test.go
+?? services/api-gateway/internal/paper/paper_structure_readiness.go
+?? services/api-gateway/internal/paper/readiness_assessment_facts.go
+?? services/api-gateway/internal/paper/readiness_assessment_facts_test.go
+?? services/api-gateway/internal/paper/readiness_confirmation_test.go
+?? services/api-gateway/internal/paper/readiness_scoring_policy.go
+?? services/api-gateway/internal/paper/readiness_scoring_policy_test.go
+?? services/api-gateway/internal/platformschools/members_ux_test.go
+?? services/api-gateway/internal/processing/actors.go
+?? services/api-gateway/internal/processing/archive_boundary.go
+?? services/api-gateway/internal/processing/context.go
+?? services/api-gateway/internal/processing/list_presentation_test.go
+?? services/api-gateway/internal/processing/store_memory_batch28_test.go
+?? services/api-gateway/internal/questionbank/acl_preservation_ux_test.go
+?? services/api-gateway/internal/questionbank/content_acl_scoring_batch25_test.go
+?? services/api-gateway/internal/questionbank/members.go
+?? services/api-gateway/internal/questionbank/members_batch41_test.go
+?? services/api-gateway/internal/questionbank/members_identity_test.go
+?? services/api-gateway/internal/questionbank/members_ux_test.go
+?? services/api-gateway/internal/questionbank/metadata_batch23_test.go
+?? services/api-gateway/internal/questionbank/mutation_batch28_test.go
+?? services/api-gateway/internal/questionbank/postgres_batch22_test.go
+?? services/api-gateway/internal/questionbank/scoring_batch19_test.go
+?? services/api-gateway/internal/report/store_memory_batch28_test.go
+?? services/api-gateway/internal/review/actors.go
+?? services/api-gateway/internal/review/arbitration_context_ux_test.go
+?? services/api-gateway/internal/review/list_batch18_test.go
+?? services/api-gateway/internal/review/product_ux_test.go
+?? services/api-gateway/internal/review/review_workbench_batch38_test.go
+?? services/api-gateway/internal/review/store_postgres_batch34_test.go
+?? services/api-gateway/internal/reviewannotation/student_release_postgres_test.go
+?? services/api-gateway/internal/reviewannotation/student_release_version_test.go
+?? services/api-gateway/internal/schoolassistant/
+?? services/api-gateway/internal/scorerelease/store_postgres_dashboard_test.go
+?? services/api-gateway/internal/scorerelease/student_analytics_batch27_test.go
+?? services/api-gateway/internal/scorerelease/student_preview.go
+?? services/api-gateway/internal/scorerelease/student_preview_batch17_test.go
+?? services/api-gateway/internal/scorerelease/student_preview_test.go
+?? services/api-gateway/internal/scorerelease/student_release_version.go
+?? services/api-gateway/internal/scorerelease/student_release_version_test.go
+?? services/api-gateway/internal/scorerelease/student_session_integration_test.go
+?? services/api-gateway/internal/scorerelease/student_session_postgres.go
+?? services/api-gateway/internal/scorerelease/student_ux_test.go
+?? services/api-gateway/internal/server/e2e_exam_archive_commands_test.go
+?? services/api-gateway/internal/server/e2e_exam_management_test.go
+?? services/api-gateway/internal/server/e2e_question_bank_acl_ux_test.go
+?? services/api-gateway/internal/server/interaction_scope_test.go
+?? services/api-gateway/internal/server/module_school_assistant.go
+?? services/api-gateway/internal/server/routes_school_assistant.go
+?? services/api-gateway/internal/server/school_assistant_routes_test.go
+?? services/api-gateway/internal/server/student_preview_route_test.go
+?? services/api-gateway/internal/subjective/grading_agent_v2_builder_batch35_test.go
+?? services/api-gateway/internal/subjective/math_evidence_batch35_test.go
+?? services/api-gateway/internal/subjective/panel_batch36_test.go
+?? services/api-gateway/internal/submission/store_memory_batch28_test.go
+?? services/api-gateway/internal/taskmaterials/
+?? services/api-gateway/internal/workerruntime/scope_claim_metrics_batch26_test.go
+?? services/api-gateway/internal/workflowactors/
+?? services/api-gateway/internal/workspace/archive.go
+?? services/api-gateway/internal/workspace/archive_test.go
+?? services/api-gateway/internal/workspace/service_batch24_test.go
+?? services/api-gateway/migrations/000181_paper_material_structure.sql
+?? services/api-gateway/migrations/000182_answer_sheet_source_purpose.sql
+?? services/api-gateway/migrations/000183_exam_management_archive.sql
+?? services/api-gateway/migrations/000184_model_role_binding_revision.sql
+?? services/api-gateway/tools/import-fujian-2024-math-simulation/crop_batch10_test.go
+?? services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_adapter_test.go
+?? services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go
+?? services/image-quality-worker/tests/test_quality_measurement_boundaries.py
+?? services/image-quality-worker/tests/test_report_batch40.py
+?? services/math-verification-worker/tests/test_verification_batch38.py
+?? services/ocr-worker/tests/test_formula_validation_batch19.py
+?? services/ocr-worker/tests/test_ocr_adapters_batch33.py
+?? services/ocr-worker/tests/test_ocr_artifacts_batch39.py
+?? services/ocr-worker/tests/test_ocr_workflows_batch37.py
+?? services/ocr-worker/tests/test_paper_formula_batch35.py
+?? services/ocr-worker/tests/test_recognition_router_batch32.py
+?? services/ocr-worker/tests/test_startup_batch36.py
+?? services/page-processing-worker/tests/test_api_batch31.py
+?? services/page-processing-worker/tests/test_decoder_batch31.py
+?? services/page-processing-worker/tests/test_external_omr_batch40.py
+?? services/page-processing-worker/tests/test_omr_batch31.py
+?? services/page-processing-worker/tests/test_runner_state_boundaries.py
+?? tests/e2e/specs/assessment-defaults.spec.ts
+?? tests/e2e/specs/assessment-subject-guidance.spec.ts
+?? tests/e2e/specs/platform-bindings-concurrency.spec.ts

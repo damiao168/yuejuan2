@@ -1,14 +1,12 @@
 import { EduGradeApi } from "@edugrade/sdk";
 import type {
   CreateGoldPaperVersionRequest,
-  GoldCoverage,
-  GoldPaper,
   GoldPaperStatus,
   NominateGoldPaperRequest
 } from "@edugrade/sdk";
 import { apiClient } from "./client";
 
-export type { CreateGoldPaperVersionRequest, GoldCoverage, GoldPaper, GoldPaperStatus, NominateGoldPaperRequest };
+export type { CreateGoldPaperVersionRequest, GoldCoverage, GoldPaper, GoldPaperStatus, NominateGoldPaperRequest } from "@edugrade/sdk";
 
 const goldPaperApi = new EduGradeApi(apiClient);
 

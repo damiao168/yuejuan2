@@ -53,8 +53,9 @@ class ContractV2Tests(unittest.TestCase):
             ("invalid-request-whole-page.json", "near-whole-page"),
         )
         for name, message in cases:
+            request = fixture(name)
             with self.subTest(name=name), self.assertRaisesRegex(AgentError, message):
-                validate_request_v2(fixture(name))
+                validate_request_v2(request)
 
     def test_media_content_attestations_are_recomputed(self):
         cases = (
@@ -69,6 +70,34 @@ class ContractV2Tests(unittest.TestCase):
             request["media_evidence"][field] = value
             with self.subTest(field=field), self.assertRaisesRegex(AgentError, message):
                 validate_request_v2(request)
+
+    def test_media_metadata_and_bbox_fail_before_decoding_content(self):
+        for media_changes, message in (
+            ({"width_pixels": 0, "data_base64": "not-base64"}, "dimensions are invalid"),
+            ({"normalized_bbox": {"x": 0, "y": 0, "width": 1, "height": 1}, "data_base64": "not-base64"}, "near-whole-page"),
+        ):
+            request = fixture("valid-request.json")
+            request["media_evidence"].update(media_changes)
+            with self.subTest(message=message), self.assertRaisesRegex(AgentError, message):
+                validate_request_v2(request)
+
+    def test_math_formulas_cannot_reuse_a_step_identity(self):
+        request = fixture("valid-request.json")
+        formula = request["math_evidence"]["formulas"][0]
+        formula["id"] = request["math_evidence"]["steps"][0]["id"]
+        with self.assertRaisesRegex(AgentError, "formula identity or status"):
+            validate_request_v2(request)
+
+    def test_reference_solution_error_precedes_answer_part_error(self):
+        request = fixture("valid-request.json")
+        request["reference_context"] = {
+            "source": "confirmed_exam_import_snapshot", "snapshot_hash": "a" * 64,
+            "standard_answer": None, "equivalent_answers": [], "solution_text": "",
+            "solution_steps": [{"step_no": False, "content": "work"}],
+            "answer_parts": [{"part_no": 2, "answer_text": "answer"}],
+        }
+        with self.assertRaisesRegex(AgentError, "solution_steps.step_no"):
+            validate_request_v2(request)
 
     def test_unknown_storage_and_identity_fields_are_rejected(self):
         for field in ("url", "storage_key", "student_name", "final_score"):
@@ -111,8 +140,9 @@ class ContractV2Tests(unittest.TestCase):
 
     def test_v2_remains_unreachable_from_the_v1_application(self):
         app = GradingAgentApplication(settings(), model=FakeModel())
+        request = fixture('valid-request.json')
         with self.assertRaises(AgentError) as caught:
-            app.grade(fixture("valid-request.json"), "subjective-grade-image-0001")
+            app.grade(request, 'subjective-grade-image-0001')
         self.assertEqual(caught.exception.code, "invalid_request")
 
 

@@ -56,10 +56,8 @@ type ExamQuestionSnapshot struct {
 	CreatedAt             time.Time      `json:"created_at"`
 }
 
-// UnmarshalJSON accepts both the public API shape and PostgreSQL to_jsonb(row)
-// output. Persisted snapshot columns use a _json suffix and keep profile
-// identity inside profile_snapshot_json; consumers still receive one stable
-// domain shape without consulting mutable profile tables.
+// UnmarshalJSON 同时接受公开 API 结构和 PostgreSQL to_jsonb(row) 输出。
+// 持久化快照列使用 _json 后缀，配置身份保存在 profile_snapshot_json；使用方无需查询可变配置表，仍能获得稳定的领域结构。
 func (s *ExamQuestionSnapshot) UnmarshalJSON(data []byte) error {
 	type snapshotAlias ExamQuestionSnapshot
 	aux := struct {

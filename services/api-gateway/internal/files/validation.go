@@ -12,6 +12,12 @@ import (
 	"unicode/utf8"
 )
 
+const (
+	contentTypeTIFF      = "image/tiff"
+	contentTypePlainText = "text/plain"
+	contentTypePlainUTF8 = "text/plain; charset=utf-8"
+)
+
 var allowedOwnerTypes = map[string]bool{
 	"generic":                              true,
 	"exam":                                 true,
@@ -44,35 +50,35 @@ var allowedContentTypesByExt = map[string]map[string]bool{
 		"image/jpeg": true,
 	},
 	".tif": {
-		"image/tiff": true,
+		contentTypeTIFF: true,
 	},
 	".tiff": {
-		"image/tiff": true,
+		contentTypeTIFF: true,
 	},
 	".csv": {
-		"text/csv":                  true,
-		"text/csv; charset=utf-8":   true,
-		"text/plain; charset=utf-8": true,
-		"text/plain":                true,
-		"application/vnd.ms-excel":  true,
+		"text/csv":                 true,
+		"text/csv; charset=utf-8":  true,
+		contentTypePlainUTF8:       true,
+		contentTypePlainText:       true,
+		"application/vnd.ms-excel": true,
 	},
 	".docx": {
 		"application/vnd.openxmlformats-officedocument.wordprocessingml.document": true,
 		"application/zip": true,
 	},
 	".txt": {
-		"text/plain":                true,
-		"text/plain; charset=utf-8": true,
+		contentTypePlainText: true,
+		contentTypePlainUTF8: true,
 	},
 	".md": {
-		"text/plain":                   true,
-		"text/plain; charset=utf-8":    true,
+		contentTypePlainText:           true,
+		contentTypePlainUTF8:           true,
 		"text/markdown":                true,
 		"text/markdown; charset=utf-8": true,
 	},
 	".markdown": {
-		"text/plain":                   true,
-		"text/plain; charset=utf-8":    true,
+		contentTypePlainText:           true,
+		contentTypePlainUTF8:           true,
 		"text/markdown":                true,
 		"text/markdown; charset=utf-8": true,
 	},
@@ -131,8 +137,7 @@ func ValidateFileType(filename string, declaredContentType string, sniffedConten
 	}
 	declaredContentType = strings.ToLower(strings.TrimSpace(declaredContentType))
 	sniffedContentType = strings.ToLower(strings.TrimSpace(sniffedContentType))
-	// Browsers and generic multipart clients commonly send this placeholder;
-	// it carries no trustworthy type information, so defer to server sniffing.
+	// 浏览器和通用 multipart 客户端常发送此占位值；它不提供可信类型信息，因此交由服务端内容检测判断。
 	if declaredContentType == "application/octet-stream" {
 		declaredContentType = ""
 	}
@@ -164,18 +169,17 @@ func SniffContentType(sample []byte) string {
 		return ""
 	}
 	if len(sample) >= 4 && ((sample[0] == 'I' && sample[1] == 'I' && sample[2] == 42 && sample[3] == 0) || (sample[0] == 'M' && sample[1] == 'M' && sample[2] == 0 && sample[3] == 42)) {
-		return "image/tiff"
+		return contentTypeTIFF
 	}
 	return http.DetectContentType(sample)
 }
 
-// SniffFileContentType keeps server-side inspection authoritative while
-// treating UTF-8 Markdown and plain text as text even when the generic MIME
-// sniffer encounters Markdown HTML or clipboard control whitespace.
+// SniffFileContentType 以服务端检查为准；
+// 即使通用 MIME 检测遇到 Markdown HTML 或剪贴板控制空白，也将 UTF-8 Markdown 和纯文本视为文本。
 func SniffFileContentType(filename string, sample []byte) string {
 	ext := strings.ToLower(filepath.Ext(filename))
 	if (ext == ".txt" || ext == ".md" || ext == ".markdown") && looksLikeUTF8Text(sample) {
-		return "text/plain; charset=utf-8"
+		return contentTypePlainUTF8
 	}
 	return SniffContentType(sample)
 }
@@ -192,8 +196,7 @@ func looksLikeUTF8Text(sample []byte) bool {
 	if utf8.Valid(sample) {
 		return true
 	}
-	// The 512-byte inspection window may end in the middle of a valid UTF-8
-	// rune. Accept only that specific incomplete-tail case.
+	// 512 字节检查窗口可能截断有效 UTF-8 字符；只接受这种尾部不完整的特定情况。
 	for tailLength := 1; tailLength < utf8.UTFMax && tailLength <= len(sample); tailLength++ {
 		cut := len(sample) - tailLength
 		tail := sample[cut:]

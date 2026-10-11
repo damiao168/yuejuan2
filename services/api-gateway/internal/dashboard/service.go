@@ -38,7 +38,7 @@ func NewService(deps Dependencies) *Service {
 	return &Service{deps: deps}
 }
 
-// 汇总严格沿用请求上下文中的 AccessScope；单项数据源失败时保留可用统计并返回中文告警。
+// Summary 沿用请求上下文中的 AccessScope；可降级的数据源失败时保留可用统计并返回中文告警。
 func (s *Service) Summary(ctx context.Context, user auth.User, accessScope auth.AccessScope) (Summary, error) {
 	if s.deps.Exams == nil || s.deps.Submissions == nil || s.deps.Reviews == nil || s.deps.Audits == nil {
 		return Summary{}, fmt.Errorf("dashboard dependencies are incomplete")
@@ -60,79 +60,16 @@ func (s *Service) Summary(ctx context.Context, user auth.User, accessScope auth.
 		Warnings:         []string{},
 	}
 
-	if s.deps.Organizations == nil {
-		result.Warnings = append(result.Warnings, "成员基础数据暂时无法统计")
-	} else {
-		organizationStatistics, organizationErr := s.deps.Organizations.DashboardOrganizationSummary(ctx, user.TenantID, accessScope)
-		if organizationErr != nil {
-			result.Warnings = append(result.Warnings, "成员基础数据暂时无法统计")
-		} else {
-			result.OrganizationStatistics = organizationStatistics
-		}
-	}
+	s.applyOrganizationSummary(ctx, user.TenantID, accessScope, &result)
 
 	exams, err := s.deps.Exams.ListExams(ctx, accessScope, exam.ListFilter{SchoolID: result.Scope.SchoolID})
 	if err != nil {
 		return Summary{}, fmt.Errorf("list dashboard exams: %w", err)
 	}
 
-	submissionByExam := make(map[string][]submission.Submission, len(exams))
-	if batchLister, ok := s.deps.Submissions.(submission.ExamBatchLister); ok {
-		examIDs := make([]string, 0, len(exams))
-		for _, item := range exams {
-			examIDs = append(examIDs, item.ID)
-		}
-		if items, listErr := batchLister.ListByExams(ctx, user.TenantID, examIDs); listErr != nil {
-			result.Warnings = append(result.Warnings, "部分答题卡状态暂时无法统计")
-		} else {
-			submissionByExam = items
-		}
-	} else {
-		for _, item := range exams {
-			items, listErr := s.deps.Submissions.ListByExam(ctx, user.TenantID, item.ID, submission.ListFilter{})
-			if listErr != nil {
-				result.Warnings = append(result.Warnings, "部分答题卡状态暂时无法统计")
-				continue
-			}
-			submissionByExam[item.ID] = items
-		}
-	}
-
-	for _, item := range exams {
-		if item.Status == "finalized" {
-			result.Statistics.FinalizedExamCount++
-		}
-		if item.Status == "collecting" {
-			result.Statistics.CollectingExamCount++
-		}
-		if item.Status == "published" || item.Status == "archived" {
-			continue
-		}
-		result.Statistics.ActiveExamCount++
-		active := ActiveExam{
-			ID:        item.ID,
-			Name:      item.Name,
-			Subject:   item.Subject,
-			Status:    item.Status,
-			CreatedAt: item.CreatedAt,
-		}
-		for _, answerSheet := range submissionByExam[item.ID] {
-			active.SubmissionCount++
-			if submissionFailed(answerSheet) {
-				active.FailedCount++
-				result.Statistics.FailedSubmissionCount++
-			}
-			if answerSheet.StudentID == "" {
-				active.UnmatchedCount++
-				result.Statistics.UnmatchedSubmissionCount++
-			}
-			if len(answerSheet.QualityIssues) > 0 || answerSheet.QualityStatus == "failed" || answerSheet.QualityStatus == "review" {
-				active.QualityIssueCount++
-				result.Statistics.QualityIssueSubmissionCount++
-			}
-		}
-		result.ActiveExams = append(result.ActiveExams, active)
-	}
+	submissionByExam, submissionWarnings := s.submissionsByExam(ctx, user.TenantID, exams)
+	result.Warnings = append(result.Warnings, submissionWarnings...)
+	appendExamStatistics(exams, submissionByExam, &result)
 
 	tasks, taskErr := s.deps.Reviews.ListTasks(ctx, user.TenantID, review.ListFilter{
 		ScopeMode: accessScope.QueryMode(), ScopeActorID: accessScope.ActorID,
@@ -143,15 +80,7 @@ func (s *Service) Summary(ctx context.Context, user auth.User, accessScope auth.
 	if taskErr != nil {
 		result.Warnings = append(result.Warnings, "阅卷待办暂时无法统计")
 	} else {
-		submissions := map[string]struct{}{}
-		for _, task := range tasks {
-			if task.Status == "submitted" || task.Status == "completed" {
-				continue
-			}
-			result.Statistics.PendingReviewQuestionCount++
-			submissions[task.SubmissionID] = struct{}{}
-		}
-		result.Statistics.PendingReviewSubmissionCount = len(submissions)
+		result.Statistics.PendingReviewQuestionCount, result.Statistics.PendingReviewSubmissionCount = pendingReviewCounts(tasks)
 	}
 
 	arbitrations, arbitrationErr := s.deps.Reviews.ListArbitrationTasks(ctx, user.TenantID, review.ArbitrationFilter{
@@ -163,46 +92,11 @@ func (s *Service) Summary(ctx context.Context, user auth.User, accessScope auth.
 	if arbitrationErr != nil {
 		result.Warnings = append(result.Warnings, "人工复核待办暂时无法统计")
 	} else {
-		submissions := map[string]struct{}{}
-		for _, task := range arbitrations {
-			if task.Status == "completed" || task.Status == "cancelled" {
-				continue
-			}
-			result.Statistics.PendingArbitrationCount++
-			submissions[task.SubmissionID] = struct{}{}
-		}
-		result.Statistics.PendingArbitrationSubmissionCount = len(submissions)
+		result.Statistics.PendingArbitrationCount, result.Statistics.PendingArbitrationSubmissionCount = pendingArbitrationCounts(arbitrations)
 	}
 
 	var activityErr error
-	if s.deps.Activities != nil {
-		result.RecentActivities, activityErr = s.deps.Activities.ListRecent(ctx, user.TenantID, accessScope, 5)
-	} else if accessScope.IsPlatform || accessScope.TenantWide {
-		var audits []auth.AuditRecord
-		var auditErr error
-		audits, auditErr = s.deps.Audits.ListAudits(ctx, user.TenantID, auth.AuditFilter{Limit: 10})
-		if auditErr != nil {
-			activityErr = auditErr
-		} else {
-			for _, record := range audits {
-				if !dashboardActivity(record.Action) {
-					continue
-				}
-				result.RecentActivities = append(result.RecentActivities, RecentActivity{
-					ID:            record.ID,
-					Action:        record.Action,
-					TargetType:    record.TargetType,
-					TargetID:      record.TargetID,
-					Reason:        record.Reason,
-					CreatedAt:     record.CreatedAt,
-					DrilldownPath: activityPath(record),
-				})
-				if len(result.RecentActivities) == 5 {
-					break
-				}
-			}
-		}
-	}
+	result.RecentActivities, activityErr = s.recentActivities(ctx, user.TenantID, accessScope)
 	if activityErr != nil {
 		result.Warnings = append(result.Warnings, "关键进展暂时无法加载")
 	}
@@ -213,6 +107,147 @@ func (s *Service) Summary(ctx context.Context, user auth.User, accessScope auth.
 	// 阻塞项只从统计结果推导，前端可据此直接跳转处理会卡住阅卷或成绩发布的问题。
 	result.BlockingIssues = blockingIssues(result.Statistics)
 	return result, nil
+}
+
+func (s *Service) applyOrganizationSummary(ctx context.Context, tenantID string, accessScope auth.AccessScope, result *Summary) {
+	if s.deps.Organizations == nil {
+		result.Warnings = append(result.Warnings, "成员基础数据暂时无法统计")
+		return
+	}
+	organizationStatistics, organizationErr := s.deps.Organizations.DashboardOrganizationSummary(ctx, tenantID, accessScope)
+	if organizationErr != nil {
+		result.Warnings = append(result.Warnings, "成员基础数据暂时无法统计")
+		return
+	}
+	result.OrganizationStatistics = organizationStatistics
+}
+
+func (s *Service) submissionsByExam(ctx context.Context, tenantID string, exams []exam.Exam) (map[string][]submission.Submission, []string) {
+	submissionByExam := make(map[string][]submission.Submission, len(exams))
+	var warnings []string
+	if batchLister, ok := s.deps.Submissions.(submission.ExamBatchLister); ok {
+		examIDs := make([]string, 0, len(exams))
+		for _, item := range exams {
+			examIDs = append(examIDs, item.ID)
+		}
+		// 批量接口存在时只使用该次读取；失败记一次告警，不回退到逐考试读取。
+		items, listErr := batchLister.ListByExams(ctx, tenantID, examIDs)
+		if listErr != nil {
+			return submissionByExam, append(warnings, "部分答题卡状态暂时无法统计")
+		}
+		return items, warnings
+	}
+	for _, item := range exams {
+		items, listErr := s.deps.Submissions.ListByExam(ctx, tenantID, item.ID, submission.ListFilter{})
+		if listErr != nil {
+			warnings = append(warnings, "部分答题卡状态暂时无法统计")
+			continue
+		}
+		submissionByExam[item.ID] = items
+	}
+	return submissionByExam, warnings
+}
+
+func appendExamStatistics(exams []exam.Exam, submissionByExam map[string][]submission.Submission, result *Summary) {
+	for _, item := range exams {
+		if item.Status == "finalized" {
+			result.Statistics.FinalizedExamCount++
+		}
+		if item.Status == "collecting" {
+			result.Statistics.CollectingExamCount++
+		}
+		if item.Status == "published" || item.Status == "archived" {
+			continue
+		}
+		result.Statistics.ActiveExamCount++
+		result.ActiveExams = append(result.ActiveExams, activeExamStatistics(item, submissionByExam[item.ID], &result.Statistics))
+	}
+}
+
+func activeExamStatistics(item exam.Exam, answerSheets []submission.Submission, stats *Statistics) ActiveExam {
+	active := ActiveExam{
+		ID:        item.ID,
+		Name:      item.Name,
+		Subject:   item.Subject,
+		Status:    item.Status,
+		CreatedAt: item.CreatedAt,
+	}
+	// 三类问题独立按答题卡计数，同一份答题卡可以同时出现在多个问题统计中。
+	for _, answerSheet := range answerSheets {
+		active.SubmissionCount++
+		if submissionFailed(answerSheet) {
+			active.FailedCount++
+			stats.FailedSubmissionCount++
+		}
+		if answerSheet.StudentID == "" {
+			active.UnmatchedCount++
+			stats.UnmatchedSubmissionCount++
+		}
+		if len(answerSheet.QualityIssues) > 0 || answerSheet.QualityStatus == "failed" || answerSheet.QualityStatus == "review" {
+			active.QualityIssueCount++
+			stats.QualityIssueSubmissionCount++
+		}
+	}
+	return active
+}
+
+func pendingReviewCounts(tasks []review.ReviewTask) (int, int) {
+	questions := 0
+	submissions := map[string]struct{}{}
+	for _, task := range tasks {
+		if task.Status == "submitted" || task.Status == "completed" {
+			continue
+		}
+		questions++
+		submissions[task.SubmissionID] = struct{}{}
+	}
+	return questions, len(submissions)
+}
+
+func pendingArbitrationCounts(tasks []review.ArbitrationTask) (int, int) {
+	count := 0
+	submissions := map[string]struct{}{}
+	for _, task := range tasks {
+		if task.Status == "completed" || task.Status == "cancelled" {
+			continue
+		}
+		count++
+		submissions[task.SubmissionID] = struct{}{}
+	}
+	return count, len(submissions)
+}
+
+func (s *Service) recentActivities(ctx context.Context, tenantID string, accessScope auth.AccessScope) ([]RecentActivity, error) {
+	if s.deps.Activities != nil {
+		return s.deps.Activities.ListRecent(ctx, tenantID, accessScope, 5)
+	}
+	activities := []RecentActivity{}
+	// 旧审计读取没有学校或任务过滤；只有平台或全租户作用域可以使用该降级来源。
+	if !accessScope.IsPlatform && !accessScope.TenantWide {
+		return activities, nil
+	}
+	audits, err := s.deps.Audits.ListAudits(ctx, tenantID, auth.AuditFilter{Limit: 10})
+	if err != nil {
+		return activities, err
+	}
+	for _, record := range audits {
+		if !dashboardActivity(record.Action) {
+			continue
+		}
+		activities = append(activities, RecentActivity{
+			ID:            record.ID,
+			Action:        record.Action,
+			TargetType:    record.TargetType,
+			TargetID:      record.TargetID,
+			Reason:        record.Reason,
+			CreatedAt:     record.CreatedAt,
+			DrilldownPath: activityPath(record),
+		})
+		if len(activities) == 5 {
+			break
+		}
+	}
+	return activities, nil
 }
 
 func submissionFailed(item submission.Submission) bool {

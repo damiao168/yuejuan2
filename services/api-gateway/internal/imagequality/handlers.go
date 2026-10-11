@@ -45,9 +45,7 @@ type TransactionalHandlerDependencies struct {
 	Captures    capture.Store
 }
 
-// NewTransactionalHandler constructs the production command boundary. Every
-// dependency needed by the coordinated transaction is explicit; wrappers are
-// accepted by capability and typed nil values are rejected.
+// NewTransactionalHandler 构造生产命令边界，显式列出协同事务所需全部依赖；按能力接受包装器，并拒绝带类型的 nil 值。
 func NewTransactionalHandler(dependencies TransactionalHandlerDependencies) (*Handler, error) {
 	required := []struct {
 		name  string
@@ -296,16 +294,8 @@ func (h *Handler) SubmitResult(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, err)
 		return
 	}
-	if strings.TrimSpace(input.NormalizedFileAssetID) != "" {
-		asset, err := h.files.Get(r.Context(), user.TenantID, input.NormalizedFileAssetID)
-		if err != nil {
-			httpx.Error(w, r, http.StatusBadRequest, "normalized_file_asset_not_found", "normalized_file_asset_id does not exist for current tenant")
-			return
-		}
-		if asset.ContentType != "image/png" {
-			httpx.Error(w, r, http.StatusBadRequest, "normalized_file_asset_invalid", "normalized file asset must be image/png")
-			return
-		}
+	if !h.validateNormalizedResultAsset(w, r, user, input) {
+		return
 	}
 	if h.coordinator != nil {
 		run, err := h.coordinator.SubmitResultCommand(r.Context(), user.TenantID, user.ID, runID, input)
@@ -323,62 +313,88 @@ func (h *Handler) SubmitResult(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if run.ProcessingStatus == ProcessingCompleted {
-		_, err := h.submissions.ApplyPageQualityResult(r.Context(), user.TenantID, submission.ApplyPageQualityInput{
-			SubmissionID:          run.SubmissionID,
-			PageID:                run.SubmissionPageID,
-			LatestQualityRunID:    run.ID,
-			NormalizedFileAssetID: run.NormalizedFileAssetID,
-			QualityStatus:         run.QualityStatus,
-			QualityIssues:         toSubmissionIssues(run.QualityIssues),
-		})
-		if err != nil {
+		if err := h.applyCompletedPageQuality(r, user, run); err != nil {
 			writeStoreError(w, r, err)
 			return
 		}
-		if h.captures != nil {
-			captureLinked := true
-			if err = h.captures.ApplyQualityOutcome(r.Context(), user.TenantID, run.SubmissionPageID, run.QualityStatus); errors.Is(err, capture.ErrNotFound) {
-				captureLinked = false
-			} else if err != nil {
-				writeStoreError(w, r, err)
-				return
-			}
-			if captureLinked && run.QualityStatus == QualityPassed {
-				if _, err = h.captures.QueueSubmissionPages(r.Context(), user.TenantID, run.SubmissionID, user.ID); err != nil && !errors.Is(err, capture.ErrInvalidTransition) {
-					writeStoreError(w, r, err)
-					return
-				}
-			}
-		}
 	}
-	if h.runtime != nil {
-		task, taskErr := h.runtime.GetBySource(r.Context(), user.TenantID, "image_quality_run", run.ID)
-		if taskErr != nil {
-			writeStoreError(w, r, taskErr)
-			return
-		}
-		if run.ProcessingStatus == ProcessingCompleted {
-			_, taskErr = h.runtime.Complete(r.Context(), user.TenantID, task.ID, workerruntime.CompleteInput{
-				LeaseToken: input.LeaseToken, ResultSchemaVersion: "image-quality-result.v1", DurationMS: input.DurationMS,
-				Result: map[string]any{"quality_run_id": run.ID, "normalized_file_asset_id": run.NormalizedFileAssetID, "quality_status": run.QualityStatus, "result_version": run.ResultVersion},
-			})
-		} else {
-			errorCode := run.ErrorCode
-			if errorCode == "" {
-				errorCode = "image_quality_processing_failed"
-			}
-			_, taskErr = h.runtime.Fail(r.Context(), user.TenantID, task.ID, workerruntime.FailInput{
-				LeaseToken: input.LeaseToken, Retryable: run.ProcessingStatus == ProcessingRetryableError,
-				ErrorCode: errorCode, ErrorDetail: run.ErrorDetail, DurationMS: input.DurationMS,
-			})
-		}
-		if taskErr != nil {
-			writeStoreError(w, r, taskErr)
-			return
-		}
+	if err := h.syncQualityRuntime(r, user, run, input); err != nil {
+		writeStoreError(w, r, err)
+		return
 	}
 	h.auditAction(r, "image_quality.result_submitted", "image_quality_run", run.ID, "submit image quality result")
 	httpx.JSON(w, http.StatusOK, map[string]any{"run": run})
+}
+
+func (h *Handler) validateNormalizedResultAsset(w http.ResponseWriter, r *http.Request, user auth.User, input ResultInput) bool {
+	if strings.TrimSpace(input.NormalizedFileAssetID) == "" {
+		return true
+	}
+	asset, err := h.files.Get(r.Context(), user.TenantID, input.NormalizedFileAssetID)
+	if err != nil {
+		httpx.Error(w, r, http.StatusBadRequest, "normalized_file_asset_not_found", "normalized_file_asset_id does not exist for current tenant")
+		return false
+	}
+	if asset.ContentType != "image/png" {
+		httpx.Error(w, r, http.StatusBadRequest, "normalized_file_asset_invalid", "normalized file asset must be image/png")
+		return false
+	}
+	return true
+}
+
+func (h *Handler) applyCompletedPageQuality(r *http.Request, user auth.User, run Run) error {
+	// 仅用于旧的非协同事务路径；先应用答题页，再处理采集关联，失败不能提前确认 runtime 回执。
+	_, err := h.submissions.ApplyPageQualityResult(r.Context(), user.TenantID, submission.ApplyPageQualityInput{
+		SubmissionID:          run.SubmissionID,
+		PageID:                run.SubmissionPageID,
+		LatestQualityRunID:    run.ID,
+		NormalizedFileAssetID: run.NormalizedFileAssetID,
+		QualityStatus:         run.QualityStatus,
+		QualityIssues:         toSubmissionIssues(run.QualityIssues),
+	})
+	if err != nil {
+		return err
+	}
+	if h.captures != nil {
+		captureLinked := true
+		if err = h.captures.ApplyQualityOutcome(r.Context(), user.TenantID, run.SubmissionPageID, run.QualityStatus); errors.Is(err, capture.ErrNotFound) {
+			captureLinked = false
+		} else if err != nil {
+			return err
+		}
+		if captureLinked && run.QualityStatus == QualityPassed {
+			if _, err = h.captures.QueueSubmissionPages(r.Context(), user.TenantID, run.SubmissionID, user.ID); err != nil && !errors.Is(err, capture.ErrInvalidTransition) {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (h *Handler) syncQualityRuntime(r *http.Request, user auth.User, run Run, input ResultInput) error {
+	if h.runtime == nil {
+		return nil
+	}
+	task, taskErr := h.runtime.GetBySource(r.Context(), user.TenantID, "image_quality_run", run.ID)
+	if taskErr != nil {
+		return taskErr
+	}
+	if run.ProcessingStatus == ProcessingCompleted {
+		_, taskErr = h.runtime.Complete(r.Context(), user.TenantID, task.ID, workerruntime.CompleteInput{
+			LeaseToken: input.LeaseToken, ResultSchemaVersion: "image-quality-result.v1", DurationMS: input.DurationMS,
+			Result: map[string]any{"quality_run_id": run.ID, "normalized_file_asset_id": run.NormalizedFileAssetID, "quality_status": run.QualityStatus, "result_version": run.ResultVersion},
+		})
+	} else {
+		errorCode := run.ErrorCode
+		if errorCode == "" {
+			errorCode = "image_quality_processing_failed"
+		}
+		_, taskErr = h.runtime.Fail(r.Context(), user.TenantID, task.ID, workerruntime.FailInput{
+			LeaseToken: input.LeaseToken, Retryable: run.ProcessingStatus == ProcessingRetryableError,
+			ErrorCode: errorCode, ErrorDetail: run.ErrorDetail, DurationMS: input.DurationMS,
+		})
+	}
+	return taskErr
 }
 
 func toSubmissionIssues(issues []Issue) []submission.QualityIssue {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, App, Button, DatePicker, Descriptions, Drawer, Input, Select, Space, Tooltip, type TableColumnsType } from "antd";
 import { Download, FileWarning, LockKeyhole, RefreshCw, Search, ShieldCheck } from "lucide-react";
 import { ApiClientError, getUserErrorMessage } from "../api/client";
@@ -14,6 +14,13 @@ interface AuditLogPageProps {
   canRead: boolean;
   canExport: boolean;
   tenantName: string;
+}
+
+interface AuditLogDetailDrawerProps {
+  selectedLog: AuditLog | null;
+  open: boolean;
+  onClose: () => void;
+  actorName: (actor?: string) => string;
 }
 
 const sensitiveKeys = ["password", "token", "authorization", "secret", "credential", "access_token", "refresh_token", "password_hash"];
@@ -236,7 +243,57 @@ function actionLabel(action: string) {
   return actionLabels[action] ?? "其他操作";
 }
 
-export function AuditLogPage({ canRead, canExport, tenantName }: AuditLogPageProps) {
+function exportWatermarkText(watermark: string) {
+  if (!watermark) {
+    return "每次导出都会自动记录在操作日志中";
+  }
+  let displayWatermark = watermark;
+  if (watermark.length > 12) {
+    displayWatermark = `${watermark.slice(0, 12)}…`;
+  }
+  return `最近一次导出已记录（水印编号 ${displayWatermark}）`;
+}
+
+// 详情只接收展示数据和关闭回调；选中状态、触发元素及焦点恢复仍由父页维护。
+function AuditLogDetailDrawer({ selectedLog, open, onClose, actorName }: Readonly<AuditLogDetailDrawerProps>) {
+  return (
+    <Drawer title="记录详情" width={640} open={open} onClose={onClose}>
+      {selectedLog ? (
+        <div className="audit-detail-stack">
+          <Descriptions size="small" column={1}>
+            <Descriptions.Item label="操作人">{selectedLog.actor_id ? <span title={selectedLog.actor_id}>{actorName(selectedLog.actor_id)}</span> : actorName(selectedLog.actor_id)}</Descriptions.Item>
+            <Descriptions.Item label="操作内容"><span title={selectedLog.action}>{actionLabel(selectedLog.action)}</span></Descriptions.Item>
+            <Descriptions.Item label="操作对象"><span title={selectedLog.target_id ? `${selectedLog.target_type}:${selectedLog.target_id}` : selectedLog.target_type}>{describeTarget(selectedLog)}</span></Descriptions.Item>
+            <Descriptions.Item label="说明">{maskText(selectedLog.reason)}</Descriptions.Item>
+            <Descriptions.Item label="IP 地址">{selectedLog.ip_address || "-"}</Descriptions.Item>
+            <Descriptions.Item label="浏览器">{maskText(selectedLog.user_agent)}</Descriptions.Item>
+            <Descriptions.Item label="时间">{formatTime(selectedLog.created_at)}</Descriptions.Item>
+            <Descriptions.Item label="请求编号">{selectedLog.request_id || "-"}</Descriptions.Item>
+          </Descriptions>
+          <details className="audit-json-block">
+            <summary><strong>变更前数据</strong></summary>
+            <pre>{maskedJSON(selectedLog.before_value)}</pre>
+          </details>
+          <details className="audit-json-block">
+            <summary><strong>变更后数据</strong></summary>
+            <pre>{maskedJSON(selectedLog.after_value)}</pre>
+          </details>
+          <Alert
+            type="info"
+            showIcon
+            icon={<FileWarning size={18} />}
+            message="只读记录"
+            description="操作记录不可修改、不可删除；密码等敏感内容显示时已自动隐藏。"
+          />
+        </div>
+      ) : (
+        <EmptyState title="未选择记录" description="请选择一条操作记录查看详情。" />
+      )}
+    </Drawer>
+  );
+}
+
+export function AuditLogPage({ canRead, canExport, tenantName }: Readonly<AuditLogPageProps>) {
   const { message, modal } = App.useApp();
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [exams, setExams] = useState<Exam[]>([]);
@@ -251,6 +308,9 @@ export function AuditLogPage({ canRead, canExport, tenantName }: AuditLogPagePro
   const [createdTo, setCreatedTo] = useState("");
   const [keyword, setKeyword] = useState("");
   const [lastWatermark, setLastWatermark] = useState("");
+  const [lastLoadedAt, setLastLoadedAt] = useState("");
+  const detailTriggerRef = useRef<HTMLElement | null>(null);
+  const queryRevisionRef = useRef(0);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [nextCursor, setNextCursor] = useState("");
@@ -271,12 +331,10 @@ export function AuditLogPage({ canRead, canExport, tenantName }: AuditLogPagePro
   );
 
   const actionOptions = useMemo(
-    () =>
-      Array.from(new Set(logs.map((item) => item.action)))
-        .sort()
-        .map((action) => ({ value: action, label: actionLabel(action) })),
-    [logs]
+    () => Object.entries(actionLabels).map(([value, label]) => ({ value, label: `${label} · ${value}` })),
+    []
   );
+  const filtersChanged = JSON.stringify(pendingFilter) !== JSON.stringify(filter);
 
   const userNameById = useMemo(() => new Map(users.map((item) => [item.id, item.display_name])), [users]);
 
@@ -296,10 +354,10 @@ export function AuditLogPage({ canRead, canExport, tenantName }: AuditLogPagePro
       return logs;
     }
     return logs.filter((item) => {
-      const haystack = [item.actor_id, item.action, item.target_type, item.target_id, item.reason, item.ip_address, item.user_agent, item.request_id].join(" ").toLowerCase();
+      const haystack = [item.actor_id, actorName(item.actor_id), item.action, actionLabel(item.action), item.target_type, targetTypeLabel(item.target_type), item.target_id, item.reason, item.ip_address, item.user_agent, item.request_id].join(" ").toLowerCase();
       return haystack.includes(text);
     });
-  }, [keyword, logs]);
+  }, [actorName, keyword, logs]);
 
   const summary = useMemo(
     () => ({
@@ -343,14 +401,19 @@ export function AuditLogPage({ canRead, canExport, tenantName }: AuditLogPagePro
   }, []);
 
   const loadLogs = useCallback(async () => {
+    // 新筛选或刷新开始后，旧查询和旧分页只能结束自己的请求，不能再写入当前列表。
+    const revision = ++queryRevisionRef.current;
     setLoading(true);
+    setLoadingMore(false);
     setError(null);
     try {
       const [auditResult, examResult] = await Promise.allSettled([listAuditLogs({ ...filter, limit: 50 }), listExams()]);
+      if (revision !== queryRevisionRef.current) return;
       if (auditResult.status === "fulfilled") {
         setLogs(auditResult.value.audit_logs);
         setNextCursor(auditResult.value.next_cursor ?? "");
         setHasMore(Boolean(auditResult.value.has_more));
+        setLastLoadedAt(new Date().toISOString());
       } else {
         throw auditResult.reason;
       }
@@ -358,20 +421,21 @@ export function AuditLogPage({ canRead, canExport, tenantName }: AuditLogPagePro
         setExams(examResult.value.exams);
       }
     } catch (currentError) {
-      setLogs([]);
-      setNextCursor("");
-      setHasMore(false);
+      if (revision !== queryRevisionRef.current) return;
+      // 刷新失败时保留上次查询结果；时间标记让用户知道这不是刚取到的数据。
       setError(formatError(currentError));
     } finally {
-      setLoading(false);
+      if (revision === queryRevisionRef.current) setLoading(false);
     }
   }, [filter]);
 
   const loadMoreLogs = useCallback(async () => {
-    if (!hasMore || !nextCursor || loadingMore) return;
+    if (!hasMore || !nextCursor || loadingMore || loading || error) return;
+    const revision = queryRevisionRef.current;
     setLoadingMore(true);
     try {
       const result = await listAuditLogs({ ...filter, limit: 50, cursor: nextCursor });
+      if (revision !== queryRevisionRef.current) return;
       setLogs((current) => {
         const byID = new Map(current.map((item) => [item.id, item]));
         result.audit_logs.forEach((item) => byID.set(item.id, item));
@@ -380,25 +444,31 @@ export function AuditLogPage({ canRead, canExport, tenantName }: AuditLogPagePro
       setNextCursor(result.next_cursor ?? "");
       setHasMore(Boolean(result.has_more));
     } catch (currentError) {
-      message.error(formatError(currentError));
+      if (revision === queryRevisionRef.current) message.error(formatError(currentError));
     } finally {
-      setLoadingMore(false);
+      if (revision === queryRevisionRef.current) setLoadingMore(false);
     }
-  }, [filter, hasMore, loadingMore, message, nextCursor]);
+  }, [error, filter, hasMore, loading, loadingMore, message, nextCursor]);
 
   useEffect(() => {
     void loadLogs();
   }, [loadLogs]);
 
-  const openDetail = (record: AuditLog) => {
+  const openDetail = (record: AuditLog, trigger: HTMLElement) => {
+    detailTriggerRef.current = trigger;
     setSelectedLog(record);
     setDrawerOpen(true);
+  };
+
+  const closeDetail = () => {
+    setDrawerOpen(false);
+    requestAnimationFrame(() => detailTriggerRef.current?.focus());
   };
 
   const exportLogs = () => {
     modal.confirm({
       title: "导出操作记录",
-      content: "将导出当前筛选条件下的操作记录为 CSV 文件。此次导出会被记录在案，文件带有可追溯水印，请妥善保管。",
+      content: "将导出已应用筛选条件下最新的最多 200 条操作记录为 CSV；表内关键字仅搜索已加载记录，不影响导出。此次导出会被记录在案，文件带有可追溯水印，请妥善保管。",
       okText: "确认导出",
       cancelText: "取消",
       onOk: async () => {
@@ -434,7 +504,7 @@ export function AuditLogPage({ canRead, canExport, tenantName }: AuditLogPagePro
           </Button>
           <Tooltip title={!canExport ? "需要「导出操作记录」权限" : ""}>
             <span>
-              <Button type="primary" icon={<Download size={16} />} disabled={!canExport || logs.length === 0} loading={exporting} onClick={exportLogs}>
+              <Button type="primary" icon={<Download size={16} />} disabled={!canExport || logs.length === 0 || loading || Boolean(error)} loading={exporting} onClick={exportLogs}>
                 导出 CSV
               </Button>
             </span>
@@ -444,6 +514,7 @@ export function AuditLogPage({ canRead, canExport, tenantName }: AuditLogPagePro
 
       {!canRead ? <Alert type="error" showIcon message="没有查看权限" description="当前账号没有「查看操作记录」的权限，请联系系统管理员开通。" /> : null}
       {error ? <ErrorState message={error} onRetry={loadLogs} /> : null}
+      {error && logs.length > 0 ? <Alert type="warning" showIcon message="当前查询未成功，列表保留上次成功读取的记录；请重试后继续分页或导出。" /> : null}
 
       <section className="audit-scope-panel">
         <LockKeyhole size={18} />
@@ -451,42 +522,39 @@ export function AuditLogPage({ canRead, canExport, tenantName }: AuditLogPagePro
       </section>
 
       <section className="audit-filter-panel">
-        <DatePicker.RangePicker
-          showTime
-          onChange={(dates) => {
-            setCreatedFrom(dates?.[0]?.toISOString() ?? "");
-            setCreatedTo(dates?.[1]?.toISOString() ?? "");
-          }}
-        />
-        {usersFailed ? (
-          <Input placeholder="操作人 ID" value={actorFilter} onChange={(event) => setActorFilter(event.target.value)} allowClear />
-        ) : (
-          <Select
-            allowClear
-            showSearch
-            placeholder="按操作人筛选"
-            optionFilterProp="label"
-            value={actorFilter || undefined}
-            options={users.map((item) => ({ value: item.id, label: item.display_name }))}
-            onChange={(value) => setActorFilter(value ?? "")}
+        <label className="audit-filter-field audit-filter-dates">
+          <span>时间范围</span>
+          <DatePicker.RangePicker
+            showTime
+            onChange={(dates) => {
+              setCreatedFrom(dates?.[0]?.toISOString() ?? "");
+              setCreatedTo(dates?.[1]?.toISOString() ?? "");
+            }}
           />
-        )}
-        <Select allowClear placeholder="操作类型" value={actionFilter || undefined} options={actionOptions} onChange={(value) => setActionFilter(value ?? "")} />
-        <Select
-          allowClear
-          placeholder="考试"
-          value={examFilter || undefined}
-          options={exams.map((exam) => ({ value: exam.id, label: `${exam.name} · ${examSubjectLabel(exam.subject)}` }))}
-          onChange={(value) => setExamFilter(value ?? "")}
-        />
-        <Button icon={<Search size={16} />} onClick={() => setFilter(pendingFilter)} loading={loading}>
-          查询
-        </Button>
+        </label>
+        <label className="audit-filter-field">
+          <span>操作人</span>
+          {usersFailed ? (
+            <Input placeholder="操作人 ID" value={actorFilter} onChange={(event) => setActorFilter(event.target.value)} allowClear />
+          ) : (
+            <Select allowClear showSearch placeholder="全部人员" optionFilterProp="label" value={actorFilter || undefined} options={users.map((item) => ({ value: item.id, label: item.display_name }))} onChange={(value) => setActorFilter(value ?? "")} />
+          )}
+        </label>
+        <label className="audit-filter-field">
+          <span>操作类型</span>
+          <Select allowClear showSearch optionFilterProp="label" placeholder="全部类型" value={actionFilter || undefined} options={actionOptions} onChange={(value) => setActionFilter(value ?? "")} />
+        </label>
+        <label className="audit-filter-field">
+          <span>考试</span>
+          <Select allowClear showSearch optionFilterProp="label" placeholder="全部考试" value={examFilter || undefined} options={exams.map((exam) => ({ value: exam.id, label: `${exam.name} · ${examSubjectLabel(exam.subject)}` }))} onChange={(value) => setExamFilter(value ?? "")} />
+        </label>
+        <Button className="audit-apply-filter" type="primary" icon={<Search size={16} />} onClick={() => setFilter(pendingFilter)} loading={loading}>应用筛选</Button>
+        {filtersChanged ? <p className="audit-filter-pending">筛选条件尚未应用，列表与导出仍按上次查询。</p> : null}
       </section>
 
       <section className="audit-summary-strip">
         <div>
-          <span>本次查询</span>
+          <span>已加载记录</span>
           <strong>{summary.total}</strong>
         </div>
         <div>
@@ -507,9 +575,9 @@ export function AuditLogPage({ canRead, canExport, tenantName }: AuditLogPagePro
         <div className="panel-head">
           <div>
             <h2>操作记录</h2>
-            <p>{filteredLogs.length} / {logs.length} 条记录，点击行查看详情。</p>
+            <p>当前已加载 {logs.length} 条{hasMore ? "，还有更多可加载" : ""}；表内关键字只查已加载记录。{lastLoadedAt ? `最近成功读取：${formatTime(lastLoadedAt)}` : ""}</p>
           </div>
-          <Input className="audit-keyword" prefix={<Search size={16} />} placeholder="搜索操作内容或说明" value={keyword} onChange={(event) => setKeyword(event.target.value)} allowClear />
+          <Input className="audit-keyword" prefix={<Search size={16} />} placeholder="在已加载记录中搜索" value={keyword} onChange={(event) => setKeyword(event.target.value)} allowClear aria-label="在已加载记录中搜索" />
         </div>
         {loading ? (
           <LoadingState label="正在读取操作记录" />
@@ -522,10 +590,19 @@ export function AuditLogPage({ canRead, canExport, tenantName }: AuditLogPagePro
               columns={columns}
               dataSource={filteredLogs}
               pagination={{ pageSize: 12 }}
-              onRow={(record) => ({ onClick: () => openDetail(record) })}
+              onRow={(record) => ({
+                tabIndex: 0,
+                onClick: (event) => openDetail(record, event.currentTarget),
+                onKeyDown: (event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    openDetail(record, event.currentTarget);
+                  }
+                }
+              })}
               locale={{ emptyText: <EmptyState title="暂无操作记录" description="当前筛选条件下没有操作记录，可放宽时间范围后重试。" /> }}
             />
-            {hasMore ? (
+            {hasMore && !error ? (
               <Button block loading={loadingMore} onClick={() => void loadMoreLogs()}>
                 加载更多操作记录
               </Button>
@@ -536,42 +613,10 @@ export function AuditLogPage({ canRead, canExport, tenantName }: AuditLogPagePro
 
       <section className="audit-export-panel">
         <ShieldCheck size={18} />
-        <span>{lastWatermark ? `最近一次导出已记录（水印编号 ${lastWatermark.length > 12 ? `${lastWatermark.slice(0, 12)}…` : lastWatermark}）` : "每次导出都会自动记录在操作日志中"}</span>
+        <span>{exportWatermarkText(lastWatermark)}</span>
       </section>
 
-      <Drawer title="记录详情" width={520} open={drawerOpen} onClose={() => setDrawerOpen(false)}>
-        {selectedLog ? (
-          <div className="audit-detail-stack">
-            <Descriptions size="small" column={1}>
-              <Descriptions.Item label="操作人">{selectedLog.actor_id ? <span title={selectedLog.actor_id}>{actorName(selectedLog.actor_id)}</span> : actorName(selectedLog.actor_id)}</Descriptions.Item>
-              <Descriptions.Item label="操作内容"><span title={selectedLog.action}>{actionLabel(selectedLog.action)}</span></Descriptions.Item>
-              <Descriptions.Item label="操作对象"><span title={selectedLog.target_id ? `${selectedLog.target_type}:${selectedLog.target_id}` : selectedLog.target_type}>{describeTarget(selectedLog)}</span></Descriptions.Item>
-              <Descriptions.Item label="说明">{maskText(selectedLog.reason)}</Descriptions.Item>
-              <Descriptions.Item label="IP 地址">{selectedLog.ip_address || "-"}</Descriptions.Item>
-              <Descriptions.Item label="浏览器">{maskText(selectedLog.user_agent)}</Descriptions.Item>
-              <Descriptions.Item label="时间">{formatTime(selectedLog.created_at)}</Descriptions.Item>
-              <Descriptions.Item label="请求编号">{selectedLog.request_id || "-"}</Descriptions.Item>
-            </Descriptions>
-            <details className="audit-json-block">
-              <summary><strong>变更前数据</strong></summary>
-              <pre>{maskedJSON(selectedLog.before_value)}</pre>
-            </details>
-            <details className="audit-json-block">
-              <summary><strong>变更后数据</strong></summary>
-              <pre>{maskedJSON(selectedLog.after_value)}</pre>
-            </details>
-            <Alert
-              type="info"
-              showIcon
-              icon={<FileWarning size={18} />}
-              message="只读记录"
-              description="操作记录不可修改、不可删除；密码等敏感内容显示时已自动隐藏。"
-            />
-          </div>
-        ) : (
-          <EmptyState title="未选择记录" description="请选择一条操作记录查看详情。" />
-        )}
-      </Drawer>
+      <AuditLogDetailDrawer selectedLog={selectedLog} open={drawerOpen} onClose={closeDetail} actorName={actorName} />
     </div>
   );
 }

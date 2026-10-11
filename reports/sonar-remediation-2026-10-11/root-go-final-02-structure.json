@@ -1,0 +1,380 @@
+[
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "TestBatch9ConfigDefaultsAndModeBoundaries",
+    "line": 26,
+    "cognitive_estimate": 9,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "assertBatch9ConfigDefaults",
+    "line": 70,
+    "cognitive_estimate": 1,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "assertBatch9ConnectionDefaults",
+    "line": 82,
+    "cognitive_estimate": 2,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "assertBatch9IdentityDefaults",
+    "line": 89,
+    "cognitive_estimate": 2,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "assertBatch9DatasetModeDefaults",
+    "line": 96,
+    "cognitive_estimate": 2,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "TestBatch9TemplateLayoutContract",
+    "line": 103,
+    "cognitive_estimate": 4,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "assertBatch9TemplatePage",
+    "line": 125,
+    "cognitive_estimate": 7,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "assertBatch9RegionGeometry",
+    "line": 151,
+    "cognitive_estimate": 2,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "assertBatch9Options",
+    "line": 158,
+    "cognitive_estimate": 7,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "RoundTrip",
+    "line": 186,
+    "cognitive_estimate": 0,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "batch9Client",
+    "line": 190,
+    "cognitive_estimate": 0,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "batch9Response",
+    "line": 194,
+    "cognitive_estimate": 0,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "TestBatch9UploadProtocol",
+    "line": 198,
+    "cognitive_estimate": 11,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "assertBatch9UploadRequest",
+    "line": 235,
+    "cognitive_estimate": 4,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "readBatch9Multipart",
+    "line": 247,
+    "cognitive_estimate": 12,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "record",
+    "line": 300,
+    "cognitive_estimate": 1,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "Connect",
+    "line": 316,
+    "cognitive_estimate": 0,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "Driver",
+    "line": 319,
+    "cognitive_estimate": 0,
+    "parameters": 0
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "Open",
+    "line": 320,
+    "cognitive_estimate": 0,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "Close",
+    "line": 321,
+    "cognitive_estimate": 0,
+    "parameters": 0
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "Prepare",
+    "line": 322,
+    "cognitive_estimate": 0,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "Begin",
+    "line": 325,
+    "cognitive_estimate": 0,
+    "parameters": 0
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "BeginTx",
+    "line": 328,
+    "cognitive_estimate": 1,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "Commit",
+    "line": 335,
+    "cognitive_estimate": 0,
+    "parameters": 0
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "Rollback",
+    "line": 339,
+    "cognitive_estimate": 0,
+    "parameters": 0
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "batch9Args",
+    "line": 343,
+    "cognitive_estimate": 4,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "QueryContext",
+    "line": 354,
+    "cognitive_estimate": 6,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "ExecContext",
+    "line": 366,
+    "cognitive_estimate": 3,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "Columns",
+    "line": 378,
+    "cognitive_estimate": 2,
+    "parameters": 0
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "Close",
+    "line": 389,
+    "cognitive_estimate": 0,
+    "parameters": 0
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "Next",
+    "line": 390,
+    "cognitive_estimate": 1,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "openBatch9DB",
+    "line": 398,
+    "cognitive_estimate": 0,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "TestBatch9RegistrationTransactions",
+    "line": 406,
+    "cognitive_estimate": 10,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "assertBatch9RegistrationTransaction",
+    "line": 439,
+    "cognitive_estimate": 4,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "TestBatch9RegistrationCompletion",
+    "line": 455,
+    "cognitive_estimate": 12,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "TestBatch9AnswerCandidateDecisions",
+    "line": 476,
+    "cognitive_estimate": 9,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "TestBatch9ObjectiveGradeBindings",
+    "line": 503,
+    "cognitive_estimate": 8,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "batch9DatasetFixture",
+    "line": 523,
+    "cognitive_estimate": 5,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "roundTrip",
+    "line": 570,
+    "cognitive_estimate": 4,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "response",
+    "line": 586,
+    "cognitive_estimate": 8,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "segmentResponse",
+    "line": 650,
+    "cognitive_estimate": 3,
+    "parameters": 0
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "TestBatch9ImportStageOrderAndFailureResult",
+    "line": 665,
+    "cognitive_estimate": 13,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "prepareBatch9ImportFailureDataset",
+    "line": 703,
+    "cognitive_estimate": 2,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "assertBatch9ImportRosterOrder",
+    "line": 716,
+    "cognitive_estimate": 2,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "assertBatch9CandidateBindings",
+    "line": 723,
+    "cognitive_estimate": 12,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "assertBatch9ScoringDefinitions",
+    "line": 740,
+    "cognitive_estimate": 9,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "assertBatch9QuestionOrder",
+    "line": 762,
+    "cognitive_estimate": 2,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "assertBatch9ObjectiveRuleRoute",
+    "line": 770,
+    "cognitive_estimate": 2,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "assertBatch9SubjectiveRubricRoute",
+    "line": 777,
+    "cognitive_estimate": 1,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "TestBatch9CropRepairSkipAndUpdate",
+    "line": 784,
+    "cognitive_estimate": 19,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "assertBatch9CropRepairRoute",
+    "line": 822,
+    "cognitive_estimate": 5,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "assertBatch9Error",
+    "line": 829,
+    "cognitive_estimate": 5,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "batch9ErrorText",
+    "line": 842,
+    "cognitive_estimate": 1,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+    "name": "logBatch9Proof",
+    "line": 849,
+    "cognitive_estimate": 1,
+    "parameters": 3
+  }
+]

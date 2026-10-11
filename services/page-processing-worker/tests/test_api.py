@@ -20,7 +20,7 @@ def test_upload_page_reuses_authorized_duplicate_asset() -> None:
     client = Client("http://api", "demo", "worker", "secret", token="token")
     task = {"payload": {"capture_file_id": "capture-1", "exam_id": "exam-1"}}
 
-    with patch("page_processing.api.request.urlopen", side_effect=conflict):
+    with patch("page_processing.api._open_request", side_effect=conflict):
         assert client.upload_page(task, 2, b"png") == existing
 
 
@@ -36,7 +36,7 @@ def test_login_error_preserves_status_and_retry_after() -> None:
     client = Client("http://api", "demo", "worker", "secret")
 
     with (
-        patch("page_processing.api.request.urlopen", side_effect=limited),
+        patch("page_processing.api._open_request", side_effect=limited),
         pytest.raises(APIError, match="api_request_failed:429") as caught,
     ):
         client.login()
@@ -49,7 +49,7 @@ def test_login_transport_error_is_exposed_as_retryable_api_error() -> None:
     client = Client("http://api", "demo", "worker", "secret")
 
     with (
-        patch("page_processing.api.request.urlopen", side_effect=error.URLError("connection refused")),
+        patch("page_processing.api._open_request", side_effect=error.URLError("connection refused")),
         pytest.raises(APIError, match="api_request_failed:transport") as caught,
     ):
         client.login()
@@ -70,7 +70,7 @@ def test_download_preserves_forbidden_status_as_stable_error() -> None:
     client = Client("http://api", "demo", "worker", "secret", token="worker-token")
 
     with (
-        patch("page_processing.api.request.urlopen", side_effect=forbidden),
+        patch("page_processing.api._open_request", side_effect=forbidden),
         pytest.raises(APIError, match="source_download_forbidden") as caught,
     ):
         client.download("/files/file-1/download")

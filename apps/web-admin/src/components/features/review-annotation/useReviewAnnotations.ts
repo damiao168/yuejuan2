@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiClientError, getUserErrorMessage } from "../../../api/client";
 import {
   createReviewAnnotation,
@@ -40,6 +40,8 @@ export function useReviewAnnotations(taskId: string) {
   const [loading, setLoading] = useState(true);
   const [saveState, setSaveState] = useState<AnnotationSaveState>("idle");
   const [error, setError] = useState<string>();
+  const templateTask = useRef(taskId);
+  templateTask.current = taskId;
 
   const reloadAnnotations = useCallback(async (signal?: AbortSignal) => {
     const response = await listReviewAnnotations(taskId, signal);
@@ -157,9 +159,17 @@ export function useReviewAnnotations(taskId: string) {
   }, [reloadTemplates]);
 
   const applyTemplate = useCallback(async (shortcut: string) => {
-    const response = await applyReviewCommentTemplate(shortcut);
-    setTemplates((items) => items.map((item) => item.id === response.comment_template.id ? response.comment_template : item));
-    return response.comment_template;
+    const originalTask = templateTask.current;
+    setError(undefined);
+    try {
+      const response = await applyReviewCommentTemplate(shortcut);
+      if (templateTask.current === originalTask) setTemplates((items) => items.map((item) => item.id === response.comment_template.id ? response.comment_template : item));
+      return response.comment_template;
+    } catch (cause) {
+      // 已切换答卷时，旧插入失败不能成为新任务的错误提示。
+      if (templateTask.current === originalTask) setError(errorMessage(cause));
+      throw cause;
+    }
   }, []);
 
   return {

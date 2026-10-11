@@ -250,6 +250,68 @@ func TestPanelRoutesPrimaryFailureToHumanWithoutCallingArbiter(t *testing.T) {
 	}
 }
 
+type failingPanelHumanStore struct {
+	PanelPersistence
+	failure     error
+	failUpdate  int
+	failTask    bool
+	updateCalls int
+	taskCalls   int
+}
+
+func (s *failingPanelHumanStore) UpdatePanel(ctx context.Context, tenantID, panelID string, input UpdatePanelInput) (GradingPanel, error) {
+	s.updateCalls++
+	if s.updateCalls == s.failUpdate {
+		return GradingPanel{ID: "failed-update-result"}, s.failure
+	}
+	return s.PanelPersistence.UpdatePanel(ctx, tenantID, panelID, input)
+}
+
+func (s *failingPanelHumanStore) RoutePanelHumanReview(ctx context.Context, tenantID, actorID string, panel GradingPanel) (string, error) {
+	s.taskCalls++
+	if s.failTask {
+		return "", s.failure
+	}
+	return s.PanelPersistence.RoutePanelHumanReview(ctx, tenantID, actorID, panel)
+}
+
+func TestPanelRoutesHumanPersistenceFailuresPreserveStageReturnContract(t *testing.T) {
+	// 主评已完成后分别注入人工状态、任务创建和任务关联失败，保护各阶段返回的成绩与面板边界。
+	for _, test := range []struct {
+		name       string
+		failUpdate int
+		failTask   bool
+		updates    int
+		tasks      int
+		keepGrades bool
+	}{
+		{name: "state", failUpdate: 1, updates: 1},
+		{name: "task", failTask: true, updates: 1, tasks: 1},
+		{name: "association", failUpdate: 2, updates: 2, tasks: 1, keepGrades: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			a := &panelTestAdapter{err: errors.New("unavailable")}
+			b := &panelTestAdapter{supported: map[string]bool{"p1": true}, confidence: .9}
+			c := &panelTestAdapter{supported: map[string]bool{"p1": true}, confidence: .99}
+			orchestrator := newTestPanelOrchestrator(t, a, b, c)
+			failure := errors.New("human persistence unavailable")
+			store := &failingPanelHumanStore{PanelPersistence: orchestrator.store, failure: failure, failUpdate: test.failUpdate, failTask: test.failTask}
+			orchestrator.store = store
+			result, err := orchestrator.Grade(context.Background(), "tenant-1", "actor-1", panelTestContext(), PanelDecisionConfig{})
+			if !errors.Is(err, failure) || store.updateCalls != test.updates || store.taskCalls != test.tasks || len(c.inputs) != 0 {
+				t.Fatalf("human persistence failure changed execution boundary: result=%#v err=%v updates=%d tasks=%d", result, err, store.updateCalls, store.taskCalls)
+			}
+			if test.keepGrades {
+				if result.Panel.ID != "failed-update-result" || result.PrimaryB.ID == "" || result.PrimaryB.SuggestedScore != 2 {
+					t.Fatalf("task association failure lost the returned panel or saved grade: %#v", result)
+				}
+			} else if result.Panel.ID != "" || result.PrimaryA.ID != "" || result.PrimaryB.ID != "" || result.Arbiter != nil {
+				t.Fatalf("failure before task association did not return an empty result: %#v", result)
+			}
+		})
+	}
+}
+
 func TestPanelMathV2UsesVerifiedCropAndFrozenRuleScore(t *testing.T) {
 	handler, store, _, value := newMathHandlerFixture(t, false)
 	a, b, c := &panelMathTestAdapter{}, &panelMathTestAdapter{}, &panelMathTestAdapter{}

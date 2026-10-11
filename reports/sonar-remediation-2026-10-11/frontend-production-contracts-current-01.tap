@@ -1,0 +1,25 @@
+✔ measures static imports, re-exports and preload once, excluding dynamic pages (55.1065ms)
+✔ keeps asset report paths in fixed UTF-16 order across case, digits and accents (87.9888ms)
+✔ rejects a missing static asset instead of reporting an artificially small entry (22.5793ms)
+✔ rejects imported assets outside the measured build (23.4565ms)
+✔ budget rejects both oversized entry and a deferred feature made static (0.7375ms)
+✔ rejects a missing budget limit instead of silently disabling the gate (0.3687ms)
+✔ CLI rejects an omitted budget path instead of passing without a budget (447.4234ms)
+✔ the split production modules retain their connected contracts (105.3403ms)
+✔ rejects removal of experience switching (37.3675ms)
+✔ rejects removal of workspace deep-link permission (24.8318ms)
+✔ rejects removal of administrator grading branch (29.6326ms)
+✔ rejects removal of mobile drawer trigger (22.0368ms)
+✔ rejects removal of teacher original image permission (15.6118ms)
+✔ rejects removal of original image retention (13.238ms)
+✔ rejects removal of eager page import (17.0395ms)
+✔ rejects removal of suspense boundary (22.2009ms)
+✔ rejects adding generic score publication to the management list (21.5246ms)
+ℹ tests 17
+ℹ suites 0
+ℹ pass 17
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1539.0643

@@ -26,17 +26,19 @@ class SymbolicVerificationRunner:
         started = time.monotonic()
         task_id = str(runtime_task["id"])
         lease = str(runtime_task["lease_token"])
-        tenant_id = str(runtime_task["tenant_id"])
+        # 保留领取任务的元数据契约检查；此字段不能用于选择 HTTP 请求租户。
+        if "tenant_id" not in runtime_task:
+            raise KeyError("tenant_id")
         self.api.activate_task(runtime_task, self.config.worker_id)
         with _LeaseHeartbeat(
             api=self.api, runtime_task_id=task_id, lease_token=lease, worker_id=self.config.worker_id,
             interval=self.config.heartbeat_interval, lease_seconds=self.config.lease_seconds,
-            request_timeout=self.config.heartbeat_timeout, tenant_id=tenant_id,
+            request_timeout=self.config.heartbeat_timeout,
         ) as heartbeat:
             try:
                 if runtime_task.get("source_type") != "math_understanding_artifact":
                     raise ValueError("invalid symbolic task source")
-                task_input = self.api.get_math_verification_input(task_id, tenant_id)
+                task_input = self.api.get_math_verification_input(task_id)
                 binding = task_input["task"]
                 payload = runtime_task["payload"]
                 if binding["id"] != task_id or binding["artifact_id"] != runtime_task["source_id"]:
@@ -52,7 +54,7 @@ class SymbolicVerificationRunner:
                     "lease_token": lease, "duration_ms": int((time.monotonic() - started) * 1000),
                     "artifact_id": binding["artifact_id"], "artifact_version": binding["artifact_version"],
                     "correction_revision": binding["correction_revision"], "verifications": checks,
-                }, tenant_id)
+                })
             except AuthenticationError:
                 raise
             except (APIError, KeyError, TypeError, ValueError) as exc:
@@ -61,7 +63,7 @@ class SymbolicVerificationRunner:
                     "lease_token": lease, "retryable": isinstance(exc, APIError),
                     "error_code": "math_symbolic_verification_failed", "error_detail": {},
                     "duration_ms": int((time.monotonic() - started) * 1000),
-                }, tenant_id)
+                })
 
 
 def build_symbolic_verifications(contract: dict[str, Any], verifier: Any, heartbeat: Any = None) -> list[dict[str, Any]]:
@@ -70,9 +72,23 @@ def build_symbolic_verifications(contract: dict[str, Any], verifier: Any, heartb
     active_ids = {formula_id for step in graph["steps"] for formula_id in step.get("formula_ids", [])}
     formulas = {formula["id"]: formula for formula in contract["formulas"] if formula["id"] in active_ids}
     checks: list[dict[str, Any]] = []
+    # 先记录解析失败，再核验推导，最后求终端方程；各阶段沿用公式、边和步骤的原顺序。
+    normalized_asts = _normalize_symbolic_formulas(formulas, verifier, heartbeat, checks)
+    _append_symbolic_transitions(graph, steps, normalized_asts, verifier, heartbeat, checks)
+    _append_terminal_symbolic_solutions(graph, normalized_asts, verifier, heartbeat, checks)
+    if not checks:
+        checks.append(_check("sympy-no-supported-checks", "constraint", {
+            "status": "uncertain", "reason_code": "no_supported_symbolic_checks",
+        }))
+    return checks
+
+
+def _normalize_symbolic_formulas(
+    formulas: dict[str, dict[str, Any]], verifier: Any, heartbeat: Any, checks: list[dict[str, Any]],
+) -> dict[str, dict[str, Any]]:
     normalized_asts: dict[str, dict[str, Any]] = {}
-    # Re-normalize in stage two, so temporary parser/service outages in stage
-    # one do not permanently prevent mathematical verification.
+    # 在第二阶段重新规范化，避免第一阶段解析器或服务
+    # 暂时不可用后，永久阻断数学验证。
     for formula_id, formula in formulas.items():
         if heartbeat is not None:
             heartbeat.raise_if_failed()
@@ -86,10 +102,20 @@ def build_symbolic_verifications(contract: dict[str, Any], verifier: Any, heartb
             checks.append(_check(f"sympy-parse-{formula_id}", "constraint", {
                 "status": "uncertain", "reason_code": "unsupported_expression",
             }, formula_id=formula_id))
+    return normalized_asts
 
+
+def _append_symbolic_transitions(
+    graph: dict[str, Any],
+    steps: dict[str, dict[str, Any]],
+    normalized_asts: dict[str, dict[str, Any]],
+    verifier: Any,
+    heartbeat: Any,
+    checks: list[dict[str, Any]],
+) -> None:
     seen_edges: set[tuple[str, str]] = set()
     for edge in graph.get("edges", []):
-        # Reading order alone is not evidence of an equivalent transformation.
+        # 单凭阅读顺序不能证明等价变换。
         if edge["kind"] != "derives":
             continue
         source, target = steps[edge["from_step_id"]], steps[edge["to_step_id"]]
@@ -110,31 +136,45 @@ def build_symbolic_verifications(contract: dict[str, Any], verifier: Any, heartb
         check["details"].update({"from_step_id": source["id"], "from_formula_id": from_id})
         checks.append(check)
 
+
+def _append_terminal_symbolic_solutions(
+    graph: dict[str, Any],
+    normalized_asts: dict[str, dict[str, Any]],
+    verifier: Any,
+    heartbeat: Any,
+    checks: list[dict[str, Any]],
+) -> None:
+    # 任何后续边都会使该步骤不再是终端；next 等阅读顺序边也不能忽略。
     outgoing = {edge["from_step_id"] for edge in graph.get("edges", [])}
     for step in graph["steps"]:
         if step["id"] in outgoing:
             continue
-        for formula_id in step.get("formula_ids", []):
-            ast = normalized_asts.get(formula_id)
-            if ast is None or ast.get("kind") != "equation":
-                continue
-            symbols = _symbols(ast)
-            if len(symbols) != 1:
-                continue
-            if heartbeat is not None:
-                heartbeat.raise_if_failed()
-            result = verifier.solve(ast, next(iter(symbols)))
-            # Computing a set is not proof that the student's conclusion is
-            # complete. Preserve it as a constraint fact, not a rubric award.
-            check = _check(f"sympy-solve-{formula_id}", "constraint", result,
-                           formula_id=formula_id, step_id=step["id"])
-            check["reason_code"] = result.get("reason_code", "solution_set_computed")
-            checks.append(check)
-    if not checks:
-        checks.append(_check("sympy-no-supported-checks", "constraint", {
-            "status": "uncertain", "reason_code": "no_supported_symbolic_checks",
-        }))
-    return checks
+        _append_step_symbolic_solutions(step, normalized_asts, verifier, heartbeat, checks)
+
+
+def _append_step_symbolic_solutions(
+    step: dict[str, Any],
+    normalized_asts: dict[str, dict[str, Any]],
+    verifier: Any,
+    heartbeat: Any,
+    checks: list[dict[str, Any]],
+) -> None:
+    for formula_id in step.get("formula_ids", []):
+        ast = normalized_asts.get(formula_id)
+        if ast is None or ast.get("kind") != "equation":
+            continue
+        symbols = _symbols(ast)
+        if len(symbols) != 1:
+            continue
+        if heartbeat is not None:
+            heartbeat.raise_if_failed()
+        result = verifier.solve(ast, next(iter(symbols)))
+        # 算出一个集合不能证明学生结论完整。
+        # 将其保留为约束事实，不作为评分细则的得分依据。
+        check = _check(f"sympy-solve-{formula_id}", "constraint", result,
+                       formula_id=formula_id, step_id=step["id"])
+        check["reason_code"] = result.get("reason_code", "solution_set_computed")
+        checks.append(check)
 
 
 def _symbols(ast: dict[str, Any]) -> set[str]:

@@ -1,0 +1,64 @@
+{
+  "verified_at": "2026-10-11T13:47:36+08:00",
+  "official_manifest_url": "https://static.rust-lang.org/dist/channel-rust-1.98.1.toml",
+  "manifest_sha256": "a7c8774a5fd8441c997d94c029776cbc5eb111e9d72ab5d256fa69866644347e",
+  "components": [
+    {
+      "package": "cargo",
+      "official_url": "https://static.rust-lang.org/dist/2026-09-03/cargo-1.98.1-x86_64-pc-windows-msvc.tar.xz",
+      "fetch_url": "https://static-rust-lang-org.s3.amazonaws.com/dist/2026-09-03/cargo-1.98.1-x86_64-pc-windows-msvc.tar.xz",
+      "sha256": "d6e8c738a0503b16b04db3838a38769620d553e436f632d2ebf667f793b2d44d",
+      "bytes": 10258624,
+      "cache_reused": true
+    },
+    {
+      "package": "rust-std",
+      "official_url": "https://static.rust-lang.org/dist/2026-09-03/rust-std-1.98.1-x86_64-pc-windows-msvc.tar.xz",
+      "fetch_url": "https://static-rust-lang-org.s3.amazonaws.com/dist/2026-09-03/rust-std-1.98.1-x86_64-pc-windows-msvc.tar.xz",
+      "sha256": "42727764a01a54db7423e43db08a9c818405679af6a9a677068e8cd4b8361242",
+      "bytes": 23032992,
+      "cache_reused": true
+    },
+    {
+      "package": "rustc",
+      "official_url": "https://static.rust-lang.org/dist/2026-09-03/rustc-1.98.1-x86_64-pc-windows-msvc.tar.xz",
+      "fetch_url": "https://static-rust-lang-org.s3.amazonaws.com/dist/2026-09-03/rustc-1.98.1-x86_64-pc-windows-msvc.tar.xz",
+      "sha256": "cb5370843a9d15ce6e6cf6461b4c997722220d268d0d813c2b2b86f3ed59ac24",
+      "bytes": 71317968,
+      "cache_reused": true
+    },
+    {
+      "package": "rust-src",
+      "official_url": "https://static.rust-lang.org/dist/2026-09-03/rust-src-1.98.1.tar.xz",
+      "fetch_url": "https://static-rust-lang-org.s3.amazonaws.com/dist/2026-09-03/rust-src-1.98.1.tar.xz",
+      "sha256": "5c846ebcebcc7e2e0777a4cdaa12051691593f16a7e94edbae5e6241cc62d98c",
+      "bytes": 5741168,
+      "cache_reused": true
+    },
+    {
+      "package": "rust-docs",
+      "official_url": "https://static.rust-lang.org/dist/2026-09-03/rust-docs-1.98.1-x86_64-pc-windows-msvc.tar.xz",
+      "fetch_url": "https://static-rust-lang-org.s3.amazonaws.com/dist/2026-09-03/rust-docs-1.98.1-x86_64-pc-windows-msvc.tar.xz",
+      "sha256": "e16a75443493b8830154232ca7339e6d3cb83f9d694725817962b3087dedb2e7",
+      "bytes": 24174044,
+      "cache_reused": false,
+      "elapsed_seconds": 35.61
+    },
+    {
+      "package": "rustfmt-preview",
+      "official_url": "https://static.rust-lang.org/dist/2026-09-03/rustfmt-1.98.1-x86_64-pc-windows-msvc.tar.xz",
+      "fetch_url": "https://static-rust-lang-org.s3.amazonaws.com/dist/2026-09-03/rustfmt-1.98.1-x86_64-pc-windows-msvc.tar.xz",
+      "sha256": "6606ee64b80c1ce758ad64633aef869b2ce72188568d39a53a4f792c62299769",
+      "bytes": 2588136,
+      "cache_reused": true
+    },
+    {
+      "package": "clippy-preview",
+      "official_url": "https://static.rust-lang.org/dist/2026-09-03/clippy-1.98.1-x86_64-pc-windows-msvc.tar.xz",
+      "fetch_url": "https://static-rust-lang-org.s3.amazonaws.com/dist/2026-09-03/clippy-1.98.1-x86_64-pc-windows-msvc.tar.xz",
+      "sha256": "12d0b3606a66d01aebaf7fa282e2164779150dec52935ca3d07fa6fd3ec776fd",
+      "bytes": 3956644,
+      "cache_reused": true
+    }
+  ]
+}

@@ -103,28 +103,39 @@ func (s MathEvidenceSource) Prepare(ctx context.Context, tenantID string, value 
 		contract.SubjectCode != "mathematics" {
 		return nil, nil
 	}
-	if s.requireCrop || s.Crops != nil {
-		if s.Crops == nil {
-			return nil, ErrActiveCropUnavailable
-		}
-		crop, cropErr := s.Crops.GetEvidenceForQuestion(ctx, tenantID, value.SegmentID, value.Question.ID)
-		if cropErr != nil || strings.TrimSpace(crop.CropSHA256) == "" {
-			return nil, ErrActiveCropUnavailable
-		}
-		if crop.SegmentID != value.SegmentID || crop.QuestionID != value.Question.ID || !mathCropHashMatches(base.InputHash, crop.CropSHA256) {
-			return nil, mathunderstanding.ErrRevisionConflict
-		}
+	if err := s.validateMathCropBinding(ctx, tenantID, value, base); err != nil {
+		return nil, err
 	}
 	frozen := mathunderstanding.FrozenRubric{SnapshotID: value.AssessmentSnapshot.ID, Rubric: value.Rubric}
 	baseline, err := mathunderstanding.ScoreFrozenRubric(frozen, effective, nil)
 	if err != nil {
 		return nil, nil
 	}
+	return projectMathEvidence(effective, frozen, baseline), nil
+}
+
+// 缺少可用裁剪与已有裁剪不匹配分别报错；调用方据此区分不可评分和证据版本冲突。
+func (s MathEvidenceSource) validateMathCropBinding(ctx context.Context, tenantID string, value Context, base mathunderstanding.Artifact) error {
+	if s.requireCrop || s.Crops != nil {
+		if s.Crops == nil {
+			return ErrActiveCropUnavailable
+		}
+		crop, cropErr := s.Crops.GetEvidenceForQuestion(ctx, tenantID, value.SegmentID, value.Question.ID)
+		if cropErr != nil || strings.TrimSpace(crop.CropSHA256) == "" {
+			return ErrActiveCropUnavailable
+		}
+		if crop.SegmentID != value.SegmentID || crop.QuestionID != value.Question.ID || !mathCropHashMatches(base.InputHash, crop.CropSHA256) {
+			return mathunderstanding.ErrRevisionConflict
+		}
+	}
+	return nil
+}
+
+func projectMathEvidence(effective mathunderstanding.EffectiveArtifact, frozen mathunderstanding.FrozenRubric, baseline mathunderstanding.RubricScore) *MathEvidenceContext {
+	base, contract := effective.BaseArtifact, effective.EffectiveContract
 	out := &MathEvidenceContext{
-		// The verified artifact records the correction revision already applied;
-		// EffectiveArtifact records a newer projection still attached to it. Their
-		// sum is monotonic for this artifact and changes if a correction arrives
-		// while grading is in flight.
+		// 已核验产物记录已应用的修正修订号，EffectiveArtifact 记录仍附着于该产物的更新投影。
+		// 两者之和对该产物保持单调，评分进行中到达新修正时会改变。
 		ArtifactID: base.ID, ArtifactVersion: base.Version, CorrectionRevision: base.CorrectionRevision + effective.CorrectionRevision,
 		ExamQuestionSnapshotID: base.ExamQuestionSnapshotID, ScoringVersion: MathScoringVersionV1,
 		OverallConfidence: contract.SolutionGraph.OverallConfidence,
@@ -164,7 +175,7 @@ func (s MathEvidenceSource) Prepare(ctx context.Context, tenantID string, value 
 		}
 	}
 	out.Quality = deriveMathEvidenceQuality(contract, baseline)
-	return out, nil
+	return out
 }
 
 func mathCropHashMatches(inputHash, cropSHA256 string) bool {
@@ -193,15 +204,7 @@ func deriveMathEvidenceQuality(contract mathunderstanding.CreateArtifactInput, s
 	for _, step := range contract.SolutionGraph.Steps {
 		quality.Structure = math.Min(quality.Structure, math.Min(step.Confidence, step.StructureConfidence))
 	}
-	if len(contract.Verifications) == 0 {
-		quality.Verification = 0
-	}
-	for _, check := range contract.Verifications {
-		quality.Verification = math.Min(quality.Verification, check.Confidence)
-		if check.Status == "uncertain" {
-			quality.Verification = 0
-		}
-	}
+	quality.Verification = mathVerificationQuality(contract.Verifications)
 	if len(score.RubricEvidence) == 0 {
 		quality.RubricMapping = 0
 	}
@@ -212,6 +215,21 @@ func deriveMathEvidenceQuality(contract mathunderstanding.CreateArtifactInput, s
 		}
 	}
 	quality.Critical = math.Min(quality.Recognition, math.Min(quality.Formula, math.Min(quality.Structure, math.Min(quality.Verification, quality.RubricMapping))))
+	return quality
+}
+
+// 核验缺失以0表示未知；逐条取最小值，uncertain在该步将当前值置0。
+func mathVerificationQuality(verifications []mathunderstanding.MathVerification) float64 {
+	quality := 1.0
+	if len(verifications) == 0 {
+		quality = 0
+	}
+	for _, check := range verifications {
+		quality = math.Min(quality, check.Confidence)
+		if check.Status == "uncertain" {
+			quality = 0
+		}
+	}
 	return quality
 }
 

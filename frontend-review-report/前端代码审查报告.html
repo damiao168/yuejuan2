@@ -1,0 +1,602 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>EduGrade 前端代码审查与改进建议</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231667d8'/%3E%3Cpath d='M21 20h22M21 32h22M21 44h15' stroke='white' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E" />
+<style>
+  :root{
+    --bg:#f5f7fa; --panel:#ffffff; --ink:#1b2432; --ink-2:#4a5568; --ink-3:#7a8699;
+    --line:#e4e8ef; --line-2:#eef1f6;
+    --brand:#1667d8; --brand-soft:#eaf2fe;
+    --p0:#d92d3a; --p0-soft:#fdecee;
+    --p1:#d97706; --p1-soft:#fdf3e3;
+    --p2:#2f9e44; --p2-soft:#e9f7ec;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei","Noto Sans CJK SC",Arial,sans-serif;
+    --shadow:0 1px 2px rgba(16,24,40,.05),0 1px 3px rgba(16,24,40,.06);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.7;-webkit-font-smoothing:antialiased}
+  a{color:var(--brand);text-decoration:none}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+  /* top */
+  header.hero{background:linear-gradient(180deg,#10233f 0%,#16335c 100%);color:#fff;padding:56px 0 48px}
+  header.hero .kicker{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:#9fc0ee;margin:0 0 14px}
+  header.hero h1{font-size:34px;line-height:1.25;margin:0 0 14px;font-weight:700}
+  header.hero p.sub{font-size:16px;color:#cdd9ea;max-width:720px;margin:0}
+  .meta-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}
+  .meta-chip{background:#2d476c;border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:6px 14px;font-size:13px;color:#e7eef9}
+  /* section */
+  section.block{padding:44px 0 8px}
+  h2.sec{font-size:23px;margin:0 0 6px;font-weight:700;display:flex;align-items:center;gap:12px}
+  h2.sec .no{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;background:var(--brand-soft);color:var(--brand);font-size:15px;font-weight:700;flex:none}
+  p.sec-desc{color:var(--ink-2);margin:0 0 22px;max-width:820px}
+  h3{font-size:17px;margin:30px 0 12px;font-weight:700}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:22px 24px;margin-bottom:18px}
+  /* score */
+  .score-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}
+  .score-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px;box-shadow:var(--shadow)}
+  .score-card .lab{font-size:13px;color:var(--ink-3);margin:0 0 6px}
+  .score-card .val{font-size:26px;font-weight:700;line-height:1}
+  .score-card .val small{font-size:14px;color:var(--ink-3);font-weight:500}
+  .bar{height:7px;background:var(--line-2);border-radius:99px;margin-top:12px;overflow:hidden}
+  .bar > i{display:block;height:100%;border-radius:99px;background:var(--brand)}
+  .gauge-row{display:flex;align-items:baseline;gap:8px;margin-top:4px}
+  /* summary list */
+  .find{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--line-2)}
+  .find:last-child{border-bottom:0}
+  .find .ic{flex:none;width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;margin-top:2px}
+  .ic.p0{background:var(--p0-soft);color:var(--p0)} .ic.p1{background:var(--p1-soft);color:var(--p1)} .ic.p2{background:var(--p2-soft);color:var(--p2)} .ic.ok{background:var(--brand-soft);color:var(--brand)}
+  .find b{font-weight:700}
+  .find p{margin:2px 0 0;color:var(--ink-2);font-size:14.5px}
+  /* good grid */
+  .good-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:14px}
+  .good{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--p2);border-radius:10px;padding:15px 18px;box-shadow:var(--shadow)}
+  .good b{display:block;margin-bottom:3px;font-size:15px}
+  .good span{color:var(--ink-2);font-size:14px}
+  /* tables */
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line-2);vertical-align:top}
+  th{font-size:12.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-3);font-weight:600;background:#fafbfd}
+  td code, p code, li code{font-family:var(--mono);font-size:12.5px;background:#f1f4f9;border:1px solid var(--line-2);border-radius:5px;padding:1px 6px;color:#33415c}
+  /* badges */
+  .tag{display:inline-block;border-radius:6px;padding:2px 9px;font-size:12px;font-weight:600;white-space:nowrap}
+  .t0{background:var(--p0-soft);color:var(--p0)} .t1{background:var(--p1-soft);color:var(--p1)} .t2{background:var(--p2-soft);color:var(--p2)}
+  .tag.k{background:#eef2f7;color:var(--ink-2);font-family:var(--mono);font-weight:500}
+  /* issue blocks */
+  .issue{border:1px solid var(--line);border-radius:12px;background:var(--panel);box-shadow:var(--shadow);margin-bottom:16px;overflow:hidden}
+  .issue .hd{display:flex;align-items:center;gap:12px;padding:15px 20px;border-bottom:1px solid var(--line-2);background:#fcfdfe}
+  .issue .hd .ttl{font-weight:700;font-size:15.5px;flex:1}
+  .issue .bd{padding:16px 20px}
+  .issue .bd p{margin:0 0 10px;color:var(--ink-2);font-size:14.5px}
+  .issue .bd p:last-child{margin-bottom:0}
+  .kv{display:grid;grid-template-columns:88px 1fr;gap:6px 14px;font-size:14px;margin-bottom:8px}
+  .kv dt{color:var(--ink-3);font-size:13px}
+  .kv dd{margin:0;color:var(--ink-2)}
+  .rec{background:var(--brand-soft);border:1px solid #d4e4fb;border-radius:9px;padding:11px 15px;margin-top:10px;font-size:14px;color:#1c3f73}
+  .rec b{color:#14305c}
+  /* arch diagram */
+  .arch{display:grid;grid-template-columns:1fr 40px 1fr;gap:0;align-items:stretch;margin:8px 0 4px}
+  .arch .col{border:1px dashed var(--line);border-radius:10px;padding:14px;background:#fcfdfe}
+  .arch .col h4{margin:0 0 10px;font-size:13.5px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.05em}
+  .box{border:1px solid var(--line);border-radius:8px;background:#fff;padding:9px 12px;margin-bottom:8px;font-size:13.5px}
+  .box.alt{border-color:#f0c9cf;background:#fef6f7}
+  .box .d{color:var(--ink-3);font-size:12px;margin-top:2px}
+  .arrow{display:flex;align-items:center;justify-content:center;color:var(--ink-3);font-size:22px}
+  /* roadmap */
+  .road{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+  .phase{border:1px solid var(--line);border-radius:12px;background:var(--panel);box-shadow:var(--shadow);overflow:hidden}
+  .phase .ph{padding:13px 18px;font-weight:700;color:#fff}
+  .phase.p0 .ph{background:var(--p0)} .phase.p1 .ph{background:var(--p1)} .phase.p2 .ph{background:var(--p2)}
+  .phase ul{margin:0;padding:14px 18px 16px 34px;font-size:14px;color:var(--ink-2)}
+  .phase li{margin-bottom:8px}
+  /* nav */
+  .toc{position:sticky;top:16px}
+  .layout{display:grid;grid-template-columns:200px 1fr;gap:34px;align-items:start}
+  .toc a{display:block;padding:6px 10px;border-radius:7px;color:var(--ink-2);font-size:13.5px;margin-bottom:2px}
+  .toc a:hover{background:var(--brand-soft);color:var(--brand)}
+  .toc .tg{font-size:11.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin:14px 10px 4px;font-weight:600}
+  footer{padding:40px 0 60px;color:var(--ink-3);font-size:13px;text-align:center}
+  .chart-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:18px 20px 8px;margin-bottom:18px}
+  #matrix{width:100%;height:460px}
+  .note{font-size:13px;color:var(--ink-3);margin:6px 2px 0}
+  ul.tight{margin:6px 0;padding-left:22px;color:var(--ink-2);font-size:14.5px}
+  ul.tight li{margin-bottom:6px}
+  @media(max-width:860px){
+    .layout{grid-template-columns:1fr} .toc{display:none}
+    .arch{grid-template-columns:1fr} .arrow{transform:rotate(90deg);height:30px}
+    header.hero h1{font-size:27px}
+  }
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <p class="kicker">Frontend Code Review · 只读评审</p>
+    <h1>EduGrade 前端代码审查与改进建议</h1>
+    <p class="sub">面向 apps（web-admin / desktop-client / student-portal / teacher-portal）与 packages（ui / design-tokens / sdk 等）的架构、组件、数据、样式、性能与工程化评审。本次仅审查与记录，<b>未改动任何源码</b>。</p>
+    <div class="meta-row">
+      <span class="meta-chip">审查日期 2026-10-04</span>
+      <span class="meta-chip">React 19 · Vite 6 · TypeScript 5.7</span>
+      <span class="meta-chip">web-admin 约 5.25 万行 / 404 文件</span>
+      <span class="meta-chip">Monorepo（npm workspaces）</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap layout" style="padding-top:36px">
+  <nav class="toc">
+    <div class="tg">总览</div>
+    <a href="#summary">执行摘要</a>
+    <a href="#scores">总体评分</a>
+    <a href="#good">做得好的地方</a>
+    <div class="tg">分析</div>
+    <a href="#matrix">优先级矩阵</a>
+    <a href="#arch">架构现状</a>
+    <div class="tg">详细建议</div>
+    <a href="#d-route">路由与架构</a>
+    <a href="#d-data">数据与状态</a>
+    <a href="#d-comp">组件设计</a>
+    <a href="#d-pkg">共享包治理</a>
+    <a href="#d-style">样式方案</a>
+    <a href="#d-perf">构建与性能</a>
+    <a href="#d-eng">工程化</a>
+    <a href="#d-test">测试</a>
+    <a href="#d-a11y">可访问性</a>
+    <a href="#d-multi">多端与空壳</a>
+    <div class="tg">落地</div>
+    <a href="#roadmap">路线图</a>
+    <a href="#appendix">量化附录</a>
+  </nav>
+
+  <main>
+  <!-- ===== 执行摘要 ===== -->
+  <section class="block" id="summary" style="padding-top:6px">
+    <h2 class="sec"><span class="no">1</span>执行摘要</h2>
+    <p class="sec-desc">整体判断：这是一个工程质量<b>明显高于行业平均水平</b>的前端——TypeScript 严格、几乎无 any、无调试残留、错误与安全边界考虑周到、核心模块有清晰的关注点分离。当前的主要问题不在“代码脏”，而在<b>架构一致性与复杂度管理</b>：两套路由、两套数据获取范式并存，核心工作台状态与 props 过度膨胀，共享包利用率偏低。</p>
+    <div class="card">
+      <div class="find"><span class="ic p0">P0</span><div><b>两套路由系统并存，TanStack Router 被“降级”为壳</b><p>依赖了 @tanstack/react-router，却只注册 5 个无组件的占位路由，真正的页面解析、权限、导航由自研 AppRoute 注册表 + pageRendering 完成。类型安全、loader、路由级代码分割等能力基本未用，还带来理解成本。</p></div></div>
+      <div class="find"><span class="ic p0">P0</span><div><b>核心阅卷工作台绕开 react-query，手写一整套缓存/预取/草稿队列</b><p>react-query 仅 11 个文件使用；最复杂的 GradingWorkbench 用约 30 个 state/ref + 自研队列、预取、冲突、续租逻辑。能力很强但状态机复杂、难测试，且与全站数据范式不统一。</p></div></div>
+      <div class="find"><span class="ic p1">P1</span><div><b>巨型组件与严重 prop drilling</b><p>20+ 个文件超过 18KB（最大 ScoringAssuranceWorkspace 46KB）；TaskRail 单组件接收 30+ props，WorkbenchTaskContent 接收三个十几字段的聚合对象。</p></div></div>
+      <div class="find"><span class="ic p1">P1</span><div><b>共享包“建了但用得少”，跨应用复制代码</b><p>packages/ui 仅约 6 处实际引用；design-tokens 在 TSX 中仅 2 处使用，另有 23 处硬编码色值；desktop-client 的 api/client、userError 与 web-admin 高度同源却各自复制演化。</p></div></div>
+      <div class="find"><span class="ic p2">P2</span><div><b>工程化与测试的“最后一公里”</b><p>Biome 规则集为 none 且 formatter 关闭；50 个全局 CSS 无 CSS Module；多个 feature（appeals / onboarding / calibration 等）单测为 0；teacher-portal 为空壳。</p></div></div>
+    </div>
+  </section>
+
+  <!-- ===== 总体评分 ===== -->
+  <section class="block" id="scores">
+    <h2 class="sec"><span class="no">2</span>总体评分</h2>
+    <p class="sec-desc">评分基于本次实际抽样与全量静态统计，侧重可长期维护性。综合评级 <b>B（良好，具备扎实底座，但存在明确的结构性技术债）</b>。</p>
+    <div class="score-grid">
+      <div class="score-card"><p class="lab">类型安全 Type Safety</p><div class="gauge-row"><span class="val">9.0</span><small>/10</small></div><div class="bar"><i style="width:90%"></i></div></div>
+      <div class="score-card"><p class="lab">代码整洁 Cleanliness</p><div class="gauge-row"><span class="val">9.0</span><small>/10</small></div><div class="bar"><i style="width:90%"></i></div></div>
+      <div class="score-card"><p class="lab">错误处理与安全</p><div class="gauge-row"><span class="val">8.5</span><small>/10</small></div><div class="bar"><i style="width:85%"></i></div></div>
+      <div class="score-card"><p class="lab">架构一致性</p><div class="gauge-row"><span class="val" style="color:var(--p1)">5.5</span><small>/10</small></div><div class="bar"><i style="width:55%;background:var(--p1)"></i></div></div>
+      <div class="score-card"><p class="lab">组件可维护性</p><div class="gauge-row"><span class="val" style="color:var(--p1)">6.0</span><small>/10</small></div><div class="bar"><i style="width:60%;background:var(--p1)"></i></div></div>
+      <div class="score-card"><p class="lab">共享与复用</p><div class="gauge-row"><span class="val" style="color:var(--p0)">5.0</span><small>/10</small></div><div class="bar"><i style="width:50%;background:var(--p0)"></i></div></div>
+      <div class="score-card"><p class="lab">样式一致性</p><div class="gauge-row"><span class="val">6.0</span><small>/10</small></div><div class="bar"><i style="width:60%;background:var(--p1)"></i></div></div>
+      <div class="score-card"><p class="lab">性能与构建</p><div class="gauge-row"><span class="val">6.5</span><small>/10</span></div><div class="bar"><i style="width:65%"></i></div></div>
+      <div class="score-card"><p class="lab">测试覆盖</p><div class="gauge-row"><span class="val">6.0</span><small>/10</small></div><div class="bar"><i style="width:60%;background:var(--p1)"></i></div></div>
+      <div class="score-card"><p class="lab">可访问性 A11y</p><div class="gauge-row"><span class="val">6.5</span><small>/10</small></div><div class="bar"><i style="width:65%"></i></div></div>
+      <div class="score-card" style="grid-column:1/-1;background:#10233f;color:#fff;border:0"><p class="lab" style="color:#9fc0ee">综合评价 Overall</p><div class="gauge-row"><span class="val" style="color:#fff">6.8</span><small style="color:#cdd9ea">/10 · B 级 · 底座扎实，优先偿还“一致性”债务</small></div></div>
+    </div>
+  </section>
+
+  <!-- ===== 做得好 ===== -->
+  <section class="block" id="good">
+    <h2 class="sec"><span class="no">3</span>做得好的地方</h2>
+    <p class="sec-desc">在提出改进前，先明确这些应当保持、并可作为规范推广到其余模块的实践。</p>
+    <div class="good-grid">
+      <div class="good"><b>严格的类型体系</b><span>tsconfig 开启 strict / noUnusedLocals / noUnusedParameters / noImplicitReturns；全量代码几乎无 any，Biome 对 noExplicitAny 告警。</span></div>
+      <div class="good"><b>清晰的关注点分离</b><span>grading 等核心模块把逻辑下沉为 14 个自定义 hook 与纯函数 model/presentation，组件负责组合与渲染。</span></div>
+      <div class="good"><b>周到的错误边界</b><span>ErrorBoundary 用 resetKey（路由变化）复位而非 key，避免无谓重挂；并正确处理了 lazy 模块被拒绝后会被缓存的边界。</span></div>
+      <div class="good"><b>扎实的传输层安全</b><span>统一处理鉴权、CSRF 头、写操作幂等键（Idempotency-Key）、428 二次认证事件、SSE 与 Blob 下载。</span></div>
+      <div class="good"><b>路由级代码分割</b><span>pageRendering 中所有页面均通过 React.lazy 按需加载，主包不承载全部页面。</span></div>
+      <div class="good"><b>无调试残留、注释规范</b><span>0 处 console.log、0 处 TODO/FIXME；关键业务规则、权限边界、并发与恢复均有简洁中文注释，符合仓库注释标准。</span></div>
+      <div class="good"><b>公共场景安全细节</b><span>公共电脑模式含空闲锁定、解锁二次认证、离开清理；登出时 queryClient.clear 防止账号间数据残留。</span></div>
+      <div class="good"><b>具备自动化测试基建</b><span>Vitest 单测 + Testing Library + Playwright E2E/视觉用例，核心链路（grading/exams/capture）覆盖较好。</span></div>
+    </div>
+  </section>
+
+  <!-- ===== 优先级矩阵 ===== -->
+  <section class="block" id="matrix-sec">
+    <h2 class="sec"><span class="no">4</span>改进项优先级矩阵</h2>
+    <p class="sec-desc">横轴为改造成本（越右越贵），纵轴为预期收益（越上越值得）。气泡颜色表示优先级。<b>优先做左上角（高收益、低成本）项</b>。</p>
+    <div class="chart-card"><div id="matrix"></div></div>
+    <p class="note">说明：成本/收益为评审基于当前代码规模与耦合度的相对估计（1–10），用于排序而非精确工时。</p>
+  </section>
+
+  <!-- ===== 架构现状 ===== -->
+  <section class="block" id="arch">
+    <h2 class="sec"><span class="no">5</span>架构现状：两套机制并存</h2>
+    <p class="sec-desc">项目已经引入了成熟的标准库，但在最关键的路由与数据两处，又并行维护了一套自研机制，导致“会用 A 的人要同时读懂 B”。</p>
+    <div class="card">
+      <div class="arch">
+        <div class="col">
+          <h4>已引入的标准能力</h4>
+          <div class="box">TanStack Router<span class="d">仅注册 5 个无组件占位路由</span></div>
+          <div class="box">TanStack Query<span class="d">仅 11 个文件 / 33 处调用</span></div>
+          <div class="box">@edugrade/design-tokens<span class="d">TSX 中仅 2 处使用</span></div>
+          <div class="box">@edugrade/ui<span class="d">仅约 6 处实际引用</span></div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="col">
+          <h4>实际承担工作的自研机制</h4>
+          <div class="box alt">AppRoute 注册表 + pageRendering<span class="d">手写页面解析 / 权限 / 导航</span></div>
+          <div class="box alt">工作台 queue / prefetch / draft 队列<span class="d">约 30 个 state/ref，手写缓存与冲突</span></div>
+          <div class="box alt">硬编码色值 + 内联样式<span class="d">23 处 hex、81 处 inline style</span></div>
+          <div class="box alt">各 app 自有组件 / api 复制<span class="d">desktop 与 web-admin 同源演化</span></div>
+        </div>
+      </div>
+      <p class="note">目标状态（详见路线图）：让标准能力成为“主路径”，自研仅保留标准库确实无法覆盖的业务规则（如任务认领/续租、草稿冲突仲裁），并以薄封装形式存在。</p>
+    </div>
+  </section>
+  <!-- ===== 详细建议 ===== -->
+  <section class="block" id="d-route">
+    <h2 class="sec"><span class="no">6</span>详细改进建议</h2>
+    <p class="sec-desc">每条包含：问题与影响、本次取得的证据、可执行建议与优先级。标签 <span class="tag k">path</span> 为相关文件。</p>
+
+    <h3 id="route-h">6.1 路由与整体架构</h3>
+
+    <div class="issue">
+      <div class="hd"><span class="tag t0">P0</span><span class="ttl">收敛双路由：让 TanStack Router 真正工作，或移除它</span></div>
+      <div class="bd">
+        <dl class="kv">
+          <dt>证据</dt><dd><span class="tag k">router/appRouter.tsx</span> 仅 5 个路由且均无 <code>component</code>；真正渲染由 <span class="tag k">router/routes.tsx</span>（24 生产 + 4 mock 的 AppRoute）与 <span class="tag k">router/pageRendering.tsx</span>（16KB switch）完成。</dd>
+        </dl>
+        <p>当前等于同时维护两套路由心智模型：TanStack 负责“匹配 URL”，自研注册表负责“决定渲染谁、能否访问”。其类型安全路由、<code>beforeLoad/loader</code>、路由级代码分割、<code>defaultPreload</code> 等能力基本闲置。</p>
+        <div class="rec"><b>建议：</b>推荐把每个 AppRoute 映射为带 <code>component</code> 的 <code>createRoute</code>，权限/体验判断移入 <code>beforeLoad</code>，页面组件交给路由树做分割与预取，<code>$experience</code> 作为前缀或布局路由。若团队评估后坚持自研，则应删除 @tanstack/react-router 依赖与 <code>RouterProvider</code>，避免“装了却没用”误导后来者。</div>
+      </div>
+    </div>
+
+    <div class="issue">
+      <div class="hd"><span class="tag t1">P1</span><span class="ttl">渲染函数体中的副作用：setBusinessCommandScope</span></div>
+      <div class="bd">
+        <dl class="kv"><dt>证据</dt><dd><span class="tag k">AppShell.tsx:41</span> 在组件函数体直接执行 <code>setBusinessCommandScope(user?.tenant, user?.id)</code>。</dd></dl>
+        <p>渲染体应保持纯函数；直接在其中写模块级状态，在严格模式/并发渲染下可能以非预期顺序执行，且难以推断。</p>
+        <div class="rec"><b>建议：</b>移入 <code>useEffect(() =&gt; setBusinessCommandScope(user?.tenant ?? "", user?.id ?? ""), [user?.tenant, user?.id])</code>。成本极低，建议作为首批顺手项。</div>
+      </div>
+    </div>
+
+    <div class="issue">
+      <div class="hd"><span class="tag t1">P1</span><span class="ttl">AppShell 职责过载，应拆分认证与引导</span></div>
+      <div class="bd">
+        <dl class="kv"><dt>证据</dt><dd><span class="tag k">AppShell.tsx</span>（约 250 行）同时负责会话恢复、登录/登出、激活/恢复页、路由解析、experience 切换、导航。</dd></dl>
+        <div class="rec"><b>建议：</b>抽 <code>AuthProvider + useAuth()</code>（承载 user/loading/login/logout），激活/恢复抽为独立视图或真实路由，路由解析交还给路由层。AppShell 最终只保留“布局 + 当前路由出口”。</div>
+      </div>
+    </div>
+
+    <div class="issue">
+      <div class="hd"><span class="tag t2">P2</span><span class="ttl">明确 Hash History 的取舍</span></div>
+      <div class="bd">
+        <p>使用 <code>createHashHistory</code> 利于纯静态托管（nginx.conf 已配套），但 URL 不美观、不利于服务端路由与未来 SEO。可保留，但建议在文档说明原因；若后续需要真实地址再切换为 browser history 并配置 fallback。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="d-data">
+    <h3>6.2 数据获取与状态管理</h3>
+
+    <div class="issue">
+      <div class="hd"><span class="tag t0">P0</span><span class="ttl">收敛数据获取范式：工作台回归 react-query</span></div>
+      <div class="bd">
+        <dl class="kv">
+          <dt>证据</dt><dd>react-query 仅 11 个文件使用；<span class="tag k">GradingWorkbench.tsx</span> 含约 30 个 useState/useRef，并自研任务队列、预取（useGradingPrefetch）、草稿保存队列（TaskDraftSaveQueue）、冲突与续租。</dd>
+        </dl>
+        <p>这些手写逻辑覆盖了 react-query 已内置的能力（缓存、去重、分页/无限滚动、预取、失效、重试、后台刷新），使状态机非常复杂、难测试。客观上阅卷确有特殊业务（认领、续租、草稿冲突仲裁），但<b>数据获取/缓存</b>与<b>业务规则</b>应当分离。</p>
+        <div class="rec"><b>建议：</b>任务列表用 <code>useInfiniteQuery</code>、任务上下文/聚合用 <code>useQuery</code>（key 含 examId/taskId），提交分数用 <code>useMutation</code> 并做失效；草稿自动保存用 mutation + 轻量队列；认领/续租/冲突仲裁保留为薄业务层。可从“只读加载”部分先行迁移，写路径随后。</div>
+      </div>
+    </div>
+
+    <div class="issue">
+      <div class="hd"><span class="tag t2">P2</span><span class="ttl">避免直接 import 全局 QueryClient，改用 hook</span></div>
+      <div class="bd">
+        <dl class="kv"><dt>证据</dt><dd><span class="tag k">GradingWorkbench.tsx:8</span> 直接 <code>import { appQueryClient }</code> 并调用 <code>invalidateQueries</code>。</dd></dl>
+        <div class="rec"><b>建议：</b>组件内统一用 <code>useQueryClient()</code>；单例仅用于在入口挂载 Provider。这样测试可注入独立 client，也避免隐式全局依赖。</div>
+      </div>
+    </div>
+
+    <div class="issue">
+      <div class="hd"><span class="tag t2">P2</span><span class="ttl">优先“派生状态”，减少镜像 state</span></div>
+      <div class="bd">
+        <p>部分 state 是由上下文/路由可直接计算的值的“副本”，容易出现不一致。建议能用 <code>useMemo</code> 从 <code>ctx / route / user</code> 派生的就不另存 state；确需本地编辑初值时，用 key 重置（如已有的 exam/account key 模式）。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="d-comp">
+    <h3>6.3 组件设计</h3>
+
+    <div class="issue">
+      <div class="hd"><span class="tag t1">P1</span><span class="ttl">拆分巨型组件/文件</span></div>
+      <div class="bd">
+        <dl class="kv"><dt>证据</dt><dd>20+ 文件超过 18KB：ScoringAssuranceWorkspace 46KB、QualityDashboardPage 35KB、PlatformModelConfigPage 32KB、ArbitrationPage 31KB、CaptureBatchPage 29KB 等。</dd></dl>
+        <div class="rec"><b>建议：</b>按“页面区域 + 职责”拆为子组件与 hook（数据获取、表现、事件各归位），建议单文件控制在约 250–300 行内；纯计算移入 model/presentation（grading 已是正面范例，可推广）。</div>
+      </div>
+    </div>
+
+    <div class="issue">
+      <div class="hd"><span class="tag t1">P1</span><span class="ttl">消除 prop drilling：Context / 组合 / 状态收敛</span></div>
+      <div class="bd">
+        <dl class="kv"><dt>证据</dt><dd><span class="tag k">GradingWorkbench → TaskRail</span> 传 30+ props；<span class="tag k">WorkbenchTaskContent</span> 接收 answer/evidence/editor 三个十几字段的聚合对象。</dd></dl>
+        <div class="rec"><b>建议：</b>① 用工作台级 Context 下发共享数据与动作；② 采用组合/slot 模式，让 Header/Rail/Content 作为子组件就近取数，而非由顶层逐个转发；③ 草稿与动作这类跨切面状态收敛到一个 reducer 或 context，避免几十个 setter 层层传递。</div>
+      </div>
+    </div>
+
+    <div class="issue">
+      <div class="hd"><span class="tag t2">P2</span><span class="ttl">稳定传给子组件的引用</span></div>
+      <div class="bd">
+        <p>内联聚合对象与回调在每次渲染都新建，会使下游 <code>React.memo</code> 失效。配合上述 Context 后，对回调使用 <code>useCallback</code>、对聚合对象使用 <code>useMemo</code>；AppLayout 中 <code>permittedRoutes / menuItems</code> 同样建议 memo 化。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="d-pkg">
+    <h3>6.4 共享包治理（Monorepo）</h3>
+
+    <div class="issue">
+      <div class="hd"><span class="tag t1">P1</span><span class="ttl">packages/ui：推广复用或精简，避免“名义共享”</span></div>
+      <div class="bd">
+        <dl class="kv"><dt>证据</dt><dd>ui 包含 13 个组件（PageHeader/StatusBadge/FilterBar/MetricCard 等，仅 361 行），全仓仅约 6 处实际引用；web-admin 内部仍保留大量同类组件。</dd></dl>
+        <div class="rec"><b>建议：</b>盘点重复，把 web-admin 中同类的 Header/Badge/FilterBar/Card 替换为共享版并补齐差异；长期无人使用的组件移出共享包。目标是“同类 UI 只有一处实现”。</div>
+      </div>
+    </div>
+
+    <div class="issue">
+      <div class="hd"><span class="tag t1">P1</span><span class="ttl">design-tokens 成为唯一样式真相</span></div>
+      <div class="bd">
+        <dl class="kv"><dt>证据</dt><dd>TSX 中仅 2 处引用 token；存在 23 处硬编码十六进制色值（10 个文件）；主题在 <span class="tag k">main.tsx</span> 与 <span class="tag k">AppLayout.tsx</span> 两处 ConfigProvider 分别配置。</dd></dl>
+        <div class="rec"><b>建议：</b>颜色/间距/圆角/阴影统一引用 token，清除硬编码；由 token 生成唯一 antd 主题对象并在一处配置；换肤/大字模式也基于 token 派生。</div>
+      </div>
+    </div>
+
+    <div class="issue">
+      <div class="hd"><span class="tag t1">P1</span><span class="ttl">提高 SDK 生成覆盖率，收敛手写端点</span></div>
+      <div class="bd">
+        <dl class="kv"><dt>证据</dt><dd>18 个 api 文件使用生成的 <code>EduGradeApi</code>，29 个仍为纯手写；generated client（158KB）+ types（172KB）已具备完整契约。</dd></dl>
+        <div class="rec"><b>建议：</b>优先把高频手写端点（review/papers/capture/exams）纳入 OpenAPI 生成，手写仅保留“跨端点聚合/编排”；并把生成覆盖率纳入 CI 门槛（仓库已有 update-api-route-coverage 等脚本基础）。</div>
+      </div>
+    </div>
+
+    <div class="issue">
+      <div class="hd"><span class="tag t1">P1</span><span class="ttl">抽取跨应用共享的 transport / 错误码</span></div>
+      <div class="bd">
+        <dl class="kv"><dt>证据</dt><dd>desktop-client 的 <span class="tag k">api/client.ts</span>（6.5KB）、<span class="tag k">api/userError.ts</span>（3.6KB）与 web-admin 高度同源，属复制后各自演化。</dd></dl>
+        <div class="rec"><b>建议：</b>把 transport、错误码映射、通用类型抽到共享包（如 core-client），desktop 端只注入 Tauri/离线队列等差异，修复一处即处处生效。</div>
+      </div>
+    </div>
+
+    <div class="issue">
+      <div class="hd"><span class="tag t2">P2</span><span class="ttl">清理空包、明确归属</span></div>
+      <div class="bd"><p>packages/auth-client 为 0 源文件、shared-types 仅 43 行。建议明确其职责并填充，或合并入相关包，避免空壳长期存在。</p></div>
+    </div>
+  </section>
+  <section class="block" id="d-style">
+    <h3>6.5 样式方案</h3>
+    <div class="issue">
+      <div class="hd"><span class="tag t1">P1</span><span class="ttl">50 个全局 CSS、0 CSS Module，靠人工命名防冲突</span></div>
+      <div class="bd">
+        <dl class="kv"><dt>证据</dt><dd>web-admin 有 50 个 <code>.css</code>、无 <code>.module.css</code>；<span class="tag k">main.tsx</span> 集中 import 12+ 个样式；类名采用 BEM 风格（如 .grading-shell）。</dd></dl>
+        <div class="rec"><b>建议：</b>新页面统一使用 Vite 原生支持的 CSS Modules（<code>*.module.css</code>）并与组件 co-locate；reset、tokens 等保留全局；存量按模块渐进迁移，避免类名碰撞与“改一处怕影响别处”。</div>
+      </div>
+    </div>
+    <div class="issue">
+      <div class="hd"><span class="tag t2">P2</span><span class="ttl">收敛 81 处内联样式与两处样式目录</span></div>
+      <div class="bd">
+        <dl class="kv"><dt>证据</dt><dd>inline style 共 81 处，集中在 ScoringAssuranceWorkspace(20)、AnswerGroupingDrawer(12)、QualityDashboardPage(8)；样式同时存在于 <span class="tag k">styles/features</span> 与各 <span class="tag k">features/*</span>。</dd></dl>
+        <div class="rec"><b>建议：</b>静态样式移入 class + token，内联仅保留真正动态计算值；样式目录统一并入对应 feature，减少“两处找样式”。</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="d-perf">
+    <h3>6.6 构建与运行时性能</h3>
+    <div class="issue">
+      <div class="hd"><span class="tag t1">P1</span><span class="ttl">Chunk 粒度过粗，缺少体积分析与预算</span></div>
+      <div class="bd">
+        <dl class="kv"><dt>证据</dt><dd><span class="tag k">vite.config.ts</span> 将整个 antd / recharts / framer-motion 各打成一个 chunk；项目还含 pdfjs、katex 等重依赖。</dd></dl>
+        <div class="rec"><b>建议：</b>引入 <code>rollup-plugin-visualizer</code> 建立产物可视化与体积预算；让重依赖（pdfjs/katex/recharts）仅在对应页面懒加载、不进首屏路径；antd 按需随页面拆分，避免首个后台页面即拉取超大 vendor。</div>
+      </div>
+    </div>
+    <div class="issue">
+      <div class="hd"><span class="tag t2">P2</span><span class="ttl">首屏白屏与资源提示</span></div>
+      <div class="bd">
+        <dl class="kv"><dt>证据</dt><dd><span class="tag k">index.html</span> 在 JS 执行前为空 div，无首屏占位、无 <code>&lt;noscript&gt;</code>。</dd></dl>
+        <div class="rec"><b>建议：</b>内联一个轻量品牌/加载占位与 noscript 提示，改善弱网首屏；对关键 chunk 使用 modulepreload，非首屏图片懒加载并给占位。长列表（审计/学生/任务）保持分页或虚拟滚动（已有 ResponsiveTable 基础）。</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="d-eng">
+    <h3>6.7 工程化与规范</h3>
+    <div class="issue">
+      <div class="hd"><span class="tag t1">P1</span><span class="ttl">Biome 规则集为 none、formatter 关闭</span></div>
+      <div class="bd">
+        <dl class="kv"><dt>证据</dt><dd><span class="tag k">biome.json</span> <code>preset:"none"</code>，仅手动开启少量 correctness/suspicious 规则，未含 a11y 与多数最佳实践；formatter/assist 关闭。</dd></dl>
+        <div class="rec"><b>建议：</b>渐进启用 recommended 规则集（先 warn、修复后转 error），打开 formatter 并接入编辑器与提交钩子/CI。统一格式可消除大量无意义 diff，规则也能在提交前兜底 a11y/复杂度问题。</div>
+      </div>
+    </div>
+    <div class="issue">
+      <div class="hd"><span class="tag t2">P2</span><span class="ttl">固化运行环境与依赖治理</span></div>
+      <div class="bd">
+        <div class="rec"><b>建议：</b>用 <code>.nvmrc</code> 与 package.json <code>engines</code> 固定 Node 版本；定期做依赖漏洞审计；保持现有 CI 分层（ci:web:fast/full）与契约门（OpenAPI/授权/架构边界），这些是明显优势，应继续维护。</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="d-test">
+    <h3>6.8 测试</h3>
+    <div class="issue">
+      <div class="hd"><span class="tag t1">P1</span><span class="ttl">覆盖不均：多个 feature 单测为 0</span></div>
+      <div class="bd">
+        <dl class="kv"><dt>证据</dt><dd>appeals / calibration / dashboard / onboarding / platform-model-config 为 0；question-bank / gold-papers / members / platform 仅 1；共享包 ui、design-tokens 为 0。</dd></dl>
+        <div class="rec"><b>建议：</b>优先为纯函数 model/presentation 补测（投入小、回报高、不依赖渲染），再补关键交互与边界（权限、错误、并发）；共享组件因影响面大应至少有渲染+交互测试；按 feature 设差异化覆盖率门槛，避免“一刀切”。</div>
+      </div>
+    </div>
+    <div class="issue">
+      <div class="hd"><span class="tag t2">P2</span><span class="ttl">测试关注点：以用户行为为主</span></div>
+      <div class="bd"><p>继续以 Testing Library 的角色/可访问名查询，避免断言内部 state；E2E 保持对核心链路（考试工作区、采集、阅卷）的覆盖，可在视觉用例中补充可访问性断言。</p></div>
+    </div>
+  </section>
+
+  <section class="block" id="d-a11y">
+    <h3>6.9 可访问性 A11y</h3>
+    <div class="issue">
+      <div class="hd"><span class="tag t1">P1</span><span class="ttl">自定义图片查看器与全局快捷键的键盘/ARIA</span></div>
+      <div class="bd">
+        <dl class="kv"><dt>证据</dt><dd>答案查看器以 pointer 事件驱动拖拽/缩放，工作台注册大量全局键盘快捷键。</dd></dl>
+        <div class="rec"><b>建议：</b>确保可聚焦、具 <code>aria-label/role</code>，所有指针操作有等价键盘路径；快捷键避免与浏览器/读屏冲突并提供“查看/关闭快捷键”入口；配合 Biome a11y 规则在提交前检查。</div>
+      </div>
+    </div>
+    <div class="issue">
+      <div class="hd"><span class="tag t2">P2</span><span class="ttl">对比度、焦点管理与路由朗读</span></div>
+      <div class="bd">
+        <p>已具备“跳到主要内容”链接、<code>#main-workspace</code> tabIndex 与大字模式，值得保持。建议：核对次要文字在白底的对比度达 WCAG AA；错误提示不仅靠颜色（已用 Alert，保持）；路由切换时把焦点移至主区域并朗读新页面标题。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="d-multi">
+    <h3>6.10 多端策略与空壳</h3>
+    <div class="issue">
+      <div class="hd"><span class="tag t1">P1</span><span class="ttl">teacher-portal 为空壳，需“补全或下线”决策</span></div>
+      <div class="bd">
+        <dl class="kv"><dt>证据</dt><dd><span class="tag k">apps/teacher-portal</span> 仅含一个 README，无 package.json/源码。</dd></dl>
+        <div class="rec"><b>建议：</b>若教师能力已由 web-admin 的 teacher experience 承担，则在文档说明并考虑移除该空目录；若规划独立端，则补最小可运行骨架。避免目录长期悬空造成范围误解。</div>
+      </div>
+    </div>
+    <div class="issue">
+      <div class="hd"><span class="tag t2">P2</span><span class="ttl">厘清“一前端多身份”与“独立客户端”的边界</span></div>
+      <div class="bd">
+        <p>web-admin 已内置 admin/teacher/auditor/student 多 experience，同时又存在独立 student-portal 与 desktop-client。建议明确各端定位（如 desktop 专注离线扫描、student-portal 专注学生场景），避免学生/采集能力在多处重复实现；Tauri 端保持现有最小权限与 CSP（check:security-config）。</p>
+      </div>
+    </div>
+  </section>
+  <!-- ===== 路线图 ===== -->
+  <section class="block" id="roadmap">
+    <h2 class="sec"><span class="no">7</span>分阶段落地路线图</h2>
+    <p class="sec-desc">建议“先低成本高收益 + 定方向，再做结构治理，最后持续打磨”。周期为相对估计，可按团队人力调整。</p>
+    <div class="road">
+      <div class="phase p0">
+        <div class="ph">阶段一 · P0｜约 1–3 周</div>
+        <ul>
+          <li>顺手修复：渲染体副作用、主题单点收敛、首屏占位与 noscript</li>
+          <li>路由方向决策；用 3–5 个路由做 TanStack 收敛 PoC（component + beforeLoad）</li>
+          <li>工作台“只读”数据（任务列表/上下文/聚合）迁移至 react-query</li>
+          <li>建立 bundle 可视化，确认重依赖不进首屏</li>
+        </ul>
+      </div>
+      <div class="phase p1">
+        <div class="ph">阶段二 · P1｜约 3–8 周</div>
+        <ul>
+          <li>拆分 Top 巨型组件；用 Context/组合消除 prop drilling</li>
+          <li>推广共享 ui、design-tokens，清除硬编码色值</li>
+          <li>抽取跨端 core-client（transport/错误码），收敛 desktop 复制</li>
+          <li>提高 SDK 生成覆盖率；样式渐进 CSS Modules</li>
+          <li>启用 Biome recommended + formatter 并接入 CI</li>
+        </ul>
+      </div>
+      <div class="phase p2">
+        <div class="ph">阶段三 · P2｜持续打磨</div>
+        <ul>
+          <li>补齐边缘 feature 与共享包测试，设覆盖率门槛</li>
+          <li>细化 chunk、落地体积预算、重依赖懒加载</li>
+          <li>自定义交互 a11y、对比度与路由焦点管理</li>
+          <li>teacher-portal 补全/下线落地，文档化多端边界</li>
+        </ul>
+      </div>
+    </div>
+    <p class="note">原则：每一步都保持可发布、可回滚；优先迁移“只读/纯函数”，写路径与复杂业务规则随后；不追求一次性重写。</p>
+  </section>
+
+  <!-- ===== 附录 ===== -->
+  <section class="block" id="appendix">
+    <h2 class="sec"><span class="no">8</span>量化附录</h2>
+    <h3>各模块规模（不含 node_modules / dist，已剔除测试计数）</h3>
+    <div class="card" style="padding:8px 10px">
+      <table>
+        <thead><tr><th style="width:26%">模块</th><th>源文件</th><th>源码行</th><th>测试文件</th><th>测试行</th></tr></thead>
+        <tbody>
+          <tr><td><code>apps/web-admin</code></td><td>404</td><td>52,498</td><td>113</td><td>10,368</td></tr>
+          <tr><td><code>apps/desktop-client</code></td><td>41</td><td>5,333</td><td>19</td><td>1,510</td></tr>
+          <tr><td><code>apps/student-portal</code></td><td>14</td><td>1,548</td><td>4</td><td>819</td></tr>
+          <tr><td><code>apps/teacher-portal</code></td><td colspan="4">空壳，仅 README（无 package.json / 源码）</td></tr>
+          <tr><td><code>packages/sdk</code></td><td>5</td><td>3,061</td><td>0</td><td>0（另含 generated client 158KB / types 172KB）</td></tr>
+          <tr><td><code>packages/ui</code></td><td>17</td><td>361</td><td>0</td><td>0</td></tr>
+          <tr><td><code>packages/design-tokens</code></td><td>12</td><td>137</td><td>0</td><td>0</td></tr>
+          <tr><td><code>packages/shared-types</code></td><td>1</td><td>43</td><td>0</td><td>0</td></tr>
+          <tr><td><code>packages/auth-client</code></td><td colspan="4">0 源文件（空包）</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>关键静态指标（本次评审实测）</h3>
+    <div class="card" style="padding:8px 10px">
+      <table>
+        <thead><tr><th style="width:40%">指标</th><th>数值 / 结论</th></tr></thead>
+        <tbody>
+          <tr><td>路由</td><td>TanStack 占位路由 5 个（无组件）；自研 AppRoute 生产 24 + mock 4；Hash history</td></tr>
+          <tr><td>API 客户端</td><td>使用生成 EduGradeApi 18 个；纯手写 29 个</td></tr>
+          <tr><td>react-query 使用</td><td>11 个文件 / 33 处（核心工作台未使用）</td></tr>
+          <tr><td>design-tokens（TSX）</td><td>2 处引用</td></tr>
+          <tr><td>硬编码十六进制色值</td><td>23 处 / 10 个文件</td></tr>
+          <tr><td>内联样式 style={{}}</td><td>81 处 / 24 个文件</td></tr>
+          <tr><td>样式文件</td><td>50 个全局 CSS / 0 个 CSS Module</td></tr>
+          <tr><td>any 使用（非测试）</td><td>≈ 0（strict + noExplicitAny）</td></tr>
+          <tr><td>console.log / TODO·FIXME</td><td>0 / 0</td></tr>
+          <tr><td>TypeScript / Lint</td><td>tsconfig strict 全开；Biome preset=none、formatter 关闭</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">口径说明：行数为静态统计近似值；成本/收益与评分为评审相对判断，用于排序与沟通，不代表精确工时或绝对标准。本报告全程只读，未对仓库源码做任何修改。</p>
+  </section>
+  </main>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js" integrity="sha384-Mx5lkUEQPM1pOJCwFtUICyX45KNojXbkWdYhkKUKsbv391mavbfoAmONbzkgYPzR" crossorigin="anonymous"></script>
+<script>
+(function(){
+  function p(name,x,y){return [x,y,name];}
+  var P0 = [p("收敛双路由",7,9),p("工作台回归 react-query",8,8.6),p("拆分巨型组件",6,7.6),p("消除 prop drilling",5,7.6)];
+  var P1 = [p("推广共享 ui",5,7),p("design-tokens 单一真相",4,6.7),p("抽跨端 core-client",4.4,6.3),p("样式模块化",6,6.2),
+            p("启用 Biome+formatter",2,6.2),p("补齐边缘测试",6,6),p("查看器/快捷键 a11y",4,5.6),p("teacher-portal 决策",3,4.4)];
+  var P2 = [p("主题单点收敛",2,5),p("渲染体副作用修复",1,4.2),p("首屏占位/noscript",1,4),p("bundle 分析/预算",3,5.4),p("useQueryClient 替代单例",1.6,3.7)];
+  function series(name,data,color){
+    return {name:name,type:"scatter",data:data,itemStyle:{color:color},symbolSize:16,
+      label:{show:true,position:"right",fontSize:11,color:"#4a5568",formatter:function(p){return p.data[2];}},
+      emphasis:{scale:1.3,label:{fontWeight:700,color:"#1b2432"}}};
+  }
+  var el=document.getElementById("matrix");
+  // 图表脚本无法加载时保留文字路线图；没有图表容器时直接结束初始化。
+  if(!el||typeof echarts==="undefined"){
+    if(el){
+      el.innerHTML="<p style='color:#7a8699'>图表库未加载，可参考第 7 节路线图排序。</p>";
+    }
+    return;
+  }
+  var chart=echarts.init(el);
+  chart.setOption({
+    grid:{left:64,right:26,top:34,bottom:58},
+    tooltip:{trigger:"item",formatter:function(p){return "<b>"+p.data[2]+"</b><br/>成本 "+p.data[0]+" · 收益 "+p.data[1]+"<br/>优先级 "+p.seriesName;}},
+    legend:{top:2,right:10,data:["P0","P1","P2"],itemWidth:12,itemHeight:12,textStyle:{fontSize:12}},
+    xAxis:{name:"改造成本 →",nameLocation:"middle",nameGap:32,min:0,max:9.5,interval:1,
+      axisLine:{lineStyle:{color:"#c4ccda"}},splitLine:{lineStyle:{color:"#eef1f6"}},nameTextStyle:{color:"#7a8699",fontSize:12}},
+    yAxis:{name:"收益 →",nameLocation:"middle",nameGap:42,min:3,max:10,interval:1,
+      axisLine:{lineStyle:{color:"#c4ccda"}},splitLine:{lineStyle:{color:"#eef1f6"}},nameTextStyle:{color:"#7a8699",fontSize:12}},
+    series:[
+      Object.assign(series("P0",P0,"#d92d3a"),{
+        markArea:{silent:true,itemStyle:{color:"rgba(47,158,68,.07)"},label:{color:"#2f9e44",fontSize:11,position:"insideTopLeft"},
+          data:[[{coord:[0,7],name:"优先区：高收益 / 低成本"},{coord:[5,10]}]]},
+        markLine:{silent:true,symbol:"none",lineStyle:{type:"dashed",color:"#c8d0dc"},data:[{xAxis:5},{yAxis:7}]}}),
+      series("P1",P1,"#d97706"),
+      series("P2",P2,"#2f9e44")
+    ]
+  });
+  window.addEventListener("resize",function(){chart.resize();});
+})();
+</script>
+<footer><div class="wrap">EduGrade 前端只读评审 · 本报告不修改任何源码 · 生成于 2026-10-04</div></footer>
+</body>
+</html>

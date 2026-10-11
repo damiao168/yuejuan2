@@ -124,18 +124,7 @@ class GradingAgentV2ApplicationSeam:
                 owner = True
 
         if not owner:
-            if not inflight["event"].wait(self.queue_timeout_seconds):
-                raise AgentError(
-                    "model_timeout",
-                    "timed out waiting for the in-flight idempotent request",
-                    status=504,
-                    retryable=True,
-                    request_id=request_id,
-                )
-            if inflight["error"]:
-                raise self._copy_error(inflight["error"], request_id)
-            self._log(request_id, "replayed", attempts=1)
-            return copy.deepcopy(inflight["result"]), True
+            return self._wait_for_inflight(inflight, request_id), True
 
         try:
             suggestion = self._grade_fixture(request)
@@ -164,6 +153,21 @@ class GradingAgentV2ApplicationSeam:
             inflight["event"].set()
             self._inflight.pop(idempotency_key, None)
         return suggestion, False
+
+    def _wait_for_inflight(self, inflight, request_id):
+        # 等待必须离开状态锁；拥有者先写入结果或错误，再唤醒同一请求的其他调用。
+        if not inflight["event"].wait(self.queue_timeout_seconds):
+            raise AgentError(
+                "model_timeout",
+                "timed out waiting for the in-flight idempotent request",
+                status=504,
+                retryable=True,
+                request_id=request_id,
+            )
+        if inflight["error"]:
+            raise self._copy_error(inflight["error"], request_id)
+        self._log(request_id, "replayed", attempts=1)
+        return copy.deepcopy(inflight["result"])
 
     def _grade_fixture(self, request):
         request_id = request["request_id"]
@@ -399,11 +403,7 @@ class ProductionMathV2Application:
                 self._inflight[idempotency_key] = inflight
                 owner = True
         if not owner:
-            if not inflight["event"].wait(self.settings.model_queue_timeout_seconds + self.settings.model_timeout_seconds * (self.settings.model_max_retries + 1) + 5):
-                raise AgentError("model_timeout", "timed out waiting for the in-flight request", status=504, retryable=True, request_id=request_id)
-            if inflight["error"]:
-                raise GradingAgentV2ApplicationSeam._copy_error(inflight["error"], request_id)
-            return copy.deepcopy(inflight["result"]), True
+            return self._wait_for_inflight(inflight, request_id), True
         try:
             result = self._infer(request)
         except AgentError as exc:
@@ -434,6 +434,15 @@ class ProductionMathV2Application:
             inflight["event"].set()
             self._inflight.pop(idempotency_key, None)
         return result, False
+
+    def _wait_for_inflight(self, inflight, request_id):
+        # 等待预算覆盖排队与重试；不持有缓存锁，超时调用也不能移除拥有者的任务。
+        timeout = self.settings.model_queue_timeout_seconds + self.settings.model_timeout_seconds * (self.settings.model_max_retries + 1) + 5
+        if not inflight["event"].wait(timeout):
+            raise AgentError("model_timeout", "timed out waiting for the in-flight request", status=504, retryable=True, request_id=request_id)
+        if inflight["error"]:
+            raise GradingAgentV2ApplicationSeam._copy_error(inflight["error"], request_id)
+        return copy.deepcopy(inflight["result"])
 
     def _infer(self, request):
         request_id = request["request_id"]

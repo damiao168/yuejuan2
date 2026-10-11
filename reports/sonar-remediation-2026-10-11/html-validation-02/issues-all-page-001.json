@@ -1,0 +1,289 @@
+{
+  "total": 2,
+  "p": 1,
+  "ps": 500,
+  "paging": {
+    "pageIndex": 1,
+    "pageSize": 500,
+    "total": 2
+  },
+  "effortTotal": 7,
+  "issues": [
+    {
+      "key": "cb72da98-d338-447a-aa79-4399b8ed8166",
+      "rule": "javascript:S7773",
+      "severity": "MINOR",
+      "component": "yuejuan-remediation-html-20261011:docs/architecture/previews/index.html",
+      "project": "yuejuan-remediation-html-20261011",
+      "line": 9,
+      "hash": "2dbc1d73fde8b3daee23f6b682fd98a3",
+      "textRange": {
+        "startLine": 9,
+        "endLine": 9,
+        "startOffset": 74,
+        "endOffset": 84
+      },
+      "flows": [],
+      "status": "OPEN",
+      "message": "Prefer `Number.parseFloat` over `parseFloat`.",
+      "effort": "2min",
+      "debt": "2min",
+      "author": "",
+      "tags": [
+        "convention",
+        "es2015",
+        "editable-source"
+      ],
+      "transitions": [
+        "accept",
+        "falsepositive",
+        "confirm",
+        "resolve",
+        "wontfix"
+      ],
+      "actions": [
+        "set_type",
+        "set_tags",
+        "comment",
+        "set_severity",
+        "assign"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T17:20:44+0800",
+      "updateDate": "2026-10-11T17:20:44+0800",
+      "type": "CODE_SMELL",
+      "scope": "MAIN",
+      "quickFixAvailable": true,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "CONVENTIONAL",
+      "cleanCodeAttributeCategory": "CONSISTENT",
+      "impacts": [
+        {
+          "softwareQuality": "RELIABILITY",
+          "severity": "MEDIUM"
+        },
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "LOW"
+        }
+      ],
+      "issueStatus": "OPEN",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "7896c681-434e-4ce0-b3e6-94aec494f659",
+      "rule": "javascript:S2681",
+      "severity": "MAJOR",
+      "component": "yuejuan-remediation-html-20261011:docs/architecture/previews/index.html",
+      "project": "yuejuan-remediation-html-20261011",
+      "line": 14,
+      "hash": "a116b4e6965dd4c4cd1ac5e4e7c38df6",
+      "textRange": {
+        "startLine": 14,
+        "endLine": 14,
+        "startOffset": 233,
+        "endOffset": 251
+      },
+      "flows": [],
+      "status": "OPEN",
+      "message": "This statement will not be executed conditionally; only the first statement will be. The rest will execute unconditionally.",
+      "effort": "5min",
+      "debt": "5min",
+      "author": "",
+      "tags": [
+        "cwe",
+        "editable-source"
+      ],
+      "transitions": [
+        "accept",
+        "falsepositive",
+        "confirm",
+        "resolve",
+        "wontfix"
+      ],
+      "actions": [
+        "set_type",
+        "set_tags",
+        "comment",
+        "set_severity",
+        "assign"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T17:20:44+0800",
+      "updateDate": "2026-10-11T17:20:44+0800",
+      "type": "CODE_SMELL",
+      "scope": "MAIN",
+      "quickFixAvailable": false,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "FORMATTED",
+      "cleanCodeAttributeCategory": "CONSISTENT",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ],
+      "issueStatus": "OPEN",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    }
+  ],
+  "components": [
+    {
+      "key": "yuejuan-remediation-html-20261011",
+      "enabled": true,
+      "qualifier": "TRK",
+      "name": "yuejuan remediation HTML verification 2026-10-11",
+      "longName": "yuejuan remediation HTML verification 2026-10-11"
+    },
+    {
+      "key": "yuejuan-remediation-html-20261011:docs/architecture/previews/index.html",
+      "enabled": true,
+      "qualifier": "FIL",
+      "name": "index.html",
+      "longName": "docs/architecture/previews/index.html",
+      "path": "docs/architecture/previews/index.html"
+    }
+  ],
+  "rules": [
+    {
+      "key": "javascript:S7773",
+      "name": "Number static methods and properties should be preferred over global equivalents",
+      "lang": "js",
+      "status": "READY",
+      "langName": "JavaScript"
+    },
+    {
+      "key": "javascript:S2681",
+      "name": "Multiline blocks should be enclosed in curly braces",
+      "lang": "js",
+      "status": "READY",
+      "langName": "JavaScript"
+    }
+  ],
+  "users": [
+    {
+      "login": "admin",
+      "name": "Administrator",
+      "active": true
+    }
+  ],
+  "languages": [
+    {
+      "key": "py",
+      "name": "Python"
+    },
+    {
+      "key": "ipynb",
+      "name": "IPython Notebooks"
+    },
+    {
+      "key": "go",
+      "name": "Go"
+    },
+    {
+      "key": "kotlin",
+      "name": "Kotlin"
+    },
+    {
+      "key": "terraform",
+      "name": "Terraform"
+    },
+    {
+      "key": "cloudformation",
+      "name": "CloudFormation"
+    },
+    {
+      "key": "kubernetes",
+      "name": "Kubernetes"
+    },
+    {
+      "key": "docker",
+      "name": "Docker"
+    },
+    {
+      "key": "azureresourcemanager",
+      "name": "Azure Resource Manager"
+    },
+    {
+      "key": "yaml",
+      "name": "YAML"
+    },
+    {
+      "key": "json",
+      "name": "JSON"
+    },
+    {
+      "key": "js",
+      "name": "JavaScript"
+    },
+    {
+      "key": "ts",
+      "name": "TypeScript"
+    },
+    {
+      "key": "css",
+      "name": "CSS"
+    },
+    {
+      "key": "ruby",
+      "name": "Ruby"
+    },
+    {
+      "key": "scala",
+      "name": "Scala"
+    },
+    {
+      "key": "rust",
+      "name": "Rust"
+    },
+    {
+      "key": "cs",
+      "name": "C#"
+    },
+    {
+      "key": "java",
+      "name": "Java"
+    },
+    {
+      "key": "web",
+      "name": "HTML"
+    },
+    {
+      "key": "jsp",
+      "name": "JSP"
+    },
+    {
+      "key": "flex",
+      "name": "Flex"
+    },
+    {
+      "key": "xml",
+      "name": "XML"
+    },
+    {
+      "key": "php",
+      "name": "PHP"
+    },
+    {
+      "key": "text",
+      "name": "Text"
+    },
+    {
+      "key": "secrets",
+      "name": "Secrets"
+    },
+    {
+      "key": "vbnet",
+      "name": "VB.NET"
+    }
+  ],
+  "facets": []
+}

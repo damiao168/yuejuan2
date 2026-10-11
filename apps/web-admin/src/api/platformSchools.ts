@@ -87,7 +87,7 @@ export interface PlatformSchoolListResponse {
 
 export interface SchoolMembersResponse {
   members: ManagedUser[];
-  summary: { total: number; active: number; disabled: number; admins: number; teachers: number; graders: number };
+  summary: { total: number; active: number; disabled: number; invited?: number; unknown?: number; admins: number; teachers: number; graders: number };
 }
 
 export interface UsageBreakdown { key: string; label: string; total_tokens: number; requests: number; share: number; estimated_cost_microusd: number }

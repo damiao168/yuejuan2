@@ -32,17 +32,13 @@ func (h *Handler) WithSegmentImage(reader segment.CropImageReader) *Handler {
 	return h
 }
 
-// WithRegradeService links the completed, manager-reviewed backmark
-// population to A19.  The link is deliberately opt-in so a backmark handler
-// never gains any ability to publish or update a current score.
+// WithRegradeService 将已完成且经管理员复核的回评对象集合关联到 A19。该关联须显式启用，使回评处理器不会获得发布或更新当前分数的能力。
 func (h *Handler) WithRegradeService(service *regrade.Service) *Handler {
 	h.regrade = service
 	return h
 }
 
-// RegisterRoutes keeps manager impact selection separate from a grader's
-// assigned-item actions. The submit endpoint writes a backmark_grade only; it
-// is intentionally not the normal review submit endpoint.
+// RegisterRoutes 将管理员选择影响范围与阅卷者处理已分配条目的操作分开。提交端点只写 backmark_grade，不使用常规复核提交端点。
 func RegisterRoutes(mux *http.ServeMux, h *Handler, requireManage, requireWork func(http.HandlerFunc) http.Handler) {
 	mux.Handle("POST /api/v1/exams/{examId}/questions/{questionId}/backmark-preview", requireManage(h.Preview))
 	mux.Handle("POST /api/v1/exams/{examId}/questions/{questionId}/backmark-batches", requireManage(h.Create))
@@ -181,8 +177,7 @@ func (h *Handler) CreateRegrade(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	// Keep the idempotency key stable across a retry or double-click while
-	// allowing a later correction from a different immutable source release.
+	// 重试或双击时保持幂等键稳定，同时允许后续从另一份不可变来源发布发起更正。
 	key := "backmark:" + batch.ID + ":" + input.SourceReleaseID
 	summary, err := h.regrade.Create(r.Context(), user.TenantID, batch.ExamID, batch.QuestionID, user.ID, regrade.CreateInput{
 		SourceReleaseID: input.SourceReleaseID,
@@ -201,8 +196,7 @@ func (h *Handler) CreateRegrade(w http.ResponseWriter, r *http.Request) {
 		"regrade_job_id": summary.Job.ID, "source_release_id": input.SourceReleaseID,
 		"affected_count": summary.Job.AffectedCount,
 	})
-	// A19 returns an awaiting-approval job.  No backmark candidate is copied to
-	// final_grade and no score release is published by this endpoint.
+	// A19 返回待批准任务。此端点不会将回评候选分数复制到 final_grade，也不会发布成绩。
 	httpx.JSON(w, http.StatusCreated, map[string]any{"regrade": summary})
 }
 
@@ -335,8 +329,7 @@ func (h *Handler) Submit(w http.ResponseWriter, r *http.Request) {
 		"batch_id": item.BatchID, "new_grade_id": grade.ID, "status": item.Status,
 		"diff": item.Diff,
 	})
-	// This response deliberately does not include a final/current grade. The
-	// client must route the resulting status to confirmation/arbitration/A19.
+	// 此响应不包含最终或当前成绩；客户端必须将结果状态导向确认、仲裁或 A19。
 	httpx.JSON(w, http.StatusCreated, map[string]any{"backmark_item": graderView(item), "backmark_grade": grade})
 }
 

@@ -15,6 +15,7 @@ var (
 	ErrTemplateNotLocked = errors.New("template must be locked before binding")
 	ErrConflict          = errors.New("configuration revision conflict")
 	ErrNotReady          = errors.New("exam configuration is not ready")
+	ErrReadinessChanged  = errors.New("reviewed exam configuration changed")
 	ErrExamFrozen        = errors.New("exam paper configuration is frozen")
 )
 
@@ -34,10 +35,12 @@ type Paper struct {
 	FileAssetID string         `json:"file_asset_id"`
 	VersionNo   int            `json:"version_no"`
 	Status      string         `json:"status"`
+	Purpose     string         `json:"purpose"`
 	File        FileAssetInput `json:"file"`
 }
 
 type CreatePaperInput struct {
+	Purpose     string         `json:"purpose"`
 	FileAssetID string         `json:"file_asset_id"`
 	File        FileAssetInput `json:"file"`
 }
@@ -188,9 +191,8 @@ type PaperImportIssue struct {
 	ResolutionHint string                 `json:"resolution_hint,omitempty"`
 }
 
-// PaperImportRuntimeProgress is the latest factual worker heartbeat for the
-// active import stage. Completed/total always describe the named unit; an
-// absent or zero total means the stage is intentionally indeterminate.
+// PaperImportRuntimeProgress 是当前导入阶段最新的实际 worker 心跳。
+// Completed/total 始终描述指定单位；total 缺失或为零表示该阶段进度有意保持不确定。
 type PaperImportRuntimeProgress struct {
 	TaskType          string     `json:"task_type"`
 	TaskStatus        string     `json:"task_status"`
@@ -229,40 +231,41 @@ type PaperImportModelUsage struct {
 }
 
 type PaperImportJob struct {
-	dispatchLeaseOwner       string
-	ID                       string                      `json:"id"`
-	TenantID                 string                      `json:"tenant_id"`
-	ExamID                   string                      `json:"exam_id"`
-	ExamPaperID              string                      `json:"exam_paper_id"`
-	PaperFileAssetID         string                      `json:"paper_file_asset_id"`
-	AnswerFileAssetID        string                      `json:"answer_file_asset_id"`
-	Status                   string                      `json:"status"`
-	Generation               int64                       `json:"generation"`
-	RunID                    string                      `json:"run_id"`
-	SourceRevision           string                      `json:"source_revision"`
-	ResultGeneration         int64                       `json:"result_generation,omitempty"`
-	Subject                  string                      `json:"subject"`
-	AuthoritativeSubjectCode string                      `json:"authoritative_subject_code,omitempty"`
-	RecognitionPolicyVersion string                      `json:"recognition_policy_version,omitempty"`
-	RecognitionPolicyHash    string                      `json:"recognition_policy_hash,omitempty"`
-	FormulaStatus            string                      `json:"formula_status,omitempty"`
-	FormulaRegionCount       int                         `json:"formula_region_count,omitempty"`
-	FormulaReviewCount       int                         `json:"formula_review_count,omitempty"`
-	RuntimeProgress          *PaperImportRuntimeProgress `json:"runtime_progress,omitempty"`
-	ModelUsage               PaperImportModelUsage       `json:"model_usage,omitempty"`
-	Sources                  []PaperImportSource         `json:"sources"`
-	QuestionCandidates       []QuestionCandidate         `json:"question_candidates"`
-	AnswerCandidates         []AnswerCandidate           `json:"answer_candidates"`
-	SolutionCandidates       []SolutionCandidate         `json:"solution_candidates"`
-	RubricCandidates         []RubricCandidate           `json:"rubric_candidates"`
-	StructuredIssues         []PaperImportIssue          `json:"structured_issues"`
-	Questions                []PaperImportDraftQuestion  `json:"questions"`
-	Issues                   []string                    `json:"issues"`
-	ErrorCode                string                      `json:"error_code,omitempty"`
-	CreatedBy                string                      `json:"created_by"`
-	CreatedAt                time.Time                   `json:"created_at"`
-	UpdatedAt                time.Time                   `json:"updated_at"`
-	AppliedAt                *time.Time                  `json:"applied_at,omitempty"`
+	dispatchLeaseOwner           string
+	ID                           string                      `json:"id"`
+	TenantID                     string                      `json:"tenant_id"`
+	ExamID                       string                      `json:"exam_id"`
+	ExamPaperID                  string                      `json:"exam_paper_id"`
+	PaperFileAssetID             string                      `json:"paper_file_asset_id"`
+	AnswerFileAssetID            string                      `json:"answer_file_asset_id"`
+	Status                       string                      `json:"status"`
+	Generation                   int64                       `json:"generation"`
+	StructureConfirmedGeneration int64                       `json:"structure_confirmed_generation,omitempty"`
+	RunID                        string                      `json:"run_id"`
+	SourceRevision               string                      `json:"source_revision"`
+	ResultGeneration             int64                       `json:"result_generation,omitempty"`
+	Subject                      string                      `json:"subject"`
+	AuthoritativeSubjectCode     string                      `json:"authoritative_subject_code,omitempty"`
+	RecognitionPolicyVersion     string                      `json:"recognition_policy_version,omitempty"`
+	RecognitionPolicyHash        string                      `json:"recognition_policy_hash,omitempty"`
+	FormulaStatus                string                      `json:"formula_status,omitempty"`
+	FormulaRegionCount           int                         `json:"formula_region_count,omitempty"`
+	FormulaReviewCount           int                         `json:"formula_review_count,omitempty"`
+	RuntimeProgress              *PaperImportRuntimeProgress `json:"runtime_progress,omitempty"`
+	ModelUsage                   PaperImportModelUsage       `json:"model_usage,omitempty"`
+	Sources                      []PaperImportSource         `json:"sources"`
+	QuestionCandidates           []QuestionCandidate         `json:"question_candidates"`
+	AnswerCandidates             []AnswerCandidate           `json:"answer_candidates"`
+	SolutionCandidates           []SolutionCandidate         `json:"solution_candidates"`
+	RubricCandidates             []RubricCandidate           `json:"rubric_candidates"`
+	StructuredIssues             []PaperImportIssue          `json:"structured_issues"`
+	Questions                    []PaperImportDraftQuestion  `json:"questions"`
+	Issues                       []string                    `json:"issues"`
+	ErrorCode                    string                      `json:"error_code,omitempty"`
+	CreatedBy                    string                      `json:"created_by"`
+	CreatedAt                    time.Time                   `json:"created_at"`
+	UpdatedAt                    time.Time                   `json:"updated_at"`
+	AppliedAt                    *time.Time                  `json:"applied_at,omitempty"`
 }
 
 type CreatePaperImportInput struct {
@@ -299,8 +302,10 @@ type ReplacePaperImportSourceInput struct {
 }
 
 type ReviewPaperImportInput struct {
-	ExpectedGeneration int64                      `json:"expected_generation"`
-	Questions          []PaperImportDraftQuestion `json:"questions"`
+	ExpectedGeneration int64 `json:"expected_generation"`
+	// 同代次可以反复核对；整卷写入还须匹配读取时的内容时间，防止覆盖其他人的保存。
+	ExpectedUpdatedAt string                     `json:"expected_updated_at"`
+	Questions         []PaperImportDraftQuestion `json:"questions"`
 }
 
 type PaperImportOCRAsset struct {
@@ -478,6 +483,7 @@ type Question struct {
 	QuestionNo              string                 `json:"question_no"`
 	QuestionType            string                 `json:"question_type"`
 	Score                   float64                `json:"score"`
+	ScoreSource             string                 `json:"score_source,omitempty"`
 	Stem                    string                 `json:"stem,omitempty"`
 	KnowledgePoints         []string               `json:"knowledge_points"`
 	AnswerArea              map[string]any         `json:"answer_area,omitempty"`
@@ -647,10 +653,8 @@ type AnswerSheetTemplate struct {
 	UpdatedAt   time.Time      `json:"updated_at"`
 }
 
-// ExamTemplateBinding records which immutable answer-sheet template version
-// may be used to route pages for one exam. It deliberately does not overload
-// AnswerSheetTemplate.Status: template locking and exam routing are separate
-// lifecycle decisions.
+// ExamTemplateBinding 记录某次考试可用于页面路由的不可变答题卡模板版本。
+// 它不复用 AnswerSheetTemplate.Status 的含义：模板锁定与考试路由是独立的生命周期决策。
 type ExamTemplateBinding struct {
 	ID                  string    `json:"id"`
 	TenantID            string    `json:"tenant_id"`
@@ -717,6 +721,10 @@ type ReadinessAdvisory struct {
 }
 
 type ReadinessResult struct {
+	// 保留本次摘要使用的归属；确认重建后直接比较，不能重新读取学籍来替换已核对的预期值。
+	candidateClasses []readinessCandidateClass
+	// 确认转入 ready 后核对触发器实际冻结事实，覆盖模板读取到冻结之间的变化。
+	assessmentFactsHash     string
 	Ready                   bool                `json:"ready"`
 	Confirmed               bool                `json:"confirmed"`
 	ConfigurationHash       string              `json:"configuration_hash"`
@@ -737,7 +745,8 @@ type PaperImportRepository interface {
 	CreatePaperImport(ctx context.Context, tenantID string, examID string, userID string, input CreatePaperImportInput) (PaperImportJob, error)
 	AddPaperImportSources(ctx context.Context, tenantID string, id string, userID string, input AddPaperImportSourcesInput) (PaperImportJob, error)
 	ReplacePaperImportSources(ctx context.Context, tenantID string, id string, userID string, input ReplacePaperImportSourcesInput) (PaperImportJob, error)
-	CompletePaperImportCandidates(ctx context.Context, tenantID string, id string, detected []PaperImportDetectedDocument, questions []QuestionCandidate, answers []AnswerCandidate, solutions []SolutionCandidate, rubrics []RubricCandidate, issues []PaperImportIssue) (PaperImportJob, error)
+	// CompletePaperImportCandidates 供同步内存解析使用；PostgreSQL 发布仍须走带租约和代次校验的 v2 完成入口。
+	CompletePaperImportCandidates(ctx context.Context, tenantID string, id string, parsed PaperImportParseResult) (PaperImportJob, error)
 	SavePaperImportReview(ctx context.Context, tenantID string, id string, userID string, input ReviewPaperImportInput) (PaperImportJob, error)
 	CompletePaperImport(ctx context.Context, tenantID string, id string, questions []PaperImportDraftQuestion, issues []string) (PaperImportJob, error)
 	FailPaperImport(ctx context.Context, tenantID string, id string, errorCode string, issues []string) (PaperImportJob, error)
@@ -776,15 +785,19 @@ type TemplateBindingRepository interface {
 	UnbindExamTemplate(ctx context.Context, tenantID string, examID string, input UnbindExamTemplateInput) (ExamTemplateBinding, error)
 }
 
+// ConfirmReadinessInput 可绑定管理员已经核对的配置，空值保留旧客户端的确认行为。
+type ConfirmReadinessInput struct {
+	ExpectedConfigurationHash string `json:"expected_configuration_hash,omitempty"`
+}
+
 type ReadinessRepository interface {
 	Readiness(ctx context.Context, tenantID string, examID string) (ReadinessResult, error)
-	ConfirmReadiness(ctx context.Context, tenantID string, examID string, userID string) (ReadinessResult, error)
+	ConfirmReadiness(ctx context.Context, tenantID string, examID string, userID string, input ConfirmReadinessInput) (ReadinessResult, error)
 	StartCollection(ctx context.Context, tenantID string, examID string, userID string) (ReadinessResult, error)
 }
 
-// Store remains the compatibility aggregate for callers that still span the
-// complete paper lifecycle. New consumers should depend on the smallest
-// repository capability that covers their work.
+// Store 为仍覆盖完整试卷生命周期的调用方保留兼容聚合接口。
+// 新调用方应依赖能覆盖自身工作的最小仓储能力。
 type Store interface {
 	PaperRepository
 	PaperImportRepository

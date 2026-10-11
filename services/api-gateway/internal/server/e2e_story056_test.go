@@ -40,10 +40,8 @@ type story056WorkerLease struct {
 	Token    string
 }
 
-// This acceptance suite intentionally uses an isolated database named by
-// EDUGRADE_E2E_DATABASE_URL. It verifies durable workflow coordination; the
-// pixel-level OMR decision quality remains covered by the worker's synthetic
-// image acceptance suite.
+// 此验收套件使用 EDUGRADE_E2E_DATABASE_URL 指定的隔离数据库，验证持久化流程协调。
+// 像素级 OMR 决策质量仍由 worker 的合成图像验收套件覆盖。
 func TestStory056ObjectiveScoringRecoveryE2EWithPostgresTestDatabase(t *testing.T) {
 	dsn := strings.TrimSpace(os.Getenv("EDUGRADE_E2E_DATABASE_URL"))
 	if dsn == "" {
@@ -74,16 +72,16 @@ func TestStory056ObjectiveScoringRecoveryE2EWithPostgresTestDatabase(t *testing.
 	e2eAssertStory062ReadinessCheck(t, ready, "active_run_clear", true, "blocker")
 
 	cancelledRun := e2eStartStory056Run(t, router, adminToken, fixture.ExamID, "story056-cancel-"+suffix)
-	e2eAssertStory056Run(t, cancelledRun, "processing", story056AcceptanceAnswerCount, story056AcceptanceAnswerCount, 0, 0, 0, 0)
+	e2eAssertStory056Run(t, cancelledRun, story056RunExpectation{Status: "processing", Total: story056AcceptanceAnswerCount, Queued: story056AcceptanceAnswerCount, AutoConfirmed: 0, HumanConfirmed: 0, Review: 0, Failed: 0})
 	cancelledID := e2eString(t, cancelledRun, "id")
 	cancelResponse := e2ePostJSON(t, router, http.MethodPost, "/api/v1/scoring-runs/"+cancelledID+"/cancel", adminToken, `{}`, http.StatusOK)
-	e2eAssertStory056Run(t, cancelResponse["scoring_run"].(map[string]any), "cancelled", story056AcceptanceAnswerCount, 0, 0, 0, 0, 0)
+	e2eAssertStory056Run(t, cancelResponse["scoring_run"].(map[string]any), story056RunExpectation{Status: "cancelled", Total: story056AcceptanceAnswerCount, Queued: 0, AutoConfirmed: 0, HumanConfirmed: 0, Review: 0, Failed: 0})
 	e2eAssertStory056CancelledWork(t, db, fixture.TenantID, cancelledID, story056AcceptanceAnswerCount)
 	readyAfterCancellation := e2eStory062ScoringReadiness(t, router, adminToken, fixture.ExamID)
 	e2eAssertStory062ScoringReadiness(t, readyAfterCancellation, true, 3, story056AcceptanceAnswerCount, story056AcceptanceAnswerCount, 0)
 
 	run := e2eStartStory056Run(t, router, adminToken, fixture.ExamID, "story056-acceptance-"+suffix)
-	e2eAssertStory056Run(t, run, "processing", story056AcceptanceAnswerCount, story056AcceptanceAnswerCount, 0, 0, 0, 0)
+	e2eAssertStory056Run(t, run, story056RunExpectation{Status: "processing", Total: story056AcceptanceAnswerCount, Queued: story056AcceptanceAnswerCount, AutoConfirmed: 0, HumanConfirmed: 0, Review: 0, Failed: 0})
 	runID := e2eString(t, run, "id")
 	e2eEnableStory056AutoConfirmation(t, db, fixture.TenantID, runID)
 	activeRunReadiness := e2eStory062ScoringReadiness(t, router, adminToken, fixture.ExamID)
@@ -167,16 +165,23 @@ func TestStory056ObjectiveScoringRecoveryE2EWithPostgresTestDatabase(t *testing.
 
 	reviewDetail := e2eGetJSON(t, router, "/api/v1/scoring-runs/"+runID, adminToken, http.StatusOK)
 	reviewRun := reviewDetail["scoring_run"].(map[string]any)
-	e2eAssertStory056Run(t, reviewRun, "needs_review", story056AcceptanceAnswerCount, 0, story056AcceptanceAutoConfirmedCount, 0, story056AcceptanceHumanReviewCount, 0)
+	e2eAssertStory056Run(t, reviewRun, story056RunExpectation{Status: "needs_review", Total: story056AcceptanceAnswerCount, Queued: 0, AutoConfirmed: story056AcceptanceAutoConfirmedCount, HumanConfirmed: 0, Review: story056AcceptanceHumanReviewCount, Failed: 0})
 	e2eAssertStory056ItemStates(t, e2eStory056RunItems(t, reviewDetail), story056AcceptanceAutoConfirmedCount, story056AcceptanceHumanReviewCount)
-	e2eCompleteStory056HumanReviews(t, db, router, adminToken, graderToken, graderID, fixture, story056AcceptanceHumanReviewCount)
+	e2eCompleteStory056HumanReviews(t, db, router, story056ReviewActors{AdminToken: adminToken, GraderToken: graderToken, GraderID: graderID}, fixture, story056AcceptanceHumanReviewCount)
 
 	completedDetail := e2eGetJSON(t, router, "/api/v1/scoring-runs/"+runID, adminToken, http.StatusOK)
 	completedRun := completedDetail["scoring_run"].(map[string]any)
-	e2eAssertStory056Run(t, completedRun, "completed", story056AcceptanceAnswerCount, 0, story056AcceptanceAutoConfirmedCount, story056AcceptanceHumanReviewCount, 0, 0)
+	e2eAssertStory056Run(t, completedRun, story056RunExpectation{Status: "completed", Total: story056AcceptanceAnswerCount, Queued: 0, AutoConfirmed: story056AcceptanceAutoConfirmedCount, HumanConfirmed: story056AcceptanceHumanReviewCount, Review: 0, Failed: 0})
 	completedItems := e2eStory056RunItems(t, completedDetail)
 	e2eAssertStory056ItemStates(t, completedItems, story056AcceptanceAnswerCount, 0)
 	e2eAssertStory056ConfirmedScores(t, db, fixture.TenantID, runID, story056AcceptanceAutoConfirmedCount, story056AcceptanceHumanReviewCount)
+	e2eFinalizeAndReprocessStory056(t, db, router, adminToken, fixture, suffix, completedItems)
+}
+
+// 全部自动/人工确认后才能形成最终成绩；重做只覆盖指定答案且保留原幂等键和版本检查。
+func e2eFinalizeAndReprocessStory056(t *testing.T, db *sql.DB, router http.Handler, adminToken string, fixture story056AcceptanceFixture, suffix string, completedItems []map[string]any) {
+	t.Helper()
+	fileStore := files.NewPostgresStore(db)
 	finals, err := score.NewPostgresStore(db).FinalizeExam(t.Context(), fixture.TenantID, fixture.ExamID, fixture.AdminID)
 	if err != nil || finals.CreatedFinals != story056AcceptanceAnswerCount || !finals.Quality.Passed {
 		t.Fatalf("completed scoring must finalize every answer: %+v err=%v", finals, err)
@@ -193,7 +198,7 @@ func TestStory056ObjectiveScoringRecoveryE2EWithPostgresTestDatabase(t *testing.
 	}), http.StatusCreated)
 	reprocessRun := reprocessResponse["scoring_run"].(map[string]any)
 	reprocessID := e2eString(t, reprocessRun, "id")
-	e2eAssertStory056Run(t, reprocessRun, "processing", 1, 1, 0, 0, 0, 0)
+	e2eAssertStory056Run(t, reprocessRun, story056RunExpectation{Status: "processing", Total: 1, Queued: 1, AutoConfirmed: 0, HumanConfirmed: 0, Review: 0, Failed: 0})
 	e2eEnableStory056AutoConfirmation(t, db, fixture.TenantID, reprocessID)
 	idempotentReprocess := e2ePostJSON(t, router, http.MethodPost, "/api/v1/answer-segments/"+segmentID+"/reprocess-score", adminToken, story056JSON(t, map[string]any{
 		"idempotency_key": reprocessKey,
@@ -232,7 +237,7 @@ func TestStory056ObjectiveScoringRecoveryE2EWithPostgresTestDatabase(t *testing.
 	}), http.StatusOK)
 
 	finishedReprocess := e2eGetJSON(t, router, "/api/v1/scoring-runs/"+reprocessID, adminToken, http.StatusOK)
-	e2eAssertStory056Run(t, finishedReprocess["scoring_run"].(map[string]any), "completed", 1, 0, 1, 0, 0, 0)
+	e2eAssertStory056Run(t, finishedReprocess["scoring_run"].(map[string]any), story056RunExpectation{Status: "completed", Total: 1, Queued: 0, AutoConfirmed: 1, HumanConfirmed: 0, Review: 0, Failed: 0})
 	e2eAssertStory056ReprocessVersion(t, db, fixture.TenantID, segmentID, reprocessID)
 }
 
@@ -283,9 +288,9 @@ func e2eCreateStory056AcceptanceFixtureWithLifecycle(t *testing.T, db *sql.DB, r
 	paperID := e2eString(t, paper, "id")
 
 	questionIDs := map[string]string{}
-	questionIDs["single_choice"] = e2eCreateStory056Question(t, router, adminToken, examID, paperID, "Q1", "single_choice", "A", 1)
-	questionIDs["true_false"] = e2eCreateStory056Question(t, router, adminToken, examID, paperID, "Q2", "true_false", true, 2)
-	questionIDs["multiple_choice"] = e2eCreateStory056Question(t, router, adminToken, examID, paperID, "Q3", "multiple_choice", []string{"A", "C"}, 3)
+	questionIDs["single_choice"] = e2eCreateStory056Question(t, router, adminToken, story056QuestionSpec{ExamID: examID, PaperID: paperID, QuestionNo: "Q1", QuestionType: "single_choice", StandardAnswer: "A", SortOrder: 1})
+	questionIDs["true_false"] = e2eCreateStory056Question(t, router, adminToken, story056QuestionSpec{ExamID: examID, PaperID: paperID, QuestionNo: "Q2", QuestionType: "true_false", StandardAnswer: true, SortOrder: 2})
+	questionIDs["multiple_choice"] = e2eCreateStory056Question(t, router, adminToken, story056QuestionSpec{ExamID: examID, PaperID: paperID, QuestionNo: "Q3", QuestionType: "multiple_choice", StandardAnswer: []string{"A", "C"}, SortOrder: 3})
 
 	for questionType, questionID := range questionIDs {
 		config := map[string]any{}
@@ -326,8 +331,16 @@ func e2eCreateStory056AcceptanceFixtureWithLifecycle(t *testing.T, db *sql.DB, r
 	}
 }
 
-func e2eCreateStory056Question(t *testing.T, router http.Handler, adminToken, examID, paperID, questionNo, questionType string, standardAnswer any, sortOrder int) string {
+// 题目夹具把试卷归属、题型、标准答案与排序作为一份输入，避免相邻字符串参数传反。
+type story056QuestionSpec struct {
+	ExamID, PaperID, QuestionNo, QuestionType string
+	StandardAnswer                            any
+	SortOrder                                 int
+}
+
+func e2eCreateStory056Question(t *testing.T, router http.Handler, adminToken string, spec story056QuestionSpec) string {
 	t.Helper()
+	examID, paperID, questionNo, questionType, standardAnswer, sortOrder := spec.ExamID, spec.PaperID, spec.QuestionNo, spec.QuestionType, spec.StandardAnswer, spec.SortOrder
 	question := e2ePostJSON(t, router, http.MethodPost, "/api/v1/exams/"+examID+"/questions", adminToken, story056JSON(t, map[string]any{
 		"exam_paper_id": paperID, "question_no": questionNo, "question_type": questionType, "score": 1,
 		"stem": "STORY-056 " + questionNo, "knowledge_points": []string{"story056"}, "answer_area": map[string]any{}, "sort_order": sortOrder,
@@ -354,9 +367,8 @@ func e2eSeedStory056AcceptanceAnswers(t *testing.T, db *sql.DB, fixture story056
 	e2eSeedStory056AcceptanceAnswersCount(t, db, fixture, suffix, story056AcceptanceAnswerCount)
 }
 
-// e2eSeedStory056AcceptanceAnswersCount keeps the PostgreSQL workflow tests
-// focused: broad recovery coverage can seed the full acceptance volume, while
-// transactional edge cases can make an unambiguous one-answer assertion.
+// e2eSeedStory056AcceptanceAnswersCount 使 PostgreSQL 流程测试保持聚焦：
+// 广泛恢复测试可预置完整验收规模，事务边界测试则可明确断言单个答案。
 func e2eSeedStory056AcceptanceAnswersCount(t *testing.T, db *sql.DB, fixture story056AcceptanceFixture, suffix string, count int) {
 	e2eSeedStory056AcceptanceAnswersWithQuestionTypes(t, db, fixture, suffix, count, []string{"single_choice", "true_false", "multiple_choice"})
 }
@@ -547,10 +559,9 @@ func e2eCreateStory056Overlay(t *testing.T, fileStore files.Store, fixture story
 	return asset
 }
 
-// e2eStory056AssetHash deliberately derives a valid SHA-256 value from the
-// fixture identity. File assets have tenant-scoped deduplication, so fixed
-// synthetic hashes turn otherwise independent PostgreSQL E2E cases into
-// accidental duplicates when they share the demo tenant.
+// e2eStory056AssetHash 根据夹具身份生成有效 SHA-256 值。
+// 文件资源按租户去重，因此固定的合成哈希会让本来独立的 PostgreSQL 端到端用例
+// 在共享演示租户时意外重复。
 func e2eStory056AssetHash(parts ...string) string {
 	return fmt.Sprintf("%x", sha256.Sum256([]byte(strings.Join(parts, "\x00"))))
 }
@@ -587,8 +598,15 @@ func e2eStory056SelectedOptions(t *testing.T, questionType string) []string {
 	}
 }
 
-func e2eAssertStory056Run(t *testing.T, run map[string]any, status string, total, queued, autoConfirmed, humanConfirmed, review, failed int) {
+// 运行摘要按明确命名的计数核对；自动确认与人工确认不能交换或合并。
+type story056RunExpectation struct {
+	Status                                                       string
+	Total, Queued, AutoConfirmed, HumanConfirmed, Review, Failed int
+}
+
+func e2eAssertStory056Run(t *testing.T, run map[string]any, expected story056RunExpectation) {
 	t.Helper()
+	status, total, queued, autoConfirmed, humanConfirmed, review, failed := expected.Status, expected.Total, expected.Queued, expected.AutoConfirmed, expected.HumanConfirmed, expected.Review, expected.Failed
 	if run["status"] != status ||
 		int(e2eFloat(t, run, "total_count")) != total ||
 		int(e2eFloat(t, run, "queued_count")) != queued ||
@@ -622,8 +640,14 @@ func e2eAssertStory056ItemStates(t *testing.T, items []map[string]any, wantConfi
 	}
 }
 
-func e2eCompleteStory056HumanReviews(t *testing.T, db *sql.DB, router http.Handler, adminToken, graderToken, graderID string, fixture story056AcceptanceFixture, count int) {
+// 管理者负责派发，阅卷员负责领取和提交；这份角色夹具不合并权限或替换请求身份。
+type story056ReviewActors struct {
+	AdminToken, GraderToken, GraderID string
+}
+
+func e2eCompleteStory056HumanReviews(t *testing.T, db *sql.DB, router http.Handler, actors story056ReviewActors, fixture story056AcceptanceFixture, count int) {
 	t.Helper()
+	adminToken, graderID := actors.AdminToken, actors.GraderID
 	taskResponse := e2eGetJSON(t, router, "/api/v1/review-tasks?exam_id="+fixture.ExamID, adminToken, http.StatusOK)
 	tasks := taskResponse["tasks"].([]any)
 	pendingTasks := make([]map[string]any, 0, count)
@@ -643,32 +667,40 @@ func e2eCompleteStory056HumanReviews(t *testing.T, db *sql.DB, router http.Handl
 		}), http.StatusOK)
 	}
 	for index := 0; index < count; index++ {
-		claim := e2ePostJSON(t, router, http.MethodPost, "/api/v1/review-tasks/next", graderToken, story056JSON(t, map[string]any{
-			"exam_id": fixture.ExamID, "question_id": fixture.QuestionIDs["multiple_choice"],
-		}), http.StatusOK)
-		task := claim["task"].(map[string]any)
-		if task["source"] != "omr_ambiguous" || task["status"] != "assigned" {
-			t.Fatalf("human review claim has unexpected state: %#v", task)
-		}
-		taskID := e2eString(t, task, "id")
-		submitted := e2ePostJSON(t, router, http.MethodPost, "/api/v1/review-tasks/"+taskID+"/submit", graderToken, story056JSON(t, map[string]any{
-			"expected_revision": task["revision"], "score": 1, "rubric_selections": []any{}, "comments": "STORY-056 multi-select verification", "reason": "confirmed against answer key",
-		}), http.StatusCreated)
-		if submitted["question_grade_id"] == nil || submitted["task"].(map[string]any)["status"] != "submitted" {
-			t.Fatalf("human review must create a durable question grade: %#v", submitted)
-		}
+		e2eCompleteStory056AssignedHumanReview(t, db, router, actors, fixture)
+	}
+}
 
-		type submittedState struct {
-			Status              string
-			CurrentGradeID      string
-			HumanGradeCount     int
-			ReviewCount         int
-			HumanConfirmedCount int
-			FailedCount         int
-		}
-		readState := func() submittedState {
-			var state submittedState
-			if err := db.QueryRow(`
+// 每次领取后立即提交并检查数据库；已提交任务被退回的拒绝响应不能改动成绩或进度。
+func e2eCompleteStory056AssignedHumanReview(t *testing.T, db *sql.DB, router http.Handler, actors story056ReviewActors, fixture story056AcceptanceFixture) {
+	t.Helper()
+	adminToken, graderToken := actors.AdminToken, actors.GraderToken
+	claim := e2ePostJSON(t, router, http.MethodPost, "/api/v1/review-tasks/next", graderToken, story056JSON(t, map[string]any{
+		"exam_id": fixture.ExamID, "question_id": fixture.QuestionIDs["multiple_choice"],
+	}), http.StatusOK)
+	task := claim["task"].(map[string]any)
+	if task["source"] != "omr_ambiguous" || task["status"] != "assigned" {
+		t.Fatalf("human review claim has unexpected state: %#v", task)
+	}
+	taskID := e2eString(t, task, "id")
+	submitted := e2ePostJSON(t, router, http.MethodPost, "/api/v1/review-tasks/"+taskID+"/submit", graderToken, story056JSON(t, map[string]any{
+		"expected_revision": task["revision"], "score": 1, "rubric_selections": []any{}, "comments": "STORY-056 multi-select verification", "reason": "confirmed against answer key",
+	}), http.StatusCreated)
+	if submitted["question_grade_id"] == nil || submitted["task"].(map[string]any)["status"] != "submitted" {
+		t.Fatalf("human review must create a durable question grade: %#v", submitted)
+	}
+
+	type submittedState struct {
+		Status              string
+		CurrentGradeID      string
+		HumanGradeCount     int
+		ReviewCount         int
+		HumanConfirmedCount int
+		FailedCount         int
+	}
+	readState := func() submittedState {
+		var state submittedState
+		if err := db.QueryRow(`
 SELECT rt.status, COALESCE(rt.current_grade_id::text, ''), count(hg.id)::int,
   sr.review_count, sr.human_confirmed_count, sr.failed_count
 FROM review_task rt
@@ -677,27 +709,26 @@ LEFT JOIN human_grade hg ON hg.tenant_id=rt.tenant_id AND hg.review_task_id=rt.i
 WHERE rt.tenant_id=$1::uuid AND rt.id=$2::uuid AND rt.deleted_at IS NULL
 GROUP BY rt.status, rt.current_grade_id, sr.review_count, sr.human_confirmed_count, sr.failed_count
 `, fixture.TenantID, taskID).Scan(
-				&state.Status,
-				&state.CurrentGradeID,
-				&state.HumanGradeCount,
-				&state.ReviewCount,
-				&state.HumanConfirmedCount,
-				&state.FailedCount,
-			); err != nil {
-				t.Fatalf("read submitted review state: %v", err)
-			}
-			return state
+			&state.Status,
+			&state.CurrentGradeID,
+			&state.HumanGradeCount,
+			&state.ReviewCount,
+			&state.HumanConfirmedCount,
+			&state.FailedCount,
+		); err != nil {
+			t.Fatalf("read submitted review state: %v", err)
 		}
-		beforeReturn := readState()
-		if beforeReturn.Status != "submitted" || beforeReturn.CurrentGradeID == "" || beforeReturn.HumanGradeCount != 1 {
-			t.Fatalf("submitted review state is incomplete: %#v", beforeReturn)
-		}
-		e2eExpectStatus(t, router, http.MethodPost, "/api/v1/review-tasks/"+taskID+"/return", adminToken, story056JSON(t, map[string]any{
-			"reason": "must not invalidate a submitted grade", "expected_revision": submitted["task"].(map[string]any)["revision"],
-		}), http.StatusConflict)
-		if afterReturn := readState(); afterReturn != beforeReturn {
-			t.Fatalf("rejected return mutated task, grade, or scoring progress: before=%#v after=%#v", beforeReturn, afterReturn)
-		}
+		return state
+	}
+	beforeReturn := readState()
+	if beforeReturn.Status != "submitted" || beforeReturn.CurrentGradeID == "" || beforeReturn.HumanGradeCount != 1 {
+		t.Fatalf("submitted review state is incomplete: %#v", beforeReturn)
+	}
+	e2eExpectStatus(t, router, http.MethodPost, "/api/v1/review-tasks/"+taskID+"/return", adminToken, story056JSON(t, map[string]any{
+		"reason": "must not invalidate a submitted grade", "expected_revision": submitted["task"].(map[string]any)["revision"],
+	}), http.StatusConflict)
+	if afterReturn := readState(); afterReturn != beforeReturn {
+		t.Fatalf("rejected return mutated task, grade, or scoring progress: before=%#v after=%#v", beforeReturn, afterReturn)
 	}
 }
 

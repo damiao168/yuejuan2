@@ -1,0 +1,513 @@
+{
+  "started_at_utc": "2026-10-11T10:23:35.862751+00:00",
+  "source_scan": "full-checkpoint-02/issues.json",
+  "original_ledger_unchanged": true,
+  "count": 19,
+  "severities": {
+    "CRITICAL": 5,
+    "MAJOR": 8,
+    "MINOR": 6
+  },
+  "baseline_root": "D:\\tools\\sonar-remediation-20261011\\python-new-baseline",
+  "files": [
+    {
+      "file": "ai-services/tests/test_model_transport_security.py",
+      "baseline_sha256": "1ff9b10fc49238dc7c856803a1bfe991fc9a2297bf9ee247c8330f1fa2a78c43",
+      "baseline_lines": 217,
+      "full_file_review_status": "reviewed",
+      "review_evidence": "读取完整当前函数体、输入与生成/握手边界；生成物仅内存验证",
+      "current_sha256": "daa3c6757a8a6b6e23205e437c980dac395e15451670d8d1306cd5bd3985a6d0",
+      "current_lines": 218,
+      "source_modified_by_this_batch": true,
+      "syntax_validation": "in_memory_compile_passed",
+      "validation": {
+        "report": "python-new-test-execution.json",
+        "passed": true,
+        "current_sha256": "daa3c6757a8a6b6e23205e437c980dac395e15451670d8d1306cd5bd3985a6d0",
+        "exit_code": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "file": "ai-services/tests/test_server_tls_handshake.py",
+      "baseline_sha256": "640c9b27193a3f670a39fa8056e388a8383a9f64bcaeb3c43840938cf760acac",
+      "baseline_lines": 262,
+      "full_file_review_status": "reviewed",
+      "review_evidence": "读取完整当前函数体、输入与生成/握手边界；生成物仅内存验证",
+      "current_sha256": "6a3198313784b20317f0e6c12fcda65abefef39ce703fd01ca64d2ee45729a6e",
+      "current_lines": 274,
+      "source_modified_by_this_batch": true,
+      "syntax_validation": "in_memory_compile_passed",
+      "validation": {
+        "report": "python-new-test-execution.json",
+        "passed": true,
+        "current_sha256": "6a3198313784b20317f0e6c12fcda65abefef39ce703fd01ca64d2ee45729a6e",
+        "exit_code": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "file": "docs/architecture/tools/finalize_delivery_records.py",
+      "baseline_sha256": "395b7694128c7aaf43dcc0e17a831c91914144a374cb0c1502d0fc7a46ade29b",
+      "baseline_lines": 85,
+      "full_file_review_status": "reviewed",
+      "review_evidence": "读取完整当前函数体、输入与生成/握手边界；生成物仅内存验证",
+      "current_sha256": "790fca5d4a70d5263d58ce74da40faadd49d450b5a5b36320bfc800de1d5b037",
+      "current_lines": 95,
+      "source_modified_by_this_batch": true,
+      "syntax_validation": "in_memory_compile_passed",
+      "validation": {
+        "report": "python-new-tools-equivalence.json",
+        "passed": true,
+        "current_sha256": "790fca5d4a70d5263d58ce74da40faadd49d450b5a5b36320bfc800de1d5b037",
+        "generated_artifact_writes": false
+      }
+    },
+    {
+      "file": "docs/architecture/tools/fit_box_typography.py",
+      "baseline_sha256": "dcc6d8f0eac143ef0a2827447f9a2b3a7d1c29f47935fd0728f592c55b31e832",
+      "baseline_lines": 99,
+      "full_file_review_status": "reviewed",
+      "review_evidence": "读取完整当前函数体、输入与生成/握手边界；生成物仅内存验证",
+      "current_sha256": "984d37011dcdf8e47097a7b9d7ce5701402338f0967b80715c0e3192895719eb",
+      "current_lines": 120,
+      "source_modified_by_this_batch": true,
+      "syntax_validation": "in_memory_compile_passed",
+      "validation": {
+        "report": "python-new-tools-equivalence.json",
+        "passed": true,
+        "current_sha256": "984d37011dcdf8e47097a7b9d7ce5701402338f0967b80715c0e3192895719eb",
+        "generated_artifact_writes": false
+      }
+    },
+    {
+      "file": "docs/architecture/tools/retire_stale_reviews.py",
+      "baseline_sha256": "f567adc721312c2b911a9c1234590f90c037b088cc7961e02991c3b89359ea2f",
+      "baseline_lines": 43,
+      "full_file_review_status": "reviewed",
+      "review_evidence": "读取完整当前函数体、输入与生成/握手边界；生成物仅内存验证",
+      "current_sha256": "d9b3cadeb378d83cb78d4bf4bbcdceee809a91aaf3be0967b3ff17d8a8ded89e",
+      "current_lines": 49,
+      "source_modified_by_this_batch": true,
+      "syntax_validation": "in_memory_compile_passed",
+      "validation": {
+        "report": "python-new-tools-equivalence.json",
+        "passed": true,
+        "current_sha256": "d9b3cadeb378d83cb78d4bf4bbcdceee809a91aaf3be0967b3ff17d8a8ded89e",
+        "generated_artifact_writes": false
+      }
+    },
+    {
+      "file": "docs/architecture/tools/verify_typography.py",
+      "baseline_sha256": "1275521d6cc92bb784c3dc852647889845cc14be7188f5d9e880a0349c71399d",
+      "baseline_lines": 53,
+      "full_file_review_status": "reviewed",
+      "review_evidence": "读取完整当前函数体、输入与生成/握手边界；生成物仅内存验证",
+      "current_sha256": "1275521d6cc92bb784c3dc852647889845cc14be7188f5d9e880a0349c71399d",
+      "current_lines": 53,
+      "source_modified_by_this_batch": false,
+      "syntax_validation": "in_memory_compile_passed",
+      "validation": {
+        "report": "python-new-tools-equivalence.json",
+        "passed": true,
+        "current_sha256": "1275521d6cc92bb784c3dc852647889845cc14be7188f5d9e880a0349c71399d",
+        "generated_artifact_writes": false
+      }
+    },
+    {
+      "file": "docs/architecture/tools/write_frontend_specs.py",
+      "baseline_sha256": "7daddf9e5b6587138734e0407966a82131fdca7bb4bf008f905fc9daaafe6a24",
+      "baseline_lines": 279,
+      "full_file_review_status": "reviewed",
+      "review_evidence": "读取完整当前函数体、输入与生成/握手边界；生成物仅内存验证",
+      "current_sha256": "cc5cd506d2111570357fb43b3a80ca827c7cb4ec42a00db67ab5900e1d7c73c5",
+      "current_lines": 279,
+      "source_modified_by_this_batch": true,
+      "syntax_validation": "in_memory_compile_passed",
+      "validation": {
+        "report": "python-new-tools-equivalence.json",
+        "passed": true,
+        "current_sha256": "cc5cd506d2111570357fb43b3a80ca827c7cb4ec42a00db67ab5900e1d7c73c5",
+        "generated_artifact_writes": false
+      }
+    },
+    {
+      "file": "services/math-verification-worker/tests/test_server_tls_batch54.py",
+      "baseline_sha256": "185b99553fd11506d6938e5970d4933d886f7741f47992a24a89fbdcc69dbf10",
+      "baseline_lines": 257,
+      "full_file_review_status": "reviewed",
+      "review_evidence": "读取完整当前函数体、输入与生成/握手边界；生成物仅内存验证",
+      "current_sha256": "aefcb18c85bbd1fb31c380b6b97ada82f721dc68b5c3859fe8a5b2659c9de497",
+      "current_lines": 259,
+      "source_modified_by_this_batch": true,
+      "syntax_validation": "in_memory_compile_passed",
+      "validation": {
+        "report": "python-new-test-execution.json",
+        "passed": true,
+        "current_sha256": "aefcb18c85bbd1fb31c380b6b97ada82f721dc68b5c3859fe8a5b2659c9de497",
+        "exit_code": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "file": "tests/infra/test_internal_test_certificates.py",
+      "baseline_sha256": "9c8b2a7278aa0bd34e7fb5c61bdeaba9a88dad19d53edb18790b0561eb5606b1",
+      "baseline_lines": 191,
+      "full_file_review_status": "reviewed",
+      "review_evidence": "读取完整当前函数体、输入与生成/握手边界；生成物仅内存验证",
+      "current_sha256": "ee08a8ff9c99cbf085b2081d6799342d535b0240b3ec68b1a2bab79dc5fce355",
+      "current_lines": 192,
+      "source_modified_by_this_batch": true,
+      "syntax_validation": "in_memory_compile_passed",
+      "validation": {
+        "report": "python-new-test-execution.json",
+        "passed": true,
+        "current_sha256": "ee08a8ff9c99cbf085b2081d6799342d535b0240b3ec68b1a2bab79dc5fce355",
+        "exit_code": 0,
+        "skipped": 0
+      }
+    }
+  ],
+  "issues": [
+    {
+      "key": "52b383e7-afce-4aab-99d4-18fba060d8a4",
+      "rule": "python:S3776",
+      "severity": "CRITICAL",
+      "file": "docs/architecture/tools/finalize_delivery_records.py",
+      "scan_line": 37,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 16 to the 15 allowed.",
+      "state": "validated_fix_pending_platform_rescan",
+      "change": "按来源版本复核、旧完成声明撤销或原生布局度量阶段拆分；保留真实处理顺序",
+      "current_sha256": "790fca5d4a70d5263d58ce74da40faadd49d450b5a5b36320bfc800de1d5b037",
+      "validation": {
+        "report": "python-new-tools-equivalence.json",
+        "passed": true,
+        "current_sha256": "790fca5d4a70d5263d58ce74da40faadd49d450b5a5b36320bfc800de1d5b037",
+        "generated_artifact_writes": false
+      }
+    },
+    {
+      "key": "1c1527ae-c2f0-4edf-a04f-b8a48bda3362",
+      "rule": "python:S3776",
+      "severity": "CRITICAL",
+      "file": "docs/architecture/tools/fit_box_typography.py",
+      "scan_line": 40,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 40 to the 15 allowed.",
+      "state": "validated_fix_pending_platform_rescan",
+      "change": "按来源版本复核、旧完成声明撤销或原生布局度量阶段拆分；保留真实处理顺序",
+      "current_sha256": "984d37011dcdf8e47097a7b9d7ce5701402338f0967b80715c0e3192895719eb",
+      "validation": {
+        "report": "python-new-tools-equivalence.json",
+        "passed": true,
+        "current_sha256": "984d37011dcdf8e47097a7b9d7ce5701402338f0967b80715c0e3192895719eb",
+        "generated_artifact_writes": false
+      }
+    },
+    {
+      "key": "a4a46a6b-9c41-4d91-891a-a08ad4fdbe46",
+      "rule": "python:S3776",
+      "severity": "CRITICAL",
+      "file": "docs/architecture/tools/retire_stale_reviews.py",
+      "scan_line": 11,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 16 to the 15 allowed.",
+      "state": "validated_fix_pending_platform_rescan",
+      "change": "按来源版本复核、旧完成声明撤销或原生布局度量阶段拆分；保留真实处理顺序",
+      "current_sha256": "d9b3cadeb378d83cb78d4bf4bbcdceee809a91aaf3be0967b3ff17d8a8ded89e",
+      "validation": {
+        "report": "python-new-tools-equivalence.json",
+        "passed": true,
+        "current_sha256": "d9b3cadeb378d83cb78d4bf4bbcdceee809a91aaf3be0967b3ff17d8a8ded89e",
+        "generated_artifact_writes": false
+      }
+    },
+    {
+      "key": "0f3d55da-1188-4581-8dac-2499c0709621",
+      "rule": "python:S1192",
+      "severity": "CRITICAL",
+      "file": "docs/architecture/tools/write_frontend_specs.py",
+      "scan_line": 9,
+      "message": "Define a constant instead of duplicating this literal \"services/api-gateway/internal/server/router_guards.go\" 8 times.",
+      "state": "validated_fix_pending_platform_rescan",
+      "change": "全部相同完整路径引用已有常量，复合路径与出处文案逐字保留",
+      "current_sha256": "cc5cd506d2111570357fb43b3a80ca827c7cb4ec42a00db67ab5900e1d7c73c5",
+      "validation": {
+        "report": "python-new-tools-equivalence.json",
+        "passed": true,
+        "current_sha256": "cc5cd506d2111570357fb43b3a80ca827c7cb4ec42a00db67ab5900e1d7c73c5",
+        "generated_artifact_writes": false
+      }
+    },
+    {
+      "key": "5b6b5d0e-fb6e-4719-ae68-d3cc47b6818b",
+      "rule": "python:S1192",
+      "severity": "CRITICAL",
+      "file": "docs/architecture/tools/write_frontend_specs.py",
+      "scan_line": 10,
+      "message": "Define a constant instead of duplicating this literal \"services/api-gateway/internal/files/handlers.go\" 4 times.",
+      "state": "validated_fix_pending_platform_rescan",
+      "change": "全部相同完整路径引用已有常量，复合路径与出处文案逐字保留",
+      "current_sha256": "cc5cd506d2111570357fb43b3a80ca827c7cb4ec42a00db67ab5900e1d7c73c5",
+      "validation": {
+        "report": "python-new-tools-equivalence.json",
+        "passed": true,
+        "current_sha256": "cc5cd506d2111570357fb43b3a80ca827c7cb4ec42a00db67ab5900e1d7c73c5",
+        "generated_artifact_writes": false
+      }
+    },
+    {
+      "key": "f2fcdb03-5d4f-454e-a909-0d702893428b",
+      "rule": "python:S5778",
+      "severity": "MAJOR",
+      "file": "ai-services/tests/test_model_transport_security.py",
+      "scan_line": 169,
+      "message": "Refactor this exception test to have only one invocation possibly throwing an exception.",
+      "state": "validated_fix_pending_platform_rescan",
+      "change": "构造有效请求/可信 TLS 上下文/失败配置移到异常上下文外；保留异常和资源回收断言",
+      "current_sha256": "daa3c6757a8a6b6e23205e437c980dac395e15451670d8d1306cd5bd3985a6d0",
+      "validation": {
+        "report": "python-new-test-execution.json",
+        "passed": true,
+        "current_sha256": "daa3c6757a8a6b6e23205e437c980dac395e15451670d8d1306cd5bd3985a6d0",
+        "exit_code": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "key": "9174a6ed-e229-42cf-bb75-bc5232b4eec4",
+      "rule": "python:S5778",
+      "severity": "MAJOR",
+      "file": "ai-services/tests/test_server_tls_handshake.py",
+      "scan_line": 153,
+      "message": "Refactor this exception test to have only one invocation possibly throwing an exception.",
+      "state": "validated_fix_pending_platform_rescan",
+      "change": "构造有效请求/可信 TLS 上下文/失败配置移到异常上下文外；保留异常和资源回收断言",
+      "current_sha256": "6a3198313784b20317f0e6c12fcda65abefef39ce703fd01ca64d2ee45729a6e",
+      "validation": {
+        "report": "python-new-test-execution.json",
+        "passed": true,
+        "current_sha256": "6a3198313784b20317f0e6c12fcda65abefef39ce703fd01ca64d2ee45729a6e",
+        "exit_code": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "key": "821e82a0-2c20-4239-8efa-32982d052bbe",
+      "rule": "python:S5778",
+      "severity": "MAJOR",
+      "file": "ai-services/tests/test_server_tls_handshake.py",
+      "scan_line": 213,
+      "message": "Refactor this exception test to have only one invocation possibly throwing an exception.",
+      "state": "validated_fix_pending_platform_rescan",
+      "change": "构造有效请求/可信 TLS 上下文/失败配置移到异常上下文外；保留异常和资源回收断言",
+      "current_sha256": "6a3198313784b20317f0e6c12fcda65abefef39ce703fd01ca64d2ee45729a6e",
+      "validation": {
+        "report": "python-new-test-execution.json",
+        "passed": true,
+        "current_sha256": "6a3198313784b20317f0e6c12fcda65abefef39ce703fd01ca64d2ee45729a6e",
+        "exit_code": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "key": "ead07595-6c96-47f2-a1e8-b480c4a1731d",
+      "rule": "python:S5778",
+      "severity": "MAJOR",
+      "file": "ai-services/tests/test_server_tls_handshake.py",
+      "scan_line": 229,
+      "message": "Refactor this exception test to have only one invocation possibly throwing an exception.",
+      "state": "validated_fix_pending_platform_rescan",
+      "change": "构造有效请求/可信 TLS 上下文/失败配置移到异常上下文外；保留异常和资源回收断言",
+      "current_sha256": "6a3198313784b20317f0e6c12fcda65abefef39ce703fd01ca64d2ee45729a6e",
+      "validation": {
+        "report": "python-new-test-execution.json",
+        "passed": true,
+        "current_sha256": "6a3198313784b20317f0e6c12fcda65abefef39ce703fd01ca64d2ee45729a6e",
+        "exit_code": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "key": "0dbe8090-525c-4ef2-ac35-9793f8eca03c",
+      "rule": "python:S5778",
+      "severity": "MAJOR",
+      "file": "ai-services/tests/test_server_tls_handshake.py",
+      "scan_line": 255,
+      "message": "Refactor this exception test to have only one invocation possibly throwing an exception.",
+      "state": "validated_fix_pending_platform_rescan",
+      "change": "构造有效请求/可信 TLS 上下文/失败配置移到异常上下文外；保留异常和资源回收断言",
+      "current_sha256": "6a3198313784b20317f0e6c12fcda65abefef39ce703fd01ca64d2ee45729a6e",
+      "validation": {
+        "report": "python-new-test-execution.json",
+        "passed": true,
+        "current_sha256": "6a3198313784b20317f0e6c12fcda65abefef39ce703fd01ca64d2ee45729a6e",
+        "exit_code": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "key": "05751b2e-4f9d-439b-8076-c16b596cffc4",
+      "rule": "python:S5778",
+      "severity": "MAJOR",
+      "file": "services/math-verification-worker/tests/test_server_tls_batch54.py",
+      "scan_line": 162,
+      "message": "Refactor this exception test to have only one invocation possibly throwing an exception.",
+      "state": "validated_fix_pending_platform_rescan",
+      "change": "构造有效请求/可信 TLS 上下文/失败配置移到异常上下文外；保留异常和资源回收断言",
+      "current_sha256": "aefcb18c85bbd1fb31c380b6b97ada82f721dc68b5c3859fe8a5b2659c9de497",
+      "validation": {
+        "report": "python-new-test-execution.json",
+        "passed": true,
+        "current_sha256": "aefcb18c85bbd1fb31c380b6b97ada82f721dc68b5c3859fe8a5b2659c9de497",
+        "exit_code": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "key": "d594d48e-5fba-4e0f-9d58-06617ab93fc8",
+      "rule": "python:S5778",
+      "severity": "MAJOR",
+      "file": "services/math-verification-worker/tests/test_server_tls_batch54.py",
+      "scan_line": 183,
+      "message": "Refactor this exception test to have only one invocation possibly throwing an exception.",
+      "state": "validated_fix_pending_platform_rescan",
+      "change": "构造有效请求/可信 TLS 上下文/失败配置移到异常上下文外；保留异常和资源回收断言",
+      "current_sha256": "aefcb18c85bbd1fb31c380b6b97ada82f721dc68b5c3859fe8a5b2659c9de497",
+      "validation": {
+        "report": "python-new-test-execution.json",
+        "passed": true,
+        "current_sha256": "aefcb18c85bbd1fb31c380b6b97ada82f721dc68b5c3859fe8a5b2659c9de497",
+        "exit_code": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "key": "91c32d4c-9dc7-4158-b8be-ac18462db392",
+      "rule": "python:S9073",
+      "severity": "MAJOR",
+      "file": "tests/infra/test_internal_test_certificates.py",
+      "scan_line": 26,
+      "message": "Split this composite assertion into separate assertions.",
+      "state": "validated_fix_pending_platform_rescan",
+      "change": "复合断言拆为顺序断言，spec 非空失败后不访问 loader",
+      "current_sha256": "ee08a8ff9c99cbf085b2081d6799342d535b0240b3ec68b1a2bab79dc5fce355",
+      "validation": {
+        "report": "python-new-test-execution.json",
+        "passed": true,
+        "current_sha256": "ee08a8ff9c99cbf085b2081d6799342d535b0240b3ec68b1a2bab79dc5fce355",
+        "exit_code": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "key": "3e6e4231-098d-492a-8d3e-fc9a26f6589a",
+      "rule": "python:S7498",
+      "severity": "MINOR",
+      "file": "docs/architecture/tools/finalize_delivery_records.py",
+      "scan_line": 53,
+      "message": "Replace this constructor call with a literal.",
+      "state": "validated_fix_pending_platform_rescan",
+      "change": "仅 keyword 的 dict 构造改成字典字面量，键序与值不变",
+      "current_sha256": "790fca5d4a70d5263d58ce74da40faadd49d450b5a5b36320bfc800de1d5b037",
+      "validation": {
+        "report": "python-new-tools-equivalence.json",
+        "passed": true,
+        "current_sha256": "790fca5d4a70d5263d58ce74da40faadd49d450b5a5b36320bfc800de1d5b037",
+        "generated_artifact_writes": false
+      }
+    },
+    {
+      "key": "f1912c02-01b9-4658-b729-66c418f8cf62",
+      "rule": "python:S7498",
+      "severity": "MINOR",
+      "file": "docs/architecture/tools/finalize_delivery_records.py",
+      "scan_line": 56,
+      "message": "Replace this constructor call with a literal.",
+      "state": "validated_fix_pending_platform_rescan",
+      "change": "仅 keyword 的 dict 构造改成字典字面量，键序与值不变",
+      "current_sha256": "790fca5d4a70d5263d58ce74da40faadd49d450b5a5b36320bfc800de1d5b037",
+      "validation": {
+        "report": "python-new-tools-equivalence.json",
+        "passed": true,
+        "current_sha256": "790fca5d4a70d5263d58ce74da40faadd49d450b5a5b36320bfc800de1d5b037",
+        "generated_artifact_writes": false
+      }
+    },
+    {
+      "key": "62ff6fb6-69a9-4e74-966a-5fabc9c97966",
+      "rule": "python:S7498",
+      "severity": "MINOR",
+      "file": "docs/architecture/tools/finalize_delivery_records.py",
+      "scan_line": 72,
+      "message": "Replace this constructor call with a literal.",
+      "state": "validated_fix_pending_platform_rescan",
+      "change": "仅 keyword 的 dict 构造改成字典字面量，键序与值不变",
+      "current_sha256": "790fca5d4a70d5263d58ce74da40faadd49d450b5a5b36320bfc800de1d5b037",
+      "validation": {
+        "report": "python-new-tools-equivalence.json",
+        "passed": true,
+        "current_sha256": "790fca5d4a70d5263d58ce74da40faadd49d450b5a5b36320bfc800de1d5b037",
+        "generated_artifact_writes": false
+      }
+    },
+    {
+      "key": "1f77c921-711f-487d-8848-2f09bb3003f4",
+      "rule": "python:S7498",
+      "severity": "MINOR",
+      "file": "docs/architecture/tools/finalize_delivery_records.py",
+      "scan_line": 81,
+      "message": "Replace this constructor call with a literal.",
+      "state": "validated_fix_pending_platform_rescan",
+      "change": "仅 keyword 的 dict 构造改成字典字面量，键序与值不变",
+      "current_sha256": "790fca5d4a70d5263d58ce74da40faadd49d450b5a5b36320bfc800de1d5b037",
+      "validation": {
+        "report": "python-new-tools-equivalence.json",
+        "passed": true,
+        "current_sha256": "790fca5d4a70d5263d58ce74da40faadd49d450b5a5b36320bfc800de1d5b037",
+        "generated_artifact_writes": false
+      }
+    },
+    {
+      "key": "9c64a937-6ff7-4c05-ae68-f279043238a6",
+      "rule": "python:S7498",
+      "severity": "MINOR",
+      "file": "docs/architecture/tools/verify_typography.py",
+      "scan_line": 38,
+      "message": "Replace this constructor call with a literal.",
+      "state": "validated_existing_resolution_pending_platform_rescan",
+      "change": "外部当前源码已使用字典字面量；本智能体未重复改写",
+      "evidence": "全文核对与 AST 无 dict(...) 调用；保留 defusedxml 安全解析",
+      "current_sha256": "1275521d6cc92bb784c3dc852647889845cc14be7188f5d9e880a0349c71399d",
+      "validation": {
+        "report": "python-new-tools-equivalence.json",
+        "passed": true,
+        "current_sha256": "1275521d6cc92bb784c3dc852647889845cc14be7188f5d9e880a0349c71399d",
+        "generated_artifact_writes": false
+      }
+    },
+    {
+      "key": "20be2f43-bae8-4be8-aab2-510e954d2e85",
+      "rule": "python:S7498",
+      "severity": "MINOR",
+      "file": "docs/architecture/tools/verify_typography.py",
+      "scan_line": 40,
+      "message": "Replace this constructor call with a literal.",
+      "state": "validated_existing_resolution_pending_platform_rescan",
+      "change": "外部当前源码已使用字典字面量；本智能体未重复改写",
+      "evidence": "全文核对与 AST 无 dict(...) 调用；保留 defusedxml 安全解析",
+      "current_sha256": "1275521d6cc92bb784c3dc852647889845cc14be7188f5d9e880a0349c71399d",
+      "validation": {
+        "report": "python-new-tools-equivalence.json",
+        "passed": true,
+        "current_sha256": "1275521d6cc92bb784c3dc852647889845cc14be7188f5d9e880a0349c71399d",
+        "generated_artifact_writes": false
+      }
+    }
+  ],
+  "updated_at_utc": "2026-10-11T10:32:52.795661+00:00",
+  "summary": {
+    "validated_fix_pending_platform_rescan": 17,
+    "validated_existing_resolution_pending_platform_rescan": 2
+  },
+  "platform_actions_performed": false,
+  "source_exclusions_or_threshold_changes": false
+}

@@ -91,7 +91,8 @@ if (!governance.valid) throw new Error(`JorGPT governance failed: ${governance.e
 const invalidInputs = persistedSamples.map((sample) => ({ sample_id: sample.sample_id, validation: validateGradingInput(sampleToInput(sample)) }))
   .filter((item) => !item.validation.valid);
 if (invalidInputs.length) {
-  throw new Error(`JorGPT grading schema failed: ${invalidInputs.slice(0, 5).map((item) => `${item.sample_id}: ${item.validation.errors.join("; ")}`).join(" | ")}`);
+  const details = invalidInputs.slice(0, 5).map((item) => `${item.sample_id}: ${item.validation.errors.join("; ")}`).join(" | ");
+  throw new Error(`JorGPT grading schema failed: ${details}`);
 }
 
 const outputText = persistedSamples.map((sample) => JSON.stringify(sample)).join("\n") + "\n";

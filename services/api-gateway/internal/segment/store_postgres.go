@@ -133,9 +133,8 @@ func (s *PostgresStore) GetEvidence(ctx context.Context, tenantID string, id str
 	return s.getEvidence(ctx, tenantID, id, "")
 }
 
-// GetEvidenceForQuestion is the server-to-server variant used by internal
-// grading evidence resolvers. It keeps the question binding in the tenant
-// scoped database lookup instead of accepting a segment and comparing later.
+// GetEvidenceForQuestion 是内部评分证据解析器使用的服务间版本。
+// 它在租户作用域数据库查询中保留题目绑定，而不是先接受分段再比较。
 func (s *PostgresStore) GetEvidenceForQuestion(ctx context.Context, tenantID string, id string, questionID string) (SegmentEvidence, error) {
 	if questionID == "" {
 		return SegmentEvidence{}, ErrNotFound

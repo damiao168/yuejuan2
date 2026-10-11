@@ -1,0 +1,34 @@
+{
+  "files": [
+    {
+      "file": "services/api-gateway/internal/server/e2e_paper_import_reconciliation_test.go",
+      "sha256": "0a8230a084fbd512dff197e0bf4a217365834375f9e9309640a727acc740cb85",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_paper_import_reconciliation_test.go"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_paper_import_reconciliation_test.go",
+      "sha256": "1bc4642f79cf2a2e87e36cfee714765a3241f0890060cea8ce31dccb04a0f573",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_paper_import_reconciliation_test.go"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_paper_import_reconciliation_test.go",
+      "sha256": "66c0eb7737f21c39c90c226d77666973e734d9ba6be6c44e446b2b57a929bc5a",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_paper_import_reconciliation_test.go"
+    }
+  ],
+  "issue_functions": [
+    {
+      "file": "services/api-gateway/internal/server/e2e_paper_import_reconciliation_test.go",
+      "function": "TestPaperImportApplyGateE2EWithPostgresTestDatabase"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_paper_import_reconciliation_test.go",
+      "function": "e2eAssertPaperStageAndInputFence"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_paper_import_reconciliation_test.go",
+      "function": "e2eAssertPaperOCRParseRecovery"
+    }
+  ],
+  "checkpoint_relation": "after checkpoint02; requires subsequent scan"
+}

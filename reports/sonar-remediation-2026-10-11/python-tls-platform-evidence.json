@@ -1,0 +1,295 @@
+{
+  "checked_at_utc": "2026-10-11T10:32:52.789785+00:00",
+  "count": 2,
+  "platform_actions_performed": false,
+  "records": [
+    {
+      "key": "7f939914-9bb6-4005-80a0-4c2efe12eedb",
+      "rule": "python:S5332",
+      "severity": "MINOR",
+      "file": "ai-services/grading_agent/server.py",
+      "original_line": 291,
+      "current_sha256": "62c2b234657f1f29d444968d8ce815647f820b1b8c7b3eb7d6a6db6d617c637e",
+      "production_source_modified_by_this_agent": false,
+      "full_review": {
+        "server": true,
+        "settings": true,
+        "entrypoint": "ai-services/grading_agent/__main__.py",
+        "entrypoint_directly_calls_validated_serving_function": true
+      },
+      "source_proof": [
+        {
+          "file": "ai-services/grading_agent/config.py",
+          "start_line": 121,
+          "end_line": 152,
+          "current_sha256": "2ff9cbe6105aa62ab6098f53cc5d8cf0bde0d858e8bf7bc5992ec48648d3b460",
+          "text": "    def _validate_credentials_and_listener(self):\n        if (\n            len(self.service_token) < 32\n            or self.service_token != self.service_token.strip()\n            or any(character.isspace() for character in self.service_token)\n        ):\n            raise ValueError(\"EDUGRADE_GRADING_AGENT_TOKEN must contain at least 32 non-whitespace characters\")\n        if not isinstance(self.host, str) or not self.host:\n            raise ValueError(\"EDUGRADE_GRADING_AGENT_HOST must be a non-empty string\")\n        if bool(self.tls_cert_file) != bool(self.tls_key_file):\n            raise ValueError(\"grading-agent TLS certificate and key must be configured together\")\n        # 直接注入 Settings 时也只接受实际布尔值，不能用字符串或整数的真值开启明文监听。\n        if type(self.allow_insecure_loopback_http) is not bool:\n            raise ValueError(\"EDUGRADE_GRADING_AGENT_ALLOW_INSECURE_LOOPBACK_HTTP must be a boolean\")\n        if self.tls_cert_file:\n            return\n        try:\n            address = ipaddress.ip_address(self.host)\n        except ValueError:\n            address = None\n        # 明文仅用于显式开发环境、明确 opt-in 和 IPv4 字面回环地址；不解析 DNS，也不开放 IPv6。\n        if (\n            self.environment in {\"local\", \"development\", \"dev\", \"test\"}\n            and self.allow_insecure_loopback_http is True\n            and isinstance(address, ipaddress.IPv4Address)\n            and address.is_loopback\n        ):\n            return\n        raise ValueError(\n            \"grading-agent TLS certificate and key are required unless explicit development \"\n            \"loopback HTTP is enabled\"\n        )"
+        },
+        {
+          "file": "ai-services/grading_agent/server.py",
+          "start_line": 279,
+          "end_line": 294,
+          "current_sha256": "62c2b234657f1f29d444968d8ce815647f820b1b8c7b3eb7d6a6db6d617c637e",
+          "text": "def serve(settings=None):\n    settings = settings or Settings.from_env()\n    # 调用方直接传入 Settings 仍须检查监听边界，拒绝发生在加载应用和绑定端口之前。\n    settings._validate_credentials_and_listener()\n    application = GradingAgentApplication(settings)\n    server = GradingAgentHTTPServer((settings.host, settings.port), application)\n    try:\n        if settings.tls_cert_file:\n            context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)\n            context.minimum_version = ssl.TLSVersion.TLSv1_2\n            context.load_cert_chain(settings.tls_cert_file, settings.tls_key_file)\n            server.socket = context.wrap_socket(server.socket, server_side=True)\n        server.serve_forever()\n    finally:\n        # 证书加载失败或服务退出时也要清理；就绪线程先收到退出信号，再关闭监听。\n        server.server_close()"
+        }
+      ],
+      "observed_behavior": [
+        "生产、缺省和未知环境在应用启动或绑定监听端口前拒绝缺证书的配置；证书/密钥必须成对。",
+        "显式开发环境的明文例外必须有真实 bool opt-in 且只使用字面 IPv4 回环；DNS、通配地址、远端、IPv6 和非 bool 被拒绝。",
+        "TLS 证书加载和 socket 包装先于 serve_forever；上下文最低 TLS1.2；TLS 初始化异常也关闭监听资源。",
+        "真实监听器接受可信 CA + 正确 SAN 的 HTTPS；拒绝错误/缺失 CA、SAN 不匹配以及明文业务响应。"
+      ],
+      "test_validation": {
+        "report": "python-new-test-execution.json",
+        "group": "grading-tls-and-transport",
+        "exit_code": 0,
+        "junit_counts": {
+          "tests": 196,
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0
+        },
+        "junit": "python-new-grading-tls-and-transport-junit.xml",
+        "log": "python-new-grading-tls-and-transport-pytest.log",
+        "passed_tls_test_cases": [
+          {
+            "class": "ai-services.tests.test_model_transport_security.ModelTransportSecurityTests",
+            "name": "test_tls_rejects_an_untrusted_certificate_for_every_transport"
+          },
+          {
+            "class": "ai-services.tests.test_server_tls_handshake.ServerTLSHandshakeTests",
+            "name": "test_missing_invalid_or_mismatched_certificate_closes_real_resources"
+          },
+          {
+            "class": "ai-services.tests.test_server_tls_handshake.ServerTLSHandshakeTests",
+            "name": "test_plaintext_does_not_receive_an_http_or_json_response"
+          },
+          {
+            "class": "ai-services.tests.test_server_tls_handshake.ServerTLSHandshakeTests",
+            "name": "test_production_https_preserves_health_readiness_and_service_authentication"
+          },
+          {
+            "class": "ai-services.tests.test_server_tls_handshake.ServerTLSHandshakeTests",
+            "name": "test_san_mismatch_rejects_a_trusted_certificate"
+          },
+          {
+            "class": "ai-services.tests.test_server_tls_handshake.ServerTLSHandshakeTests",
+            "name": "test_wrong_or_missing_ca_rejects_the_same_real_listener"
+          },
+          {
+            "class": "ai-services.tests.test_server_tls.ServerTLSTests",
+            "name": "test_configured_tls_takes_precedence_over_development_http_opt_in"
+          },
+          {
+            "class": "ai-services.tests.test_server_tls.ServerTLSTests",
+            "name": "test_direct_explicit_development_loopback_http_skips_tls_and_closes"
+          },
+          {
+            "class": "ai-services.tests.test_server_tls.ServerTLSTests",
+            "name": "test_direct_partial_tls_cannot_fall_back_to_development_http"
+          },
+          {
+            "class": "ai-services.tests.test_server_tls.ServerTLSTests",
+            "name": "test_direct_settings_rejects_development_plaintext_without_opt_in"
+          },
+          {
+            "class": "ai-services.tests.test_server_tls.ServerTLSTests",
+            "name": "test_direct_settings_rejects_empty_or_non_string_hosts"
+          },
+          {
+            "class": "ai-services.tests.test_server_tls.ServerTLSTests",
+            "name": "test_direct_settings_rejects_missing_or_whitespace_credentials_before_bind"
+          },
+          {
+            "class": "ai-services.tests.test_server_tls.ServerTLSTests",
+            "name": "test_direct_settings_rejects_non_boolean_opt_in"
+          },
+          {
+            "class": "ai-services.tests.test_server_tls.ServerTLSTests",
+            "name": "test_direct_settings_rejects_plaintext_outside_explicit_development"
+          },
+          {
+            "class": "ai-services.tests.test_server_tls.ServerTLSTests",
+            "name": "test_direct_settings_rejects_wildcard_dns_remote_ipv6_and_invalid_hosts"
+          },
+          {
+            "class": "ai-services.tests.test_server_tls.ServerTLSTests",
+            "name": "test_invalid_certificate_closes_server_without_serving"
+          },
+          {
+            "class": "ai-services.tests.test_server_tls.ServerTLSTests",
+            "name": "test_socket_wrap_failure_closes_server_without_serving"
+          },
+          {
+            "class": "ai-services.tests.test_server_tls.ServerTLSTests",
+            "name": "test_tls_is_wrapped_before_serving_and_closed_on_exit"
+          },
+          {
+            "class": "ai-services.tests.test_config.SettingsTests",
+            "name": "test_complete_tls_configuration_accepts_all_environment_classes"
+          },
+          {
+            "class": "ai-services.tests.test_config.SettingsTests",
+            "name": "test_default_environment_requires_tls_even_on_loopback"
+          },
+          {
+            "class": "ai-services.tests.test_config.SettingsTests",
+            "name": "test_empty_listener_host_is_rejected_before_tls_selection"
+          },
+          {
+            "class": "ai-services.tests.test_config.SettingsTests",
+            "name": "test_partial_tls_never_falls_back_to_opted_in_development_http"
+          },
+          {
+            "class": "ai-services.tests.test_config.SettingsTests",
+            "name": "test_production_requires_server_tls_certificate"
+          },
+          {
+            "class": "ai-services.tests.test_config.SettingsTests",
+            "name": "test_tls_certificate_requires_its_matching_private_key"
+          }
+        ],
+        "sources_unchanged_during_tests": true
+      },
+      "recommendation": "请 root 按本证据在平台做 false_positive 评审；不改变正确的 TLS 行为以适配只识别 HTTPServer 构造的静态模式。",
+      "reason": "告警命中 ThreadingHTTPServer 构造/继承，但该监听 socket 在处理请求前由服务端 TLS 上下文包装。调用链中的默认拒绝策略和真实握手负例已验证。",
+      "platform_disposition": "pending_root",
+      "no_suppression_or_source_exclusion": true
+    },
+    {
+      "key": "0cb24e71-bce5-4ed4-b2c5-ca9aac275754",
+      "rule": "python:S5332",
+      "severity": "MINOR",
+      "file": "services/math-verification-worker/math_verification_worker/server.py",
+      "original_line": 186,
+      "current_sha256": "d9d6a02c89cea615738f507e3462e185e4c9992537acdb6b93ce28427f9a4f1f",
+      "production_source_modified_by_this_agent": false,
+      "full_review": {
+        "server": true,
+        "settings": false,
+        "entrypoint": "services/math-verification-worker/math_verification_worker/__main__.py",
+        "entrypoint_directly_calls_validated_serving_function": true
+      },
+      "source_proof": [
+        {
+          "file": "services/math-verification-worker/math_verification_worker/server.py",
+          "start_line": 145,
+          "end_line": 166,
+          "current_sha256": "d9d6a02c89cea615738f507e3462e185e4c9992537acdb6b93ce28427f9a4f1f",
+          "text": "def _validate_listener_policy(environment: str, host: str, allow_http: bool, has_certificate: bool) -> None:\n    # 不接受字符串或整数的真值；只有明确的布尔授权才能进入开发明文例外。\n    if type(allow_http) is not bool:\n        raise ValueError(\"math verifier insecure HTTP opt-in must be a boolean\")\n    # IPv4Address 也接受整数；只接收字符串，避免直接调用绕过字面地址限制。\n    if not isinstance(host, str):\n        raise ValueError(\"EDUGRADE_MATH_VERIFY_HOST must be a string\")\n    if not host:\n        raise ValueError(\"EDUGRADE_MATH_VERIFY_HOST must not be empty\")\n    if has_certificate:\n        return\n    if environment not in {\"local\", \"development\", \"dev\", \"test\"}:\n        raise ValueError(\"math verifier TLS certificate and key are required in production-like environments\")\n    if allow_http is not True:\n        raise ValueError(\"math verifier cleartext HTTP requires explicit insecure loopback opt-in\")\n    # AF_INET 监听器只允许字面 IPv4 回环例外，避免 DNS 解析或通配地址扩展明文暴露范围。\n    try:\n        address = ipaddress.IPv4Address(host)\n    except ipaddress.AddressValueError as exc:\n        raise ValueError(\"math verifier cleartext HTTP requires a literal IPv4 loopback host\") from exc\n    if not address.is_loopback:\n        raise ValueError(\"math verifier cleartext HTTP requires a literal IPv4 loopback host\")"
+        },
+        {
+          "file": "services/math-verification-worker/math_verification_worker/server.py",
+          "start_line": 169,
+          "end_line": 189,
+          "current_sha256": "d9d6a02c89cea615738f507e3462e185e4c9992537acdb6b93ce28427f9a4f1f",
+          "text": "def main() -> None:\n    port = int(os.environ.get(\"EDUGRADE_MATH_VERIFY_PORT\", \"8092\"))\n    host = os.environ.get(\"EDUGRADE_MATH_VERIFY_HOST\", \"0.0.0.0\").strip()\n    cert_file = os.environ.get(\"EDUGRADE_MATH_VERIFY_TLS_CERT_FILE\", \"\").strip()\n    key_file = os.environ.get(\"EDUGRADE_MATH_VERIFY_TLS_KEY_FILE\", \"\").strip()\n    if bool(cert_file) != bool(key_file):\n        raise ValueError(\"math verifier TLS certificate and key must be configured together\")\n    environment = os.environ.get(\"EDUGRADE_ENV\", \"production\").strip().lower()\n    # 缺省和未知环境都需要 TLS；所有明文例外检查必须在占用监听端口前完成。\n    _validate_listener_policy(environment, host, _allow_insecure_loopback_http(), bool(cert_file))\n    server = ThreadingHTTPServer((host, port), Handler)\n    try:\n        if cert_file:\n            context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)\n            context.minimum_version = ssl.TLSVersion.TLSv1_2\n            context.load_cert_chain(cert_file, key_file)\n            server.socket = context.wrap_socket(server.socket, server_side=True)\n        server.serve_forever()\n    finally:\n        # TLS 初始化失败仍需释放监听端口，避免下一次启动被旧套接字阻塞。\n        server.server_close()"
+        }
+      ],
+      "observed_behavior": [
+        "生产、缺省和未知环境在应用启动或绑定监听端口前拒绝缺证书的配置；证书/密钥必须成对。",
+        "显式开发环境的明文例外必须有真实 bool opt-in 且只使用字面 IPv4 回环；DNS、通配地址、远端、IPv6 和非 bool 被拒绝。",
+        "TLS 证书加载和 socket 包装先于 serve_forever；上下文最低 TLS1.2；TLS 初始化异常也关闭监听资源。",
+        "真实监听器接受可信 CA + 正确 SAN 的 HTTPS；拒绝错误/缺失 CA、SAN 不匹配以及明文业务响应。",
+        "数学服务另用真实 TLS1.2/TLS1.3 握手和 TLS1.1 ClientHello 告警响应验证协议下限。"
+      ],
+      "test_validation": {
+        "report": "python-new-test-execution.json",
+        "group": "math-verifier-tls-and-policy",
+        "exit_code": 0,
+        "junit_counts": {
+          "tests": 96,
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0
+        },
+        "junit": "python-new-math-verifier-tls-and-policy-junit.xml",
+        "log": "python-new-math-verifier-tls-and-policy-pytest.log",
+        "passed_tls_test_cases": [
+          {
+            "class": "tests.test_server_tls_batch54",
+            "name": "test_actual_main_serves_health_and_bounded_normalization_over_tls"
+          },
+          {
+            "class": "tests.test_server_tls_batch54",
+            "name": "test_actual_tls_listener_preserves_internal_token_rejection"
+          },
+          {
+            "class": "tests.test_server_tls_batch54",
+            "name": "test_actual_tls_listener_rejects_untrusted_certificate[empty]"
+          },
+          {
+            "class": "tests.test_server_tls_batch54",
+            "name": "test_actual_tls_listener_rejects_untrusted_certificate[other-ca]"
+          },
+          {
+            "class": "tests.test_server_tls_batch54",
+            "name": "test_actual_tls_listener_rejects_wrong_certificate_san"
+          },
+          {
+            "class": "tests.test_server_tls_batch54",
+            "name": "test_actual_tls_listener_rejects_plaintext_http"
+          },
+          {
+            "class": "tests.test_server_tls_batch54",
+            "name": "test_actual_tls_listener_negotiates_supported_protocols[771-TLSv1.2]"
+          },
+          {
+            "class": "tests.test_server_tls_batch54",
+            "name": "test_actual_tls_listener_negotiates_supported_protocols[772-TLSv1.3]"
+          },
+          {
+            "class": "tests.test_server_tls_batch54",
+            "name": "test_actual_tls_listener_rejects_a_tls11_client_hello"
+          },
+          {
+            "class": "tests.test_server_tls_batch54",
+            "name": "test_actual_certificate_load_failure_releases_listener"
+          },
+          {
+            "class": "tests.test_server",
+            "name": "test_production_requires_tls_certificate"
+          },
+          {
+            "class": "tests.test_server",
+            "name": "test_tls_certificate_requires_matching_key"
+          },
+          {
+            "class": "tests.test_server",
+            "name": "test_tls_wraps_listener_before_serving"
+          },
+          {
+            "class": "tests.test_server",
+            "name": "test_partial_tls_configuration_is_rejected_before_bind[EDUGRADE_MATH_VERIFY_TLS_CERT_FILE]"
+          },
+          {
+            "class": "tests.test_server",
+            "name": "test_partial_tls_configuration_is_rejected_before_bind[EDUGRADE_MATH_VERIFY_TLS_KEY_FILE]"
+          },
+          {
+            "class": "tests.test_server",
+            "name": "test_certificate_keeps_tls_enabled_with_development_cleartext_opt_in"
+          },
+          {
+            "class": "tests.test_server",
+            "name": "test_tls_load_and_wrap_finish_before_serving"
+          },
+          {
+            "class": "tests.test_server",
+            "name": "test_tls_wrap_failure_closes_listener_without_serving"
+          },
+          {
+            "class": "tests.test_server",
+            "name": "test_invalid_tls_certificate_closes_listener"
+          }
+        ],
+        "sources_unchanged_during_tests": true
+      },
+      "recommendation": "请 root 按本证据在平台做 false_positive 评审；不改变正确的 TLS 行为以适配只识别 HTTPServer 构造的静态模式。",
+      "reason": "告警命中 ThreadingHTTPServer 构造/继承，但该监听 socket 在处理请求前由服务端 TLS 上下文包装。调用链中的默认拒绝策略和真实握手负例已验证。",
+      "platform_disposition": "pending_root",
+      "no_suppression_or_source_exclusion": true
+    }
+  ],
+  "scope": "本地当前源码和现有真实 TLS 测试；未访问远端仓库或替平台自动判定状态。"
+}

@@ -1,0 +1,267 @@
+{
+  "nginx_version": "nginx version: nginx/1.29.0",
+  "platform": "nt",
+  "endpoint_adaptation": "只替换 listener 与固定 upstream 地址为回环测试端点",
+  "passed": true,
+  "case_count": 48,
+  "results": [
+    {
+      "config": "nginx.conf",
+      "syntax": "nginx: the configuration file C:\\Users\\pc\\AppData\\Local\\Temp\\edugrade-nginx-authority-okmo1xf3\\nginx.conf syntax is ok\nnginx: configuration file C:\\Users\\pc\\AppData\\Local\\Temp\\edugrade-nginx-authority-okmo1xf3\\nginx.conf test is successful",
+      "cases": [
+        {
+          "path": "/api/echo?limit=1",
+          "incoming_host": "unexpected.example",
+          "upstream_host": "edugrade_api"
+        },
+        {
+          "path": "/ui-test?limit=1",
+          "incoming_host": "unexpected.example",
+          "upstream_host": "edugrade_web"
+        },
+        {
+          "path": "/health/live",
+          "incoming_host": "unexpected.example",
+          "upstream_host": "edugrade_api"
+        },
+        {
+          "path": "/health/ready",
+          "incoming_host": "unexpected.example",
+          "upstream_host": "edugrade_api"
+        },
+        {
+          "path": "/ready",
+          "incoming_host": "unexpected.example",
+          "upstream_host": "edugrade_api"
+        },
+        {
+          "path": "/backend-health",
+          "incoming_host": "unexpected.example",
+          "upstream_host": "edugrade_api"
+        },
+        {
+          "path": "/health",
+          "incoming_host": "unexpected.example",
+          "status": 200
+        },
+        {
+          "path": "/front-redirect",
+          "incoming_host": "unexpected.example",
+          "location": "http://unexpected.example:61581/front-landing"
+        },
+        {
+          "path": "/api/echo?limit=1",
+          "incoming_host": "127.0.0.1:61581",
+          "upstream_host": "edugrade_api"
+        },
+        {
+          "path": "/ui-test?limit=1",
+          "incoming_host": "127.0.0.1:61581",
+          "upstream_host": "edugrade_web"
+        },
+        {
+          "path": "/health/live",
+          "incoming_host": "127.0.0.1:61581",
+          "upstream_host": "edugrade_api"
+        },
+        {
+          "path": "/health/ready",
+          "incoming_host": "127.0.0.1:61581",
+          "upstream_host": "edugrade_api"
+        },
+        {
+          "path": "/ready",
+          "incoming_host": "127.0.0.1:61581",
+          "upstream_host": "edugrade_api"
+        },
+        {
+          "path": "/backend-health",
+          "incoming_host": "127.0.0.1:61581",
+          "upstream_host": "edugrade_api"
+        },
+        {
+          "path": "/health",
+          "incoming_host": "127.0.0.1:61581",
+          "status": 200
+        },
+        {
+          "path": "/front-redirect",
+          "incoming_host": "127.0.0.1:61581",
+          "location": "http://127.0.0.1:61581/front-landing"
+        },
+        {
+          "path": "/api/echo?limit=1",
+          "incoming_host": "gateway.e2e.invalid:61581",
+          "upstream_host": "edugrade_api"
+        },
+        {
+          "path": "/ui-test?limit=1",
+          "incoming_host": "gateway.e2e.invalid:61581",
+          "upstream_host": "edugrade_web"
+        },
+        {
+          "path": "/health/live",
+          "incoming_host": "gateway.e2e.invalid:61581",
+          "upstream_host": "edugrade_api"
+        },
+        {
+          "path": "/health/ready",
+          "incoming_host": "gateway.e2e.invalid:61581",
+          "upstream_host": "edugrade_api"
+        },
+        {
+          "path": "/ready",
+          "incoming_host": "gateway.e2e.invalid:61581",
+          "upstream_host": "edugrade_api"
+        },
+        {
+          "path": "/backend-health",
+          "incoming_host": "gateway.e2e.invalid:61581",
+          "upstream_host": "edugrade_api"
+        },
+        {
+          "path": "/health",
+          "incoming_host": "gateway.e2e.invalid:61581",
+          "status": 200
+        },
+        {
+          "path": "/front-redirect",
+          "incoming_host": "gateway.e2e.invalid:61581",
+          "location": "http://gateway.e2e.invalid:61581/front-landing"
+        }
+      ]
+    },
+    {
+      "config": "story056-e2e.conf",
+      "syntax": "nginx: the configuration file C:\\Users\\pc\\AppData\\Local\\Temp\\edugrade-nginx-authority-4s12upb3\\nginx.conf syntax is ok\nnginx: configuration file C:\\Users\\pc\\AppData\\Local\\Temp\\edugrade-nginx-authority-4s12upb3\\nginx.conf test is successful",
+      "cases": [
+        {
+          "path": "/api/echo?limit=1",
+          "incoming_host": "unexpected.example",
+          "upstream_host": "story056_api"
+        },
+        {
+          "path": "/ui-test?limit=1",
+          "incoming_host": "unexpected.example",
+          "upstream_host": "story056_web"
+        },
+        {
+          "path": "/health",
+          "incoming_host": "unexpected.example",
+          "status": 200
+        },
+        {
+          "path": "/front-redirect",
+          "incoming_host": "unexpected.example",
+          "location": "http://unexpected.example:61634/front-landing"
+        },
+        {
+          "path": "/api/echo?limit=1",
+          "incoming_host": "127.0.0.1:61634",
+          "upstream_host": "story056_api"
+        },
+        {
+          "path": "/ui-test?limit=1",
+          "incoming_host": "127.0.0.1:61634",
+          "upstream_host": "story056_web"
+        },
+        {
+          "path": "/health",
+          "incoming_host": "127.0.0.1:61634",
+          "status": 200
+        },
+        {
+          "path": "/front-redirect",
+          "incoming_host": "127.0.0.1:61634",
+          "location": "http://127.0.0.1:61634/front-landing"
+        },
+        {
+          "path": "/api/echo?limit=1",
+          "incoming_host": "gateway.e2e.invalid:61634",
+          "upstream_host": "story056_api"
+        },
+        {
+          "path": "/ui-test?limit=1",
+          "incoming_host": "gateway.e2e.invalid:61634",
+          "upstream_host": "story056_web"
+        },
+        {
+          "path": "/health",
+          "incoming_host": "gateway.e2e.invalid:61634",
+          "status": 200
+        },
+        {
+          "path": "/front-redirect",
+          "incoming_host": "gateway.e2e.invalid:61634",
+          "location": "http://gateway.e2e.invalid:61634/front-landing"
+        }
+      ]
+    },
+    {
+      "config": "story060-e2e.conf",
+      "syntax": "nginx: the configuration file C:\\Users\\pc\\AppData\\Local\\Temp\\edugrade-nginx-authority-pz4_i1n6\\nginx.conf syntax is ok\nnginx: configuration file C:\\Users\\pc\\AppData\\Local\\Temp\\edugrade-nginx-authority-pz4_i1n6\\nginx.conf test is successful",
+      "cases": [
+        {
+          "path": "/api/echo?limit=1",
+          "incoming_host": "unexpected.example",
+          "upstream_host": "story060_api"
+        },
+        {
+          "path": "/ui-test?limit=1",
+          "incoming_host": "unexpected.example",
+          "upstream_host": "story060_web"
+        },
+        {
+          "path": "/health",
+          "incoming_host": "unexpected.example",
+          "status": 200
+        },
+        {
+          "path": "/front-redirect",
+          "incoming_host": "unexpected.example",
+          "location": "http://unexpected.example:61663/front-landing"
+        },
+        {
+          "path": "/api/echo?limit=1",
+          "incoming_host": "127.0.0.1:61663",
+          "upstream_host": "story060_api"
+        },
+        {
+          "path": "/ui-test?limit=1",
+          "incoming_host": "127.0.0.1:61663",
+          "upstream_host": "story060_web"
+        },
+        {
+          "path": "/health",
+          "incoming_host": "127.0.0.1:61663",
+          "status": 200
+        },
+        {
+          "path": "/front-redirect",
+          "incoming_host": "127.0.0.1:61663",
+          "location": "http://127.0.0.1:61663/front-landing"
+        },
+        {
+          "path": "/api/echo?limit=1",
+          "incoming_host": "gateway.e2e.invalid:61663",
+          "upstream_host": "story060_api"
+        },
+        {
+          "path": "/ui-test?limit=1",
+          "incoming_host": "gateway.e2e.invalid:61663",
+          "upstream_host": "story060_web"
+        },
+        {
+          "path": "/health",
+          "incoming_host": "gateway.e2e.invalid:61663",
+          "status": 200
+        },
+        {
+          "path": "/front-redirect",
+          "incoming_host": "gateway.e2e.invalid:61663",
+          "location": "http://gateway.e2e.invalid:61663/front-landing"
+        }
+      ]
+    }
+  ]
+}

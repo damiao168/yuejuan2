@@ -1,4 +1,4 @@
-import { useState, type Dispatch, type MutableRefObject } from "react";
+import { useState, type Dispatch, type RefObject } from "react";
 import { App } from "antd";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import { getUserErrorMessage } from "../../../api/client";
@@ -9,10 +9,34 @@ import type { TemplateLayoutAction } from "./templateLayoutReducer";
 function clamp(value: number, min = 0, max = 1) { return Math.min(max, Math.max(min, value)); }
 function roundCoordinate(value: number) { return Number(value.toFixed(6)); }
 
+type NormalizedQuestion = { question: Question; key: string };
+type QuestionAnchor = { question: Question; top: number };
+type PDFPage = Awaited<ReturnType<PDFDocumentProxy["getPage"]>>;
+
+function collectPageAnchors(content: Awaited<ReturnType<PDFPage["getTextContent"]>>, height: number, normalized: NormalizedQuestion[], unmatched: Set<string>): QuestionAnchor[] {
+  const anchors: QuestionAnchor[] = [];
+  for (const raw of content.items) {
+    if (!("str" in raw) || !("transform" in raw)) continue;
+    const text = String(raw.str).replace(/\s+/g, "").toLowerCase();
+    const candidate = normalized.find(({ question, key }) => unmatched.has(question.id)
+      && (text === key || text.startsWith(`${key}.`)
+        || text.startsWith(`${key}、`) || text.startsWith(`${key}．`)));
+    if (!candidate) continue;
+    const transform = raw.transform as number[];
+    // PDF 文字坐标从底部起算；区域编辑器使用从顶部起算的 0～1 页面比例。
+    anchors.push({
+      question: candidate.question,
+      top: clamp(1 - ((transform[5] || 0) + Math.abs(transform[3] || transform[0] || 12)) / height)
+    });
+    unmatched.delete(candidate.question.id);
+  }
+  return anchors.sort((a, b) => a.top - b.top);
+}
+
 export function useRegionSuggestion({
   pdfRef, questions, readonly, dispatchLayout
 }: {
-  pdfRef: MutableRefObject<PDFDocumentProxy | undefined>;
+  pdfRef: RefObject<PDFDocumentProxy | undefined>;
   questions: Question[];
   readonly: boolean;
   dispatchLayout: Dispatch<TemplateLayoutAction>;
@@ -38,27 +62,11 @@ export function useRegionSuggestion({
         const page = await pdf.getPage(pageIndex);
         const viewport = page.getViewport({ scale: 1 });
         const content = await page.getTextContent();
-        const pageAnchors: Array<{ question: Question; top: number }> = [];
-        for (const raw of content.items) {
-          if (!("str" in raw) || !("transform" in raw)) continue;
-          const text = String(raw.str).replace(/\s+/g, "").toLowerCase();
-          const candidate = normalized.find(({ question, key }) => unmatched.has(question.id)
-            && (text === key || text.startsWith(`${key}.`)
-              || text.startsWith(`${key}、`) || text.startsWith(`${key}．`)));
-          if (!candidate) continue;
-          const transform = raw.transform as number[];
-          // PDF 文字坐标从底部起算；区域编辑器使用从顶部起算的 0～1 页面比例。
-          pageAnchors.push({
-            question: candidate.question,
-            top: clamp(1 - ((transform[5] || 0) + Math.abs(transform[3] || transform[0] || 12)) / viewport.height)
-          });
-          unmatched.delete(candidate.question.id);
-        }
-        pageAnchors.sort((a, b) => a.top - b.top);
+        const pageAnchors = collectPageAnchors(content, viewport.height, normalized, unmatched);
         if (pageAnchors.length) anchors.set(pageIndex, pageAnchors);
       }
       if (!anchors.size) {
-        message.warning("没有从 PDF 文字层识别到题号；扫描版请先完成 OCR 后再生成候选区域");
+        message.warning("没有找到与本场题目相符的题号。请在左侧选择题目，再在答题卡上拖拽框选区域。");
         return;
       }
       const pages = new Map<number, LayoutRegion[]>();
@@ -75,7 +83,8 @@ export function useRegionSuggestion({
         }));
       }
       dispatchLayout({ type: "suggestRegions", pages });
-      message.success(`已生成 ${questions.length - unmatched.size} 道题的候选区域；请逐题核对并调整${unmatched.size ? `，另有 ${unmatched.size} 道题未识别` : ""}`);
+      const unmatchedNotice = unmatched.size ? `，另有 ${unmatched.size} 道题未识别` : "";
+      message.success(`已生成 ${questions.length - unmatched.size} 道题的候选区域；请逐题核对并调整${unmatchedNotice}`);
     } catch (error) {
       message.error(getUserErrorMessage(error, "操作失败，请稍后重试"));
     } finally {

@@ -1,0 +1,39 @@
+{
+  "started_at": "2026-10-11T17:18:40.434714+08:00",
+  "finished_at": "2026-10-11T17:18:51.336184+08:00",
+  "duration_seconds": 10.906000000002678,
+  "command": [
+    "go",
+    "test",
+    "-json",
+    "-p",
+    "1",
+    "-count=1",
+    "-timeout=5m",
+    "./cmd/reliability-repair"
+  ],
+  "cwd": "D:\\project\\yuejuan\\services\\api-gateway",
+  "exit_code": 0,
+  "isolation": {
+    "toolchain": "local",
+    "module_proxy": "off",
+    "checksum_service": "off",
+    "GOMAXPROCS": 2,
+    "cleared_environment_names": []
+  },
+  "package_results": [
+    {
+      "Time": "2026-10-11T17:18:50.9423394+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/cmd/reliability-repair",
+      "Elapsed": 1.55
+    }
+  ],
+  "test_result_counts": {
+    "pass": 42,
+    "fail": 0,
+    "skip": 0
+  },
+  "skipped_tests": [],
+  "note": "只报告实际运行的包；环境缺失跳过项不算真实数据库或外部模型集成通过。"
+}

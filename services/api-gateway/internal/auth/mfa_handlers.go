@@ -121,7 +121,7 @@ func (h *Handler) mfaPassword(w http.ResponseWriter, r *http.Request, user User,
 		h.mfaFailure(w, r, user, ErrMFAInvalid)
 		return "", false
 	}
-	// Password alone must not clear accumulated OTP failures or promote assurance.
+	// 仅凭密码不能清除累计 OTP 失败次数，也不能提升认证保障等级。
 	return hash, true
 }
 
@@ -336,7 +336,7 @@ func (h *Handler) VerifyMFAChallenge(w http.ResponseWriter, r *http.Request) {
 	}
 	h.loginGuard.RegisterSuccess(r.Context(), h.mfaAttempt(user, r))
 	h.mfaAudit(r, user, "auth.mfa_challenge_verified", input.Method)
-	// This verifies only the named command, never the whole session/device.
+	// 这里只验证指定命令，不验证整个会话或设备。
 	httpx.JSON(w, http.StatusOK, map[string]any{"status": "verified", "operation": challenge.Operation, "expires_at": challenge.ExpiresAt})
 }
 

@@ -1,0 +1,491 @@
+{
+  "method": "原始逐文件清单 + 各分工人工审读记录；read_status=complete且源SHA256匹配才计入完成",
+  "automatic_scan_counts_as_review": false,
+  "protected_counts_as_review": false,
+  "inventory_source": {
+    "file": "docs/architecture/evidence/file-inventory.json",
+    "sha256": "1a20a86c1a474129d0b14dc7ecfe83c43853cbfc5ac8463d5b0266ff83f8cfa3"
+  },
+  "original_files": 3396,
+  "reviewed": 181,
+  "pending": 3215,
+  "read_status_counts": {
+    "not_manually_reviewed": 3151,
+    "complete": 181,
+    "partial": 64
+  },
+  "handling_counts": {
+    "read_only": 2584,
+    "protected": 349,
+    "documentation": 463
+  },
+  "source_manifests": [
+    {
+      "file": "docs/architecture/evidence/current-desktop-reviewed-files.json",
+      "sha256": "c74404799444a1b1b515739fbf596e02565092950869526a68074ca55d0d024d",
+      "records": 1
+    },
+    {
+      "file": "docs/architecture/evidence/database-reviewed-files.json",
+      "sha256": "7e412a248bedd9e99fb8e297f7038c07cf9a0c5931e918eb5a04caa0a57fe8e4",
+      "records": 336
+    },
+    {
+      "file": "docs/architecture/evidence/final-reviewed-files.json",
+      "sha256": "8b579363baff4d13dbcf9e71a8c01294acde1f3cc40fe001e0f268eaab8c38c8",
+      "records": 10
+    },
+    {
+      "file": "docs/architecture/evidence/frontend-reviewed-files.json",
+      "sha256": "fa4909d2af6f2793eb65eee2b3d3cef9feb07a1f2bec15bfcab1acedfc7f93ca",
+      "records": 944
+    },
+    {
+      "file": "docs/architecture/evidence/late-current-reviewed-files.json",
+      "sha256": "d7fe78d0d252276d88be08dfd9b3707226bdd7335dba237861772f0a43250b39",
+      "records": 8
+    },
+    {
+      "file": "docs/architecture/evidence/pipeline-reviewed-files.json",
+      "sha256": "202ee36f34020edc25445c0f961f99133dd6b56e41d790bd249e9c7e1eefbb0d",
+      "records": 581
+    },
+    {
+      "file": "docs/architecture/evidence/root-reviewed-files.json",
+      "sha256": "c25744d0144aeb5c81f0c1098beaa4940764f9f9c6f309c59afa91dd0793aeeb",
+      "records": 48
+    }
+  ],
+  "directory_counts": {
+    "(root files)": {
+      "pending": 11,
+      "reviewed": 2
+    },
+    ".github/CODEOWNERS": {
+      "pending": 1
+    },
+    ".github/dependabot.yml": {
+      "pending": 1
+    },
+    ".github/workflows": {
+      "pending": 3
+    },
+    "ai-services/Dockerfile": {
+      "pending": 1
+    },
+    "ai-services/README.md": {
+      "pending": 1
+    },
+    "ai-services/grading_agent": {
+      "pending": 27,
+      "reviewed": 2
+    },
+    "ai-services/prompts": {
+      "pending": 35
+    },
+    "ai-services/requirements.txt": {
+      "pending": 1
+    },
+    "ai-services/tests": {
+      "pending": 32
+    },
+    "apps/desktop-client": {
+      "pending": 111,
+      "reviewed": 9
+    },
+    "apps/student-portal": {
+      "pending": 45,
+      "reviewed": 1
+    },
+    "apps/teacher-portal": {
+      "reviewed": 1
+    },
+    "apps/web-admin": {
+      "pending": 670,
+      "reviewed": 43
+    },
+    "contracts/architecture": {
+      "pending": 1
+    },
+    "contracts/authorization": {
+      "pending": 1
+    },
+    "contracts/grading-agent": {
+      "pending": 18
+    },
+    "contracts/openapi": {
+      "pending": 3
+    },
+    "contracts/samples": {
+      "pending": 2
+    },
+    "contracts/testing": {
+      "pending": 1
+    },
+    "docs/agent-spec": {
+      "pending": 2
+    },
+    "docs/api": {
+      "pending": 22
+    },
+    "docs/architecture": {
+      "pending": 11,
+      "reviewed": 1
+    },
+    "docs/code-review-context.md": {
+      "pending": 1
+    },
+    "docs/database": {
+      "pending": 1
+    },
+    "docs/deployment": {
+      "pending": 6
+    },
+    "docs/design-reviews": {
+      "pending": 19
+    },
+    "docs/engineering": {
+      "pending": 5,
+      "reviewed": 1
+    },
+    "docs/evaluation": {
+      "pending": 11
+    },
+    "docs/frontend-ux-optimization-2026-09-12.md": {
+      "pending": 1
+    },
+    "docs/history-session": {
+      "pending": 6
+    },
+    "docs/integration": {
+      "pending": 1
+    },
+    "docs/ocr-formula-ai-evidence-review-2026-09-12.md": {
+      "pending": 1
+    },
+    "docs/paper-import-benchmark": {
+      "pending": 4
+    },
+    "docs/prd": {
+      "pending": 4
+    },
+    "docs/reviews": {
+      "pending": 25
+    },
+    "docs/security": {
+      "pending": 2
+    },
+    "docs/stories": {
+      "pending": 190
+    },
+    "docs/superpowers": {
+      "pending": 2
+    },
+    "docs/ui-spec": {
+      "pending": 2
+    },
+    "docs/user-guides": {
+      "pending": 2
+    },
+    "docs/verification-status.md": {
+      "pending": 1
+    },
+    "frontend-review-report/_shots": {
+      "pending": 31
+    },
+    "frontend-review-report/ui-design-assets": {
+      "pending": 7
+    },
+    "frontend-review-report/前端UI优化方案-对标成熟产品.html": {
+      "pending": 1
+    },
+    "frontend-review-report/前端UI设计分析.html": {
+      "pending": 1
+    },
+    "frontend-review-report/前端代码审查报告.html": {
+      "pending": 1
+    },
+    "frontend-review-report/前端改进修复记录-2026-10-04.md": {
+      "pending": 1
+    },
+    "frontend-review-report/前端改进实施方案-2026-10-04.md": {
+      "pending": 1
+    },
+    "infra/README.md": {
+      "pending": 1
+    },
+    "infra/docker-compose": {
+      "pending": 25,
+      "reviewed": 1
+    },
+    "lab/.gitignore": {
+      "pending": 1
+    },
+    "lab/AGENTS.md": {
+      "reviewed": 1
+    },
+    "lab/README.md": {
+      "pending": 1
+    },
+    "lab/config": {
+      "pending": 11
+    },
+    "lab/docs": {
+      "pending": 32
+    },
+    "lab/evals": {
+      "pending": 183
+    },
+    "lab/examples": {
+      "pending": 5
+    },
+    "lab/openapi": {
+      "pending": 1
+    },
+    "lab/package-lock.json": {
+      "pending": 1
+    },
+    "lab/package.json": {
+      "reviewed": 1
+    },
+    "lab/scripts": {
+      "pending": 26
+    },
+    "lab/src": {
+      "pending": 35
+    },
+    "lab/stories": {
+      "pending": 39
+    },
+    "lab/tests": {
+      "pending": 25
+    },
+    "packages/README.md": {
+      "pending": 1
+    },
+    "packages/auth-client": {
+      "pending": 1
+    },
+    "packages/design-tokens": {
+      "pending": 13
+    },
+    "packages/sdk": {
+      "pending": 7,
+      "reviewed": 1
+    },
+    "packages/shared-types": {
+      "pending": 2
+    },
+    "packages/ui": {
+      "pending": 18
+    },
+    "packages/worker-runtime-python": {
+      "pending": 4
+    },
+    "reports/code-review-2026-09-24": {
+      "pending": 42
+    },
+    "reports/code-review-2026-09-26": {
+      "pending": 36
+    },
+    "reports/maintenance-comments-2026-09-27": {
+      "pending": 31
+    },
+    "reports/ocr-evaluation": {
+      "pending": 29
+    },
+    "reports/p1p2-fix-status-2026-09-29.md": {
+      "pending": 1
+    },
+    "reports/platform-audit-2026-10-09": {
+      "pending": 2
+    },
+    "scripts/check-architecture-boundaries.mjs": {
+      "pending": 1
+    },
+    "scripts/check-authorization-contract.mjs": {
+      "pending": 1
+    },
+    "scripts/check-lab-integration.mjs": {
+      "pending": 1
+    },
+    "scripts/check-onboarding.mjs": {
+      "pending": 1
+    },
+    "scripts/check-openapi-breaking.mjs": {
+      "pending": 1
+    },
+    "scripts/check-openapi-route-debt.mjs": {
+      "pending": 1
+    },
+    "scripts/check-schema-version.mjs": {
+      "pending": 1
+    },
+    "scripts/check-story049-ocr-worker.mjs": {
+      "pending": 1
+    },
+    "scripts/check-story052-production-deployment.mjs": {
+      "pending": 1
+    },
+    "scripts/check-story053-product-shell.mjs": {
+      "pending": 1
+    },
+    "scripts/check-story057-grading-contract.mjs": {
+      "pending": 1
+    },
+    "scripts/check-story061-model-evaluation-ui.mjs": {
+      "pending": 1
+    },
+    "scripts/check-story063-subjective-grading.mjs": {
+      "pending": 1
+    },
+    "scripts/check-user-facing-copy.mjs": {
+      "pending": 1
+    },
+    "scripts/ci": {
+      "pending": 14,
+      "reviewed": 1
+    },
+    "scripts/generate-fujian-2024-math-simulation.py": {
+      "pending": 1
+    },
+    "scripts/generate-sdk.mjs": {
+      "pending": 1
+    },
+    "scripts/launch-local.ps1": {
+      "pending": 1
+    },
+    "scripts/lib": {
+      "pending": 1
+    },
+    "scripts/start-local-ocr-fast.ps1": {
+      "pending": 1
+    },
+    "scripts/start-local-ocr-fast.sh": {
+      "pending": 1
+    },
+    "scripts/start-local.ps1": {
+      "pending": 1
+    },
+    "scripts/sync-schema-version.mjs": {
+      "pending": 1
+    },
+    "scripts/test-compose-deployment.ps1": {
+      "pending": 1
+    },
+    "scripts/test_fujian_math_batch29.py": {
+      "pending": 1
+    },
+    "scripts/update-api-route-coverage.mjs": {
+      "pending": 1
+    },
+    "scripts/update-openapi-baseline.mjs": {
+      "pending": 1
+    },
+    "services/README.md": {
+      "pending": 1
+    },
+    "services/api-gateway": {
+      "pending": 1117,
+      "reviewed": 109
+    },
+    "services/image-quality-worker": {
+      "pending": 18,
+      "reviewed": 2
+    },
+    "services/math-verification-worker": {
+      "pending": 12
+    },
+    "services/ocr-worker": {
+      "pending": 37
+    },
+    "services/page-processing-worker": {
+      "pending": 27,
+      "reviewed": 4
+    },
+    "services/subjective-grading-worker": {
+      "pending": 9,
+      "reviewed": 1
+    },
+    "tests/README.md": {
+      "pending": 1
+    },
+    "tests/ai-evaluation": {
+      "pending": 7
+    },
+    "tests/e2e": {
+      "pending": 44
+    },
+    "tests/integration": {
+      "pending": 2
+    }
+  },
+  "rejected_completion_claims": [],
+  "records_outside_original_inventory": [
+    {
+      "file": "apps/student-portal/src/App.beforeUnload.batch52.test.tsx",
+      "source": "docs/architecture/evidence/frontend-reviewed-files.json"
+    },
+    {
+      "file": "apps/web-admin/src/features/grading/workbench/hooks/useGradingKeyboard.batch52.test.tsx",
+      "source": "docs/architecture/evidence/frontend-reviewed-files.json"
+    },
+    {
+      "file": "apps/web-admin/src/styles/features/examPreparationContrast.batch52.test.ts",
+      "source": "docs/architecture/evidence/frontend-reviewed-files.json"
+    },
+    {
+      "file": "packages/sdk/browserLifecycle.batch52.test.mjs",
+      "source": "docs/architecture/evidence/frontend-reviewed-files.json"
+    },
+    {
+      "file": "packages/sdk/src/browserLifecycle.ts",
+      "source": "docs/architecture/evidence/frontend-reviewed-files.json"
+    },
+    {
+      "file": "docs/architecture/evidence/pipeline-audit.md",
+      "source": "docs/architecture/evidence/pipeline-reviewed-files.json"
+    },
+    {
+      "file": "docs/architecture/evidence/pipeline-current-ui-subread.md",
+      "source": "docs/architecture/evidence/pipeline-reviewed-files.json"
+    },
+    {
+      "file": "docs/architecture/specs/05-business-workflow.json",
+      "source": "docs/architecture/evidence/pipeline-reviewed-files.json"
+    },
+    {
+      "file": "docs/architecture/specs/06-image-template-pipeline.json",
+      "source": "docs/architecture/evidence/pipeline-reviewed-files.json"
+    },
+    {
+      "file": "docs/architecture/specs/07-ai-grading.json",
+      "source": "docs/architecture/evidence/pipeline-reviewed-files.json"
+    },
+    {
+      "file": "docs/architecture/specs/09-task-state-machine.json",
+      "source": "docs/architecture/evidence/pipeline-reviewed-files.json"
+    },
+    {
+      "file": "services/image-quality-worker/.pytest_cache/README.md",
+      "source": "docs/architecture/evidence/pipeline-reviewed-files.json"
+    },
+    {
+      "file": "services/ocr-worker/.pytest_cache/README.md",
+      "source": "docs/architecture/evidence/pipeline-reviewed-files.json"
+    },
+    {
+      "file": "services/page-processing-worker/.pytest_cache/README.md",
+      "source": "docs/architecture/evidence/pipeline-reviewed-files.json"
+    },
+    {
+      "file": "services/subjective-grading-worker/.pytest_cache/README.md",
+      "source": "docs/architecture/evidence/pipeline-reviewed-files.json"
+    }
+  ],
+  "limitations": [
+    "账本只汇总有版本依据的审读声明，不自行证明审读质量",
+    "尚未落盘的分工记录不会计入；交付前必须重新合并",
+    "原始文件清单固定；本次新文档不冒充原始源码审读覆盖"
+  ]
+}

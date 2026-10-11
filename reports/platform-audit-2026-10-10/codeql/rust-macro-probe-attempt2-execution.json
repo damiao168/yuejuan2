@@ -1,0 +1,30 @@
+{
+  "command": [
+    "rustup",
+    "run",
+    "1.98.1",
+    "cargo",
+    "check",
+    "--offline",
+    "--locked",
+    "--workspace",
+    "--all-features",
+    "--all-targets",
+    "--message-format=json",
+    "--target-dir",
+    "D:/tools/audit-codeql-20261010/databases/rust-20261011-toolchain-ready/working/target"
+  ],
+  "working_directory": "D:\\tools\\audit-codeql-20261010\\source-rust-macro-probe-20261011\\apps\\desktop-client\\src-tauri",
+  "started": "2026-10-11T15:04:41+08:00",
+  "purpose": "串行定位 generate_context 的实际编译诊断；离线锁定依赖，不执行测试或应用，不修改维护源码。",
+  "environment_overrides": {
+    "CARGO_NET_OFFLINE": "true",
+    "CARGO_BUILD_JOBS": "1",
+    "RAYON_NUM_THREADS": "1",
+    "TEMP": "D:\\tools\\audit-codeql-20261010\\rust-context-probe-temp",
+    "TMP": "D:\\tools\\audit-codeql-20261010\\rust-context-probe-temp"
+  },
+  "exit_code": 101,
+  "finished": "2026-10-11T15:07:43+08:00",
+  "elapsed_seconds": 181.89
+}

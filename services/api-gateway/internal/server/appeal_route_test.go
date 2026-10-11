@@ -98,8 +98,25 @@ func TestAppealTeacherOnlyWorksAssignedAppealsAndCannotFinalize(t *testing.T) {
 	}
 	appealID := decodeAppealID(t, rec.Body.Bytes())
 
-	req = appealAuthedRequest(http.MethodGet, "/api/v1/appeals", "", teacherToken)
+	appealAssertAssignmentBoundaries(t, router, appealID, teacherToken, adminToken, tenantAdminToken)
+	appealAssertTeacherRecommendationBoundaries(t, router, appealID, teacherToken)
+
+	req = appealAuthedRequest(http.MethodGet, "/api/v1/appeals", "", originalGraderToken)
 	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"appeals":[]`) {
+		t.Fatalf("unassigned original grader should have an empty queue, got %d %s", rec.Code, rec.Body.String())
+	}
+
+	reviewAssertAuditAction(t, authStore, "appeal.assigned")
+	reviewAssertAuditAction(t, authStore, "appeal.teacher_recommendation_submitted")
+}
+
+// 未派发时不可读，原阅卷员不可接回申诉；拒绝请求不能推进 expected_revision。
+func appealAssertAssignmentBoundaries(t *testing.T, router http.Handler, appealID, teacherToken, adminToken, tenantAdminToken string) {
+	t.Helper()
+	req := appealAuthedRequest(http.MethodGet, "/api/v1/appeals", "", teacherToken)
+	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"appeals":[]`) {
 		t.Fatalf("teacher should have an empty queue before assignment, got %d %s", rec.Code, rec.Body.String())
@@ -132,9 +149,13 @@ func TestAppealTeacherOnlyWorksAssignedAppealsAndCannotFinalize(t *testing.T) {
 	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"assigned_to":"`+appealTeacherUserID+`"`) {
 		t.Fatalf("admin assignment expected assigned appeal, got %d %s", rec.Code, rec.Body.String())
 	}
+}
 
-	req = appealAuthedRequest(http.MethodGet, "/api/v1/appeals", "", teacherToken)
-	rec = httptest.NewRecorder()
+// 教师只看匿名证据并提出建议；建议提交后仍不能关闭申诉或修改最终分数。
+func appealAssertTeacherRecommendationBoundaries(t *testing.T, router http.Handler, appealID, teacherToken string) {
+	t.Helper()
+	req := appealAuthedRequest(http.MethodGet, "/api/v1/appeals", "", teacherToken)
+	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"id":"`+appealID+`"`) || !strings.Contains(rec.Body.String(), `"anonymous_code":"ANON-001"`) || strings.Contains(rec.Body.String(), `"student_id"`) {
 		t.Fatalf("teacher should see assigned anonymized appeal, got %d %s", rec.Code, rec.Body.String())
@@ -167,16 +188,6 @@ func TestAppealTeacherOnlyWorksAssignedAppealsAndCannotFinalize(t *testing.T) {
 	if rec.Code != http.StatusForbidden {
 		t.Fatalf("teacher must not close appeal, got %d %s", rec.Code, rec.Body.String())
 	}
-
-	req = appealAuthedRequest(http.MethodGet, "/api/v1/appeals", "", originalGraderToken)
-	rec = httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
-	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"appeals":[]`) {
-		t.Fatalf("unassigned original grader should have an empty queue, got %d %s", rec.Code, rec.Body.String())
-	}
-
-	reviewAssertAuditAction(t, authStore, "appeal.assigned")
-	reviewAssertAuditAction(t, authStore, "appeal.teacher_recommendation_submitted")
 }
 
 func TestAppealRoutesRequirePermission(t *testing.T) {

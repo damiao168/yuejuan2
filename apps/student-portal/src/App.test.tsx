@@ -176,13 +176,13 @@ describe("Student Portal released-score boundaries", () => {
       ]
     }));
 
-    expect(screen.getByRole("heading", { name: "学科均衡" })).toBeTruthy();
-    expect(screen.queryByRole("img", { name: "我的各科得分率与学校平均雷达图" })).toBeNull();
+    expect(screen.getByRole("heading", { name: "已公布科目的得分对比" })).toBeTruthy();
+    expect(screen.queryByRole("img", { name: "我的各科得分率与本次参试学生平均雷达图" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "展开学科雷达图" }));
-    expect(screen.getByRole("img", { name: "我的各科得分率与学校平均雷达图" })).toBeTruthy();
+    expect(screen.getByRole("img", { name: "我的各科得分率与本次参试学生平均雷达图" })).toBeTruthy();
     expect(screen.getByRole("img", { name: "各科得分率分组柱状图" })).toBeTruthy();
     expect(screen.getByRole("button", { name: /我的得分率/ })).toBeTruthy();
-    expect(screen.getByRole("button", { name: /学校平均/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /本次参试学生平均/ })).toBeTruthy();
   });
 
   it("uses the shared legend to toggle both radar and bar chart series", async () => {
@@ -196,7 +196,7 @@ describe("Student Portal released-score boundaries", () => {
     }));
 
     fireEvent.click(screen.getByRole("button", { name: "展开学科雷达图" }));
-    const radar = screen.getByRole("img", { name: "我的各科得分率与学校平均雷达图" });
+    const radar = screen.getByRole("img", { name: "我的各科得分率与本次参试学生平均雷达图" });
     const bars = screen.getByRole("img", { name: "各科得分率分组柱状图" });
     expect(radar.querySelector(".radar-series.student")).toBeTruthy();
     expect(bars.querySelector(".subject-bar.student")).toBeTruthy();
@@ -229,7 +229,7 @@ describe("Student Portal released-score boundaries", () => {
 
     expect(screen.getByRole("heading", { name: "数学逐题分析" })).toBeTruthy();
     expect(screen.getAllByRole("columnheader").map((cell) => cell.textContent)).toEqual([
-      "题号", "正确答案", "实际答案", "得分", "班级平均分", "学校平均分", "群体中位分对比"
+      "题号", "正确答案", "实际答案", "得分", "班级平均分", "参试学生平均分", "群体中位分对比"
     ]);
     expect(screen.getByText("达到群体中位分")).toBeTruthy();
     expect(screen.getByText("低于群体中位分")).toBeTruthy();
@@ -351,6 +351,8 @@ describe("Student Portal released-score boundaries", () => {
     fireEvent.click(screen.getByRole("button", { name: /14 \/ 20 分/ }));
     const reason = await screen.findByRole("textbox", { name: "具体说明" });
     fireEvent.change(reason, { target: { value: "第二步计算过程已正确完成，请重新核对采分点。" } });
+    // 表单先核对当前版本是否已有申请；文本框出现不代表核对已完成。
+    await waitFor(() => expect(screen.getByRole<HTMLButtonElement>("button", { name: "确认提交（仅一次）" }).disabled).toBe(false));
     fireEvent.click(screen.getByRole("button", { name: "确认提交（仅一次）" }));
 
     await waitFor(() => expect(appealCall).toBeTruthy());
@@ -435,7 +437,7 @@ describe("Student Portal released-score boundaries", () => {
     const questionButton = screen.getByRole("button", { name: /14 \/ 20 分/ });
     fireEvent.click(questionButton);
 
-    await screen.findByText("学校尚未发布这场考试的成绩。");
+    await screen.findByText(/本题详情暂不可用，考试总分仍可查看。/);
     expect(screen.getByRole("button", { name: /14 \/ 20 分/ })).toBeTruthy();
     expect(screen.queryByText(/INTERNAL_SEGMENT/)).toBeNull();
   });

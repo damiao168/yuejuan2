@@ -59,9 +59,7 @@ func NewRedisLoginAttemptGuard(client redis.UniversalClient, limit int, window t
 	return guard
 }
 
-// Probe the read, script/write and delete permissions used by the limiter.
-// An expiring non-user key also lets readiness recover after Redis returns,
-// without waiting for traffic through an unready instance.
+// 探测限流器需要的读取、脚本执行及写入、删除权限。使用有过期时间的非用户键，使 Redis 恢复后就绪状态可自行恢复，无需等待流量经过未就绪实例。
 func probeRedisLoginLimiter(ctx context.Context, client redis.UniversalClient) error {
 	if client == nil {
 		return errors.New("distributed authentication rate limiter is unavailable")
@@ -135,9 +133,7 @@ func (l *RedisLoginFailureLimiter) Clear(ctx context.Context, key string) {
 	if l == nil || l.client == nil {
 		return
 	}
-	// The fallback may contain failures recorded during an earlier Redis
-	// outage. Clear it even when Redis has recovered so a later outage cannot
-	// resurrect stale lockout state after a successful login.
+	// 备用存储可能包含先前 Redis 故障期间记录的失败。即使 Redis 已恢复也要清除它，避免后续故障在成功登录后重新带出过时锁定状态。
 	l.fallback.Clear(ctx, key)
 	ctx, cancel := context.WithTimeout(ctx, 500*time.Millisecond)
 	defer cancel()

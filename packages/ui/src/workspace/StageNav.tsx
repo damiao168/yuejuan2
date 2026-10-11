@@ -1,8 +1,8 @@
 import type { CSSProperties } from "react";
 import type { WorkspaceStage } from "./types";
 
-/** Compact navigation for the configured examination lifecycle stages. */
-export function StageNav({ stages, onNavigate }: { stages: WorkspaceStage[]; onNavigate: (route: string) => void }) {
+/** 针对已配置考试生命周期阶段的紧凑导航。 */
+export function StageNav({ stages, onNavigate }: Readonly<{ stages: WorkspaceStage[]; onNavigate: (route: string) => void }>) {
   return (
     <nav className="eg-workspace-stages" aria-label="考试流程" style={{ "--eg-stage-count": Math.max(stages.length, 1) } as CSSProperties}>
       {stages.map((stage, index) => (

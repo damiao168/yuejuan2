@@ -17,8 +17,8 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// Use the shipped deployment setting and a fresh NOINHERIT application login:
-// superuser-backed handler tests cannot catch a missing runtime role switch.
+// 使用随部署提供的设置和一个全新的 NOINHERIT 应用登录身份：
+// 以超级用户运行的 handler 测试无法发现缺失的运行时角色切换。
 func TestComposeApplicationBootstrapAndLoginWithPostgres(t *testing.T) {
 	dsn := strings.TrimSpace(os.Getenv("EDUGRADE_E2E_DATABASE_URL"))
 	if dsn == "" {

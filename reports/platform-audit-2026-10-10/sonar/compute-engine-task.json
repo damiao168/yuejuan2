@@ -1,0 +1,24 @@
+{
+  "task": {
+    "id": "14bfcea9-251b-472e-bc01-1ece81c736f0",
+    "type": "REPORT",
+    "componentId": "2bb938e2-4c1a-469c-89c9-bf89d9d2cbbf",
+    "componentKey": "yuejuan-local-workspace-20261010",
+    "componentName": "yuejuan current local workspace 2026-10-10",
+    "componentQualifier": "TRK",
+    "analysisId": "cc0db5d3-a417-4f53-b547-dd8759ce7f9a",
+    "status": "SUCCESS",
+    "submittedAt": "2026-10-11T12:08:10+0800",
+    "submitterLogin": "admin",
+    "startedAt": "2026-10-11T12:08:10+0800",
+    "executedAt": "2026-10-11T12:19:58+0800",
+    "executionTimeMs": 708091,
+    "hasScannerContext": true,
+    "warningCount": 2,
+    "warnings": [
+      "Inconsistent highlighting data detected on some files (2 in total). File source may have been modified while analysis was running.\n   ° docs/architecture/tools/verify_delivery.py\n   ° services/api-gateway/internal/releasegate/service.go",
+      "Inconsistent symbol data detected on file 'docs/architecture/tools/verify_delivery.py'. File source may have been modified while analysis was running."
+    ],
+    "infoMessages": []
+  }
+}

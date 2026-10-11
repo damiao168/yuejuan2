@@ -18,6 +18,7 @@ export interface ScoreWorkspaceSnapshot {
   quality: QualityCheckResult | null;
   releaseGate: ScoreReleaseGate | null;
   scoreReleases: ScoreRelease[];
+  currentPublishedRelease: ScoreRelease | null;
   regradeJobs: RegradeJob[];
   roster: RosterReport | null;
   identities: ScoreIdentityMaps;
@@ -28,7 +29,8 @@ export function emptyScoreWorkspaceSnapshot(examId = ""): ScoreWorkspaceSnapshot
   return {
     examId, submissions: [], grades: [], gradeTotal: 0, filteredGradeTotal: 0,
     allGradesLocked: false, gradeNextCursor: "", gradesHaveMore: false, quality: null,
-    releaseGate: null, scoreReleases: [], regradeJobs: [], roster: null,
+    releaseGate: null, scoreReleases: [], currentPublishedRelease: null,
+    regradeJobs: [], roster: null,
     identities: { students: {}, classes: {} }, auditLogs: []
   };
 }
@@ -67,19 +69,48 @@ export function initialScoreWorkspaceState(initialExamId: string): ScoreWorkspac
   };
 }
 
+function loadExamsIntoWorkspace(
+  state: ScoreWorkspaceState,
+  action: Extract<ScoreWorkspaceAction, { type: "examsLoaded" }>
+): ScoreWorkspaceState {
+  // 入口指定考试优先于状态匹配；两者不可用时保留有效的当前选择，再回退到首项。
+  const requestedExam = action.requestedStatus
+    ? action.exams.find((exam) => exam.status === action.requestedStatus) : undefined;
+  const fallbackExamId = action.exams.some((exam) => exam.id === state.selectedExamId)
+    ? state.selectedExamId : action.exams[0]?.id || "";
+  const preferredExamId = requestedExam?.id ?? fallbackExamId;
+  const examId = action.initialExamId && action.exams.some((exam) => exam.id === action.initialExamId)
+    ? action.initialExamId : preferredExamId;
+  return { ...state, exams: action.exams, selectedExamId: examId,
+    snapshot: examId === state.selectedExamId ? state.snapshot : emptyScoreWorkspaceSnapshot(examId) };
+}
+
+function appendWorkspaceGrades(
+  state: ScoreWorkspaceState,
+  action: Extract<ScoreWorkspaceAction, { type: "appendGrades" }>
+): ScoreWorkspaceState {
+  // 翻页结果还须匹配发起时的游标，重复回包或全量刷新后的旧页不能再次拼入。
+  if (state.selectedExamId !== action.examId || state.snapshot.examId !== action.examId
+    || state.snapshot.gradeNextCursor !== action.expectedCursor) return state;
+  const byId = new Map(state.snapshot.grades.map((grade) => [grade.id, grade]));
+  for (const grade of action.grades) byId.set(grade.id, grade);
+  return { ...state, snapshot: {
+    ...state.snapshot, grades: [...byId.values()], gradeTotal: action.total,
+    filteredGradeTotal: action.filteredTotal, allGradesLocked: action.allLocked,
+    gradeNextCursor: action.nextCursor, gradesHaveMore: action.hasMore,
+    identities: {
+      students: { ...state.snapshot.identities.students, ...action.identities.students },
+      classes: { ...state.snapshot.identities.classes, ...action.identities.classes },
+      error: [state.snapshot.identities.error, action.identities.error].filter(Boolean).join("；") || undefined
+    }
+  }, loadingMoreGrades: false };
+}
+
+// reducer 拒绝已切换考试和旧游标的回包；同考试请求代次仍由调用方校验。
 export function scoreWorkspaceReducer(state: ScoreWorkspaceState, action: ScoreWorkspaceAction): ScoreWorkspaceState {
   switch (action.type) {
     case "patch": return { ...state, ...action.patch };
-    case "examsLoaded": {
-      const requestedExam = action.requestedStatus
-        ? action.exams.find((exam) => exam.status === action.requestedStatus) : undefined;
-      const examId = action.initialExamId && action.exams.some((exam) => exam.id === action.initialExamId)
-        ? action.initialExamId
-        : requestedExam?.id ?? (action.exams.some((exam) => exam.id === state.selectedExamId)
-          ? state.selectedExamId : action.exams[0]?.id || "");
-      return { ...state, exams: action.exams, selectedExamId: examId,
-        snapshot: examId === state.selectedExamId ? state.snapshot : emptyScoreWorkspaceSnapshot(examId) };
-    }
+    case "examsLoaded": return loadExamsIntoWorkspace(state, action);
     case "selectExam": return action.examId === state.selectedExamId ? state : {
       ...state, selectedExamId: action.examId,
       snapshot: emptyScoreWorkspaceSnapshot(action.examId),
@@ -98,23 +129,7 @@ export function scoreWorkspaceReducer(state: ScoreWorkspaceState, action: ScoreW
     case "loadFailed": return state.selectedExamId === action.examId
       ? { ...state, loadingScores: false, error: action.error }
       : state;
-    // 翻页结果还须匹配发起时的游标，重复回包或全量刷新后的旧页不能再次拼入。
-    case "appendGrades": {
-      if (state.selectedExamId !== action.examId || state.snapshot.examId !== action.examId
-        || state.snapshot.gradeNextCursor !== action.expectedCursor) return state;
-      const byId = new Map(state.snapshot.grades.map((grade) => [grade.id, grade]));
-      for (const grade of action.grades) byId.set(grade.id, grade);
-      return { ...state, snapshot: {
-        ...state.snapshot, grades: [...byId.values()], gradeTotal: action.total,
-        filteredGradeTotal: action.filteredTotal, allGradesLocked: action.allLocked,
-        gradeNextCursor: action.nextCursor, gradesHaveMore: action.hasMore,
-        identities: {
-          students: { ...state.snapshot.identities.students, ...action.identities.students },
-          classes: { ...state.snapshot.identities.classes, ...action.identities.classes },
-          error: [state.snapshot.identities.error, action.identities.error].filter(Boolean).join("；") || undefined
-        }
-      }, loadingMoreGrades: false };
-    }
+    case "appendGrades": return appendWorkspaceGrades(state, action);
     case "setRoster": return { ...state, snapshot: { ...state.snapshot, roster: action.roster } };
   }
 }

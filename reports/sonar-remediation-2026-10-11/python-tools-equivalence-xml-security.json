@@ -1,0 +1,3015 @@
+{
+  "checked_at_utc": "2026-10-11T10:11:14.675358+00:00",
+  "passed": true,
+  "comparison": "同一缓存本地输入；所有生成写入仅在内存；交付实时时间戳不比较；文本输出统一LF，XML二进制逐字节比较",
+  "quality_gate_claim": false,
+  "records": [
+    {
+      "tool": "docs/architecture/tools/build_database_specs.py",
+      "equivalent": true,
+      "baseline": {
+        "result": null,
+        "error": null,
+        "writes": {
+          "D:\\project\\yuejuan\\docs\\architecture\\evidence\\database-catalog.json": {
+            "sha256": "6bf3438e8273de325ac49e180fbadacacdceac71b1fd5edf180e7f075cbc28fb",
+            "bytes": 2863571
+          },
+          "D:\\project\\yuejuan\\docs\\architecture\\specs\\04-database-er.json": {
+            "sha256": "201f25e1fb1af3c771a0d967d65ce0e62460dc02c2e7b7667bf48b69f396e0a4",
+            "bytes": 172229
+          }
+        },
+        "stdout": "{\n  \"summary\": {\n    \"PostgreSQL\": {\n      \"tables\": 198,\n      \"columns\": 3083,\n      \"foreign_key_definitions\": 883,\n      \"explicit_indexes\": 305,\n      \"rls_tables\": 42\n    },\n    \"SQLite\": {\n      \"tables\": 8,\n      \"columns\": 64,\n      \"foreign_key_definitions\": 5,\n      \"explicit_indexes\": 1,\n      \"rls_tables\": 0\n    },\n    \"manual_review\": {\n      \"complete\": 59,\n      \"partial\": 6,\n      \"pending\": 277\n    }\n  },\n  \"diagram_pages\": 29,\n  \"entity_nodes\": 243,\n  \"manual_review_files\": 336\n}\n"
+      },
+      "current": {
+        "result": null,
+        "error": null,
+        "writes": {
+          "D:\\project\\yuejuan\\docs\\architecture\\evidence\\database-catalog.json": {
+            "sha256": "6bf3438e8273de325ac49e180fbadacacdceac71b1fd5edf180e7f075cbc28fb",
+            "bytes": 2863571
+          },
+          "D:\\project\\yuejuan\\docs\\architecture\\specs\\04-database-er.json": {
+            "sha256": "201f25e1fb1af3c771a0d967d65ce0e62460dc02c2e7b7667bf48b69f396e0a4",
+            "bytes": 172229
+          }
+        },
+        "stdout": "{\n  \"summary\": {\n    \"PostgreSQL\": {\n      \"tables\": 198,\n      \"columns\": 3083,\n      \"foreign_key_definitions\": 883,\n      \"explicit_indexes\": 305,\n      \"rls_tables\": 42\n    },\n    \"SQLite\": {\n      \"tables\": 8,\n      \"columns\": 64,\n      \"foreign_key_definitions\": 5,\n      \"explicit_indexes\": 1,\n      \"rls_tables\": 0\n    },\n    \"manual_review\": {\n      \"complete\": 59,\n      \"partial\": 6,\n      \"pending\": 277\n    }\n  },\n  \"diagram_pages\": 29,\n  \"entity_nodes\": 243,\n  \"manual_review_files\": 336\n}\n"
+      }
+    },
+    {
+      "tool": "docs/architecture/tools/build_diagrams.py",
+      "equivalent": true,
+      "baseline": {
+        "result": false,
+        "error": null,
+        "writes": {
+          "D:\\project\\yuejuan\\docs\\architecture\\diagrams\\01-feature-tree.drawio": {
+            "sha256": "91ababea08d8631d61fc4bde94a8ae784ed5771e69ec413eefefc8274b8be236",
+            "bytes": 161027
+          },
+          "D:\\project\\yuejuan\\docs\\architecture\\diagrams\\02-system-architecture.drawio": {
+            "sha256": "f875bd45cdb42f6559795f368e43fe357185cb25502f9c0527a0f11377c3fb4d",
+            "bytes": 37410
+          },
+          "D:\\project\\yuejuan\\docs\\architecture\\diagrams\\03-module-dependencies.drawio": {
+            "sha256": "58c69b949963318eac48b50c4704508b2456a1c7132b0389bbe2e28816455b1e",
+            "bytes": 53337
+          },
+          "D:\\project\\yuejuan\\docs\\architecture\\diagrams\\04-database-er.drawio": {
+            "sha256": "ac2e33175da90c3c366f5bca0308cc1f6ab75a5bfc4f2074c84c62c096d2e0a2",
+            "bytes": 451121
+          },
+          "D:\\project\\yuejuan\\docs\\architecture\\diagrams\\05-business-workflow.drawio": {
+            "sha256": "03065cddf33206d2f586e2372770915f1147af32bb2d4cc213e62e05ae45ed47",
+            "bytes": 51783
+          },
+          "D:\\project\\yuejuan\\docs\\architecture\\diagrams\\06-image-template-pipeline.drawio": {
+            "sha256": "bfd54ac6c10650eb79092c740c47b293a5099fe09d7e256468c5d65db2000720",
+            "bytes": 50491
+          },
+          "D:\\project\\yuejuan\\docs\\architecture\\diagrams\\07-ai-grading.drawio": {
+            "sha256": "2c3f319074ad02b790e0a4814cf920c89b293e3259774efb7479e389d001ad52",
+            "bytes": 66689
+          },
+          "D:\\project\\yuejuan\\docs\\architecture\\diagrams\\08-api-data-flow.drawio": {
+            "sha256": "2786ff5cb1ccc0d81236835ce3193378f9a9da68f46ca162a2dd475a3aa1b232",
+            "bytes": 165941
+          },
+          "D:\\project\\yuejuan\\docs\\architecture\\diagrams\\09-task-state-machine.drawio": {
+            "sha256": "73bb1680468056400e4b1f017d9d7fe4eed5cd62d7a2db1c2e0473c9cbee2c3f",
+            "bytes": 52120
+          },
+          "D:\\project\\yuejuan\\docs\\architecture\\diagrams\\10-security-deployment.drawio": {
+            "sha256": "ef1387aff5186f93853924b99a5346535db05080d282c5c19314eb7dbb75c07a",
+            "bytes": 42916
+          },
+          "D:\\project\\yuejuan\\docs\\architecture\\evidence\\diagram-provenance.tsv": {
+            "sha256": "53e80b93fb8acf0b44b40921edceadb2883741ffbca036bcceef925495f8e7da",
+            "bytes": 196781
+          },
+          "D:\\project\\yuejuan\\docs\\architecture\\evidence\\diagram-validation.json": {
+            "sha256": "c0c55a90b2fce3cc9a988e489b4e1b74f459d32b6909759a037a6bc3796e61d0",
+            "bytes": 13223
+          }
+        },
+        "stdout": "{\"files\": 10, \"pages\": 70, \"errors\": []}\n"
+      },
+      "current": {
+        "result": false,
+        "error": null,
+        "writes": {
+          "D:\\project\\yuejuan\\docs\\architecture\\diagrams\\01-feature-tree.drawio": {
+            "sha256": "91ababea08d8631d61fc4bde94a8ae784ed5771e69ec413eefefc8274b8be236",
+            "bytes": 161027
+          },
+          "D:\\project\\yuejuan\\docs\\architecture\\diagrams\\02-system-architecture.drawio": {
+            "sha256": "f875bd45cdb42f6559795f368e43fe357185cb25502f9c0527a0f11377c3fb4d",
+            "bytes": 37410
+          },
+          "D:\\project\\yuejuan\\docs\\architecture\\diagrams\\03-module-dependencies.drawio": {
+            "sha256": "58c69b949963318eac48b50c4704508b2456a1c7132b0389bbe2e28816455b1e",
+            "bytes": 53337
+          },
+          "D:\\project\\yuejuan\\docs\\architecture\\diagrams\\04-database-er.drawio": {
+            "sha256": "ac2e33175da90c3c366f5bca0308cc1f6ab75a5bfc4f2074c84c62c096d2e0a2",
+            "bytes": 451121
+          },
+          "D:\\project\\yuejuan\\docs\\architecture\\diagrams\\05-business-workflow.drawio": {
+            "sha256": "03065cddf33206d2f586e2372770915f1147af32bb2d4cc213e62e05ae45ed47",
+            "bytes": 51783
+          },
+          "D:\\project\\yuejuan\\docs\\architecture\\diagrams\\06-image-template-pipeline.drawio": {
+            "sha256": "bfd54ac6c10650eb79092c740c47b293a5099fe09d7e256468c5d65db2000720",
+            "bytes": 50491
+          },
+          "D:\\project\\yuejuan\\docs\\architecture\\diagrams\\07-ai-grading.drawio": {
+            "sha256": "2c3f319074ad02b790e0a4814cf920c89b293e3259774efb7479e389d001ad52",
+            "bytes": 66689
+          },
+          "D:\\project\\yuejuan\\docs\\architecture\\diagrams\\08-api-data-flow.drawio": {
+            "sha256": "2786ff5cb1ccc0d81236835ce3193378f9a9da68f46ca162a2dd475a3aa1b232",
+            "bytes": 165941
+          },
+          "D:\\project\\yuejuan\\docs\\architecture\\diagrams\\09-task-state-machine.drawio": {
+            "sha256": "73bb1680468056400e4b1f017d9d7fe4eed5cd62d7a2db1c2e0473c9cbee2c3f",
+            "bytes": 52120
+          },
+          "D:\\project\\yuejuan\\docs\\architecture\\diagrams\\10-security-deployment.drawio": {
+            "sha256": "ef1387aff5186f93853924b99a5346535db05080d282c5c19314eb7dbb75c07a",
+            "bytes": 42916
+          },
+          "D:\\project\\yuejuan\\docs\\architecture\\evidence\\diagram-provenance.tsv": {
+            "sha256": "53e80b93fb8acf0b44b40921edceadb2883741ffbca036bcceef925495f8e7da",
+            "bytes": 196781
+          },
+          "D:\\project\\yuejuan\\docs\\architecture\\evidence\\diagram-validation.json": {
+            "sha256": "c0c55a90b2fce3cc9a988e489b4e1b74f459d32b6909759a037a6bc3796e61d0",
+            "bytes": 13223
+          }
+        },
+        "stdout": "{\"files\": 10, \"pages\": 70, \"errors\": []}\n"
+      }
+    },
+    {
+      "tool": "docs/architecture/tools/verify_delivery.py",
+      "equivalent": true,
+      "baseline": {
+        "result": true,
+        "error": null,
+        "writes": {
+          "D:\\project\\yuejuan\\docs\\architecture\\evidence\\delivery-validation.json": {
+            "sha256": "f93c69f03de6dc507b2a50591db1ae9c63d56187f5fbc3277ccce8688a2d046c",
+            "bytes": 19685
+          }
+        },
+        "stdout": "{\"artifact_checks_passed\": false, \"total_pages\": 70, \"errors\": [\"current source invalidates complete review: apps/desktop-client/src-tauri/src/durable_store/queue.rs\", \"current source invalidates complete review: apps/desktop-client/src/components/OfflineWorkbench.tsx\", \"current source invalidates complete review: apps/student-portal/src/App.tsx\", \"current source invalidates complete review: apps/web-admin/src/features/answer-sheet-template/view/TemplateWorkspaceView.tsx\", \"current source invalidates complete review: apps/web-admin/src/pages/CaptureBatchPage.tsx\", \"current source invalidates complete review: apps/web-admin/src/pages/ExamPreparationPage.tsx\", \"current source invalidates complete review: infra/docker-compose/nginx/nginx.conf\", \"current source invalidates complete review: services/api-gateway/internal/auth/token.go\"]}\n"
+      },
+      "current": {
+        "result": true,
+        "error": null,
+        "writes": {
+          "D:\\project\\yuejuan\\docs\\architecture\\evidence\\delivery-validation.json": {
+            "sha256": "f93c69f03de6dc507b2a50591db1ae9c63d56187f5fbc3277ccce8688a2d046c",
+            "bytes": 19685
+          }
+        },
+        "stdout": "{\"artifact_checks_passed\": false, \"total_pages\": 70, \"errors\": [\"current source invalidates complete review: apps/desktop-client/src-tauri/src/durable_store/queue.rs\", \"current source invalidates complete review: apps/desktop-client/src/components/OfflineWorkbench.tsx\", \"current source invalidates complete review: apps/student-portal/src/App.tsx\", \"current source invalidates complete review: apps/web-admin/src/features/answer-sheet-template/view/TemplateWorkspaceView.tsx\", \"current source invalidates complete review: apps/web-admin/src/pages/CaptureBatchPage.tsx\", \"current source invalidates complete review: apps/web-admin/src/pages/ExamPreparationPage.tsx\", \"current source invalidates complete review: infra/docker-compose/nginx/nginx.conf\", \"current source invalidates complete review: services/api-gateway/internal/auth/token.go\"]}\n"
+      }
+    }
+  ],
+  "current_source_hashes": {
+    "docs/architecture/tools/build_database_specs.py": "2f482ab0be6bb609707ca412a472616ff35c5dbd91495882a5a820b9623588c5",
+    "docs/architecture/tools/build_diagrams.py": "405abfecefb8d7c5f19971104c940adf399fc54cfc3dc67f839c32aa4d1b28af",
+    "docs/architecture/tools/verify_delivery.py": "5c1478e9e91f541524eeda94605c16beaad14f477d615aaf1d68e253d0280792"
+  },
+  "sources_unchanged_during_comparison": true,
+  "input_files": [
+    {
+      "file": "D:\\project\\yuejuan\\AGENTS.md",
+      "bytes": 1086,
+      "sha256": "41503e5909a98016701609add9c6efe9914012853d8ced68a71b812c0e6f421c"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\ai-services\\grading_agent\\app.py",
+      "bytes": 11306,
+      "sha256": "e3d4b3b17a82cad5f6e3f8bd297181d3a1e165c6d1cf0a4899bc82fa5caee9df"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\ai-services\\grading_agent\\app_v2.py",
+      "bytes": 22375,
+      "sha256": "dd773931573b52ace09c4f48b55d91a73a583ee56a6aa0244b35634395aa534a"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\ai-services\\grading_agent\\model.py",
+      "bytes": 32307,
+      "sha256": "6df8267f6d4201ad69ddbe692986b930cd0d57e0ab6b1785639151ed922abbb9"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\ai-services\\grading_agent\\provider_adapter.py",
+      "bytes": 2319,
+      "sha256": "903a2982a49d5cee5a144ef1eeeb629baecc7c17f1f22d6c159d8aee4d847b8c"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\desktop-client\\src-tauri\\src\\durable_store\\claim.rs",
+      "bytes": 16892,
+      "sha256": "ef254596635799104d520b25d386f4cdb7421879dad79f952dd169cb90af2876"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\desktop-client\\src-tauri\\src\\durable_store\\connection.rs",
+      "bytes": 555,
+      "sha256": "8df7ce848ca5289b4fc5101a8d62d1d420f1698dde0634843d67e4e104c00eb8"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\desktop-client\\src-tauri\\src\\durable_store\\crypto.rs",
+      "bytes": 6868,
+      "sha256": "8fdadd2b87d65a01f913540db8864a62eb37d2c6c71d93dbf26d177befd8cb35"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\desktop-client\\src-tauri\\src\\durable_store\\drafts.rs",
+      "bytes": 11227,
+      "sha256": "8da95099ce829d112c8a09442c516c0c12f67144f2a18f703780a190371c3a3f"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\desktop-client\\src-tauri\\src\\durable_store\\mod.rs",
+      "bytes": 22834,
+      "sha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\desktop-client\\src-tauri\\src\\durable_store\\offline_access.rs",
+      "bytes": 8274,
+      "sha256": "7e0ea9fb193127299fb325fe91cef3fac1a088d946dbeab2a5d1951da8fc15e6"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\desktop-client\\src-tauri\\src\\durable_store\\paths.rs",
+      "bytes": 7135,
+      "sha256": "18d6cd3ad7c0df27444117953ed996e7532e1f07331cd4c56e57f92998c796a6"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\desktop-client\\src-tauri\\src\\durable_store\\queue.rs",
+      "bytes": 11373,
+      "sha256": "ed76b14331188d882d9f397d9a4ce462cc21669a13e4b004303ab04d6e27d1a0"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\desktop-client\\src-tauri\\src\\durable_store\\schema.rs",
+      "bytes": 3767,
+      "sha256": "cbeeb7c9dd4103e1229f6e3e4f7b4575704360090bc0e185e9e461b6334a7a97"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\desktop-client\\src-tauri\\src\\durable_store\\spool.rs",
+      "bytes": 17897,
+      "sha256": "6af4026ca85852586ba31fb56daa95c8c556db3b11a1207ef5ef2d9011aea33d"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\desktop-client\\src-tauri\\src\\durable_store\\storage.rs",
+      "bytes": 16183,
+      "sha256": "2ab93840f2a3f14b5abb01a09f192d1f19f73bf9f9281f2dd34debbd41107ba8"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\desktop-client\\src-tauri\\src\\durable_store\\types.rs",
+      "bytes": 4608,
+      "sha256": "e7770d4642eae830c36be60a34bb0698b30c4baa6ac5d025a2306ed689ee19d0"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\desktop-client\\src\\App.tsx",
+      "bytes": 35269,
+      "sha256": "4bd2f97b580cae5714c187ce61616d00c0a293f1f80d135e079794b99d6f99fd"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\desktop-client\\src\\api\\captureUploads.ts",
+      "bytes": 7448,
+      "sha256": "31513284a5dcb47b225fdb2aa03b4cd5237ea6a272b615425632cb0ab9f41874"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\desktop-client\\src\\components\\OfflineWorkbench.tsx",
+      "bytes": 65728,
+      "sha256": "e7fabdc2bdcce63df8bb31664e463f2306eb2a8fe6d1e6cef881e7ef14786ba5"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\desktop-client\\src\\features\\scan-queue\\useScanQueue.ts",
+      "bytes": 23866,
+      "sha256": "8afb7c76c339e358ecd905e9bb77ac03200663a5df1b79d104162612ae988aaa"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\desktop-client\\src\\features\\scan\\ScanWorkspace.tsx",
+      "bytes": 26349,
+      "sha256": "dee947aedcab5b332ea9dbfcdc1ab42f06018379f9bf186e21deddfc15725454"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\student-portal\\src\\App.tsx",
+      "bytes": 75566,
+      "sha256": "b6f723b49dcffeab510c01de046ccd6e7e280b0c42eb7bf228db99d2758867ed"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\student-portal\\src\\api.ts",
+      "bytes": 9367,
+      "sha256": "340a5578c47daadc3a14adb8a50e192737f0f6c11a95aa7edcaefde6b43deba1"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\teacher-portal\\README.md",
+      "bytes": 167,
+      "sha256": "f93a7588e1377b5a4a22297d8de4e5591ba8e411f0f97a4f2269e524e9372bd2"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\web-admin\\src\\App.tsx",
+      "bytes": 795,
+      "sha256": "0e94530b4514cb08fa0221d957a7fc98351161ec4c57b6fd9781e7924164013f"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\web-admin\\src\\AppShell.tsx",
+      "bytes": 11505,
+      "sha256": "02d525d91a3c907c5b0c563314714de376e5db99b49469f0ec1fcdf394d68cbc"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\web-admin\\src\\api\\businessCommand.ts",
+      "bytes": 10362,
+      "sha256": "1d50ed8377c2b8425000a5e52c266a3d823fb0e9498faffa85a84a0e635eb080"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\web-admin\\src\\api\\client.test.ts",
+      "bytes": 3706,
+      "sha256": "ea441adf379c35f7f397ca58370a30f81721f92d26d21949036d7d5e087546fb"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\web-admin\\src\\api\\client.ts",
+      "bytes": 8014,
+      "sha256": "e8887a64f0b11133bac4abab0e1c80bddaafe0386fe182ce546f0ec9209f3a13"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\web-admin\\src\\api\\files.ts",
+      "bytes": 3254,
+      "sha256": "f9823e611273029ebf5bb69ea2414b83d67193244b49e0d2754aa589beb7c05b"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\web-admin\\src\\api\\query.test.ts",
+      "bytes": 577,
+      "sha256": "a72cdb303cba86c78bd3450c0e80198f8dcb8abaa50f20bf505d2207f95c5b16"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\web-admin\\src\\api\\query.ts",
+      "bytes": 818,
+      "sha256": "5ca4fe535ff5cc7ff02e6abe69a1a76d3f0c3f28577819bc2da5d3c258a8208c"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\web-admin\\src\\api\\schoolAiChat.ts",
+      "bytes": 2646,
+      "sha256": "c1c2ba314779b7ea53d911c9aee099a7303b00eff7dc1b180c3b03b376cb7f8b"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\web-admin\\src\\api\\scores.ts",
+      "bytes": 5131,
+      "sha256": "129168b759acc744a89582226152853808eef5bf3a5e2becc194262d17abe68c"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\web-admin\\src\\auth\\capabilities.ts",
+      "bytes": 938,
+      "sha256": "eb34741c8dc6970c3f44e99f76337957b41d24ffe0e68efc2b7bcd6f020b0440"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\web-admin\\src\\auth\\session.ts",
+      "bytes": 3488,
+      "sha256": "3f56164b56221e878713592dd5f147142b71cc3f403255ba4da8d8dbb5501f1e"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\web-admin\\src\\auth\\sessionLifecycle.test.ts",
+      "bytes": 5188,
+      "sha256": "a219521468ee979ff76bc1c6a1423066b4f1a2cae38ca33c1ac6deb9f70e3f57"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\web-admin\\src\\auth\\sessionLifecycle.ts",
+      "bytes": 2527,
+      "sha256": "e7a5c3032cde1c53e9daea560c24955feaed867cde2abb3003a21f1c405ab2f2"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\web-admin\\src\\components\\features\\assessment\\AssessmentProfileEditor.tsx",
+      "bytes": 28573,
+      "sha256": "c5eac04b04ee834c65d8bac7b97c0a6c0035b51902a76bd4bb44d4f34af47f43"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\web-admin\\src\\features\\answer-sheet-template\\view\\TemplateWorkspaceView.tsx",
+      "bytes": 21880,
+      "sha256": "3a33c07ac95894d74faaa0e7f674ee567ce31537bc59f081e937e4962b56e1ae"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\web-admin\\src\\features\\calibration\\CalibrationDrawer.tsx",
+      "bytes": 15155,
+      "sha256": "7543d61c5d8c1ce1a593d4efa1170504fdebd14a77603652e1e8c993967fcf36"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\web-admin\\src\\features\\exams\\create\\createExamValidation.test.ts",
+      "bytes": 4108,
+      "sha256": "7fa2fb5bacec4c901ba86cd562871e113c2d77cee3a2beecd60a06cc6da6e4cf"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\web-admin\\src\\features\\exams\\create\\createExamValidation.ts",
+      "bytes": 3234,
+      "sha256": "d57fb7fa3f9a42b1cf3040ca57b5434b509ddcc605b534b04ac8feb36abbbaa6"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\web-admin\\src\\features\\grading\\workbench\\GradingWorkbench.tsx",
+      "bytes": 28643,
+      "sha256": "0f528b61752ad61683e8abe42015b33b3b0472adf36ae0516d2899d2f7a59ec0"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\web-admin\\src\\features\\grading\\workbench\\hooks\\useGradingKeyboard.ts",
+      "bytes": 5048,
+      "sha256": "726de41eee9afda95881178fd0458c8d5a9f4d3bd5a53a6f0174085493e32f71"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\web-admin\\src\\features\\school-assistant\\SchoolAssistantResult.tsx",
+      "bytes": 5187,
+      "sha256": "abfbb0076d793b18cb6bcea54dcd2b7b5623d1f2667ed64df2added7b767ca64"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\web-admin\\src\\features\\score-management\\hooks\\useScoreWorkspaceData.ts",
+      "bytes": 10697,
+      "sha256": "d0e5412960cc5714f17da709a3f89a80ffab0462407695a2d011dcf3d8342839"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\web-admin\\src\\pages\\CaptureBatchPage.tsx",
+      "bytes": 35613,
+      "sha256": "ca4f1926b798b59557f0795a92abdb7700c431f4a0c429ffd41268aca44042f5"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\web-admin\\src\\pages\\ExamPreparationPage.tsx",
+      "bytes": 24543,
+      "sha256": "eeb24b7d2aa22a4c289a6c8140e4c9ea020ba3fc209317022f7c3f1ac548898e"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\web-admin\\src\\pages\\ModulePage.tsx",
+      "bytes": 1448,
+      "sha256": "c3296e8303797b675d8d88865045e2302e495520dab0f5968d6515a4f6585c44"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\web-admin\\src\\pages\\OrganizationSetupPage.test.tsx",
+      "bytes": 9165,
+      "sha256": "60be8b440596587d411ba37ea0f4c42ae5cb5e661dcca057984fedf850b8fa96"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\web-admin\\src\\pages\\OrganizationSetupPage.tsx",
+      "bytes": 24478,
+      "sha256": "5251998f31278a68f0b393bd95bcd29a5853d116bad8ab13b7b8612b73d11dc5"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\web-admin\\src\\pages\\ScoreManagementPage.tsx",
+      "bytes": 21071,
+      "sha256": "f5bd3cf4f3d5d590a07561604245bfcbf4fb31919fd04b81deaf2bcc78c8f98f"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\web-admin\\src\\query\\client.test.ts",
+      "bytes": 1220,
+      "sha256": "fa9b95a4bedaf18afbb59a4e2aa261a44c5b5cb471f8facfc5593a7f701059cf"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\web-admin\\src\\query\\client.ts",
+      "bytes": 754,
+      "sha256": "5d4810895829ddee7fddf2141cec84d5db6af751be7d887a65940e237b4884fb"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\web-admin\\src\\router\\appRouter.tsx",
+      "bytes": 1292,
+      "sha256": "19fdd48b841dae394e71a39d53b5760f9cae566d44ad4864414fb708f6ae0a4c"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\web-admin\\src\\router\\experience.test.ts",
+      "bytes": 2237,
+      "sha256": "474b1ac7eaf3aeafc88e647d2b841d8ac1ab1262781b7993714de419dbbbd532"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\web-admin\\src\\router\\experience.ts",
+      "bytes": 3581,
+      "sha256": "550d7f11812aecbafe6302df62d0361cee8c9952c051dc974a11aee6cb4f1287"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\web-admin\\src\\router\\navigation.ts",
+      "bytes": 1664,
+      "sha256": "11eaa4955f98a978c3db224e46e54c72d5dfbdaf619fa70835e3ff9a166385f8"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\web-admin\\src\\router\\pageRendering.test.tsx",
+      "bytes": 12894,
+      "sha256": "a93f3bd980e9c9c67a25aebc659937d7a90b0316767f5ad114f0933a37dd0e63"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\web-admin\\src\\router\\pageRendering.tsx",
+      "bytes": 18979,
+      "sha256": "e34c0d6f13a2915ce06f1f4cc67c9cf7530e8644c5aab751e21d594374d0b652"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\web-admin\\src\\router\\routes.test.tsx",
+      "bytes": 2713,
+      "sha256": "e5a757d462889a40abaf5412b0d58bb5c4f4655f5a4ca85f1a0f2e4d5194b2aa"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\web-admin\\src\\router\\routes.tsx",
+      "bytes": 18756,
+      "sha256": "456d60cb121e3138fb73d94a6bd156af4cb52d19f6e069bc79bed70098c7f2ac"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\web-admin\\src\\router\\useUnsavedChangesGuard.test.tsx",
+      "bytes": 4864,
+      "sha256": "ac1ab93dc87592720e42c61f97dcea456bbea522470f21ce7fe39cc2bea41764"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\web-admin\\src\\router\\useUnsavedChangesGuard.ts",
+      "bytes": 1831,
+      "sha256": "8e5e262c4709f06df254cc8ac5f0b5e2dcd790893c6840cd787a4f520dc79d85"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\web-admin\\src\\styles\\features\\exam-preparation.css",
+      "bytes": 7442,
+      "sha256": "35636f6b1bd2873e750e36b00b55ec4bf87d7bbdea734a874b13d57902095a83"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\apps\\web-admin\\src\\workspaces\\registry.ts",
+      "bytes": 2746,
+      "sha256": "10cc9d619825fc87776a3f70830bd6c295ad95e2c5c47aa0894c5333600a597e"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\ARCHITECTURE_REVIEW.md",
+      "bytes": 17971,
+      "sha256": "2dc11670fda9deddf00dc19c2fdb50e670c9afc7a06fc012f070c906e0134da5"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\DIAGRAM_MAINTENANCE.md",
+      "bytes": 8245,
+      "sha256": "1fbba093789c1766f81210e5bf74d7ca08e61ec5732b99e541791f012b900723"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\MODULE_CATALOG.md",
+      "bytes": 134991,
+      "sha256": "32ee665567e391dac09e7e96c25f893a34724e5c81f3eab1a41ba8934b7c00e1"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\README.md",
+      "bytes": 8150,
+      "sha256": "0b9514b23b4831dd3d623350f720b0ccb55cab400bbc82d7ed16161d4a78604e"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\diagrams\\01-feature-tree.drawio",
+      "bytes": 162064,
+      "sha256": "ce9f45d4b2a5985e08efa91af8f5e4428a76f39ab066307d342adacffa213ee4"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\diagrams\\02-system-architecture.drawio",
+      "bytes": 37634,
+      "sha256": "566de960ea1a67208508a4718cc23e339cfcadd7f56de24d8449f8c618adf638"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\diagrams\\03-module-dependencies.drawio",
+      "bytes": 53701,
+      "sha256": "c4bd39130819b20b52fa998984e67ff49b2079adf638b60d2b6ad1c5c36fcaaf"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\diagrams\\04-database-er.drawio",
+      "bytes": 453161,
+      "sha256": "10a1c9947153aafeb9c8631dd780d75cc627a13b550769078c1a6c5143b1a646"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\diagrams\\05-business-workflow.drawio",
+      "bytes": 52124,
+      "sha256": "ffe29e56c656dac4844fff53e66f019e91c5662117bb4d649d54691e5441b09d"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\diagrams\\06-image-template-pipeline.drawio",
+      "bytes": 50837,
+      "sha256": "993fa46ff20c8598ae6cd7aee7f8cf6c1415c587ffa22023d552e0962b576a36"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\diagrams\\07-ai-grading.drawio",
+      "bytes": 67135,
+      "sha256": "a374e4fcd129dda00aaf8995d2d1239db38fc9a07b516d897e1e71914141b93d"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\diagrams\\08-api-data-flow.drawio",
+      "bytes": 166821,
+      "sha256": "f457a8f14be1c5ea708b7f802455b653097628bb58360eb95bf9a1c725aef289"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\diagrams\\09-task-state-machine.drawio",
+      "bytes": 52501,
+      "sha256": "a9008613307501e9330406f517c2826cac447cb51b83c6eef7752781fa36f126"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\diagrams\\10-security-deployment.drawio",
+      "bytes": 43193,
+      "sha256": "76280f49d3ccda4a2fd508d6efb10fd94f346c3ef66190c93e0126e12391a2af"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\evidence\\acceptance-report.md",
+      "bytes": 5535,
+      "sha256": "7359a05148dd73123c57e2c6da98f385d27005e38b33864822a756369a84f4ab"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\evidence\\audit-coverage.json",
+      "bytes": 12620,
+      "sha256": "5831b998c77cc83e4b2fb13fb55377b1dcb7a97e641bd5fc459ca5725706b9f5"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\evidence\\concurrent-workspace-review.md",
+      "bytes": 3118,
+      "sha256": "82d06e7b721d6e1a8ea92d6894b761903cdd211b7d534c50610b1bc4bec921c4"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\evidence\\current-desktop-recheck.md",
+      "bytes": 8163,
+      "sha256": "17b7f5cd77e87a8bcc58f803732fffac5f40b6e16f79e94e6750835e10d7d1a4"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\evidence\\database-audit.md",
+      "bytes": 15485,
+      "sha256": "f4e063df42b753e32969417df7d5a17561af2ed5173fadf736ee51ddfae02c11"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\evidence\\database-catalog.json",
+      "bytes": 2936764,
+      "sha256": "c2116b99a798d8abb7bde3353c8cd44ce42fcf305662c74bcbfa2aa409c197ee"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\evidence\\database-reviewed-files.json",
+      "bytes": 138586,
+      "sha256": "7e412a248bedd9e99fb8e297f7038c07cf9a0c5931e918eb5a04caa0a57fe8e4"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\evidence\\database-validation.json",
+      "bytes": 785,
+      "sha256": "1b49f4d329a4f3a583a1a7202387e551487bd4db344c14ca41dbb42d9f562b6b"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\evidence\\diagram-validation.json",
+      "bytes": 13789,
+      "sha256": "1837cec482c89345ec3f34f2c6c5c5d6b8c652a6ea1b76fff7d3120ee636d522"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\evidence\\file-review.tsv",
+      "bytes": 2100903,
+      "sha256": "e2a632dab67648ef9779d4464707d639cbf33bca2c34b5d3d0b5592ce9921156"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\evidence\\final-current-source-review.md",
+      "bytes": 11133,
+      "sha256": "95de60a8def32a17ff09cc638a1afb3e271507ce30e5fdb07b7f0cbfd2bb2ce4"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\evidence\\final-delivery-audit.md",
+      "bytes": 6945,
+      "sha256": "709575590c73b240764d9455c8071ce642cf142bac77c440feefcf56b4a8e4d7"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\evidence\\frontend-api-audit.md",
+      "bytes": 18663,
+      "sha256": "c0c517f4cbc1395e8549faf74d54bdf40626cd8c0c22d4dfeb9d0d4e65db4a8b"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\evidence\\frontend-current-source-recheck.md",
+      "bytes": 5805,
+      "sha256": "cab448fc1921d4a10f0b9bdf8e8e3efb22161373567c54a3109231b5822c53a6"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\evidence\\late-current-recheck.md",
+      "bytes": 1901,
+      "sha256": "26c49f454264e3201167e395e19a73c387393aa46fdfd0f14b9adbd6628fd569"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\evidence\\native-render-validation.json",
+      "bytes": 23703,
+      "sha256": "528b0d19d4beffbee4211566ff07405b69486580b2af67f0b166c1e2a457510a"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\evidence\\pipeline-audit.md",
+      "bytes": 25623,
+      "sha256": "5b80c5beb27f10f60d171a18b17043b0dd88a5e84b6b145692d4eee5e53d27c0"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\evidence\\pipeline-current-ui-subread.md",
+      "bytes": 9405,
+      "sha256": "09e6be43a0c7275c855e55461c3ad48ff079ec6303629ed8d377d10077248fa9"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\evidence\\root-audit.md",
+      "bytes": 7305,
+      "sha256": "abe0ae2175017de4f82b334b06a525c9c55711aa71ebb52564179ce56d0a664d"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\evidence\\visual-qa.md",
+      "bytes": 4005,
+      "sha256": "88cc4e12f6759b697daf842f0a5f78ae1ec8c67926f2d5b7f8edd76661491cca"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\evidence\\workspace-preservation.json",
+      "bytes": 19437,
+      "sha256": "ea620bad4e50e8963141bbb81ba52560bc634b4eee8e5a34ca2c33ecc7a8f3b7"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\overview.md",
+      "bytes": 1974,
+      "sha256": "34d909a343992597eceedb71b850728a728ce2a09823396343f20be798665c3a"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\specs\\01-feature-tree.json",
+      "bytes": 128119,
+      "sha256": "ea9ba63cb2e6cc6c99c6849d4ee10edb78466a20c15103ffe7fd6e0700dc1476"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\specs\\02-system-architecture.json",
+      "bytes": 26785,
+      "sha256": "c4ecacc86e55d7214b168654120088a495bb5fe49b9b1e04fdcf0b9ad50ffbfd"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\specs\\03-module-dependencies.json",
+      "bytes": 40113,
+      "sha256": "88edcd877b92aa54c442ca499f646de1bf8b93f34ebc1e45e168c824342785ad"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\specs\\04-database-er.json",
+      "bytes": 333834,
+      "sha256": "9910ffa067e4266180cdb8e93ca5de2f461429a4354050d50a8478c4c5b03232"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\specs\\05-business-workflow.json",
+      "bytes": 38659,
+      "sha256": "8ccc4cac01896cfef4462576595ec3c3010b1ea3dfa93fb8259caca92af4606e"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\specs\\06-image-template-pipeline.json",
+      "bytes": 38320,
+      "sha256": "26088107e9d82e10234695a54a4804d92b9f2f4626e1e18de4372f6ce91d8fbb"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\specs\\07-ai-grading.json",
+      "bytes": 50220,
+      "sha256": "84d5d3cebbdf2bb1d6c0ef7b91b4fc6a52dbd943830424e982bfe34886bbc077"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\specs\\08-api-data-flow.json",
+      "bytes": 124148,
+      "sha256": "572ca8b8d738403ec117b034fe92ec1a61f98022d9f99f34625fde317813f7d1"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\specs\\09-task-state-machine.json",
+      "bytes": 41770,
+      "sha256": "89f25ee8751a141dc73578ebdc890b0ba5daf3f75ed981aa20d09efb5159ccb8"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\specs\\10-security-deployment.json",
+      "bytes": 32118,
+      "sha256": "b2050b26ebe82b30fcd6747ff7243236b1d968a77bfbd576e1b384c7d57b75a1"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\tools\\build_database_specs.py",
+      "bytes": 15952,
+      "sha256": "2f482ab0be6bb609707ca412a472616ff35c5dbd91495882a5a820b9623588c5"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\tools\\build_diagrams.py",
+      "bytes": 11358,
+      "sha256": "405abfecefb8d7c5f19971104c940adf399fc54cfc3dc67f839c32aa4d1b28af"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\tools\\build_module_catalog.py",
+      "bytes": 7415,
+      "sha256": "c2df3ce00834b3274ec9cd7d07267154ac926f6cd3f58a6c5c34def7bf44dea8"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\tools\\build_preview.py",
+      "bytes": 6207,
+      "sha256": "56d94138d0123f4ae3f7beba356fbde9703403ba955aa85638871ed6e9bdc9bd"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\tools\\extract_database_catalog.py",
+      "bytes": 13285,
+      "sha256": "df5d1e523942351cbc2245fd93df75ead18c4abf7e3527ecc4e6d7544cd75d3c"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\tools\\finalize_delivery_records.py",
+      "bytes": 4530,
+      "sha256": "395b7694128c7aaf43dcc0e17a831c91914144a374cb0c1502d0fc7a46ade29b"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\tools\\fit_box_typography.py",
+      "bytes": 5273,
+      "sha256": "dcc6d8f0eac143ef0a2827447f9a2b3a7d1c29f47935fd0728f592c55b31e832"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\tools\\merge_review_ledger.py",
+      "bytes": 7110,
+      "sha256": "890af09c82714c07c8e33268e33cb94cdfdce7ca31aef910967444a940072058"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\tools\\preview_server.py",
+      "bytes": 1445,
+      "sha256": "72ef85e9f65e34f899ea8dcefb2c14ffdfaa7bc8c40e9a7f4890f586d464e08d"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\tools\\retire_stale_reviews.py",
+      "bytes": 2067,
+      "sha256": "f567adc721312c2b911a9c1234590f90c037b088cc7961e02991c3b89359ea2f"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\tools\\route_obstructions.py",
+      "bytes": 6492,
+      "sha256": "083f3d3072a7dc54c0c3827d3d686c7f9c2b1731ba138bd0f86a6b1004c2c9bf"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\tools\\scan_repository.py",
+      "bytes": 3758,
+      "sha256": "831cc68351613d8bcdb2347d51af0e88207cb977b2477804be3a951585b1e72b"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\tools\\simplify_diagrams.py",
+      "bytes": 21002,
+      "sha256": "f8e514d442833fe376f20499526cec73169782765831bfe6a210653f9a538a71"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\tools\\snapshot_workspace.py",
+      "bytes": 2729,
+      "sha256": "627d11165e0b3870bd50fd6f4c8969b27e0080ac511ffb0f058b48347503bdc5"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\tools\\test_xml_security.py",
+      "bytes": 2250,
+      "sha256": "ca7b626aa5bf6ec29f9335ffe0fb92dd51bc89516da957cac1323981d8c95745"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\tools\\test_xml_supplemental_security.py",
+      "bytes": 5581,
+      "sha256": "9e195e6bf60d118915b9e2ae2208e8be312dc9973e8fb4dbb1405fa23324d015"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\tools\\verify_database_catalog.py",
+      "bytes": 6601,
+      "sha256": "ab605068d0e3fc47791e6412ddf70432d739a3afd601f0dad852e0319de76450"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\tools\\verify_delivery.py",
+      "bytes": 8375,
+      "sha256": "5c1478e9e91f541524eeda94605c16beaad14f477d615aaf1d68e253d0280792"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\tools\\verify_typography.py",
+      "bytes": 3195,
+      "sha256": "1275521d6cc92bb784c3dc852647889845cc14be7188f5d9e880a0349c71399d"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\tools\\write_frontend_audit.py",
+      "bytes": 35028,
+      "sha256": "22eec2f09f0e6deeee57d0cc22a48fa30d95fa30410680c29e74425fa986b3f9"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\tools\\write_frontend_specs.py",
+      "bytes": 49098,
+      "sha256": "7daddf9e5b6587138734e0407966a82131fdca7bb4bf008f905fc9daaafe6a24"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\tools\\write_root_review.py",
+      "bytes": 4779,
+      "sha256": "56347d7c926c42c20eb0bd3dadabe1d8ac9dda4e1c67b841681b3c4564d65602"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\architecture\\tools\\write_root_specs.py",
+      "bytes": 23576,
+      "sha256": "36d736ef8e094b5ecce1a4f858a3f42e7ce65f10ef6123f1e607ff7aa17ad11d"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\docs\\engineering\\commenting-standard.md",
+      "bytes": 10723,
+      "sha256": "582d56da32f8b6300ca5d8e51626815a2e30c936e657377060347734ed2696ea"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\infra\\docker-compose\\docker-compose.yml",
+      "bytes": 44412,
+      "sha256": "e3bf76a592b30e82e2d6534b943710e453db9f8fb2c8e0bf5f1b415e3cc43067"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\infra\\docker-compose\\nginx\\nginx.conf",
+      "bytes": 3961,
+      "sha256": "7762b643a7fcc54ba82b3c69de702176c34ad516ab119dd013b666355b967c02"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\lab\\AGENTS.md",
+      "bytes": 1048,
+      "sha256": "e8a34bd4a960dfa56c7671a239d1c301641a0ba52a8fa65c3d51644c3eb87315"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\lab\\package.json",
+      "bytes": 2963,
+      "sha256": "a5eca54a6ceacde7e26d9ea3cf2834fe1082d6cb25598e3c395b44b17996a408"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\package.json",
+      "bytes": 3369,
+      "sha256": "f75a488df89d3b9640fd128bc913d0bd7d0d3d3ed2ff87f3c376a1e54f0b25f1"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\packages\\sdk\\src\\index.ts",
+      "bytes": 188,
+      "sha256": "d65c9f7c4ad0270bdacde70f3495869a7792f8ffd7d1464c348756eda13f5607"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\packages\\sdk\\src\\runtime.ts",
+      "bytes": 3689,
+      "sha256": "115fdd2b69fb1c57200b3888c42d1974593932684ca690b9d053e3c72f5a96fc"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\scripts\\ci\\check-go-coverage.mjs",
+      "bytes": 3508,
+      "sha256": "df8909bbfdfc3b8049e003d982d63a3f71022c7de0b438bf93e8337674855a26"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\cmd\\api-gateway\\main.go",
+      "bytes": 5498,
+      "sha256": "4eeb41c3484754e4450ccf6dd5e2e94bbcf52304e1667d828f4326742e51203c"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\go.mod",
+      "bytes": 1377,
+      "sha256": "5a280d3adfeb7d81751ab5db73fa9e910d3600e8456014e0e679feaa4905adcf"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\aidisagreement\\store_postgres.go",
+      "bytes": 10553,
+      "sha256": "337b1ee8f2d907cb0918e5ecd0a2d23d2f0e4456a3ff3125422964d8401ec6eb"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\aieligibility\\store_postgres.go",
+      "bytes": 6421,
+      "sha256": "9cd00ad65d1a4d761e67a9251d659511bfa058ce4fa460dab7f197d6ff86c791"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\answergroup\\store_postgres.go",
+      "bytes": 28554,
+      "sha256": "5a41caf067519d6c1bc59446e7f8adc9248016208227ff8b1fc2d0f97874b839"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\appeal\\published_question_store_postgres.go",
+      "bytes": 25041,
+      "sha256": "dc641a8d651464ad14afd7de3347355d38c4f1ac4b99914a99a027f910ca2149"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\appeal\\published_question_store_postgres_test.go",
+      "bytes": 10999,
+      "sha256": "43d0c1fbd35080595a8653079888872b1f92ddecd44fbd82de1d203217312159"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\appeal\\store_postgres.go",
+      "bytes": 27608,
+      "sha256": "a785e3f8c3482703876e325c346a5932fb8189497372ac45e76e31c3e69c062a"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\assessment\\policy.go",
+      "bytes": 2139,
+      "sha256": "6f1ce72b35b2893d5f3f83a17824de7f31707e975db63753db9253386a0d64de"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\assessment\\store_postgres.go",
+      "bytes": 19051,
+      "sha256": "3309c1c6296531d95bfa14a730ce5118fa101436e30b177bf8331fb4fe05c356"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\auth\\authorization_contract_postgres_test.go",
+      "bytes": 7132,
+      "sha256": "816df5413809f08b2a75b9ff202147d29780c3095f5359e4848b59210556cc66"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\auth\\managed_access_store.go",
+      "bytes": 10660,
+      "sha256": "d2f619277bceb529714b918035b1b7fd58b3303017b9719efd285d9de88a0f2c"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\auth\\mfa_postgres.go",
+      "bytes": 15248,
+      "sha256": "c4a702a7cb48bbbe7688d7125ecae99327382a7af9571ebbfa9bd97c5e805206"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\auth\\middleware.go",
+      "bytes": 6761,
+      "sha256": "1be2b26d991c162c3be6d6336b5b3cc931c4905207cb44892655a0abeb1de3a0"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\auth\\password.go",
+      "bytes": 4067,
+      "sha256": "38bb4612c0847e31cb6330a84926974f7cafbfd751ae37d385663c3cf48c1167"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\auth\\resource_scope.go",
+      "bytes": 29380,
+      "sha256": "b98dd3f3fcc4e5d00eec918cfdd342cb5e363bfc8be035c47b0ee9077aa31166"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\auth\\role_policy.go",
+      "bytes": 3091,
+      "sha256": "e4177d4adf139d10a2b9be728d0b94bb1d699df5c19d49e5d873ccb35e3f6828"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\auth\\store_postgres.go",
+      "bytes": 61240,
+      "sha256": "e0f2e45e2af1861400d0c6662b9eb317ba636b0f378864b0e59655e941e6ceec"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\auth\\store_postgres_batch49_test.go",
+      "bytes": 8435,
+      "sha256": "a00c46f6b569241e2793839dae855849205e9e9d89e95b32e471d1214ec1c7e3"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\auth\\store_postgres_batch50_test.go",
+      "bytes": 6340,
+      "sha256": "8c0c169045c5b7f2a2516cddd312b6399900d4644a2907d27abc192928360f1f"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\auth\\token.go",
+      "bytes": 659,
+      "sha256": "d6204fdbd6daea40f4e38739bdf790607769b6250c817afc8142f2c00db06a68"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\auth\\wechat_store_postgres.go",
+      "bytes": 5997,
+      "sha256": "c3fcef1bfdb8b29949a2b47153bd8388011ad3dcbd532a9e4fb8e4988a24b0ee"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\backmark\\store_postgres.go",
+      "bytes": 17450,
+      "sha256": "3c473cc3293d0eef9c8aef141a8d9154a492746ff3705aabe4017e1799434478"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\backmark\\store_postgres_test.go",
+      "bytes": 2968,
+      "sha256": "dcf141cb34cacea8acb68c9aea1dc87395cd9d84829bd97d0da085b5bc47be54"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\calibration\\store_postgres.go",
+      "bytes": 14115,
+      "sha256": "8c0a4f258236375a2c035cd94a32b9d8cee2d12f443abf0194782f23da2c82ac"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\capture\\batch_command_postgres.go",
+      "bytes": 3655,
+      "sha256": "c3dc83beec27ed9263b784e77e4f24491b122fa0422a309e7f17db4079d24233"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\capture\\correction_apply_store_postgres.go",
+      "bytes": 16018,
+      "sha256": "a20d5fb7ba5e4fbc22c9f955ca2977c29496859257f0438a99642b7eaac38909"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\capture\\correction_store_postgres.go",
+      "bytes": 14597,
+      "sha256": "f8a4c64f5783ee6dece86060b0c2d5bd59cfd5f00a9e417ee0f9c84d65220ee7"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\capture\\handlers.go",
+      "bytes": 38997,
+      "sha256": "2c34c825920a521304f18d300d83ebf6adf7e19351940a7a2e15ddb85ac9b6b2"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\capture\\matching_store_postgres.go",
+      "bytes": 9856,
+      "sha256": "edccd47ad65142629affeeb8240a166b03d0354b53a243e03eb184725f5e0e80"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\capture\\organization_store_postgres.go",
+      "bytes": 11857,
+      "sha256": "06b7f747ea12bf6ce6f4b130bdb1442538f2b33cae31b525c0c5f4f911f9b0ad"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\capture\\registration_review_store_postgres.go",
+      "bytes": 7048,
+      "sha256": "4ccf7a85fbafc0fe230a51aa2a6d15447ea632e1c4ccd8b5b00b2c0c3cc6392f"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\capture\\registration_store_postgres.go",
+      "bytes": 28662,
+      "sha256": "e049cd5647ae0d3c0deafaf193c43f6b9099338b168a5f97812e3d2af317041e"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\capture\\scan_context.go",
+      "bytes": 7480,
+      "sha256": "5bf2a2062f94cfead9b0456466e655933549e01fb0d0655fe2c8d505f0b1e616"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\capture\\store_postgres.go",
+      "bytes": 44245,
+      "sha256": "5176585ef7fa98aebad0b90bd2fac8ddf0b840961d97a7419038c30bfb033398"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\capture\\template_match_store_postgres.go",
+      "bytes": 16103,
+      "sha256": "0e00cb1fa3393e90dc770d765280d09d99b50110e119d612e4268d5d2ec93e2a"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\captureupload\\store_postgres.go",
+      "bytes": 12413,
+      "sha256": "85b55703fab66d3cfba6c9008418acaf69fc069cb4dfa519ac71521be39c892d"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\dashboard\\organization_postgres.go",
+      "bytes": 5691,
+      "sha256": "83ff0cf67f202a3ba59e1253c7d53cbe6892a0b9f1def89f075ac8d84ca1a587"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\db\\postgres.go",
+      "bytes": 4475,
+      "sha256": "0ee84bb8b6f6e277276e1744d6134febfa4e99e9d3e3ef42c216cd203839fabc"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\db\\postgres_test.go",
+      "bytes": 2464,
+      "sha256": "a9ee1c4bbdde93fe62aeb3b6afe31a079dd26e1ea653f5a6fb99eb1aa5747dae"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\db\\tenant_context.go",
+      "bytes": 5239,
+      "sha256": "eacdb801497dbe16b0bf9f4fc3d7acb35b04c5a2a88d0bdc0ca76ea01b32ea31"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\deps\\deps.go",
+      "bytes": 9794,
+      "sha256": "ea87b8fa3628cc9e6dedcbaf4c24ba105f517a1bf5403feb142cf83be3e0f139"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\evidence\\store_postgres.go",
+      "bytes": 4598,
+      "sha256": "5225c68fd2fcd6713bc71fa03bd364e030ea36bd5d082fc12cb2bac1b49fa409"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\exam\\candidate_snapshot_postgres.go",
+      "bytes": 4233,
+      "sha256": "a7c2a0fd954c3d15737c4ae48bc5514472ba72c8e91495ad04bf3e6bb78f7877"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\exam\\handlers.go",
+      "bytes": 13283,
+      "sha256": "1f5f34a26214922c5e875103adacddb5e3985b9f5eb43de2692310c35d9d178f"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\exam\\management_archive_postgres.go",
+      "bytes": 16992,
+      "sha256": "dfe65b28dcbac21062270a9a2498a65e8289832c13aff72e73be09dea553cb33"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\exam\\management_postgres.go",
+      "bytes": 17770,
+      "sha256": "fc7d6f8afc536f16666cdd550af1361b4ff52a0cfe29afa0c97e6aa0260aa098"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\exam\\session_postgres.go",
+      "bytes": 14632,
+      "sha256": "9f6a24ba1934dd1b495acfa22fd1050a2c80fa594eb74135a576cbbeba2fee7a"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\exam\\session_postgres_batch49_test.go",
+      "bytes": 9977,
+      "sha256": "57ab9a1ecab89a9c8c5b3b51886e83de4fe98e2943d6d8bc64057000225283a0"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\exam\\status.go",
+      "bytes": 1268,
+      "sha256": "25e61362ef64d21eda4b64c64a0e13fe75d58a8bf767bb8535e23675f804bf44"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\exam\\store_postgres.go",
+      "bytes": 17340,
+      "sha256": "63f0b5b76b2dccad831cfb6e7841be90f554feae4c964fe4c292b9797da4445e"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\exam\\store_postgres_batch49_test.go",
+      "bytes": 4978,
+      "sha256": "54dc99a1ba08fc4fd778380028d062e212f97b0c0697368e01ddfc818b5a19b7"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\exam\\store_postgres_test.go",
+      "bytes": 676,
+      "sha256": "b530ac17dba3fffe81820cec19fca05fb93ca232a62de3c9132c49beab35bd18"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\exam\\template_postgres.go",
+      "bytes": 4272,
+      "sha256": "a853839a10db293f45acef5bfcd12e23d9d0b40bd24a6f196d1e183cb95fea23"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\files\\storage_minio.go",
+      "bytes": 2783,
+      "sha256": "b51982b8141a87aae7e57ee5b3d843a2dfab78ee0fd42c4724edc6670061e591"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\files\\store_postgres.go",
+      "bytes": 11442,
+      "sha256": "c05e1e7f479bec4a8b80f7cfd4be574c2be4ab76ec7876dcf31f884b851c4211"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\goldpaper\\store_postgres.go",
+      "bytes": 15815,
+      "sha256": "074510d98ec224d42bd23ba58726a3378389b14cc60fc1892d4dc8210753dd50"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\goldpaper\\store_postgres_batch48_test.go",
+      "bytes": 4784,
+      "sha256": "4a86b0faf5869174ba7ff9d3dc243db45f983f3acd27d518888940913163535c"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\graderdrift\\store_postgres.go",
+      "bytes": 7750,
+      "sha256": "cdbee38690b2ae23d3fb1c20a2632cb1c5d83907f12ec3a61e9534a76ed3227e"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\grading\\scoring_run_lifecycle.go",
+      "bytes": 13606,
+      "sha256": "bb34327042a49ef0f41c03b949496cb74efef8b3073c33c0d4de3a63e4ebc765"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\grading\\scoring_run_process.go",
+      "bytes": 4368,
+      "sha256": "647c9fa9a8e4b4d93d529a3bf31533cf183d0aa3b3905b940ea515820dd4c4a6"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\grading\\scoring_run_routing.go",
+      "bytes": 4857,
+      "sha256": "cb639dd5d85eb114a7a1dcab67e9f0a92ee87e0506f9c9391d3146a328bed44b"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\grading\\scoring_run_start.go",
+      "bytes": 30284,
+      "sha256": "beda7da0ae51d0a19c5a2ec4762c0e9bb2831ccb9506b423c04981ee6657bc65"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\grading\\store_postgres.go",
+      "bytes": 10895,
+      "sha256": "6bebbcda06070016417dbd7a005d287a0a263c7c36833384b3f9ff1846218f02"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\gradingevaluation\\store_postgres.go",
+      "bytes": 20225,
+      "sha256": "425e21f67f26b14ab4806f644b8027adfc77f97b2231d8a1ed2ce50048ac56f5"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\idempotency\\middleware.go",
+      "bytes": 11114,
+      "sha256": "253afc85359c9ab8f160b869db6606b5365d9c0b4ee37a8d815339326f250193"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\idempotency\\store_postgres.go",
+      "bytes": 4920,
+      "sha256": "f0158a67da920f9832dc62dedda1886d272daf6c2bce85da00e1a43bf1840074"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\imagequality\\coordinator_postgres.go",
+      "bytes": 4322,
+      "sha256": "3212d299019d5d0d39e9f6f6b3d5a1bf5bda3458cc8d2895ed9c8c080de654f4"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\imagequality\\store_postgres.go",
+      "bytes": 17038,
+      "sha256": "855b8bfe8dd5e1d20ca7b88f91e4ad1a4aa9576f31a7eb39cf48fb5bb88f4cca"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\logger\\logger.go",
+      "bytes": 3380,
+      "sha256": "b006882c02968d7b8515cbb9503dadc36a40a00c1fe89a749cae553ca395df84"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\mathunderstanding\\correction_postgres.go",
+      "bytes": 6430,
+      "sha256": "494d5d99797ce705345d439b102c08a85a82bb8ac1e2b9300e98c84bf4910276"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\mathunderstanding\\pilot_store_postgres.go",
+      "bytes": 2670,
+      "sha256": "9a92d8ec26757326705055f73af69f7138a86093b87d46853ec7549eca6e6e96"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\mathunderstanding\\store_postgres.go",
+      "bytes": 10669,
+      "sha256": "9272069d0de4c43d8f99877046056895e6be6788c7f93355c720579c28a75017"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\middleware\\middleware.go",
+      "bytes": 10066,
+      "sha256": "7389555a2d26d8a8a53ef228291206b894a74b6bf05b5b02ebef545d187ecc34"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\modelcalibration\\store_postgres.go",
+      "bytes": 12328,
+      "sha256": "6987392937fed0065eab743a3838316332f31bdfcd630e9d4c02c9b244d614f1"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\modelgovernance\\managed_config.go",
+      "bytes": 15838,
+      "sha256": "0a50246f2e069dea4e3160e35ce952e575fef6779629cbb9b77becb5709121fe"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\modelgovernance\\managed_config_store_postgres.go",
+      "bytes": 19524,
+      "sha256": "28b2d1d2cf219e0be7523db0707b1722c29984292057753ead6f652e3dbc1838"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\modelgovernance\\role_binding.go",
+      "bytes": 6600,
+      "sha256": "141bad2ef8128b538ac14ec8125d3512db1defc8317c3cddbfefc30822260e75"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\modelgovernance\\role_binding_store_postgres.go",
+      "bytes": 5878,
+      "sha256": "c63fd84c71cdac8a5071210ba50cf72b9c7513786048fcee2c7a0574d56fa58f"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\modelgovernance\\store_postgres.go",
+      "bytes": 52364,
+      "sha256": "adbd70ae393a7178e4fc47453f2c10271e9d33a6398180b29640f45962c7de66"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\ocr\\handlers.go",
+      "bytes": 13836,
+      "sha256": "7eea0eb55c206c858800f6d45337d7af979c16f20e5bcfb3a2703b6f50c030ff"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\ocr\\runtime_coordinator_postgres.go",
+      "bytes": 8985,
+      "sha256": "0af84c81ebda8283677991fc81eff95c9f80b2f7b2b3f8e88bc2cd1591396d33"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\ocr\\store_postgres.go",
+      "bytes": 17235,
+      "sha256": "2e1dbbbbfeb7f3ddc010f0b55817623c403185ae5e3cc705972a980aab37b94d"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\orchestrator\\store_postgres.go",
+      "bytes": 12385,
+      "sha256": "429587aa4c8ffc3d9c9508c74ca11f8e623e41239d727e419e16ec88a2a00ad4"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\org\\enrollment_postgres.go",
+      "bytes": 4425,
+      "sha256": "9669b3de958cf42cade2d2396eac1c510be18c350568aa521f7d62d35e97bd8e"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\org\\store_postgres.go",
+      "bytes": 21406,
+      "sha256": "c0511a72dcdb066296ffcb49608215b8bf39b095283921edfb75a92a30f95444"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\org\\store_postgres_test.go",
+      "bytes": 898,
+      "sha256": "b5260cfa550d4b757c9263fcd414685c4c07b97503ff148117e58ed179a341ca"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\outbox\\publisher_log.go",
+      "bytes": 851,
+      "sha256": "a5ae5f53d57a77954643cd09915942ccca8a4b0ceaf2bba0eee18f7a4660fd4d"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\outbox\\store_postgres.go",
+      "bytes": 3269,
+      "sha256": "3e928c390b4d9c56b03175195da3f30a00513f75a154dea35b1dce91f244abf3"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\paper\\configuration_handlers.go",
+      "bytes": 7017,
+      "sha256": "f59c98009a6d02e7c4a74993551fdec24da93e799be5a5198f1a3a185f15623c"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\paper\\configuration_validation_postgres.go",
+      "bytes": 1936,
+      "sha256": "396e2f3336c4dc6e03041e8bc5f1f3c871b69ed59c81ca47ee824b2903e6f533"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\paper\\document_import.go",
+      "bytes": 21065,
+      "sha256": "e0ea8e77d1840c0cde565e9c35444744cf741d9a4d830047bcf6f7b628c349dc"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\paper\\paper_import_content_postgres.go",
+      "bytes": 7170,
+      "sha256": "1224ec121679f505ec18c89a118b92c4cfa307b43b85a98c458082fe8490c2cf"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\paper\\paper_import_exhaustion_postgres.go",
+      "bytes": 7094,
+      "sha256": "8f9146987bcc4f8c6a82254443848734b5c322fee9360fbc60aa781e0caa0ce4"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\paper\\paper_import_parse_commit_postgres.go",
+      "bytes": 11600,
+      "sha256": "cfb19a34a5a740c4fe11b794a8b91652d4d73fddd34161b3b91ce97d5cde957f"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\paper\\paper_import_parse_retry_postgres.go",
+      "bytes": 5050,
+      "sha256": "e11fec4e3bd1a60e61035422947e632102dfe7eabe92ce04685e70c82c75d861"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\paper\\paper_import_postgres.go",
+      "bytes": 51104,
+      "sha256": "8c6b819ef0e219e4db6c7d7c2762469438b7557a8360bb75566c21f048e48079"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\paper\\paper_import_postgres_batch10_test.go",
+      "bytes": 12474,
+      "sha256": "27760b25e6cd105ce7d992e0bda3c42fb328c86ddb6891f4715a51be412b619d"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\paper\\paper_import_run_postgres.go",
+      "bytes": 14454,
+      "sha256": "6d0b28be3f90e5848f7ddf7d632886e8b4c7f724f42980cba4f0cd801049dae9"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\paper\\paper_import_runtime_postgres.go",
+      "bytes": 54152,
+      "sha256": "975dae30b8d89bb67d7e6b68fc20d34be3a5cabce3f719ad6668b5a44ade2aff"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\paper\\paper_import_structure_postgres.go",
+      "bytes": 16027,
+      "sha256": "c3be2f2ecf619832073c46fc9fcd2e9515d8a5196a78951130429041bd0453eb"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\paper\\paper_postgres.go",
+      "bytes": 5248,
+      "sha256": "965408cfce2db32f4ea19136b4b5affed03ef0728894dc6764127e570449547c"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\paper\\question_postgres.go",
+      "bytes": 9231,
+      "sha256": "d52ab730df662ad67cae4616be33f74e9cad7f0f83dc49918afe3254c31294ab"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\paper\\rubric_postgres.go",
+      "bytes": 3086,
+      "sha256": "c05d2b69c31376d13d024601f080093ed39096095ab829ffa44e637cf7e5f025"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\paper\\store_postgres.go",
+      "bytes": 342,
+      "sha256": "756d451899d73978bd25782251463e185c486db2da0f34e263ce52e5bb3ae859"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\paper\\store_postgres_configuration.go",
+      "bytes": 28410,
+      "sha256": "356f0d16166b374954eaed3d7172b018733aff3f8e1fc62d8ee14c11087e6ce2"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\paper\\store_postgres_shared.go",
+      "bytes": 6931,
+      "sha256": "6789505454b27fc5012115eeb7b0b26f4eb58bca003057b6738ff441960a80bc"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\paper\\store_postgres_template_binding.go",
+      "bytes": 4389,
+      "sha256": "8b187b8913f2d0f22f499ffd2bcd652bff21455c9c682ce2f5edac8d554ab88c"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\platformschools\\store_postgres.go",
+      "bytes": 14672,
+      "sha256": "f04617a98af90eb9b09f01d7f8ffde27240815914b6376afdfc978b9ec9cbc33"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\processing\\context.go",
+      "bytes": 3170,
+      "sha256": "5fef495b1ddb18841261cf27a8c5c88d8edbd80146c097d57c6d0868a7c5f3dc"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\processing\\handlers.go",
+      "bytes": 7662,
+      "sha256": "789646b545bd8071072344896ea5a775f6b8cba20f40c8d61661ab1abc528a5a"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\processing\\projection_store_postgres.go",
+      "bytes": 3561,
+      "sha256": "dbeaa9c2d15ccb79d8980d39bfb376e642c013295a4afd43caa430b0b4f133f2"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\processing\\retry_postgres.go",
+      "bytes": 1619,
+      "sha256": "760636ad0c7472893852e9c308dcd625682f428071fcc616af2b479bb8b712f4"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\processing\\store_postgres.go",
+      "bytes": 28979,
+      "sha256": "97ada29c843c7987a5c532e44689b1fcec1b4142056301618a9228c3d2fe9a6d"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\qualitydashboard\\postgres.go",
+      "bytes": 3423,
+      "sha256": "613fcf7a07f56ccf90763c6a9e256da93329588bf22110f3cc3ac4b20137828d"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\questionbank\\import_postgres.go",
+      "bytes": 18719,
+      "sha256": "8223b0314be11fcd5a94b57258763eb333bfadb69ad1fff41d15540e16c43ae4"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\questionbank\\metadata_acl_search_postgres.go",
+      "bytes": 20841,
+      "sha256": "4f9ff642d083043abde4fdc6ab38d89a975d27afabc825fa9cca0132a39343a3"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\questionbank\\postgres_batch22_test.go",
+      "bytes": 15594,
+      "sha256": "c3b40d073bdd4bcedd5c65a10580f39df85979ed6f87ea964f69ddf5dbe10057"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\questionbank\\publication_postgres.go",
+      "bytes": 15475,
+      "sha256": "a366c9939cff59449ebb81b42dd8c8a74b670e92db1d128f0be48a394b7973e3"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\questionbank\\store_postgres.go",
+      "bytes": 23503,
+      "sha256": "2502a52be6a60239e4f7129d495ff7d15039abe692ff2b5e2f4a63e629080b40"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\regrade\\grader_context_postgres.go",
+      "bytes": 6714,
+      "sha256": "cfb1e12f4d579f90d86d5e11a7ac362a68b940bdcc8551b1abd3ceca0b44d6a3"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\regrade\\store_postgres.go",
+      "bytes": 27233,
+      "sha256": "f79f0016de4856dadb8d1241b1e8cf126e251f6f5b751b12e144717ea2a0a4dc"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\regrade\\store_postgres_batch48_test.go",
+      "bytes": 9171,
+      "sha256": "d65b750fdb5abbea12e0154e91fab8a6bf0eb6a358ec225750cac8a33f846b60"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\releasegate\\coordinator.go",
+      "bytes": 1900,
+      "sha256": "eaa6840e720708ed754afe83877f1a3d0c331d433de0ab7134ef8e66487b92cf"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\releasegate\\service.go",
+      "bytes": 10244,
+      "sha256": "1a66121cfe3df61d7be016e0b85dc7a99a2c1991ec66531e77958127fd5ac05b"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\releasegate\\store_postgres.go",
+      "bytes": 9254,
+      "sha256": "5fef3d02dc31770287965560234780025d1860e1637e50c836d3b2d86fcad196"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\report\\store_postgres.go",
+      "bytes": 16562,
+      "sha256": "5a1386300807f8b59556b3b2e73e89b3849f87e71e20097946f22a4f9eb50a71"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\review\\draft_postgres.go",
+      "bytes": 5384,
+      "sha256": "2fd9effba235e81dc49ef739b700f73ef56b433bad507fc2dc787b2511f9351a"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\review\\handlers.go",
+      "bytes": 34313,
+      "sha256": "2d89f90df0a3af8e1972a3dac190fb34c1c45d8becc2b9241e92d6f780119351"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\review\\store_postgres_arbitration.go",
+      "bytes": 12049,
+      "sha256": "3fd1b5a3c4c31ea1bc87d2c3b54876df57176a28dd25f8f26f616ad5532ef897"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\review\\store_postgres_batch34_test.go",
+      "bytes": 16589,
+      "sha256": "dc4bd2e130573ceb32a2b101a20d6baf48df1b68c77d9ca421c39bcffcb344c4"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\review\\store_postgres_context.go",
+      "bytes": 11514,
+      "sha256": "73640346a56ea7fe97172d62f4e0ba14d776f5d293e952a1891b925fff0fc632"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\review\\store_postgres_double_mark.go",
+      "bytes": 9755,
+      "sha256": "634b7e2685881ecfb0032c95df8c59f223122cddf90bc97a9dbd6438ebefc5ba"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\review\\store_postgres_resolution.go",
+      "bytes": 9845,
+      "sha256": "250ca6db05e410fa689dd1b7882f420dcd7b99069389e6ab29ed1f5b9a75787c"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\review\\store_postgres_scanners.go",
+      "bytes": 4136,
+      "sha256": "e61fcaa98507a883f2790819a8217448e50dea17d91a4773869279fc5d47f4c2"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\review\\store_postgres_scoring_double_mark.go",
+      "bytes": 5864,
+      "sha256": "8615b8d076785d43eaac731c78240d0c7d7fbfe2d235d4e7b0674102b159cf1e"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\review\\store_postgres_task_internals.go",
+      "bytes": 4875,
+      "sha256": "6202a20f811b7856a0b0b8d1c4e410fe91bdc91cd31d5df4874c3be2f211255d"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\review\\store_postgres_tasks.go",
+      "bytes": 23336,
+      "sha256": "111bad7d5e51a829148b5c2e4105e8007b2bda61ac28851932aa2fa08fe715d2"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\review\\task_context.go",
+      "bytes": 8170,
+      "sha256": "d34ac2e9715fea912198b63b0f758e082efd255584220182ffb5580618254361"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\review\\task_context_postgres.go",
+      "bytes": 5377,
+      "sha256": "2e80803dcab5027258756a19d25628cd2d0e195f10493ee280b90ea98810c39c"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\review\\workbench_postgres.go",
+      "bytes": 5130,
+      "sha256": "225855f145c1d572218edc20afbf513659d86cab1d7cb83a013f28a397d614a3"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\reviewannotation\\store_postgres.go",
+      "bytes": 17228,
+      "sha256": "fb244fc2d674e7e98f4bda2dbd714379619a2ba5817f179be1d2977690e1c8f2"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\reviewannotation\\student_release_postgres_test.go",
+      "bytes": 4740,
+      "sha256": "7fc96dd356275936729f968a40bc0805f6644a534d183b07d9d3f2881f19cae6"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\schoolassistant\\adapters.go",
+      "bytes": 8381,
+      "sha256": "9f044d119eff6bd62755f279a8b3b1a8f674462765c1b8293ee1ff108f03f0b6"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\schoolassistant\\conversation.go",
+      "bytes": 19299,
+      "sha256": "34ff5e59acf584dc51569f3fb9db10fd1eb23938b489547dd50bbed74f6fa089"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\schoolassistant\\types.go",
+      "bytes": 5721,
+      "sha256": "d4d2c22bd21ccbba6b9efa731820ed767441797eba6a7958c029f8d7a93edfb8"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\score\\handlers.go",
+      "bytes": 9203,
+      "sha256": "213741964b9c9b9409b4cd9d6a9d7cf5b5cbfaf3b17e9d0b67464526cf40f1d3"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\score\\store_postgres.go",
+      "bytes": 42981,
+      "sha256": "822368ebcf902180406b529bec159b9001d6efeeeab0c3fffe574e87bd4cd748"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\scorerelease\\anonymous_paper.go",
+      "bytes": 14974,
+      "sha256": "e52326ad51678fc6395817179507c02a4c37bb9b3af172a79f6e2fd1bfa2ecbe"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\scorerelease\\anonymous_paper_postgres.go",
+      "bytes": 7455,
+      "sha256": "360cd0d4726303ec15995238987e31439aafe5d0879fcef38455c74b4d41214f"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\scorerelease\\handlers.go",
+      "bytes": 16254,
+      "sha256": "c84b1f9070866e6460b830b93a90fc34ef94aa7e153cad7710f8f541684823e1"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\scorerelease\\service.go",
+      "bytes": 9995,
+      "sha256": "bdbbaf3ee408f021e8539752eb15de93050d5072a2c0c00ebbc6acd6c07577f7"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\scorerelease\\store_postgres.go",
+      "bytes": 62254,
+      "sha256": "18e863156b073c8f26810c152294aef2bbbbdc3ebe9e5c133228b00a65914322"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\scorerelease\\store_postgres_batch48_test.go",
+      "bytes": 5527,
+      "sha256": "55b72705e0a7abb42ea247e6896b65fa33c90a18eff1df5c8b9d493bf9a60e3a"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\scorerelease\\store_postgres_batch50_test.go",
+      "bytes": 7932,
+      "sha256": "06de586e92fc68258158d2f9a446471dee0c317e66b0f2be8ca70fbe05e6817a"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\scorerelease\\store_postgres_dashboard_test.go",
+      "bytes": 1638,
+      "sha256": "e191e1809d86fcc5700954942698486e04338a697344d753591c151d00eca9fa"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\scorerelease\\student_detail_postgres.go",
+      "bytes": 1003,
+      "sha256": "a80997d9783e7552e9314c696cd006bcdfc3dd54ef1088cc6a0f2d084b7ca1d7"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\scorerelease\\student_session_postgres.go",
+      "bytes": 3193,
+      "sha256": "b28ee836b9f27a9985e2fbb691ff096b5b67ba175a127d32a1743097ce2a7564"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\seedquality\\store_postgres.go",
+      "bytes": 15820,
+      "sha256": "3c2befc637e2736ba06d30fa13e46ffc73cbcc20c9a4466adb699375c57ca179"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\segment\\store_postgres.go",
+      "bytes": 7682,
+      "sha256": "fe33c3364be8a549cc7eb358820893b734817e3799afc22f823cfeee74228228"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\server\\application_modules.go",
+      "bytes": 7430,
+      "sha256": "aacbdebccefa416889f675e6760c93866e0d2734c33dca97b13ea943319e2aee"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\server\\e2e_postgres_test.go",
+      "bytes": 57440,
+      "sha256": "63661ddcd204726ad063beec0b53c009ba11021abf0822af5f7a3af166695af4"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\server\\infrastructure.go",
+      "bytes": 8979,
+      "sha256": "b919dd75833fd85a886ae25455b12f0fa6bfc53a825c3eba7c562ed789b2a636"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\server\\managed_config_postgres_test.go",
+      "bytes": 4694,
+      "sha256": "71a5793a7b0670497c8b85329a6e7665dc7e96750c3fd5b0fe5ffcf54f187b50"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\server\\module_ai_foundation.go",
+      "bytes": 2097,
+      "sha256": "b42ccbe34d80bd116a29adebaccf1716266a7dabc45d59c3bddc8c7b7e11320e"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\server\\module_ai_governance.go",
+      "bytes": 2887,
+      "sha256": "7175758281fbf41e5d39251066e2d8dbc3f6fb7f69a6811c02bfb6879b77f5e9"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\server\\module_capture.go",
+      "bytes": 6091,
+      "sha256": "dd28ef1c57f9500015a5c5cf0709e1cb24832cd8a1a86587424245f2f5d9a600"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\server\\module_exam.go",
+      "bytes": 5170,
+      "sha256": "f4bb5eb8cebf3755110641be98158ffbaa9c0b6a4c677362dde8ff8e4137be8d"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\server\\module_grading.go",
+      "bytes": 10576,
+      "sha256": "93ee56103a5ba5894642497eb6f640de770b49148f84663907746879be57eade"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\server\\module_identity.go",
+      "bytes": 1904,
+      "sha256": "9e85a310ed1e459f4bb8ddd105d26bf496485c358cafa046b22cc99b7bbd0745"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\server\\module_release.go",
+      "bytes": 5185,
+      "sha256": "94c5adc3197861674c47d9c0b1cd2cbdf8435e706e254e636bb55b9099e1403a"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\server\\module_school_assistant.go",
+      "bytes": 481,
+      "sha256": "ba244a8f63f917f18b31b0326179fa9d6bcd9e139d1c182f442db50472062c54"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\server\\recent_auth_test.go",
+      "bytes": 11958,
+      "sha256": "f398f6877187c28d1cb525faceb407793755ebd7339d31b9c01dcd305f3ea6b5"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\server\\router_guards.go",
+      "bytes": 20954,
+      "sha256": "239b49ea63862ebed4d2e65d090b465db4185037c8e0024ea9d1f1b5c1faba6f"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\server\\routes_auth.go",
+      "bytes": 5029,
+      "sha256": "2537437e7f045a8343a448d37454ed6c1e2f5ce92b1e3184bf82ce837c31c56f"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\server\\routes_capture.go",
+      "bytes": 7275,
+      "sha256": "5a294da354f014c93a16401d3259ea046fb4b4d1b1130a478e944ad185f4b720"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\server\\routes_exam.go",
+      "bytes": 3929,
+      "sha256": "270747d1306f75588dda39a16be3accdeb236d32f7fae0cd5e93c88192e91700"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\server\\routes_files.go",
+      "bytes": 983,
+      "sha256": "0ea762412d296bb3eecdcf19b31d6c2ee741a8193cfe20ec97a2540bf5c4f4a1"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\server\\routes_grading.go",
+      "bytes": 6753,
+      "sha256": "5b1dfe45ba55cc01a130a495f7d8abb06c59ca752df50723b2fa834573c2ca47"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\server\\routes_paper.go",
+      "bytes": 6379,
+      "sha256": "fa9578beee2358d2fcd4535ec9f01fb3f83ba03f551b9397dc641e0045013e13"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\server\\routes_platform_schools.go",
+      "bytes": 959,
+      "sha256": "26ab719db79834027a38220f02368248cab0683c0a06dcd6e3c3d79ebd2b8c9f"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\server\\routes_processing.go",
+      "bytes": 3391,
+      "sha256": "7ca7d011878831963cf288c9adb46b2449398c30ed39de64758393a94e5c9b09"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\server\\routes_release.go",
+      "bytes": 6785,
+      "sha256": "e404627ab415b702d2a850e1f6fc3b3bd97d106bd5af7ac444630790f416b845"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\server\\routes_review.go",
+      "bytes": 6976,
+      "sha256": "8bd469e21001e09c6405de37174a8f35eccb47228c381c5117782970187ce8fd"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\server\\routes_school_assistant.go",
+      "bytes": 435,
+      "sha256": "75cb0a331c3daf3d3f949a1205482b670cba57817510c6b29a1fe9015d8157ff"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\server\\routes_system.go",
+      "bytes": 815,
+      "sha256": "065a6ede7d1dc5300e6787c99885959fcf107a56b0745a7a2d796599a94403c1"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\server\\routes_worker.go",
+      "bytes": 6298,
+      "sha256": "bf02d683ab724afe6d3378b3eb172dba97960404fae3ae535757fc66aaad8e7f"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\server\\server.go",
+      "bytes": 9365,
+      "sha256": "784283dce580311be8d14d62aa0213d61c13d1a08f34664702f5f1cbf3760fa1"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\studentportal\\store_postgres.go",
+      "bytes": 992,
+      "sha256": "fdf1346517bab5019ac5c72bb3cbe36d5960b0bea413af4eef8be0d037c9844b"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\subjective\\active_crop_resolver.go",
+      "bytes": 8869,
+      "sha256": "ebf1df7e5741b0a5811ac33b926d2dfe770d1160e65bfd22b58cee86cb666d0f"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\subjective\\adapter.go",
+      "bytes": 3231,
+      "sha256": "65fde7c47f3db5b87ed2f875b8b24e9d0e5e08a066ffa573edbd66efd9b4acaa"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\subjective\\adapter_http.go",
+      "bytes": 23604,
+      "sha256": "6efaea34bba466c99c9b58a6c06658ac8745e941ade77930cecff7f792b020bc"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\subjective\\eligibility.go",
+      "bytes": 6255,
+      "sha256": "5f8e5ddfbd75f7c340a7988f818f855d0547d7fff8accc030f887768b35587e4"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\subjective\\grade_settlement_pipeline.go",
+      "bytes": 2534,
+      "sha256": "004159ad3fb0c8cd73ed5b1075ed2c34ca642c52dd725476af8f471035578e01"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\subjective\\grading_agent_v2_builder.go",
+      "bytes": 21424,
+      "sha256": "b69279b7999e8d22b93b3afcb9f66eba0eae383f287c3d7207473917a364b8f6"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\subjective\\handlers.go",
+      "bytes": 4347,
+      "sha256": "519b6f7491487b4fbd00d0a31cc2dbc2e754ab4fe6bc8b3f9c7a4b96a1a70cd0"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\subjective\\handlers_grade.go",
+      "bytes": 13771,
+      "sha256": "da8ae65624a1ce69a8ef24682fd41a044aff8adff3f83f780450299ae5a7d096"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\subjective\\handlers_worker.go",
+      "bytes": 7678,
+      "sha256": "d6ed919c1aa91a36fafdca0b9086356a698e2e07fe732c1e501a48e2861149e9"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\subjective\\math_grading.go",
+      "bytes": 9428,
+      "sha256": "b846be39deec1f829d5d183ed07a6f189c088fae505765b4fb5592273f14d14d"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\subjective\\panel_agent_binding.go",
+      "bytes": 3341,
+      "sha256": "02cd56eed59f03b83fe2f7773f4881f4a9085acbf14a8dbd8ce5ecd9d259c6e4"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\subjective\\panel_disagreement.go",
+      "bytes": 5409,
+      "sha256": "db22a60952178ab9f6a167415b32da83bd1c0850a4a54540473e66bdd3fad41f"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\subjective\\panel_orchestrator.go",
+      "bytes": 23504,
+      "sha256": "e1fa4046a753edb07b836a2c79894ba50389280be40198631911d6115d1041c9"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\subjective\\panel_policy_store_postgres.go",
+      "bytes": 6404,
+      "sha256": "6f7f2913fefc0a3f285c161c090b8c04f06975eeb6295e7d9bdf10b1ae30b5a1"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\subjective\\panel_shadow_runner.go",
+      "bytes": 10472,
+      "sha256": "6cbda5f0a7d863c8622a1145eac2c622da0df190fd41968f8603fc3d42772d62"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\subjective\\panel_store_postgres.go",
+      "bytes": 8619,
+      "sha256": "73e84cdaf5993bc291dfe5d2fb110c172551c7815734bd86d879f2515453e5d2"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\subjective\\store_postgres.go",
+      "bytes": 32757,
+      "sha256": "a47acba07c6701aefe1165f9210a5323871ed6d0c5eaabe34138d2297df0ad05"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\subjective\\store_postgres_batch.go",
+      "bytes": 7058,
+      "sha256": "d192ea6919e73fea273601b3ec9f702284573695e940f7e35d51db7e4b02659c"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\subjective\\worker_completion_service.go",
+      "bytes": 4829,
+      "sha256": "aa9c9018b0c9abb27caa2105b7f46e39756e94dd4ebcbf4e4f543b5c1f0adc20"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\subjective\\worker_execution_service.go",
+      "bytes": 7229,
+      "sha256": "d34b8fcd855f1eefaed73534effbf316334124aeabdf2d394c1b151193558320"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\submission\\store_postgres.go",
+      "bytes": 24069,
+      "sha256": "bad823d661bd1328c74bc74ce667ea8d1f9a9b9fecfc247f2f98da8c6dfc78a6"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\workerruntime\\scope_middleware.go",
+      "bytes": 8416,
+      "sha256": "aa1b77cc9b3707e5bbb38d0a059f5ce3df2ae7f9fd57c0bea7b4b889a2ffc750"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\workerruntime\\store_postgres.go",
+      "bytes": 30198,
+      "sha256": "b260e8af94233c4dfdee875cfff15452cf85aa5fd0b0d9ed4f91a386ea85e5dc"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\workerruntime\\store_postgres_batch48_test.go",
+      "bytes": 8697,
+      "sha256": "c724dfafe36ac3d97c5b6acf85861b4e3c00b4061dba30a00a8f87428b534843"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\internal\\workerruntime\\store_postgres_test.go",
+      "bytes": 972,
+      "sha256": "afb162dd221ce96bfadb362bb19483739120d52ef01075ee7259af1e67223c38"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000001_auth_rbac.sql",
+      "bytes": 7507,
+      "sha256": "97bf43089dc5003689e6e20beb836f96ade3992add4e13a5e962d8ff57eca054"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000002_organization.sql",
+      "bytes": 3868,
+      "sha256": "d923356a3a68948cddad43aec0e166201a40709faf97ebe6a95a92edd2f150cc"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000003_exam_management.sql",
+      "bytes": 1623,
+      "sha256": "2494852c2eb53c6e43bbab9c0e647d362ecac996be12f3b4793555fe17f166d2"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000004_paper_question.sql",
+      "bytes": 4457,
+      "sha256": "7f81460425598d57189eb0bf1fb7a0431ce84707af75a53d98ae807444eef8bc"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000005_file_upload.sql",
+      "bytes": 1384,
+      "sha256": "290f3204db73477611b25ac77d77a429d1eeb5ea86da3dd116635659005e87f4"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000006_submission_collection.sql",
+      "bytes": 2759,
+      "sha256": "41e142797995c00af2238354d11e33cef897318b64d33af4cf3881c7874835de"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000007_ocr_task.sql",
+      "bytes": 2609,
+      "sha256": "488c8065156b131d174bf9ec95b398d696e7b0114572adeb31ce96df062c13fb"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000008_answer_segment.sql",
+      "bytes": 1760,
+      "sha256": "70814e4e35633db18b5248749993ed5d38ad02cd86c975328cfdaba1d4c02dc5"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000009_orchestrator.sql",
+      "bytes": 3071,
+      "sha256": "a9a9e7aac532f0182f2c11ee2af41dd6ba11dec3015ece0ceaf1f5d1c1137d92"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000010_rule_grading.sql",
+      "bytes": 3174,
+      "sha256": "6d34c7ed72394c7accad66b580c0de2fe7072a6bca709ad21b865c88dc1acb75"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000011_subjective_ai_grading.sql",
+      "bytes": 1490,
+      "sha256": "a2c70cb26929a8061979c2304c1ceeb291b9cb0baaa625c7a10e35dfc5caa36b"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000012_evidence_check.sql",
+      "bytes": 1606,
+      "sha256": "84e08aae0cda9c777b725ce2d0ed5472f8d06dc6eb0aec4952d19a543e04d06c"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000013_human_review_workflow.sql",
+      "bytes": 3739,
+      "sha256": "896337b8ff6b242220f263e82a8e584f0ca62199aa86327c4e137ec726857a7d"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000014_double_mark_arbitration.sql",
+      "bytes": 8255,
+      "sha256": "6d161358f98afec5c5702561878033ed2872002720fb591eb9481c7cebce6535"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000015_final_grades_publishing.sql",
+      "bytes": 4489,
+      "sha256": "660abb14c3580ca17383080d190ede8c1265431909e4eaf2b71f1cf751d5c7d6"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000016_appeal_workflow.sql",
+      "bytes": 4304,
+      "sha256": "ca8edff4772d3a07d6f59ebe79b9e45d6d08a2c9bf74b603d7ec3a248d6f4103"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000017_report_analytics.sql",
+      "bytes": 2565,
+      "sha256": "38e2bf8c0cbb804882098e933f824d51772feafc6ee5e36ff4d777a3414b656a"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000018_audit_log_export.sql",
+      "bytes": 863,
+      "sha256": "8a0cdb7ac93b8dfee600b10bde377524f75a30157ca9b7b1f4b9b5bee1e313ea"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000019_story044_rbac_hardening.sql",
+      "bytes": 2203,
+      "sha256": "11d5238b2b2a541dce6cd60843d9878877f940f28528752390413b7da2051917"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000020_story047_tenant_constraints.sql",
+      "bytes": 17475,
+      "sha256": "580d29749a8f77615a400749cc0b5800779a1c08cbd7e4f7098ecd67d8e405df"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000021_story049_ocr_worker_metadata.sql",
+      "bytes": 1028,
+      "sha256": "1b2429537b144d8ba6cdaf87a2d6c96656633de5e563a2c156f764f4084aa4c7"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000022_story050_image_quality_run.sql",
+      "bytes": 3934,
+      "sha256": "a8817c879e5f3b5fc2e7e88982bc3d88ad22090e49c853e210be3b255a1d2bfe"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000023_story051_agent_worker_runtime.sql",
+      "bytes": 3926,
+      "sha256": "8dfc376182497e0ceece39267af2b38ce324fa790857efff638baed4f4d94894"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000024_completed_scope_integrity_hardening.sql",
+      "bytes": 6877,
+      "sha256": "9665df027cffd4fbf6f46b8e2c5c94141d02eb54b03337eb22a57984ab5f3739"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000025_story053_product_shell_rbac.sql",
+      "bytes": 372,
+      "sha256": "4261f41143bf59733de2dd871cab056bedecfea19766621d5389be2773a4c9c7"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000026_story054_exam_readiness.sql",
+      "bytes": 6828,
+      "sha256": "a1d6789368a2978ae665b2159e7451d30cea385292a7266faa7d1bc4744e9e68"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000027_story055_capture_processing.sql",
+      "bytes": 9875,
+      "sha256": "fbe5f8e1612b54402dbdb36b89560be98aeeda60368557289c96ad36a93dcc8d"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000028_story055_page_processing_role.sql",
+      "bytes": 549,
+      "sha256": "517632b59261cf01caf9db6e65809ccb8d6c3bb9ae1c42443a48d82cf2241aed"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000029_story055_page_processing_task_types.sql",
+      "bytes": 419,
+      "sha256": "d6661f39d723a751ac9e7c4a716710015d36139406238da4ca288b293f15ff07"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000030_story055_capture_quality_source_asset.sql",
+      "bytes": 672,
+      "sha256": "3174ae0debf44082a1a18294e9e0484665a144b7d104d4a8230a4385fbb492b0"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000031_story055_candidate_page_matching.sql",
+      "bytes": 1276,
+      "sha256": "34ba7c7c66b3d2114b1cb11e1c79e4b4616d5a544ae5c5cd3e42f8fe724722d5"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000032_story055_registration_review.sql",
+      "bytes": 350,
+      "sha256": "b29bec4df4e3e77996a49bffc17e4d480ba66b97b261bf642c566db91f3913f3"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000033_story055_capture_complete_operation.sql",
+      "bytes": 337,
+      "sha256": "a4d526471373fce1ae7334aed9e15ac981a0eb2ddeb3fe6aff15ed424af70038"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000034_story055_manual_registration_correction.sql",
+      "bytes": 3675,
+      "sha256": "516a21d0917d4579a67c10b0a932b8ebb4dee4042dd8184fa91d3d39aa8c48ac"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000035_story055_manual_correction_apply.sql",
+      "bytes": 292,
+      "sha256": "84c45f3f8cf296602a3b91dc9d6e5c4aa769aab7fb0e0de98566862d371f3713"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000036_story056_grading_workbench.sql",
+      "bytes": 11701,
+      "sha256": "14c1f6e21f966afb23a4168fcc981888586899f1741db484c88188f280648d15"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000037_story056_review_grade_link.sql",
+      "bytes": 365,
+      "sha256": "52581c2244cd1a12ce0bb83addec80c764903213c8c7d1cf83061628239e5b54"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000038_story056_scoring_recovery.sql",
+      "bytes": 654,
+      "sha256": "df543a3a1dac8a7aeea0537b0a77a458f6d48a5a3fbdb490993998bf0ceeb0fc"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000039_story056_template_omr_gate.sql",
+      "bytes": 558,
+      "sha256": "bb4609a3ad2de855d546511a273264cc9ef0fc8dfcf3c6bd0c1df26d7461df4c"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000040_story056_template_difference_reference.sql",
+      "bytes": 815,
+      "sha256": "fe69426a2a69abf3f2a4cf7ec97f1967d3f8ee8f8216da57dc3e4f3dd7fd1bbd"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000041_story056_omr_calibration_approval.sql",
+      "bytes": 6394,
+      "sha256": "72e4e9a13650504770772de5876ce5a204a2e987bd1162f9ddab11e769e596f8"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000042_story056_human_confirmed_count.sql",
+      "bytes": 597,
+      "sha256": "97c0c70220a778eb1f5d797cbdf590c2aef2ab9aba2c885c1fa3dfbf33e63830"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000043_teacher_appeal_workflow.sql",
+      "bytes": 2465,
+      "sha256": "f4d1b604c68de42bf9d54b2899b6a6c56308d04df184d843748d318c7727cadd"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000044_grading_agent_integration.sql",
+      "bytes": 1507,
+      "sha256": "557b1bfc5d7dd241764beaac268f123e1a7a976799c99d923c3109b7ded3ae76"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000045_reconcile_published_exam_status.sql",
+      "bytes": 452,
+      "sha256": "df6aef8268fb31c7507ff9393563e8c16dc873e3884c1b1bc4ae3a9e3ef373fe"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000046_reconcile_completed_ocr_runtime_tasks.sql",
+      "bytes": 2114,
+      "sha256": "3c8e7fef5d1bf8b4d63a5bd2146963d7c0e28aa8f7e81d3e11bffcaed1965695"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000047_remove_teacher_grader_system_read.sql",
+      "bytes": 378,
+      "sha256": "46e8252b238e833834a95886d6ae55a140fe9137de548fedc14d7e7e99aa7d79"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000048_ocr_runtime_atomicity.sql",
+      "bytes": 3741,
+      "sha256": "5b024322defaa4e6c6f68a5104bea2b2361eece24c9934fd6db850dc50b96feb"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000049_remove_teacher_review_management.sql",
+      "bytes": 392,
+      "sha256": "92cd37e0224df7d58d595f560faad50743e5957ef3b45ff5979da1ee0a1d8816"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000050_scoring_run_grade_candidate_indexes.sql",
+      "bytes": 747,
+      "sha256": "d23e4f8102d40120d077319f76ed10098f5d1ffaf9970fa21422d0f5c950a57f"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000051_human_grade_ai_link.sql",
+      "bytes": 1355,
+      "sha256": "a7499dba86e2612fca7dfa4c435ab5eada7d4624743930f168dd307e210d8aa2"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000052_story060_exam_roster_attendance.sql",
+      "bytes": 1361,
+      "sha256": "2afd9884ba73aede58ad088d56214cd716be5a72b9d8b99835982e480b479495"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000053_story060_roster_query_indexes.sql",
+      "bytes": 501,
+      "sha256": "e11aa07585176cafc0ee37f0436492bcbd5fc3373e9b3ac8fb5a80095f27138d"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000054_story060_student_sheet_identity.sql",
+      "bytes": 3937,
+      "sha256": "b08a837fc6d28f83aff0962cbb8129a43ede1246aa06600512c8de0fbe6bd79c"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000055_story060_sheet_reprint_lifecycle.sql",
+      "bytes": 1631,
+      "sha256": "6d17bdce7af161450027e42cf07e7c0a9c335c3c5d142e198febe1a7fd328a64"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000056_story060_template_omr_calibration.sql",
+      "bytes": 4212,
+      "sha256": "8224ba2e4eaaae323a9e0f430bea8faba49cf105b9f68ebe86f0099519f03462"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000057_story061_model_governance_foundation.sql",
+      "bytes": 9958,
+      "sha256": "2a74a333908f2a2dae42cebdb19dbe6b015d27d3843c4fa307eba00f19419d29"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000058_story061_governance_tenant_constraints.sql",
+      "bytes": 1047,
+      "sha256": "5f500123d653babc41a8e5930f9a3b5a12bdf7dc64b3e65cc43c86e6c0b4ed9a"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000059_story061_model_governance_rbac.sql",
+      "bytes": 1821,
+      "sha256": "f2b67174222b815af979270f6a07f7a565032e0f6b0e63fa160544f4778f502a"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000060_story061_sandbox_approval.sql",
+      "bytes": 2621,
+      "sha256": "d7303d9bcd5e1248e7dc184255139c3aea5f74f541a342a8645836de1164307c"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000061_story061_offline_model_evaluation.sql",
+      "bytes": 11576,
+      "sha256": "8ee04ae858a277fb3a46fff6f29706f86d031aca3f91b44327d0d5c4ddc184a2"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000062_story061_model_promotion.sql",
+      "bytes": 7057,
+      "sha256": "c39ed5b5695903d2efd3ebcac6fcc746d63d3df90fc0fadac2e7891ebc2850eb"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000063_story063_subjective_grading_runs.sql",
+      "bytes": 1762,
+      "sha256": "2fa20b84e2752d35d2298c264a4fc083ecd3a0224b0d965b7215f7048928df9e"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000064_story063_subjective_grading_batches.sql",
+      "bytes": 1710,
+      "sha256": "302da4cebaa00318b1415c94057988c011d3626c18c5e6f7656417cf7b911772"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000065_device_sessions.sql",
+      "bytes": 1820,
+      "sha256": "3201c1bdbf1aae4512c281dd4127b269ccaa1ba46e82f98f46a13cdc2286a0c7"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000066_access_scope_exam_revision.sql",
+      "bytes": 700,
+      "sha256": "41e923a53c39c08d92429f2f26022d9c32c0844ea0e7b0d3c1e430582e53fcc9"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000067_file_asset_lifecycle.sql",
+      "bytes": 1216,
+      "sha256": "6dc8c512ebd06d62fa70e7e625d2966f54746685e636dc113cceb7494466dd41"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000068_strong_audit_outbox.sql",
+      "bytes": 4425,
+      "sha256": "cc86dd63ac2953c7123061c776f6371d772c35131d1e7d19c1490b1ce6c6c7cd"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000069_request_idempotency.sql",
+      "bytes": 1385,
+      "sha256": "c2f698208a8af40559609fa385d898745650bc5992310bb320712abd75ad85b0"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000070_outbox_delivery.sql",
+      "bytes": 942,
+      "sha256": "3e1081f51a3d998d5c2d3b1c6ffd1fb4bdd762c1cae0d330e8fed1a45562f924"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000071_file_reconciliation.sql",
+      "bytes": 2751,
+      "sha256": "2aba49e12b9fac094720f2c97907bdc7d325d5b63eb923cac2f7d001001318dc"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000072_critical_entity_revisions.sql",
+      "bytes": 1175,
+      "sha256": "22c5ecbe8087019e651c5d14abf798922a4e083210a65c173b0eda10f9a222bd"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000073_list_pagination_indexes.sql",
+      "bytes": 389,
+      "sha256": "2ae74dc97359fc1cd5302093f3430c399ff22798ca2641da19f9565d6dae1db3"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000074_transactional_strong_audit.sql",
+      "bytes": 5197,
+      "sha256": "30873d35afc9fc19264ec6e0270cc004376c0d29e86141088869ac564eaacfa4"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000075_subjective_grading_worker_role.sql",
+      "bytes": 562,
+      "sha256": "41adf808cf14ecb182aee83d0137c665aece4c7e653be269f4d3a8e0d068c0e9"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000076_storyA01_assessment_domain.sql",
+      "bytes": 33380,
+      "sha256": "d7eb5c6f9fbcfeec96d7b692ffe9900b3d67ef680c1bab12b1951ea871d2ace7"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000077_storyA06_review_annotations.sql",
+      "bytes": 3239,
+      "sha256": "789fe456438edee72aa3f6fef93f652d8dda9e9077213658989ea34a3036f881"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000078_storyA08_gold_papers.sql",
+      "bytes": 4662,
+      "sha256": "d2075679338b1d5ba8c1fe317e68bc53e5bbd6d8f940d4e92d4d240f4ecd32fe"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000079_storyA09_grader_calibration.sql",
+      "bytes": 6984,
+      "sha256": "e2b57c44ae719116cdb6d8433b2b69826a828ba43aafd45e2dd901d2ede2eb9c"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000080_storyA07_answer_groups.sql",
+      "bytes": 8241,
+      "sha256": "ef0c6a3bbe603247415d2fa88cb1999c506aaad199be5a0985b62ec88ec63723"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000081_storyA10_seed_quality.sql",
+      "bytes": 5970,
+      "sha256": "e9488cde1d5c8d6b9466364b1c8fc2db3f4504c251c14605666554c5795059bb"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000082_storyA11_grader_drift.sql",
+      "bytes": 3656,
+      "sha256": "a51e5cf7c7bdd3a1dd2ba91bb66666d39c6333982025c045fdbdfb4d0ad400d7"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000083_storyA12_backmark.sql",
+      "bytes": 4660,
+      "sha256": "e7eba05730e6dc46fa22da1edb32aa67e028e5c83df2731981c4d935ac1d7556"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000084_storyA14_ai_eligibility.sql",
+      "bytes": 3672,
+      "sha256": "9f0c66aeeebdca8f8eb527e38308efec43a66937c3cb840621bc03149f557c16"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000085_storyA16_grading_evaluation.sql",
+      "bytes": 9947,
+      "sha256": "f335bdb7d878fbcec317b9e1c9c36ff9ef646a997d9ee06e5fc7cc493b4b113d"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000086_storyA15_model_calibration.sql",
+      "bytes": 12350,
+      "sha256": "095874a8943046ecc1010ba3efd238b083eeb8f6d74b8676ead64cf164f6c7fa"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000087_storyA17_ai_human_disagreement.sql",
+      "bytes": 6265,
+      "sha256": "21b74b5c7389a7a3ba473ea845ac8080c88c87092961162564172a36eedd3bd2"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000088_storyA18_score_releases.sql",
+      "bytes": 7997,
+      "sha256": "f01656a79060f9a7d18e22228057361d0e83462a4c01724cee010f406414e864"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000089_storyA19_regrade_workflow.sql",
+      "bytes": 6127,
+      "sha256": "9d23319219ba2664f4eeabc6617c492a982a7c00b4ae10517b154f4be95f0ef4"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000090_storyA20_release_gate.sql",
+      "bytes": 5645,
+      "sha256": "bbb8911ca0632edce1df1194f505135efe1be649f1eb8181991a07020dda2474"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000091_storyA21_student_portal.sql",
+      "bytes": 1190,
+      "sha256": "1198bb44fb2eecab8763751ac7ce658b4ab9b3b806518ce62914721aa0613736"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000092_storyA22_question_appeal.sql",
+      "bytes": 9300,
+      "sha256": "f12928039162d02db8532528980884e058ebb5d0d27cdaefd0a68efe56d7a638"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000093_storyA24_offline_scan_spool.sql",
+      "bytes": 2595,
+      "sha256": "9728122b0bda8b175460dd4fd3f31a9e3750c37a6fc8d490be693fd1a7747fc1"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000094_storyA25_scanner_profiles.sql",
+      "bytes": 1296,
+      "sha256": "3ed89cba6fe09a8d35c628287a293b8069332789e1a6673b2d6d7f2f1ce89900"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000095_storyA26_processing_state.sql",
+      "bytes": 3061,
+      "sha256": "266b8c4595e36e6e9ad9a1b7c1664eedc8544fbbb0e25e3b6cb1f3e8c1526e0e"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000096_storyA19_regrade_candidate_evidence.sql",
+      "bytes": 594,
+      "sha256": "f11bd642398f15f7f171673112eacbf2bab0c658644b950f647fe4dc89562804"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000097_story_math00_understanding_contract.sql",
+      "bytes": 3227,
+      "sha256": "426a89e91572dc8fbf0b1fdac54fcfc5b2b8adee017b00b71f4d5b2e25cfd4ca"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000098_story_math07_corrections.sql",
+      "bytes": 1451,
+      "sha256": "fd4b5b656e1e0e2c2a330ff4f25081bfb1a7b52c4fcbd78c70f6babe46a4842a"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000099_story_math08_pilot_gate.sql",
+      "bytes": 1172,
+      "sha256": "ddc8ac8f70699ff967dc522ab5a78695db7a1a9d2aeb91887ef8fa623d083cbe"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000100_story_math_runtime_pipeline.sql",
+      "bytes": 4280,
+      "sha256": "f343be1faa128542d9db72a927727e74ced96614d54fc1ac07bb6d80221dfebc"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000101_question_appeal_single_submission.sql",
+      "bytes": 307,
+      "sha256": "ef724a27e804744194430e38c5a2c85c7df7127d2f14c7ab6de5d2c9b753475a"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000102_paper_document_import.sql",
+      "bytes": 1018,
+      "sha256": "e6e5134a52b64c018ad959648f53edd37d08ca3cd0a4197c8b2391753b9db308"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000103_school_admin_review_work.sql",
+      "bytes": 567,
+      "sha256": "40ee6dfc01140e89d5595d1f15b145c1b59dd0d357310f0d3814579a9118e3c6"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000104_exam_sessions.sql",
+      "bytes": 2167,
+      "sha256": "f51e87245aa5c503d389a4ac2755a3d58bb4c8d271a2ddfe4a9eef1b8161d0ff"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000105_grade_education_stage.sql",
+      "bytes": 679,
+      "sha256": "3fb5d2b44aa90b5dd17ce594e1bf8368dfe23ca1191ba7836f7d15efbaf2e98e"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000106_exam_templates.sql",
+      "bytes": 6312,
+      "sha256": "f8f5f26992b093d85807f5e755f54accf269d4f9c8a223a089598e5871a9cf6d"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000107_exam_candidate_snapshot.sql",
+      "bytes": 1887,
+      "sha256": "7071351fba58caefdc6485915ccc9efec4480ced1faf1c792b9027955dc51de9"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000108_school_enrollment_model.sql",
+      "bytes": 7030,
+      "sha256": "aa4af3ed3f40af6614682a1c21450e9290c20c0dcb1faef4f4c06c580f0aecbe"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000109_grading_error_attribution.sql",
+      "bytes": 1736,
+      "sha256": "738f04055ec6652c1e52b7cb7aca4f25d59622d8815367cfe7761e2c92fba958"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000110_paper_import_sources_candidates.sql",
+      "bytes": 4778,
+      "sha256": "52527aa3c33cf7248166e2b2358ff25caa1b42b4addff42630b4a93d48992188"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000111_authorization_model_hardening.sql",
+      "bytes": 7931,
+      "sha256": "51671cf7cede4b8c8c4c109bac14b43e4d140d2b8dedf18777d2b8495b3be7e4"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000112_backfill_school_admin_rbac.sql",
+      "bytes": 3076,
+      "sha256": "531dca5987c0daacccdb5791fd60b3d26eb996d04365dcba179917ed55188cf6"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000113_local_authorization_repair.sql",
+      "bytes": 6065,
+      "sha256": "dfad1faa4ce941ed2052727093a35390d18cbee53685824d9f33b3c4d9b033df"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000114_authorization_repair_followup.sql",
+      "bytes": 2978,
+      "sha256": "e39c63db18d4a7374fe612a9878937a51346a864098fde43d7143e0991389805"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000115_school_activity_projection.sql",
+      "bytes": 7879,
+      "sha256": "e862484031e00dbf1bf81f4f5b02567354a7f1d4af4c14b3722345928172c405"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000116_paper_import_rubric_candidates.sql",
+      "bytes": 738,
+      "sha256": "cd89fa46e2e148c21c9649d566b7fb78caec0eeecda199b833cbb5f8076994b3"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000117_student_learning_portal.sql",
+      "bytes": 1237,
+      "sha256": "5b20862f54ac96468a5df58725fca137da4392b30d3a22545c597cfbf82001a8"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000118_managed_model_api_config.sql",
+      "bytes": 2321,
+      "sha256": "53df81e6f55de05cfd9ea5eb4d180ae8b98dc9fd5e48ece23a21d6c07f3ff245"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000119_paper_import_cancellation.sql",
+      "bytes": 254,
+      "sha256": "d51f7de772c7b1f8a3da1c8012c0ef208883d83e709119cf28e70720f22243ea"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000120_paper_import_parse_runtime.sql",
+      "bytes": 1517,
+      "sha256": "176040946b72f00287ca5107a74f34703773f3f4d6c7743f9066e6dbf0ba4533"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000121_exam_session_command_id.sql",
+      "bytes": 486,
+      "sha256": "4f631eeb9938fcdd2da241d828be76e205182db869696c6ee808e53d7e979eed"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000122_processing_projection_refresh.sql",
+      "bytes": 8839,
+      "sha256": "165581d11be512ef26eb914b8018dfbd86af82ab8efe09e807b243979f70d39b"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000123_reliability_command_runs.sql",
+      "bytes": 8462,
+      "sha256": "07a3932a540c8cc475e26298d515d69e8850e501fe55f778cc0c310e496c0105"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000124_import_input_integrity.sql",
+      "bytes": 2495,
+      "sha256": "0f0aef63b69cad1e6eb824cfb4b52c2f5dde3ec217c9def2630c16c849463f85"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000125_projection_lifecycle_identity.sql",
+      "bytes": 1069,
+      "sha256": "0e641d0bd94bb38083996e58eb87148c02ca818fe6b9a4e7117f4078e3ff7918"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000126_capture_batch_command.sql",
+      "bytes": 584,
+      "sha256": "6a790d135015d6ec63d60e1ad83521ee400cf3d6d037f27e65cf743eec9f8211"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000127_scoring_run_command.sql",
+      "bytes": 422,
+      "sha256": "f3be83138b57ed04254fa5e376395646cbac12ac24d36e05f3169b537ee877ff"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000128_subjective_batch_commands.sql",
+      "bytes": 1074,
+      "sha256": "de41566cee88e7b5e89b3bdbcb20bbcc0abe62166d7e67d10f9b146422d7e0b3"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000129_business_command_receipts.sql",
+      "bytes": 475,
+      "sha256": "48c6892f07db51aca6e9d2c8a5d0e2f55b9f67de2ea425d873cc81c7e7cbdb36"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000130_review_round_identity.sql",
+      "bytes": 320,
+      "sha256": "4d9c595d709cdf6cc6447e8ce2cf3559c8d0210792a8b9775dbbef60f9936e68"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000131_exam_answer_sheet_template_binding.sql",
+      "bytes": 4385,
+      "sha256": "64e400b9c389911c3a6aec2828f770be8cf86f82aab5083e3a93df6346a6b062"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000132_managed_model_api_health.sql",
+      "bytes": 801,
+      "sha256": "a3776caec94614254641d16a5b9875f7b0ec291d58e2db59dc05c681b04e97c1"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000133_managed_model_api_probe_modes.sql",
+      "bytes": 1327,
+      "sha256": "cb74e796a34357f5d44b144c8da8fb89fb976ee7943855ac85828ecd25536053"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000135_paper_formula_recognition.sql",
+      "bytes": 1967,
+      "sha256": "b8646f0c1dbfd584539c8e1c4d48fbe14d41e941ab5a96e331bf55b28b29b1c3"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000136_managed_model_api_capability_diagnostics.sql",
+      "bytes": 845,
+      "sha256": "87235ac914010d4cd67e1fa13f1d27d0d6bbe71be44d8c201e64573286b305c5"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000137_worker_task_progress.sql",
+      "bytes": 269,
+      "sha256": "94f591600bc78e0f8868d5e62bec8b8942df30ff0ff5027c018f845c45f80e10"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000138_business_command_payload.sql",
+      "bytes": 481,
+      "sha256": "2908010135a82ba79f7b3e0b9ddd3c84fa01e5103d3a9cc4ec8d8c725215aced"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000139_high_risk_tenant_rls.sql",
+      "bytes": 2811,
+      "sha256": "cae3cab03f52bd173466341c81bf7cc3e2ec5be2f5eb0804a1001ed6fe5ea9d9"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000140_question_bank_core.sql",
+      "bytes": 8620,
+      "sha256": "e2ee94ec86980dad4429d501cef18ab2e1bc0f2600e2c6bdc06404fdd7d25f15"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000141_question_bank_publication.sql",
+      "bytes": 22253,
+      "sha256": "43f9a3c8f8523aa0f764a7d1059fb4f17244ecfab38339b6d83fa02ce4fff251"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000142_question_bank_metadata_acl_search.sql",
+      "bytes": 9158,
+      "sha256": "9cdd27981b9bae04b1ba176fd17f73feeb687d2b3d647784c391c28cc7fb2d91"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000143_auth_identity_security_epoch.sql",
+      "bytes": 5926,
+      "sha256": "5eba28ace1084ce2fca0f424f09028fcb92c7c609a022d02864d86da16e5c7d3"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000144_question_bank_snapshot_import.sql",
+      "bytes": 6438,
+      "sha256": "aa88e1b2be79feb7e7d7a926ff7b90c473b4de168477d18ee17a8676148d9784"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000145_story_math09a_mixed_perception.sql",
+      "bytes": 3062,
+      "sha256": "bc541eefbd5fef258806e44119a67fd7951324220ed83e933e6e20b3a933183a"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000146_story_math11_symbolic_verification_stage.sql",
+      "bytes": 7094,
+      "sha256": "ed8ef706c09e3b7f1eb98d17c01c9ba153711e6e1b249aae287c36ba2103cbfc"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000147_auth_dynamic_risk_shadow.sql",
+      "bytes": 5638,
+      "sha256": "6c5b0f482cff01e14c947264b8174d6b86eec4c807aa67801dd42447528bc26b"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000148_story_math13_grading_bindings.sql",
+      "bytes": 2635,
+      "sha256": "4b5a38ddd913740f2e9e40b3bd83bd3edfa9c7e6b60057d7ae2f77308c42f703"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000149_auth_totp_scoped_challenges.sql",
+      "bytes": 3071,
+      "sha256": "3e892ce1a98c8315c6eb0512b1ae5fb122eee68f654049786be0c340b0322c81"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000150_auth_mfa_security_notification_intents.sql",
+      "bytes": 2858,
+      "sha256": "33b553c9b1b8236ba108bad110f1335c427b8f5d9dad4e1938315e495550e992"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000151_capture_upload_completion_lease.sql",
+      "bytes": 264,
+      "sha256": "ac14f1545dbcc5117cc8093ee50d4193044bc7828674139d5120a5049bcd3db8"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000152_paper_import_visual_pages.sql",
+      "bytes": 383,
+      "sha256": "c47acf3a1b13d0816d25612abdcac64b2205ad56a1bcf25349308232220f5fbb"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000153_paper_import_model_usage.sql",
+      "bytes": 396,
+      "sha256": "7d5e200394e36e7975f8d907385e47ac2d26db8a019053fc7db9644f61f60e71"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000154_auth_wechat_login.sql",
+      "bytes": 2057,
+      "sha256": "af04da6d639739ecd17348d94f7d6138c47ad83fa2154252310033a8134a1d5a"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000155_subjective_multi_agent_panel.sql",
+      "bytes": 12445,
+      "sha256": "82db290ede117015fe4dbd7d5d3c6a7ec1328f2713c9eb4ba2425e66ac82a146"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000156_model_role_binding.sql",
+      "bytes": 2016,
+      "sha256": "d23221d600d3366c969a5eadd14aed7b9fc1e9cb62251a618ef1edd19eaf4c99"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000157_subjective_panel_evaluation.sql",
+      "bytes": 3477,
+      "sha256": "e547212648a55c78519be8fc96c242d33ff1d17a28df1a1b11116989fb737d54"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000158_subjective_panel_policy.sql",
+      "bytes": 6647,
+      "sha256": "9beaa74c23a0a854cc5e61a0cdce6b6ca87444371348bd13a4df9867f3830950"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000159_managed_model_api_multi_model.sql",
+      "bytes": 400,
+      "sha256": "3561985738fbcc6eccbdf9d3f2c1cfc932eabc37f015400a91237e3922a0db1e"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000160_subjective_panel_model_set_provenance.sql",
+      "bytes": 1636,
+      "sha256": "a56fcb843b712bdf74ae56d8d25f472898a13fd19b4bc9f5cb958520fa7708de"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000161_platform_panel_model_binding_actor.sql",
+      "bytes": 440,
+      "sha256": "255c0cd01fda8a2e62cde00d2e2d3af44d06046f6ddb8736cc026105b7360a82"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000162_subjective_panel_legacy_hardening.sql",
+      "bytes": 8046,
+      "sha256": "4354c1b8cc988ad5c28d923e76c34e7b522d26213b709fd75add2d556078e308"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000163_answer_group_v2_candidate_quarantine.sql",
+      "bytes": 2229,
+      "sha256": "0bbf50be8d43b8b6dbc0049f6bcbe49bbf7068c04909ca43ba66a0bc13e9a4dc"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000164_score_release_anonymous_page.sql",
+      "bytes": 2105,
+      "sha256": "3c182825c8013738d9f6ea2ffd306742ca1acb193695d7bc0da0fdf796b7c76b"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000165_platform_school_operations.sql",
+      "bytes": 32735,
+      "sha256": "22e6dd63b500585ad37fb8deb7ddb616d2ab0a7fa68044fb80eb7d0cfd1a3646"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000166_managed_model_probe_transient_status.sql",
+      "bytes": 1631,
+      "sha256": "20e7493fe84e863cbe5d1f76ceb1f0269357c910b7fceba0e2cb8b55b4a905eb"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000167_model_management_rbac_alignment.sql",
+      "bytes": 1479,
+      "sha256": "3486609f9a9e2eb92cd0fcef951826818182470b54deff078d2929458aa076cb"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000168_managed_model_soft_delete_audit.sql",
+      "bytes": 257,
+      "sha256": "254516489eb4e6959430bba19e84ba6d7c20d88d9b89eeab3a534bef0b41b124"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000169_model_governance_managed_config_bridge.sql",
+      "bytes": 7407,
+      "sha256": "afded2047e756e84b71046564dfa54ef063aa9b8533bfcf45e368773c21c3d3e"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000170_model_evaluation_managed_config.sql",
+      "bytes": 5998,
+      "sha256": "fc24477b5cdec5124ae12c1cf339c736213a7d8e0d04ddf79e5302fe6aa1dbde"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000171_model_approval_managed_config.sql",
+      "bytes": 4147,
+      "sha256": "ad8cc1d9472d1d82b9191b1860a73f371bfa6fdc0f215ab71c457a478decd26e"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000172_model_policy_managed_config.sql",
+      "bytes": 2481,
+      "sha256": "665e9fa09640d1dcc951db7b081ec49820f5c4e73bd1bb18f87870d3d126eb41"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000173_model_sandbox_managed_config.sql",
+      "bytes": 1273,
+      "sha256": "8b9a7186dabd0ddf16adf851bd4e6df51503c529f3d314487523d6c8013994d6"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000174_managed_model_permissions.sql",
+      "bytes": 1345,
+      "sha256": "b7f8dd4f52eeda673665cf013f03625c862f41de25cf56326e6dfd5552c89f2e"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000175_model_call_fact_managed_identity.sql",
+      "bytes": 770,
+      "sha256": "a71ffcd0bf58569763a0ed961204ecc98b4a8555815e403714362b7254bee07c"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000176_managed_model_api_multiple_credentials.sql",
+      "bytes": 195,
+      "sha256": "95d60fcb66bb69118a749c9df78822e5913beb56315d05f583e42787cdc4a18e"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000177_scoring_ai_batch_link.sql",
+      "bytes": 2094,
+      "sha256": "387dd4b3603102fa8b3011cec952bb4a16240517dd7fa6ca95004356d3e184db"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000178_scoring_double_mark_cancel.sql",
+      "bytes": 533,
+      "sha256": "e441e5569e4f821f9433adc0e8ac5d469ee2e0666f7f4d1c86fdaeed9c3c5a9d"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000179_question_import_options.sql",
+      "bytes": 486,
+      "sha256": "d8b613d486f4066efdcdecd50dc4d0da80c89ffb6fbeee3f16b3ae5fc777e932"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000180_exam_candidate_roster_freeze.sql",
+      "bytes": 1469,
+      "sha256": "7fba96f861bf4fdd6b720bc5b7c6ea78597ece7f294b9376795b8cd8e3189ddc"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000181_paper_material_structure.sql",
+      "bytes": 1324,
+      "sha256": "7a1026cdfa2ad5a9952ab11fe73f7388d29df9081a8b6a67b31c88ec710c83b7"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000182_answer_sheet_source_purpose.sql",
+      "bytes": 494,
+      "sha256": "79562a07babfb1ddceb2edd4428d48f30a2fcc730613a97500e3d90e82201691"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000183_exam_management_archive.sql",
+      "bytes": 14283,
+      "sha256": "96b3a218b7a0043d279b5ca016ff3538ac6a584976aa491daed2a11902137b36"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\000184_model_role_binding_revision.sql",
+      "bytes": 304,
+      "sha256": "2fba5dba633c4dd6e181dc2a7f0da97d5939ea579a959929ee0a24fe9469a103"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\baseline\\000020_fingerprint.sql",
+      "bytes": 2443,
+      "sha256": "35a820c7daa0f944c0ba218b45a59bd8e2ec44f8e53157d0356e3296711eb25a"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\tests\\000169_bridge_assert.sql",
+      "bytes": 1310,
+      "sha256": "c8138d15160d17a01c58bf7c252431e780a55c3d729ac77b47b9bf4b952aa8bb"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\tests\\000169_bridge_fixture.sql",
+      "bytes": 4607,
+      "sha256": "3971263f09b4488113482defad0f23611e4f1a6bf6588862a86191475cf352bc"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\tests\\000170_171_managed_flow_assert.sql",
+      "bytes": 4338,
+      "sha256": "5518cfdd6c3d03bbb282ac65ce5deeda2b28108ada804afebf4c1b3baefbade2"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\tests\\000172_policy_assert.sql",
+      "bytes": 1001,
+      "sha256": "21edae10a6bddadf5f1ad6c8b4dc1a4df18df0b0436de6fe3eb013e88c253524"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\tests\\000172_policy_fixture.sql",
+      "bytes": 380,
+      "sha256": "a3974a7c4b83c9b7bcfc9a7159ea95dc7f4b77cb14df14082c669433905aa37e"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\tests\\000173_sandbox_assert.sql",
+      "bytes": 1477,
+      "sha256": "91e80f4621f975de1dfba567d031774a28020b6af32afbd3516ce8ceebc854c7"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\tests\\000173_sandbox_fixture.sql",
+      "bytes": 689,
+      "sha256": "c69f4e1321c3f0c527d46e9c475e37c83f1b1c3d7272903b1ee8266c190bc467"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\api-gateway\\migrations\\tests\\000175_call_fact_assert.sql",
+      "bytes": 808,
+      "sha256": "75860edbd8b84bdb809fd1bf7cf32babd94da606dd1d2ba84cd6ede1d3da1467"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\image-quality-worker\\image_quality\\engine.py",
+      "bytes": 6606,
+      "sha256": "be1636f10c68d4d4f23f0e7b13bf8fa14e34f64e355cc1d6788b6e1d374ea24a"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\image-quality-worker\\image_quality\\metrics.py",
+      "bytes": 16559,
+      "sha256": "e3d38f59c390f5898a6da9e1b8098f2c9643395a24ec31454e54efde6b67d90a"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\image-quality-worker\\image_quality\\policy.py",
+      "bytes": 11245,
+      "sha256": "093775b9acd6b89dea9622050338667264c000972b72db41f16b49f7edd1dcde"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\ocr-worker\\ocr_worker\\recognition_router.py",
+      "bytes": 23972,
+      "sha256": "f5120c490011b20fa1d876d1dc450ed6b892aaa033fcce388ea4b08c9ba69ffd"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\page-processing-worker\\page_processing\\barcode.py",
+      "bytes": 1120,
+      "sha256": "900e9a66a20adf2294cb5b2216a069984b143e02660e48c8abc32603098c9e2d"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\page-processing-worker\\page_processing\\decoder.py",
+      "bytes": 7208,
+      "sha256": "b47018b67795527a25ca3dd76424bcd9d55ace8f976523344c0e336b6b14add3"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\page-processing-worker\\page_processing\\omr.py",
+      "bytes": 14182,
+      "sha256": "2abd891a47f7d46e4298900f20a62e642c1772e33f10fe8e2c808cca00ab6808"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\page-processing-worker\\page_processing\\registration.py",
+      "bytes": 20317,
+      "sha256": "acf7ea7dcb040955938ed80cb96ce479191cb2956663e75c9ee600cbec221fa1"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\page-processing-worker\\page_processing\\runner.py",
+      "bytes": 29358,
+      "sha256": "32d236c9d4fa337d61ac403cd1d9b8e3a05d5f5dcbd0a1330284ad778694041e"
+    },
+    {
+      "file": "D:\\project\\yuejuan\\services\\subjective-grading-worker\\subjective_grading_worker\\runner.py",
+      "bytes": 3075,
+      "sha256": "01d9c0ed77518522ecfb01aa0553781a3ed4df695edae5f30f6734eb97bbfde0"
+    },
+    {
+      "file": "D:\\tools\\sonar-remediation-20261011\\baseline\\docs\\architecture\\tools\\build_database_specs.py",
+      "bytes": 14960,
+      "sha256": "8cf12b2171204cda24c2bb6d84ada02ef7c185446b5c4bbbed1fa26465263339"
+    },
+    {
+      "file": "D:\\tools\\sonar-remediation-20261011\\baseline\\docs\\architecture\\tools\\build_diagrams.py",
+      "bytes": 10528,
+      "sha256": "ff48d34d9280dbdc0c01824b76b678d43f237f2ae5276bd1b3994b8276cbf2ee"
+    },
+    {
+      "file": "D:\\tools\\sonar-remediation-20261011\\baseline\\docs\\architecture\\tools\\verify_delivery.py",
+      "bytes": 7422,
+      "sha256": "db7a6e7b8924cf4eaf67d352dd2cdc2e7a8619f11096069d934b8630d7e87e78"
+    }
+  ]
+}

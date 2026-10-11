@@ -1,0 +1,45 @@
+{
+  "started_at": "2026-10-11T18:23:49.028339+08:00",
+  "finished_at": "2026-10-11T18:23:58.273845+08:00",
+  "duration_seconds": 9.25,
+  "command": [
+    "go",
+    "test",
+    "-json",
+    "-p",
+    "1",
+    "-count=1",
+    "-timeout=5m",
+    "./internal/taskmaterials"
+  ],
+  "cwd": "D:\\project\\yuejuan\\services\\api-gateway",
+  "exit_code": 0,
+  "isolation": {
+    "toolchain": "local",
+    "module_proxy": "off",
+    "checksum_service": "off",
+    "GOMAXPROCS": 1,
+    "cleared_environment_names": []
+  },
+  "source_identity": {
+    "before": "go-batch13-21-retry-taskmaterials-source-before.json",
+    "after": "go-batch13-21-retry-taskmaterials-source-after.json",
+    "count": 575,
+    "changed_paths": []
+  },
+  "package_results": [
+    {
+      "Time": "2026-10-11T18:23:57.7514166+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/taskmaterials",
+      "Elapsed": 1.021
+    }
+  ],
+  "test_result_counts": {
+    "pass": 9,
+    "fail": 0,
+    "skip": 0
+  },
+  "skipped_tests": [],
+  "note": "只报告实际运行的包；环境缺失跳过项不算真实数据库或外部模型集成通过。"
+}

@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -61,6 +62,27 @@ func TestScoringCommandRecoveryWithPostgresTestDatabase(t *testing.T) {
 	if err != nil || invisible.Status != "not_accepted" {
 		t.Fatalf("actor isolation: %+v %v", invisible, err)
 	}
+	assertScoringCommandTransportRecovery(t, db, store, fixture, command, first.run.ID)
+	if _, err = db.Exec(`UPDATE scoring_run SET deleted_at=now() WHERE id=$1::uuid`, first.run.ID); err != nil {
+		t.Fatal(err)
+	}
+	replay, err := grading.NewPostgresStore(db).StartScoringRun(ctx, fixture.TenantID, fixture.ExamID, fixture.AdminID, input)
+	if err != nil || replay.ID != first.run.ID {
+		t.Fatalf("deleted replay: %+v %v", replay, err)
+	}
+	recovered := e2eGetJSON(t, router, "/api/v1/exams/"+fixture.ExamID+"/scoring-runs/commands/"+command, token, http.StatusOK)
+	if recovered["status"] != "succeeded" || recovered["scoring_run"].(map[string]any)["id"] != first.run.ID {
+		t.Fatalf("recovery: %+v", recovered)
+	}
+	var count int
+	if err = db.QueryRow(`SELECT count(*) FROM scoring_run WHERE tenant_id=$1::uuid AND idempotency_key=$2`, fixture.TenantID, command).Scan(&count); err != nil || count != 1 {
+		t.Fatalf("run count %d: %v", count, err)
+	}
+}
+
+// 故意只破坏传输回执的第一次完成写入；重试必须接回已成功的业务评分运行。
+func assertScoringCommandTransportRecovery(t *testing.T, db *sql.DB, store *grading.PostgresStore, fixture story056AcceptanceFixture, command, runID string) {
+	t.Helper()
 	handler := grading.NewHandler(store, grading.NewEngine(), auth.NewMemoryStore())
 	transport := &failCompleteOnceIdempotencyStore{Store: idempotency.NewPostgresStore(db)}
 	mux := http.NewServeMux()
@@ -77,22 +99,7 @@ func TestScoringCommandRecoveryWithPostgresTestDatabase(t *testing.T) {
 	}
 	retried := httptest.NewRecorder()
 	mux.ServeHTTP(retried, request())
-	if retried.Code != 201 || !strings.Contains(retried.Body.String(), first.run.ID) {
+	if retried.Code != 201 || !strings.Contains(retried.Body.String(), runID) {
 		t.Fatalf("takeover: %d %s", retried.Code, retried.Body)
-	}
-	if _, err = db.Exec(`UPDATE scoring_run SET deleted_at=now() WHERE id=$1::uuid`, first.run.ID); err != nil {
-		t.Fatal(err)
-	}
-	replay, err := grading.NewPostgresStore(db).StartScoringRun(ctx, fixture.TenantID, fixture.ExamID, fixture.AdminID, input)
-	if err != nil || replay.ID != first.run.ID {
-		t.Fatalf("deleted replay: %+v %v", replay, err)
-	}
-	recovered := e2eGetJSON(t, router, "/api/v1/exams/"+fixture.ExamID+"/scoring-runs/commands/"+command, token, http.StatusOK)
-	if recovered["status"] != "succeeded" || recovered["scoring_run"].(map[string]any)["id"] != first.run.ID {
-		t.Fatalf("recovery: %+v", recovered)
-	}
-	var count int
-	if err = db.QueryRow(`SELECT count(*) FROM scoring_run WHERE tenant_id=$1::uuid AND idempotency_key=$2`, fixture.TenantID, command).Scan(&count); err != nil || count != 1 {
-		t.Fatalf("run count %d: %v", count, err)
 	}
 }

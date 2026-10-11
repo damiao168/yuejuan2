@@ -1,0 +1,32 @@
+{
+  "started_at": "2026-10-11T19:11:09.184442+08:00",
+  "completed_at": "2026-10-11T19:11:13.476926+08:00",
+  "duration_seconds": 4.297000000005937,
+  "command": [
+    "D:/tools/go/bin/go.exe",
+    "test",
+    "-json",
+    "-p",
+    "1",
+    "-count=1",
+    "-timeout=5m",
+    "./internal/server"
+  ],
+  "exit_code": 1,
+  "GOMAXPROCS": 1,
+  "cleared_environment_names": [],
+  "test_result_counts": {},
+  "all_test_results": [
+    {
+      "Time": "2026-10-11T19:11:13.2474888+08:00",
+      "Action": "fail",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Elapsed": 0.001,
+      "FailedBuild": "edugrade-enterprise/services/api-gateway/internal/server [edugrade-enterprise/services/api-gateway/internal/server.test]"
+    }
+  ],
+  "source_sha_file": "go-server-batch03-source-sha.json",
+  "source_changed_during_test": [],
+  "event_log": "go-server-batch03-events.jsonl",
+  "note": "环境缺失的 PostgreSQL/模型条件 skip 不计为集成通过；原始输出保留原因。"
+}

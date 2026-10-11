@@ -10,14 +10,19 @@ use tauri::{AppHandle, Manager};
 struct ActiveScope {
     path_component: String,
     session_id: String,
+    offline_valid_until: Option<chrono::DateTime<chrono::Utc>>,
 }
 
 static ACTIVE_SCOPE: LazyLock<RwLock<Option<ActiveScope>>> = LazyLock::new(|| RwLock::new(None));
-// Commands are synchronous. This lock lets a command finish against its original
-// account before a new binding can become active.
+// 命令同步执行。此锁让命令在原账号下完成后，
+// 新的账号绑定才能生效。
 static OPERATION_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
 
 pub(crate) fn bind_scope(server: &str, tenant_id: &str, actor_id: &str) -> Result<String, String> {
+    bind_scope_with_expiry(server, tenant_id, actor_id, None)
+}
+
+pub(crate) fn bind_scope_with_expiry(server: &str, tenant_id: &str, actor_id: &str, valid_until: Option<chrono::DateTime<chrono::Utc>>) -> Result<String, String> {
     let scope = scope_path_component(server, tenant_id, actor_id)?;
     let session_id = uuid::Uuid::new_v4().to_string();
     let _operation = OPERATION_LOCK
@@ -28,6 +33,7 @@ pub(crate) fn bind_scope(server: &str, tenant_id: &str, actor_id: &str) -> Resul
         .map_err(|_| "session scope lock failed")? = Some(ActiveScope {
         path_component: scope,
         session_id: session_id.clone(),
+        offline_valid_until: valid_until,
     });
     Ok(session_id)
 }
@@ -81,14 +87,18 @@ pub(crate) fn with_session<T>(
     if active.as_ref().map(|scope| scope.session_id.as_str()) != Some(session_id) {
         return Err("durable session changed; retry after login".into());
     }
+    // 离线授权只决定本机解密；每次原生读写都检查有效期，前端定时器不能延长已过期的租约。
+    if active.as_ref().and_then(|scope| scope.offline_valid_until).is_some_and(|until| until <= chrono::Utc::now()) {
+        return Err("本机离线授权已过期，请联网登录后续期。".into());
+    }
     drop(active);
     operation()
 }
 
-// This is intentionally conservative.  A missing key must not be treated as
-// a first launch if either the SQLite store or a controlled spool asset is
-// already present.  It is safer to require recovery of the Credential Manager
-// entry than to create a key that can never decrypt the retained evidence.
+// 这里有意采取保守判断。只要 SQLite 存储或受控暂存资产
+// 已经存在，密钥缺失就不能视为首次启动。
+// 应要求恢复凭据管理器条目，
+// 而不是创建无法解密现有证据的新密钥。
 pub(crate) fn durable_data_exists(root: &Path) -> Result<bool, String> {
     let database = db_path(root);
     if database.exists() {

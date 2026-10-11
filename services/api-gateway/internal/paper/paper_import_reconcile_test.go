@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 )
 
 func newReconcileFixture(t *testing.T, questions []CreateQuestionInput) (*MemoryStore, PaperImportJob) {
@@ -236,7 +237,7 @@ func TestPaperImportReviewResolvesTypeBeforeCreatingObjectivePoints(t *testing.T
 		t.Fatal(err)
 	}
 	preview.Questions[0].QuestionTypeResolution = "use_blueprint"
-	reviewed, err := store.SavePaperImportReview(context.Background(), "tenant", job.ID, "user", ReviewPaperImportInput{ExpectedGeneration: preview.Generation, Questions: preview.Questions})
+	reviewed, err := store.SavePaperImportReview(context.Background(), "tenant", job.ID, "user", ReviewPaperImportInput{ExpectedGeneration: preview.Generation, ExpectedUpdatedAt: preview.UpdatedAt.Format(time.RFC3339Nano), Questions: preview.Questions})
 	if err != nil {
 		t.Fatal(err)
 	}

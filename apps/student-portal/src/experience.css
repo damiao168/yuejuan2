@@ -29,6 +29,15 @@ button, input, select, textarea { font-family: inherit; }
 .region-coordinate-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .region-coordinate-fields input { width: 100%; min-height: 44px; }
 .portal-content .section-heading, .subject-table > header { flex-wrap: wrap; gap: 12px; }
+.student-public-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.student-public-text .student-formula { white-space: normal; }
+.student-public-text .student-formula.display { display: block; max-width: 100%; overflow-x: auto; }
+.student-public-text .katex { font-size: 1.1em; }
+.student-public-text .katex-display { margin-block: 12px; }
+.question-review-navigation { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 0; background: var(--eg-color-surface, #fff); border-bottom: 1px solid var(--eg-color-border); }
+.appeal-form-fields { display: grid; gap: 14px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.submission-notice { padding: 12px; background: #fff8e6; color: #714500; }
+.appeal-release-state { color: #344054; }
 @media (max-width: 760px) {
   .portal-content { width: calc(100% - 32px); padding-bottom: 32px; }
   .portal-header { padding-inline: 16px; gap: 12px; align-items: flex-start; }

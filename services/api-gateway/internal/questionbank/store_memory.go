@@ -14,7 +14,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// MemoryStore is an explicit development/test implementation, not persistence.
+// MemoryStore 明确用于开发和测试，不提供持久化。
 type MemoryStore struct {
 	mu       sync.Mutex
 	banks    map[string]Bank
@@ -71,13 +71,22 @@ func (s *MemoryStore) version(scope auth.AccessScope, id, action string) (Versio
 	}
 	return copyVersion(v), nil
 }
-func memoryMutation[T any](ctx context.Context, s *MemoryStore, scope auth.AccessScope, op, target string, input any, action string, fn func() (T, error)) (out T, err error) {
+
+type memoryMutationCommand struct {
+	op, target string
+	input      any
+	action     string
+}
+
+// 同一把锁覆盖回执读取、当前权限复核、业务变更和回执保存。
+// 回执指纹继续使用原先的 input 参数，不能把 command 整体当作输入。
+func memoryMutation[T any](ctx context.Context, s *MemoryStore, scope auth.AccessScope, command memoryMutationCommand, fn func() (T, error)) (out T, err error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if !validScope(scope) {
 		return out, auth.ErrForbidden
 	}
-	replay, err := s.receipts.Load(ctx, scope.TenantID, scope.ActorID, op, target, input, &out)
+	replay, err := s.receipts.Load(ctx, scope.TenantID, scope.ActorID, command.op, command.target, command.input, &out)
 	if err != nil {
 		return out, err
 	}
@@ -85,17 +94,17 @@ func memoryMutation[T any](ctx context.Context, s *MemoryStore, scope auth.Acces
 		// 命令回执也可能在撤权后被再次读取，返回旧结果前仍要检查当前权限。
 		switch v := any(out).(type) {
 		case Bank:
-			_, err = s.bank(scope, v.ID, action)
+			_, err = s.bank(scope, v.ID, command.action)
 		case ItemResult:
-			_, err = s.bank(scope, v.Item.BankID, action)
+			_, err = s.bank(scope, v.Item.BankID, command.action)
 		case Version:
-			_, err = s.item(scope, v.ItemID, action)
+			_, err = s.item(scope, v.ItemID, command.action)
 		case MetadataSchema:
 			_, err = s.bank(scope, v.BankID, "manage")
 		case ACLDocument:
 			_, err = s.bank(scope, v.BankID, "manage")
 		case Item:
-			_, err = s.item(scope, v.ID, action)
+			_, err = s.item(scope, v.ID, command.action)
 		}
 		if err != nil {
 			var zero T
@@ -107,7 +116,7 @@ func memoryMutation[T any](ctx context.Context, s *MemoryStore, scope auth.Acces
 	if err != nil {
 		return out, err
 	}
-	err = s.receipts.Save(ctx, scope.TenantID, scope.ActorID, op, target, input, out)
+	err = s.receipts.Save(ctx, scope.TenantID, scope.ActorID, command.op, command.target, command.input, out)
 	return
 }
 func (s *MemoryStore) GetBank(_ context.Context, scope auth.AccessScope, id string) (Bank, error) {
@@ -137,7 +146,7 @@ func (s *MemoryStore) CreateBank(ctx context.Context, scope auth.AccessScope, in
 	if !scope.AllowsSchool(in.SchoolID) {
 		return Bank{}, auth.ErrForbidden
 	}
-	return memoryMutation(ctx, s, scope, "question_bank.create", "", input, "read", func() (Bank, error) {
+	return memoryMutation(ctx, s, scope, memoryMutationCommand{op: "question_bank.create", input: input, action: "read"}, func() (Bank, error) {
 		now := time.Now().UTC()
 		b := Bank{ID: uuid.NewString(), TenantID: scope.TenantID, SchoolID: in.SchoolID, Name: in.Name, Description: in.Description, Status: "active", Revision: 1, MetadataSchemaVersion: 1, CreatedBy: scope.ActorID, CreatedAt: now, UpdatedAt: now}
 		s.banks[b.ID] = b
@@ -153,7 +162,7 @@ func (s *MemoryStore) UpdateBank(ctx context.Context, scope auth.AccessScope, id
 	if err != nil || in.ExpectedRevision <= 0 || !oneOf(in.Status, "active", "archived") {
 		return Bank{}, ErrInvalidInput
 	}
-	return memoryMutation(ctx, s, scope, "question_bank.update", id, in, "manage", func() (Bank, error) {
+	return memoryMutation(ctx, s, scope, memoryMutationCommand{op: "question_bank.update", target: id, input: in, action: "manage"}, func() (Bank, error) {
 		b, err := s.bank(scope, id, "manage")
 		if err != nil {
 			return b, err
@@ -197,7 +206,7 @@ func (s *MemoryStore) CreateItem(ctx context.Context, scope auth.AccessScope, ba
 	if input.Kind == "rubric_template" {
 		op = "question_bank.template.create"
 	}
-	return memoryMutation(ctx, s, scope, op, bankID, input, "create", func() (ItemResult, error) {
+	return memoryMutation(ctx, s, scope, memoryMutationCommand{op: op, target: bankID, input: input, action: "create"}, func() (ItemResult, error) {
 		b, err := s.bank(scope, bankID, "create")
 		if err != nil {
 			return ItemResult{}, err
@@ -224,7 +233,7 @@ func (s *MemoryStore) CreateVersion(ctx context.Context, scope auth.AccessScope,
 	if !validID(in.SourceVersionID) {
 		return Version{}, ErrInvalidInput
 	}
-	return memoryMutation(ctx, s, scope, "question_bank.version.create", itemID, in, "edit", func() (Version, error) {
+	return memoryMutation(ctx, s, scope, memoryMutationCommand{op: "question_bank.version.create", target: itemID, input: in, action: "edit"}, func() (Version, error) {
 		i, err := s.item(scope, itemID, "edit")
 		if err != nil {
 			return Version{}, err
@@ -258,7 +267,7 @@ func (s *MemoryStore) UpdateVersion(ctx context.Context, scope auth.AccessScope,
 	if err != nil || in.ExpectedRevision <= 0 {
 		return Version{}, ErrInvalidInput
 	}
-	return memoryMutation(ctx, s, scope, "question_bank.version.update", id, in, "edit", func() (Version, error) {
+	return memoryMutation(ctx, s, scope, memoryMutationCommand{op: "question_bank.version.update", target: id, input: in, action: "edit"}, func() (Version, error) {
 		v, err := s.version(scope, id, "edit")
 		if err != nil {
 			return v, err

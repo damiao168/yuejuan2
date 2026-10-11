@@ -1,0 +1,6 @@
+{"#select":{"columns":[
+   {"name":"mc","kind":"Entity"}
+  ,{"kind":"String"}]
+ ,"tuples":[
+   [{"label":"compile_error!..."},"Macro call was not resolved to a target."]]
+ }}

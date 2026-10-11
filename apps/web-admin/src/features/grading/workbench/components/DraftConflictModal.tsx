@@ -23,7 +23,15 @@ const fieldLabels: Record<DraftConflictField, string> = {
 function present(value: unknown): string {
   if (value === null || value === undefined || value === "") return "（空）";
   if (typeof value === "object") return JSON.stringify(value, null, 2);
-  return String(value);
+  switch (typeof value) {
+    case "string": return value;
+    case "number":
+    case "boolean":
+    case "bigint":
+    case "symbol":
+    case "function": return String(value);
+    default: return "（空）";
+  }
 }
 
 export interface DraftConflictModalProps {
@@ -33,10 +41,11 @@ export interface DraftConflictModalProps {
   onApply: (snapshot: DraftFallbackSnapshot) => void;
 }
 
-export function DraftConflictModal({ conflict, loading = false, onCancel, onApply }: DraftConflictModalProps) {
+export function DraftConflictModal({ conflict, loading = false, onCancel, onApply }: Readonly<DraftConflictModalProps>) {
   const [choices, setChoices] = useState<DraftConflictChoices>(() => initialDraftConflictChoices());
 
   useEffect(() => {
+    // 新一轮冲突从默认本机选择开始，不能沿用上一轮对其他草稿作出的字段选择。
     if (conflict) setChoices(initialDraftConflictChoices());
   }, [conflict]);
 

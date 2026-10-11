@@ -2,7 +2,7 @@ import type { ScanQualityCheck, SyncQueueItem } from "../types";
 
 const scanQueueStorageKey = "edugrade.desktop.scan_queue";
 const maxUploadBytes = 104857600;
-const allowedUploadExtensions = [".pdf", ".png", ".jpg", ".jpeg", ".tif", ".tiff"];
+const allowedUploadExtensions = new Set([".pdf", ".png", ".jpg", ".jpeg", ".tif", ".tiff"]);
 
 export function formatDate(value?: string) {
   if (!value) return "未记录";
@@ -27,7 +27,7 @@ export function estimateLocalCacheBytes() {
   let total = 0;
   for (let index = 0; index < window.localStorage.length; index += 1) {
     const key = window.localStorage.key(index);
-    if (!key || !key.startsWith("edugrade.desktop.")) continue;
+    if (!key?.startsWith("edugrade.desktop.")) continue;
     total += key.length;
     total += window.localStorage.getItem(key)?.length ?? 0;
   }
@@ -36,7 +36,7 @@ export function estimateLocalCacheBytes() {
 
 export async function inspectScanFile(file: File): Promise<ScanQualityCheck[]> {
   const extension = fileExtension(file.name);
-  const allowedType = allowedUploadExtensions.includes(extension);
+  const allowedType = allowedUploadExtensions.has(extension);
   const checks: ScanQualityCheck[] = [
     {
       key: "file_type",

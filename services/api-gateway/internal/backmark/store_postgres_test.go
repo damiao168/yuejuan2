@@ -20,8 +20,7 @@ func TestPostgresBackmarkCountsAndFilteredCursorPages(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
-	// A single connection and temporary table isolate this test from all
-	// persisted tenant data, even when run against a development database.
+	// 单个连接和临时表将此测试与所有持久化租户数据隔离，即使在开发数据库执行也如此。
 	db.SetMaxOpenConns(1)
 	_, err = db.Exec(`CREATE TEMP TABLE backmark_item (
 id uuid, tenant_id uuid, batch_id uuid, review_task_id uuid, original_grade_id uuid,

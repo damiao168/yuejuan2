@@ -114,7 +114,7 @@ func TestMissingChecksAndLegacyEvidenceNeverBecomeFalseZero(t *testing.T) {
 			case "deductions":
 				frozen.Rubric.Deductions = []any{map[string]any{"score": 1}}
 			}
-			// Old supported/unsupported evidence in the artifact is never authority.
+			// 产物中旧的支持或不支持证据不能作为权威依据。
 			input.RubricEvidence[0].RubricCriterionKey = "P1"
 			input.RubricEvidence[0].Status = "unsupported"
 			score, err := ScoreFrozenRubric(frozen, effective, nil)
@@ -216,38 +216,7 @@ func TestCandidateWireContractRejectsPointScoreAndTotalInjection(t *testing.T) {
 func TestFollowThroughAndSelfCorrectionNeedExplicitReviewedPolicy(t *testing.T) {
 	for _, scenario := range []string{"contradicted_predecessor", "uncertain_predecessor", "missing_predecessor", "self_correction", "complex_domain", "explicit_constraints"} {
 		t.Run(scenario, func(t *testing.T) {
-			frozen, effective := scoringFixture()
-			frozen.Rubric.Points = frozen.Rubric.Points[:1]
-			frozen.Rubric.MaxScore = 2
-			input := &effective.EffectiveContract
-			switch scenario {
-			case "complex_domain":
-				input.Verifications[2].Domain = "complex"
-			case "explicit_constraints":
-				input.Verifications[2].Constraints = []string{"x>0"}
-			case "self_correction":
-				input.SolutionGraph.Steps = append(input.SolutionGraph.Steps, SolutionStep{ID: "earlier", BlockIDs: []string{"block-1"}, Confidence: .9})
-				input.SolutionGraph.Edges = append(input.SolutionGraph.Edges, SolutionEdge{FromStepID: "earlier", ToStepID: "step-1", Kind: "corrects"})
-			default:
-				input.SolutionGraph.Steps = append(input.SolutionGraph.Steps, SolutionStep{ID: "earlier", BlockIDs: []string{"block-1"}, FormulaIDs: []string{"formula-1"}, Confidence: .9})
-				input.SolutionGraph.Edges = append(input.SolutionGraph.Edges, SolutionEdge{FromStepID: "earlier", ToStepID: "step-1", Kind: "derives"})
-				if scenario != "missing_predecessor" {
-					check := input.Verifications[2]
-					check.ID = "earlier-check"
-					check.StepID = "step-1"
-					check.FormulaID = "formula-1"
-					check.Details = map[string]any{"from_step_id": "earlier", "from_formula_id": "formula-1"}
-					check.Status = "contradicted"
-					if scenario == "uncertain_predecessor" {
-						check.Status = "uncertain"
-					}
-					input.Verifications = append(input.Verifications, check)
-				}
-			}
-			score, err := ScoreFrozenRubric(frozen, effective, nil)
-			if err != nil || score.VerifiedScore != 0 || score.UnresolvedScore != 2 || score.CriterionDecisions[0].AwardedScore != nil || len(score.MissingPoints) != 0 {
-				t.Fatalf("implicit follow-through credit: %#v %v", score, err)
-			}
+			assertMathFollowThroughNeedsReviewedPolicy(t, scenario)
 		})
 	}
 }
@@ -359,5 +328,41 @@ func TestRubricScoreAPIIsAssignedTenantScopedReadOnlyAndRevisionBound(t *testing
 		if json.Unmarshal(w.Body.Bytes(), &score) != nil || score.VerifiedScore != 0 || score.UnresolvedScore != 6 || score.CorrectionRevision != 1 {
 			t.Fatalf("pending correction reused symbolic score: %s", w.Body.String())
 		}
+	}
+}
+
+func assertMathFollowThroughNeedsReviewedPolicy(t *testing.T, scenario string) {
+	t.Helper()
+	frozen, effective := scoringFixture()
+	frozen.Rubric.Points = frozen.Rubric.Points[:1]
+	frozen.Rubric.MaxScore = 2
+	input := &effective.EffectiveContract
+	switch scenario {
+	case "complex_domain":
+		input.Verifications[2].Domain = "complex"
+	case "explicit_constraints":
+		input.Verifications[2].Constraints = []string{"x>0"}
+	case "self_correction":
+		input.SolutionGraph.Steps = append(input.SolutionGraph.Steps, SolutionStep{ID: "earlier", BlockIDs: []string{"block-1"}, Confidence: .9})
+		input.SolutionGraph.Edges = append(input.SolutionGraph.Edges, SolutionEdge{FromStepID: "earlier", ToStepID: "step-1", Kind: "corrects"})
+	default:
+		input.SolutionGraph.Steps = append(input.SolutionGraph.Steps, SolutionStep{ID: "earlier", BlockIDs: []string{"block-1"}, FormulaIDs: []string{"formula-1"}, Confidence: .9})
+		input.SolutionGraph.Edges = append(input.SolutionGraph.Edges, SolutionEdge{FromStepID: "earlier", ToStepID: "step-1", Kind: "derives"})
+		if scenario != "missing_predecessor" {
+			check := input.Verifications[2]
+			check.ID = "earlier-check"
+			check.StepID = "step-1"
+			check.FormulaID = "formula-1"
+			check.Details = map[string]any{"from_step_id": "earlier", "from_formula_id": "formula-1"}
+			check.Status = "contradicted"
+			if scenario == "uncertain_predecessor" {
+				check.Status = "uncertain"
+			}
+			input.Verifications = append(input.Verifications, check)
+		}
+	}
+	score, err := ScoreFrozenRubric(frozen, effective, nil)
+	if err != nil || score.VerifiedScore != 0 || score.UnresolvedScore != 2 || score.CriterionDecisions[0].AwardedScore != nil || len(score.MissingPoints) != 0 {
+		t.Fatalf("implicit follow-through credit: %#v %v", score, err)
 	}
 }

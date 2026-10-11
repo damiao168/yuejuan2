@@ -10,7 +10,7 @@ interface RecoveryFormValues {
   confirmPassword: string;
 }
 
-export function RecoveryPage({ onComplete }: { onComplete: (tenantCode?: string) => void }) {
+export function RecoveryPage({ onComplete }: Readonly<{ onComplete: (tenantCode?: string) => void }>) {
   const [token] = useState(() => new URLSearchParams(window.location.search).get("token")?.trim() ?? "");
   const [preview, setPreview] = useState<RecoveryPreview>();
   const [loading, setLoading] = useState(true);

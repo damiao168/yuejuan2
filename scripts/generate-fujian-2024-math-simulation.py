@@ -35,7 +35,9 @@ SOURCE_ATTACHMENT = (
 )
 
 CHOICE_KEY = ["D", "C", "C", "A", "B", "B", "A", "A", "B", "C"]
-FILL_KEY = ["x(x+1)", "x<1", "90", "2", "(2,1)", "128"]
+FACTORED_ANSWER = "x(x+1)"
+COORDINATE_ANSWER = "(2,1)"
+FILL_KEY = [FACTORED_ANSWER, "x<1", "90", "2", COORDINATE_ANSWER, "128"]
 
 QUESTION_STEMS = {
     "Q1": "下列实数中，无理数是（ ）",
@@ -128,7 +130,7 @@ CANDIDATES: list[dict[str, Any]] = [
                 f"Q{i + 1}": answer(v, 0.975, "auto_confirm", score=4 if v == CHOICE_KEY[i] else 0)
                 for i, v in enumerate(["D", "C", "C", "A", "A", "B", "A", "A", "D", "C"])
             },
-            "Q11": answer("x(x+1)", 0.96, "auto_confirm", score=4),
+            "Q11": answer(FACTORED_ANSWER, 0.96, "auto_confirm", score=4),
             "Q12": answer("x≤1", 0.95, "auto_confirm", score=0),
             "Q13": answer("90", 0.97, "auto_confirm", score=4),
             "Q14": answer("2", 0.96, "auto_confirm", score=4),
@@ -163,11 +165,11 @@ CANDIDATES: list[dict[str, Any]] = [
                 )
                 for i, v in enumerate(["D", "C", "C", ["A", "C"], "B", "B", "A", "A", "B", "C"])
             },
-            "Q11": answer("x(x+1)", 0.72, "rule_grade_review", score=4),
+            "Q11": answer(FACTORED_ANSWER, 0.72, "rule_grade_review", score=4),
             "Q12": answer("x<1", 0.95, "auto_confirm", score=4),
             "Q13": answer("90", 0.96, "auto_confirm", score=4),
             "Q14": answer("", 0.2, "rule_grade_review", score=0),
-            "Q15": answer("(2,1)", 0.93, "auto_confirm", score=4),
+            "Q15": answer(COORDINATE_ANSWER, 0.93, "auto_confirm", score=4),
             "Q16": answer("128", 0.68, "rule_grade_review", score=4),
             "Q17": answer("1+5-√4=4", 0.82, "subjective_agent_review", score=8),
             "Q18": answer(
@@ -197,7 +199,7 @@ CANDIDATES: list[dict[str, Any]] = [
             "Q12": answer("x<1", 0.91, "auto_confirm", score=4),
             "Q13": answer("90", 0.94, "auto_confirm", score=4),
             "Q14": answer("2", 0.95, "auto_confirm", score=4),
-            "Q15": answer("(2,1)", 0.91, "auto_confirm", score=4),
+            "Q15": answer(COORDINATE_ANSWER, 0.91, "auto_confirm", score=4),
             "Q16": answer("128", 0.93, "auto_confirm", score=4),
             "Q17": answer("(-1)⁰+5-2=4", 0.88, "subjective_agent_review", score=8),
             "Q18": answer(
@@ -297,11 +299,12 @@ def base_page(candidate_no: str, page_no: int) -> Image.Image:
     return image
 
 
-def page_one(candidate: dict[str, Any], candidate_index: int) -> tuple[Image.Image, dict[str, dict[str, float]]]:
-    image = base_page(candidate["candidate_no"], 1)
-    draw = ImageDraw.Draw(image)
-    regions: dict[str, dict[str, float]] = {}
-
+def _draw_choice_answers(
+    draw: ImageDraw.ImageDraw,
+    candidate: dict[str, Any],
+    candidate_index: int,
+    regions: dict[str, dict[str, float]],
+) -> None:
     draw.text((100, 330), "一、选择题（每题4分）", font=font(FONT_SANS, 31), fill=(20, 20, 20))
     option_font = font(FONT_SANS, 27)
     for index in range(10):
@@ -319,6 +322,7 @@ def page_one(candidate: dict[str, Any], candidate_index: int) -> tuple[Image.Ima
             draw.ellipse((cx - 17, cy - 17, cx + 17, cy + 17), outline=(70, 70, 70), width=2)
             draw_centered(draw, (cx, cy - 14), option, font(FONT_SANS, 20), (70, 70, 70))
             if option in selected_options:
+                # 每个选项独立取种子并画七笔；合并随机源会改变其他题目的仿真外观。
                 rng = random.Random(candidate_index * 100 + index * 9 + option_index)
                 for _ in range(7):
                     dx = rng.randint(-13, 13)
@@ -330,6 +334,21 @@ def page_one(candidate: dict[str, Any], candidate_index: int) -> tuple[Image.Ima
             "height": 105 / HEIGHT,
         }
 
+
+def _fill_answer_blur(confidence: float) -> float:
+    # 这里只选择仿真字迹的模糊程度，不能用作评分或人工复核阈值。
+    if confidence < 0.75:
+        return 1.35
+    if confidence < 0.9:
+        return 0.35
+    return 0.0
+
+
+def page_one(candidate: dict[str, Any], candidate_index: int) -> tuple[Image.Image, dict[str, dict[str, float]]]:
+    image = base_page(candidate["candidate_no"], 1)
+    draw = ImageDraw.Draw(image)
+    regions: dict[str, dict[str, float]] = {}
+    _draw_choice_answers(draw, candidate, candidate_index, regions)
     draw.line((95, 720, WIDTH - 95, 720), fill=(120, 120, 120), width=2)
     draw.text((100, 760), "二、填空题（每题4分）", font=font(FONT_SANS, 31), fill=(20, 20, 20))
     fill_positions = [
@@ -343,7 +362,7 @@ def page_one(candidate: dict[str, Any], candidate_index: int) -> tuple[Image.Ima
         draw.text((x0, y0), f"{question_number}.", font=font(FONT_SANS, 29), fill=(25, 25, 25))
         draw.line((x0 + 72, y0 + 75, x0 + 620, y0 + 75), fill=(65, 65, 65), width=2)
         confidence = float(candidate["answers"][question_no]["confidence"])
-        blur = 1.35 if confidence < 0.75 else 0.35 if confidence < 0.9 else 0.0
+        blur = _fill_answer_blur(confidence)
         handwriting_patch(
             image,
             (x0 + 96, y0 + 2),

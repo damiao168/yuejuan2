@@ -149,29 +149,7 @@ func TestScoringRecoveryEndpointsCoordinateWorkerRuntime(t *testing.T) {
 		t.Fatalf("cancellation must reach worker runtime: task=%#v err=%v", cancelled, err)
 	}
 
-	retryTask, err := runtimeStore.CreateTask(context.Background(), tenantID, userID, recoveryRuntimeTask("retry-task"))
-	if err != nil {
-		t.Fatalf("create retry task: %v", err)
-	}
-	claimed, err := runtimeStore.Claim(context.Background(), tenantID, workerruntime.ClaimInput{QueueName: "image-quality", WorkerService: "test-worker", WorkerInstanceID: "worker-1", Limit: 1, LeaseSeconds: 300})
-	if err != nil || len(claimed) != 1 || claimed[0].ID != retryTask.ID {
-		t.Fatalf("claim retry task: %#v err=%v", claimed, err)
-	}
-	if _, err = runtimeStore.Fail(context.Background(), tenantID, retryTask.ID, workerruntime.FailInput{LeaseToken: claimed[0].LeaseToken, ErrorCode: "omr_failed", ErrorDetail: map[string]any{}, DurationMS: 1}); err != nil {
-		t.Fatalf("fail retry task: %v", err)
-	}
-	store.run = grading.ScoringRun{ID: "run-2", TenantID: tenantID, ExamID: "exam-1", Status: "failed", TotalCount: 1, FailedCount: 1}
-	store.failed = []grading.FailedOMRTask{{OMRRunID: "omr-1", RuntimeTaskID: retryTask.ID}}
-	req = authedRequest(http.MethodPost, "/api/v1/scoring-runs/run-2/retry-failed", nil, token)
-	rec = httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
-	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"requeued":1`) {
-		t.Fatalf("retry failed should requeue worker task, got %d %s", rec.Code, rec.Body.String())
-	}
-	requeued, err := runtimeStore.Get(context.Background(), tenantID, retryTask.ID)
-	if err != nil || requeued.Status != workerruntime.StatusQueued {
-		t.Fatalf("retry must return worker task to queue: task=%#v err=%v", requeued, err)
-	}
+	assertScoringFailedTaskRuntimeRetry(t, runtimeStore, store, router, token)
 
 	store.run = grading.ScoringRun{ID: "run-3", TenantID: tenantID, ExamID: "exam-1", Status: "processing", TotalCount: 1}
 	req = authedRequest(http.MethodPost, "/api/v1/answer-segments/segment-1/reprocess-score", bytes.NewBufferString(`{"idempotency_key":"operator-fix-1"}`), token)
@@ -447,4 +425,33 @@ func assertAuditAction(t *testing.T, store *auth.MemoryStore, action string) {
 		}
 	}
 	t.Fatalf("missing audit action %s in %#v", action, store.Audits())
+}
+
+// 取消流程确认后再制造失败任务，HTTP重试必须将同一runtime任务重新入队。
+func assertScoringFailedTaskRuntimeRetry(t *testing.T, runtimeStore *workerruntime.MemoryStore, store *scoringRecoveryTestStore, router http.Handler, token string) {
+	t.Helper()
+	retryTask, err := runtimeStore.CreateTask(context.Background(), tenantID, userID, recoveryRuntimeTask("retry-task"))
+	if err != nil {
+		t.Fatalf("create retry task: %v", err)
+	}
+	claimed, err := runtimeStore.Claim(context.Background(), tenantID, workerruntime.ClaimInput{QueueName: "image-quality", WorkerService: "test-worker", WorkerInstanceID: "worker-1", Limit: 1, LeaseSeconds: 300})
+	if err != nil || len(claimed) != 1 || claimed[0].ID != retryTask.ID {
+		t.Fatalf("claim retry task: %#v err=%v", claimed, err)
+	}
+	if _, err = runtimeStore.Fail(context.Background(), tenantID, retryTask.ID, workerruntime.FailInput{LeaseToken: claimed[0].LeaseToken, ErrorCode: "omr_failed", ErrorDetail: map[string]any{}, DurationMS: 1}); err != nil {
+		t.Fatalf("fail retry task: %v", err)
+	}
+	store.run = grading.ScoringRun{ID: "run-2", TenantID: tenantID, ExamID: "exam-1", Status: "failed", TotalCount: 1, FailedCount: 1}
+	store.failed = []grading.FailedOMRTask{{OMRRunID: "omr-1", RuntimeTaskID: retryTask.ID}}
+	req := authedRequest(http.MethodPost, "/api/v1/scoring-runs/run-2/retry-failed", nil, token)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"requeued":1`) {
+		t.Fatalf("retry failed should requeue worker task, got %d %s", rec.Code, rec.Body.String())
+	}
+	requeued, err := runtimeStore.Get(context.Background(), tenantID, retryTask.ID)
+	if err != nil || requeued.Status != workerruntime.StatusQueued {
+		t.Fatalf("retry must return worker task to queue: task=%#v err=%v", requeued, err)
+	}
+
 }

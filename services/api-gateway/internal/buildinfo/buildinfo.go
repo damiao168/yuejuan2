@@ -1,7 +1,6 @@
 package buildinfo
 
-// These values are replaced with -ldflags for release builds. Development
-// binaries keep explicit local values rather than pretending to be a release.
+// 发布构建通过 -ldflags 替换这些值；开发二进制保留明确的本地值，不冒充发布版本。
 var (
 	Version       = "dev"
 	GitSHA        = "unknown"

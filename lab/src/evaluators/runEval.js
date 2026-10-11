@@ -51,6 +51,13 @@ export function filterSamples(samples, filters = {}) {
   });
 }
 
+// 分类只反映过滤后样本的标记；空集合沿用 every 的结果，仍记为 synthetic。
+function classifyDataset(records) {
+  if (records.every((record) => record.sample.synthetic === true)) return "synthetic";
+  if (records.every((record) => record.sample.synthetic === false)) return "real";
+  return "mixed";
+}
+
 export function runEvaluation({ datasetPath, adapterName = "mock", filters = {} }) {
   const adapter = createAdapter(adapterName);
   const samples = filterSamples(readJsonl(datasetPath), filters);
@@ -78,7 +85,7 @@ export function runEvaluation({ datasetPath, adapterName = "mock", filters = {} 
     generated_at: new Date().toISOString(),
     dataset_path: datasetPath,
     dataset_sha256: createHash("sha256").update(readFileSync(datasetPath)).digest("hex"),
-    dataset_kind: records.every((record) => record.sample.synthetic === true) ? "synthetic" : records.every((record) => record.sample.synthetic === false) ? "real" : "mixed",
+    dataset_kind: classifyDataset(records),
     adapter: adapterName,
     model_info: adapter.get_model_info(),
     prompt_version: "prompt-base-v1",
@@ -125,7 +132,7 @@ export async function runEvaluationAsync({ datasetPath, adapterName = "mock", ad
     generated_at: new Date().toISOString(),
     dataset_path: datasetPath,
     dataset_sha256: createHash("sha256").update(readFileSync(datasetPath)).digest("hex"),
-    dataset_kind: records.every((record) => record.sample.synthetic === true) ? "synthetic" : records.every((record) => record.sample.synthetic === false) ? "real" : "mixed",
+    dataset_kind: classifyDataset(records),
     adapter: adapterName,
     model_info: adapter.get_model_info(),
     prompt_version: "prompt-base-v1",
@@ -151,6 +158,7 @@ export function failedCasesFromReport(report, records = report.results) {
 }
 
 export function writeEvaluationReport(report, jsonPath, markdownPath, failedCasesPath) {
+  // 报告依次写入，后续失败不回滚已写文件；这里只创建 JSON 的父目录。
   mkdirSync(dirname(jsonPath), { recursive: true });
   writeFileSync(jsonPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
   const lines = [

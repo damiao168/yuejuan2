@@ -6,26 +6,20 @@ import (
 )
 
 const (
-	// OMRProfileModeManualOnly deliberately permits extraction as an operator
-	// suggestion while preventing it from becoming an automatic grade. The raw
-	// fill-ratio extractor cannot distinguish every printed answer-sheet design
-	// from a handwritten mark.
+	// OMRProfileModeManualOnly 允许提取结果作为操作人员的建议，但阻止其成为自动成绩。
+	// 原始填涂比例提取器无法区分所有印刷答题卡设计与手写标记。
 	// 此模式始终需要人工确认；差分模式另由已批准的校准记录决定自动确认资格。
 	OMRProfileModeManualOnly = "manual_only"
-	// OMRProfileModeTemplateDifference uses the immutable blank page that was
-	// used to configure and register the answer sheet. It removes printing
-	// already present on the form before measuring a mark. This is still an
-	// extraction mode, not permission to auto-confirm a grade.
+	// OMRProfileModeTemplateDifference 使用配置和配准答题卡时的不可变空白页。
+	// 它先移除表单已有印刷内容，再测量标记；这仍是提取模式，不代表有权自动确认成绩。
 	OMRProfileModeTemplateDifference = "template_difference"
 
-	// OMRProfileVersionOpenCVFillV1 is the conservative raw-fill suggestion
-	// profile. It remains manual-only because it does not subtract the printed
-	// content of a concrete answer-sheet design.
+	// OMRProfileVersionOpenCVFillV1 是保守的原始填涂建议配置。
+	// 它不扣除具体答题卡设计的印刷内容，因此仍只允许人工确认。
 	OMRProfileVersionOpenCVFillV1 = "opencv-fill-v1"
 
-	// OMRProfileVersionTemplateDifferenceBubbleV1 is intentionally narrow: it
-	// only supports explicit bubble regions on a page that has been registered
-	// against the exact reference asset frozen in the locked template.
+	// OMRProfileVersionTemplateDifferenceBubbleV1 的范围刻意受限：
+	// 只支持已按锁定模板中冻结的准确参考资源完成配准的页面上的显式涂点区域。
 	OMRProfileVersionTemplateDifferenceBubbleV1 = "opencv-template-difference-bubble-v1"
 
 	OMRReferenceSourceExamPaper = "exam_paper"
@@ -44,25 +38,20 @@ const (
 	OMRAutoConfirmReasonCalibrationRevoked          = "template_difference_calibration_revoked"
 	OMRAutoConfirmReasonUnsupportedProfile          = "unsupported_omr_profile"
 
-	// OMRCalibrationMinimumSampleCount is deliberately conservative. It is a
-	// deployment gate, not a claim that one hundred clean examples prove a
-	// model is universally correct.
+	// OMRCalibrationMinimumSampleCount 采用保守值。
+	// 这是部署门禁，并不表示一百个清晰样本就能证明模型普遍正确。
 	OMRCalibrationMinimumSampleCount = 100
-	// OMRCalibrationMinimumSamplesPerOption prevents a skewed sample from
-	// approving a question whose other bubble regions were never examined.
+	// OMRCalibrationMinimumSamplesPerOption 防止偏斜样本批准其他涂点区域从未被检查过的题目。
 	OMRCalibrationMinimumSamplesPerOption = 10
-	// OMRCalibrationMinimumSamplesPerStratum forces evidence to cover the
-	// worker's high-confidence, low-confidence, blank, and ambiguous branches.
+	// OMRCalibrationMinimumSamplesPerStratum 要求证据覆盖 worker 的高置信度、低置信度、空白和歧义分支。
 	OMRCalibrationMinimumSamplesPerStratum = 10
-	// OMRCalibrationMinimumConfidence is stricter than the historical generic
-	// OMR threshold. A calibrated permission only covers this high-confidence
-	// branch; all other outcomes continue through human review.
+	// OMRCalibrationMinimumConfidence 比历史通用 OMR 阈值更严格。
+	// 校准授权只覆盖这个高置信度分支；其他结果仍交由人工复核。
 	OMRCalibrationMinimumConfidence = 0.98
 )
 
-// TemplateOMRReference is the immutable source document used both for page
-// registration and for background subtraction. It is server-derived from the
-// selected exam paper; a client-supplied value is overwritten before storage.
+// TemplateOMRReference 是页面配准和背景扣除共同使用的不可变来源文档。
+// 服务器根据选定试卷生成该值；存储前覆盖客户端提供的值。
 type TemplateOMRReference struct {
 	Source      string `json:"source"`
 	FileAssetID string `json:"file_asset_id"`
@@ -70,18 +59,16 @@ type TemplateOMRReference struct {
 	ContentType string `json:"content_type"`
 }
 
-// TemplateOMRProfile is part of the immutable answer-sheet layout. It
-// describes which extraction contract generated a suggestion; it is not an
-// operator-controlled permission to write automatic grades.
+// TemplateOMRProfile 是不可变答题卡布局的一部分。
+// 它描述生成建议所用的提取契约，不是操作人员可控制的自动成绩写入授权。
 type TemplateOMRProfile struct {
 	Mode      string                `json:"mode,omitempty"`
 	Version   string                `json:"version,omitempty"`
 	Reference *TemplateOMRReference `json:"reference,omitempty"`
 }
 
-// OMRReferenceCrop is the exact reference page and normalized crop that a
-// worker must use for a template-difference extraction. It is derived from
-// the locked layout, not accepted from a worker or client callback.
+// OMRReferenceCrop 指定 worker 执行模板差分提取必须使用的准确参考页和归一化裁剪区域。
+// 它由锁定布局生成，不接受 worker 或客户端回调提供的值。
 type OMRReferenceCrop struct {
 	FileAssetID string  `json:"file_asset_id"`
 	HashSHA256  string  `json:"hash_sha256"`
@@ -93,10 +80,8 @@ type OMRReferenceCrop struct {
 	Height      float64 `json:"height"`
 }
 
-// OMRCalibrationApproval is the immutable scope a grading store must load
-// from a separately approved calibration session. It is intentionally a
-// value object: the template layout, worker payload, and browser cannot grant
-// automatic-confirmation permission by constructing one themselves.
+// OMRCalibrationApproval 是评分存储必须从单独批准的校准会话中加载的不可变作用域。
+// 它只是值对象：模板布局、worker 载荷和浏览器不能自行构造它来取得自动确认权限。
 type OMRCalibrationApproval struct {
 	ID                   string  `json:"id"`
 	TemplateID           string  `json:"template_id"`
@@ -112,8 +97,8 @@ type OMRCalibrationApproval struct {
 	Status               string  `json:"status"`
 }
 
-// OMRRuntimeProfile is the exact, serializable worker configuration. Its hash
-// is snapshotted with every OMR run and must be echoed by the worker result.
+// OMRRuntimeProfile 是准确、可序列化的 worker 配置。
+// 每次 OMR 运行都保存其哈希快照，worker 结果必须原样返回该哈希。
 type OMRRuntimeProfile struct {
 	Mode               string  `json:"mode"`
 	Version            string  `json:"version"`
@@ -121,15 +106,13 @@ type OMRRuntimeProfile struct {
 	AmbiguousThreshold float64 `json:"ambiguous_threshold"`
 	MinimumMargin      float64 `json:"minimum_margin"`
 	BorderFraction     float64 `json:"border_fraction"`
-	// ReferenceMaskDilationPixels allows the worker to suppress a small
-	// registration anti-aliasing halo around printed template ink. It is zero
-	// for the raw profile and therefore omitted from its historical hash.
+	// ReferenceMaskDilationPixels 允许 worker 去除印刷模板墨迹周围因配准产生的少量抗锯齿晕边。
+	// 原始配置中该值为零，因此不计入其历史哈希。
 	ReferenceMaskDilationPixels int `json:"reference_mask_dilation_pixels,omitempty"`
 }
 
-// OMRAutoConfirmPolicy is the server-side decision snapshot associated with a
-// queued OMR run. Workers receive the runtime profile but cannot grant the
-// eligibility flag themselves.
+// OMRAutoConfirmPolicy 是与已入队 OMR 运行关联的服务器端决策快照。
+// worker 接收运行时配置，但不能自行授予资格标记。
 type OMRAutoConfirmPolicy struct {
 	RuntimeProfile      OMRRuntimeProfile
 	ProfileHash         string
@@ -163,10 +146,8 @@ func OMRRuntimeProfileHash(profile OMRRuntimeProfile) string {
 	return "sha256:" + stableContentHash(profile)
 }
 
-// NormalizeTemplateLayout turns an omitted profile into an explicit immutable
-// manual-only contract before the template is hashed and stored. Existing
-// locked templates are not rewritten here; they remain safely unverified when
-// read by OMRAutoConfirmPolicyForTemplate.
+// NormalizeTemplateLayout 在模板计算哈希和存储前，将省略的配置变为显式、不可变的仅人工确认契约。
+// 此处不改写已有锁定模板；OMRAutoConfirmPolicyForTemplate 读取它们时仍保守地视为未核验。
 func NormalizeTemplateLayout(layout TemplateLayout) TemplateLayout {
 	if isEmptyTemplateOMRProfile(layout.OMRProfile) {
 		layout.OMRProfile = DefaultTemplateOMRProfile()
@@ -174,9 +155,8 @@ func NormalizeTemplateLayout(layout TemplateLayout) TemplateLayout {
 	return layout
 }
 
-// BindTemplateOMRReference replaces every client-supplied reference with the
-// asset metadata resolved by the server. Manual-only extraction must not carry
-// a dormant reference that could later be mistaken for an approved contract.
+// BindTemplateOMRReference 将全部客户端提供的参考替换为服务器解析出的资源元数据。
+// 仅人工提取不能保留潜藏的参考，以免以后被误认为已批准契约。
 func BindTemplateOMRReference(layout TemplateLayout, reference TemplateOMRReference) TemplateLayout {
 	if layout.OMRProfile.Mode == OMRProfileModeTemplateDifference {
 		referenceCopy := reference
@@ -189,7 +169,7 @@ func BindTemplateOMRReference(layout TemplateLayout, reference TemplateOMRRefere
 
 func ValidateTemplateOMRProfile(profile TemplateOMRProfile) error {
 	if isEmptyTemplateOMRProfile(profile) {
-		return nil // Legacy input is normalized before storage.
+		return nil // 旧版输入在存储前先规范化。
 	}
 	mode := strings.TrimSpace(profile.Mode)
 	version := strings.TrimSpace(profile.Version)
@@ -205,8 +185,7 @@ func ValidateTemplateOMRProfile(profile TemplateOMRProfile) error {
 		if version != OMRProfileVersionTemplateDifferenceBubbleV1 {
 			return errors.New("OMR profile version is not supported")
 		}
-		// A draft may request this mode before the store has materialized the
-		// trusted reference. Locking and task creation require it below.
+		// 草稿可在存储生成可信参考之前请求此模式。下方的锁定和任务创建流程则要求已有该参考。
 		if profile.Reference != nil {
 			if err := ValidateTemplateOMRReference(*profile.Reference); err != nil {
 				return err
@@ -233,31 +212,26 @@ func ValidateTemplateOMRReference(reference TemplateOMRReference) error {
 	}
 }
 
-// OMRAutoConfirmPolicyForTemplate resolves the only authority that may allow
-// automatic confirmation. The result is intentionally fail-closed: the raw
-// OpenCV profile is an auditable suggestion path, never an auto-grade path.
+// OMRAutoConfirmPolicyForTemplate 解析唯一可允许自动确认的授权来源。
+// 结果采取保守拒绝：原始 OpenCV 配置只提供可审计建议，绝不作为自动评分路径。
 // 此兼容入口没有校准记录，因此不授权自动确认；生产调用需使用带 Calibration 的入口。
 func OMRAutoConfirmPolicyForTemplate(layout TemplateLayout, templateStatus, templateContentHash, segmentContentHash string) OMRAutoConfirmPolicy {
 	return OMRAutoConfirmPolicyForTemplateReference(layout, templateStatus, templateContentHash, segmentContentHash, TemplateOMRReference{}, "")
 }
 
-// OMRAutoConfirmPolicyForTemplateReference resolves the worker extraction
-// contract and its server-side grade permission together. It takes the
-// current paper asset metadata separately so a stale or forged layout
-// reference cannot trick a worker into subtracting a different document.
+// OMRAutoConfirmPolicyForTemplateReference 同时解析 worker 提取契约和服务器端成绩权限。
+// 当前试卷资源元数据单独传入，避免过时或伪造的布局参考诱使 worker 扣除其他文档。
 func OMRAutoConfirmPolicyForTemplateReference(layout TemplateLayout, templateStatus, templateContentHash, segmentContentHash string, currentReference TemplateOMRReference, questionID string) OMRAutoConfirmPolicy {
-	// This compatibility helper deliberately has no template ID, so it can only
-	// ever return an uncalibrated policy. Production callers must use the
-	// calibration-aware function with the persisted template ID.
-	return OMRAutoConfirmPolicyForTemplateReferenceAndCalibration(layout, templateStatus, templateContentHash, segmentContentHash, currentReference, questionID, "", nil)
+	// 这个兼容辅助函数没有模板 ID，因此只能返回未经校准的策略。
+	// 生产调用方必须使用模板带持久化 ID 且支持校准的函数。
+	template := AnswerSheetTemplate{Layout: layout, Status: templateStatus, ContentHash: templateContentHash}
+	return OMRAutoConfirmPolicyForTemplateReferenceAndCalibration(template, segmentContentHash, currentReference, questionID, nil)
 }
 
-// OMRAutoConfirmPolicyForTemplateReferenceAndCalibration resolves template
-// extraction and a separately persisted calibration approval in one
-// fail-closed decision. The approval must match every immutable input that can
-// change mark recognition.
+// OMRAutoConfirmPolicyForTemplateReferenceAndCalibration 在一次保守拒绝决策中解析模板提取配置与单独持久化的校准批准。
+// 批准必须匹配所有可能改变标记识别结果的不可变输入。
 // 调用方必须从数据库加载已批准记录；此函数校验匹配范围，不鉴别对象是否来自可信存储。
-func OMRAutoConfirmPolicyForTemplateReferenceAndCalibration(layout TemplateLayout, templateStatus, templateContentHash, segmentContentHash string, currentReference TemplateOMRReference, questionID, templateID string, calibration *OMRCalibrationApproval) OMRAutoConfirmPolicy {
+func OMRAutoConfirmPolicyForTemplateReferenceAndCalibration(template AnswerSheetTemplate, segmentContentHash string, currentReference TemplateOMRReference, questionID string, calibration *OMRCalibrationApproval) OMRAutoConfirmPolicy {
 	runtimeProfile := defaultOMRRuntimeProfile()
 	policy := OMRAutoConfirmPolicy{
 		RuntimeProfile:    runtimeProfile,
@@ -266,42 +240,41 @@ func OMRAutoConfirmPolicyForTemplateReferenceAndCalibration(layout TemplateLayou
 		MinimumConfidence: 0.9,
 	}
 
-	if strings.TrimSpace(templateStatus) == "" {
+	if strings.TrimSpace(template.Status) == "" {
 		policy.Reason = OMRAutoConfirmReasonTemplateNotFound
 		return policy
 	}
-	if templateStatus != "locked" {
+	if template.Status != "locked" {
 		policy.Reason = OMRAutoConfirmReasonTemplateNotLocked
 		return policy
 	}
-	if strings.TrimSpace(templateContentHash) == "" || templateContentHash != segmentContentHash {
+	if strings.TrimSpace(template.ContentHash) == "" || template.ContentHash != segmentContentHash {
 		policy.Reason = OMRAutoConfirmReasonTemplateContentHashMismatch
 		return policy
 	}
-	if isEmptyTemplateOMRProfile(layout.OMRProfile) {
+	if isEmptyTemplateOMRProfile(template.Layout.OMRProfile) {
 		return policy
 	}
-	if err := ValidateTemplateOMRProfile(layout.OMRProfile); err != nil {
+	if err := ValidateTemplateOMRProfile(template.Layout.OMRProfile); err != nil {
 		policy.Reason = OMRAutoConfirmReasonUnsupportedProfile
 		return policy
 	}
 
-	if layout.OMRProfile.Mode == OMRProfileModeManualOnly {
-		// An explicit manual-only profile is more informative than an omitted
-		// legacy profile, but is still deliberately ineligible for auto-confirm.
+	if template.Layout.OMRProfile.Mode == OMRProfileModeManualOnly {
+		// 显式的仅人工确认配置比省略的旧配置提供更多信息，但仍不具备自动确认资格。
 		policy.Reason = OMRAutoConfirmReasonManualOnlyProfile
 		return policy
 	}
 
-	if layout.OMRProfile.Reference == nil {
+	if template.Layout.OMRProfile.Reference == nil {
 		policy.Reason = OMRAutoConfirmReasonTemplateReferenceUnverified
 		return policy
 	}
-	if !sameTemplateOMRReference(*layout.OMRProfile.Reference, currentReference) {
+	if !sameTemplateOMRReference(*template.Layout.OMRProfile.Reference, currentReference) {
 		policy.Reason = OMRAutoConfirmReasonTemplateReferenceMismatch
 		return policy
 	}
-	reference, ok := referenceCropForQuestion(layout, questionID)
+	reference, ok := referenceCropForQuestion(template.Layout, questionID)
 	if !ok {
 		policy.Reason = OMRAutoConfirmReasonTemplateReferenceRegion
 		return policy
@@ -319,13 +292,12 @@ func OMRAutoConfirmPolicyForTemplateReferenceAndCalibration(layout TemplateLayou
 		Height:      reference.Height,
 	}
 	if calibration == nil {
-		// Difference extraction is useful immediately as an auditable suggestion,
-		// but calibration approval is a separate production control. Do not let an
-		// operator-selected profile bypass that control.
+		// 差分提取可立即用于提供可审计建议，但校准批准属于单独的生产控制。
+		// 不能让操作人员选择的配置绕过这项控制。
 		policy.Reason = OMRAutoConfirmReasonCalibrationUnapproved
 		return policy
 	}
-	if !calibrationMatchesTemplateDifference(*calibration, templateID, templateContentHash, questionID, policy.ProfileHash, currentReference) {
+	if !calibrationMatchesTemplateDifference(*calibration, template.ID, template.ContentHash, questionID, policy.ProfileHash, currentReference) {
 		policy.Reason = OMRAutoConfirmReasonCalibrationScopeMismatch
 		return policy
 	}

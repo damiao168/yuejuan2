@@ -38,33 +38,7 @@ func TestHTTPAdapterSendsGovernedIdentityFreeContract(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, forbidden := range []string{"tenant_id", "student_id", "student_name", "student_no", "final_score", "published_score", "answer_image_ref"} {
-		if _, exists := received[forbidden]; exists {
-			t.Fatalf("grading request leaked forbidden field %s", forbidden)
-		}
-	}
-	if received["subject"] != "chinese" || received["grade_level"] != "junior" || received["agent_role"] != "single" {
-		t.Fatalf("missing capability context: %#v", received)
-	}
-	constraint, ok := received["output_constraint"].(map[string]any)
-	if !ok || constraint["criteria_evidence_only"] != true || constraint["allow_model_final_score"] != false || constraint["final_score_authority"] != "server_rubric_or_human_confirmation" {
-		t.Fatalf("grading request must carry the server-owned score boundary: %#v", received["output_constraint"])
-	}
-	if output.SuggestedScore != 4 || output.Confidence != 0 || !output.NeedsHumanReview || output.Mock {
-		t.Fatalf("unexpected output: %#v", output)
-	}
-	if output.ModelVersion != adapter.Policy().ModelVersion || output.PromptVersion != adapter.Policy().PromptVersion || output.RubricVersion != "rubric-v3" {
-		t.Fatalf("version mapping failed: %#v", output)
-	}
-	if output.Telemetry.Usage.InputTokens != 101 || output.Telemetry.Usage.CachedInputTokens != 40 || output.Telemetry.Usage.OutputTokens != 23 || output.Telemetry.Usage.ReasoningTokens != 7 || output.Telemetry.Usage.TotalTokens != 124 {
-		t.Fatalf("provider token usage was not mapped from the grading response: %#v", output.Telemetry.Usage)
-	}
-	if len(output.Evidence) != 2 || output.Evidence[0].EvidenceID != "e1" || output.Evidence[0].AnswerText == "" {
-		t.Fatalf("evidence mapping failed: %#v", output.Evidence)
-	}
-	if raw, _ := json.Marshal(output.RawOutput); strings.Contains(string(raw), input.AnswerText) {
-		t.Fatal("raw output must not duplicate complete answer text")
-	}
+	assertHTTPAdapterGovernedRequestAndEvidence(t, received, output, adapter, input)
 }
 
 func TestHTTPAdapterMapsPanelRolesWithoutExposingPrimaryIdentity(t *testing.T) {
@@ -288,5 +262,42 @@ func writeAgentSuccess(t *testing.T, w http.ResponseWriter, requestID string) {
 	}
 	if err := json.NewEncoder(w).Encode(payload); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// 供应商契约只携带评分证据，不向外暴露学生身份；评分权限、版本和完整答案去重逐项保留。
+func assertHTTPAdapterGovernedRequestAndEvidence(t *testing.T, received map[string]any, output AdapterOutput, adapter *HTTPAdapter, input AdapterInput) {
+	t.Helper()
+	assertHTTPAdapterRequestAuthority(t, received)
+	if output.SuggestedScore != 4 || output.Confidence != 0 || !output.NeedsHumanReview || output.Mock {
+		t.Fatalf("unexpected output: %#v", output)
+	}
+	if output.ModelVersion != adapter.Policy().ModelVersion || output.PromptVersion != adapter.Policy().PromptVersion || output.RubricVersion != "rubric-v3" {
+		t.Fatalf("version mapping failed: %#v", output)
+	}
+	if output.Telemetry.Usage.InputTokens != 101 || output.Telemetry.Usage.CachedInputTokens != 40 || output.Telemetry.Usage.OutputTokens != 23 || output.Telemetry.Usage.ReasoningTokens != 7 || output.Telemetry.Usage.TotalTokens != 124 {
+		t.Fatalf("provider token usage was not mapped from the grading response: %#v", output.Telemetry.Usage)
+	}
+	if len(output.Evidence) != 2 || output.Evidence[0].EvidenceID != "e1" || output.Evidence[0].AnswerText == "" {
+		t.Fatalf("evidence mapping failed: %#v", output.Evidence)
+	}
+	if raw, _ := json.Marshal(output.RawOutput); strings.Contains(string(raw), input.AnswerText) {
+		t.Fatal("raw output must not duplicate complete answer text")
+	}
+}
+
+func assertHTTPAdapterRequestAuthority(t *testing.T, received map[string]any) {
+	t.Helper()
+	for _, forbidden := range []string{"tenant_id", "student_id", "student_name", "student_no", "final_score", "published_score", "answer_image_ref"} {
+		if _, exists := received[forbidden]; exists {
+			t.Fatalf("grading request leaked forbidden field %s", forbidden)
+		}
+	}
+	if received["subject"] != "chinese" || received["grade_level"] != "junior" || received["agent_role"] != "single" {
+		t.Fatalf("missing capability context: %#v", received)
+	}
+	constraint, ok := received["output_constraint"].(map[string]any)
+	if !ok || constraint["criteria_evidence_only"] != true || constraint["allow_model_final_score"] != false || constraint["final_score_authority"] != "server_rubric_or_human_confirmation" {
+		t.Fatalf("grading request must carry the server-owned score boundary: %#v", received["output_constraint"])
 	}
 }

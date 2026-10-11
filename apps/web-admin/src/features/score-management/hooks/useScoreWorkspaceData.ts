@@ -2,7 +2,7 @@ import { useCallback, useEffect, useReducer, useRef, type SetStateAction } from 
 import { App } from "antd";
 import { ApiClientError, getUserErrorMessage } from "../../../api/client";
 import { listAuditLogs } from "../../../api/audit";
-import { listExams } from "../../../api/exams";
+import { listAllExams } from "../../../api/exams";
 import { listClasses, listStudents, type SchoolClass, type Student } from "../../../api/org";
 import {
   checkExamGradeQuality,
@@ -11,6 +11,7 @@ import {
   type RosterReport
 } from "../../../api/scores";
 import {
+  getCurrentPublishedScoreRelease,
   getScoreReleaseGate,
   listRegradeJobs,
   listScoreReleases,
@@ -34,6 +35,21 @@ function formatError(error: unknown) {
     console.error("请求失败", error.status, error.code, error.message);
   }
   return getUserErrorMessage(error, "操作失败，请稍后重试");
+}
+
+function requiredResult<T>(result: PromiseSettledResult<T>): T {
+  if (result.status === "rejected") throw result.reason;
+  return result.value;
+}
+
+async function loadCurrentPublishedRelease(examId: string) {
+  try {
+    return (await getCurrentPublishedScoreRelease(examId)).release;
+  } catch (error) {
+    // 仅“尚未发布”属于正常空状态；其他读取失败不能伪装成门户没有版本。
+    if (error instanceof ApiClientError && error.status === 404 && error.code === "score_release_not_found") return null;
+    throw error;
+  }
 }
 
 async function loadIdentities(canReadStudentNames: boolean, studentIds: string[]): Promise<ScoreIdentityMaps> {
@@ -86,7 +102,7 @@ export function useScoreWorkspaceData({
   const loadExamList = useCallback(async () => {
     dispatch({ type: "patch", patch: { loadingExams: true, error: null } });
     try {
-      const result = await listExams();
+      const result = await listAllExams();
       dispatch({
         type: "examsLoaded", exams: result.exams, initialExamId,
         requestedStatus: hashQueryParam("status") || ""
@@ -118,36 +134,39 @@ export function useScoreWorkspaceData({
         canReadAudit ? listAuditLogs({ target_type: "exam", target_id: examId, limit: 20 }) : Promise.resolve({ audit_logs: [] }),
         canManage ? getScoreReleaseGate(examId) : Promise.resolve({ release_gate: null }),
         canManage ? listScoreReleases(examId) : Promise.resolve({ score_releases: [] }),
+        canManage ? loadCurrentPublishedRelease(examId) : Promise.resolve(null),
         canManage ? listRegradeJobs(examId) : Promise.resolve({ regrade_jobs: [] })
       ]);
       if (!request.isCurrent()) return;
-      const [submissionResult, gradeResult, qualityResult, rosterResult, auditResult, releaseGateResult, releasesResult, regradesResult] = results;
-      // Validate all required data before publishing any part of the workspace.
-      if (submissionResult.status !== "fulfilled") throw submissionResult.reason;
-      if (gradeResult.status !== "fulfilled") throw gradeResult.reason;
-      if (qualityResult.status !== "fulfilled") throw qualityResult.reason;
-      if (rosterResult.status !== "fulfilled") throw rosterResult.reason;
-      if (releaseGateResult.status !== "fulfilled") throw releaseGateResult.reason;
-      if (releasesResult.status !== "fulfilled") throw releasesResult.reason;
-      if (regradesResult.status !== "fulfilled") throw regradesResult.reason;
+      const [submissionResult, gradeResult, qualityResult, rosterResult, auditResult, releaseGateResult, releasesResult, currentReleaseResult, regradesResult] = results;
+      // 必需数据仍按原顺序校验；全部通过后才读身份并发布完整快照，审计读取失败单独降级。
+      const submissionData = requiredResult(submissionResult);
+      const gradeData = requiredResult(gradeResult);
+      const qualityData = requiredResult(qualityResult);
+      const rosterData = requiredResult(rosterResult);
+      const releaseGateData = requiredResult(releaseGateResult);
+      const releasesData = requiredResult(releasesResult);
+      const currentRelease = requiredResult(currentReleaseResult);
+      const regradesData = requiredResult(regradesResult);
       const identityResult = await loadIdentities(
         canReadStudentNames,
-        gradeResult.value.grades.flatMap((grade) => grade.student_id ? [grade.student_id] : [])
+        gradeData.grades.flatMap((grade) => grade.student_id ? [grade.student_id] : [])
       );
       if (!request.isCurrent()) return;
       const complete: ScoreWorkspaceSnapshot = {
-        examId, submissions: submissionResult.value.submissions,
-        grades: gradeResult.value.grades, gradeTotal: gradeResult.value.total,
-        filteredGradeTotal: gradeResult.value.filtered_total,
-        allGradesLocked: gradeResult.value.all_locked,
-        gradeNextCursor: gradeResult.value.next_cursor,
-        gradesHaveMore: gradeResult.value.has_more,
-        quality: qualityResult.value, roster: rosterResult.value.roster,
+        examId, submissions: submissionData.submissions,
+        grades: gradeData.grades, gradeTotal: gradeData.total,
+        filteredGradeTotal: gradeData.filtered_total,
+        allGradesLocked: gradeData.all_locked,
+        gradeNextCursor: gradeData.next_cursor,
+        gradesHaveMore: gradeData.has_more,
+        quality: qualityData, roster: rosterData.roster,
         identities: identityResult,
         auditLogs: auditResult.status === "fulfilled" ? auditResult.value.audit_logs : [],
-        releaseGate: releaseGateResult.value.release_gate,
-        scoreReleases: releasesResult.value.score_releases,
-        regradeJobs: regradesResult.value.regrade_jobs
+        releaseGate: releaseGateData.release_gate,
+        scoreReleases: releasesData.score_releases,
+        currentPublishedRelease: currentRelease,
+        regradeJobs: regradesData.regrade_jobs
       };
       dispatch({ type: "loadSucceeded", examId, snapshot: complete });
     } catch (currentError) {
@@ -202,6 +221,7 @@ export function useScoreWorkspaceData({
     gradeTotal: snapshot.gradeTotal, filteredGradeTotal: snapshot.filteredGradeTotal,
     allGradesLocked: snapshot.allGradesLocked, quality: snapshot.quality,
     releaseGate: snapshot.releaseGate, scoreReleases: snapshot.scoreReleases,
+    currentPublishedRelease: snapshot.currentPublishedRelease,
     regradeJobs: snapshot.regradeJobs, roster: snapshot.roster, setRoster,
     identities: snapshot.identities, auditLogs: snapshot.auditLogs,
     keyword: state.keyword, setKeyword, appliedKeyword, setAppliedKeyword,

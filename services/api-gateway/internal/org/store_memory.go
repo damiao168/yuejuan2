@@ -43,15 +43,14 @@ func (s *MemoryStore) CreateTenant(_ context.Context, input TenantProvision) (Te
 	return item, nil
 }
 
-// 非平台用户只能看到自己的租户；内存实现也保留这个租户隔离规则以对齐生产库。
+// ListTenants 由调用方确认平台权限；canListAll=false 时只能看到指定租户。
 func (s *MemoryStore) ListTenants(_ context.Context, tenantID string, canListAll bool, filter TenantListFilter) ([]Tenant, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
+	// 过滤、排序与分页复用本次读锁；helper 只处理值和结果 slice，不重新获取 store 的锁。
 	out := []Tenant{}
 	for _, item := range s.tenants {
-		if (canListAll || item.ID == tenantID) && (filter.Query == "" ||
-			strings.Contains(strings.ToLower(item.Name), strings.ToLower(filter.Query)) ||
-			strings.Contains(strings.ToLower(item.Code), strings.ToLower(filter.Query))) {
+		if tenantMatches(item, tenantID, canListAll, filter.Query) {
 			out = append(out, item)
 		}
 	}
@@ -61,6 +60,17 @@ func (s *MemoryStore) ListTenants(_ context.Context, tenantID string, canListAll
 		}
 		return out[i].Code < out[j].Code
 	})
+	return pageTenants(out, filter), nil
+}
+
+func tenantMatches(item Tenant, tenantID string, canListAll bool, query string) bool {
+	return (canListAll || item.ID == tenantID) && (query == "" ||
+		strings.Contains(strings.ToLower(item.Name), strings.ToLower(query)) ||
+		strings.Contains(strings.ToLower(item.Code), strings.ToLower(query)))
+}
+
+func pageTenants(out []Tenant, filter TenantListFilter) []Tenant {
+	// 租户游标必须同时有 Code 和 ID；只保留严格大于该排序二元组的结果。
 	if filter.CursorCode != "" && filter.CursorID != "" {
 		start := 0
 		for start < len(out) && (out[start].Code < filter.CursorCode ||
@@ -72,7 +82,7 @@ func (s *MemoryStore) ListTenants(_ context.Context, tenantID string, canListAll
 	if filter.Limit > 0 && len(out) > filter.Limit {
 		out = out[:filter.Limit]
 	}
-	return out, nil
+	return out
 }
 
 func (s *MemoryStore) UpdateTenantStatus(_ context.Context, id string, status string) (Tenant, error) {
@@ -232,28 +242,16 @@ func (s *MemoryStore) CreateStudent(_ context.Context, tenantID string, input St
 func (s *MemoryStore) ListStudents(_ context.Context, tenantID string, filter StudentListFilter) ([]Student, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
+	// helper 不读取共享 map；从过滤到分页都保留在同一读锁内，避免拆分后递归加锁。
 	ids := make(map[string]struct{}, len(filter.StudentIDs))
 	for _, id := range filter.StudentIDs {
 		ids[id] = struct{}{}
 	}
 	out := []Student{}
 	for _, item := range s.students {
-		if item.TenantID != tenantID || (filter.ClassID != "" && item.ClassID != filter.ClassID) {
-			continue
+		if studentMatches(item, tenantID, filter, ids) {
+			out = append(out, item)
 		}
-		if filter.RestrictClasses && !slices.Contains(filter.ClassIDs, item.ClassID) && (filter.StudentID == "" || filter.StudentID != item.ID) {
-			continue
-		}
-		if len(ids) > 0 {
-			if _, ok := ids[item.ID]; !ok {
-				continue
-			}
-		}
-		query := strings.ToLower(filter.Query)
-		if query != "" && !strings.Contains(strings.ToLower(item.StudentNo), query) && !strings.Contains(strings.ToLower(item.Name), query) {
-			continue
-		}
-		out = append(out, item)
 	}
 	sort.Slice(out, func(i, j int) bool {
 		if out[i].StudentNo == out[j].StudentNo {
@@ -261,6 +259,31 @@ func (s *MemoryStore) ListStudents(_ context.Context, tenantID string, filter St
 		}
 		return out[i].StudentNo < out[j].StudentNo
 	})
+	return pageStudents(out, filter), nil
+}
+
+func studentMatches(item Student, tenantID string, filter StudentListFilter, ids map[string]struct{}) bool {
+	if item.TenantID != tenantID || (filter.ClassID != "" && item.ClassID != filter.ClassID) {
+		return false
+	}
+	// 本人例外只放宽班级访问限制，不能跳过租户、显式班级、IDs 或文本筛选。
+	if filter.RestrictClasses && !slices.Contains(filter.ClassIDs, item.ClassID) && (filter.StudentID == "" || filter.StudentID != item.ID) {
+		return false
+	}
+	if len(ids) > 0 {
+		if _, ok := ids[item.ID]; !ok {
+			return false
+		}
+	}
+	query := strings.ToLower(filter.Query)
+	if query != "" && !strings.Contains(strings.ToLower(item.StudentNo), query) && !strings.Contains(strings.ToLower(item.Name), query) {
+		return false
+	}
+	return true
+}
+
+func pageStudents(out []Student, filter StudentListFilter) []Student {
+	// 学生游标只要求 ID 非空，StudentNo 可以为空；不能复用租户游标的双非空前提。
 	if filter.CursorID != "" {
 		start := 0
 		for start < len(out) {
@@ -275,7 +298,7 @@ func (s *MemoryStore) ListStudents(_ context.Context, tenantID string, filter St
 	if filter.Limit > 0 && len(out) > filter.Limit {
 		out = out[:filter.Limit]
 	}
-	return out, nil
+	return out
 }
 
 func (s *MemoryStore) UpdateStudentStatus(_ context.Context, tenantID string, id string, status string) (Student, error) {

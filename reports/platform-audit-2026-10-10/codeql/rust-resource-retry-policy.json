@@ -1,0 +1,35 @@
+{
+  "recorded_at": "2026-10-11T14:10:31+08:00",
+  "retry_database": "D:/tools/audit-codeql-20261010/databases/rust-20261011-low-memory",
+  "unchanged_scope": {
+    "maintenance_rust_files": 16,
+    "resolved_security_and_quality_queries": 41,
+    "cargo_features": "all features default extractor behavior",
+    "cargo_targets": "all targets default extractor behavior",
+    "source_root": "D:/tools/audit-codeql-20261010/source-20261011"
+  },
+  "changes": {
+    "RAYON_NUM_THREADS": "1",
+    "CARGO_BUILD_JOBS": "1",
+    "TEMP": "D:/tools/audit-codeql-20261010/rust-low-memory-temp",
+    "TMP": "D:/tools/audit-codeql-20261010/rust-low-memory-temp",
+    "rust.cargo_target_dir": "D:/tools/audit-codeql-20261010/databases/rust-20261011-toolchain-ready/working/target",
+    "rust.trap.compression": "gzip"
+  },
+  "local_primary_evidence": [
+    "rust-extractor-options.yml",
+    "rust-extractor-help.txt"
+  ],
+  "official_references": {
+    "rayon_threads": "https://docs.rs/rayon/latest/rayon/struct.ThreadPoolBuilder.html#method.num_threads",
+    "rust_crlf_normalization": "https://doc.rust-lang.org/reference/input-format.html#crlf-normalization",
+    "codeql_source_inspected_for_recovery_only": "https://raw.githubusercontent.com/github/codeql/main/rust/extractor/src/main.rs"
+  },
+  "limitations": [
+    "RAYON_NUM_THREADS 控制采用 Rayon 默认线程池的代码；不能保证全部 Rust Analyzer 线程或内存硬上限。",
+    "cargo_target_dir 为官方支持的跨重试编译缓存，仅复用原工具链输出，不补入或改写维护源码。",
+    "gzip 为官方接受的 TRAP 序列化编码，改变证据存储压缩格式，保持原源码/特征/查询不变。",
+    "公开 main 分支源码仅辅助解释提取器实现，不冒充本机 2.27.2 二进制的精确源码版本。",
+    "宏探针与提取器第二次同时运行时出现全机内存分配失败，后续不再同时运行原生编译探针。"
+  ]
+}

@@ -1,0 +1,67 @@
+{
+  "date": "2026-10-11",
+  "review_mode": "independent incremental read-only code review",
+  "scope_boundary": "仅比较 remediation/baseline/files 与当前 Worker、XML 修复增量，并审读相关传输、租约、错误处理、打包配置和新增测试；没有把这些文件登记为完成全文件审读。评审未改业务代码，也没有重复执行测试。",
+  "reviewed_findings": ["SG-034", "SG-035", "SG-036", "SG-037", "SG-092", "SG-093", "SG-094", "SG-097", "SG-098", "SG-099", "SG-100", "SG-101", "SG-102", "SG-104"],
+  "findings": [
+    {
+      "id": "REVIEW-001",
+      "priority": "P2",
+      "title": "拒绝跳转后应关闭原响应",
+      "status": "resolved_in_code_by_parent",
+      "files": [
+        "services/image-quality-worker/image_quality/api.py",
+        "services/ocr-worker/ocr_worker/api.py",
+        "services/page-processing-worker/page_processing/api.py",
+        "services/subjective-grading-worker/subjective_grading_worker/api.py"
+      ],
+      "evidence": "初版拒绝处理器将 fp 放入 HTTPError，调用方进入 with 之前抛出，再由 APIError 的异常链保留响应；处理器和调用方都未关闭该跳转响应。原 stdlib HTTPError 会保留传入 fp。",
+      "resolution_verified": "四处当前 http_error_302 均先 fp.close()，再抛 HTTPError(..., headers, None)，301/303/307/308 别名共用此规则。关闭仅发生在跳转响应，不作用于正常 409 冲突响应。附近简单中文注释准确解释 with 尚未进入和异常链持有资源的原因。",
+      "validation_owner": "根代理负责补充响应关闭测试和重跑网络、租约、runner 回归；本评审只核对修正后的源码。"
+    }
+  ],
+  "checks": [
+    {
+      "area": "Worker 入口覆盖",
+      "result": "pass",
+      "evidence": "图片质量 download/upload_normalized/_request 三处，OCR download/_request 两处及 MathVerificationClient._post 一处，页面处理 download/upload_asset/_json 三处，主观题 _request 一处，全部通过局部 _open_request；相关生产文件不再保留 urlopen 调用。数学客户端使用本包 api 的 helper。"
+    },
+    {
+      "area": "跳转与 TLS",
+      "result": "pass",
+      "evidence": "每个 helper 使用 HTTPRedirectHandler 子类和局部 build_opener，五种自动跳转状态直接失败，不发第二跳。核对本地标准库 build_opener 的子类替换逻辑，其仅替换默认跳转 handler，默认 HTTPSHandler、证书和主机名验证仍保留；没有 install_opener、非验证 SSLContext 或新全局设置。"
+    },
+    {
+      "area": "租约、初始 origin 和错误",
+      "result": "pass",
+      "evidence": "baseline 增量未改变初始同源校验、Authorization/任务租约头、心跳正文、调用超时和限额读取。401、403、Retry-After、数学 422 uncertain 回退及页面上传 409 资产冲突回读仍为原处理；跳转的 HTTPError 保留 status code 与 headers。"
+    },
+    {
+      "area": "Worker 回归测试和包依赖",
+      "result": "pass",
+      "evidence": "四个新增双 origin 测试文件覆盖五种跳转状态、来源敏感头/合成登录正文、目标零请求、同源拒绝、直接成功和过期租约失败；已有测试替身改指向新 helper，断言与时限保持。helper 位于已有发行包内且只用标准库，不增加跨服务包依赖；四份 pyproject 的包发现规则覆盖对应已有 package。"
+    },
+    {
+      "area": "XML 两处读取入口",
+      "result": "pass",
+      "evidence": "build_diagrams 的磁盘回读与 verify_delivery.validate_diagram 均使用 safe_xml.parse(..., forbid_dtd=True)。核对已安装 defusedxml 的 parse 签名，forbid_entities=True 与 forbid_external=True 是默认参数；生成器仍用标准库 ET 创建并写出 XML，其读取入口已替换。拒绝解析异常会中止交付验证，未捕获后转成成功。"
+    },
+    {
+      "area": "XML 依赖与准确说明",
+      "result": "pass",
+      "evidence": "docs/architecture/tools/requirements.txt 固定 defusedxml==0.7.1；DIAGRAM_MAINTENANCE.md 在运行工具前列出安装命令，并限定防护只覆盖两个工具的 XML 读取入口。新增中文注释说明原生图纸无需 DTD、自定义实体，拒绝后停止验收，不扩大为业务或视觉验收保证。"
+    },
+    {
+      "area": "XML 12 个测试用例的边界",
+      "result": "pass",
+      "evidence": "审读 test_xml_security.py：1 个临时生成与交付回读，5 种 DTD/实体声明分别用 UTF-8 和 UTF-16 的 10 个参数用例，1 个现有十份原生图纸只读回读。恶意样本使用临时目录和合成外部路径，测试不改写历史图纸或验收证据。本评审未重复运行这 12 个用例。"
+    },
+    {
+      "area": "保留本地基线",
+      "result": "pass",
+      "evidence": "直接与 baseline/files 比较五个 Worker 生产文件、两个 XML 工具和维护文档；其增量为新增 helper、调用替换、读取解析器、局部注释和安装说明。审读已有测试增量，mock 目标替换不撤销租约、超时或错误断言。"
+    }
+  ],
+  "open_findings_in_reviewed_increment": [],
+  "remaining_validation": "最终测试结果、统一 Semgrep 复扫和整体验收由根代理汇总；本结论不覆盖未审读区域或真实供应商/生产部署。"
+}

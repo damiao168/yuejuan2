@@ -17,9 +17,7 @@ func NewService(store Store, runtime workerruntime.Store) *Service {
 	return &Service{store: store, runtime: runtime}
 }
 
-// Summary is deliberately read-only. Source changes are projected by the
-// durable background projector, so a GET never takes write locks or starts
-// pipeline work.
+// Summary 是只读操作。来源变化由持久化后台投影器处理，因此 GET 不获取写锁，也不启动流水线工作。
 func (s *Service) Summary(ctx context.Context, tenantID, examID string) (Summary, error) {
 	if s == nil || s.store == nil || strings.TrimSpace(tenantID) == "" || strings.TrimSpace(examID) == "" {
 		return Summary{}, ErrInvalidInput
@@ -54,9 +52,8 @@ func (s *Service) Resolve(ctx context.Context, tenantID, exceptionID, actorID st
 	return s.store.ResolveException(ctx, tenantID, exceptionID, actorID, input)
 }
 
-// Retry delegates to the existing worker runtime. It performs no image, OCR
-// or parser work in the API process. A duplicate click is harmless because
-// Requeue is itself state-checked by the worker runtime.
+// Retry 委托现有 Worker Runtime，不在 API 进程内执行图像、OCR 或解析工作。
+// 重复点击无害，因为 Worker Runtime 的 Requeue 自身检查状态。
 func (s *Service) Retry(ctx context.Context, tenantID, exceptionID string) (workerruntime.Task, error) {
 	if s == nil || s.store == nil || s.runtime == nil || strings.TrimSpace(tenantID) == "" || strings.TrimSpace(exceptionID) == "" {
 		return workerruntime.Task{}, ErrInvalidInput
@@ -87,10 +84,8 @@ func (s *Service) Retry(ctx context.Context, tenantID, exceptionID string) (work
 	return s.runtime.Requeue(ctx, tenantID, task.ID)
 }
 
-// ParserQualityForSegment is the A26-to-A14 adapter. It returns the quality
-// dimension matching the frozen subject/archetype and intentionally returns
-// nil for absent or unsupported parser evidence. That makes A14 abstain
-// instead of treating OCR text quality as a mathematical/diagram parse.
+// ParserQualityForSegment 是 A26 到 A14 的适配器。它返回与冻结学科、题型原型匹配的质量维度，
+// 对缺失或不支持的解析器证据返回 nil，使 A14 放弃判断，而非把 OCR 文本质量当作数学或图示解析质量。
 func (s *Service) ParserQualityForSegment(ctx context.Context, tenantID, segmentID string, subject assessment.SubjectCode, archetype string) (*float64, error) {
 	if s == nil || s.store == nil || strings.TrimSpace(tenantID) == "" || strings.TrimSpace(segmentID) == "" || !subject.Valid() {
 		return nil, ErrInvalidInput

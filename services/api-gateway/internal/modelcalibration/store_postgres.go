@@ -102,7 +102,7 @@ FROM model_calibration_evidence WHERE tenant_id=$1::uuid AND calibration_id=$2::
 	return items, nil
 }
 
-func (s *PostgresStore) Complete(ctx context.Context, tenantID, calibrationID string, expectedN int, artifact Artifact, uri, digest string, at time.Time) (Calibration, error) {
+func (s *PostgresStore) Complete(ctx context.Context, tenantID, calibrationID string, expectedN int, artifact Artifact, reference ArtifactReference, at time.Time) (Calibration, error) {
 	if s.db == nil {
 		return Calibration{}, ErrInvalidInput
 	}
@@ -131,7 +131,7 @@ FROM model_calibration WHERE tenant_id=$1::uuid AND id=$2::uuid FOR UPDATE`, ten
 	row := tx.QueryRowContext(ctx, `
 UPDATE model_calibration SET method=$3,status='completed',calibration_n=$4,artifact_uri=$5,artifact_sha256=$6,artifact_json=$7,completed_at=$8
 WHERE tenant_id=$1::uuid AND id=$2::uuid AND status='draft'
-RETURNING `+calibrationColumns, tenantID, calibrationID, artifact.Method, expectedN, uri, digest, raw, at.UTC())
+RETURNING `+calibrationColumns, tenantID, calibrationID, artifact.Method, expectedN, reference.URI, reference.SHA256, raw, at.UTC())
 	item, err := scanCalibration(row)
 	if err != nil {
 		return Calibration{}, mapStoreError(err)

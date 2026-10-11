@@ -75,5 +75,9 @@ function normalizePath(pathname: string): string {
   if (!pathname) return "/dashboard";
   const withoutQuery = pathname.split(/[?#]/, 1)[0];
   const normalized = withoutQuery.startsWith("/") ? withoutQuery : `/${withoutQuery}`;
-  return normalized.length > 1 ? normalized.replace(/\/+$/, "") : normalized;
+  if (normalized.length <= 1) return normalized;
+  // 长路径只去掉尾部斜杠；全是斜杠时沿用旧空串结果。
+  let end = normalized.length;
+  while (end > 0 && normalized[end - 1] === "/") end -= 1;
+  return normalized.slice(0, end);
 }

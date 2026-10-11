@@ -17,10 +17,7 @@ type ContextSource interface {
 	GetTaskContext(context.Context, string, string) (review.TaskContext, error)
 }
 
-// TaskSource is intentionally narrower than the normal review handler.  It
-// is used only by a manager-triggered hand-off to A19 to turn completed
-// backmark items into the immutable source-release submission filter.  It is
-// never exposed to the independent backmark grader surface.
+// TaskSource 比常规复核处理器的能力更窄，只供管理员触发转交 A19 时，将已完成回评条目转换为不可变来源发布的提交筛选条件；它不暴露给独立回评阅卷者界面。
 type TaskSource interface {
 	GetTask(context.Context, string, string) (review.ReviewTask, error)
 }
@@ -33,8 +30,7 @@ type Service struct {
 
 func NewService(store Store) *Service { return &Service{store: store} }
 
-// WithContextSource gives the back-mark queue a narrow read-only bridge to
-// the original task facts. It never calls review submission APIs.
+// WithContextSource 为回评队列提供读取原任务事实的有限只读连接，不调用复核提交 API。
 func (s *Service) WithContextSource(source ContextSource) *Service {
 	s.context = source
 	return s
@@ -123,10 +119,7 @@ func (s *Service) GetPage(ctx context.Context, tenantID, batchID string, page Pa
 	return Summary{Batch: batch, Items: items, Histogram: histogram, StatusCounts: counts}, nil
 }
 
-// RegradeSelection returns exactly the submissions whose independently
-// re-marked score crossed this batch's regrade policy.  The caller still has
-// to select a published source release and create the A19 job explicitly;
-// this method never changes a score or release by itself.
+// RegradeSelection 只返回独立回评分数触发本批次重评策略的提交。调用方仍须选择已发布来源并显式创建 A19 任务；此方法本身不改变分数或发布。
 func (s *Service) RegradeSelection(ctx context.Context, tenantID, batchID string) (Batch, []string, error) {
 	if strings.TrimSpace(tenantID) == "" || strings.TrimSpace(batchID) == "" || s.tasks == nil {
 		return Batch{}, nil, ErrInvalidInput
@@ -135,9 +128,7 @@ func (s *Service) RegradeSelection(ctx context.Context, tenantID, batchID string
 	if err != nil {
 		return Batch{}, nil, err
 	}
-	// A partial batch cannot be a stable correction population.  Managers may
-	// inspect its current diff, but must wait until every assigned item has
-	// completed before entering the formal regrade workflow.
+	// 未全部完成的批次不能成为稳定的更正对象集合。管理员可查看当前差异，但须等所有已分配条目完成后，才能进入正式重评工作流。
 	if batch.Status != BatchReadyForConfirmation {
 		return Batch{}, nil, ErrStateConflict
 	}
@@ -149,26 +140,15 @@ func (s *Service) RegradeSelection(ctx context.Context, tenantID, batchID string
 		if listErr != nil {
 			return Batch{}, nil, listErr
 		}
-		for _, item := range items {
-			if item.Status != ItemRegradeRequired {
-				continue
-			}
-			task, getErr := s.tasks.GetTask(ctx, tenantID, item.ReviewTaskID)
-			if getErr != nil {
-				return Batch{}, nil, getErr
-			}
-			if strings.TrimSpace(task.SubmissionID) == "" {
-				return Batch{}, nil, ErrStateConflict
-			}
-			if _, exists := seen[task.SubmissionID]; exists {
-				continue
-			}
-			seen[task.SubmissionID] = struct{}{}
-			submissionIDs = append(submissionIDs, task.SubmissionID)
+		selected, selectErr := s.regradeSubmissionIDs(ctx, tenantID, items, seen)
+		if selectErr != nil {
+			return Batch{}, nil, selectErr
 		}
+		submissionIDs = append(submissionIDs, selected...)
 		if len(items) < page.Limit {
 			break
 		}
+		// 游标取未筛选页的最后一项；重评项较少时也必须继续读取后面的完整批次。
 		last := items[len(items)-1]
 		page.CursorCreatedAt, page.CursorID = last.CreatedAt, last.ID
 	}
@@ -177,6 +157,29 @@ func (s *Service) RegradeSelection(ctx context.Context, tenantID, batchID string
 	}
 	sort.Strings(submissionIDs)
 	return batch, submissionIDs, nil
+}
+
+func (s *Service) regradeSubmissionIDs(ctx context.Context, tenantID string, items []Item, seen map[string]struct{}) ([]string, error) {
+	selected := make([]string, 0)
+	for _, item := range items {
+		if item.Status != ItemRegradeRequired {
+			continue
+		}
+		task, err := s.tasks.GetTask(ctx, tenantID, item.ReviewTaskID)
+		if err != nil {
+			return nil, err
+		}
+		if strings.TrimSpace(task.SubmissionID) == "" {
+			return nil, ErrStateConflict
+		}
+		// 只检查空白，不改写来源 ID；跨页去重和后续筛选都按原始标识匹配。
+		if _, exists := seen[task.SubmissionID]; exists {
+			continue
+		}
+		seen[task.SubmissionID] = struct{}{}
+		selected = append(selected, task.SubmissionID)
+	}
+	return selected, nil
 }
 
 func (s *Service) List(ctx context.Context, tenantID, examID, questionID string) ([]Batch, error) {
@@ -251,6 +254,7 @@ func (s *Service) GetGraderContext(ctx context.Context, tenantID, itemID, grader
 		Item:             graderView(item),
 		ExpectedRevision: item.Revision,
 		Question: GraderQuestion{
+			Options: append([]string(nil), question.Options...), AnswerKey: question.AnswerKey, Solution: question.Solution,
 			ID: question.ID, QuestionNo: question.QuestionNo, QuestionType: question.QuestionType,
 			Score: question.Score, Stem: question.Stem, KnowledgePoints: append([]string(nil), question.KnowledgePoints...),
 		},
@@ -324,23 +328,15 @@ func (s *Service) Submit(ctx context.Context, tenantID, itemID, graderID string,
 	return s.store.Submit(ctx, tenantID, itemID, graderID, input)
 }
 
-// Match normal review scoring: a rubric-backed grade equals the sum of its
-// awarded points. Required describes the rubric criterion, not a requirement
-// that a student's answer earn positive credit for it.
+// 与常规复核评分一致：使用评分细则的成绩等于各项实得分之和。Required 描述评分细则条目，并不要求学生答案必须在该项取得正分。
 func validFrozenSelections(input SubmitInput, rubric paper.Rubric) bool {
 	hasRubric := rubric.ID != "" || len(rubric.Points) > 0
 	if hasRubric && (!finiteNonNegative(rubric.MaxScore) || input.Score > rubric.MaxScore) {
 		return false
 	}
-	allowed := make(map[string]float64, len(rubric.Points))
-	for _, point := range rubric.Points {
-		if strings.TrimSpace(point.ID) == "" || !finiteNonNegative(point.Score) {
-			return false
-		}
-		if _, duplicate := allowed[point.ID]; duplicate {
-			return false
-		}
-		allowed[point.ID] = point.Score
+	allowed, valid := frozenPointScores(rubric.Points)
+	if !valid {
+		return false
 	}
 	seen := make(map[string]bool, len(input.RubricSelections))
 	sum := 0.0
@@ -352,7 +348,23 @@ func validFrozenSelections(input SubmitInput, rubric paper.Rubric) bool {
 		seen[selection.PointID] = true
 		sum += selection.Score
 	}
+	// 保留既有绝对误差容差，避免浮点求和差异使合法的细则得分被拒绝。
 	return finiteNonNegative(sum) && (!hasRubric || math.Abs(sum-input.Score) <= 0.0001)
+}
+
+func frozenPointScores(points []paper.RubricPoint) (map[string]float64, bool) {
+	// 空白检查不做 ID 标准化；选择项必须与冻结细则的原始 ID 精确对应。
+	allowed := make(map[string]float64, len(points))
+	for _, point := range points {
+		if strings.TrimSpace(point.ID) == "" || !finiteNonNegative(point.Score) {
+			return nil, false
+		}
+		if _, duplicate := allowed[point.ID]; duplicate {
+			return nil, false
+		}
+		allowed[point.ID] = point.Score
+	}
+	return allowed, true
 }
 
 func sourceHash(tenantID, examID, questionID string, selector Selector, sources []SourceTask) string {
@@ -427,21 +439,29 @@ func validSelector(value Selector) bool {
 			return false
 		}
 	}
-	if value.ScoreBand != nil {
-		if value.ScoreBand.Min != nil && (!finiteNonNegative(*value.ScoreBand.Min)) {
-			return false
-		}
-		if value.ScoreBand.Max != nil && (!finiteNonNegative(*value.ScoreBand.Max)) {
-			return false
-		}
-		if value.ScoreBand.Min != nil && value.ScoreBand.Max != nil && *value.ScoreBand.Max < *value.ScoreBand.Min {
-			return false
-		}
+	if !validScoreBand(value.ScoreBand) {
+		return false
 	}
 	for _, taskID := range value.TaskIDs {
 		if strings.TrimSpace(taskID) == "" {
 			return false
 		}
+	}
+	return true
+}
+
+func validScoreBand(value *ScoreBand) bool {
+	if value == nil {
+		return true
+	}
+	if value.Min != nil && !finiteNonNegative(*value.Min) {
+		return false
+	}
+	if value.Max != nil && !finiteNonNegative(*value.Max) {
+		return false
+	}
+	if value.Min != nil && value.Max != nil && *value.Max < *value.Min {
+		return false
 	}
 	return true
 }

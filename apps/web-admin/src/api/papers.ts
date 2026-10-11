@@ -21,6 +21,7 @@ export interface PaperVersion {
   file_asset_id: string;
   version_no: number;
   status: string;
+  purpose?: "question_paper" | "answer_sheet";
   file: PaperFile;
 }
 
@@ -91,6 +92,7 @@ export interface PaperImportJob {
   answer_file_asset_id: string;
   status: "processing" | "review_required" | "failed" | "cancelled" | "applied";
   generation: number;
+  structure_confirmed_generation?: number;
   run_id: string;
   source_revision: string;
   result_generation?: number;
@@ -108,6 +110,7 @@ export interface PaperImportJob {
 		reasoning_tokens?: number;
 		total_tokens?: number;
 	};
+	// Worker 的计数单位、运行模式和计划来源允许扩展，类型不能限制为当前已知值。
 	runtime_progress?: {
 		task_type: string;
 		task_status: string;
@@ -115,7 +118,7 @@ export interface PaperImportJob {
 		phase?: string;
 		completed?: number;
 		total?: number;
-		unit?: "document" | "page" | "formula_region" | string;
+		unit?: string;
 		page_no?: number;
 		page_total?: number;
 		batch_no?: number;
@@ -124,8 +127,8 @@ export interface PaperImportJob {
 		event_seq?: number;
 		cold_start?: boolean;
 		model?: string;
-		runtime_mode?: "resident" | "per_job" | string;
-		runtime_plan_source?: "explicit" | "measured_profile" | "compatibility_default" | string;
+		runtime_mode?: string;
+		runtime_plan_source?: string;
 		runtime_batch_size?: number;
 		parse_route?: string;
 		message?: string;
@@ -210,6 +213,7 @@ export interface Question {
   question_no: string;
   question_type: string;
   score: number;
+  score_source?: "human" | "preset" | "material" | "missing";
   stem?: string;
   options: string[];
   parent_question_no?: string;
@@ -260,15 +264,16 @@ export interface ValidationResult {
   issues: ValidationIssue[];
 }
 
-export async function registerPaperFromFile(examId: string, fileAssetId: string) {
+export async function registerPaperFromFile(examId: string, fileAssetId: string, purpose: "question_paper" | "answer_sheet" = "question_paper") {
   return apiClient.request<{ paper: PaperVersion; note: string }>(`/api/v1/exams/${encodeURIComponent(examId)}/papers`, {
     method: "POST",
-    body: JSON.stringify({ file_asset_id: fileAssetId })
+    body: JSON.stringify({ file_asset_id: fileAssetId, ...(purpose === "answer_sheet" ? { purpose } : {}) })
   });
 }
 
-export async function listPapers(examId: string) {
-  return apiClient.request<{ papers: PaperVersion[] }>(`/api/v1/exams/${encodeURIComponent(examId)}/papers`);
+export async function listPapers(examId: string, purpose: "question_paper" | "answer_sheet" = "question_paper") {
+  const query = purpose === "answer_sheet" ? "?purpose=answer_sheet" : "";
+  return apiClient.request<{ papers: PaperVersion[] }>(`/api/v1/exams/${encodeURIComponent(examId)}/papers${query}`);
 }
 
 export async function listPaperImports(examId: string) {
@@ -291,8 +296,8 @@ export async function replacePaperImportSources(importId: string, expectedGenera
 	return apiClient.request<{ import: PaperImportJob }>(`/api/v1/paper-imports/${encodeURIComponent(importId)}/sources`, { method: "PUT", headers: { "Idempotency-Key": commandId }, body: JSON.stringify({ sources, expected_generation: expectedGeneration }) });
 }
 
-export async function savePaperImportReview(importId: string, expectedGeneration: number, questions: PaperImportDraftQuestion[]) {
-	return generatedApi.savePaperImportReview({ path: { id: importId }, body: { expected_generation: expectedGeneration, questions } });
+export async function savePaperImportReview(importId: string, expectedGeneration: number, questions: PaperImportDraftQuestion[], expectedUpdatedAt: string) {
+	return generatedApi.savePaperImportReview({ path: { id: importId }, body: { expected_generation: expectedGeneration, expected_updated_at: expectedUpdatedAt, questions } });
 }
 
 export async function generatePaperImportRubricDraft(importId: string, candidateId: string, expectedGeneration: number, expectedUpdatedAt: string) {
@@ -305,6 +310,15 @@ export async function generatePaperImportRubricDraft(importId: string, candidate
 export async function applyPaperImport(importId: string) {
   return generatedApi.applyPaperImport({ path: { id: importId } });
 }
+
+export async function fillPaperImportContent(importId: string, expectedGeneration: number) {
+  return generatedApi.fillPaperImportContent({ path: { id: importId }, body: { expected_generation: expectedGeneration } });
+}
+
+export interface PaperStructureChange { question_no: string; question_id?: string; action: "add"|"remove"|"update"|"keep"|"conflict"; previous_type?: string; question_type?: string; previous_score?: number; score?: number; reason?: string; }
+export interface PaperStructurePreview { import_id: string; generation: number; preview_hash: string; current_count: number; recognized_count: number; expected_total: number; recognized_total: number; missing_scores: string[]; changes: PaperStructureChange[]; blocked_reasons: string[]; paper_detected: boolean; confirmed: boolean; }
+export function previewPaperStructure(importId: string, signal?: AbortSignal) { return generatedApi.previewPaperStructure({path:{id:importId},signal}); }
+export function adoptPaperStructure(importId: string, payload: {expected_generation:number;preview_hash:string;complete_paper_confirmed:boolean}) { return generatedApi.adoptPaperStructure({path:{id:importId},body:payload}); }
 
 export async function cancelPaperImport(importId: string, expectedGeneration: number, commandId: string) {
   return apiClient.request<{ import: PaperImportJob }>(`/api/v1/paper-imports/${encodeURIComponent(importId)}/cancel?expected_generation=${expectedGeneration}`, {

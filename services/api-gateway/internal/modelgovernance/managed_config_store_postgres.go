@@ -343,26 +343,31 @@ func managedProbePersistence(result *ManagedAPIProbeResult) managedProbePersiste
 	values.UpdateCapability = values.Mode == "capability" && !result.Reused && !transientFailure &&
 		(result.GeneratedRequest || result.CapabilityCheck.OK || result.CapabilityCheck.Code != "")
 	if values.UpdateCapability {
-		values.CapabilityStatus = "failed"
-		if result.CapabilityCheck.OK {
-			values.CapabilityStatus = "success"
-		}
-		values.CapabilityMessage = boundedManagedProbeMessage(result.CapabilityCheck.Message)
-		if values.CapabilityMessage == "" {
-			values.CapabilityMessage = values.Message
-		}
-		values.CapabilityTestedAt = now
-		values.CapabilityVersion = ManagedCapabilityProbeVersion
-		if usage, err := json.Marshal(result.Usage); err == nil {
-			values.CapabilityUsage = string(usage)
-		}
-		diagnostic := result.Diagnostic
-		diagnostic.ContentPreview = ""
-		if encoded, err := json.Marshal(diagnostic); err == nil {
-			values.CapabilityDiagnostic = string(encoded)
-		}
+		applyManagedCapabilityPersistence(&values, result, now)
 	}
 	return values
+}
+
+// 只写入能力检查的持久化字段；响应预览必须在 JSON 编码前清空。
+func applyManagedCapabilityPersistence(values *managedProbePersistenceValues, result *ManagedAPIProbeResult, testedAt time.Time) {
+	values.CapabilityStatus = "failed"
+	if result.CapabilityCheck.OK {
+		values.CapabilityStatus = "success"
+	}
+	values.CapabilityMessage = boundedManagedProbeMessage(result.CapabilityCheck.Message)
+	if values.CapabilityMessage == "" {
+		values.CapabilityMessage = values.Message
+	}
+	values.CapabilityTestedAt = testedAt
+	values.CapabilityVersion = ManagedCapabilityProbeVersion
+	if usage, err := json.Marshal(result.Usage); err == nil {
+		values.CapabilityUsage = string(usage)
+	}
+	diagnostic := result.Diagnostic
+	diagnostic.ContentPreview = ""
+	if encoded, err := json.Marshal(diagnostic); err == nil {
+		values.CapabilityDiagnostic = string(encoded)
+	}
 }
 
 func boundedManagedProbeMessage(message string) string {

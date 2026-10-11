@@ -1,6 +1,6 @@
 import type { WorkspaceNotice } from "./types";
 
-export function WorkspaceNoticeList({ notices, emptyText, onNavigate }: { notices: WorkspaceNotice[]; emptyText: string; onNavigate: (route: string) => void }) {
+export function WorkspaceNoticeList({ notices, emptyText, onNavigate }: Readonly<{ notices: WorkspaceNotice[]; emptyText: string; onNavigate: (route: string) => void }>) {
   if (notices.length === 0) {
     return <div className="eg-workspace-notice-empty">{emptyText}</div>;
   }

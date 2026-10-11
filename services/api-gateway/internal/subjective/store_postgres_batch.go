@@ -9,9 +9,8 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/paper"
 )
 
-// LoadContexts resolves an immutable batch input in one database round trip.
-// Ordering follows segmentIDs so request identities and response failures remain
-// stable across safe enqueue retries.
+// LoadContexts 通过一次数据库往返解析不可变批次输入。
+// 顺序遵循 segmentIDs，使安全入队重试中的请求身份和响应失败保持稳定。
 func (s *PostgresStore) LoadContexts(ctx context.Context, tenantID string, segmentIDs []string) ([]Context, error) {
 	if tenantID == "" || len(segmentIDs) == 0 {
 		return nil, ErrInvalidInput

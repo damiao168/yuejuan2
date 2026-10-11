@@ -1,9 +1,7 @@
-// Command import-fujian-2024-math-simulation loads the governed synthetic
-// answer sheets into a running local EduGrade stack.
+// Command import-fujian-2024-math-simulation 将受治理的合成答题卡加载到运行中的本地 EduGrade 服务栈。
 //
-// The official questions and answers are preserved as sourced reference
-// material. Every candidate answer, OCR result, OMR result, identity and scan
-// is synthetic and remains explicitly labelled as such.
+// 官方题目与答案作为有来源的参考材料保留。
+// 每个考生答案、OCR 结果、OMR 结果、身份和扫描件均为合成数据，并始终明确标记。
 package main
 
 import (
@@ -32,6 +30,13 @@ import (
 	ocrpkg "edugrade-enterprise/services/api-gateway/internal/ocr"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
+)
+
+const (
+	answerSegmentRoutePrefix = "/api/v1/answer-segments/"
+	examRoutePrefix          = "/api/v1/exams/"
+	submissionRoutePrefix    = "/api/v1/submissions/"
+	jsonContentType          = "application/json"
 )
 
 const (
@@ -160,6 +165,92 @@ type importResult struct {
 	CreatedAt                 string            `json:"created_at"`
 }
 
+type importUsers struct {
+	tenantID string
+	adminID  string
+	graderID string
+}
+
+type registrationCreateInput struct {
+	tenantID       string
+	adminID        string
+	captureBatchID string
+	submissionID   string
+	page           pageRecord
+	templateID     string
+	templateHash   string
+	candidateNo    string
+}
+
+type registrationCompleteInput struct {
+	tenantID         string
+	submissionID     string
+	submissionPageID string
+	registrationID   string
+	templateID       string
+	templateHash     string
+	registered       map[string]any
+}
+
+type answerCandidateCreateInput struct {
+	tenantID   string
+	adminID    string
+	segmentID  string
+	answerID   string
+	question   questionDef
+	answerData candidateAnswer
+	extractor  string
+}
+
+type objectiveGradeConfirmation struct {
+	tenantID     string
+	adminID      string
+	examID       string
+	submissionID string
+	questionID   string
+	segmentID    string
+	candidateID  string
+	ruleID       string
+	grade        map[string]any
+}
+
+type importRoster struct {
+	schoolID   string
+	classID    string
+	studentIDs map[string]string
+}
+
+type importQuestionBindings struct {
+	questionIDs map[string]string
+	ruleIDs     map[string]string
+	rubricIDs   map[string]string
+}
+
+type aiTarget struct {
+	SegmentID string
+	Label     string
+}
+
+type candidateImport struct {
+	cfg               config
+	data              dataset
+	client            *apiClient
+	db                *sql.DB
+	users             importUsers
+	roster            importRoster
+	questions         importQuestionBindings
+	examID            string
+	captureBatchID    string
+	templateID        string
+	templateHash      string
+	ocrStore          *ocrpkg.PostgresStore
+	candidate         candidateDef
+	candidateIndex    int
+	submissionID      string
+	pages             []pageRecord
+	segmentByQuestion map[string]string
+}
+
 func main() {
 	cfg, err := parseConfig()
 	if err != nil {
@@ -187,8 +278,7 @@ func main() {
 
 	client := &apiClient{
 		baseURL: strings.TrimRight(cfg.apiBaseURL, "/"),
-		// The governed local agent may perform one full retry. Keep the caller's
-		// deadline above two 360-second model attempts plus transport overhead.
+		// 受治理的本地 agent 可进行一次完整重试。调用方截止时间需大于两次各 360 秒的模型尝试加上传输开销。
 		client: &http.Client{Timeout: 13 * time.Minute},
 	}
 	if err = client.login(ctx, cfg.tenantCode, cfg.adminUser, cfg.adminPass); err != nil {
@@ -251,7 +341,7 @@ func main() {
 		fatalf("lookup grader %q: %v", cfg.graderUser, err)
 	}
 
-	result, err := importDataset(ctx, cfg, data, client, db, tenantID, adminID, graderID)
+	result, err := importDataset(ctx, cfg, data, client, db, importUsers{tenantID: tenantID, adminID: adminID, graderID: graderID})
 	if err != nil {
 		fatalf("import dataset: %v", err)
 	}
@@ -330,7 +420,7 @@ ORDER BY created_at DESC LIMIT 1
 			}
 			continue
 		}
-		response, gradeErr := client.json(ctx, http.MethodPost, "/api/v1/answer-segments/"+item.segmentID+"/subjective-ai-grade", map[string]any{
+		response, gradeErr := client.json(ctx, http.MethodPost, answerSegmentRoutePrefix+item.segmentID+"/subjective-ai-grade", map[string]any{
 			"model_policy": map[string]any{},
 		}, http.StatusCreated)
 		if gradeErr != nil {
@@ -355,6 +445,16 @@ ORDER BY created_at DESC LIMIT 1
 	return result, nil
 }
 
+type cropRepairTarget struct {
+	segmentID     string
+	candidate     string
+	questionNo    string
+	registration  string
+	cropHash      string
+	cropOwnerType string
+	cropOwnerID   string
+}
+
 func repairExistingCrops(
 	ctx context.Context,
 	cfg config,
@@ -365,15 +465,6 @@ func repairExistingCrops(
 	examID string,
 ) (cropRepairResult, error) {
 	result := cropRepairResult{DatasetID: datasetID, ExamID: examID}
-	type target struct {
-		segmentID     string
-		candidate     string
-		questionNo    string
-		registration  string
-		cropHash      string
-		cropOwnerType string
-		cropOwnerID   string
-	}
 	rows, err := db.QueryContext(ctx, `
 SELECT seg.id::text,sub.candidate_no,q.question_no,COALESCE(seg.registration_run_id::text,''),
        COALESCE(seg.crop_sha256,''),COALESCE(fa.owner_type,''),COALESCE(fa.owner_id::text,'')
@@ -388,9 +479,9 @@ ORDER BY sub.candidate_no,q.sort_order
 		return result, err
 	}
 	defer rows.Close()
-	targets := make([]target, 0, len(data.Candidates)*len(data.Questions))
+	targets := make([]cropRepairTarget, 0, len(data.Candidates)*len(data.Questions))
 	for rows.Next() {
-		var item target
+		var item cropRepairTarget
 		if err = rows.Scan(&item.segmentID, &item.candidate, &item.questionNo, &item.registration, &item.cropHash, &item.cropOwnerType, &item.cropOwnerID); err != nil {
 			return result, err
 		}
@@ -405,42 +496,16 @@ ORDER BY sub.candidate_no,q.sort_order
 		return result, fmt.Errorf("found %d answer segments, want %d", result.Found, want)
 	}
 
-	candidates := make(map[string]candidateDef, len(data.Candidates))
-	pageImages := make(map[string][]image.Image, len(data.Candidates))
-	for _, candidate := range data.Candidates {
-		candidates[candidate.CandidateNo] = candidate
-		images := make([]image.Image, len(candidate.PageFiles))
-		for index, relativePath := range candidate.PageFiles {
-			images[index], err = decodeImage(filepath.Join(cfg.datasetDir, filepath.FromSlash(relativePath)))
-			if err != nil {
-				return result, fmt.Errorf("decode %s page %d: %w", candidate.CandidateNo, index+1, err)
-			}
-		}
-		pageImages[candidate.CandidateNo] = images
+	// 全部源页先解码成功，再开始修复；重复考生编号仍以后一次记录覆盖。
+	candidates, pageImages, err := loadRepairPageImages(cfg.datasetDir, data.Candidates)
+	if err != nil {
+		return result, err
 	}
 
 	for _, item := range targets {
-		if item.registration == "" {
-			return result, fmt.Errorf("segment %s has no completed registration", item.segmentID)
-		}
-		candidate, ok := candidates[item.candidate]
-		if !ok {
-			return result, fmt.Errorf("segment references unknown candidate %s", item.candidate)
-		}
-		itemRegion, ok := data.Regions[item.candidate][item.questionNo]
-		if !ok {
-			return result, fmt.Errorf("missing region for %s/%s", item.candidate, item.questionNo)
-		}
-		pageIndex := 0
-		if questionNumber(item.questionNo) >= 17 {
-			pageIndex = 1
-		}
-		if pageIndex >= len(candidate.PageFiles) {
-			return result, fmt.Errorf("missing page %d for %s/%s", pageIndex+1, item.candidate, item.questionNo)
-		}
-		content, _, cropErr := cropAnswerRegion(pageImages[item.candidate][pageIndex], itemRegion, cropPadding)
+		content, cropErr := prepareRepairCrop(item, candidates, data.Regions, pageImages)
 		if cropErr != nil {
-			return result, fmt.Errorf("crop %s/%s: %w", item.candidate, item.questionNo, cropErr)
+			return result, cropErr
 		}
 		hash := sha256Hex(content)
 		if item.cropHash == hash && item.cropOwnerType == "answer_segment_crop" && item.cropOwnerID == item.registration {
@@ -462,6 +527,51 @@ ORDER BY sub.candidate_no,q.sort_order
 		result.Updated++
 	}
 	return result, nil
+}
+
+func prepareRepairCrop(item cropRepairTarget, candidates map[string]candidateDef, regions map[string]map[string]region, pageImages map[string][]image.Image) ([]byte, error) {
+	// 先核对配准身份和源页，再生成证据；即使旧哈希匹配也不能跳过这些前提。
+	if item.registration == "" {
+		return nil, fmt.Errorf("segment %s has no completed registration", item.segmentID)
+	}
+	candidate, ok := candidates[item.candidate]
+	if !ok {
+		return nil, fmt.Errorf("segment references unknown candidate %s", item.candidate)
+	}
+	itemRegion, ok := regions[item.candidate][item.questionNo]
+	if !ok {
+		return nil, fmt.Errorf("missing region for %s/%s", item.candidate, item.questionNo)
+	}
+	pageIndex := 0
+	if questionNumber(item.questionNo) >= 17 {
+		pageIndex = 1
+	}
+	if pageIndex >= len(candidate.PageFiles) {
+		return nil, fmt.Errorf("missing page %d for %s/%s", pageIndex+1, item.candidate, item.questionNo)
+	}
+	content, _, err := cropAnswerRegion(pageImages[item.candidate][pageIndex], itemRegion, cropPadding)
+	if err != nil {
+		return nil, fmt.Errorf("crop %s/%s: %w", item.candidate, item.questionNo, err)
+	}
+	return content, nil
+}
+
+func loadRepairPageImages(datasetDir string, definitions []candidateDef) (map[string]candidateDef, map[string][]image.Image, error) {
+	candidates := make(map[string]candidateDef, len(definitions))
+	pageImages := make(map[string][]image.Image, len(definitions))
+	for _, candidate := range definitions {
+		candidates[candidate.CandidateNo] = candidate
+		images := make([]image.Image, len(candidate.PageFiles))
+		for index, relativePath := range candidate.PageFiles {
+			var err error
+			images[index], err = decodeImage(filepath.Join(datasetDir, filepath.FromSlash(relativePath)))
+			if err != nil {
+				return nil, nil, fmt.Errorf("decode %s page %d: %w", candidate.CandidateNo, index+1, err)
+			}
+		}
+		pageImages[candidate.CandidateNo] = images
+	}
+	return candidates, pageImages, nil
 }
 
 func reconcileExistingOCRRuntime(
@@ -591,50 +701,14 @@ func importDataset(
 	data dataset,
 	client *apiClient,
 	db *sql.DB,
-	tenantID string,
-	adminID string,
-	graderID string,
+	users importUsers,
 ) (importResult, error) {
-	schoolResponse, err := client.json(ctx, http.MethodPost, "/api/v1/schools", map[string]any{
-		"name": "福建中考数学匿名仿真验证学校",
-		"code": "sim-fj2024-math-v1",
-	}, http.StatusCreated)
+	tenantID, adminID, graderID := users.tenantID, users.adminID, users.graderID
+	roster, err := createImportRoster(ctx, client, data.Candidates)
 	if err != nil {
-		return importResult{}, fmt.Errorf("create school: %w", err)
+		return importResult{}, err
 	}
-	schoolID := nestedStringField(schoolResponse, "school", "id")
-	gradeResponse, err := client.json(ctx, http.MethodPost, "/api/v1/grades", map[string]any{
-		"school_id":     schoolID,
-		"name":          "九年级（匿名仿真）",
-		"level_no":      9,
-		"academic_year": "2024",
-	}, http.StatusCreated)
-	if err != nil {
-		return importResult{}, fmt.Errorf("create grade: %w", err)
-	}
-	classResponse, err := client.json(ctx, http.MethodPost, "/api/v1/classes", map[string]any{
-		"school_id": schoolID,
-		"grade_id":  nestedStringField(gradeResponse, "grade", "id"),
-		"name":      "中考数学流程验证班",
-		"code":      "sim-fj2024-g9",
-	}, http.StatusCreated)
-	if err != nil {
-		return importResult{}, fmt.Errorf("create class: %w", err)
-	}
-	classID := nestedStringField(classResponse, "class", "id")
-	studentIDs := map[string]string{}
-	for index, candidate := range data.Candidates {
-		studentResponse, studentErr := client.json(ctx, http.MethodPost, "/api/v1/students", map[string]any{
-			"school_id":  schoolID,
-			"class_id":   classID,
-			"student_no": candidate.CandidateNo,
-			"name":       fmt.Sprintf("匿名仿真考生%03d", index+1),
-		}, http.StatusCreated)
-		if studentErr != nil {
-			return importResult{}, fmt.Errorf("create synthetic student %s: %w", candidate.CandidateNo, studentErr)
-		}
-		studentIDs[candidate.CandidateNo] = nestedStringField(studentResponse, "student", "id")
-	}
+	schoolID, classID := roster.schoolID, roster.classID
 	examResponse, err := client.json(ctx, http.MethodPost, "/api/v1/exams", map[string]any{
 		"school_id":      schoolID,
 		"name":           examName,
@@ -650,100 +724,19 @@ func importDataset(
 		return importResult{}, fmt.Errorf("create exam: %w", err)
 	}
 	examID := nestedStringField(examResponse, "exam", "id")
-
-	blankPDF := fileFromManifest(cfg.datasetDir, data.Manifest.Files, "blank_answer_sheet")
-	paperAsset, err := client.upload(ctx, blankPDF, map[string]string{
-		"owner_type": "exam", "owner_id": examID, "exam_id": examID, "school_id": schoolID,
-	})
+	paperID, sourceAssets, err := createImportPaperAssets(ctx, cfg, data, client, examID, schoolID)
 	if err != nil {
-		return importResult{}, fmt.Errorf("upload blank answer sheet: %w", err)
+		return importResult{}, err
 	}
-	paperResponse, err := client.json(ctx, http.MethodPost, "/api/v1/exams/"+examID+"/papers", map[string]any{
-		"file_asset_id": stringField(paperAsset, "id"),
-	}, http.StatusCreated)
-	if err != nil {
-		return importResult{}, fmt.Errorf("create exam paper: %w", err)
-	}
-	paperID := nestedStringField(paperResponse, "paper", "id")
-
-	sourceAssets := map[string]string{"blank_answer_sheet": stringField(paperAsset, "id")}
-	for _, item := range []struct {
-		key string
-		out string
-	}{
-		{key: "official_questions", out: "official_questions"},
-		{key: "official_answers", out: "official_answers"},
-	} {
-		asset, uploadErr := client.upload(ctx, fileFromManifest(cfg.datasetDir, data.Manifest.Files, item.key), map[string]string{
-			"owner_type": "import", "owner_id": examID, "exam_id": examID, "school_id": schoolID,
-		})
-		if uploadErr != nil {
-			return importResult{}, fmt.Errorf("upload %s: %w", item.key, uploadErr)
-		}
-		sourceAssets[item.out] = stringField(asset, "id")
-	}
-
-	questionIDs := map[string]string{}
-	ruleIDs := map[string]string{}
-	rubricIDs := map[string]string{}
 	baseRegions := data.Regions[data.Candidates[0].CandidateNo]
-	for index, question := range data.Questions {
-		itemRegion, ok := baseRegions[question.QuestionNo]
-		if !ok {
-			return importResult{}, fmt.Errorf("missing region for %s", question.QuestionNo)
-		}
-		pageNo := 1
-		if questionNumber(question.QuestionNo) >= 17 {
-			pageNo = 2
-		}
-		response, createErr := client.json(ctx, http.MethodPost, "/api/v1/exams/"+examID+"/questions", map[string]any{
-			"exam_paper_id":    paperID,
-			"question_no":      question.QuestionNo,
-			"question_type":    question.QuestionType,
-			"score":            question.Score,
-			"stem":             question.Stem,
-			"knowledge_points": []string{"2024福建中考数学", "真实流程仿真"},
-			"answer_area": map[string]any{
-				"page": pageNo,
-				"x":    itemRegion.X, "y": itemRegion.Y, "w": itemRegion.Width, "h": itemRegion.Height,
-			},
-			"sort_order": index + 1,
-			"answer_key": map[string]any{
-				"standard_answer":    question.StandardAnswer,
-				"equivalent_answers": []any{},
-				"tolerance":          map[string]any{},
-			},
-		}, http.StatusCreated)
-		if createErr != nil {
-			return importResult{}, fmt.Errorf("create %s: %w", question.QuestionNo, createErr)
-		}
-		questionID := nestedStringField(response, "question", "id")
-		questionIDs[question.QuestionNo] = questionID
-		if index < 16 {
-			ruleResponse, ruleErr := client.json(ctx, http.MethodPost, "/api/v1/questions/"+questionID+"/scoring-rules", map[string]any{
-				"rule_type": question.QuestionType,
-				"config":    map[string]any{},
-			}, http.StatusCreated)
-			if ruleErr != nil {
-				return importResult{}, fmt.Errorf("create rule for %s: %w", question.QuestionNo, ruleErr)
-			}
-			ruleID := nestedStringField(ruleResponse, "scoring_rule", "id")
-			if _, ruleErr = client.json(ctx, http.MethodPost, "/api/v1/scoring-rules/"+ruleID+"/publish", map[string]any{}, http.StatusOK); ruleErr != nil {
-				return importResult{}, fmt.Errorf("publish rule for %s: %w", question.QuestionNo, ruleErr)
-			}
-			ruleIDs[question.QuestionNo] = ruleID
-		} else {
-			rubric := rubricFor(question.QuestionNo)
-			rubricResponse, rubricErr := client.json(ctx, http.MethodPost, "/api/v1/questions/"+questionID+"/rubric", rubric, http.StatusCreated)
-			if rubricErr != nil {
-				return importResult{}, fmt.Errorf("create rubric for %s: %w", question.QuestionNo, rubricErr)
-			}
-			rubricIDs[question.QuestionNo] = nestedStringField(rubricResponse, "rubric", "id")
-		}
+	questions, err := createImportQuestions(ctx, client, examID, paperID, data.Questions, baseRegions)
+	if err != nil {
+		return importResult{}, err
 	}
+	questionIDs := questions.questionIDs
 
 	layout := buildTemplateLayout(questionIDs, baseRegions)
-	templateResponse, err := client.json(ctx, http.MethodPost, "/api/v1/exams/"+examID+"/answer-sheet-templates", map[string]any{
+	templateResponse, err := client.json(ctx, http.MethodPost, examRoutePrefix+examID+"/answer-sheet-templates", map[string]any{
 		"exam_paper_id": paperID,
 		"name":          "福建中考数学匿名仿真双页答题卡 v1",
 		"page_count":    2,
@@ -761,10 +754,10 @@ func importDataset(
 	if err = addAnswerAreaCompatibilityAliases(ctx, db, tenantID, examID); err != nil {
 		return importResult{}, err
 	}
-	if _, err = client.json(ctx, http.MethodPost, "/api/v1/exams/"+examID+"/readiness/confirm", map[string]any{}, http.StatusOK); err != nil {
+	if _, err = client.json(ctx, http.MethodPost, examRoutePrefix+examID+"/readiness/confirm", map[string]any{}, http.StatusOK); err != nil {
 		return importResult{}, fmt.Errorf("confirm exam readiness: %w", err)
 	}
-	if _, err = client.json(ctx, http.MethodPost, "/api/v1/exams/"+examID+"/start-collection", map[string]any{}, http.StatusOK); err != nil {
+	if _, err = client.json(ctx, http.MethodPost, examRoutePrefix+examID+"/start-collection", map[string]any{}, http.StatusOK); err != nil {
 		return importResult{}, fmt.Errorf("start collection: %w", err)
 	}
 
@@ -791,278 +784,22 @@ func importDataset(
 		SubjectiveAISuggestionIDs: []string{},
 		CreatedAt:                 time.Now().Format(time.RFC3339),
 	}
-
-	type aiTarget struct {
-		SegmentID string
-		Label     string
-	}
 	aiTargets := []aiTarget{}
 	ocrStore := ocrpkg.NewPostgresStore(db)
-
 	for candidateIndex, candidate := range data.Candidates {
-		submissionResponse, createErr := client.json(ctx, http.MethodPost, "/api/v1/exams/"+examID+"/submissions", map[string]any{
-			"student_id":          studentIDs[candidate.CandidateNo],
-			"candidate_no":        candidate.CandidateNo,
-			"source_type":         "scanner_upload",
-			"expected_page_count": 2,
-		}, http.StatusCreated)
-		if createErr != nil {
-			return importResult{}, fmt.Errorf("create submission %s: %w", candidate.CandidateNo, createErr)
+		candidateRun := candidateImport{
+			cfg: cfg, data: data, client: client, db: db, users: users, roster: roster,
+			questions: questions, examID: examID, captureBatchID: captureBatchID,
+			templateID: templateID, templateHash: templateHash, ocrStore: ocrStore,
+			candidate: candidate, candidateIndex: candidateIndex,
 		}
-		submissionID := nestedStringField(submissionResponse, "submission", "id")
-		pages := make([]pageRecord, 0, 2)
-		for pageIndex, relativePath := range candidate.PageFiles {
-			pageNo := pageIndex + 1
-			sourcePath := filepath.Join(cfg.datasetDir, filepath.FromSlash(relativePath))
-			sourceImage, decodeErr := decodeImage(sourcePath)
-			if decodeErr != nil {
-				return importResult{}, fmt.Errorf("decode %s page %d: %w", candidate.CandidateNo, pageNo, decodeErr)
-			}
-			sourceAsset, uploadErr := client.upload(ctx, sourcePath, map[string]string{
-				"owner_type":    "submission",
-				"owner_id":      submissionID,
-				"submission_id": submissionID,
-				"exam_id":       examID,
-				"school_id":     schoolID,
-			})
-			if uploadErr != nil {
-				return importResult{}, fmt.Errorf("upload %s page %d: %w", candidate.CandidateNo, pageNo, uploadErr)
-			}
-			pageResponse, pageErr := client.json(ctx, http.MethodPost, "/api/v1/submissions/"+submissionID+"/pages", map[string]any{
-				"file_asset_id": stringField(sourceAsset, "id"),
-				"page_no":       pageNo,
-			}, http.StatusCreated)
-			if pageErr != nil {
-				return importResult{}, fmt.Errorf("add %s page %d: %w", candidate.CandidateNo, pageNo, pageErr)
-			}
-			pages = append(pages, pageRecord{
-				ID:        nestedStringField(pageResponse, "page", "id"),
-				PageNo:    pageNo,
-				FileAsset: sourceAsset,
-				Path:      sourcePath,
-				Image:     sourceImage,
-			})
-		}
-		integrityResponse, integrityErr := client.json(ctx, http.MethodPost, "/api/v1/submissions/"+submissionID+"/quality-check", map[string]any{}, http.StatusOK)
-		if integrityErr != nil {
-			return importResult{}, fmt.Errorf("quality-check %s: %w", candidate.CandidateNo, integrityErr)
-		}
-		if integrityResult := nestedMap(integrityResponse, "result"); !boolField(integrityResult, "valid") {
-			return importResult{}, fmt.Errorf("collection integrity failed for %s: %v", candidate.CandidateNo, integrityResult["issues"])
-		}
-		if _, createErr = client.json(ctx, http.MethodPost, "/api/v1/submissions/"+submissionID+"/run-quality-check", map[string]any{}, http.StatusAccepted); createErr != nil {
-			return importResult{}, fmt.Errorf("run image quality check %s: %w", candidate.CandidateNo, createErr)
-		}
-		if createErr = waitForSubmissionImageQuality(ctx, client, submissionID); createErr != nil {
-			return importResult{}, fmt.Errorf("image quality %s: %w", candidate.CandidateNo, createErr)
-		}
-		if _, createErr = client.json(ctx, http.MethodPost, "/api/v1/submissions/"+submissionID+"/status", map[string]any{"status": "ready_for_ocr", "expected_revision": 1}, http.StatusOK); createErr != nil {
-			return importResult{}, fmt.Errorf("mark %s ready for OCR: %w", candidate.CandidateNo, createErr)
-		}
-		segmentResponse, segmentErr := client.json(ctx, http.MethodPost, "/api/v1/submissions/"+submissionID+"/segment-answers", map[string]any{}, http.StatusOK)
-		if segmentErr != nil {
-			return importResult{}, fmt.Errorf("generate segments for %s: %w", candidate.CandidateNo, segmentErr)
-		}
-		segments := sliceOfMaps(nestedMap(segmentResponse, "result")["segments"])
-		if len(segments) != len(data.Questions) {
-			return importResult{}, fmt.Errorf("%s generated %d segments, want %d", candidate.CandidateNo, len(segments), len(data.Questions))
-		}
-		result.AnswerSegmentCount += len(segments)
-		segmentByQuestion := map[string]string{}
-		for _, segment := range segments {
-			segmentByQuestion[stringField(segment, "question_no")] = stringField(segment, "id")
-		}
-
-		for pageIndex := range pages {
-			page := &pages[pageIndex]
-			registrationID, registrationErr := createRegistration(ctx, db, tenantID, adminID, examID, captureBatchID, submissionID, *page, templateID, templateHash, candidate.CandidateNo)
-			if registrationErr != nil {
-				return importResult{}, registrationErr
-			}
-			page.RegistrationID = registrationID
-			registeredAsset, uploadErr := client.upload(ctx, page.Path, map[string]string{
-				"owner_type":    "page_registration_output",
-				"owner_id":      registrationID,
-				"exam_id":       examID,
-				"submission_id": submissionID,
-			})
-			if uploadErr != nil {
-				return importResult{}, fmt.Errorf("upload registered page: %w", uploadErr)
-			}
-			if registrationErr = completeRegistration(ctx, db, tenantID, submissionID, page.ID, registrationID, templateID, templateHash, registeredAsset); registrationErr != nil {
-				return importResult{}, registrationErr
-			}
-		}
-
-		for _, question := range data.Questions {
-			segmentID := segmentByQuestion[question.QuestionNo]
-			itemRegion, ok := data.Regions[candidate.CandidateNo][question.QuestionNo]
-			if !ok {
-				return importResult{}, fmt.Errorf("missing region for %s/%s", candidate.CandidateNo, question.QuestionNo)
-			}
-			pageIndex := 0
-			if questionNumber(question.QuestionNo) >= 17 {
-				pageIndex = 1
-			}
-			cropContent, _, cropErr := cropAnswerRegion(pages[pageIndex].Image, itemRegion, cropPadding)
-			if cropErr != nil {
-				return importResult{}, fmt.Errorf("crop %s/%s: %w", candidate.CandidateNo, question.QuestionNo, cropErr)
-			}
-			filename := strings.ToLower(candidate.CandidateNo + "-" + question.QuestionNo + "-crop.png")
-			cropAsset, uploadErr := client.uploadBytes(ctx, filename, cropContent, map[string]string{
-				"owner_type":    "answer_segment_crop",
-				"owner_id":      pages[pageIndex].RegistrationID,
-				"exam_id":       examID,
-				"submission_id": submissionID,
-			})
-			if uploadErr != nil {
-				return importResult{}, fmt.Errorf("upload %s/%s crop: %w", candidate.CandidateNo, question.QuestionNo, uploadErr)
-			}
-			if cropErr = attachSegmentCrop(ctx, db, tenantID, segmentID, cropAsset); cropErr != nil {
-				return importResult{}, fmt.Errorf("attach %s/%s crop: %w", candidate.CandidateNo, question.QuestionNo, cropErr)
-			}
-		}
-
-		ocrResults := []ocrpkg.ResultInput{}
-		for _, question := range data.Questions {
-			number := questionNumber(question.QuestionNo)
-			if number <= 10 {
-				continue
-			}
-			answerData := candidate.Answers[question.QuestionNo]
-			if displayText(answerData.Text) == "" {
-				continue
-			}
-			itemRegion := data.Regions[candidate.CandidateNo][question.QuestionNo]
-			page := pages[0]
-			if number >= 17 {
-				page = pages[1]
-			}
-			ocrResults = append(ocrResults, ocrpkg.ResultInput{
-				SubmissionPageID:  page.ID,
-				Text:              displayText(answerData.Text),
-				BBox:              []float64{itemRegion.X, itemRegion.Y, itemRegion.Width, itemRegion.Height},
-				Confidence:        answerData.Confidence,
-				SourceImageFileID: stringField(page.FileAsset, "id"),
-			})
-		}
-		inputHash := sha256Hex([]byte(candidate.CandidateNo + ":" + datasetID))
-		completedOCR, ocrErr := ocrStore.SeedCompletedTask(
-			ctx,
-			tenantID,
-			submissionID,
-			adminID,
-			ocrpkg.CreateTaskInput{
-				Engine:         "paddleocr",
-				EngineVersion:  "simulation-seeded-v1",
-				MinConfidence:  0.85,
-				IdempotencyKey: "simulation:" + datasetID + ":" + candidate.CandidateNo + ":ocr:v1",
-			},
-			ocrpkg.CompleteTaskInput{
-				Results:           ocrResults,
-				ModelVersion:      "simulation-seeded-transcript-v1",
-				ConfigHash:        sha256Hex([]byte("simulation-ocr-config-v1")),
-				InputHash:         inputHash,
-				DurationMS:        300 + candidateIndex*45,
-				WorkerID:          "simulation-importer",
-				PreprocessProfile: "synthetic-handwriting-scan-v1",
-			},
-		)
-		if ocrErr != nil {
-			return importResult{}, fmt.Errorf("atomically seed OCR task for %s: %w", candidate.CandidateNo, ocrErr)
-		}
-		result.CompletedOCRTaskCount++
-		result.SeededOCRResultCount += completedOCR.ResultCount
-
-		for _, question := range data.Questions {
-			answerData, ok := candidate.Answers[question.QuestionNo]
-			if !ok || !answerData.Synthetic {
-				return importResult{}, fmt.Errorf("missing governed synthetic answer %s/%s", candidate.CandidateNo, question.QuestionNo)
-			}
-			segmentID := segmentByQuestion[question.QuestionNo]
-			if segmentID == "" {
-				return importResult{}, fmt.Errorf("missing segment %s/%s", candidate.CandidateNo, question.QuestionNo)
-			}
-			source := "ocr_text"
-			extractor := "ocr"
-			if questionNumber(question.QuestionNo) <= 10 {
-				source = "imported_answer"
-				extractor = "omr"
-			}
-			answerResponse, recordErr := client.json(ctx, http.MethodPut, "/api/v1/answer-segments/"+segmentID+"/answer", map[string]any{
-				"answer_text": displayText(answerData.Text),
-				"answer_payload": map[string]any{
-					"answer":          answerData.Text,
-					"synthetic":       true,
-					"simulation_only": true,
-					"extractor":       extractor,
-					"dataset_id":      datasetID,
-				},
-				"source":     source,
-				"confidence": answerData.Confidence,
-			}, http.StatusOK)
-			if recordErr != nil {
-				return importResult{}, fmt.Errorf("record %s/%s answer: %w", candidate.CandidateNo, question.QuestionNo, recordErr)
-			}
-			answerID := nestedStringField(answerResponse, "answer", "id")
-			candidateID, candidateErr := createAnswerCandidate(ctx, db, tenantID, adminID, segmentID, answerID, question, answerData, extractor)
-			if candidateErr != nil {
-				return importResult{}, candidateErr
-			}
-
-			if questionNumber(question.QuestionNo) <= 16 {
-				gradeResponse, gradeErr := client.json(ctx, http.MethodPost, "/api/v1/answer-segments/"+segmentID+"/rule-grade", map[string]any{}, http.StatusCreated)
-				if gradeErr != nil {
-					return importResult{}, fmt.Errorf("rule grade %s/%s: %w", candidate.CandidateNo, question.QuestionNo, gradeErr)
-				}
-				grade := nestedMap(gradeResponse, "grade")
-				if answerData.Route == "auto_confirm" {
-					if !boolField(grade, "auto_pass") || boolField(grade, "needs_human_review") {
-						return importResult{}, fmt.Errorf("auto route rejected by grading guardrail for %s/%s", candidate.CandidateNo, question.QuestionNo)
-					}
-					if confirmErr := confirmObjectiveGrade(ctx, db, tenantID, adminID, examID, submissionID, questionIDs[question.QuestionNo], segmentID, candidateID, ruleIDs[question.QuestionNo], grade); confirmErr != nil {
-						return importResult{}, confirmErr
-					}
-					result.AutoConfirmedGradeCount++
-				} else {
-					sourceCode := "ocr_low_confidence"
-					if extractor == "omr" {
-						sourceCode = "manual_sample"
-					}
-					if _, gradeErr = createReviewTask(ctx, client, segmentID, graderID, sourceCode, 80); gradeErr != nil {
-						return importResult{}, fmt.Errorf("create review task %s/%s: %w", candidate.CandidateNo, question.QuestionNo, gradeErr)
-					}
-					result.AssignedReviewTaskCount++
-				}
-			} else {
-				if _, recordErr = createReviewTask(ctx, client, segmentID, graderID, "subjective_default_review", 60); recordErr != nil {
-					return importResult{}, fmt.Errorf("create subjective review task %s/%s: %w", candidate.CandidateNo, question.QuestionNo, recordErr)
-				}
-				result.AssignedReviewTaskCount++
-				if candidateIndex == 0 {
-					aiTargets = append(aiTargets, aiTarget{SegmentID: segmentID, Label: candidate.CandidateNo + "/" + question.QuestionNo})
-				}
-			}
+		if err = candidateRun.run(ctx, &result, &aiTargets); err != nil {
+			return importResult{}, err
 		}
 	}
-
-	for index, target := range aiTargets {
-		if index >= cfg.aiLimit {
-			break
-		}
-		response, aiErr := client.json(ctx, http.MethodPost, "/api/v1/answer-segments/"+target.SegmentID+"/subjective-ai-grade", map[string]any{
-			"model_policy": map[string]any{},
-		}, http.StatusCreated)
-		if aiErr != nil {
-			return importResult{}, fmt.Errorf("create governed AI suggestion for %s: %w", target.Label, aiErr)
-		}
-		grade := nestedMap(response, "grade")
-		if stringField(grade, "status") != "succeeded" {
-			return importResult{}, fmt.Errorf("governed AI suggestion failed for %s: %s", target.Label, stringField(grade, "failure_reason"))
-		}
-		result.SubjectiveAISuggestionIDs = append(result.SubjectiveAISuggestionIDs, stringField(grade, "id"))
+	if err = createImportAISuggestions(ctx, cfg, client, aiTargets, &result); err != nil {
+		return importResult{}, err
 	}
-
 	result.AutomationDisclosure = map[string]any{
 		"objective":  "高置信度选择题/填空题已通过确定性规则形成 confirmed question_grade。",
 		"ocr":        "4个双页OCR任务已完成，但文本由 simulation-importer 按标注真值写入；这验证流程分流，不等同于验证真实OCR模型精度。",
@@ -1070,6 +807,521 @@ func importDataset(
 		"privacy":    "候选人、字迹、条码与扫描噪声均为匿名仿真，不含真实未成年人身份。",
 	}
 	return result, nil
+}
+
+func createImportRoster(ctx context.Context, client *apiClient, candidates []candidateDef) (importRoster, error) {
+	schoolResponse, err := client.json(ctx, http.MethodPost, "/api/v1/schools", map[string]any{
+		"name": "福建中考数学匿名仿真验证学校",
+		"code": "sim-fj2024-math-v1",
+	}, http.StatusCreated)
+	if err != nil {
+		return importRoster{}, fmt.Errorf("create school: %w", err)
+	}
+	schoolID := nestedStringField(schoolResponse, "school", "id")
+	gradeResponse, err := client.json(ctx, http.MethodPost, "/api/v1/grades", map[string]any{
+		"school_id":     schoolID,
+		"name":          "九年级（匿名仿真）",
+		"level_no":      9,
+		"academic_year": "2024",
+	}, http.StatusCreated)
+	if err != nil {
+		return importRoster{}, fmt.Errorf("create grade: %w", err)
+	}
+	classResponse, err := client.json(ctx, http.MethodPost, "/api/v1/classes", map[string]any{
+		"school_id": schoolID,
+		"grade_id":  nestedStringField(gradeResponse, "grade", "id"),
+		"name":      "中考数学流程验证班",
+		"code":      "sim-fj2024-g9",
+	}, http.StatusCreated)
+	if err != nil {
+		return importRoster{}, fmt.Errorf("create class: %w", err)
+	}
+	classID := nestedStringField(classResponse, "class", "id")
+	studentIDs := map[string]string{}
+	for index, candidate := range candidates {
+		studentResponse, studentErr := client.json(ctx, http.MethodPost, "/api/v1/students", map[string]any{
+			"school_id":  schoolID,
+			"class_id":   classID,
+			"student_no": candidate.CandidateNo,
+			"name":       fmt.Sprintf("匿名仿真考生%03d", index+1),
+		}, http.StatusCreated)
+		if studentErr != nil {
+			return importRoster{}, fmt.Errorf("create synthetic student %s: %w", candidate.CandidateNo, studentErr)
+		}
+		studentIDs[candidate.CandidateNo] = nestedStringField(studentResponse, "student", "id")
+	}
+	return importRoster{schoolID: schoolID, classID: classID, studentIDs: studentIDs}, nil
+}
+
+func createImportPaperAssets(ctx context.Context, cfg config, data dataset, client *apiClient, examID, schoolID string) (string, map[string]string, error) {
+	blankPDF := fileFromManifest(cfg.datasetDir, data.Manifest.Files, "blank_answer_sheet")
+	paperAsset, err := client.upload(ctx, blankPDF, map[string]string{
+		"owner_type": "exam", "owner_id": examID, "exam_id": examID, "school_id": schoolID,
+	})
+	if err != nil {
+		return "", nil, fmt.Errorf("upload blank answer sheet: %w", err)
+	}
+	paperResponse, err := client.json(ctx, http.MethodPost, examRoutePrefix+examID+"/papers", map[string]any{
+		"file_asset_id": stringField(paperAsset, "id"),
+	}, http.StatusCreated)
+	if err != nil {
+		return "", nil, fmt.Errorf("create exam paper: %w", err)
+	}
+	paperID := nestedStringField(paperResponse, "paper", "id")
+
+	sourceAssets := map[string]string{"blank_answer_sheet": stringField(paperAsset, "id")}
+	for _, item := range []struct {
+		key string
+		out string
+	}{
+		{key: "official_questions", out: "official_questions"},
+		{key: "official_answers", out: "official_answers"},
+	} {
+		asset, uploadErr := client.upload(ctx, fileFromManifest(cfg.datasetDir, data.Manifest.Files, item.key), map[string]string{
+			"owner_type": "import", "owner_id": examID, "exam_id": examID, "school_id": schoolID,
+		})
+		if uploadErr != nil {
+			return "", nil, fmt.Errorf("upload %s: %w", item.key, uploadErr)
+		}
+		sourceAssets[item.out] = stringField(asset, "id")
+	}
+
+	return paperID, sourceAssets, nil
+}
+
+func createImportQuestions(ctx context.Context, client *apiClient, examID, paperID string, definitions []questionDef, baseRegions map[string]region) (importQuestionBindings, error) {
+	bindings := importQuestionBindings{questionIDs: map[string]string{}, ruleIDs: map[string]string{}, rubricIDs: map[string]string{}}
+	for index, question := range definitions {
+		itemRegion, ok := baseRegions[question.QuestionNo]
+		if !ok {
+			return importQuestionBindings{}, fmt.Errorf("missing region for %s", question.QuestionNo)
+		}
+		pageNo := 1
+		if questionNumber(question.QuestionNo) >= 17 {
+			pageNo = 2
+		}
+		response, createErr := client.json(ctx, http.MethodPost, examRoutePrefix+examID+"/questions", map[string]any{
+			"exam_paper_id":    paperID,
+			"question_no":      question.QuestionNo,
+			"question_type":    question.QuestionType,
+			"score":            question.Score,
+			"stem":             question.Stem,
+			"knowledge_points": []string{"2024福建中考数学", "真实流程仿真"},
+			"answer_area": map[string]any{
+				"page": pageNo,
+				"x":    itemRegion.X, "y": itemRegion.Y, "w": itemRegion.Width, "h": itemRegion.Height,
+			},
+			"sort_order": index + 1,
+			"answer_key": map[string]any{
+				"standard_answer":    question.StandardAnswer,
+				"equivalent_answers": []any{},
+				"tolerance":          map[string]any{},
+			},
+		}, http.StatusCreated)
+		if createErr != nil {
+			return importQuestionBindings{}, fmt.Errorf("create %s: %w", question.QuestionNo, createErr)
+		}
+		questionID := nestedStringField(response, "question", "id")
+		bindings.questionIDs[question.QuestionNo] = questionID
+		ruleID, rubricID, err := createImportScoringDefinition(ctx, client, question, index, questionID)
+		if err != nil {
+			return importQuestionBindings{}, err
+		}
+		if index < 16 {
+			bindings.ruleIDs[question.QuestionNo] = ruleID
+		} else {
+			bindings.rubricIDs[question.QuestionNo] = rubricID
+		}
+	}
+	return bindings, nil
+}
+
+func createImportScoringDefinition(ctx context.Context, client *apiClient, question questionDef, index int, questionID string) (string, string, error) {
+	// 评分定义按数据集顺序划分前 16 题；不能改为按题号判断。
+	if index < 16 {
+		ruleResponse, ruleErr := client.json(ctx, http.MethodPost, "/api/v1/questions/"+questionID+"/scoring-rules", map[string]any{
+			"rule_type": question.QuestionType,
+			"config":    map[string]any{},
+		}, http.StatusCreated)
+		if ruleErr != nil {
+			return "", "", fmt.Errorf("create rule for %s: %w", question.QuestionNo, ruleErr)
+		}
+		ruleID := nestedStringField(ruleResponse, "scoring_rule", "id")
+		if _, ruleErr = client.json(ctx, http.MethodPost, "/api/v1/scoring-rules/"+ruleID+"/publish", map[string]any{}, http.StatusOK); ruleErr != nil {
+			return "", "", fmt.Errorf("publish rule for %s: %w", question.QuestionNo, ruleErr)
+		}
+		return ruleID, "", nil
+	}
+	rubric := rubricFor(question.QuestionNo)
+	rubricResponse, rubricErr := client.json(ctx, http.MethodPost, "/api/v1/questions/"+questionID+"/rubric", rubric, http.StatusCreated)
+	if rubricErr != nil {
+		return "", "", fmt.Errorf("create rubric for %s: %w", question.QuestionNo, rubricErr)
+	}
+	return "", nestedStringField(rubricResponse, "rubric", "id"), nil
+}
+
+func (run *candidateImport) run(ctx context.Context, result *importResult, aiTargets *[]aiTarget) error {
+	// 页面配准、裁剪和 OCR 播种依次完成，之后才记录答案并分流评分。
+	if err := run.createPages(ctx); err != nil {
+		return err
+	}
+	if err := run.prepareSegments(ctx, result); err != nil {
+		return err
+	}
+	if err := run.registerPages(ctx); err != nil {
+		return err
+	}
+	if err := run.attachCrops(ctx); err != nil {
+		return err
+	}
+	if err := run.seedOCR(ctx, result); err != nil {
+		return err
+	}
+	return run.recordAnswers(ctx, result, aiTargets)
+}
+
+func (run *candidateImport) createPages(ctx context.Context) error {
+	candidate, client, cfg := run.candidate, run.client, run.cfg
+	examID, schoolID, studentIDs := run.examID, run.roster.schoolID, run.roster.studentIDs
+	submissionResponse, createErr := client.json(ctx, http.MethodPost, examRoutePrefix+examID+"/submissions", map[string]any{
+		"student_id":          studentIDs[candidate.CandidateNo],
+		"candidate_no":        candidate.CandidateNo,
+		"source_type":         "scanner_upload",
+		"expected_page_count": 2,
+	}, http.StatusCreated)
+	if createErr != nil {
+		return fmt.Errorf("create submission %s: %w", candidate.CandidateNo, createErr)
+	}
+	submissionID := nestedStringField(submissionResponse, "submission", "id")
+	pages := make([]pageRecord, 0, 2)
+	for pageIndex, relativePath := range candidate.PageFiles {
+		pageNo := pageIndex + 1
+		sourcePath := filepath.Join(cfg.datasetDir, filepath.FromSlash(relativePath))
+		sourceImage, decodeErr := decodeImage(sourcePath)
+		if decodeErr != nil {
+			return fmt.Errorf("decode %s page %d: %w", candidate.CandidateNo, pageNo, decodeErr)
+		}
+		sourceAsset, uploadErr := client.upload(ctx, sourcePath, map[string]string{
+			"owner_type":    "submission",
+			"owner_id":      submissionID,
+			"submission_id": submissionID,
+			"exam_id":       examID,
+			"school_id":     schoolID,
+		})
+		if uploadErr != nil {
+			return fmt.Errorf("upload %s page %d: %w", candidate.CandidateNo, pageNo, uploadErr)
+		}
+		pageResponse, pageErr := client.json(ctx, http.MethodPost, submissionRoutePrefix+submissionID+"/pages", map[string]any{
+			"file_asset_id": stringField(sourceAsset, "id"),
+			"page_no":       pageNo,
+		}, http.StatusCreated)
+		if pageErr != nil {
+			return fmt.Errorf("add %s page %d: %w", candidate.CandidateNo, pageNo, pageErr)
+		}
+		pages = append(pages, pageRecord{
+			ID:        nestedStringField(pageResponse, "page", "id"),
+			PageNo:    pageNo,
+			FileAsset: sourceAsset,
+			Path:      sourcePath,
+			Image:     sourceImage,
+		})
+	}
+	run.submissionID, run.pages = submissionID, pages
+	return nil
+}
+
+func (run *candidateImport) prepareSegments(ctx context.Context, result *importResult) error {
+	candidate, client, submissionID, data := run.candidate, run.client, run.submissionID, run.data
+	integrityResponse, integrityErr := client.json(ctx, http.MethodPost, submissionRoutePrefix+submissionID+"/quality-check", map[string]any{}, http.StatusOK)
+	if integrityErr != nil {
+		return fmt.Errorf("quality-check %s: %w", candidate.CandidateNo, integrityErr)
+	}
+	if integrityResult := nestedMap(integrityResponse, "result"); !boolField(integrityResult, "valid") {
+		return fmt.Errorf("collection integrity failed for %s: %v", candidate.CandidateNo, integrityResult["issues"])
+	}
+	if _, createErr := client.json(ctx, http.MethodPost, submissionRoutePrefix+submissionID+"/run-quality-check", map[string]any{}, http.StatusAccepted); createErr != nil {
+		return fmt.Errorf("run image quality check %s: %w", candidate.CandidateNo, createErr)
+	}
+	if createErr := waitForSubmissionImageQuality(ctx, client, submissionID); createErr != nil {
+		return fmt.Errorf("image quality %s: %w", candidate.CandidateNo, createErr)
+	}
+	if _, createErr := client.json(ctx, http.MethodPost, submissionRoutePrefix+submissionID+"/status", map[string]any{"status": "ready_for_ocr", "expected_revision": 1}, http.StatusOK); createErr != nil {
+		return fmt.Errorf("mark %s ready for OCR: %w", candidate.CandidateNo, createErr)
+	}
+	segmentResponse, segmentErr := client.json(ctx, http.MethodPost, submissionRoutePrefix+submissionID+"/segment-answers", map[string]any{}, http.StatusOK)
+	if segmentErr != nil {
+		return fmt.Errorf("generate segments for %s: %w", candidate.CandidateNo, segmentErr)
+	}
+	segments := sliceOfMaps(nestedMap(segmentResponse, "result")["segments"])
+	if len(segments) != len(data.Questions) {
+		return fmt.Errorf("%s generated %d segments, want %d", candidate.CandidateNo, len(segments), len(data.Questions))
+	}
+	result.AnswerSegmentCount += len(segments)
+	segmentByQuestion := map[string]string{}
+	for _, segment := range segments {
+		segmentByQuestion[stringField(segment, "question_no")] = stringField(segment, "id")
+	}
+	run.segmentByQuestion = segmentByQuestion
+	return nil
+}
+
+func (run *candidateImport) registerPages(ctx context.Context) error {
+	pages, candidate, client, db := run.pages, run.candidate, run.client, run.db
+	tenantID, adminID, examID := run.users.tenantID, run.users.adminID, run.examID
+	captureBatchID, submissionID := run.captureBatchID, run.submissionID
+	templateID, templateHash := run.templateID, run.templateHash
+	for pageIndex := range pages {
+		page := &pages[pageIndex]
+		registrationID, registrationErr := createRegistration(ctx, db, registrationCreateInput{
+			tenantID: tenantID, adminID: adminID, captureBatchID: captureBatchID,
+			submissionID: submissionID, page: *page, templateID: templateID,
+			templateHash: templateHash, candidateNo: candidate.CandidateNo,
+		})
+		if registrationErr != nil {
+			return registrationErr
+		}
+		page.RegistrationID = registrationID
+		registeredAsset, uploadErr := client.upload(ctx, page.Path, map[string]string{
+			"owner_type":    "page_registration_output",
+			"owner_id":      registrationID,
+			"exam_id":       examID,
+			"submission_id": submissionID,
+		})
+		if uploadErr != nil {
+			return fmt.Errorf("upload registered page: %w", uploadErr)
+		}
+		if registrationErr = completeRegistration(ctx, db, registrationCompleteInput{
+			tenantID: tenantID, submissionID: submissionID, submissionPageID: page.ID,
+			registrationID: registrationID, templateID: templateID, templateHash: templateHash,
+			registered: registeredAsset,
+		}); registrationErr != nil {
+			return registrationErr
+		}
+	}
+	return nil
+}
+
+func (run *candidateImport) attachCrops(ctx context.Context) error {
+	data, candidate, pages, client, db := run.data, run.candidate, run.pages, run.client, run.db
+	segmentByQuestion, tenantID, examID, submissionID := run.segmentByQuestion, run.users.tenantID, run.examID, run.submissionID
+	for _, question := range data.Questions {
+		segmentID := segmentByQuestion[question.QuestionNo]
+		itemRegion, ok := data.Regions[candidate.CandidateNo][question.QuestionNo]
+		if !ok {
+			return fmt.Errorf("missing region for %s/%s", candidate.CandidateNo, question.QuestionNo)
+		}
+		pageIndex := 0
+		if questionNumber(question.QuestionNo) >= 17 {
+			pageIndex = 1
+		}
+		cropContent, _, cropErr := cropAnswerRegion(pages[pageIndex].Image, itemRegion, cropPadding)
+		if cropErr != nil {
+			return fmt.Errorf("crop %s/%s: %w", candidate.CandidateNo, question.QuestionNo, cropErr)
+		}
+		filename := strings.ToLower(candidate.CandidateNo + "-" + question.QuestionNo + "-crop.png")
+		cropAsset, uploadErr := client.uploadBytes(ctx, filename, cropContent, map[string]string{
+			"owner_type":    "answer_segment_crop",
+			"owner_id":      pages[pageIndex].RegistrationID,
+			"exam_id":       examID,
+			"submission_id": submissionID,
+		})
+		if uploadErr != nil {
+			return fmt.Errorf("upload %s/%s crop: %w", candidate.CandidateNo, question.QuestionNo, uploadErr)
+		}
+		if cropErr = attachSegmentCrop(ctx, db, tenantID, segmentID, cropAsset); cropErr != nil {
+			return fmt.Errorf("attach %s/%s crop: %w", candidate.CandidateNo, question.QuestionNo, cropErr)
+		}
+	}
+	return nil
+}
+
+func (run *candidateImport) seedOCR(ctx context.Context, result *importResult) error {
+	data, candidate, pages := run.data, run.candidate, run.pages
+	ocrStore, tenantID, submissionID, adminID := run.ocrStore, run.users.tenantID, run.submissionID, run.users.adminID
+	candidateIndex := run.candidateIndex
+	ocrResults := []ocrpkg.ResultInput{}
+	for _, question := range data.Questions {
+		number := questionNumber(question.QuestionNo)
+		if number <= 10 {
+			continue
+		}
+		answerData := candidate.Answers[question.QuestionNo]
+		if displayText(answerData.Text) == "" {
+			continue
+		}
+		itemRegion := data.Regions[candidate.CandidateNo][question.QuestionNo]
+		page := pages[0]
+		if number >= 17 {
+			page = pages[1]
+		}
+		ocrResults = append(ocrResults, ocrpkg.ResultInput{
+			SubmissionPageID:  page.ID,
+			Text:              displayText(answerData.Text),
+			BBox:              []float64{itemRegion.X, itemRegion.Y, itemRegion.Width, itemRegion.Height},
+			Confidence:        answerData.Confidence,
+			SourceImageFileID: stringField(page.FileAsset, "id"),
+		})
+	}
+	inputHash := sha256Hex([]byte(candidate.CandidateNo + ":" + datasetID))
+	completedOCR, ocrErr := ocrStore.SeedCompletedTask(
+		ctx,
+		tenantID,
+		submissionID,
+		adminID,
+		ocrpkg.CreateTaskInput{
+			Engine:         "paddleocr",
+			EngineVersion:  "simulation-seeded-v1",
+			MinConfidence:  0.85,
+			IdempotencyKey: "simulation:" + datasetID + ":" + candidate.CandidateNo + ":ocr:v1",
+		},
+		ocrpkg.CompleteTaskInput{
+			Results:           ocrResults,
+			ModelVersion:      "simulation-seeded-transcript-v1",
+			ConfigHash:        sha256Hex([]byte("simulation-ocr-config-v1")),
+			InputHash:         inputHash,
+			DurationMS:        300 + candidateIndex*45,
+			WorkerID:          "simulation-importer",
+			PreprocessProfile: "synthetic-handwriting-scan-v1",
+		},
+	)
+	if ocrErr != nil {
+		return fmt.Errorf("atomically seed OCR task for %s: %w", candidate.CandidateNo, ocrErr)
+	}
+	result.CompletedOCRTaskCount++
+	result.SeededOCRResultCount += completedOCR.ResultCount
+	return nil
+}
+
+func (run *candidateImport) recordAnswers(ctx context.Context, result *importResult, aiTargets *[]aiTarget) error {
+	data, candidate, segmentByQuestion := run.data, run.candidate, run.segmentByQuestion
+	for _, question := range data.Questions {
+		answerData, ok := candidate.Answers[question.QuestionNo]
+		if !ok || !answerData.Synthetic {
+			return fmt.Errorf("missing governed synthetic answer %s/%s", candidate.CandidateNo, question.QuestionNo)
+		}
+		segmentID := segmentByQuestion[question.QuestionNo]
+		if segmentID == "" {
+			return fmt.Errorf("missing segment %s/%s", candidate.CandidateNo, question.QuestionNo)
+		}
+		if err := run.recordAnswer(ctx, question, answerData, segmentID, result, aiTargets); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (run *candidateImport) recordAnswer(ctx context.Context, question questionDef, answerData candidateAnswer, segmentID string, result *importResult, aiTargets *[]aiTarget) error {
+	client, db, candidate := run.client, run.db, run.candidate
+	tenantID, adminID, graderID := run.users.tenantID, run.users.adminID, run.users.graderID
+	source := "ocr_text"
+	extractor := "ocr"
+	if questionNumber(question.QuestionNo) <= 10 {
+		source = "imported_answer"
+		extractor = "omr"
+	}
+	answerResponse, recordErr := client.json(ctx, http.MethodPut, answerSegmentRoutePrefix+segmentID+"/answer", map[string]any{
+		"answer_text": displayText(answerData.Text),
+		"answer_payload": map[string]any{
+			"answer":          answerData.Text,
+			"synthetic":       true,
+			"simulation_only": true,
+			"extractor":       extractor,
+			"dataset_id":      datasetID,
+		},
+		"source":     source,
+		"confidence": answerData.Confidence,
+	}, http.StatusOK)
+	if recordErr != nil {
+		return fmt.Errorf("record %s/%s answer: %w", candidate.CandidateNo, question.QuestionNo, recordErr)
+	}
+	answerID := nestedStringField(answerResponse, "answer", "id")
+	candidateID, candidateErr := createAnswerCandidate(ctx, db, answerCandidateCreateInput{
+		tenantID: tenantID, adminID: adminID, segmentID: segmentID, answerID: answerID,
+		question: question, answerData: answerData, extractor: extractor,
+	})
+	if candidateErr != nil {
+		return candidateErr
+	}
+
+	if questionNumber(question.QuestionNo) <= 16 {
+		return run.gradeObjective(ctx, objectiveAnswer{
+			question: question, answerData: answerData, segmentID: segmentID,
+			candidateID: candidateID, extractor: extractor,
+		}, result)
+	}
+	if _, recordErr = createReviewTask(ctx, client, segmentID, graderID, "subjective_default_review", 60); recordErr != nil {
+		return fmt.Errorf("create subjective review task %s/%s: %w", candidate.CandidateNo, question.QuestionNo, recordErr)
+	}
+	result.AssignedReviewTaskCount++
+	if run.candidateIndex == 0 {
+		*aiTargets = append(*aiTargets, aiTarget{SegmentID: segmentID, Label: candidate.CandidateNo + "/" + question.QuestionNo})
+	}
+	return nil
+}
+
+type objectiveAnswer struct {
+	question    questionDef
+	answerData  candidateAnswer
+	segmentID   string
+	candidateID string
+	extractor   string
+}
+
+func (run *candidateImport) gradeObjective(ctx context.Context, answer objectiveAnswer, result *importResult) error {
+	client, db, candidate := run.client, run.db, run.candidate
+	tenantID, adminID, graderID := run.users.tenantID, run.users.adminID, run.users.graderID
+	examID, submissionID, questionIDs, ruleIDs := run.examID, run.submissionID, run.questions.questionIDs, run.questions.ruleIDs
+	question, answerData, segmentID, candidateID, extractor := answer.question, answer.answerData, answer.segmentID, answer.candidateID, answer.extractor
+	gradeResponse, gradeErr := client.json(ctx, http.MethodPost, answerSegmentRoutePrefix+segmentID+"/rule-grade", map[string]any{}, http.StatusCreated)
+	if gradeErr != nil {
+		return fmt.Errorf("rule grade %s/%s: %w", candidate.CandidateNo, question.QuestionNo, gradeErr)
+	}
+	grade := nestedMap(gradeResponse, "grade")
+	// 自动确认仍须规则同时满足通过且无需复核；低置信度路线只创建教师任务。
+	if answerData.Route == "auto_confirm" {
+		if !boolField(grade, "auto_pass") || boolField(grade, "needs_human_review") {
+			return fmt.Errorf("auto route rejected by grading guardrail for %s/%s", candidate.CandidateNo, question.QuestionNo)
+		}
+		if confirmErr := confirmObjectiveGrade(ctx, db, objectiveGradeConfirmation{
+			tenantID: tenantID, adminID: adminID, examID: examID, submissionID: submissionID,
+			questionID: questionIDs[question.QuestionNo], segmentID: segmentID,
+			candidateID: candidateID, ruleID: ruleIDs[question.QuestionNo], grade: grade,
+		}); confirmErr != nil {
+			return confirmErr
+		}
+		result.AutoConfirmedGradeCount++
+	} else {
+		sourceCode := "ocr_low_confidence"
+		if extractor == "omr" {
+			sourceCode = "manual_sample"
+		}
+		if _, gradeErr = createReviewTask(ctx, client, segmentID, graderID, sourceCode, 80); gradeErr != nil {
+			return fmt.Errorf("create review task %s/%s: %w", candidate.CandidateNo, question.QuestionNo, gradeErr)
+		}
+		result.AssignedReviewTaskCount++
+	}
+	return nil
+}
+
+func createImportAISuggestions(ctx context.Context, cfg config, client *apiClient, aiTargets []aiTarget, result *importResult) error {
+	for index, target := range aiTargets {
+		if index >= cfg.aiLimit {
+			break
+		}
+		response, aiErr := client.json(ctx, http.MethodPost, answerSegmentRoutePrefix+target.SegmentID+"/subjective-ai-grade", map[string]any{
+			"model_policy": map[string]any{},
+		}, http.StatusCreated)
+		if aiErr != nil {
+			return fmt.Errorf("create governed AI suggestion for %s: %w", target.Label, aiErr)
+		}
+		grade := nestedMap(response, "grade")
+		if stringField(grade, "status") != "succeeded" {
+			return fmt.Errorf("governed AI suggestion failed for %s: %s", target.Label, stringField(grade, "failure_reason"))
+		}
+		result.SubjectiveAISuggestionIDs = append(result.SubjectiveAISuggestionIDs, stringField(grade, "id"))
+	}
+
+	return nil
 }
 
 func rubricFor(questionNo string) map[string]any {
@@ -1127,24 +1379,7 @@ func buildTemplateLayout(questionIDs map[string]string, regions map[string]regio
 				"x":           item.X, "y": item.Y, "width": item.Width, "height": item.Height,
 			}
 			if number <= 10 {
-				row := (number - 1) / 5
-				col := (number - 1) % 5
-				x0 := 105 + col*302
-				y0 := 402 + row*160
-				options := []any{}
-				for optionIndex, option := range []string{"A", "B", "C", "D"} {
-					cx := x0 + 66 + optionIndex*53
-					cy := y0 + 26
-					options = append(options, map[string]any{
-						"id":     strings.ToLower(questionNo) + "-" + strings.ToLower(option),
-						"label":  option,
-						"x":      float64(cx-17) / imageWidth,
-						"y":      float64(cy-17) / imageHeight,
-						"width":  float64(34) / imageWidth,
-						"height": float64(34) / imageHeight,
-					})
-				}
-				regionData["option_regions"] = options
+				regionData["option_regions"] = buildObjectiveOptionRegions(number, questionNo)
 			}
 			questionRegions = append(questionRegions, regionData)
 		}
@@ -1170,6 +1405,27 @@ func buildTemplateLayout(questionIDs map[string]string, regions map[string]regio
 		},
 		"pages": pages,
 	}
+}
+
+func buildObjectiveOptionRegions(number int, questionNo string) []any {
+	row := (number - 1) / 5
+	col := (number - 1) % 5
+	x0 := 105 + col*302
+	y0 := 402 + row*160
+	options := []any{}
+	for optionIndex, option := range []string{"A", "B", "C", "D"} {
+		cx := x0 + 66 + optionIndex*53
+		cy := y0 + 26
+		options = append(options, map[string]any{
+			"id":     strings.ToLower(questionNo) + "-" + strings.ToLower(option),
+			"label":  option,
+			"x":      float64(cx-17) / imageWidth,
+			"y":      float64(cy-17) / imageHeight,
+			"width":  float64(34) / imageWidth,
+			"height": float64(34) / imageHeight,
+		})
+	}
+	return options
 }
 
 func createCaptureBatch(ctx context.Context, db *sql.DB, tenantID, examID, adminID string) (string, error) {
@@ -1208,16 +1464,11 @@ WHERE tenant_id=$1::uuid AND exam_id=$2::uuid AND deleted_at IS NULL
 func createRegistration(
 	ctx context.Context,
 	db *sql.DB,
-	tenantID string,
-	adminID string,
-	examID string,
-	captureBatchID string,
-	submissionID string,
-	page pageRecord,
-	templateID string,
-	templateHash string,
-	candidateNo string,
+	input registrationCreateInput,
 ) (string, error) {
+	tenantID, adminID := input.tenantID, input.adminID
+	captureBatchID, submissionID, page := input.captureBatchID, input.submissionID, input.page
+	templateID, templateHash, candidateNo := input.templateID, input.templateHash, input.candidateNo
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return "", err
@@ -1272,14 +1523,11 @@ RETURNING id::text
 func completeRegistration(
 	ctx context.Context,
 	db *sql.DB,
-	tenantID string,
-	submissionID string,
-	submissionPageID string,
-	registrationID string,
-	templateID string,
-	templateHash string,
-	registered map[string]any,
+	input registrationCompleteInput,
 ) error {
+	tenantID, submissionID, submissionPageID := input.tenantID, input.submissionID, input.submissionPageID
+	registrationID, templateID, templateHash := input.registrationID, input.templateID, input.templateHash
+	registered := input.registered
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -1387,14 +1635,10 @@ WHERE tenant_id=$1::uuid AND id=$2::uuid AND deleted_at IS NULL
 func createAnswerCandidate(
 	ctx context.Context,
 	db *sql.DB,
-	tenantID string,
-	adminID string,
-	segmentID string,
-	answerID string,
-	question questionDef,
-	answerData candidateAnswer,
-	extractor string,
+	input answerCandidateCreateInput,
 ) (string, error) {
+	tenantID, adminID, segmentID, answerID := input.tenantID, input.adminID, input.segmentID, input.answerID
+	question, answerData, extractor := input.question, input.answerData, input.extractor
 	payload, _ := json.Marshal(map[string]any{
 		"answer":          answerData.Text,
 		"synthetic":       true,
@@ -1438,16 +1682,10 @@ RETURNING id::text
 func confirmObjectiveGrade(
 	ctx context.Context,
 	db *sql.DB,
-	tenantID string,
-	adminID string,
-	examID string,
-	submissionID string,
-	questionID string,
-	segmentID string,
-	candidateID string,
-	ruleID string,
-	grade map[string]any,
+	input objectiveGradeConfirmation,
 ) error {
+	tenantID, adminID, examID, submissionID := input.tenantID, input.adminID, input.examID, input.submissionID
+	questionID, segmentID, candidateID, ruleID, grade := input.questionID, input.segmentID, input.candidateID, input.ruleID, input.grade
 	evidence, _ := json.Marshal(map[string]any{
 		"ai_grade_id":             stringField(grade, "id"),
 		"grader_type":             stringField(grade, "grader_type"),
@@ -1536,9 +1774,9 @@ func (c *apiClient) json(ctx context.Context, method, path string, body any, wan
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Accept", jsonContentType)
 	if body != nil {
-		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Content-Type", jsonContentType)
 	}
 	if c.token != "" {
 		req.Header.Set("Authorization", "Bearer "+c.token)
@@ -1573,7 +1811,7 @@ func waitForSubmissionImageQuality(ctx context.Context, client *apiClient, submi
 	timeout := time.NewTimer(2 * time.Minute)
 	defer timeout.Stop()
 	for {
-		response, err := client.json(ctx, http.MethodGet, "/api/v1/submissions/"+submissionID, nil, http.StatusOK)
+		response, err := client.json(ctx, http.MethodGet, submissionRoutePrefix+submissionID, nil, http.StatusOK)
 		if err != nil {
 			return err
 		}
@@ -1606,30 +1844,15 @@ func (c *apiClient) uploadBytes(ctx context.Context, filename string, content []
 	if strings.TrimSpace(filename) == "" {
 		return nil, errors.New("upload filename is required")
 	}
-	var buffer bytes.Buffer
-	writer := multipart.NewWriter(&buffer)
-	for key, value := range fields {
-		if value != "" {
-			if err := writer.WriteField(key, value); err != nil {
-				return nil, err
-			}
-		}
-	}
-	part, err := writer.CreateFormFile("file", filepath.Base(filename))
+	buffer, writer, err := makeUploadForm(filename, content, fields)
 	if err != nil {
 		return nil, err
 	}
-	if _, err = part.Write(content); err != nil {
-		return nil, err
-	}
-	if err = writer.Close(); err != nil {
-		return nil, err
-	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/api/v1/files", &buffer)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/api/v1/files", buffer)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Accept", jsonContentType)
 	req.Header.Set("Authorization", "Bearer "+c.token)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	response, err := c.client.Do(req)
@@ -1653,6 +1876,29 @@ func (c *apiClient) uploadBytes(ctx context.Context, filename string, content []
 		return nil, errors.New("upload response lacks file identity/hash")
 	}
 	return asset, nil
+}
+
+func makeUploadForm(filename string, content []byte, fields map[string]string) (*bytes.Buffer, *multipart.Writer, error) {
+	var buffer bytes.Buffer
+	writer := multipart.NewWriter(&buffer)
+	for key, value := range fields {
+		if value != "" {
+			if err := writer.WriteField(key, value); err != nil {
+				return nil, nil, err
+			}
+		}
+	}
+	part, err := writer.CreateFormFile("file", filepath.Base(filename))
+	if err != nil {
+		return nil, nil, err
+	}
+	if _, err = part.Write(content); err != nil {
+		return nil, nil, err
+	}
+	if err = writer.Close(); err != nil {
+		return nil, nil, err
+	}
+	return &buffer, writer, nil
 }
 
 func fileFromManifest(datasetDir string, files map[string]any, key string) string {

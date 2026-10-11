@@ -188,15 +188,18 @@ function addBrowserCSRFHeader(method: string | undefined, headers: Headers) {
 export const apiClient = new ApiClient();
 
 export function normalizeBaseUrl(value: string) {
-  const trimmed = value.trim().replace(/\/+$/, "");
-  return trimmed;
+  const trimmed = value.trim();
+  let end = trimmed.length;
+  // 只去掉尾部斜杠，保留空地址的同源请求及相对地址；不用 URL 解析改变现有路径语义。
+  while (end > 0 && trimmed[end - 1] === "/") end -= 1;
+  return trimmed.slice(0, end);
 }
 
 function filenameFromDisposition(disposition: string | null): string | undefined {
   if (!disposition) {
     return undefined;
   }
-  const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+  const utf8Match = /filename\*=UTF-8''([^;]+)/i.exec(disposition);
   if (utf8Match?.[1]) {
     try {
       return decodeURIComponent(utf8Match[1]);
@@ -204,6 +207,6 @@ function filenameFromDisposition(disposition: string | null): string | undefined
       return utf8Match[1];
     }
   }
-  const plainMatch = disposition.match(/filename="?([^";]+)"?/i);
+  const plainMatch = /filename="?([^";]+)"?/i.exec(disposition);
   return plainMatch?.[1];
 }

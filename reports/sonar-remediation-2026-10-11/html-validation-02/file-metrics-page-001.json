@@ -1,0 +1,98 @@
+{
+  "paging": {
+    "pageIndex": 1,
+    "pageSize": 500,
+    "total": 4
+  },
+  "baseComponent": {
+    "key": "yuejuan-remediation-html-20261011",
+    "name": "yuejuan remediation HTML verification 2026-10-11",
+    "qualifier": "TRK",
+    "measures": []
+  },
+  "components": [
+    {
+      "key": "yuejuan-remediation-html-20261011:docs/architecture/previews/index.html",
+      "name": "index.html",
+      "qualifier": "FIL",
+      "path": "docs/architecture/previews/index.html",
+      "language": "web",
+      "measures": [
+        {
+          "metric": "code_smells",
+          "value": "2",
+          "bestValue": false
+        },
+        {
+          "metric": "complexity",
+          "value": "1"
+        },
+        {
+          "metric": "ncloc",
+          "value": "20"
+        }
+      ]
+    },
+    {
+      "key": "yuejuan-remediation-html-20261011:frontend-review-report/前端UI优化方案-对标成熟产品.html",
+      "name": "前端UI优化方案-对标成熟产品.html",
+      "qualifier": "FIL",
+      "path": "frontend-review-report/前端UI优化方案-对标成熟产品.html",
+      "language": "web",
+      "measures": [
+        {
+          "metric": "complexity",
+          "value": "1"
+        },
+        {
+          "metric": "duplicated_lines_density",
+          "value": "3.9",
+          "bestValue": false
+        },
+        {
+          "metric": "ncloc",
+          "value": "408"
+        }
+      ]
+    },
+    {
+      "key": "yuejuan-remediation-html-20261011:frontend-review-report/前端UI设计分析.html",
+      "name": "前端UI设计分析.html",
+      "qualifier": "FIL",
+      "path": "frontend-review-report/前端UI设计分析.html",
+      "language": "web",
+      "measures": [
+        {
+          "metric": "complexity",
+          "value": "1"
+        },
+        {
+          "metric": "duplicated_lines_density",
+          "value": "5.0",
+          "bestValue": false
+        },
+        {
+          "metric": "ncloc",
+          "value": "317"
+        }
+      ]
+    },
+    {
+      "key": "yuejuan-remediation-html-20261011:frontend-review-report/前端代码审查报告.html",
+      "name": "前端代码审查报告.html",
+      "qualifier": "FIL",
+      "path": "frontend-review-report/前端代码审查报告.html",
+      "language": "web",
+      "measures": [
+        {
+          "metric": "complexity",
+          "value": "1"
+        },
+        {
+          "metric": "ncloc",
+          "value": "562"
+        }
+      ]
+    }
+  ]
+}

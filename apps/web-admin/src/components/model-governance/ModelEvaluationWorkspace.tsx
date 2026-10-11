@@ -42,6 +42,8 @@ import {
   EvaluationRunStatus,
 } from "../../api/modelGovernance";
 import { ResponsiveTable } from "../ResponsiveTable";
+import { downloadGovernanceMaterial, evaluationReportExample } from "./governanceMaterials";
+import { costToMicros, formatUSDCost } from "./costUnits";
 
 const statusLabels: Record<EvaluationRunStatus, string> = {
   draft: "采集中",
@@ -71,11 +73,46 @@ function formatPercent(value: number) {
 }
 
 function formatAverageCost(value: number) {
-  return value === 0 ? "¥0" : `¥${(value / 1_000_000).toFixed(6)}`;
+  return formatUSDCost(value);
 }
 
 function errorMessage(error: unknown) {
   return getUserErrorMessage(error, "评测操作失败，请检查输入后重试");
+}
+
+function seriousErrorClass(value: number, bestValue?: number) {
+  // 即使本批最小错误率仍大于零，也保留相对最优标记，不据此表示没有错误。
+  if (value === bestValue) return "model-evaluation-best";
+  if (value > 0) return "model-evaluation-risk";
+  return "";
+}
+
+function renderRunEvidence(run: EvaluationRun) {
+  // 失效状态优先于证据类别；历史结果不能继续作为质量判断依据。
+  if (run.status === "invalidated") {
+    return <Alert
+      type="error"
+      showIcon
+      icon={<TriangleAlert size={17} />}
+      message="这组评测证据已失效"
+      description={`失效时间：${formatTime(run.invalidated_at)}。历史结果保留用于审计，不应再用于质量判断。`}
+    />;
+  }
+  if (run.evidence_class === "authorized_frozen_set") {
+    return <Alert
+      type="success"
+      showIcon
+      icon={<ShieldCheck size={17} />}
+      message="授权冻结集证据"
+      description={`授权引用：${run.authorization_reference}；SHA-256：${run.dataset_sha256}。这类证据可进入后续质量评审，但不等于模型已批准。`}
+    />;
+  }
+  return <Alert
+    type="info"
+    showIcon
+    message="协议样例证据"
+    description={`SHA-256：${run.dataset_sha256}。只验证协议、结构和产品流程，不代表真实教师接受率或生产评分效果。`}
+  />;
 }
 
 type TransitionKind = "complete" | "invalidate";
@@ -86,15 +123,19 @@ export function ModelEvaluationWorkspace({
   configs,
   loading,
   canManage,
-  onRefresh
-}: {
+  onRefresh,
+  onDirtyChange,
+  onSavingChange
+}: Readonly<{
   runs: EvaluationRun[];
   tenantID: string;
   configs: ManagedModelAPIConfig[];
   loading: boolean;
   canManage: boolean;
   onRefresh: () => Promise<void>;
-}) {
+  onDirtyChange?: (dirty: boolean) => void;
+  onSavingChange?: (saving: boolean) => void;
+}>) {
   const { message } = App.useApp();
   const [keyword, setKeyword] = useState("");
   const [status, setStatus] = useState<EvaluationRunStatus | "all">("all");
@@ -107,6 +148,9 @@ export function ModelEvaluationWorkspace({
   const [createForm] = Form.useForm<CreateEvaluationRunInput>();
   const [candidateForm] = Form.useForm<AddEvaluationCandidateInput>();
   const [transitionForm] = Form.useForm<{ reason: string }>();
+  // 打开登记草稿后离开学校须确认；工作区切视图时保持挂载，失败输入仍留在原学校。
+  useEffect(() => { onDirtyChange?.(createDrawerOpen || candidateDrawerOpen || Boolean(transitionKind)); return () => onDirtyChange?.(false); }, [createDrawerOpen, candidateDrawerOpen, transitionKind, onDirtyChange]);
+  useEffect(() => { onSavingChange?.(saving); return () => onSavingChange?.(false); }, [saving, onSavingChange]);
 
   const filteredRuns = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLocaleLowerCase();
@@ -269,7 +313,7 @@ export function ModelEvaluationWorkspace({
       dataIndex: ["metrics", "serious_error_rate"],
       width: 118,
       render: (value: number) => (
-        <strong className={value === bestMetrics?.seriousError ? "model-evaluation-best" : value > 0 ? "model-evaluation-risk" : ""}>
+        <strong className={seriousErrorClass(value, bestMetrics?.seriousError)}>
           {formatPercent(value)}
         </strong>
       )
@@ -333,7 +377,7 @@ export function ModelEvaluationWorkspace({
 
   const submitCreate = async () => {
     const values = await createForm.validateFields();
-    setSaving(true);
+    setSaving(true); onSavingChange?.(true);
     try {
       const response = await createModelEvaluationRun({
         ...values,
@@ -349,17 +393,18 @@ export function ModelEvaluationWorkspace({
     } catch (error) {
       message.error(errorMessage(error));
     } finally {
-      setSaving(false);
+      setSaving(false); onSavingChange?.(false);
     }
   };
 
   const submitCandidate = async () => {
     if (!selectedRun) return;
     const values = await candidateForm.validateFields();
-    setSaving(true);
+    setSaving(true); onSavingChange?.(true);
     try {
       await addModelEvaluationCandidate(tenantID, selectedRun.id, {
         ...values,
+        total_cost_micros: costToMicros(values.total_cost_micros),
         evaluated_samples: selectedRun.sample_count,
         teacher_reviewed_samples: selectedRun.evidence_class === "authorized_frozen_set"
           ? selectedRun.sample_count
@@ -374,14 +419,14 @@ export function ModelEvaluationWorkspace({
     } catch (error) {
       message.error(errorMessage(error));
     } finally {
-      setSaving(false);
+      setSaving(false); onSavingChange?.(false);
     }
   };
 
   const submitTransition = async () => {
     if (!selectedRun || !transitionKind) return;
     const { reason } = await transitionForm.validateFields();
-    setSaving(true);
+    setSaving(true); onSavingChange?.(true);
     try {
       if (transitionKind === "complete") {
         await completeModelEvaluationRun(tenantID, selectedRun.id, reason);
@@ -396,13 +441,70 @@ export function ModelEvaluationWorkspace({
     } catch (error) {
       message.error(errorMessage(error));
     } finally {
-      setSaving(false);
+      setSaving(false); onSavingChange?.(false);
     }
   };
 
   const openTransition = (kind: TransitionKind) => {
     transitionForm.resetFields();
     setTransitionKind(kind);
+  };
+
+  const candidateDrawerTitle = selectedRun ? `添加候选结果 · ${selectedRun.display_name}` : "添加候选结果";
+  const renderSelectedRun = (run: EvaluationRun) => {
+    // 这里只复用已有展示条件；冻结后不再显示录入和再次冻结入口。
+    const canEditRun = canManage && run.status === "draft";
+    return (
+      <section className="model-evaluation-detail" aria-label="评测候选对比">
+        <header>
+          <div>
+            <span className="model-evaluation-detail-kicker"><BarChart3 size={15} /> 候选并排对比</span>
+            <h2>{run.display_name}</h2>
+            <p>
+              {run.subject} · {run.grade} · {run.question_type}
+              <span>数据集 {run.dataset_reference}</span>
+            </p>
+          </div>
+          <Space wrap>
+            <Tag color={statusColor(run.status)}>{statusLabels[run.status]}</Tag>
+            {canEditRun ? (
+              <Button icon={<Plus size={15} />} disabled={availableConfigs.length === 0} onClick={openCandidateDrawer}>
+                添加候选
+              </Button>
+            ) : null}
+            {canEditRun ? (
+              <Tooltip title={canCompleteSelected ? undefined : "至少需要两个候选；新评测请选择两个学校模型"}>
+                <span>
+                  <Button type="primary" icon={<CheckCircle2 size={15} />} disabled={!canCompleteSelected} onClick={() => openTransition("complete")}>
+                    冻结完成
+                  </Button>
+                </span>
+              </Tooltip>
+            ) : null}
+            {canManage && run.status !== "invalidated" ? (
+              <Button danger icon={<Ban size={15} />} onClick={() => openTransition("invalidate")}>
+                标记失效
+              </Button>
+            ) : null}
+          </Space>
+        </header>
+        <div className="model-evaluation-evidence">{renderRunEvidence(run)}</div>
+        <div className="model-evaluation-candidate-table">
+          <ResponsiveTable
+            rowKey="id"
+            columns={candidateColumns}
+            dataSource={run.candidates}
+            pagination={false}
+            mobilePrimaryCount={4}
+            locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="该批次还没有候选结果" /> }}
+          />
+        </div>
+        <footer>
+          <span><i className="model-evaluation-legend-best" /> 同批次内的相对最优值</span>
+          <small>不同数据集、题型或 Rubric 版本之间不可直接横向比较。</small>
+        </footer>
+      </section>
+    );
   };
 
   return (
@@ -439,9 +541,10 @@ export function ModelEvaluationWorkspace({
           />
           {canManage ? (
             <Button type="primary" icon={<Plus size={15} />} onClick={openCreateDrawer}>
-              新建评测
+              登记已有评测报告
             </Button>
           ) : null}
+          <Button onClick={() => downloadGovernanceMaterial("候选模型评测报告示例.json", evaluationReportExample)}>下载报告材料模板</Button>
         </Space>
       </div>
       <div className="model-evaluation-count">
@@ -461,96 +564,10 @@ export function ModelEvaluationWorkspace({
           rowClassName={(run) => run.id === selectedRunID ? "model-evaluation-selected-row" : ""}
         />
       </div>
-      {selectedRun ? (
-        <section className="model-evaluation-detail" aria-label="评测候选对比">
-          <header>
-            <div>
-              <span className="model-evaluation-detail-kicker"><BarChart3 size={15} /> 候选并排对比</span>
-              <h2>{selectedRun.display_name}</h2>
-              <p>
-                {selectedRun.subject} · {selectedRun.grade} · {selectedRun.question_type}
-                <span>数据集 {selectedRun.dataset_reference}</span>
-              </p>
-            </div>
-            <Space wrap>
-              <Tag color={statusColor(selectedRun.status)}>{statusLabels[selectedRun.status]}</Tag>
-              {canManage && selectedRun.status === "draft" ? (
-                <Button icon={<Plus size={15} />} disabled={availableConfigs.length === 0} onClick={openCandidateDrawer}>
-                  添加候选
-                </Button>
-              ) : null}
-              {canManage && selectedRun.status === "draft" ? (
-                <Tooltip
-                  title={canCompleteSelected ? undefined : "至少需要两个候选；新评测请选择两个学校模型"}
-                >
-                  <span>
-                    <Button
-                      type="primary"
-                      icon={<CheckCircle2 size={15} />}
-                      disabled={!canCompleteSelected}
-                      onClick={() => openTransition("complete")}
-                    >
-                      冻结完成
-                    </Button>
-                  </span>
-                </Tooltip>
-              ) : null}
-              {canManage && selectedRun.status !== "invalidated" ? (
-                <Button danger icon={<Ban size={15} />} onClick={() => openTransition("invalidate")}>
-                  标记失效
-                </Button>
-              ) : null}
-            </Space>
-          </header>
-
-          <div className="model-evaluation-evidence">
-            {selectedRun.status === "invalidated" ? (
-              <Alert
-                type="error"
-                showIcon
-                icon={<TriangleAlert size={17} />}
-                message="这组评测证据已失效"
-                description={`失效时间：${formatTime(selectedRun.invalidated_at)}。历史结果保留用于审计，不应再用于质量判断。`}
-              />
-            ) : selectedRun.evidence_class === "authorized_frozen_set" ? (
-              <Alert
-                type="success"
-                showIcon
-                icon={<ShieldCheck size={17} />}
-                message="授权冻结集证据"
-                description={`授权引用：${selectedRun.authorization_reference}；SHA-256：${selectedRun.dataset_sha256}。这类证据可进入后续质量评审，但不等于模型已批准。`}
-              />
-            ) : (
-              <Alert
-                type="info"
-                showIcon
-                message="协议样例证据"
-                description={`SHA-256：${selectedRun.dataset_sha256}。只验证协议、结构和产品流程，不代表真实教师接受率或生产评分效果。`}
-              />
-            )}
-          </div>
-
-          <div className="model-evaluation-candidate-table">
-            <ResponsiveTable
-              rowKey="id"
-              columns={candidateColumns}
-              dataSource={selectedRun.candidates}
-              pagination={false}
-              mobilePrimaryCount={4}
-              locale={{
-                emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="该批次还没有候选结果" />
-              }}
-            />
-          </div>
-          <footer>
-            <span><i className="model-evaluation-legend-best" /> 同批次内的相对最优值</span>
-            <small>不同数据集、题型或 Rubric 版本之间不可直接横向比较。</small>
-          </footer>
-        </section>
-      ) : null}
+      {selectedRun ? renderSelectedRun(selectedRun) : null}
 
       <Drawer
-        title="新建离线评测批次"
+        title="登记已有离线评测报告"
         width={620}
         open={createDrawerOpen}
         onClose={() => setCreateDrawerOpen(false)}
@@ -559,8 +576,8 @@ export function ModelEvaluationWorkspace({
         <Alert
           type="info"
           showIcon
-          message="评测记录不等于模型批准"
-          description="这里只登记离线运行证据；不会调用外部模型、启用部署或改变评分路由。"
+          message="登记已有报告，不运行模型"
+          description="由评测负责人先完成授权数据的离线评分和人工核验，再登记数据集引用、版本与候选汇总。登记后仍须冻结和人工批准；不会调用外部模型或改变评分路由。"
         />
         <Form form={createForm} layout="vertical" className="model-evaluation-form">
           <div className="model-governance-form-row two">
@@ -639,7 +656,7 @@ export function ModelEvaluationWorkspace({
       </Drawer>
 
       <Drawer
-        title={`添加候选结果${selectedRun ? ` · ${selectedRun.display_name}` : ""}`}
+        title={candidateDrawerTitle}
         width={620}
         open={candidateDrawerOpen}
         onClose={() => setCandidateDrawerOpen(false)}
@@ -700,8 +717,8 @@ export function ModelEvaluationWorkspace({
                 <Form.Item name="stable_repeat_samples" label="稳定重复数" rules={[{ required: true }]}>
                   <InputNumber min={0} max={selectedRun.sample_count * Math.max(0, selectedRun.repeat_count - 1)} precision={0} />
                 </Form.Item>
-                <Form.Item name="total_cost_micros" label="总成本（微元）" rules={[{ required: true }]}>
-                  <InputNumber min={0} precision={0} />
+                <Form.Item name="total_cost_micros" label="总预估成本（美元）" extra="按微美元口径登记已有报告成本，不是供应商账单。" rules={[{ required: true }]}>
+                  <InputNumber stringMode min="0" precision={6} />
                 </Form.Item>
               </div>
               <Form.Item name="reason" label="录入原因" rules={[{ required: true, min: 4, max: 256 }]}>

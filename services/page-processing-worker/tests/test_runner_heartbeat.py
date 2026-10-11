@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import io
 import time
+from unittest.mock import Mock
 
 import pytest
-from page_processing.api import APIError
+from page_processing.api import APIError, Client
 from page_processing.config import Config
-from page_processing.runner import Runner, _LeaseHeartbeat
+from page_processing.runner import Runner, _Heartbeat, _LeaseHeartbeat, _NullHeartbeat
 from PIL import Image, ImageDraw
 
 
@@ -76,6 +77,46 @@ class HeartbeatRecordingClient:
         self.failed = (run_id, payload)
 
 
+def test_null_heartbeat_accepts_keywords_without_renewal_or_progress_mutation(monkeypatch: pytest.MonkeyPatch) -> None:
+    thread_factory = Mock(side_effect=AssertionError("direct processing must not start a renewal thread"))
+    monkeypatch.setattr("page_processing.runner.threading.Thread", thread_factory)
+    heartbeat: _Heartbeat = _NullHeartbeat()
+    progress = {"stage": "page_decode", "completed": 1}
+
+    heartbeat.set_progress(progress=progress, flush=True)
+    heartbeat.set_progress(progress=progress)
+    heartbeat.raise_if_failed()
+    heartbeat.stop()
+    heartbeat.stop(raise_on_error=True)
+    heartbeat.stop(raise_on_error=False)
+
+    assert progress == {"stage": "page_decode", "completed": 1}
+    thread_factory.assert_not_called()
+
+
+def test_lease_heartbeat_progress_contract_keeps_deferred_and_immediate_sends() -> None:
+    client = Mock(spec=Client)
+    task = _omr_task()
+    heartbeat = _LeaseHeartbeat(
+        client=client, task=task, worker_id="worker-1",
+        interval=30.0, lease_seconds=600, request_timeout=1.0,
+    )
+    contract: _Heartbeat = heartbeat
+    progress = {"stage": "page_decode", "completed": 1}
+    contract.set_progress(progress=progress)
+    client.heartbeat.assert_not_called()
+    progress["completed"] = 2
+
+    # 延迟进度在首次续租时发送保存的副本；刷新则立即发送新进度。
+    with heartbeat:
+        client.heartbeat.assert_called_once_with(task, "worker-1", 600, timeout=1.0, progress={
+            "stage": "page_decode", "completed": 1,
+        })
+        contract.set_progress(progress=progress, flush=True)
+        assert client.heartbeat.call_count == 2
+        client.heartbeat.assert_called_with(task, "worker-1", 600, timeout=1.0, progress=progress)
+
+
 def test_lease_heartbeat_renews_in_background() -> None:
     client = HeartbeatRecordingClient(_sheet())
     with _LeaseHeartbeat(
@@ -118,7 +159,7 @@ def test_run_once_keeps_lease_alive_and_completes_omr() -> None:
     run_id, result = client.completed
     assert run_id == "run-1"
     assert result["selected"] == ["B"]
-    # the context sends an initial renewal before the handler starts
+    # 上下文在处理器启动前发送首次续租请求。
     assert len(client.heartbeats) >= 1
 
 
@@ -126,7 +167,7 @@ def test_run_once_reports_failure_and_survives_lost_lease(capsys: pytest.Capture
     client = HeartbeatRecordingClient(_sheet(), fail_after=0)
     runner = Runner(client, Config("http://api", "demo", "worker", "secret", "worker-1", heartbeat_interval=0.02, heartbeat_timeout=1.0))
 
-    # the initial heartbeat raises inside __enter__, so the task is reported failed
+    # 首次心跳在 __enter__ 内抛出异常，因此任务被报告为失败。
     assert runner.run_once() == 1
 
     assert client.completed is None
@@ -147,8 +188,8 @@ def test_run_once_does_not_crash_when_fail_report_also_fails(capsys: pytest.Capt
     assert runner.run_once() == 1
 
     stderr = capsys.readouterr().err
-    # both the original failure and the reporting failure must be recoverable
-    # from the log, since neither reached the server
+    # 原始失败和报告失败都必须能从日志中恢复查看，
+    # 因为两者都没有送达服务端。
     assert "fail-report also failed" in stderr
     assert "failed: APIError" in stderr
 
@@ -159,8 +200,8 @@ def test_config_rejects_heartbeat_slower_than_lease() -> None:
 
 
 def test_config_rejects_lease_outside_runtime_bounds() -> None:
-    # The runtime silently clamps these to 300s, so a worker configured beyond
-    # the bounds would renew far slower than the lease it actually holds.
+    # 运行时会将这些值静默调整为 300 秒，因此越界配置
+    # 会使工作进程的续租间隔远大于实际持有租约的有效期。
     with pytest.raises(ValueError, match="between 30 and 3600"):
         Config("http://api", "demo", "worker", "secret", "worker-1", lease_seconds=7200, heartbeat_interval=600.0)
     with pytest.raises(ValueError, match="between 30 and 3600"):
@@ -168,8 +209,8 @@ def test_config_rejects_lease_outside_runtime_bounds() -> None:
 
 
 def test_transient_heartbeat_failure_is_retried_not_fatal() -> None:
-    # A single 503 must not discard an in-flight document: the previous renewal
-    # is still valid for nearly the whole lease window.
+    # 单次 503 不能丢弃正在处理的文档：上一次续租
+    # 在几乎整个租约窗口内仍然有效。
     client = HeartbeatRecordingClient(
         _sheet(), fail_after=1, failure=APIError("api_request_failed:503", status_code=503)
     )
@@ -180,7 +221,7 @@ def test_transient_heartbeat_failure_is_retried_not_fatal() -> None:
         deadline = time.monotonic() + 2.0
         while client.attempts < 4 and time.monotonic() < deadline:
             time.sleep(0.01)
-        # transient failures keep ticking instead of latching an error
+        # 暂时失败后继续发送心跳，不把错误锁定为永久状态。
         assert client.attempts >= 4, "heartbeat thread must keep retrying after a transient failure"
         heartbeat.raise_if_failed()
 
@@ -226,4 +267,4 @@ def test_stop_can_ignore_heartbeat_error_so_completion_still_reports() -> None:
             break
         time.sleep(0.01)
 
-    heartbeat.stop(raise_on_error=False)  # must not raise; the server re-validates the lease
+    heartbeat.stop(raise_on_error=False)  # 不能抛出异常；服务端会重新校验租约。

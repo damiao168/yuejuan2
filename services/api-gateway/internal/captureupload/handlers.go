@@ -13,6 +13,10 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/logger"
 )
 
+const (
+	captureUploadScopeForbidden = "capture upload is outside the current data scope"
+)
+
 type Handler struct {
 	service *Service
 	audit   auth.AuditRecorder
@@ -22,8 +26,7 @@ func NewHandler(service *Service, audit auth.AuditRecorder) *Handler {
 	return &Handler{service: service, audit: audit}
 }
 
-// RegisterRoutes uses segment routes rather than the legacy ":complete"
-// syntax, which net/http ServeMux cannot safely bind as a path wildcard.
+// RegisterRoutes 使用分段路由，不沿用旧的 ":complete" 语法；net/http ServeMux 无法将其安全绑定为路径通配符。
 func RegisterRoutes(mux *http.ServeMux, handler *Handler, requireCaptureManage func(http.HandlerFunc) http.Handler) {
 	mux.Handle("POST /api/v1/capture/uploads:init", requireCaptureManage(handler.Init))
 	mux.Handle("GET /api/v1/capture/uploads/{id}", requireCaptureManage(handler.Get))
@@ -31,7 +34,7 @@ func RegisterRoutes(mux *http.ServeMux, handler *Handler, requireCaptureManage f
 	mux.Handle("POST /api/v1/capture/uploads/{id}/complete", requireCaptureManage(handler.Complete))
 }
 
-// Get recovers transfer progress without reinitializing or advancing it.
+// Get 恢复传输进度，不重新初始化或推进进度。
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
 	session, err := h.service.Get(r.Context(), user.TenantID, r.PathValue("id"))
@@ -40,7 +43,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !h.allowsExam(r, session.ExamID) {
-		httpx.Error(w, r, http.StatusForbidden, "capture_upload_forbidden", "capture upload is outside the current data scope")
+		httpx.Error(w, r, http.StatusForbidden, "capture_upload_forbidden", captureUploadScopeForbidden)
 		return
 	}
 	status := "processing"
@@ -60,7 +63,7 @@ func (h *Handler) Init(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !h.allowsExam(r, input.ExamID) {
-		httpx.Error(w, r, http.StatusForbidden, "capture_upload_forbidden", "capture upload is outside the current data scope")
+		httpx.Error(w, r, http.StatusForbidden, "capture_upload_forbidden", captureUploadScopeForbidden)
 		return
 	}
 	response, err := h.service.Init(r.Context(), user.TenantID, user.ID, input)
@@ -80,7 +83,7 @@ func (h *Handler) PutChunk(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !h.allowsExam(r, session.ExamID) {
-		httpx.Error(w, r, http.StatusForbidden, "capture_upload_forbidden", "capture upload is outside the current data scope")
+		httpx.Error(w, r, http.StatusForbidden, "capture_upload_forbidden", captureUploadScopeForbidden)
 		return
 	}
 	offset, err := strconv.ParseInt(strings.TrimSpace(r.Header.Get("Upload-Offset")), 10, 64)
@@ -121,7 +124,7 @@ func (h *Handler) Complete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !h.allowsExam(r, session.ExamID) {
-		httpx.Error(w, r, http.StatusForbidden, "capture_upload_forbidden", "capture upload is outside the current data scope")
+		httpx.Error(w, r, http.StatusForbidden, "capture_upload_forbidden", captureUploadScopeForbidden)
 		return
 	}
 	var input CompleteInput

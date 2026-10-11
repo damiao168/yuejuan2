@@ -1,0 +1,48 @@
+{
+  "source": "D:\\project\\yuejuan",
+  "snapshot": "C:\\Users\\pc\\AppData\\Local\\Temp\\yuejuan-semgrep-latest-external-07e0t6q8",
+  "previous_snapshot": "C:\\Users\\pc\\AppData\\Local\\Temp\\yuejuan-semgrep-remediation-qe1gj4t4",
+  "fixed_at_utc": "2026-10-11T10:12:44.539350+00:00",
+  "source_files": [
+    {
+      "path": "services/api-gateway/internal/server/e2e_mfa_test.go",
+      "sha256": "d96120d9299f453d22441a852eb7c476c34feba291727c07c79a794012f8e9f0",
+      "bytes": 20080,
+      "previous_snapshot_sha256": "baef7b00789aa9b30bc285357fdc645175dd34bdf446cc33b64aef51a4455f60",
+      "external_change": true,
+      "whole_file_review_status": "pending",
+      "review_scope": "增量和原告警相关调用"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+      "sha256": "63661ddcd204726ad063beec0b53c009ba11021abf0822af5f7a3af166695af4",
+      "bytes": 57440,
+      "previous_snapshot_sha256": "9e64cc5888db987c913d01baf93e784fdf1f465aab406b9542950732f5a2b916",
+      "external_change": true,
+      "whole_file_review_status": "pending",
+      "review_scope": "增量和原告警相关调用"
+    }
+  ],
+  "source_count": 2,
+  "origin": "外部任务在此前全仓/46文件扫描后更新的当前字节",
+  "files": [
+    {
+      "path": "services/api-gateway/internal/server/e2e_mfa_test.go",
+      "sha256": "d96120d9299f453d22441a852eb7c476c34feba291727c07c79a794012f8e9f0",
+      "bytes": 20080,
+      "previous_snapshot_sha256": "baef7b00789aa9b30bc285357fdc645175dd34bdf446cc33b64aef51a4455f60",
+      "external_change": true,
+      "whole_file_review_status": "pending",
+      "review_scope": "增量和原告警相关调用"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+      "sha256": "63661ddcd204726ad063beec0b53c009ba11021abf0822af5f7a3af166695af4",
+      "bytes": 57440,
+      "previous_snapshot_sha256": "9e64cc5888db987c913d01baf93e784fdf1f465aab406b9542950732f5a2b916",
+      "external_change": true,
+      "whole_file_review_status": "pending",
+      "review_scope": "增量和原告警相关调用"
+    }
+  ]
+}

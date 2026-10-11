@@ -3,9 +3,9 @@ import type { WorkbenchContext } from "./gradingWorkbench.types";
 
 export interface FastConfirmCandidate { grade: AiGrade; score: number; threshold: number }
 
-// Batch confirmation is intentionally narrower than ordinary teacher review.
-// Items with a rubric, mathematical evidence, high risk, or incomplete AI
-// evidence stay in the full workbench for individual judgment.
+// 批量确认的范围有意小于普通教师阅卷。
+// 有评分细则、数学证据、高风险或 AI 证据不完整的条目，
+// 仍留在完整工作台中逐项判断。
 export function fastConfirmCandidate(context: WorkbenchContext, userId: string): FastConfirmCandidate | null {
   const snapshot = context.reviewContext.question_snapshot;
   if (snapshot.scoring_policy_snapshot.mode !== "AI_FAST_CONFIRM" || !["R1", "R2"].includes(snapshot.risk_tier) || snapshot.subject_code === "mathematics") return null;

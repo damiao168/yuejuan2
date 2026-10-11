@@ -1,0 +1,63 @@
+{
+  "scope": "5 个旧 SHA 元数据文件新增当前 SHA 与独立证据，历史测试 SHA 不改写",
+  "files": [
+    {
+      "file": "apps/web-admin/scripts/check-production-routes.mjs",
+      "historical_recorded_sha256": "469c5dce5e57dcd1d917b160d4bbf40e9d59fb6eb57cb19d3f150a4a46a1ccf9",
+      "latest_current_sha256": "3f6a5db9c86c12792d8a5976ef47e2fcd16bc9b9b124348fbc30fd580266b336",
+      "evidence": [
+        "frontend-production-contracts-current-01.json",
+        "frontend-production-contracts-current-01.tap"
+      ],
+      "checkpoint03_frozen_sha_matches": true,
+      "historical_validation_not_reassigned": true
+    },
+    {
+      "file": "apps/web-admin/src/components/ResponsiveTable.tsx",
+      "historical_recorded_sha256": "44a76005937ecd809e7ac20b20e28a8ee690e986d0786c1d0c28724c8277d3b2",
+      "latest_current_sha256": "df949e3c3ed407f5f0fc1096639bf82c420b100dbaaa2589719e11460d0a656d",
+      "evidence": [
+        "frontend-web-retry-01-execution.json",
+        "frontend-web-current-typecheck-02.json"
+      ],
+      "checkpoint03_frozen_sha_matches": true,
+      "historical_validation_not_reassigned": true
+    },
+    {
+      "file": "docs/architecture/tools/capture_preview_qa.js",
+      "historical_recorded_sha256": "0606fe358d6e5a275781c02942c3207afb845616b21bf5f1d42dfbb419527eb1",
+      "latest_current_sha256": "47a3ce999f9b5b93993006ef6685d3c6670471ae66e1e667833d346891888496",
+      "evidence": [
+        "root-platform-disposition-results.json",
+        "delivery-independent-preflight-audit-python-agent.json"
+      ],
+      "checkpoint03_frozen_sha_matches": true,
+      "historical_validation_not_reassigned": true
+    },
+    {
+      "file": "docs/architecture/tools/render_native.js",
+      "historical_recorded_sha256": "0be6b4dbde9ebc8d7150140d5ae66a3aa755bd3376b43ed51ea13524dc43668a",
+      "latest_current_sha256": "85e0b8d9604713f3506c56758a3af02977ef66e35bc66ff7d3136e129eefac65",
+      "evidence": [
+        "root-new-js-tests-02.json",
+        "root-platform-disposition-results.json",
+        "root-platform-disposition-phase02-results.json"
+      ],
+      "checkpoint03_frozen_sha_matches": true,
+      "historical_validation_not_reassigned": true
+    },
+    {
+      "file": "scripts/check-story052-production-deployment.mjs",
+      "historical_recorded_sha256": "20be91cc7b35b8df3a1284a678ed29231bf93359d5fbb66cddc868aa9e4161bb",
+      "latest_current_sha256": "688b7952d124a8208bd4f650c191862f6124993a471a66affa956420f3334676",
+      "evidence": [
+        "root-new-findings-progress.json",
+        "root-production-deployment-check-01.log"
+      ],
+      "checkpoint03_frozen_sha_matches": true,
+      "historical_validation_not_reassigned": true
+    }
+  ],
+  "source_files_edited": false,
+  "platform_final_result_pending": true
+}

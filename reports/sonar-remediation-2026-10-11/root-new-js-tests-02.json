@@ -1,0 +1,17 @@
+{
+  "completed_at": "2026-10-11T19:07:27.492847+08:00",
+  "command": [
+    "D:/node.js/node.exe",
+    "--test",
+    "scripts/ci/generated-files-race.test.mjs",
+    "scripts/ci/openapi-sdk.batch20.test.mjs",
+    "scripts/ci/architecture-audit-tools.test.mjs"
+  ],
+  "exit_code": 0,
+  "source_sha256": {
+    "scripts/lib/openapi-sdk.mjs": "257f2b7281b3ce2fcce5d2463a25960dd7da75ad8a16eb69c2dc165d6fd940e6",
+    "scripts/ci/check-generated-contracts.mjs": "35fef0a11c6d6b35c07b321eed2c7ef27d2471f244899aec03d8c0002ab4d5aa"
+  },
+  "sources_unchanged": true,
+  "previous_evidence_preserved": "root-new-js-tests-01.json/tap; deeper open retry nested catch split into existing-file open and exclusive-create retry"
+}

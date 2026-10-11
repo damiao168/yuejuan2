@@ -1,10 +1,13 @@
 version: 2
 
 updates:
+  # 普通版本发布满 7 天后再纳入每周更新；cooldown 不适用于安全更新。
   - package-ecosystem: npm
     directory: "/"
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 5
     groups:
       minor-and-patch:
@@ -14,6 +17,8 @@ updates:
     directory: "/lab"
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 5
     groups:
       minor-and-patch:
@@ -23,6 +28,8 @@ updates:
     directory: "/services/api-gateway"
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 5
     groups:
       minor-and-patch:
@@ -32,6 +39,8 @@ updates:
     directory: "/ai-services"
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 5
     groups:
       minor-and-patch:
@@ -41,6 +50,8 @@ updates:
     directory: "/services/ocr-worker"
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 5
     groups:
       minor-and-patch:
@@ -50,6 +61,8 @@ updates:
     directory: "/services/image-quality-worker"
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 5
     groups:
       minor-and-patch:
@@ -59,6 +72,8 @@ updates:
     directory: "/services/page-processing-worker"
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 5
     groups:
       minor-and-patch:
@@ -68,6 +83,8 @@ updates:
     directory: "/services/subjective-grading-worker"
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 5
     groups:
       minor-and-patch:
@@ -77,6 +94,8 @@ updates:
     directory: "/services/math-verification-worker"
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 5
     groups:
       minor-and-patch:
@@ -86,6 +105,8 @@ updates:
     directory: "/apps/desktop-client/src-tauri"
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 5
     groups:
       minor-and-patch:
@@ -95,4 +116,6 @@ updates:
     directory: "/"
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 5

@@ -1,0 +1,5 @@
+{
+  "http_status": 500,
+  "body": "{\"errors\":[{\"msg\":\"An error has occurred. Please contact your administrator\"}]}",
+  "recorded_at": "2026-10-11T12:16:36.671530+08:00"
+}

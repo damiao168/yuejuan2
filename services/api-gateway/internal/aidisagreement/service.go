@@ -17,9 +17,7 @@ import (
 
 const scoreEpsilon = 1e-9
 
-// Service is intentionally an observation/projection service. Capture,
-// classification and routing can never update question_grade, final_grade,
-// score-release or a model result.
+// Service 仅负责观察与投影。采集、分类和路由都不能更新 question_grade、final_grade、成绩发布或模型结果。
 type Service struct {
 	store Store
 	now   func() time.Time
@@ -29,9 +27,7 @@ func NewService(store Store) *Service {
 	return &Service{store: store, now: func() time.Time { return time.Now().UTC() }}
 }
 
-// Capture loads the two real, tenant-scoped source facts from the Store. It
-// returns created=false when there is no material discrepancy. The unique
-// source-pair key makes retries and duplicate review submits idempotent.
+// Capture 从 Store 加载租户范围内的两条真实来源事实。没有实质差异时返回 created=false；唯一的来源配对键使重试和重复复核提交保持幂等。
 func (s *Service) Capture(ctx context.Context, tenantID string, input CaptureInput) (item Disagreement, created bool, err error) {
 	if s.store == nil || strings.TrimSpace(tenantID) == "" || strings.TrimSpace(input.AICandidateID) == "" || strings.TrimSpace(input.HumanGradeID) == "" {
 		return Disagreement{}, false, ErrInvalidInput
@@ -51,10 +47,9 @@ func (s *Service) Capture(ctx context.Context, tenantID string, input CaptureInp
 	return stored, created, nil
 }
 
-// ObserveHumanGrade is the narrow review-handler connection point. Pass the
-// server-linked HumanGrade.AIGradeID and HumanGrade.ID after a successful
-// single-round review commit; do not call it for blank AI links or blind Seed
-// tasks. The PostgreSQL store re-checks both records before writing anything.
+// ObserveHumanGrade 是复核处理器的专用连接点。
+// 单轮复核成功提交后，传入服务端关联的 HumanGrade.AIGradeID 和 HumanGrade.ID；AI 关联为空或任务是盲投 Seed 时不要调用。
+// PostgreSQL 存储在写入前会重新核验两条记录。
 func (s *Service) ObserveHumanGrade(ctx context.Context, tenantID, aiCandidateID, humanGradeID string) (Disagreement, bool, error) {
 	return s.Capture(ctx, tenantID, CaptureInput{AICandidateID: aiCandidateID, HumanGradeID: humanGradeID})
 }
@@ -88,9 +83,7 @@ func (s *Service) Classify(ctx context.Context, tenantID, id, reviewerID string,
 	return s.store.Classify(ctx, tenantID, id, reviewerID, input, s.now().UTC())
 }
 
-// Route attaches the issue to an existing tenant-scoped human review task.
-// It never creates a final grade, changes a current score, or dispatches an
-// AI retry. A19 can later consume the classification's follow-up candidate.
+// Route 将问题关联到租户范围内已有的人工复核任务。它不会生成最终成绩、修改当前分数或派发 AI 重试；A19 后续可使用分类结果中的跟进候选项。
 func (s *Service) Route(ctx context.Context, tenantID, id, actorID string, input RouteInput) (Disagreement, error) {
 	if s.store == nil || strings.TrimSpace(tenantID) == "" || strings.TrimSpace(id) == "" || strings.TrimSpace(actorID) == "" ||
 		strings.TrimSpace(input.ReviewTaskID) == "" || input.ExpectedRevision <= 0 {
@@ -106,8 +99,7 @@ func (s *Service) Dataset(ctx context.Context, tenantID string, filter Filter) (
 	}
 	entries := make([]DatasetEntry, 0, len(items))
 	for _, item := range items {
-		// Unclassified records are not an evaluation target. The caller cannot
-		// accidentally export an unresolved difference as a model error.
+		// 未分类的记录不能作为评测目标，避免调用方误将未解决的差异导出为模型错误。
 		if item.Taxonomy == "" {
 			continue
 		}
@@ -121,8 +113,7 @@ func (s *Service) Dataset(ctx context.Context, tenantID string, filter Filter) (
 	return entries, nil
 }
 
-// RecommendedFollowUps exposes a human decision aid rather than enacting an
-// action. In particular, it does not create regrade jobs or mutate a rubric.
+// RecommendedFollowUps 提供人工决策参考，不执行动作；它不会创建重评任务或修改评分细则。
 func RecommendedFollowUps(t Taxonomy) []string {
 	switch t {
 	case TaxonomyAIScoringError:
@@ -148,24 +139,11 @@ func calculate(source ActualComparison, at time.Time) (Disagreement, bool) {
 	delta, absDelta, normalized := gradingdisagreement.ScoreDelta(source.AISuggestedScore, source.HumanScore, source.MaxScore)
 	evidenceGap := source.AIEvidenceCount == 0
 	criterionGap := source.AIMatchedCriterionCount != source.HumanCriterionCount
-	// Exact score with otherwise comparable criterion/evidence summaries does
-	// not make a useful disagreement item. It would dilute the human queue.
+	// 共用引擎舍入后的分差可忽略，且评分标准、证据摘要也可比时，不产生分歧项。
 	if absDelta < scoreEpsilon && !evidenceGap && !criterionGap {
 		return Disagreement{}, false
 	}
-	difference := DifferenceScore
-	switch {
-	case absDelta >= scoreEpsilon && evidenceGap && criterionGap:
-		difference = DifferenceCombined
-	case absDelta >= scoreEpsilon && evidenceGap:
-		difference = DifferenceScoreEvidence
-	case absDelta >= scoreEpsilon && criterionGap:
-		difference = DifferenceScoreCriterion
-	case evidenceGap:
-		difference = DifferenceEvidence
-	case criterionGap:
-		difference = DifferenceCriterion
-	}
+	difference := comparisonDifferenceType(absDelta, evidenceGap, criterionGap)
 	rules := []string{}
 	if absDelta >= scoreEpsilon {
 		rules = append(rules, "score_delta")
@@ -186,8 +164,7 @@ func calculate(source ActualComparison, at time.Time) (Disagreement, bool) {
 	if source.MaxScore <= 0 {
 		normalized = absDelta / math.Max(source.MaxScore, 1)
 	}
-	// A severe score gap is intentionally conservative. R3 then receives the
-	// highest queue priority but a small variation is never labelled severe.
+	// 严重分差的判定刻意保守。R3 获得最高队列优先级，但小幅差异不会被标记为严重。
 	if normalized >= .40 || (source.RiskTier == "R3" && absDelta >= 1) {
 		severity = SeveritySevere
 		rules = append(rules, "severe_score_delta")
@@ -205,6 +182,24 @@ func calculate(source ActualComparison, at time.Time) (Disagreement, bool) {
 		EvidenceSummary: EvidenceSummary{AIEvidenceCount: source.AIEvidenceCount, AIMatchedCriterionCount: source.AIMatchedCriterionCount, HumanCriterionCount: source.HumanCriterionCount},
 		Status:          StatusNeedsReview, Revision: 1, CreatedAt: at, UpdatedAt: at,
 	}, true
+}
+
+// 多种差异并存时保留原来的分类优先级；证据和评分点缺失仍可独立产生分歧。
+func comparisonDifferenceType(absDelta float64, evidenceGap, criterionGap bool) DifferenceType {
+	switch {
+	case absDelta >= scoreEpsilon && evidenceGap && criterionGap:
+		return DifferenceCombined
+	case absDelta >= scoreEpsilon && evidenceGap:
+		return DifferenceScoreEvidence
+	case absDelta >= scoreEpsilon && criterionGap:
+		return DifferenceScoreCriterion
+	case evidenceGap:
+		return DifferenceEvidence
+	case criterionGap:
+		return DifferenceCriterion
+	default:
+		return DifferenceScore
+	}
 }
 
 func disagreementID(aiID, humanID string) string {

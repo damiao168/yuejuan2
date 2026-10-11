@@ -1,0 +1,3 @@
+﻿key,severity,type,rule,file,line,message,effort,status
+cb72da98-d338-447a-aa79-4399b8ed8166,MINOR,CODE_SMELL,javascript:S7773,docs/architecture/previews/index.html,9,Prefer `Number.parseFloat` over `parseFloat`.,2min,OPEN
+7896c681-434e-4ce0-b3e6-94aec494f659,MAJOR,CODE_SMELL,javascript:S2681,docs/architecture/previews/index.html,14,This statement will not be executed conditionally; only the first statement will be. The rest will execute unconditionally.,5min,OPEN

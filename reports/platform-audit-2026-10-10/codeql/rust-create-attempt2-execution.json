@@ -1,0 +1,22 @@
+{
+  "language": "rust",
+  "stage": "create",
+  "started": "2026-10-11T13:53:54+08:00",
+  "command": [
+    "D:\\tools\\audit-codeql-20261010\\codeql\\codeql.exe",
+    "database",
+    "create",
+    "D:\\tools\\audit-codeql-20261010\\databases\\rust-20261011-toolchain-ready",
+    "--language=rust",
+    "--source-root=D:\\tools\\audit-codeql-20261010\\source-20261011",
+    "--threads=1",
+    "--ram=3072",
+    "--build-mode=none",
+    "--working-dir=D:\\tools\\audit-codeql-20261010\\source-20261011\\apps\\desktop-client\\src-tauri",
+    "--common-caches=D:\\tools\\audit-codeql-20261010\\common-caches"
+  ],
+  "log": "D:\\project\\yuejuan\\reports\\platform-audit-2026-10-10\\codeql\\rust-create.log",
+  "exit_code": 2,
+  "finished": "2026-10-11T14:06:23+08:00",
+  "elapsed_seconds": 748.97
+}

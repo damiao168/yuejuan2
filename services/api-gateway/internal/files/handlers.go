@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"strings"
 
@@ -71,56 +72,100 @@ func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
+	info, ok := h.inspectUploadFile(w, r, file, header)
+	if !ok {
+		return
+	}
+	input, ok := h.uploadInput(w, r, user, header, info)
+	if !ok {
+		return
+	}
+	lifecycle, hasLifecycle := h.store.(LifecycleStore)
+	existing, duplicate, ok := h.lookupUploadDuplicate(w, r, input, lifecycle, hasLifecycle)
+	if !ok {
+		return
+	}
+	if duplicate && (!hasLifecycle || existing.Lifecycle == LifecycleActive) {
+		h.writeUploadDuplicate(w, r, input.OwnerType, existing)
+		return
+	}
+	var asset FileAsset
+	if hasLifecycle {
+		asset, ok = h.pendingUploadAsset(w, r, input, lifecycle, existing, duplicate)
+		if !ok {
+			return
+		}
+		// 重试必须写入待处理资源记录的路径。BuildStorageKey 包含随机后缀，因此本次请求生成的键不同。
+		input.StorageKey = asset.StorageKey
+		input.StorageBucket = asset.StorageBucket
+	}
+	if !h.writeAndVerifyUpload(w, r, input, file, asset, lifecycle, hasLifecycle) {
+		return
+	}
+	h.finishUpload(w, r, input, asset, lifecycle, hasLifecycle)
+}
+
+type uploadFileInfo struct {
+	originalName string
+	contentType  string
+	hashSHA256   string
+}
+
+// 文件在 Upload 内关闭；检查成功后流回到起点，后面的 Put 读取同一份上传内容。
+func (h *Handler) inspectUploadFile(w http.ResponseWriter, r *http.Request, file multipart.File, header *multipart.FileHeader) (uploadFileInfo, bool) {
 	if header.Size <= 0 || header.Size > h.cfg.MaxUploadBytes {
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_file_size", fmt.Sprintf("file size must be between 1 and %d bytes", h.cfg.MaxUploadBytes))
-		return
+		return uploadFileInfo{}, false
 	}
 
 	originalName, err := CleanFilename(header.Filename)
 	if err != nil {
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_filename", "file name is invalid")
-		return
+		return uploadFileInfo{}, false
 	}
 
 	sample := make([]byte, 512)
 	n, readErr := file.Read(sample)
 	if readErr != nil && !errors.Is(readErr, io.EOF) {
 		httpx.Error(w, r, http.StatusBadRequest, "file_read_failed", "failed to read uploaded file")
-		return
+		return uploadFileInfo{}, false
 	}
 	if _, err := file.Seek(0, io.SeekStart); err != nil {
 		httpx.Error(w, r, http.StatusBadRequest, "file_seek_failed", "failed to inspect uploaded file")
-		return
+		return uploadFileInfo{}, false
 	}
 	contentType, err := ValidateFileType(originalName, header.Header.Get("Content-Type"), SniffFileContentType(originalName, sample[:n]), h.cfg.AllowedExtensions)
 	if err != nil {
 		httpx.Error(w, r, http.StatusBadRequest, "unsupported_file_type", "file type is not allowed")
-		return
+		return uploadFileInfo{}, false
 	}
 
 	hash := sha256.New()
 	if _, err := io.Copy(hash, file); err != nil {
 		httpx.Error(w, r, http.StatusBadRequest, "file_hash_failed", "failed to hash uploaded file")
-		return
+		return uploadFileInfo{}, false
 	}
 	hashSHA256 := hex.EncodeToString(hash.Sum(nil))
 	if _, err := file.Seek(0, io.SeekStart); err != nil {
 		httpx.Error(w, r, http.StatusBadRequest, "file_seek_failed", "failed to prepare uploaded file")
-		return
+		return uploadFileInfo{}, false
 	}
+	return uploadFileInfo{originalName: originalName, contentType: contentType, hashSHA256: hashSHA256}, true
+}
 
+func (h *Handler) uploadInput(w http.ResponseWriter, r *http.Request, user auth.User, header *multipart.FileHeader, info uploadFileInfo) (CreateAssetInput, bool) {
 	ownerType := strings.TrimSpace(r.FormValue("owner_type"))
 	if ownerType == "" {
 		ownerType = "generic"
 	}
 	if !ValidateOwnerType(ownerType) {
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_owner_type", "owner_type is not supported")
-		return
+		return CreateAssetInput{}, false
 	}
 	ownerID := strings.TrimSpace(r.FormValue("owner_id"))
 	if ownerID != "" && !IsUUIDLike(ownerID) {
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_owner_id", "owner_id must be a UUID")
-		return
+		return CreateAssetInput{}, false
 	}
 	schoolID := strings.TrimSpace(r.FormValue("school_id"))
 	examID := strings.TrimSpace(r.FormValue("exam_id"))
@@ -128,129 +173,130 @@ func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) {
 	for field, value := range map[string]string{"school_id": schoolID, "exam_id": examID, "submission_id": submissionID} {
 		if value != "" && !IsUUIDLike(value) {
 			httpx.Error(w, r, http.StatusBadRequest, "invalid_"+field, field+" must be a UUID")
-			return
+			return CreateAssetInput{}, false
 		}
 	}
 	if !ValidateOwnerReferences(ownerType, ownerID, examID, submissionID) {
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_owner_reference", "file owner metadata is inconsistent")
-		return
+		return CreateAssetInput{}, false
 	}
-	storageKey, err := BuildStorageKey(user.TenantID, hashSHA256, originalName)
+	storageKey, err := BuildStorageKey(user.TenantID, info.hashSHA256, info.originalName)
 	if err != nil {
 		httpx.Error(w, r, http.StatusInternalServerError, "storage_key_failed", "failed to create storage key")
-		return
+		return CreateAssetInput{}, false
 	}
-	input := CreateAssetInput{
+	return CreateAssetInput{
 		TenantID: user.TenantID, SchoolID: schoolID, ExamID: examID, SubmissionID: submissionID,
-		OwnerType: ownerType, OwnerID: ownerID, OriginalName: originalName, ContentType: contentType,
-		SizeBytes: header.Size, HashSHA256: hashSHA256, StorageBucket: h.cfg.Bucket, StorageKey: storageKey,
+		OwnerType: ownerType, OwnerID: ownerID, OriginalName: info.originalName, ContentType: info.contentType,
+		SizeBytes: header.Size, HashSHA256: info.hashSHA256, StorageBucket: h.cfg.Bucket, StorageKey: storageKey,
 		Visibility: "private", UploadedBy: user.ID,
-	}
-	lifecycle, hasLifecycle := h.store.(LifecycleStore)
+	}, true
+}
+
+func (h *Handler) lookupUploadDuplicate(w http.ResponseWriter, r *http.Request, input CreateAssetInput, lifecycle LifecycleStore, hasLifecycle bool) (FileAsset, bool, bool) {
 	var accessScope auth.AccessScope
 	if hasLifecycle {
 		scope, ok := auth.AccessScopeFromContext(r.Context())
 		if !ok {
 			httpx.Error(w, r, http.StatusForbidden, "access_scope_missing", "no valid data access scope is assigned")
-			return
+			return FileAsset{}, false, false
 		}
 		if err := lifecycle.ValidateCreateScope(r.Context(), scope, input); err != nil {
 			writeStoreError(w, r, err)
-			return
+			return FileAsset{}, false, false
 		}
 		accessScope = scope
 	}
 
-	existing, duplicate, err := h.store.FindDuplicate(r.Context(), user.TenantID, ownerType, ownerID, hashSHA256)
+	existing, duplicate, err := h.store.FindDuplicate(r.Context(), input.TenantID, input.OwnerType, input.OwnerID, input.HashSHA256)
 	if err != nil {
 		writeStoreError(w, r, err)
-		return
+		return FileAsset{}, false, false
 	}
 	if duplicate && hasLifecycle {
-		// Duplicate lookup is tenant-wide. Authorize the persisted asset itself
-		// before returning it or writing to its storage key; request metadata is
-		// not proof that an existing object belongs to the caller's data scope.
+		// 重复项查询覆盖整个租户。返回已持久化资源或写入其存储键前，须对该资源本身授权；请求元数据不能证明已有对象属于调用方的数据作用域。
 		existing, err = lifecycle.GetScoped(r.Context(), accessScope, existing.ID)
 		if err != nil {
 			writeStoreError(w, r, err)
-			return
+			return FileAsset{}, false, false
 		}
 	}
-	if duplicate && (!hasLifecycle || existing.Lifecycle == LifecycleActive) {
-		// Exam-material imports are retryable workflows. Re-uploading identical
-		// material should reuse the active asset so a failed import can attach a
-		// fresh source and run again without duplicating object storage.
-		if ownerType == "import" {
-			httpx.JSON(w, http.StatusOK, map[string]any{
-				"file":      existing.Response(),
-				"duplicate": true,
-			})
-			return
-		}
-		httpx.JSON(w, http.StatusConflict, map[string]any{
-			"request_id": logger.RequestID(r.Context()),
-			"error": map[string]string{
-				"code":    "duplicate_file",
-				"message": "same file already exists for this owner",
-			},
-			"existing_file": existing.Response(),
+	return existing, duplicate, true
+}
+
+func (h *Handler) writeUploadDuplicate(w http.ResponseWriter, r *http.Request, ownerType string, existing FileAsset) {
+	// 考试材料导入是可重试工作流。重新上传相同材料应复用启用的资源，使失败导入能关联新来源并再次执行，不重复占用对象存储。
+	if ownerType == "import" {
+		httpx.JSON(w, http.StatusOK, map[string]any{
+			"file":      existing.Response(),
+			"duplicate": true,
 		})
 		return
 	}
-	if duplicate && hasLifecycle && existing.Lifecycle == LifecycleMissingObject {
+	httpx.JSON(w, http.StatusConflict, map[string]any{
+		"request_id": logger.RequestID(r.Context()),
+		"error": map[string]string{
+			"code":    "duplicate_file",
+			"message": "same file already exists for this owner",
+		},
+		"existing_file": existing.Response(),
+	})
+}
+
+func (h *Handler) pendingUploadAsset(w http.ResponseWriter, r *http.Request, input CreateAssetInput, lifecycle LifecycleStore, existing FileAsset, duplicate bool) (FileAsset, bool) {
+	if duplicate && existing.Lifecycle == LifecycleMissingObject {
 		if _, ok := h.store.(MissingObjectRecovery); !ok {
 			httpx.Error(w, r, http.StatusServiceUnavailable, "missing_object_recovery_unavailable", "missing object recovery is unavailable")
-			return
+			return FileAsset{}, false
 		}
 	}
-	var asset FileAsset
-	if hasLifecycle {
-		if duplicate && (existing.Lifecycle == LifecyclePendingUpload || existing.Lifecycle == LifecycleUploadFailed || existing.Lifecycle == LifecycleMissingObject) {
-			asset = existing
-		} else {
-			asset, err = lifecycle.CreatePending(r.Context(), input)
-			if err != nil {
-				writeStoreError(w, r, err)
-				return
-			}
-		}
-		// A retry must write to the path recorded by the pending asset. BuildStorageKey
-		// contains a random suffix, so the key generated for this request is different.
-		storageKey = asset.StorageKey
-		input.StorageKey = asset.StorageKey
-		input.StorageBucket = asset.StorageBucket
+	if duplicate && (existing.Lifecycle == LifecyclePendingUpload || existing.Lifecycle == LifecycleUploadFailed || existing.Lifecycle == LifecycleMissingObject) {
+		return existing, true
 	}
-	if err := h.objects.Put(r.Context(), input.StorageBucket, storageKey, file, header.Size, contentType); err != nil {
+	asset, err := lifecycle.CreatePending(r.Context(), input)
+	if err != nil {
+		writeStoreError(w, r, err)
+		return FileAsset{}, false
+	}
+	return asset, true
+}
+
+func (h *Handler) writeAndVerifyUpload(w http.ResponseWriter, r *http.Request, input CreateAssetInput, file multipart.File, asset FileAsset, lifecycle LifecycleStore, hasLifecycle bool) bool {
+	if err := h.objects.Put(r.Context(), input.StorageBucket, input.StorageKey, file, input.SizeBytes, input.ContentType); err != nil {
 		if hasLifecycle && asset.Lifecycle == LifecyclePendingUpload {
-			_, _ = lifecycle.MarkUploadFailed(r.Context(), user.TenantID, asset.ID, asset.Revision, "object_put_failed")
+			_, _ = lifecycle.MarkUploadFailed(r.Context(), input.TenantID, asset.ID, asset.Revision, "object_put_failed")
 		}
 		httpx.Error(w, r, http.StatusBadGateway, "object_storage_failed", "failed to write object storage")
-		return
+		return false
 	}
 	// 对象写入成功仍须回读验证大小和哈希，验证通过后才能把元数据标记为 active。
-	if err := h.verifyStoredObject(r, input.StorageBucket, storageKey, header.Size, hashSHA256); err != nil {
+	if err := h.verifyStoredObject(r, input.StorageBucket, input.StorageKey, input.SizeBytes, input.HashSHA256); err != nil {
 		if hasLifecycle && asset.Lifecycle == LifecyclePendingUpload {
-			_, _ = lifecycle.MarkUploadFailed(r.Context(), user.TenantID, asset.ID, asset.Revision, "object_verification_failed")
+			_, _ = lifecycle.MarkUploadFailed(r.Context(), input.TenantID, asset.ID, asset.Revision, "object_verification_failed")
 		}
 		httpx.Error(w, r, http.StatusBadGateway, "object_verification_failed", "uploaded object could not be verified")
-		return
+		return false
 	}
+	return true
+}
+
+func (h *Handler) finishUpload(w http.ResponseWriter, r *http.Request, input CreateAssetInput, asset FileAsset, lifecycle LifecycleStore, hasLifecycle bool) {
+	var err error
 	if hasLifecycle {
 		if asset.Lifecycle == LifecycleMissingObject {
-			asset, err = h.store.(MissingObjectRecovery).RecoverMissing(r.Context(), user.TenantID, asset.ID, asset.Revision)
+			asset, err = h.store.(MissingObjectRecovery).RecoverMissing(r.Context(), input.TenantID, asset.ID, asset.Revision)
 		} else {
-			asset, err = lifecycle.Activate(r.Context(), user.TenantID, asset.ID, asset.Revision)
+			asset, err = lifecycle.Activate(r.Context(), input.TenantID, asset.ID, asset.Revision)
 		}
 		if err != nil {
-			// Keep the object and pending metadata: a retry can safely reconcile
-			// the deterministic storage key instead of creating an orphan.
+			// 保留对象和待处理元数据，使重试可安全核对固定存储键，避免创建孤立对象。
 			writeStoreError(w, r, err)
 			return
 		}
 	} else {
 		asset, err = h.store.Create(r.Context(), input)
 		if err != nil {
-			_ = h.objects.Remove(r.Context(), h.cfg.Bucket, storageKey)
+			_ = h.objects.Remove(r.Context(), h.cfg.Bucket, input.StorageKey)
 			writeStoreError(w, r, err)
 			return
 		}

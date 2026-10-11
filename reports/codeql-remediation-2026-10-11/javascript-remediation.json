@@ -1,0 +1,111 @@
+{
+  "language": "javascript-typescript",
+  "sourceReport": "reports/platform-audit-2026-10-10/codeql/javascript.sarif",
+  "sourceReportSha256": "f0543c1d15f9cb8a13153c0a454c6b51d80d40ad610224da102ba1484f61a0f1",
+  "baseline": "reports/codeql-remediation-2026-10-11/source-before.csv",
+  "counts": { "total": 14, "fixed": 10, "already_fixed": 0, "false_positive": 2, "intentional": 2, "pending": 0 },
+  "scope": "原 SARIF 14 条结果逐条闭环；未修改原扫描证据，未运行全量 CodeQL 重扫，未将候选复核等同于全文件或全仓人工审读。",
+  "limitations": [
+    "文件描述符固定本次读写的对象；符号链接沿用系统在打开时的解析规则，不提供不可信工作目录隔离。",
+    "生成返回前核对 dev/ino，已观察到路径替换或删除时抛错；这不是对目录未来变更或同一文件内容并发写入的锁。",
+    "为保留 Windows r+ 兼容和已有权限采用就地更新；失败会抛错并关闭描述符，但不承诺回滚已经写入的字节。"
+  ],
+  "findings": [
+    {
+      "resultIndex": 0, "reviewId": "CQ-JS-001", "ruleId": "js/file-system-race",
+      "path": "scripts/ci/check-generated-contracts.mjs", "status": "fixed",
+      "reason": "删除 existsSync/statSync 后按路径读取的窗口。目录直接 opendir 并使用已打开句柄枚举；文件打开后 fstat 和 readFileSync 使用同一描述符。缺失产物继续由快照差异门禁处理，权限及读取错误传播并关闭句柄。真实打开后替换路径回归确认读取原文件。",
+      "changedFiles": ["scripts/ci/check-generated-contracts.mjs", "scripts/ci/generated-files-race.test.mjs"]
+    },
+    {
+      "resultIndex": 1, "reviewId": "CQ-JS-002", "ruleId": "js/file-system-race",
+      "path": "scripts/lib/openapi-sdk.mjs", "status": "fixed",
+      "reason": "已有产物直接以 r+ 对应标志打开，类型检查、内容比较、定位写入和截断使用同一描述符；不再根据 existsSync 重新按路径打开。写后身份核对拒绝路径替换，保留 Windows 兼容与文件权限；只读且内容未变的产物仍可通过，变化时传播写权限错误。",
+      "changedFiles": ["scripts/lib/openapi-sdk.mjs", "scripts/ci/generated-files-race.test.mjs"]
+    },
+    {
+      "resultIndex": 2, "reviewId": "CQ-JS-003", "ruleId": "js/file-system-race",
+      "path": "scripts/lib/openapi-sdk.mjs", "status": "fixed",
+      "reason": "缺失产物使用 wx+ 排他创建；另一进程先创建导致 EEXIST 时有界重试打开现有文件，不直接 w 截断竞争者产物。空内容首次创建返回 true。UTF-8 定位写、短写、尾部截断和失败关闭均有回归。",
+      "changedFiles": ["scripts/lib/openapi-sdk.mjs", "scripts/ci/generated-files-race.test.mjs"]
+    },
+    {
+      "resultIndex": 3, "reviewId": "CQ-JS-004", "ruleId": "js/file-system-race",
+      "path": "scripts/update-api-route-coverage.mjs", "status": "fixed",
+      "reason": "路由覆盖写入复用修复后的 writeIfChanged，删除 existsSync/readFileSync 后 writeFileSync 的路径检查窗口。临时合成目录回归覆盖首次生成、未变不写、更新截断、真实路径替换报错和写失败传播。",
+      "changedFiles": ["scripts/update-api-route-coverage.mjs", "scripts/lib/openapi-sdk.mjs", "scripts/ci/generated-files-race.test.mjs"]
+    },
+    {
+      "resultIndex": 4, "reviewId": "CQ-JS-005", "ruleId": "js/unused-local-variable",
+      "path": "apps/web-admin/scripts/check-production-routes.mjs", "status": "fixed",
+      "reason": "删除未参与断言的 examWorkspace 源码读取。生产路由相关的真实接线断言和契约回归继续通过；同时修正该脚本已过时的 normalizeBaseUrl return trimmed 写法断言，明确检查空默认地址和保留空值，已有 11 个地址行为回归通过。",
+      "changedFiles": ["apps/web-admin/scripts/check-production-routes.mjs"]
+    },
+    {
+      "resultIndex": 5, "reviewId": "CQ-JS-006", "ruleId": "js/unused-local-variable",
+      "path": "apps/web-admin/scripts/check-production-routes.mjs", "status": "fixed",
+      "reason": "删除没有消费者的全 src 递归读取 allUiSource；保留实际供断言使用的 gradingFeature 扫描和 sourceFiles 函数。",
+      "changedFiles": ["apps/web-admin/scripts/check-production-routes.mjs"]
+    },
+    {
+      "resultIndex": 6, "reviewId": "CQ-JS-007", "ruleId": "js/duplicate-property",
+      "path": "lab/tests/helpers.js", "status": "fixed",
+      "reason": "原重复 rubric 的末尾覆盖确有空值回退用途。本次字面量只声明一次 rubric，覆盖后恢复选定量规，保留 null/undefined 回退及原有字段顺序，补中文边界注释。新增合成夹具回归确认默认及自定义量规、版本/满分默认值、显式无效字段覆盖语义均保留。",
+      "changedFiles": ["lab/tests/helpers.js", "lab/tests/helpers.test.js"]
+    },
+    {
+      "resultIndex": 7, "reviewId": "CQ-JS-008", "ruleId": "js/useless-expression",
+      "path": "docs/architecture/tools/capture_preview_qa.js", "status": "intentional",
+      "reason": "该文件是 playwright-cli run-code 接收的 async(page) 函数表达式输入，runner 取得函数值后注入 page 执行；不是独立 Node 入口。保留运行输入并补明确说明，不能自调用缺少 page 的函数。用途依据原逐条复核与现有架构维护文档。",
+      "changedFiles": ["docs/architecture/tools/capture_preview_qa.js"]
+    },
+    {
+      "resultIndex": 8, "reviewId": "CQ-JS-009", "ruleId": "js/useless-expression",
+      "path": "docs/architecture/tools/render_native.js", "status": "intentional",
+      "reason": "docs/architecture/DIAGRAM_MAINTENANCE.md 与 evidence/acceptance-report.md 明确记载 playwright-cli run-code tools/render_native.js。现有 architecture-audit-tools 回归以 vm 获取函数并注入 page 后执行；本次验证通过。补 runner 用途注释，保留函数表达式语义。",
+      "changedFiles": ["docs/architecture/tools/render_native.js"]
+    },
+    {
+      "resultIndex": 9, "reviewId": "CQ-JS-010", "ruleId": "js/superfluous-trailing-arguments",
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useGradingKeyboard.test.tsx", "status": "false_positive",
+      "reason": "StorageEvent(type, StorageEventInit) 为标准 DOM 构造器；本地 TypeScript lib.dom.d.ts 声明同样接收这两个参数。原 SARIF relatedLocation 指向 CodeQL externs/web/webstorage.js 的旧零参数模型。保留 storage + key:null 模拟清空存储事件，相关 4 个快捷键回归及类型检查通过。",
+      "changedFiles": []
+    },
+    {
+      "resultIndex": 10, "reviewId": "CQ-JS-011", "ruleId": "js/superfluous-trailing-arguments",
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useGradingKeyboard.test.tsx", "status": "false_positive",
+      "reason": "第二个参数的 key 模拟另一标签页关闭快捷键；符合本地 DOM 类型声明。CodeQL 旧零参数 extern 导致误报，删除参数会破坏跨标签页偏好变更回归；原测试及参数保留并验证通过。",
+      "changedFiles": []
+    },
+    {
+      "resultIndex": 11, "reviewId": "CQ-JS-012", "ruleId": "js/trivial-conditional",
+      "path": "apps/web-admin/src/pages/PanelModelBindingsSection.tsx", "status": "fixed",
+      "reason": "移除字段校验中的重复 !tenantID || loadingConfigs，二者已在同一同步回调入口拒绝且中间无 await。保留租户、loadingRef、savingRef、冲突及绑定就绪边界和所有模型/版本/能力字段检查；10 个绑定状态回归通过。",
+      "changedFiles": ["apps/web-admin/src/pages/PanelModelBindingsSection.tsx"]
+    },
+    {
+      "resultIndex": 12, "reviewId": "CQ-JS-013", "ruleId": "js/trivial-conditional",
+      "path": "apps/web-admin/src/pages/PanelModelBindingsSection.tsx", "status": "fixed",
+      "reason": "删除第二处恒 false 的 !tenantID，保存入口的租户 guard 保留。",
+      "changedFiles": ["apps/web-admin/src/pages/PanelModelBindingsSection.tsx"]
+    },
+    {
+      "resultIndex": 13, "reviewId": "CQ-JS-014", "ruleId": "js/trivial-conditional",
+      "path": "apps/web-admin/src/pages/PanelModelBindingsSection.tsx", "status": "fixed",
+      "reason": "删除第二处恒 false 的 loadingConfigs，入口 loadingConfigs 与同步 loadingRef 检查均保留；刷新同一事件轮中保存被拒绝的既有回归通过。",
+      "changedFiles": ["apps/web-admin/src/pages/PanelModelBindingsSection.tsx"]
+    }
+  ],
+  "tests": [
+    { "command": "node --test --test-concurrency=1 scripts/ci/generated-files-race.test.mjs scripts/ci/contract-gates.test.mjs scripts/ci/openapi-sdk.batch20.test.mjs scripts/ci/architecture-audit-tools.test.mjs", "status": "passed", "tests": 25 },
+    { "command": "cd lab; node --test --test-concurrency=1 tests/helpers.test.js tests/rubric.test.js tests/evidence-verifier.test.js tests/schema.test.js", "status": "passed", "tests": 37 },
+    { "command": "npm --workspace apps/web-admin run check:production-routes", "status": "passed", "detail": "初次检查命中既有陈旧 return trimmed 断言；同步修正断言并以 11 个现有地址测试验证后通过。" },
+    { "command": "npm --workspace apps/web-admin run test:production-contracts", "status": "passed", "tests": 17 },
+    { "command": "cd apps/web-admin; npm exec -- vitest run src/pages/PanelModelBindingsSection.test.tsx src/features/grading/workbench/hooks/useGradingKeyboard.test.tsx --maxWorkers=1 --minWorkers=1 --no-file-parallelism", "status": "passed", "tests": 14 },
+    { "command": "cd apps/web-admin; npm exec -- vitest run src/api/client.baseUrl.batch49.test.ts --maxWorkers=1 --minWorkers=1 --no-file-parallelism", "status": "passed", "tests": 11 },
+    { "command": "npm exec -- biome lint apps/web-admin/src/pages/PanelModelBindingsSection.tsx apps/web-admin/src/features/grading/workbench/hooks/useGradingKeyboard.test.tsx", "status": "passed" },
+    { "command": "npm run typecheck --workspace apps/web-admin", "status": "passed" },
+    { "command": "read-only generateClient/generateTypes/buildRouteCoverage comparison", "status": "passed", "detail": "只读比较实际 SDK 和 route-coverage 产物与当前源契约生成结果，未写入生成物。" },
+    { "command": "git diff --check -- <JavaScript touched files>", "status": "passed" }
+  ]
+}

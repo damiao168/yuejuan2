@@ -13,6 +13,10 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/logger"
 )
 
+const (
+	authenticationRequired = "authentication required"
+)
+
 type Handler struct {
 	store Store
 	audit auth.AuditRecorder
@@ -36,7 +40,7 @@ func RegisterRoutes(mux *http.ServeMux, h *Handler, requireRead, requireManage f
 func (h *Handler) Nominate(w http.ResponseWriter, r *http.Request) {
 	user, ok := auth.UserFromContext(r.Context())
 	if !ok {
-		httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", "authentication required")
+		httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", authenticationRequired)
 		return
 	}
 	var input NominateInput
@@ -55,7 +59,7 @@ func (h *Handler) Nominate(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) CreateVersion(w http.ResponseWriter, r *http.Request) {
 	user, ok := auth.UserFromContext(r.Context())
 	if !ok {
-		httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", "authentication required")
+		httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", authenticationRequired)
 		return
 	}
 	var input CreateVersionInput
@@ -74,7 +78,7 @@ func (h *Handler) CreateVersion(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Approve(w http.ResponseWriter, r *http.Request) {
 	user, ok := auth.UserFromContext(r.Context())
 	if !ok {
-		httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", "authentication required")
+		httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", authenticationRequired)
 		return
 	}
 	version, err := strconv.Atoi(r.PathValue("version"))
@@ -94,7 +98,7 @@ func (h *Handler) Approve(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Retire(w http.ResponseWriter, r *http.Request) {
 	user, ok := auth.UserFromContext(r.Context())
 	if !ok {
-		httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", "authentication required")
+		httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", authenticationRequired)
 		return
 	}
 	var input RetireInput
@@ -113,7 +117,7 @@ func (h *Handler) Retire(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	user, ok := auth.UserFromContext(r.Context())
 	if !ok {
-		httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", "authentication required")
+		httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", authenticationRequired)
 		return
 	}
 	item, err := h.store.Get(r.Context(), user.TenantID, r.PathValue("id"))
@@ -127,7 +131,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	user, ok := auth.UserFromContext(r.Context())
 	if !ok {
-		httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", "authentication required")
+		httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", authenticationRequired)
 		return
 	}
 	filter := ListFilter{ExamID: strings.TrimSpace(r.URL.Query().Get("exam_id")), QuestionID: strings.TrimSpace(r.URL.Query().Get("question_id")), Status: Status(strings.TrimSpace(r.URL.Query().Get("status")))}
@@ -142,7 +146,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetCoverage(w http.ResponseWriter, r *http.Request) {
 	user, ok := auth.UserFromContext(r.Context())
 	if !ok {
-		httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", "authentication required")
+		httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", authenticationRequired)
 		return
 	}
 	coverage, err := h.store.Coverage(r.Context(), user.TenantID, r.PathValue("examId"), r.PathValue("questionId"))

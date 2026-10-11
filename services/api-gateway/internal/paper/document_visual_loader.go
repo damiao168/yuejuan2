@@ -66,46 +66,61 @@ func (l storedDocumentVisualPageLoader) Load(ctx context.Context, tenantID strin
 			return nil, errors.New("paper page image reference is invalid")
 		}
 		seen[key] = true
-		asset, err := l.files.Get(ctx, tenantID, page.FileAssetID)
+		image, err := l.loadDocumentVisualPageImage(ctx, tenantID, page, totalBytes)
 		if err != nil {
-			return nil, fmt.Errorf("load paper page image metadata: %w", err)
+			return nil, err
 		}
-		mediaType := strings.ToLower(strings.TrimSpace(strings.Split(asset.ContentType, ";")[0]))
-		if mediaType != "image/png" && mediaType != "image/jpeg" && mediaType != "image/webp" {
-			return nil, errors.New("paper page image has an unsupported media type")
-		}
-		if asset.SizeBytes <= 0 || asset.SizeBytes > maxDocumentVisualPageBytes || totalBytes+int(asset.SizeBytes) > maxDocumentVisualPayloadBytes {
-			return nil, errors.New("paper page images exceed the multimodal request limit")
-		}
-		reader, err := l.objects.Get(ctx, asset.StorageBucket, asset.StorageKey)
-		if err != nil {
-			return nil, fmt.Errorf("load paper page image: %w", err)
-		}
-		data, readErr := io.ReadAll(io.LimitReader(reader, maxDocumentVisualPageBytes+1))
-		closeErr := reader.Close()
-		if readErr != nil {
-			return nil, fmt.Errorf("read paper page image: %w", readErr)
-		}
-		if closeErr != nil {
-			return nil, fmt.Errorf("close paper page image: %w", closeErr)
-		}
-		if len(data) == 0 || len(data) > maxDocumentVisualPageBytes || totalBytes+len(data) > maxDocumentVisualPayloadBytes {
-			return nil, errors.New("paper page images exceed the multimodal request limit")
-		}
-		// 同时核对解码页引用和文件登记摘要，防止同一对象键内容变化后混入旧页面结果。
-		digest := fmt.Sprintf("%x", sha256.Sum256(data))
-		if expected := strings.TrimSpace(page.SHA256); expected != "" && !strings.EqualFold(expected, digest) {
-			return nil, errors.New("paper page image checksum mismatch")
-		}
-		if expected := strings.TrimSpace(asset.HashSHA256); expected != "" && !strings.EqualFold(expected, digest) {
-			return nil, errors.New("paper page image asset checksum mismatch")
-		}
-		totalBytes += len(data)
+		totalBytes += len(image.data)
 		visualPages = append(visualPages, documentVisualPage{
 			SourceID: page.SourceID, DocumentIndex: page.DocumentIndex, PageNo: page.PageNo,
-			MediaType: mediaType, DataBase64: base64.StdEncoding.EncodeToString(data), SHA256: digest,
+			MediaType: image.mediaType, DataBase64: base64.StdEncoding.EncodeToString(image.data), SHA256: image.digest,
 			Width: page.Width, Height: page.Height,
 		})
 	}
 	return visualPages, nil
+}
+
+type documentVisualPageImage struct {
+	data      []byte
+	mediaType string
+	digest    string
+}
+
+func (l storedDocumentVisualPageLoader) loadDocumentVisualPageImage(ctx context.Context, tenantID string, page PaperImportDecodedPage, totalBytes int) (documentVisualPageImage, error) {
+	asset, err := l.files.Get(ctx, tenantID, page.FileAssetID)
+	if err != nil {
+		return documentVisualPageImage{}, fmt.Errorf("load paper page image metadata: %w", err)
+	}
+	mediaType := strings.ToLower(strings.TrimSpace(strings.Split(asset.ContentType, ";")[0]))
+	if mediaType != "image/png" && mediaType != "image/jpeg" && mediaType != "image/webp" {
+		return documentVisualPageImage{}, errors.New("paper page image has an unsupported media type")
+	}
+	if asset.SizeBytes <= 0 || asset.SizeBytes > maxDocumentVisualPageBytes || totalBytes+int(asset.SizeBytes) > maxDocumentVisualPayloadBytes {
+		return documentVisualPageImage{}, errors.New("paper page images exceed the multimodal request limit")
+	}
+	reader, err := l.objects.Get(ctx, asset.StorageBucket, asset.StorageKey)
+	if err != nil {
+		return documentVisualPageImage{}, fmt.Errorf("load paper page image: %w", err)
+	}
+	data, readErr := io.ReadAll(io.LimitReader(reader, maxDocumentVisualPageBytes+1))
+	// 读取失败也要先关流；两者都失败时仍返回读取错误。
+	closeErr := reader.Close()
+	if readErr != nil {
+		return documentVisualPageImage{}, fmt.Errorf("read paper page image: %w", readErr)
+	}
+	if closeErr != nil {
+		return documentVisualPageImage{}, fmt.Errorf("close paper page image: %w", closeErr)
+	}
+	if len(data) == 0 || len(data) > maxDocumentVisualPageBytes || totalBytes+len(data) > maxDocumentVisualPayloadBytes {
+		return documentVisualPageImage{}, errors.New("paper page images exceed the multimodal request limit")
+	}
+	// 同时核对解码页引用和文件登记摘要，防止同一对象键内容变化后混入旧页面结果。
+	digest := fmt.Sprintf("%x", sha256.Sum256(data))
+	if expected := strings.TrimSpace(page.SHA256); expected != "" && !strings.EqualFold(expected, digest) {
+		return documentVisualPageImage{}, errors.New("paper page image checksum mismatch")
+	}
+	if expected := strings.TrimSpace(asset.HashSHA256); expected != "" && !strings.EqualFold(expected, digest) {
+		return documentVisualPageImage{}, errors.New("paper page image asset checksum mismatch")
+	}
+	return documentVisualPageImage{data: data, mediaType: mediaType, digest: digest}, nil
 }

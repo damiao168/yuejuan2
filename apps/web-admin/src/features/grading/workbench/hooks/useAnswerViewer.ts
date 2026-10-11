@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type MutableRefObject, type PointerEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type RefObject, type PointerEvent } from "react";
 import { App } from "antd";
 import { downloadReviewWorkspaceImage } from "../../../../api/review";
 import { formatError } from "../gradingWorkbench.model";
@@ -9,7 +9,7 @@ type PreviewPromise = Promise<Awaited<ReturnType<typeof downloadReviewWorkspaceI
 export interface UseAnswerViewerOptions {
   context: WorkbenchContext | null;
   canViewOriginalImage: boolean;
-  prefetchedPreviewRef: MutableRefObject<Map<string, PreviewPromise>>;
+  prefetchedPreviewRef: RefObject<Map<string, PreviewPromise>>;
   contentRevision?: string;
 }
 
@@ -26,7 +26,8 @@ export function useAnswerViewer({ context, canViewOriginalImage, prefetchedPrevi
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const viewportRef = useRef<HTMLDivElement | null>(null);
+  const viewportRef = useRef<HTMLElement | null>(null);
+  const capturedPointerRef = useRef<number | null>(null);
   const requestRef = useRef(0);
 
   const invalidateContent = useCallback(() => {
@@ -101,22 +102,51 @@ export function useAnswerViewer({ context, canViewOriginalImage, prefetchedPrevi
     setOffset({ x: 0, y: 0 });
   }, []);
 
-  const onPointerDown = useCallback((event: PointerEvent<HTMLDivElement>) => {
+  const onPointerDown = useCallback((event: PointerEvent<HTMLElement>) => {
     if (scale <= fitScale * 1.001) return;
     setDragging(true);
     setDragStart({ x: event.clientX - offset.x, y: event.clientY - offset.y });
     viewportRef.current?.setPointerCapture(event.pointerId);
+    capturedPointerRef.current = event.pointerId;
   }, [fitScale, offset.x, offset.y, scale]);
 
-  const onPointerMove = useCallback((event: PointerEvent<HTMLDivElement>) => {
+  const onPointerMove = useCallback((event: PointerEvent<HTMLElement>) => {
     if (!dragging) return;
     setOffset({ x: event.clientX - dragStart.x, y: event.clientY - dragStart.y });
   }, [dragStart.x, dragStart.y, dragging]);
 
-  const onPointerUp = useCallback((event: PointerEvent<HTMLDivElement>) => {
+  const onPointerUp = useCallback((event: PointerEvent<HTMLElement>) => {
     setDragging(false);
-    viewportRef.current?.releasePointerCapture(event.pointerId);
+    if (viewportRef.current?.hasPointerCapture(event.pointerId)) viewportRef.current.releasePointerCapture(event.pointerId);
+    capturedPointerRef.current = null;
   }, []);
+
+  const onKeyDown = useCallback((event: KeyboardEvent<HTMLElement>) => {
+    // 只接管键盘平移入口自身的按键；PDF、子控件、输入法和浏览器组合键保留原有行为。
+    if (event.target !== event.currentTarget || event.defaultPrevented || event.nativeEvent.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
+    if (event.key === "Escape") {
+      const pointerId = capturedPointerRef.current;
+      if (pointerId === null) return;
+      if (viewportRef.current?.hasPointerCapture(pointerId)) viewportRef.current.releasePointerCapture(pointerId);
+      capturedPointerRef.current = null;
+      setDragging(false);
+      event.preventDefault();
+      return;
+    }
+    if (!imageSize) return;
+    if (event.key === "Home") {
+      event.preventDefault();
+      fit(imageSize, true);
+      return;
+    }
+    if (scale <= fitScale * 1.001) return;
+    const step = event.shiftKey ? 80 : 24;
+    const movements: Record<string, { x: number; y: number }> = { ArrowLeft: { x: -step, y: 0 }, ArrowRight: { x: step, y: 0 }, ArrowUp: { x: 0, y: -step }, ArrowDown: { x: 0, y: step } };
+    const movement = movements[event.key];
+    if (!movement) return;
+    event.preventDefault();
+    setOffset((current) => ({ x: current.x + movement.x, y: current.y + movement.y }));
+  }, [fit, fitScale, imageSize, scale]);
 
   const onImageLoad = useCallback((size: { width: number; height: number }) => {
     setImageSize(size);
@@ -196,6 +226,7 @@ export function useAnswerViewer({ context, canViewOriginalImage, prefetchedPrevi
     onPointerDown,
     onPointerMove,
     onPointerUp,
+    onKeyDown,
     onImageLoad
   };
 }

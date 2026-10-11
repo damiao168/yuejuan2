@@ -51,16 +51,21 @@ RETURNING `+reviewTaskColumns+`
 func (s *PostgresStore) ListTasks(ctx context.Context, tenantID string, filter ListFilter) ([]ReviewTask, error) {
 	scopeMode := filter.ScopeMode
 	if scopeMode == "" {
-		scopeMode = "tenant" // backwards-compatible store callers are tenant-scoped
+		scopeMode = "tenant" // 兼容旧版的存储调用方受租户作用域限制。
 	}
 	rows, err := s.db.QueryContext(ctx, `
 SELECT `+reviewTaskColumns+`
 FROM review_task
 WHERE tenant_id = $1
   AND deleted_at IS NULL
-  AND ($2 = '' OR status = $2)
+  AND ($2 = '' OR status = $2 OR ($2 = 'active' AND status IN ('pending','assigned','in_progress','returned')))
   AND ($3 = '' OR assigned_to::text = $3)
   AND ($4 = '' OR exam_id::text = $4)
+  AND ($14 = '' OR question_id::text = $14)
+  AND (NOT $15 OR assigned_to IS NULL)
+  AND ($17 = '' OR EXISTS (SELECT 1 FROM exam e WHERE e.tenant_id=review_task.tenant_id AND e.id=review_task.exam_id AND e.subject=$17))
+  AND ($16 = '' OR strpos(lower(concat_ws(' ',id::text,submission_id::text,anonymous_code,question_no,source,
+    (SELECT concat_ws(' ',e.name,e.subject) FROM exam e WHERE e.tenant_id=review_task.tenant_id AND e.id=review_task.exam_id))),lower($16)) > 0)
   AND ($7 = '' OR priority < $5 OR (priority = $5 AND (created_at > $6 OR (created_at = $6 AND id::text > $7))))
   AND (
     $9 IN ('platform', 'tenant')
@@ -73,7 +78,7 @@ LIMIT NULLIF($8, 0)
 `, tenantID, filter.Status, filter.AssignedTo, filter.ExamID,
 		filter.CursorPriority, filter.CursorCreatedAt, filter.CursorID, filter.Limit,
 		scopeMode, strings.Join(filter.ScopeSchoolIDs, ","), strings.Join(filter.ScopeExamIDs, ","),
-		filter.ScopeActorID, strings.Join(filter.ScopeTaskIDs, ","))
+		filter.ScopeActorID, strings.Join(filter.ScopeTaskIDs, ","), filter.QuestionID, filter.Unassigned, strings.TrimSpace(filter.Q), filter.Subject)
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +91,16 @@ LIMIT NULLIF($8, 0)
 		}
 		out = append(out, task)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := s.hydrateTaskDisplayLabels(ctx, tenantID, out); err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (s *PostgresStore) AggregateTasks(ctx context.Context, tenantID string, filter ListFilter) (TaskAggregate, error) {
@@ -99,9 +113,14 @@ SELECT status, COALESCE(assigned_to::text, ''), count(*)::int
 FROM review_task
 WHERE tenant_id = $1
   AND deleted_at IS NULL
-  AND ($2 = '' OR status = $2)
+  AND ($2 = '' OR status = $2 OR ($2 = 'active' AND status IN ('pending','assigned','in_progress','returned')))
   AND ($3 = '' OR assigned_to::text = $3)
   AND ($4 = '' OR exam_id::text = $4)
+  AND ($10 = '' OR question_id::text = $10)
+  AND (NOT $11 OR assigned_to IS NULL)
+  AND ($13 = '' OR EXISTS (SELECT 1 FROM exam e WHERE e.tenant_id=review_task.tenant_id AND e.id=review_task.exam_id AND e.subject=$13))
+  AND ($12 = '' OR strpos(lower(concat_ws(' ',id::text,anonymous_code,question_no,source,
+    (SELECT concat_ws(' ',e.name,e.subject) FROM exam e WHERE e.tenant_id=review_task.tenant_id AND e.id=review_task.exam_id))),lower($12)) > 0)
   AND (
     $5 IN ('platform', 'tenant')
     OR ($5 = 'school' AND EXISTS (SELECT 1 FROM exam e WHERE e.tenant_id = review_task.tenant_id AND e.id = review_task.exam_id AND e.school_id::text = ANY(string_to_array(NULLIF($6, ''), ','))))
@@ -111,7 +130,7 @@ WHERE tenant_id = $1
 GROUP BY status, assigned_to
 `, tenantID, filter.Status, filter.AssignedTo, filter.ExamID,
 		scopeMode, strings.Join(filter.ScopeSchoolIDs, ","), strings.Join(filter.ScopeExamIDs, ","),
-		filter.ScopeActorID, strings.Join(filter.ScopeTaskIDs, ","))
+		filter.ScopeActorID, strings.Join(filter.ScopeTaskIDs, ","), filter.QuestionID, filter.Unassigned, strings.TrimSpace(filter.Q), filter.Subject)
 	if err != nil {
 		return TaskAggregate{}, err
 	}
@@ -184,7 +203,49 @@ SELECT `+reviewTaskColumns+`
 FROM review_task
 WHERE tenant_id = $1 AND id::text = $2 AND deleted_at IS NULL
 `, tenantID, id)
-	return scanTask(row)
+	task, err := scanTask(row)
+	if err != nil {
+		return ReviewTask{}, err
+	}
+	tasks := []ReviewTask{task}
+	if err := s.hydrateTaskDisplayLabels(ctx, tenantID, tasks); err != nil {
+		return ReviewTask{}, err
+	}
+	return tasks[0], nil
+}
+
+// hydrateTaskDisplayLabels 仅补充已经通过任务作用域筛选的考试名称和学科。
+// 不返回学校、班级或学生身份，也不借此扩大教师可浏览的考试范围。
+func (s *PostgresStore) hydrateTaskDisplayLabels(ctx context.Context, tenantID string, tasks []ReviewTask) error {
+	if len(tasks) == 0 {
+		return nil
+	}
+	ids := make([]string, 0, len(tasks))
+	for _, task := range tasks {
+		ids = append(ids, task.ExamID)
+	}
+	rows, err := s.db.QueryContext(ctx, `SELECT id::text,name,subject FROM exam WHERE tenant_id=$1 AND id::text=ANY(string_to_array($2,',')) AND deleted_at IS NULL`, tenantID, strings.Join(ids, ","))
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	labels := map[string][2]string{}
+	for rows.Next() {
+		var id, name, subject string
+		if err := rows.Scan(&id, &name, &subject); err != nil {
+			return err
+		}
+		labels[id] = [2]string{name, subject}
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	for i := range tasks {
+		label := labels[tasks[i].ExamID]
+		tasks[i].ExamName = label[0]
+		tasks[i].Subject = label[1]
+	}
+	return nil
 }
 
 func (s *PostgresStore) AssignTask(ctx context.Context, tenantID string, id string, _ string, input AssignTaskInput) (ReviewTask, error) {
@@ -272,29 +333,15 @@ func (s *PostgresStore) SubmitGrade(ctx context.Context, tenantID string, id str
 	}
 	defer func() { _ = tx.Rollback() }()
 	var replay SubmitResult
+	identity := commandreceipt.Identity{TenantID: tenantID, ActorID: reviewerID, Operation: "review.submit", TargetID: id}
 	// 已成功的命令先返回原回执；任务后来已提交或删除，也不应让客户端把成功误判为失败。
-	if found, err := commandreceipt.Load(ctx, tx, tenantID, reviewerID, "review.submit", id, input, &replay); err != nil || found {
+	if found, err := commandreceipt.Load(ctx, tx, identity, input, &replay); err != nil || found {
 		return replay, err
 	}
-	// 先锁父评分运行再锁任务，与取消流程保持同一锁序；已取消的运行不能再写入人工成绩或当前题目成绩。
-	var runID sql.NullString
-	if err := tx.QueryRowContext(ctx, `SELECT scoring_run_id::text FROM review_task WHERE tenant_id=$1::uuid AND id::text=$2 AND deleted_at IS NULL`, tenantID, id).Scan(&runID); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return SubmitResult{}, ErrNotFound
-		}
+	// 回执未命中后，必须先锁父评分运行，再执行下面的任务行锁。
+	runID, err := lockScoringRunForGradeSubmissionTx(ctx, tx, tenantID, id)
+	if err != nil {
 		return SubmitResult{}, err
-	}
-	if runID.Valid {
-		var runStatus string
-		if err := tx.QueryRowContext(ctx, `SELECT status FROM scoring_run WHERE tenant_id=$1::uuid AND id=$2::uuid AND deleted_at IS NULL FOR UPDATE`, tenantID, runID.String).Scan(&runStatus); err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				return SubmitResult{}, ErrInvalidTransition
-			}
-			return SubmitResult{}, err
-		}
-		if runStatus != "queued" && runStatus != "processing" && runStatus != "needs_review" && runStatus != "failed" {
-			return SubmitResult{}, ErrInvalidTransition
-		}
 	}
 	task, err := scanTask(tx.QueryRowContext(ctx, `
 	SELECT `+reviewTaskColumns+`
@@ -395,13 +442,8 @@ FROM review_task rt WHERE rt.tenant_id=$1::uuid AND rt.id=$2::uuid AND rt.scorin
 		return SubmitResult{}, err
 	}
 	if runID.Valid && (task.GradeRound == "first_mark" || task.GradeRound == "second_mark") {
-		if finalGrade != nil {
-			questionGradeID, err = s.recordScoringDoubleMarkGradeTx(ctx, tx, tenantID, runID.String, task.ID, reviewerID, finalGrade)
-			if err != nil {
-				return SubmitResult{}, err
-			}
-		}
-		if err := s.syncScoringDoubleMarkRunTx(ctx, tx, tenantID, runID.String); err != nil {
+		questionGradeID, err = s.syncSubmittedDoubleMarkTx(ctx, tx, tenantID, runID.String, task.ID, reviewerID, finalGrade)
+		if err != nil {
 			return SubmitResult{}, err
 		}
 	}
@@ -417,13 +459,53 @@ FROM review_task rt WHERE rt.tenant_id=$1::uuid AND rt.id=$2::uuid AND rt.scorin
 		ArbitrationTask:   arbitrationTask,
 	}
 
-	if err := commandreceipt.Save(ctx, tx, tenantID, reviewerID, "review.submit", id, input, result); err != nil {
+	if err := commandreceipt.Save(ctx, tx, identity, input, result); err != nil {
 		return SubmitResult{}, err
 	}
 	if err := tx.Commit(); err != nil {
 		return SubmitResult{}, err
 	}
 	return result, nil
+}
+
+// 先锁父评分运行再锁任务，与取消流程保持同一锁序；已取消的运行不能再写入成绩。
+func lockScoringRunForGradeSubmissionTx(ctx context.Context, tx *sql.Tx, tenantID, id string) (sql.NullString, error) {
+	var runID sql.NullString
+	if err := tx.QueryRowContext(ctx, `SELECT scoring_run_id::text FROM review_task WHERE tenant_id=$1::uuid AND id::text=$2 AND deleted_at IS NULL`, tenantID, id).Scan(&runID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return runID, ErrNotFound
+		}
+		return runID, err
+	}
+	if runID.Valid {
+		var runStatus string
+		if err := tx.QueryRowContext(ctx, `SELECT status FROM scoring_run WHERE tenant_id=$1::uuid AND id=$2::uuid AND deleted_at IS NULL FOR UPDATE`, tenantID, runID.String).Scan(&runStatus); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return runID, ErrInvalidTransition
+			}
+			return runID, err
+		}
+		if runStatus != "queued" && runStatus != "processing" && runStatus != "needs_review" && runStatus != "failed" {
+			return runID, ErrInvalidTransition
+		}
+	}
+	return runID, nil
+}
+
+// 双评尚无终分也同步待复核数；已有终分先写当前成绩，写入失败不能继续更新运行统计。
+func (s *PostgresStore) syncSubmittedDoubleMarkTx(ctx context.Context, tx *sql.Tx, tenantID, runID, reviewTaskID, reviewerID string, finalGrade *FinalGrade) (string, error) {
+	questionGradeID := ""
+	if finalGrade != nil {
+		var err error
+		questionGradeID, err = s.recordScoringDoubleMarkGradeTx(ctx, tx, tenantID, runID, reviewTaskID, reviewerID, finalGrade)
+		if err != nil {
+			return "", err
+		}
+	}
+	if err := s.syncScoringDoubleMarkRunTx(ctx, tx, tenantID, runID); err != nil {
+		return "", err
+	}
+	return questionGradeID, nil
 }
 
 func (s *PostgresStore) ReturnTask(ctx context.Context, tenantID string, id string, actorID string, input ReturnTaskInput) (ReviewTask, error) {

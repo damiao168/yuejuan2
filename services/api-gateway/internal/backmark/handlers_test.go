@@ -41,51 +41,12 @@ func TestBackmarkHandlersReturnBoundedCursorPages(t *testing.T) {
 	if response.Code != http.StatusCreated || created.Next == nil || *created.Next != "" || created.More == nil || *created.More {
 		t.Fatalf("create response does not match pagination contract: %s", response.Body.String())
 	}
-	for _, test := range []struct {
-		name   string
-		path   string
-		userID string
-		handle http.HandlerFunc
-	}{
+	for _, test := range []backmarkCursorRouteCase{
 		{"batch items", "/api/v1/backmark-batches/" + created.Summary.Batch.ID, "manager-1", handler.Get},
 		{"assigned items", "/api/v1/backmark-items/mine", "grader-b", handler.ListMine},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			cursor := ""
-			seen := map[string]bool{}
-			for page := 0; page < 2; page++ {
-				request := httptest.NewRequest(http.MethodGet, test.path+"?limit=2&cursor="+cursor, nil)
-				request.SetPathValue("batchId", created.Summary.Batch.ID)
-				request = request.WithContext(auth.WithUser(request.Context(), auth.User{ID: test.userID, TenantID: "tenant-1"}))
-				response := httptest.NewRecorder()
-				test.handle(response, request)
-				var decoded struct {
-					Summary Summary      `json:"backmark"`
-					Items   []GraderItem `json:"backmark_items"`
-					Next    string       `json:"next_cursor"`
-					More    bool         `json:"has_more"`
-				}
-				if err := json.Unmarshal(response.Body.Bytes(), &decoded); err != nil {
-					t.Fatal(err)
-				}
-				ids := []string{}
-				for _, item := range decoded.Summary.Items {
-					ids = append(ids, item.ID)
-				}
-				for _, item := range decoded.Items {
-					ids = append(ids, item.ID)
-				}
-				if response.Code != http.StatusOK || len(ids) != 2-page || decoded.More != (page == 0) || (decoded.Next != "") != decoded.More {
-					t.Fatalf("invalid page %d: %s", page, response.Body.String())
-				}
-				for _, id := range ids {
-					if seen[id] {
-						t.Fatalf("cursor repeated item %s", id)
-					}
-					seen[id] = true
-				}
-				cursor = decoded.Next
-			}
+			assertBackmarkCursorRoute(t, test, created.Summary.Batch.ID)
 		})
 	}
 }
@@ -142,4 +103,56 @@ func TestGetContextReturnsBlindBackmarkSurface(t *testing.T) {
 	if decoded.Context.Question.QuestionNo != "Q1" || decoded.Context.Answer.SegmentImageURL == "" {
 		t.Fatalf("missing grading context: %#v", decoded.Context)
 	}
+}
+
+type backmarkCursorRouteCase struct {
+	name   string
+	path   string
+	userID string
+	handle http.HandlerFunc
+}
+
+func assertBackmarkCursorRoute(t *testing.T, test backmarkCursorRouteCase, batchID string) {
+	t.Helper()
+	cursor := ""
+	seen := map[string]bool{}
+	for page := 0; page < 2; page++ {
+		cursor = assertBackmarkCursorPage(t, test, batchID, page, cursor, seen)
+	}
+}
+
+// 连续页共享已见ID，只在当前页内容与分页边界都正确时推进游标。
+func assertBackmarkCursorPage(t *testing.T, test backmarkCursorRouteCase, batchID string, page int, cursor string, seen map[string]bool) string {
+	t.Helper()
+	request := httptest.NewRequest(http.MethodGet, test.path+"?limit=2&cursor="+cursor, nil)
+	request.SetPathValue("batchId", batchID)
+	request = request.WithContext(auth.WithUser(request.Context(), auth.User{ID: test.userID, TenantID: "tenant-1"}))
+	response := httptest.NewRecorder()
+	test.handle(response, request)
+	var decoded struct {
+		Summary Summary      `json:"backmark"`
+		Items   []GraderItem `json:"backmark_items"`
+		Next    string       `json:"next_cursor"`
+		More    bool         `json:"has_more"`
+	}
+	if err := json.Unmarshal(response.Body.Bytes(), &decoded); err != nil {
+		t.Fatal(err)
+	}
+	ids := []string{}
+	for _, item := range decoded.Summary.Items {
+		ids = append(ids, item.ID)
+	}
+	for _, item := range decoded.Items {
+		ids = append(ids, item.ID)
+	}
+	if response.Code != http.StatusOK || len(ids) != 2-page || decoded.More != (page == 0) || (decoded.Next != "") != decoded.More {
+		t.Fatalf("invalid page %d: %s", page, response.Body.String())
+	}
+	for _, id := range ids {
+		if seen[id] {
+			t.Fatalf("cursor repeated item %s", id)
+		}
+		seen[id] = true
+	}
+	return decoded.Next
 }

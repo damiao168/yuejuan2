@@ -1,10 +1,11 @@
 import type { Exam } from "../../../api/exams";
 
 export function defaultExamWorkspaceSection(status: Exam["status"]) {
-  if (["draft", "configured", "ready"].includes(status)) return "settings";
-  if (status === "collecting") return "capture";
+  // 默认入口跟随实际阶段，进入后续工作时不能把用户送回准备第一步。
+  if (["ready", "preparation_confirmed", "collecting", "processing"].includes(status)) return "capture";
   if (["grading", "reviewing"].includes(status)) return "grading";
-  return "overview";
+  if (["finalized", "published", "archived"].includes(status)) return "scores";
+  return "students";
 }
 
 export function defaultExamWorkspaceRoute(exam: Exam) {

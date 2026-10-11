@@ -1,0 +1,25 @@
+{
+  "files": [
+    {
+      "file": "services/api-gateway/internal/server/e2e_story056_lease_test.go",
+      "sha256": "acc0ccce26a92826da6e41d720e42e81c8786f0dd0a8870e2977da759aaae42b",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_story056_lease_test.go"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_exam_management_test.go",
+      "sha256": "e8c9ca857e55707fcc1ee5a219856d9e01081593938823cf2a1b73ffeb5bb3f3",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_exam_management_test.go"
+    }
+  ],
+  "issue_functions": [
+    {
+      "file": "services/api-gateway/internal/server/e2e_story056_lease_test.go",
+      "function": "TestStory056TemplateDifferenceReferenceSnapshotE2E"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_exam_management_test.go",
+      "function": "TestWholeExamManagementE2EWithPostgresTestDatabase"
+    }
+  ],
+  "checkpoint_relation": "after checkpoint02; requires subsequent scan"
+}

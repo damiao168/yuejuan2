@@ -28,7 +28,7 @@ func TestMFAHTTPDoesNotCacheSecretsOrReplayOneTimeCommands(t *testing.T) {
 	if err := json.Unmarshal(response.Body.Bytes(), &loggedIn); err != nil || loggedIn.Token == "" {
 		t.Fatal("login failed")
 	}
-	// An omitted cookie-name config must still protect the default cookie.
+	// 即使未配置 Cookie 名称，也必须保护默认 Cookie。
 	for _, authorization := range []string{"", "Basic unrelated"} {
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/mfa/totp/enroll", strings.NewReader(`{"password":"ChangeMe123!"}`))
 		req.Header.Set("Content-Type", "application/json")

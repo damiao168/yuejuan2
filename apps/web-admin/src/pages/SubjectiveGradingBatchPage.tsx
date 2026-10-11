@@ -18,11 +18,17 @@ const batchStatusLabels: Record<string, string> = {
   cancelled: "已取消"
 };
 
+function batchStatusColor(status: SubjectiveGradingBatch["status"]) {
+  if (status === "failed") return "red";
+  if (status === "completed") return "green";
+  return "blue";
+}
+
 function newBatchIdempotencyKey() {
   return `admin-${crypto.randomUUID()}`;
 }
 
-export function SubjectiveGradingBatchPage({ scopeKey }: { scopeKey: string }) {
+export function SubjectiveGradingBatchPage({ scopeKey }: Readonly<{ scopeKey: string }>) {
   const storageKey = `subjective-batch-command:${scopeKey}`;
   const busy = useRef(false);
   const [pending, setPending] = useState(() => Boolean(localStorage.getItem(storageKey)));
@@ -178,12 +184,12 @@ export function SubjectiveGradingBatchPage({ scopeKey }: { scopeKey: string }) {
       {pollError ? <Alert type="warning" showIcon message={pollError} action={<Button size="small" onClick={() => void refresh()}>立即重试</Button>} /> : null}
       <Card title="创建批次">
         <Space direction="vertical" size="middle" style={{ width: "100%" }}>
-          <Input value={idempotencyKey} onChange={(event) => setIdempotencyKey(event.target.value)} addonBefore="幂等键" />
+          <Input value={idempotencyKey} onChange={(event) => setIdempotencyKey(event.target.value)} prefix="幂等键" />
           <Input.TextArea value={segmentText} onChange={(event) => { setSegmentText(event.target.value); setIdempotencyKey(newBatchIdempotencyKey()); }} placeholder="输入答题片段 ID，使用换行或逗号分隔（最多 1000 个）" autoSize={{ minRows: 4, maxRows: 8 }} />
           <Button type="primary" loading={loading} onClick={() => void createBatch()}>{pending ? "继续确认原批次" : "创建批次"}</Button>
         </Space>
       </Card>
-      {batch ? <Card title={<Space>批次进度 <Tag color={batch.status === "failed" ? "red" : batch.status === "completed" ? "green" : "blue"}>{batchStatusLabels[batch.status] ?? "未知状态"}</Tag></Space>} extra={<Space><Button icon={<Play size={15} />} disabled={batch.status !== "planned" && batch.status !== "processing"} loading={loading} onClick={() => void enqueue()}>入队评分</Button><Button icon={<RefreshCw size={15} />} loading={loading} onClick={() => void refresh()}>刷新</Button></Space>}>
+      {batch ? <Card title={<Space>批次进度 <Tag color={batchStatusColor(batch.status)}>{batchStatusLabels[batch.status] ?? "未知状态"}</Tag></Space>} extra={<Space><Button icon={<Play size={15} />} disabled={batch.status !== "planned" && batch.status !== "processing"} loading={loading} onClick={() => void enqueue()}>入队评分</Button><Button icon={<RefreshCw size={15} />} loading={loading} onClick={() => void refresh()}>刷新</Button></Space>}>
         <Progress percent={progress} status={batch.failed_count ? "exception" : undefined} />
         <div className="subjective-batch-counts"><span><strong>{batch.total_count}</strong>总量</span><span><strong>{batch.queued_count}</strong>排队</span><span><strong>{batch.processing_count}</strong>处理中</span><span><strong>{batch.succeeded_count}</strong>成功</span><span className={batch.failed_count ? "danger" : ""}><strong>{batch.failed_count}</strong>失败</span></div>
       </Card> : null}

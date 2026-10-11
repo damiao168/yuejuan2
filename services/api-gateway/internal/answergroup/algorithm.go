@@ -61,8 +61,7 @@ func normalizeText(value string) string {
 			space = builder.Len() > 0
 			continue
 		}
-		// Only the sentence terminator is ignored. Numeric punctuation, units,
-		// operators and brackets all distinguish potentially different answers.
+		// 仅忽略句末标点。数字标点、单位、运算符和括号都可能区分不同答案。
 		if current == '。' {
 			continue
 		}
@@ -85,15 +84,40 @@ type groupedAnswers struct {
 	Similarity [][]float64
 }
 
-// clusterAnswers uses deterministic complete-link agglomeration. Complete-link
-// is intentionally conservative: every pair in a merged group must meet the
-// threshold, avoiding chain-shaped mixed groups in the first pilot.
+// 合并组时要求跨组的每一对答案都达到阈值，避免相似度链条把不同答案串成一组。
+// 按 SegmentID 排序后，只在相似度严格更高时替换候选，平分时保持稳定结果。
 func clusterAnswers(answers []SourceAnswer, provider RepresentationProvider, threshold float64) []groupedAnswers {
+	represented := representAnswers(answers, provider)
+	similarity := answerSimilarityMatrix(represented, provider)
+	clusters := make([][]int, len(represented))
+	for index := range represented {
+		clusters[index] = []int{index}
+	}
+	for {
+		bestLeft, bestRight := bestClusterPair(clusters, similarity, threshold)
+		if bestLeft < 0 {
+			break
+		}
+		clusters[bestLeft] = append(clusters[bestLeft], clusters[bestRight]...)
+		clusters = append(clusters[:bestRight], clusters[bestRight+1:]...)
+	}
+	out := make([]groupedAnswers, 0, len(clusters))
+	for _, cluster := range clusters {
+		out = append(out, materializeCluster(cluster, represented, similarity))
+	}
+	return out
+}
+
+func representAnswers(answers []SourceAnswer, provider RepresentationProvider) []representedAnswer {
 	represented := make([]representedAnswer, len(answers))
 	for index, answer := range answers {
 		represented[index] = representedAnswer{Source: answer, Value: provider.Represent(answer.AnswerText)}
 	}
 	sort.Slice(represented, func(i, j int) bool { return represented[i].Source.SegmentID < represented[j].Source.SegmentID })
+	return represented
+}
+
+func answerSimilarityMatrix(represented []representedAnswer, provider RepresentationProvider) [][]float64 {
 	similarity := make([][]float64, len(represented))
 	for left := range represented {
 		similarity[left] = make([]float64, len(represented))
@@ -105,46 +129,44 @@ func clusterAnswers(answers []SourceAnswer, provider RepresentationProvider, thr
 			}
 		}
 	}
-	clusters := make([][]int, len(represented))
-	for index := range represented {
-		clusters[index] = []int{index}
-	}
-	for {
-		bestLeft, bestRight, best := -1, -1, -1.0
-		for left := 0; left < len(clusters); left++ {
-			for right := left + 1; right < len(clusters); right++ {
-				minimum := 1.0
-				for _, li := range clusters[left] {
-					for _, ri := range clusters[right] {
-						if similarity[li][ri] < minimum {
-							minimum = similarity[li][ri]
-						}
-					}
-				}
-				if minimum >= threshold && minimum > best {
-					bestLeft, bestRight, best = left, right, minimum
-				}
+	return similarity
+}
+
+func bestClusterPair(clusters [][]int, similarity [][]float64, threshold float64) (int, int) {
+	bestLeft, bestRight, best := -1, -1, -1.0
+	for left := 0; left < len(clusters); left++ {
+		for right := left + 1; right < len(clusters); right++ {
+			minimum := clusterMinimumSimilarity(clusters[left], clusters[right], similarity)
+			if minimum >= threshold && minimum > best {
+				bestLeft, bestRight, best = left, right, minimum
 			}
 		}
-		if bestLeft < 0 {
-			break
-		}
-		clusters[bestLeft] = append(clusters[bestLeft], clusters[bestRight]...)
-		clusters = append(clusters[:bestRight], clusters[bestRight+1:]...)
 	}
-	out := make([]groupedAnswers, 0, len(clusters))
-	for _, cluster := range clusters {
-		item := groupedAnswers{Answers: make([]representedAnswer, 0, len(cluster)), Similarity: make([][]float64, len(cluster))}
-		for local, global := range cluster {
-			item.Answers = append(item.Answers, represented[global])
-			item.Similarity[local] = make([]float64, len(cluster))
-			for otherLocal, otherGlobal := range cluster {
-				item.Similarity[local][otherLocal] = similarity[global][otherGlobal]
+	return bestLeft, bestRight
+}
+
+func clusterMinimumSimilarity(left, right []int, similarity [][]float64) float64 {
+	minimum := 1.0
+	for _, li := range left {
+		for _, ri := range right {
+			if similarity[li][ri] < minimum {
+				minimum = similarity[li][ri]
 			}
 		}
-		out = append(out, item)
 	}
-	return out
+	return minimum
+}
+
+func materializeCluster(cluster []int, represented []representedAnswer, similarity [][]float64) groupedAnswers {
+	item := groupedAnswers{Answers: make([]representedAnswer, 0, len(cluster)), Similarity: make([][]float64, len(cluster))}
+	for local, global := range cluster {
+		item.Answers = append(item.Answers, represented[global])
+		item.Similarity[local] = make([]float64, len(cluster))
+		for otherLocal, otherGlobal := range cluster {
+			item.Similarity[local][otherLocal] = similarity[global][otherGlobal]
+		}
+	}
+	return item
 }
 
 // 代表样本取组内平均相似度最高者，边界样本取最低者；单成员组必须回到人工复核。
@@ -152,37 +174,10 @@ func materializeMembers(cluster groupedAnswers, outlierThreshold float64) ([]Mem
 	members := make([]Member, len(cluster.Answers))
 	averages := make([]float64, len(cluster.Answers))
 	for index := range cluster.Answers {
-		if len(cluster.Answers) == 1 {
-			averages[index] = 0
-		} else {
-			total := 0.0
-			for other, value := range cluster.Similarity[index] {
-				if other != index {
-					total += value
-				}
-			}
-			averages[index] = total / float64(len(cluster.Answers)-1)
-		}
+		averages[index] = memberAverageSimilarity(cluster, index)
 	}
-	representative, boundary := 0, 0
-	for index := range averages {
-		if averages[index] > averages[representative] || averages[index] == averages[representative] && cluster.Answers[index].Source.SegmentID < cluster.Answers[representative].Source.SegmentID {
-			representative = index
-		}
-		if averages[index] < averages[boundary] || averages[index] == averages[boundary] && cluster.Answers[index].Source.SegmentID < cluster.Answers[boundary].Source.SegmentID {
-			boundary = index
-		}
-	}
-	homogeneity := 1.0
-	if len(averages) == 1 {
-		homogeneity = 0
-	} else {
-		total := 0.0
-		for _, value := range averages {
-			total += value
-		}
-		homogeneity = total / float64(len(averages))
-	}
+	representative, boundary := sampleMemberIndices(cluster, averages)
+	homogeneity := averageHomogeneity(averages)
 	for index, answer := range cluster.Answers {
 		outlier := 1 - averages[index]
 		members[index] = Member{
@@ -194,6 +189,46 @@ func materializeMembers(cluster groupedAnswers, outlierThreshold float64) ([]Mem
 		}
 	}
 	return members, roundScore(homogeneity)
+}
+
+func memberAverageSimilarity(cluster groupedAnswers, index int) float64 {
+	if len(cluster.Answers) == 1 {
+		return 0
+	}
+	total := 0.0
+	for other, value := range cluster.Similarity[index] {
+		if other != index {
+			total += value
+		}
+	}
+	return total / float64(len(cluster.Answers)-1)
+}
+
+func sampleMemberIndices(cluster groupedAnswers, averages []float64) (int, int) {
+	representative, boundary := 0, 0
+	for index := range averages {
+		if averages[index] > averages[representative] || averages[index] == averages[representative] && cluster.Answers[index].Source.SegmentID < cluster.Answers[representative].Source.SegmentID {
+			representative = index
+		}
+		if averages[index] < averages[boundary] || averages[index] == averages[boundary] && cluster.Answers[index].Source.SegmentID < cluster.Answers[boundary].Source.SegmentID {
+			boundary = index
+		}
+	}
+	return representative, boundary
+}
+
+func averageHomogeneity(averages []float64) float64 {
+	homogeneity := 1.0
+	if len(averages) == 1 {
+		homogeneity = 0
+	} else {
+		total := 0.0
+		for _, value := range averages {
+			total += value
+		}
+		homogeneity = total / float64(len(averages))
+	}
+	return homogeneity
 }
 
 func roundScore(value float64) float64 { return math.Round(value*10000) / 10000 }

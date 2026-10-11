@@ -10,6 +10,9 @@ pub struct SpoolAssetInput {
     pub sha256: String,
     pub exam_id: Option<String>,
     pub capture_batch_id: Option<String>,
+    pub exam_name: Option<String>,
+    pub capture_batch_name: Option<String>,
+    pub capture_batch_created_at: Option<String>,
     pub submission_id: Option<String>,
     pub page_no: Option<i64>,
     pub quality_checks: Option<Value>,
@@ -38,6 +41,9 @@ pub struct DurableQueueItem {
     pub exam_id: Option<String>,
     pub exam_name: Option<String>,
     pub capture_batch_id: Option<String>,
+    // 新字段为可选，旧密文队列仍能恢复；名称仅供核对，不替代上传归属。
+    pub capture_batch_name: Option<String>,
+    pub capture_batch_created_at: Option<String>,
     pub submission_id: Option<String>,
     pub page_no: Option<i64>,
     pub file_name: Option<String>,
@@ -82,4 +88,39 @@ pub struct OfflineDraftEnvelope {
     pub expires_at: String,
     pub sync_status: String,
     pub sync_message: Option<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::DurableQueueItem;
+
+    #[test]
+    fn old_encrypted_queue_payload_without_names_still_decodes() {
+        let payload = serde_json::json!({
+            "id": "old-file", "title": "answer.pdf", "kind": "scan_upload", "status": "pending",
+            "progress": 0, "detail": "", "updatedAt": "2026-10-10T00:00:00Z",
+            "examId": "exam-original", "captureBatchId": "batch-original"
+        });
+        let item: DurableQueueItem = serde_json::from_value(payload).expect("old queue compatibility");
+        assert!(item.capture_batch_name.is_none());
+        assert!(item.capture_batch_created_at.is_none());
+        assert_eq!(item.capture_batch_id.as_deref(), Some("batch-original"));
+    }
+
+    #[test]
+    fn refreshed_batch_name_and_time_survive_native_queue_serialization() {
+        let payload = serde_json::json!({
+            "id": "file", "title": "answer.pdf", "kind": "scan_upload", "status": "pending",
+            "progress": 0, "detail": "", "updatedAt": "2026-10-10T00:00:00Z",
+            "examId": "exam-original", "captureBatchId": "batch-original",
+            "examName": "英语月考", "captureBatchName": "教务处上午扫描",
+            "captureBatchCreatedAt": "2026-10-10T01:00:00Z"
+        });
+        let item: DurableQueueItem = serde_json::from_value(payload).expect("metadata from frontend");
+        let restored: DurableQueueItem = serde_json::from_slice(&serde_json::to_vec(&item).expect("serialize queue")).expect("restore queue");
+        assert_eq!(restored.capture_batch_name.as_deref(), Some("教务处上午扫描"));
+        assert_eq!(restored.capture_batch_created_at.as_deref(), Some("2026-10-10T01:00:00Z"));
+        assert_eq!(restored.exam_id.as_deref(), Some("exam-original"));
+        assert_eq!(restored.capture_batch_id.as_deref(), Some("batch-original"));
+    }
 }

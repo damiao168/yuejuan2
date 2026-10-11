@@ -5,8 +5,7 @@ import (
 	"io"
 )
 
-// Resource describes a validated private object. Open is deliberately lazy:
-// conditional image requests and HEAD must not read object storage.
+// Resource 描述已校验的私有对象。Open 延迟打开；图片条件请求和 HEAD 不得读取对象存储。
 type Resource struct {
 	ContentType      string
 	Size             int64

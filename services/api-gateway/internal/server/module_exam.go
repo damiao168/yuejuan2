@@ -48,6 +48,7 @@ type ExamPreparationModule struct {
 	AssessmentHandler   *assessment.Handler
 	QuestionBankHandler *questionbank.Handler
 	WorkspaceHandler    *workspace.Handler
+	WorkspaceService    *workspace.Service
 	DashboardHandler    *dashboard.Handler
 }
 
@@ -69,6 +70,11 @@ func NewExamPreparationModule(cfg config.Config, stores ExamPreparationStores, d
 	if dependencies.DocumentModelResolver != nil {
 		paperHandler.WithDocumentModelResolver(dependencies.DocumentModelResolver)
 	}
+	// 同一读服务同时承接工作区和助手；助手只解释投影，不另写考试进度规则。
+	workspaceService := workspace.NewService(workspace.Dependencies{
+		Exams: stores.Exam, Papers: stores.Paper, PaperImports: stores.Paper, Submissions: stores.Submissions, Assessments: stores.Assessments,
+		Reviews: dependencies.Reviews, Processing: dependencies.Processing,
+	})
 	return &ExamPreparationModule{
 		ExamStore:           stores.Exam,
 		PaperStore:          stores.Paper,
@@ -87,10 +93,8 @@ func NewExamPreparationModule(cfg config.Config, stores ExamPreparationStores, d
 		FileDownloads:       files.NewDownloadService(stores.Files, dependencies.ObjectStore),
 		AssessmentHandler:   assessment.NewHandler(stores.Assessments, dependencies.AuthStore),
 		QuestionBankHandler: questionbank.NewHandler(stores.QuestionBank),
-		WorkspaceHandler: workspace.NewHandler(workspace.Dependencies{
-			Exams: stores.Exam, Papers: stores.Paper, PaperImports: stores.Paper, Submissions: stores.Submissions, Assessments: stores.Assessments,
-			Reviews: dependencies.Reviews, Processing: dependencies.Processing,
-		}),
+		WorkspaceHandler:    workspace.NewHandlerWithService(workspaceService),
+		WorkspaceService:    workspaceService,
 		DashboardHandler: dashboard.NewHandler(dashboard.Dependencies{
 			Exams: stores.Exam, Submissions: stores.Submissions, Reviews: dependencies.Reviews, Audits: dependencies.AuthStore,
 			Organizations: stores.DashboardOrganizations, Activities: stores.DashboardActivities,

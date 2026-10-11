@@ -59,8 +59,10 @@ def test_no_reliable_maximum_forces_all_suggested_scores_to_null():
 def test_model_cannot_attach_invented_solution_step():
     model = FakeModel([{"description": "正确移项", "suggested_score": 2, "evidence_step_ids": ["step-99"], "review_note": ""}])
 
+    generator = MathRubricDraftGenerator(model)
+    question_candidates = candidates()
     with pytest.raises(AgentError) as raised:
-        MathRubricDraftGenerator(model).generate("job-3", *candidates())
+        generator.generate('job-3', *question_candidates)
 
     assert raised.value.code == "model_output_invalid"
 
@@ -77,8 +79,44 @@ def test_objective_question_does_not_generate_math_steps():
     question["question_type"] = "single_choice"
     model = FakeModel([])
 
+    generator = MathRubricDraftGenerator(model)
     with pytest.raises(AgentError) as raised:
-        MathRubricDraftGenerator(model).generate("job-5", question, answer, solution)
+        generator.generate('job-5', question, answer, solution)
 
     assert raised.value.code == "invalid_request"
+    assert model.calls == []
+
+
+def test_skipped_solution_lines_keep_original_ids_and_duplicate_links_are_deduplicated():
+    question, answer, solution = candidates()
+    solution["steps"].insert(0, {"content": " "})
+    model = FakeModel([{
+        "description": "正确移项", "suggested_score": 4,
+        "evidence_step_ids": ["step-2", "step-2"], "review_note": "",
+    }])
+    result = MathRubricDraftGenerator(model).generate("job-gap", question, answer, solution)
+    draft = result["suggested_rubric_candidates"][0]
+    assert draft["points"][0]["evidence_step_ids"] == ["step-2"]
+    assert "step-1" not in model.calls[0][2]["properties"]["points"]["items"]["properties"]["evidence_step_ids"]["items"]["enum"]
+
+
+@pytest.mark.parametrize("score", [None, 0])
+def test_unknown_maximum_still_rejects_invalid_model_proposed_score(score):
+    model = FakeModel([{
+        "description": "正确移项", "suggested_score": True,
+        "evidence_step_ids": ["step-1"], "review_note": "",
+    }])
+    generator = MathRubricDraftGenerator(model)
+    question_candidates = candidates(score)
+    with pytest.raises(AgentError, match='not grounded'):
+        generator.generate('job-invalid', *question_candidates)
+
+
+def test_input_provenance_error_precedes_invalid_score_without_calling_model():
+    question, answer, solution = candidates(-1)
+    solution["source_refs"] = []
+    model = FakeModel([])
+    generator = MathRubricDraftGenerator(model)
+    with pytest.raises(AgentError, match='solution provenance is required'):
+        generator.generate('job-order', question, answer, solution)
     assert model.calls == []

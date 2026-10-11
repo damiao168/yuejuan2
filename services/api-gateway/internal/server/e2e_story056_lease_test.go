@@ -13,10 +13,8 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/paper"
 )
 
-// The OMR callback must not turn a transient rule-publication race into a
-// successful worker task with no next action. The task and OMR facts remain
-// durable, while the missing confirmation target becomes an explicit human
-// review item.
+// OMR 回调不能把暂时的规则发布竞争变成没有后续操作的成功 worker 任务。
+// 任务和 OMR 事实仍已持久化，缺失的确认目标则成为显式人工复核项。
 func TestStory056OMRAutoGradeConfirmationFailureFallsBackToReviewE2E(t *testing.T) {
 	dsn := strings.TrimSpace(os.Getenv("EDUGRADE_E2E_DATABASE_URL"))
 	if dsn == "" {
@@ -40,9 +38,8 @@ func TestStory056OMRAutoGradeConfirmationFailureFallsBackToReviewE2E(t *testing.
 	segmentID := e2eString(t, item, "answer_segment_id")
 	questionID := e2eString(t, item, "question_id")
 
-	// This reproduces a rule becoming unavailable after a worker has already
-	// claimed the task. Retired is a valid immutable historical rule state and
-	// makes the confirmation lookup fail without corrupting the fixture.
+	// 此处复现 worker 已领取任务后规则变为不可用的情况。
+	// retired 是有效的不可变历史规则状态，可在不破坏夹具的情况下使确认查询失败。
 	result, err := db.Exec(`UPDATE scoring_rule SET status='retired',updated_at=now() WHERE tenant_id=$1::uuid AND question_id=$2::uuid AND status='published' AND deleted_at IS NULL`, fixture.TenantID, questionID)
 	if err != nil {
 		t.Fatalf("retire claimed task's scoring rule: %v", err)
@@ -89,10 +86,8 @@ func TestStory056OMRAutoGradeConfirmationFailureFallsBackToReviewE2E(t *testing.
 	}
 }
 
-// A worker may produce a clear selected answer, but the current raw fill-ratio
-// profile is only a suggestion. This acceptance test proves the server-side
-// eligibility snapshot, rather than a worker confidence claim, controls the
-// transition to a durable automatic grade.
+// worker 可以识别出明确的所选答案，但当前原始填涂比例配置只提供建议。
+// 此验收测试验证：控制转入持久化自动成绩的是服务器端资格快照，而非 worker 声称的置信度。
 func TestStory056ManualOnlyOMRProfileRequiresReviewE2E(t *testing.T) {
 	dsn := strings.TrimSpace(os.Getenv("EDUGRADE_E2E_DATABASE_URL"))
 	if dsn == "" {
@@ -194,10 +189,9 @@ func TestStory056RejectsMismatchedOMRProfileBeforeCompletingTaskE2E(t *testing.T
 	}
 }
 
-// A template-difference task may use only the reference asset frozen into the
-// locked template. This test verifies the complete server-side chain before a
-// real worker reads a byte: template binding, queued-task payload, immutable
-// OMR-run snapshot, callback rejection, and manual-only completion.
+// 模板差分任务只能使用锁定模板中冻结的参考资源。
+// 此测试在真实 worker 读取任何字节之前核验完整服务器链路：模板绑定、排队任务载荷、
+// 不可变 OMR 运行快照、回调拒绝和仅人工确认完成。
 func TestStory056TemplateDifferenceReferenceSnapshotE2E(t *testing.T) {
 	dsn := strings.TrimSpace(os.Getenv("EDUGRADE_E2E_DATABASE_URL"))
 	if dsn == "" {
@@ -221,6 +215,73 @@ func TestStory056TemplateDifferenceReferenceSnapshotE2E(t *testing.T) {
 	omrRunID := e2eString(t, item, "omr_run_id")
 	segmentID := e2eString(t, item, "answer_segment_id")
 
+	snapshot := e2eAssertTemplateDifferenceSnapshot(t, db, fixture, omrRunID)
+	profileVersion, profileHash, referenceSHA256 := snapshot.ProfileVersion, snapshot.ProfileHash, snapshot.ReferenceSHA256
+	overlay := e2eCreateStory056Overlay(t, files.NewPostgresStore(db), fixture, omrRunID, 1)
+	wrongReference := e2eStory056OMRResultPayload(t, lease, item, overlay, "story056-reference-wrong-"+omrRunID, []map[string]any{{"option": "A", "foreground_delta": 0.8}}, false)
+	wrongReference["profile_version"] = profileVersion
+	wrongReference["profile_hash"] = profileHash
+	wrongReference["reference_sha256"] = "sha256:replacement-reference"
+	response := e2ePostJSON(t, router, http.MethodPost, "/api/v1/internal/omr-runs/"+omrRunID+"/result", adminToken, story056JSON(t, wrongReference), http.StatusBadRequest)
+	errorBody, ok := response["error"].(map[string]any)
+	if !ok || errorBody["code"] != "invalid_grading_input" {
+		t.Fatalf("reference substitution must be rejected as invalid input: %#v", response)
+	}
+	var pendingOMRStatus, pendingTaskStatus string
+	if err := db.QueryRow(`SELECT status FROM omr_run WHERE tenant_id=$1::uuid AND id=$2::uuid`, fixture.TenantID, omrRunID).Scan(&pendingOMRStatus); err != nil {
+		t.Fatalf("load OMR status after reference rejection: %v", err)
+	}
+	if err := db.QueryRow(`SELECT status FROM agent_worker_task WHERE tenant_id=$1::uuid AND id=$2::uuid`, fixture.TenantID, lease.TaskID).Scan(&pendingTaskStatus); err != nil {
+		t.Fatalf("load worker task after reference rejection: %v", err)
+	}
+	if pendingOMRStatus != "queued" || pendingTaskStatus != "leased" {
+		t.Fatalf("reference rejection must leave work retryable: omr=%s task=%s", pendingOMRStatus, pendingTaskStatus)
+	}
+
+	accepted := e2eStory056OMRResultPayload(t, lease, item, overlay, "story056-reference-correct-"+omrRunID, []map[string]any{{"option": "A", "foreground_delta": 0.8}}, false)
+	accepted["profile_version"] = profileVersion
+	accepted["profile_hash"] = profileHash
+	accepted["reference_sha256"] = referenceSHA256
+	completed := e2ePostJSON(t, router, http.MethodPost, "/api/v1/internal/omr-runs/"+omrRunID+"/result", adminToken, story056JSON(t, accepted), http.StatusOK)
+	if _, found := completed["question_grade"]; found {
+		t.Fatalf("uncalibrated template-difference OMR must remain manual-only: %#v", completed)
+	}
+
+	var completedOMRStatus, completedTaskStatus, candidateDecision, reviewReason string
+	var gradeCount int
+	var candidateEvidence []byte
+	err := db.QueryRow(`
+SELECT o.status,t.status,
+  COALESCE((SELECT decision FROM answer_candidate WHERE tenant_id=o.tenant_id AND answer_segment_id=o.answer_segment_id AND scoring_run_id=o.scoring_run_id AND source='omr' AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 1),''),
+  COALESCE((SELECT evidence FROM answer_candidate WHERE tenant_id=o.tenant_id AND answer_segment_id=o.answer_segment_id AND scoring_run_id=o.scoring_run_id AND source='omr' AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 1),'{}'::jsonb),
+  COALESCE((SELECT reason_code FROM review_task WHERE tenant_id=o.tenant_id AND answer_segment_id=o.answer_segment_id AND scoring_run_id=o.scoring_run_id AND source='omr_ambiguous' AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 1),''),
+  (SELECT count(*) FROM question_grade WHERE tenant_id=o.tenant_id AND answer_segment_id=o.answer_segment_id AND scoring_run_id=o.scoring_run_id AND deleted_at IS NULL)
+FROM omr_run o
+JOIN agent_worker_task t ON t.tenant_id=o.tenant_id AND t.id=o.runtime_task_id
+WHERE o.tenant_id=$1::uuid AND o.id=$2::uuid
+`, fixture.TenantID, omrRunID).Scan(&completedOMRStatus, &completedTaskStatus, &candidateDecision, &candidateEvidence, &reviewReason, &gradeCount)
+	if err != nil {
+		t.Fatalf("load completed template-difference facts: %v", err)
+	}
+	if completedOMRStatus != "completed" || completedTaskStatus != "succeeded" || candidateDecision != "selected" || reviewReason != "omr_"+paper.OMRAutoConfirmReasonCalibrationUnapproved || gradeCount != 0 {
+		t.Fatalf("difference result must persist a reviewable suggestion only: omr=%s task=%s candidate=%s review=%s grades=%d segment=%s", completedOMRStatus, completedTaskStatus, candidateDecision, reviewReason, gradeCount, segmentID)
+	}
+	var evidence map[string]any
+	if err := json.Unmarshal(candidateEvidence, &evidence); err != nil {
+		t.Fatalf("decode template-difference candidate evidence: %v", err)
+	}
+	if e2eString(t, evidence, "reference_sha256") != referenceSHA256 || e2eString(t, evidence, "profile_hash") != profileHash {
+		t.Fatalf("candidate evidence must preserve the server snapshot: %#v", evidence)
+	}
+}
+
+type templateDifferenceSnapshot struct {
+	ProfileVersion, ProfileHash, ReferenceSHA256 string
+}
+
+// 先核对运行、模板文件和 worker 载荷里的同一冻结身份，再允许验证回调的参考资源。
+func e2eAssertTemplateDifferenceSnapshot(t *testing.T, db *sql.DB, fixture story056AcceptanceFixture, omrRunID string) templateDifferenceSnapshot {
+	t.Helper()
 	var profileVersion, profileHash, referenceAssetID, referenceSHA256, autoReason, schemaVersion string
 	var eligible bool
 	var taskPayloadRaw []byte
@@ -259,66 +320,10 @@ WHERE o.tenant_id=$1::uuid AND o.id=$2::uuid
 		t.Fatalf("difference task must include the locked normalized question crop: %#v", referencePayload)
 	}
 
-	overlay := e2eCreateStory056Overlay(t, files.NewPostgresStore(db), fixture, omrRunID, 1)
-	wrongReference := e2eStory056OMRResultPayload(t, lease, item, overlay, "story056-reference-wrong-"+omrRunID, []map[string]any{{"option": "A", "foreground_delta": 0.8}}, false)
-	wrongReference["profile_version"] = profileVersion
-	wrongReference["profile_hash"] = profileHash
-	wrongReference["reference_sha256"] = "sha256:replacement-reference"
-	response := e2ePostJSON(t, router, http.MethodPost, "/api/v1/internal/omr-runs/"+omrRunID+"/result", adminToken, story056JSON(t, wrongReference), http.StatusBadRequest)
-	errorBody, ok := response["error"].(map[string]any)
-	if !ok || errorBody["code"] != "invalid_grading_input" {
-		t.Fatalf("reference substitution must be rejected as invalid input: %#v", response)
-	}
-	var pendingOMRStatus, pendingTaskStatus string
-	if err := db.QueryRow(`SELECT status FROM omr_run WHERE tenant_id=$1::uuid AND id=$2::uuid`, fixture.TenantID, omrRunID).Scan(&pendingOMRStatus); err != nil {
-		t.Fatalf("load OMR status after reference rejection: %v", err)
-	}
-	if err := db.QueryRow(`SELECT status FROM agent_worker_task WHERE tenant_id=$1::uuid AND id=$2::uuid`, fixture.TenantID, lease.TaskID).Scan(&pendingTaskStatus); err != nil {
-		t.Fatalf("load worker task after reference rejection: %v", err)
-	}
-	if pendingOMRStatus != "queued" || pendingTaskStatus != "leased" {
-		t.Fatalf("reference rejection must leave work retryable: omr=%s task=%s", pendingOMRStatus, pendingTaskStatus)
-	}
-
-	accepted := e2eStory056OMRResultPayload(t, lease, item, overlay, "story056-reference-correct-"+omrRunID, []map[string]any{{"option": "A", "foreground_delta": 0.8}}, false)
-	accepted["profile_version"] = profileVersion
-	accepted["profile_hash"] = profileHash
-	accepted["reference_sha256"] = referenceSHA256
-	completed := e2ePostJSON(t, router, http.MethodPost, "/api/v1/internal/omr-runs/"+omrRunID+"/result", adminToken, story056JSON(t, accepted), http.StatusOK)
-	if _, found := completed["question_grade"]; found {
-		t.Fatalf("uncalibrated template-difference OMR must remain manual-only: %#v", completed)
-	}
-
-	var completedOMRStatus, completedTaskStatus, candidateDecision, reviewReason string
-	var gradeCount int
-	var candidateEvidence []byte
-	err = db.QueryRow(`
-SELECT o.status,t.status,
-  COALESCE((SELECT decision FROM answer_candidate WHERE tenant_id=o.tenant_id AND answer_segment_id=o.answer_segment_id AND scoring_run_id=o.scoring_run_id AND source='omr' AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 1),''),
-  COALESCE((SELECT evidence FROM answer_candidate WHERE tenant_id=o.tenant_id AND answer_segment_id=o.answer_segment_id AND scoring_run_id=o.scoring_run_id AND source='omr' AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 1),'{}'::jsonb),
-  COALESCE((SELECT reason_code FROM review_task WHERE tenant_id=o.tenant_id AND answer_segment_id=o.answer_segment_id AND scoring_run_id=o.scoring_run_id AND source='omr_ambiguous' AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 1),''),
-  (SELECT count(*) FROM question_grade WHERE tenant_id=o.tenant_id AND answer_segment_id=o.answer_segment_id AND scoring_run_id=o.scoring_run_id AND deleted_at IS NULL)
-FROM omr_run o
-JOIN agent_worker_task t ON t.tenant_id=o.tenant_id AND t.id=o.runtime_task_id
-WHERE o.tenant_id=$1::uuid AND o.id=$2::uuid
-`, fixture.TenantID, omrRunID).Scan(&completedOMRStatus, &completedTaskStatus, &candidateDecision, &candidateEvidence, &reviewReason, &gradeCount)
-	if err != nil {
-		t.Fatalf("load completed template-difference facts: %v", err)
-	}
-	if completedOMRStatus != "completed" || completedTaskStatus != "succeeded" || candidateDecision != "selected" || reviewReason != "omr_"+paper.OMRAutoConfirmReasonCalibrationUnapproved || gradeCount != 0 {
-		t.Fatalf("difference result must persist a reviewable suggestion only: omr=%s task=%s candidate=%s review=%s grades=%d segment=%s", completedOMRStatus, completedTaskStatus, candidateDecision, reviewReason, gradeCount, segmentID)
-	}
-	var evidence map[string]any
-	if err := json.Unmarshal(candidateEvidence, &evidence); err != nil {
-		t.Fatalf("decode template-difference candidate evidence: %v", err)
-	}
-	if e2eString(t, evidence, "reference_sha256") != referenceSHA256 || e2eString(t, evidence, "profile_hash") != profileHash {
-		t.Fatalf("candidate evidence must preserve the server snapshot: %#v", evidence)
-	}
+	return templateDifferenceSnapshot{ProfileVersion: profileVersion, ProfileHash: profileHash, ReferenceSHA256: referenceSHA256}
 }
 
-// Worker Runtime's semantic result hash is the final guard against a replay
-// changing scoring evidence after an OMR task has already succeeded.
+// Worker Runtime 的语义结果哈希是最后一道检查，防止 OMR 任务成功后重放改变评分证据。
 func TestStory056OMRSameVersionChangedMeasurementsIsConflictE2E(t *testing.T) {
 	dsn := strings.TrimSpace(os.Getenv("EDUGRADE_E2E_DATABASE_URL"))
 	if dsn == "" {
@@ -405,10 +410,9 @@ func e2eStory056ProfileHash() string {
 	return paper.DefaultOMRRuntimeProfileHash()
 }
 
-// The original STORY-056 scoring tests exercise the automatic-grade branch
-// independently of profile calibration. The STORY-056 safety gate makes the snapshot false by
-// default, so this test-only helper models a future approved profile without
-// letting any production request grant that privilege.
+// 原始 STORY-056 评分测试独立于配置校准，覆盖自动成绩分支。
+// STORY-056 安全门禁默认把快照设为 false，因此这个仅供测试的辅助函数模拟未来获批配置，
+// 同时不允许任何生产请求自行授予该权限。
 func e2eEnableStory056AutoConfirmation(t *testing.T, db *sql.DB, tenantID, runID string) {
 	t.Helper()
 	result, err := db.Exec(`UPDATE omr_run SET auto_confirm_eligible=true,auto_confirm_reason='test_verified_template_profile' WHERE tenant_id=$1::uuid AND scoring_run_id=$2::uuid AND deleted_at IS NULL`, tenantID, runID)
@@ -457,8 +461,7 @@ func e2eStory056CompletedOMRFacts(t *testing.T, db *sql.DB, tenantID, taskID, om
 	return out
 }
 
-// This test guards the scoring/worker atomicity boundary. A stale worker must
-// not be able to make an OMR result, answer candidate, or grade durable.
+// 此测试保护评分与 worker 的原子边界。过时 worker 不能持久化 OMR 结果、答案候选或成绩。
 func TestStory056ExpiredOMRLeaseLeavesScoringFactsUntouchedE2E(t *testing.T) {
 	dsn := strings.TrimSpace(os.Getenv("EDUGRADE_E2E_DATABASE_URL"))
 	if dsn == "" {

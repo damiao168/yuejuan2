@@ -1,7 +1,6 @@
 """Normalize untrusted paper-import transport input."""
 
 import base64
-import binascii
 import hashlib
 import re
 
@@ -20,22 +19,7 @@ def normalize_paper_input(payload):
     subject = str(payload.get("subject", "")).strip().lower()
     documents = payload.get("documents")
     if not isinstance(documents, list):
-        documents = []
-        for index, (role, key) in enumerate(
-            (("question", "paper_text"), ("answer", "answer_text"))
-        ):
-            content = str(payload.get(key, "")).strip()
-            if content:
-                documents.append(
-                    {
-                        "source_id": f"legacy-{role}",
-                        "file_asset_id": "",
-                        "document_index": index,
-                        "role_hint": role,
-                        "content": content,
-                        "blocks": [],
-                    }
-                )
+        documents = _legacy_documents(payload)
     cleaned = []
     seen_source_ids = set()
     seen_document_indexes = set()
@@ -87,6 +71,24 @@ def normalize_paper_input(payload):
     return request_id, subject, cleaned
 
 
+def _legacy_documents(payload):
+    documents = []
+    for index, (role, key) in enumerate((("question", "paper_text"), ("answer", "answer_text"))):
+        content = str(payload.get(key, "")).strip()
+        if content:
+            documents.append(
+                {
+                    "source_id": f"legacy-{role}",
+                    "file_asset_id": "",
+                    "document_index": index,
+                    "role_hint": role,
+                    "content": content,
+                    "blocks": [],
+                }
+            )
+    return documents
+
+
 def clean_visual_pages(raw_pages, documents, request_id):
     if raw_pages is None:
         return []
@@ -105,83 +107,12 @@ def clean_visual_pages(raw_pages, documents, request_id):
     total_bytes = 0
     pages_by_source = {}
     for raw_page in raw_pages:
-        if not isinstance(raw_page, dict):
-            raise AgentError(
-                "invalid_request",
-                "visual page metadata is invalid",
-                status=400,
-                request_id=request_id,
-            )
-        source_id = str(raw_page.get("source_id", "")).strip()
-        document = documents_by_id.get(source_id)
-        try:
-            document_index = int(raw_page.get("document_index"))
-            page_no = int(raw_page.get("page_no"))
-        except (TypeError, ValueError) as exc:
-            raise AgentError(
-                "invalid_request",
-                "visual page identity is invalid",
-                status=400,
-                request_id=request_id,
-            ) from exc
-        media_type = str(raw_page.get("media_type", "")).strip().lower()
-        encoded = raw_page.get("data_base64")
-        expected_sha = str(raw_page.get("sha256", "")).strip().lower()
-        identity = (source_id, page_no)
-        if (
-            document is None
-            or document_index != document["document_index"]
-            or page_no <= 0
-            or media_type not in VISUAL_MEDIA_TYPES
-            or not isinstance(encoded, str)
-            or not encoded
-            or identity in seen
-        ):
-            raise AgentError(
-                "invalid_request",
-                "visual page identity or media type is invalid",
-                status=400,
-                request_id=request_id,
-            )
-        try:
-            raw = base64.b64decode(encoded, validate=True)
-        except (ValueError, binascii.Error) as exc:
-            raise AgentError(
-                "invalid_request",
-                "visual page data is invalid",
-                status=400,
-                request_id=request_id,
-            ) from exc
         # 按解码后字节累计整批预算，单页合规不能替代整份导入的总大小限制。
-        total_bytes += len(raw)
-        digest = hashlib.sha256(raw).hexdigest()
-        if (
-            not raw
-            or len(raw) > MAX_VISUAL_PAGE_BYTES
-            or total_bytes > MAX_VISUAL_PAYLOAD_BYTES
-            or not re.fullmatch(r"[0-9a-f]{64}", expected_sha)
-            or digest != expected_sha
-        ):
-            raise AgentError(
-                "invalid_request",
-                "visual page size or checksum is invalid",
-                status=400,
-                request_id=request_id,
-            )
-        seen.add(identity)
-        pages_by_source.setdefault(source_id, []).append(page_no)
-        cleaned_pages.append(
-            {
-                "source_id": source_id,
-                "document_index": document_index,
-                "page_no": page_no,
-                "media_type": media_type,
-                "data_base64": encoded,
-                "sha256": digest,
-                "width": raw_page.get("width"),
-                "height": raw_page.get("height"),
-            }
-        )
+        page, byte_count = _clean_visual_page(raw_page, documents_by_id, seen, total_bytes, request_id)
+        total_bytes += byte_count
+        seen.add((page["source_id"], page["page_no"]))
+        pages_by_source.setdefault(page["source_id"], []).append(page["page_no"])
+        cleaned_pages.append(page)
     for document in documents:
         document["_visual_page_nos"] = sorted(
             pages_by_source.get(document["source_id"], [])
@@ -190,3 +121,61 @@ def clean_visual_pages(raw_pages, documents, request_id):
         cleaned_pages,
         key=lambda page: (page["document_index"], page["page_no"]),
     )
+
+
+def _clean_visual_page(raw_page, documents_by_id, seen, total_bytes, request_id):
+    if not isinstance(raw_page, dict):
+        raise AgentError(
+            "invalid_request", "visual page metadata is invalid", status=400, request_id=request_id,
+        )
+    source_id = str(raw_page.get("source_id", "")).strip()
+    document = documents_by_id.get(source_id)
+    try:
+        document_index = int(raw_page.get("document_index"))
+        page_no = int(raw_page.get("page_no"))
+    except (TypeError, ValueError) as exc:
+        raise AgentError(
+            "invalid_request", "visual page identity is invalid", status=400, request_id=request_id,
+        ) from exc
+    media_type = str(raw_page.get("media_type", "")).strip().lower()
+    encoded = raw_page.get("data_base64")
+    expected_sha = str(raw_page.get("sha256", "")).strip().lower()
+    if (
+        document is None
+        or document_index != document["document_index"]
+        or page_no <= 0
+        or media_type not in VISUAL_MEDIA_TYPES
+        or not isinstance(encoded, str)
+        or not encoded
+        or (source_id, page_no) in seen
+    ):
+        raise AgentError(
+            "invalid_request", "visual page identity or media type is invalid", status=400, request_id=request_id,
+        )
+    try:
+        raw = base64.b64decode(encoded, validate=True)
+    except ValueError as exc:
+        raise AgentError(
+            "invalid_request", "visual page data is invalid", status=400, request_id=request_id,
+        ) from exc
+    digest = hashlib.sha256(raw).hexdigest()
+    if (
+        not raw
+        or len(raw) > MAX_VISUAL_PAGE_BYTES
+        or total_bytes + len(raw) > MAX_VISUAL_PAYLOAD_BYTES
+        or not re.fullmatch(r"[0-9a-f]{64}", expected_sha)
+        or digest != expected_sha
+    ):
+        raise AgentError(
+            "invalid_request", "visual page size or checksum is invalid", status=400, request_id=request_id,
+        )
+    return {
+        "source_id": source_id,
+        "document_index": document_index,
+        "page_no": page_no,
+        "media_type": media_type,
+        "data_base64": encoded,
+        "sha256": digest,
+        "width": raw_page.get("width"),
+        "height": raw_page.get("height"),
+    }, len(raw)

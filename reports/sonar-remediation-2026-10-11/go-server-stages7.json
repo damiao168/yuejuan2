@@ -1,0 +1,25 @@
+{
+  "files": [
+    {
+      "file": "services/api-gateway/internal/server/e2e_story056_calibration_test.go",
+      "sha256": "b6a0e1cd9e2761e925320662575d29ef38075451e4e3f2d07f1ec80a9976cc78",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_story056_calibration_test.go"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_story060_capture_recovery_test.go",
+      "sha256": "fec5472677f15ee0476fa2809904b58f6f7850bd728702934e33d4bd7cc3155e",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_story060_capture_recovery_test.go"
+    }
+  ],
+  "issue_functions": [
+    {
+      "file": "services/api-gateway/internal/server/e2e_story056_calibration_test.go",
+      "function": "TestStory056TemplateDifferenceCalibrationApprovalAndRevocationE2E"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_story060_capture_recovery_test.go",
+      "function": "TestStory060CaptureRecoveryE2EWithPostgresTestDatabase"
+    }
+  ],
+  "checkpoint_relation": "after checkpoint02 2026-10-11 18:01:04; requires subsequent scan"
+}

@@ -204,7 +204,8 @@ export function listModelEvaluationRuns(tenantID: string, filter: { limit?: numb
   if (filter.limit) params.set("limit", String(filter.limit));
   if (filter.cursor) params.set("cursor", filter.cursor);
   const query = params.toString();
-  return apiClient.request<{ evaluation_runs: EvaluationRun[]; next_cursor: string; has_more: boolean }>(tenantURL(`/api/v1/model-evaluation-runs${query ? `?${query}` : ""}`, tenantID));
+  const querySuffix = query ? `?${query}` : "";
+  return apiClient.request<{ evaluation_runs: EvaluationRun[]; next_cursor: string; has_more: boolean }>(tenantURL(`/api/v1/model-evaluation-runs${querySuffix}`, tenantID));
 }
 
 export function createModelEvaluationRun(input: CreateEvaluationRunInput) {

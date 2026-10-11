@@ -1,0 +1,665 @@
+{
+  "schema_version": 1,
+  "reviewed_at_utc": "2026-10-11T07:09:39.814752+00:00",
+  "source_root": "D:/tools/audit-codeql-20261010/source-20261011",
+  "sarif_path": "D:/project/yuejuan/reports/platform-audit-2026-10-10/codeql/rust.sarif",
+  "sarif_sha256": "69b53cea47bc6506c0a889325414b1f35a1ded9f492c61ba4e640a91a1766062",
+  "source_manifest_path": "D:/project/yuejuan/reports/platform-audit-2026-10-10/source-manifest-resume-2026-10-11.csv",
+  "source_manifest_sha256": "f939ec3a24e837f45fba766fc1d614ad75d63707d8303e2f090029787506a56f",
+  "review_method": "Read exact SARIF source locations and enclosing cfg(test) module/test function declarations from the frozen scanned source; read local fixture setup, key uses and assertions. Verified source-byte SHA256 against resume manifest. No directory-name inference.",
+  "reviewed_result_indices_zero_based": [
+    1,
+    2,
+    3,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13
+  ],
+  "unreviewed_in_this_attachment_result_indices_zero_based": [
+    0,
+    4,
+    5
+  ],
+  "tests_or_scans_executed_for_review": false,
+  "business_source_modified": false,
+  "summary": "All 11 assigned results have compile-time cfg(test)-only literal sources and synthetic local fixtures. None of these 11 is confirmed as a production hardcoded-key vulnerability. Original SARIF severity and results remain unchanged; indices 0,4,5 are independently reviewed by the parent.",
+  "findings": [
+    {
+      "sarif_result_index_zero_based": 1,
+      "rule_id": "rust/hard-coded-cryptographic-value",
+      "raw_message": "This hard-coded value is used as [a key](1).",
+      "raw_severity_preserved": true,
+      "path": "apps/desktop-client/src-tauri/src/durable_store/claim.rs",
+      "physical_location": {
+        "artifactLocation": {
+          "uri": "apps/desktop-client/src-tauri/src/durable_store/claim.rs",
+          "uriBaseId": "%SRCROOT%",
+          "index": 4
+        },
+        "region": {
+          "startLine": 443,
+          "startColumn": 27,
+          "endColumn": 37
+        }
+      },
+      "source_sha256": "ef254596635799104d520b25d386f4cdb7421879dad79f952dd169cb90af2876",
+      "matches_resume_source_manifest": true,
+      "source_line_text": "            encrypt_json(&[7_u8; 32], &serde_json::json!({\"private\": true})).expect(\"encrypt\");",
+      "literal_at_sarif_columns": "[7_u8; 32]",
+      "classification": "test_fixture_only_not_confirmed_production_vulnerability",
+      "confidence": "high",
+      "fixture_kind": "positive_fixture_key",
+      "cfg_test_module": {
+        "attribute_line": 313,
+        "module_line": 314,
+        "closing_line": 458
+      },
+      "enclosing_item": {
+        "name": "claim_validates_legacy_credential_before_touching_files",
+        "test_attribute_line": 434,
+        "function_start_line": 435,
+        "function_end_line": 457
+      },
+      "context": "The [7_u8; 32] literal encrypts synthetic JSON in a newly created UUID temporary legacy SQLite store. The entire caller is inside cfg(test).",
+      "production_reachability": "The literal is lexically enclosed by #[cfg(test)] mod tests. Normal non-test builds exclude this entire module; private constants/helpers remain inside it. Calling production crypto/storage helpers from the test does not make the test literal a production caller.",
+      "limitations": "This is a static source-context review of this result, not a full proof of all production key generation, storage or cryptographic design. No Rust test was executed for this review.",
+      "evidence": [
+        {
+          "start_line": 313,
+          "end_line": 318,
+          "source_text": "#[cfg(test)]\nmod tests {\n    use super::{\n        db_path, ensure_target_is_empty, move_legacy_store_with_commit, verify_legacy_key,\n    };\n    use crate::durable_store::crypto::encrypt_json;"
+        },
+        {
+          "start_line": 434,
+          "end_line": 456,
+          "source_text": "    #[test]\n    fn claim_validates_legacy_credential_before_touching_files() {\n        let data = std::env::temp_dir().join(format!(\"edugrade-legacy-key-{}\", Uuid::new_v4()));\n        let legacy = data.join(\"durable-store-v1\");\n        fs::create_dir_all(&legacy).expect(\"legacy root\");\n        let conn = Connection::open(db_path(&legacy)).expect(\"legacy db\");\n        conn.execute_batch(\"CREATE TABLE draft (payload_ciphertext TEXT, payload_nonce TEXT);\")\n            .expect(\"legacy table\");\n        let (ciphertext, nonce) =\n            encrypt_json(&[7_u8; 32], &serde_json::json!({\"private\": true})).expect(\"encrypt\");\n        conn.execute(\n            \"INSERT INTO draft(payload_ciphertext,payload_nonce) VALUES (?1,?2)\",\n            params![ciphertext, nonce],\n        )\n        .expect(\"sample\");\n        drop(conn);\n        assert!(verify_legacy_key(&legacy, &[7_u8; 32]).is_ok());\n        assert!(verify_legacy_key(&legacy, &[8_u8; 32]).is_err());\n        assert!(\n            legacy.exists(),\n            \"failed verification never moves legacy data\"\n        );\n        fs::remove_dir_all(data).expect(\"cleanup\");"
+        }
+      ]
+    },
+    {
+      "sarif_result_index_zero_based": 2,
+      "rule_id": "rust/hard-coded-cryptographic-value",
+      "raw_message": "This hard-coded value is used as [a key](1).",
+      "raw_severity_preserved": true,
+      "path": "apps/desktop-client/src-tauri/src/durable_store/claim.rs",
+      "physical_location": {
+        "artifactLocation": {
+          "uri": "apps/desktop-client/src-tauri/src/durable_store/claim.rs",
+          "uriBaseId": "%SRCROOT%",
+          "index": 4
+        },
+        "region": {
+          "startLine": 450,
+          "startColumn": 45,
+          "endColumn": 55
+        }
+      },
+      "source_sha256": "ef254596635799104d520b25d386f4cdb7421879dad79f952dd169cb90af2876",
+      "matches_resume_source_manifest": true,
+      "source_line_text": "        assert!(verify_legacy_key(&legacy, &[7_u8; 32]).is_ok());",
+      "literal_at_sarif_columns": "[7_u8; 32]",
+      "classification": "test_fixture_only_not_confirmed_production_vulnerability",
+      "confidence": "high",
+      "fixture_kind": "positive_fixture_key",
+      "cfg_test_module": {
+        "attribute_line": 313,
+        "module_line": 314,
+        "closing_line": 458
+      },
+      "enclosing_item": {
+        "name": "claim_validates_legacy_credential_before_touching_files",
+        "test_attribute_line": 434,
+        "function_start_line": 435,
+        "function_end_line": 457
+      },
+      "context": "The repeated [7_u8; 32] key must successfully verify the synthetic legacy ciphertext created at line 443 in this same unit test.",
+      "production_reachability": "The literal is lexically enclosed by #[cfg(test)] mod tests. Normal non-test builds exclude this entire module; private constants/helpers remain inside it. Calling production crypto/storage helpers from the test does not make the test literal a production caller.",
+      "limitations": "This is a static source-context review of this result, not a full proof of all production key generation, storage or cryptographic design. No Rust test was executed for this review.",
+      "evidence": [
+        {
+          "start_line": 313,
+          "end_line": 318,
+          "source_text": "#[cfg(test)]\nmod tests {\n    use super::{\n        db_path, ensure_target_is_empty, move_legacy_store_with_commit, verify_legacy_key,\n    };\n    use crate::durable_store::crypto::encrypt_json;"
+        },
+        {
+          "start_line": 434,
+          "end_line": 456,
+          "source_text": "    #[test]\n    fn claim_validates_legacy_credential_before_touching_files() {\n        let data = std::env::temp_dir().join(format!(\"edugrade-legacy-key-{}\", Uuid::new_v4()));\n        let legacy = data.join(\"durable-store-v1\");\n        fs::create_dir_all(&legacy).expect(\"legacy root\");\n        let conn = Connection::open(db_path(&legacy)).expect(\"legacy db\");\n        conn.execute_batch(\"CREATE TABLE draft (payload_ciphertext TEXT, payload_nonce TEXT);\")\n            .expect(\"legacy table\");\n        let (ciphertext, nonce) =\n            encrypt_json(&[7_u8; 32], &serde_json::json!({\"private\": true})).expect(\"encrypt\");\n        conn.execute(\n            \"INSERT INTO draft(payload_ciphertext,payload_nonce) VALUES (?1,?2)\",\n            params![ciphertext, nonce],\n        )\n        .expect(\"sample\");\n        drop(conn);\n        assert!(verify_legacy_key(&legacy, &[7_u8; 32]).is_ok());\n        assert!(verify_legacy_key(&legacy, &[8_u8; 32]).is_err());\n        assert!(\n            legacy.exists(),\n            \"failed verification never moves legacy data\"\n        );\n        fs::remove_dir_all(data).expect(\"cleanup\");"
+        }
+      ]
+    },
+    {
+      "sarif_result_index_zero_based": 3,
+      "rule_id": "rust/hard-coded-cryptographic-value",
+      "raw_message": "This hard-coded value is used as [a key](1).",
+      "raw_severity_preserved": true,
+      "path": "apps/desktop-client/src-tauri/src/durable_store/claim.rs",
+      "physical_location": {
+        "artifactLocation": {
+          "uri": "apps/desktop-client/src-tauri/src/durable_store/claim.rs",
+          "uriBaseId": "%SRCROOT%",
+          "index": 4
+        },
+        "region": {
+          "startLine": 451,
+          "startColumn": 45,
+          "endColumn": 55
+        }
+      },
+      "source_sha256": "ef254596635799104d520b25d386f4cdb7421879dad79f952dd169cb90af2876",
+      "matches_resume_source_manifest": true,
+      "source_line_text": "        assert!(verify_legacy_key(&legacy, &[8_u8; 32]).is_err());",
+      "literal_at_sarif_columns": "[8_u8; 32]",
+      "classification": "test_fixture_only_not_confirmed_production_vulnerability",
+      "confidence": "high",
+      "fixture_kind": "negative_wrong_key_fixture",
+      "cfg_test_module": {
+        "attribute_line": 313,
+        "module_line": 314,
+        "closing_line": 458
+      },
+      "enclosing_item": {
+        "name": "claim_validates_legacy_credential_before_touching_files",
+        "test_attribute_line": 434,
+        "function_start_line": 435,
+        "function_end_line": 457
+      },
+      "context": "The [8_u8; 32] literal is intentionally a wrong key. The is_err assertion checks rejection without moving the temporary legacy data.",
+      "production_reachability": "The literal is lexically enclosed by #[cfg(test)] mod tests. Normal non-test builds exclude this entire module; private constants/helpers remain inside it. Calling production crypto/storage helpers from the test does not make the test literal a production caller.",
+      "limitations": "This is a static source-context review of this result, not a full proof of all production key generation, storage or cryptographic design. No Rust test was executed for this review.",
+      "evidence": [
+        {
+          "start_line": 313,
+          "end_line": 318,
+          "source_text": "#[cfg(test)]\nmod tests {\n    use super::{\n        db_path, ensure_target_is_empty, move_legacy_store_with_commit, verify_legacy_key,\n    };\n    use crate::durable_store::crypto::encrypt_json;"
+        },
+        {
+          "start_line": 434,
+          "end_line": 456,
+          "source_text": "    #[test]\n    fn claim_validates_legacy_credential_before_touching_files() {\n        let data = std::env::temp_dir().join(format!(\"edugrade-legacy-key-{}\", Uuid::new_v4()));\n        let legacy = data.join(\"durable-store-v1\");\n        fs::create_dir_all(&legacy).expect(\"legacy root\");\n        let conn = Connection::open(db_path(&legacy)).expect(\"legacy db\");\n        conn.execute_batch(\"CREATE TABLE draft (payload_ciphertext TEXT, payload_nonce TEXT);\")\n            .expect(\"legacy table\");\n        let (ciphertext, nonce) =\n            encrypt_json(&[7_u8; 32], &serde_json::json!({\"private\": true})).expect(\"encrypt\");\n        conn.execute(\n            \"INSERT INTO draft(payload_ciphertext,payload_nonce) VALUES (?1,?2)\",\n            params![ciphertext, nonce],\n        )\n        .expect(\"sample\");\n        drop(conn);\n        assert!(verify_legacy_key(&legacy, &[7_u8; 32]).is_ok());\n        assert!(verify_legacy_key(&legacy, &[8_u8; 32]).is_err());\n        assert!(\n            legacy.exists(),\n            \"failed verification never moves legacy data\"\n        );\n        fs::remove_dir_all(data).expect(\"cleanup\");"
+        }
+      ]
+    },
+    {
+      "sarif_result_index_zero_based": 6,
+      "rule_id": "rust/hard-coded-cryptographic-value",
+      "raw_message": "This hard-coded value is used as [a key](1).\nThis hard-coded value is used as [a key](2).",
+      "raw_severity_preserved": true,
+      "path": "apps/desktop-client/src-tauri/src/durable_store/drafts.rs",
+      "physical_location": {
+        "artifactLocation": {
+          "uri": "apps/desktop-client/src-tauri/src/durable_store/drafts.rs",
+          "uriBaseId": "%SRCROOT%",
+          "index": 3
+        },
+        "region": {
+          "startLine": 203,
+          "startColumn": 27,
+          "endColumn": 35
+        }
+      },
+      "source_sha256": "8da95099ce829d112c8a09442c516c0c12f67144f2a18f703780a190371c3a3f",
+      "matches_resume_source_manifest": true,
+      "source_line_text": "    const KEY: [u8; 32] = [37; 32];",
+      "literal_at_sarif_columns": "[37; 32]",
+      "classification": "test_fixture_only_not_confirmed_production_vulnerability",
+      "confidence": "high",
+      "fixture_kind": "shared_private_test_fixture_key",
+      "cfg_test_module": {
+        "attribute_line": 198,
+        "module_line": 199,
+        "closing_line": 289
+      },
+      "enclosing_item": {
+        "name": "tests::KEY and tests::insert",
+        "test_attribute_line": null,
+        "function_start_line": null,
+        "function_end_line": null
+      },
+      "context": "KEY=[37; 32] is a private const inside cfg(test), used by the private insert helper to encrypt synthetic draft/submission data in an in-memory SQLite fixture. All uses belong to this gated module.",
+      "production_reachability": "The literal is lexically enclosed by #[cfg(test)] mod tests. Normal non-test builds exclude this entire module; private constants/helpers remain inside it. Calling production crypto/storage helpers from the test does not make the test literal a production caller.",
+      "limitations": "This is a static source-context review of this result, not a full proof of all production key generation, storage or cryptographic design. No Rust test was executed for this review.",
+      "evidence": [
+        {
+          "start_line": 198,
+          "end_line": 222,
+          "source_text": "#[cfg(test)]\nmod tests {\n    use super::*;\n    use serde_json::json;\n\n    const KEY: [u8; 32] = [37; 32];\n    const NOW: &str = \"2026-10-04T00:00:00Z\";\n\n    fn fixture() -> Connection {\n        let conn = Connection::open_in_memory().expect(\"open fixture\");\n        initialize_schema(&conn).expect(\"initialize fixture\");\n        conn\n    }\n\n    fn insert(conn: &Connection, id: &str, status: &str, command: bool, expires_at: &str) {\n        let mut record = json!({\"taskId\": id, \"syncStatus\": \"syncing\", \"draft\": {\"score\": 0}});\n        if command {\n            record[\"submissionCommand\"] = json!({\"id\": \"frozen-command\", \"payload\": {\"score\": 0}});\n        }\n        let (ciphertext, nonce) = encrypt_json(&KEY, &record).expect(\"encrypt fixture\");\n        conn.execute(\n            \"INSERT INTO draft (task_id, anonymous_code, saved_at, expires_at, sync_status, payload_ciphertext, payload_nonce, updated_at)\n             VALUES (?1, 'anonymous', ?2, ?3, ?4, ?5, ?6, ?2)\",\n            params![id, NOW, expires_at, status, ciphertext, nonce],\n        )"
+        },
+        {
+          "start_line": 235,
+          "end_line": 248,
+          "source_text": "    #[test]\n    fn expired_cleanup_preserves_every_unsynced_draft_and_cleans_confirmed_records() {\n        let mut conn = fixture();\n        insert(&conn, \"legacy-draft\", \"draft\", false, NOW);\n        insert(&conn, \"ordinary-failed\", \"failed\", false, NOW);\n        insert(&conn, \"confirmed\", \"synced\", true, NOW);\n        insert(&conn, \"pending-failed\", \"failed\", true, NOW);\n        insert(&conn, \"pending-syncing\", \"syncing\", true, NOW);\n        insert(&conn, \"pending-conflict\", \"conflict\", true, NOW);\n        insert(&conn, \"future\", \"draft\", false, \"2026-10-05T00:00:00Z\");\n\n        assert_eq!(purge_expired_drafts(&mut conn, &KEY, NOW).unwrap(), 1);\n        assert_eq!(\n            ids(&conn),"
+        },
+        {
+          "start_line": 265,
+          "end_line": 288,
+          "source_text": "    #[test]\n    fn corrupt_expired_payload_rolls_back_other_deletions() {\n        let mut conn = fixture();\n        insert(&conn, \"a-ordinary\", \"draft\", false, NOW);\n        insert(&conn, \"z-pending\", \"failed\", true, NOW);\n        conn.execute(\n            \"UPDATE draft SET payload_ciphertext = 'corrupt' WHERE task_id = 'z-pending'\",\n            [],\n        )\n        .unwrap();\n\n        assert!(purge_expired_drafts(&mut conn, &KEY, NOW).is_err());\n        assert_eq!(ids(&conn), vec![\"a-ordinary\", \"z-pending\"]);\n    }\n\n    #[test]\n    fn wrong_key_preserves_all_expired_records() {\n        let mut conn = fixture();\n        insert(&conn, \"ordinary\", \"draft\", false, NOW);\n        insert(&conn, \"pending\", \"failed\", true, NOW);\n\n        assert!(purge_expired_drafts(&mut conn, &[88; 32], NOW).is_err());\n        assert_eq!(ids(&conn), vec![\"ordinary\", \"pending\"]);\n    }"
+        }
+      ]
+    },
+    {
+      "sarif_result_index_zero_based": 7,
+      "rule_id": "rust/hard-coded-cryptographic-value",
+      "raw_message": "This hard-coded value is used as [a key](1).",
+      "raw_severity_preserved": true,
+      "path": "apps/desktop-client/src-tauri/src/durable_store/drafts.rs",
+      "physical_location": {
+        "artifactLocation": {
+          "uri": "apps/desktop-client/src-tauri/src/durable_store/drafts.rs",
+          "uriBaseId": "%SRCROOT%",
+          "index": 3
+        },
+        "region": {
+          "startLine": 286,
+          "startColumn": 50,
+          "endColumn": 58
+        }
+      },
+      "source_sha256": "8da95099ce829d112c8a09442c516c0c12f67144f2a18f703780a190371c3a3f",
+      "matches_resume_source_manifest": true,
+      "source_line_text": "        assert!(purge_expired_drafts(&mut conn, &[88; 32], NOW).is_err());",
+      "literal_at_sarif_columns": "[88; 32]",
+      "classification": "test_fixture_only_not_confirmed_production_vulnerability",
+      "confidence": "high",
+      "fixture_kind": "negative_wrong_key_fixture",
+      "cfg_test_module": {
+        "attribute_line": 198,
+        "module_line": 199,
+        "closing_line": 289
+      },
+      "enclosing_item": {
+        "name": "wrong_key_preserves_all_expired_records",
+        "test_attribute_line": 280,
+        "function_start_line": 281,
+        "function_end_line": 288
+      },
+      "context": "The [88; 32] literal is intentionally different from KEY=[37; 32]. This unit test expects purge_expired_drafts to fail and both synthetic records to remain.",
+      "production_reachability": "The literal is lexically enclosed by #[cfg(test)] mod tests. Normal non-test builds exclude this entire module; private constants/helpers remain inside it. Calling production crypto/storage helpers from the test does not make the test literal a production caller.",
+      "limitations": "This is a static source-context review of this result, not a full proof of all production key generation, storage or cryptographic design. No Rust test was executed for this review.",
+      "evidence": [
+        {
+          "start_line": 198,
+          "end_line": 218,
+          "source_text": "#[cfg(test)]\nmod tests {\n    use super::*;\n    use serde_json::json;\n\n    const KEY: [u8; 32] = [37; 32];\n    const NOW: &str = \"2026-10-04T00:00:00Z\";\n\n    fn fixture() -> Connection {\n        let conn = Connection::open_in_memory().expect(\"open fixture\");\n        initialize_schema(&conn).expect(\"initialize fixture\");\n        conn\n    }\n\n    fn insert(conn: &Connection, id: &str, status: &str, command: bool, expires_at: &str) {\n        let mut record = json!({\"taskId\": id, \"syncStatus\": \"syncing\", \"draft\": {\"score\": 0}});\n        if command {\n            record[\"submissionCommand\"] = json!({\"id\": \"frozen-command\", \"payload\": {\"score\": 0}});\n        }\n        let (ciphertext, nonce) = encrypt_json(&KEY, &record).expect(\"encrypt fixture\");\n        conn.execute("
+        },
+        {
+          "start_line": 280,
+          "end_line": 288,
+          "source_text": "    #[test]\n    fn wrong_key_preserves_all_expired_records() {\n        let mut conn = fixture();\n        insert(&conn, \"ordinary\", \"draft\", false, NOW);\n        insert(&conn, \"pending\", \"failed\", true, NOW);\n\n        assert!(purge_expired_drafts(&mut conn, &[88; 32], NOW).is_err());\n        assert_eq!(ids(&conn), vec![\"ordinary\", \"pending\"]);\n    }"
+        }
+      ]
+    },
+    {
+      "sarif_result_index_zero_based": 8,
+      "rule_id": "rust/hard-coded-cryptographic-value",
+      "raw_message": "This hard-coded value is used as [a key](1).\nThis hard-coded value is used as [a key](2).",
+      "raw_severity_preserved": true,
+      "path": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+      "physical_location": {
+        "artifactLocation": {
+          "uri": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+          "uriBaseId": "%SRCROOT%",
+          "index": 5
+        },
+        "region": {
+          "startLine": 111,
+          "startColumn": 19,
+          "endColumn": 29
+        }
+      },
+      "source_sha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969",
+      "matches_resume_source_manifest": true,
+      "source_line_text": "        let key = [7_u8; 32];",
+      "literal_at_sarif_columns": "[7_u8; 32]",
+      "classification": "test_fixture_only_not_confirmed_production_vulnerability",
+      "confidence": "high",
+      "fixture_kind": "positive_fixture_key",
+      "cfg_test_module": {
+        "attribute_line": 84,
+        "module_line": 85,
+        "closing_line": 541
+      },
+      "enclosing_item": {
+        "name": "encrypted_payload_requires_the_same_key_and_nonce",
+        "test_attribute_line": 109,
+        "function_start_line": 110,
+        "function_end_line": 118
+      },
+      "context": "The [7_u8; 32] key encrypts and decrypts one synthetic answer object within this gated unit test. It is a local variable, not a production credential.",
+      "production_reachability": "The literal is lexically enclosed by #[cfg(test)] mod tests. Normal non-test builds exclude this entire module; private constants/helpers remain inside it. Calling production crypto/storage helpers from the test does not make the test literal a production caller.",
+      "limitations": "This is a static source-context review of this result, not a full proof of all production key generation, storage or cryptographic design. No Rust test was executed for this review.",
+      "evidence": [
+        {
+          "start_line": 84,
+          "end_line": 85,
+          "source_text": "#[cfg(test)]\nmod tests {"
+        },
+        {
+          "start_line": 109,
+          "end_line": 118,
+          "source_text": "    #[test]\n    fn encrypted_payload_requires_the_same_key_and_nonce() {\n        let key = [7_u8; 32];\n        let value = serde_json::json!({\"answer\": \"敏感草稿\", \"score\": 8});\n        let (ciphertext, nonce) = encrypt_json(&key, &value).expect(\"encrypt\");\n        assert!(!ciphertext.contains(\"敏感草稿\"));\n        let decoded: Value = decrypt_json(&key, &ciphertext, &nonce).expect(\"decrypt\");\n        assert_eq!(decoded, value);\n        assert!(decrypt_json::<Value>(&[8_u8; 32], &ciphertext, &nonce).is_err());\n    }"
+        }
+      ]
+    },
+    {
+      "sarif_result_index_zero_based": 9,
+      "rule_id": "rust/hard-coded-cryptographic-value",
+      "raw_message": "This hard-coded value is used as [a key](1).",
+      "raw_severity_preserved": true,
+      "path": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+      "physical_location": {
+        "artifactLocation": {
+          "uri": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+          "uriBaseId": "%SRCROOT%",
+          "index": 5
+        },
+        "region": {
+          "startLine": 117,
+          "startColumn": 40,
+          "endColumn": 50
+        }
+      },
+      "source_sha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969",
+      "matches_resume_source_manifest": true,
+      "source_line_text": "        assert!(decrypt_json::<Value>(&[8_u8; 32], &ciphertext, &nonce).is_err());",
+      "literal_at_sarif_columns": "[8_u8; 32]",
+      "classification": "test_fixture_only_not_confirmed_production_vulnerability",
+      "confidence": "high",
+      "fixture_kind": "negative_wrong_key_fixture",
+      "cfg_test_module": {
+        "attribute_line": 84,
+        "module_line": 85,
+        "closing_line": 541
+      },
+      "enclosing_item": {
+        "name": "encrypted_payload_requires_the_same_key_and_nonce",
+        "test_attribute_line": 109,
+        "function_start_line": 110,
+        "function_end_line": 118
+      },
+      "context": "The [8_u8; 32] literal is an intentionally wrong key in an is_err decryption assertion for the synthetic object encrypted with [7_u8; 32].",
+      "production_reachability": "The literal is lexically enclosed by #[cfg(test)] mod tests. Normal non-test builds exclude this entire module; private constants/helpers remain inside it. Calling production crypto/storage helpers from the test does not make the test literal a production caller.",
+      "limitations": "This is a static source-context review of this result, not a full proof of all production key generation, storage or cryptographic design. No Rust test was executed for this review.",
+      "evidence": [
+        {
+          "start_line": 84,
+          "end_line": 85,
+          "source_text": "#[cfg(test)]\nmod tests {"
+        },
+        {
+          "start_line": 109,
+          "end_line": 118,
+          "source_text": "    #[test]\n    fn encrypted_payload_requires_the_same_key_and_nonce() {\n        let key = [7_u8; 32];\n        let value = serde_json::json!({\"answer\": \"敏感草稿\", \"score\": 8});\n        let (ciphertext, nonce) = encrypt_json(&key, &value).expect(\"encrypt\");\n        assert!(!ciphertext.contains(\"敏感草稿\"));\n        let decoded: Value = decrypt_json(&key, &ciphertext, &nonce).expect(\"decrypt\");\n        assert_eq!(decoded, value);\n        assert!(decrypt_json::<Value>(&[8_u8; 32], &ciphertext, &nonce).is_err());\n    }"
+        }
+      ]
+    },
+    {
+      "sarif_result_index_zero_based": 10,
+      "rule_id": "rust/hard-coded-cryptographic-value",
+      "raw_message": "This hard-coded value is used as [a key](1).\nThis hard-coded value is used as [a key](2).",
+      "raw_severity_preserved": true,
+      "path": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+      "physical_location": {
+        "artifactLocation": {
+          "uri": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+          "uriBaseId": "%SRCROOT%",
+          "index": 5
+        },
+        "region": {
+          "startLine": 135,
+          "startColumn": 19,
+          "endColumn": 30
+        }
+      },
+      "source_sha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969",
+      "matches_resume_source_manifest": true,
+      "source_line_text": "        let key = [17_u8; 32];",
+      "literal_at_sarif_columns": "[17_u8; 32]",
+      "classification": "test_fixture_only_not_confirmed_production_vulnerability",
+      "confidence": "high",
+      "fixture_kind": "positive_fixture_key",
+      "cfg_test_module": {
+        "attribute_line": 84,
+        "module_line": 85,
+        "closing_line": 541
+      },
+      "enclosing_item": {
+        "name": "chunked_spool_verifies_order_size_and_content_without_a_whole_file_row",
+        "test_attribute_line": 128,
+        "function_start_line": 129,
+        "function_end_line": 199
+      },
+      "context": "The [17_u8; 32] key encrypts deterministically generated chunks in a UUID temporary spool with in-memory SQLite metadata; assertions validate a complete sequence and a deliberately missing middle chunk. Every caller is inside cfg(test).",
+      "production_reachability": "The literal is lexically enclosed by #[cfg(test)] mod tests. Normal non-test builds exclude this entire module; private constants/helpers remain inside it. Calling production crypto/storage helpers from the test does not make the test literal a production caller.",
+      "limitations": "This is a static source-context review of this result, not a full proof of all production key generation, storage or cryptographic design. No Rust test was executed for this review.",
+      "evidence": [
+        {
+          "start_line": 84,
+          "end_line": 85,
+          "source_text": "#[cfg(test)]\nmod tests {"
+        },
+        {
+          "start_line": 128,
+          "end_line": 139,
+          "source_text": "    #[test]\n    fn chunked_spool_verifies_order_size_and_content_without_a_whole_file_row() {\n        let root = std::env::temp_dir().join(format!(\"edugrade-spool-test-{}\", Uuid::new_v4()));\n        let spool = spool_path(&root);\n        fs::create_dir_all(&spool).expect(\"spool directory\");\n        let conn = Connection::open_in_memory().expect(\"in-memory SQLite\");\n        initialize_schema(&conn).expect(\"schema\");\n        let key = [17_u8; 32];\n        let asset_id = \"chunked-asset\";\n        let plaintext = (0..(SPOOL_CHUNK_BYTES * 2 + 37))\n            .map(|index| (index % 251) as u8)\n            .collect::<Vec<_>>();"
+        },
+        {
+          "start_line": 154,
+          "end_line": 158,
+          "source_text": "        for (chunk_index, chunk) in plaintext.chunks(SPOOL_CHUNK_BYTES).enumerate() {\n            let offset = chunk_index * SPOOL_CHUNK_BYTES;\n            let (encrypted, nonce) = encrypt_bytes(&key, chunk).expect(\"encrypt chunk\");\n            let path = spool.join(format!(\"{asset_id}-{offset}.chunk\"));\n            write_new_private_file(&path, &encrypted).expect(\"write chunk\");"
+        },
+        {
+          "start_line": 174,
+          "end_line": 199,
+          "source_text": "        verify_chunked_asset(\n            &conn,\n            &root,\n            &key,\n            asset_id,\n            plaintext.len() as i64,\n            &expected_sha,\n        )\n        .expect(\"complete chunk sequence\");\n        conn.execute(\n            \"DELETE FROM local_asset_chunk WHERE local_asset_id=?1 AND chunk_offset=?2\",\n            params![asset_id, SPOOL_CHUNK_BYTES as i64],\n        )\n        .expect(\"remove middle chunk metadata\");\n        assert!(verify_chunked_asset(\n            &conn,\n            &root,\n            &key,\n            asset_id,\n            plaintext.len() as i64,\n            &expected_sha,\n        )\n        .is_err());\n\n        fs::remove_dir_all(root).expect(\"remove test spool\");\n    }"
+        }
+      ]
+    },
+    {
+      "sarif_result_index_zero_based": 11,
+      "rule_id": "rust/hard-coded-cryptographic-value",
+      "raw_message": "This hard-coded value is used as [a key](1).\nThis hard-coded value is used as [a key](2).",
+      "raw_severity_preserved": true,
+      "path": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+      "physical_location": {
+        "artifactLocation": {
+          "uri": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+          "uriBaseId": "%SRCROOT%",
+          "index": 5
+        },
+        "region": {
+          "startLine": 261,
+          "startColumn": 19,
+          "endColumn": 30
+        }
+      },
+      "source_sha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969",
+      "matches_resume_source_manifest": true,
+      "source_line_text": "        let key = [29_u8; 32];",
+      "literal_at_sarif_columns": "[29_u8; 32]",
+      "classification": "test_fixture_only_not_confirmed_production_vulnerability",
+      "confidence": "high",
+      "fixture_kind": "positive_fixture_key",
+      "cfg_test_module": {
+        "attribute_line": 84,
+        "module_line": 85,
+        "closing_line": 541
+      },
+      "enclosing_item": {
+        "name": "recovery_keeps_a_500_page_spool_and_the_interrupted_page_checkpoint",
+        "test_attribute_line": 253,
+        "function_start_line": 254,
+        "function_end_line": 394
+      },
+      "context": "The [29_u8; 32] key encrypts 500 synthetic page checkpoints in an in-memory SQLite database. Recovery/decryption assertions check the simulated page-173 interruption; the key is local to the gated unit test.",
+      "production_reachability": "The literal is lexically enclosed by #[cfg(test)] mod tests. Normal non-test builds exclude this entire module; private constants/helpers remain inside it. Calling production crypto/storage helpers from the test does not make the test literal a production caller.",
+      "limitations": "This is a static source-context review of this result, not a full proof of all production key generation, storage or cryptographic design. No Rust test was executed for this review.",
+      "evidence": [
+        {
+          "start_line": 84,
+          "end_line": 85,
+          "source_text": "#[cfg(test)]\nmod tests {"
+        },
+        {
+          "start_line": 253,
+          "end_line": 265,
+          "source_text": "    #[test]\n    fn recovery_keeps_a_500_page_spool_and_the_interrupted_page_checkpoint() {\n        // 这是站点存储的测试数据，不是扫描器测试。它模拟\n        // 第 173 页已通过远端上传偏移确认接收后，\n        // 桌面端继续处理批次前进程被终止的情况。\n        // 重启时以加密队列作为持久化事实来源。\n        let conn = Connection::open_in_memory().expect(\"in-memory SQLite\");\n        initialize_schema(&conn).expect(\"schema\");\n        let key = [29_u8; 32];\n        let now = \"2026-08-13T00:00:00Z\";\n\n        for page_no in 1_i64..=500 {\n            let id = format!(\"page-{page_no}\");"
+        },
+        {
+          "start_line": 299,
+          "end_line": 307,
+          "source_text": "                idempotency_key: Some(format!(\"stable-page-{page_no}\")),\n                retry_count: Some(0),\n                // 模拟终止前，远端已确认第 173 页到这个准确边界；\n                // 恢复后必须保留该边界。\n                confirmed_offset: (page_no == 173).then_some(1_730_000),\n                remote_upload_id: (page_no == 173).then_some(\"remote-page-173\".to_string()),\n            };\n            let (payload, nonce) =\n                encrypt_json(&key, &checkpoint).expect(\"encrypt queue checkpoint\");"
+        },
+        {
+          "start_line": 341,
+          "end_line": 360,
+          "source_text": "        recover_interrupted_uploads(&conn).expect(\"recover interrupted upload\");\n\n        let queue_count: i64 = conn\n            .query_row(\n                \"SELECT COUNT(*) FROM sync_event WHERE operation = 'scan_upload' AND state <> 'archived'\",\n                [],\n                |row| row.get(0),\n            )\n            .expect(\"queue count\");\n        let pending_count: i64 = conn\n            .query_row(\n                \"SELECT COUNT(*) FROM sync_event WHERE operation = 'scan_upload' AND state = 'pending'\",\n                [],\n                |row| row.get(0),\n            )\n            .expect(\"pending count\");\n        assert_eq!(queue_count, 500, \"a restart must not drop queued pages\");\n        assert_eq!(\n            pending_count, 328,\n            \"the interrupted page returns to pending with untouched later pages\""
+        },
+        {
+          "start_line": 363,
+          "end_line": 394,
+          "source_text": "        let (payload, nonce): (String, String) = conn\n            .query_row(\n                \"SELECT payload_ciphertext, payload_nonce FROM sync_event WHERE entity_id = 'page-173'\",\n                [],\n                |row| Ok((row.get(0)?, row.get(1)?)),\n            )\n            .expect(\"checkpoint payload\");\n        let restored: DurableQueueItem =\n            decrypt_json(&key, &payload, &nonce).expect(\"restore checkpoint\");\n        assert_eq!(\n            restored.remote_upload_id.as_deref(),\n            Some(\"remote-page-173\")\n        );\n        assert_eq!(restored.confirmed_offset, Some(1_730_000));\n        let resumed_state: String = conn\n            .query_row(\n                \"SELECT state FROM sync_event WHERE entity_id = 'page-173'\",\n                [],\n                |row| row.get(0),\n            )\n            .expect(\"recovered queue state\");\n        let (remote_id, confirmed_offset): (String, i64) = conn\n            .query_row(\n                \"SELECT remote_id, confirmed_offset FROM upload_session WHERE local_asset_id = 'page-173'\",\n                [],\n                |row| Ok((row.get(0)?, row.get(1)?)),\n            )\n            .expect(\"upload session checkpoint\");\n        assert_eq!(resumed_state, \"pending\");\n        assert_eq!(remote_id, \"remote-page-173\");\n        assert_eq!(confirmed_offset, 1_730_000);\n    }"
+        }
+      ]
+    },
+    {
+      "sarif_result_index_zero_based": 12,
+      "rule_id": "rust/hard-coded-cryptographic-value",
+      "raw_message": "This hard-coded value is used as [a key](1).\nThis hard-coded value is used as [a key](2).",
+      "raw_severity_preserved": true,
+      "path": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+      "physical_location": {
+        "artifactLocation": {
+          "uri": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+          "uriBaseId": "%SRCROOT%",
+          "index": 5
+        },
+        "region": {
+          "startLine": 466,
+          "startColumn": 19,
+          "endColumn": 30
+        }
+      },
+      "source_sha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969",
+      "matches_resume_source_manifest": true,
+      "source_line_text": "        let key = [43_u8; 32];",
+      "literal_at_sarif_columns": "[43_u8; 32]",
+      "classification": "test_fixture_only_not_confirmed_production_vulnerability",
+      "confidence": "high",
+      "fixture_kind": "positive_fixture_key",
+      "cfg_test_module": {
+        "attribute_line": 84,
+        "module_line": 85,
+        "closing_line": 541
+      },
+      "enclosing_item": {
+        "name": "account_b_cannot_read_account_a_asset_and_v1_remains_quarantined",
+        "test_attribute_line": 427,
+        "function_start_line": 428,
+        "function_end_line": 540
+      },
+      "context": "The [43_u8; 32] key encrypts a synthetic queue item in account-A temporary SQLite. A/B scopes use new UUID actors, temporary account roots and independent databases; read assertions check A succeeds and B cannot read the same asset ID. This shared fixture key is local to the gated unit test, not evidence that deployed accounts share a key.",
+      "production_reachability": "The literal is lexically enclosed by #[cfg(test)] mod tests. Normal non-test builds exclude this entire module; private constants/helpers remain inside it. Calling production crypto/storage helpers from the test does not make the test literal a production caller.",
+      "limitations": "This is a static source-context review of this result, not a full proof of all production key generation, storage or cryptographic design. No Rust test was executed for this review.",
+      "evidence": [
+        {
+          "start_line": 84,
+          "end_line": 85,
+          "source_text": "#[cfg(test)]\nmod tests {"
+        },
+        {
+          "start_line": 427,
+          "end_line": 447,
+          "source_text": "    #[test]\n    fn account_b_cannot_read_account_a_asset_and_v1_remains_quarantined() {\n        let data_dir =\n            std::env::temp_dir().join(format!(\"edugrade-account-test-{}\", Uuid::new_v4()));\n        let legacy = data_dir.join(\"durable-store-v1\");\n        fs::create_dir_all(&legacy).expect(\"legacy directory\");\n        let legacy_marker = legacy.join(\"offline.sqlite3\");\n        fs::write(&legacy_marker, b\"legacy encrypted data\").expect(\"legacy marker\");\n        assert!(legacy_store_exists(&data_dir).expect(\"detect legacy data\"));\n\n        let tenant = Uuid::new_v4().to_string();\n        let actor_a = Uuid::new_v4().to_string();\n        let actor_b = Uuid::new_v4().to_string();\n        let scope_a =\n            scope_path_component(\"https://example.test/api\", &tenant, &actor_a).expect(\"A scope\");\n        let scope_b =\n            scope_path_component(\"https://example.test/api\", &tenant, &actor_b).expect(\"B scope\");\n        assert_ne!(scope_a, scope_b);\n        assert_ne!(\n            scope_a,\n            scope_path_component(\"https://example.test/other\", &tenant, &actor_a)"
+        },
+        {
+          "start_line": 460,
+          "end_line": 494,
+          "source_text": "        fs::create_dir_all(spool_path(&root_a)).expect(\"A spool\");\n        fs::create_dir_all(spool_path(&root_b)).expect(\"B spool\");\n        let conn_a = Connection::open(db_path(&root_a)).expect(\"A database\");\n        let conn_b = Connection::open(db_path(&root_b)).expect(\"B database\");\n        initialize_schema(&conn_a).expect(\"A schema\");\n        initialize_schema(&conn_b).expect(\"B schema\");\n        let key = [43_u8; 32];\n        let asset_id = \"account-a-asset\";\n        let record: DurableQueueItem = serde_json::from_value(serde_json::json!({\n            \"id\": asset_id, \"title\": \"a.pdf\", \"kind\": \"scan_upload\", \"status\": \"pending\",\n            \"progress\": 0, \"detail\": \"\", \"updatedAt\": \"2026-09-22T00:00:00Z\",\n            \"fileName\": \"a.pdf\", \"localAssetId\": asset_id\n        }))\n        .expect(\"queue record\");\n        let (payload, nonce) = encrypt_json(&key, &record).expect(\"encrypted queue\");\n        conn_a.execute(\n            \"INSERT INTO local_asset (id, sha256, size_bytes, mime, local_path, file_nonce, state, created_at, updated_at)\n             VALUES (?1, 'sha', 3, 'application/pdf', '', 'nonce', 'queued', ?2, ?2)\",\n            params![asset_id, \"2026-09-22T00:00:00Z\"],\n        ).expect(\"A asset\");\n        conn_a.execute(\n            \"INSERT INTO sync_event (id, operation, entity_id, idempotency_key, state, retry_count, last_error, payload_ciphertext, payload_nonce, created_at, updated_at)\n             VALUES (?1, 'scan_upload', ?1, 'key-a', 'pending', 0, NULL, ?2, ?3, ?4, ?4)\",\n            params![asset_id, payload, nonce, \"2026-09-22T00:00:00Z\"],\n        ).expect(\"A queue\");\n        assert_eq!(\n            read_durable_local_asset_at(&root_a, &key, asset_id)\n                .expect(\"A reads own asset\")\n                .filename,\n            \"a.pdf\"\n        );\n        assert!(\n            read_durable_local_asset_at(&root_b, &key, asset_id).is_err(),\n            \"B cannot read A's asset ID\"\n        );"
+        },
+        {
+          "start_line": 525,
+          "end_line": 540,
+          "source_text": "        assert_eq!(\n            read_durable_local_asset_at(&root_a, &key, asset_id)\n                .expect(\"A recovers own asset\")\n                .filename,\n            \"a.pdf\"\n        );\n        clear_scope().expect(\"clear A\");\n        assert!(\n            legacy_marker.exists(),\n            \"the unscoped v1 data must remain untouched\"\n        );\n        assert!(!root_a.starts_with(&legacy) && !root_b.starts_with(&legacy));\n        drop(conn_a);\n        drop(conn_b);\n        fs::remove_dir_all(data_dir).expect(\"remove account fixture\");\n    }"
+        }
+      ]
+    },
+    {
+      "sarif_result_index_zero_based": 13,
+      "rule_id": "rust/hard-coded-cryptographic-value",
+      "raw_message": "This hard-coded value is used as [a key](1).\nThis hard-coded value is used as [a key](2).",
+      "raw_severity_preserved": true,
+      "path": "apps/desktop-client/src-tauri/src/durable_store/storage.rs",
+      "physical_location": {
+        "artifactLocation": {
+          "uri": "apps/desktop-client/src-tauri/src/durable_store/storage.rs",
+          "uriBaseId": "%SRCROOT%",
+          "index": 7
+        },
+        "region": {
+          "startLine": 308,
+          "startColumn": 22,
+          "endColumn": 33
+        }
+      },
+      "source_sha256": "2ab93840f2a3f14b5abb01a09f192d1f19f73bf9f9281f2dd34debbd41107ba8",
+      "matches_resume_source_manifest": true,
+      "source_line_text": "        (root, conn, [61_u8; 32])",
+      "literal_at_sarif_columns": "[61_u8; 32]",
+      "classification": "test_fixture_only_not_confirmed_production_vulnerability",
+      "confidence": "high",
+      "fixture_kind": "shared_private_test_fixture_key",
+      "cfg_test_module": {
+        "attribute_line": 297,
+        "module_line": 298,
+        "closing_line": 438
+      },
+      "enclosing_item": {
+        "name": "tests::fixture",
+        "test_attribute_line": null,
+        "function_start_line": 302,
+        "function_end_line": 309
+      },
+      "context": "The [61_u8; 32] array is returned only by private fixture() inside cfg(test), alongside a UUID temporary spool and in-memory SQLite connection. Its consumers are the four gated storage unit tests and the private asset helper encrypting synthetic values.",
+      "production_reachability": "The literal is lexically enclosed by #[cfg(test)] mod tests. Normal non-test builds exclude this entire module; private constants/helpers remain inside it. Calling production crypto/storage helpers from the test does not make the test literal a production caller.",
+      "limitations": "This is a static source-context review of this result, not a full proof of all production key generation, storage or cryptographic design. No Rust test was executed for this review.",
+      "evidence": [
+        {
+          "start_line": 297,
+          "end_line": 309,
+          "source_text": "#[cfg(test)]\nmod tests {\n    use super::*;\n    use crate::durable_store::crypto::encrypt_json;\n\n    fn fixture() -> (PathBuf, Connection, [u8; 32]) {\n        let root =\n            std::env::temp_dir().join(format!(\"edugrade-storage-test-{}\", uuid::Uuid::new_v4()));\n        fs::create_dir_all(spool_path(&root)).unwrap();\n        let conn = Connection::open_in_memory().unwrap();\n        initialize_schema(&conn).unwrap();\n        (root, conn, [61_u8; 32])\n    }"
+        },
+        {
+          "start_line": 318,
+          "end_line": 327,
+          "source_text": "        let id = uuid::Uuid::new_v4().to_string();\n        let path = spool_path(root).join(&id);\n        fs::create_dir(&path).unwrap();\n        fs::write(path.join(\"0.chunk\"), [0_u8; 25]).unwrap();\n        let date = (chrono::Utc::now() - chrono::Duration::days(age_days)).to_rfc3339();\n        let value = serde_json::json!({ \"id\": id, \"title\": \"答卷.pdf\", \"kind\": \"scan_upload\", \"status\": state, \"progress\": 100, \"detail\": \"confirmed\", \"updatedAt\": date, \"fileName\": \"答卷.pdf\", \"fileAssetId\": if receipt { Some(\"remote-file\") } else { None }, \"remoteUploadId\": if receipt { Some(\"upload-1\") } else { None } });\n        let (payload, nonce) = encrypt_json(key, &value).unwrap();\n        conn.execute(\"INSERT INTO local_asset(id,sha256,size_bytes,mime,local_path,file_nonce,state,created_at,updated_at,confirmed_at) VALUES(?1,'sha',9,'application/pdf',?2,'chunked-aes-gcm-v1','retained',?3,?3,?4)\", params![id,path.to_string_lossy(),date,if receipt {Some(date.clone())} else {None}]).unwrap();\n        conn.execute(\"INSERT INTO sync_event(id,operation,entity_id,idempotency_key,state,payload_ciphertext,payload_nonce,created_at,updated_at) VALUES(?1,'scan_upload',?1,?1,?2,?3,?4,?5,?5)\", params![id,state,payload,nonce,date]).unwrap();\n        id"
+        },
+        {
+          "start_line": 330,
+          "end_line": 338,
+          "source_text": "    #[test]\n    fn cleanup_keeps_unconfirmed_and_recent_files_and_retains_confirmed_receipts() {\n        let (root, conn, key) = fixture();\n        let old = asset(&root, &conn, &key, \"archived\", 20, true);\n        let pending = asset(&root, &conn, &key, \"archived\", 20, false);\n        let recent = asset(&root, &conn, &key, \"archived\", 1, true);\n        let unarchived = asset(&root, &conn, &key, \"succeeded\", 20, true);\n        let candidates = candidates_at(&conn, &key, 7).unwrap();\n        assert_eq!(candidates.len(), 1);"
+        },
+        {
+          "start_line": 376,
+          "end_line": 380,
+          "source_text": "    #[test]\n    fn usage_counts_actual_ciphertext_and_orphans_on_the_same_volume() {\n        let (root, conn, key) = fixture();\n        asset(&root, &conn, &key, \"archived\", 20, true);\n        fs::write(spool_path(&root).join(\"incomplete.chunk\"), [0_u8; 13]).unwrap();"
+        },
+        {
+          "start_line": 392,
+          "end_line": 398,
+          "source_text": "    #[test]\n    fn cleanup_refuses_account_root_and_recovers_interrupted_purging() {\n        let (root, conn, key) = fixture();\n        let id = asset(&root, &conn, &key, \"archived\", 20, true);\n        let original = spool_path(&root).join(&id);\n        conn.execute(\n            \"UPDATE local_asset SET local_path=?2 WHERE id=?1\","
+        },
+        {
+          "start_line": 418,
+          "end_line": 438,
+          "source_text": "    #[test]\n    fn reselect_restores_only_unstarted_archived_files_with_the_same_identity() {\n        let (root, conn, key) = fixture();\n        let unstarted = asset(&root, &conn, &key, \"archived\", 20, false);\n        let confirmed = asset(&root, &conn, &key, \"archived\", 20, true);\n        let item =\n            super::super::queue::existing_queue_item_for_import(&conn, &key, &unstarted).unwrap();\n        assert_eq!(item.id, unstarted);\n        assert_eq!(item.status, \"pending\");\n        assert!(\n            super::super::queue::existing_queue_item_for_import(&conn, &key, &confirmed).is_err()\n        );\n        assert_eq!(\n            conn.query_row(\"SELECT COUNT(*) FROM sync_event\", [], |row| row\n                .get::<_, i64>(0))\n                .unwrap(),\n            2\n        );\n        fs::remove_dir_all(root).unwrap();\n    }\n}"
+        }
+      ]
+    }
+  ]
+}

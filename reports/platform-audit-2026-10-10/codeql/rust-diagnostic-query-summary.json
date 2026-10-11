@@ -1,0 +1,137 @@
+{
+  "decoded_at": "2026-10-11T16:22:37+08:00",
+  "database": "D:\\tools\\audit-codeql-20261010\\databases\\rust-20261011-context",
+  "analyze_finished": "2026-10-11T16:20:55+08:00",
+  "sarif_sha256": "322d47e65455d5a6c04bc29428cfbb7d94409c0761a34cb1943162931d2c8423",
+  "counts": {
+    "ExtractedFiles": 16,
+    "ExtractionErrors": 0,
+    "ExtractionWarnings": 28,
+    "UnextractedElements": 0,
+    "UnresolvedMacroCalls": 0,
+    "NumberOfFilesExtractedWithErrors": 2,
+    "NumberOfSuccessfullyExtractedFiles": 14
+  },
+  "queries": [
+    {
+      "query": "ExtractedFiles",
+      "command": [
+        "D:\\tools\\audit-codeql-20261010\\codeql\\codeql.exe",
+        "bqrs",
+        "decode",
+        "--format=json",
+        "--output=D:\\project\\yuejuan\\reports\\platform-audit-2026-10-10\\codeql\\rust-ExtractedFiles-decoded.json",
+        "D:\\tools\\audit-codeql-20261010\\databases\\rust-20261011-context\\results\\codeql\\rust-queries\\queries\\diagnostics\\ExtractedFiles.bqrs"
+      ],
+      "exit_code": 0,
+      "input_bqrs_sha256": "7c53dcb7c343d5700876a4d8c764a59f70771f1e49134626d62cda6a1d5de01a",
+      "output_file": "rust-ExtractedFiles-decoded.json",
+      "output_sha256": "ec372f867654c06c68ed596736e1f5e645196462d64248ab445ce70e22113a99",
+      "row_count": 16,
+      "count": 16
+    },
+    {
+      "query": "ExtractionErrors",
+      "command": [
+        "D:\\tools\\audit-codeql-20261010\\codeql\\codeql.exe",
+        "bqrs",
+        "decode",
+        "--format=json",
+        "--output=D:\\project\\yuejuan\\reports\\platform-audit-2026-10-10\\codeql\\rust-ExtractionErrors-decoded.json",
+        "D:\\tools\\audit-codeql-20261010\\databases\\rust-20261011-context\\results\\codeql\\rust-queries\\queries\\diagnostics\\ExtractionErrors.bqrs"
+      ],
+      "exit_code": 0,
+      "input_bqrs_sha256": "35c97987aa8b0d4b955905c3be04f2ed325b53b44b5a7d37219cebca1bd59605",
+      "output_file": "rust-ExtractionErrors-decoded.json",
+      "output_sha256": "150d2ce22b47947e4c50b469edd5933abefb2573e3a6e694b84bd39a10b21e26",
+      "row_count": 0,
+      "count": 0
+    },
+    {
+      "query": "ExtractionWarnings",
+      "command": [
+        "D:\\tools\\audit-codeql-20261010\\codeql\\codeql.exe",
+        "bqrs",
+        "decode",
+        "--format=json",
+        "--output=D:\\project\\yuejuan\\reports\\platform-audit-2026-10-10\\codeql\\rust-extraction-warning-query.json",
+        "D:\\tools\\audit-codeql-20261010\\databases\\rust-20261011-context\\results\\codeql\\rust-queries\\queries\\diagnostics\\ExtractionWarnings.bqrs"
+      ],
+      "exit_code": 0,
+      "input_bqrs_sha256": "4554af4ecd44f1e3e40673fe268dee32f311662e2aef57d9021c05d2d050c888",
+      "output_file": "rust-extraction-warning-query.json",
+      "output_sha256": "db9aa5f7cce2e23f366cc731c6179aa18c75affc9e6dc52ffd767c9a8488e542",
+      "row_count": 28,
+      "count": 28
+    },
+    {
+      "query": "UnextractedElements",
+      "command": [
+        "D:\\tools\\audit-codeql-20261010\\codeql\\codeql.exe",
+        "bqrs",
+        "decode",
+        "--format=json",
+        "--output=D:\\project\\yuejuan\\reports\\platform-audit-2026-10-10\\codeql\\rust-UnextractedElements-decoded.json",
+        "D:\\tools\\audit-codeql-20261010\\databases\\rust-20261011-context\\results\\codeql\\rust-queries\\queries\\diagnostics\\UnextractedElements.bqrs"
+      ],
+      "exit_code": 0,
+      "input_bqrs_sha256": "6e350d9c14e101db3789aeaae18d032d56dd0a73095e6697c330927e91b92e90",
+      "output_file": "rust-UnextractedElements-decoded.json",
+      "output_sha256": "6773baeb8974951e097ef7e26a3dbefbbbf136f126db1ccb7eda1f43cd785f0d",
+      "row_count": 0,
+      "count": 0
+    },
+    {
+      "query": "UnresolvedMacroCalls",
+      "command": [
+        "D:\\tools\\audit-codeql-20261010\\codeql\\codeql.exe",
+        "bqrs",
+        "decode",
+        "--format=json",
+        "--output=D:\\project\\yuejuan\\reports\\platform-audit-2026-10-10\\codeql\\rust-UnresolvedMacroCalls-decoded.json",
+        "D:\\tools\\audit-codeql-20261010\\databases\\rust-20261011-context\\results\\codeql\\rust-queries\\queries\\diagnostics\\UnresolvedMacroCalls.bqrs"
+      ],
+      "exit_code": 0,
+      "input_bqrs_sha256": "0fda4632e31514d81352aa3d5f29e94563196f41abdf61a9eb1793b29ea0246a",
+      "output_file": "rust-UnresolvedMacroCalls-decoded.json",
+      "output_sha256": "1019fa0171eb28a4a2298a5fa278a0f47e2e644a344b39a31ad58bf4a83eee1a",
+      "row_count": 0,
+      "count": 0
+    },
+    {
+      "query": "NumberOfFilesExtractedWithErrors",
+      "command": [
+        "D:\\tools\\audit-codeql-20261010\\codeql\\codeql.exe",
+        "bqrs",
+        "decode",
+        "--format=json",
+        "--output=D:\\project\\yuejuan\\reports\\platform-audit-2026-10-10\\codeql\\rust-NumberOfFilesExtractedWithErrors-decoded.json",
+        "D:\\tools\\audit-codeql-20261010\\databases\\rust-20261011-context\\results\\codeql\\rust-queries\\queries\\summary\\NumberOfFilesExtractedWithErrors.bqrs"
+      ],
+      "exit_code": 0,
+      "input_bqrs_sha256": "1f2660f754fa4588b3859f40c544196c7accc93e1c3dfd1dce666c51d5958e07",
+      "output_file": "rust-NumberOfFilesExtractedWithErrors-decoded.json",
+      "output_sha256": "0f3f6f52540acc1b4fb8b455a7120a1fa97e66096645624ad9e808c9bd0680d6",
+      "row_count": 1,
+      "count": 2
+    },
+    {
+      "query": "NumberOfSuccessfullyExtractedFiles",
+      "command": [
+        "D:\\tools\\audit-codeql-20261010\\codeql\\codeql.exe",
+        "bqrs",
+        "decode",
+        "--format=json",
+        "--output=D:\\project\\yuejuan\\reports\\platform-audit-2026-10-10\\codeql\\rust-NumberOfSuccessfullyExtractedFiles-decoded.json",
+        "D:\\tools\\audit-codeql-20261010\\databases\\rust-20261011-context\\results\\codeql\\rust-queries\\queries\\summary\\NumberOfSuccessfullyExtractedFiles.bqrs"
+      ],
+      "exit_code": 0,
+      "input_bqrs_sha256": "2f0b44e97e8138a57cbe5ca003e175e528013559bc86e14a7b74407313a3e85a",
+      "output_file": "rust-NumberOfSuccessfullyExtractedFiles-decoded.json",
+      "output_sha256": "134e5ea69cde75966c76ca704ca6398270b571d5c961ff45e789a036e5316f28",
+      "row_count": 1,
+      "count": 14
+    }
+  ],
+  "interpretation": "诊断和文件度量不能算作安全候选；文件 with-errors 度量包括 warnings，而 ExtractionErrors 只枚举 error。"
+}

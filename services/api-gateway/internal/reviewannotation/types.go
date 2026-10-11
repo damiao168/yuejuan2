@@ -8,10 +8,11 @@ import (
 )
 
 var (
-	ErrNotFound         = errors.New("review annotation resource not found")
-	ErrInvalidInput     = errors.New("invalid review annotation input")
-	ErrRevisionConflict = errors.New("review annotation revision conflict")
-	ErrShortcutConflict = errors.New("review comment template shortcut conflict")
+	ErrNotFound              = errors.New("review annotation resource not found")
+	ErrStudentReleaseChanged = errors.New("student published release changed")
+	ErrInvalidInput          = errors.New("invalid review annotation input")
+	ErrRevisionConflict      = errors.New("review annotation revision conflict")
+	ErrShortcutConflict      = errors.New("review comment template shortcut conflict")
 )
 
 type Visibility string
@@ -166,7 +167,7 @@ type Store interface {
 	ListStudentAnnotations(context.Context, string, string) ([]StudentAnnotation, error)
 	// 学生查询必须沿当前不可变发布版本解析答案，并使用学生和题目范围；
 	// 不接收调用方提交 ID，避免枚举他人批注。
-	ListStudentQuestionAnnotations(context.Context, string, string, string, string) ([]StudentAnnotation, error)
+	ListStudentQuestionAnnotations(context.Context, string, string, string, string, ...string) ([]StudentAnnotation, error)
 
 	CreateCommentTemplate(context.Context, string, string, CreateCommentTemplateInput) (CommentTemplate, error)
 	ListCommentTemplates(context.Context, string, string) ([]CommentTemplate, error)

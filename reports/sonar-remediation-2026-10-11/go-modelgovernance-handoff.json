@@ -1,0 +1,128 @@
+{
+  "updated_at": "2026-10-11T17:24:28.404546",
+  "original_count": 12,
+  "edited_by_this_agent": false,
+  "review_state": "pending",
+  "issues": [
+    {
+      "key": "d6c9fc78-8075-4d13-85b4-554748ddd284",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/modelgovernance/governance_routing_state_refactor_test.go",
+      "original_line": 201,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "8bacfdbb-b883-458b-a02b-67ca11b48c96",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/modelgovernance/managed_agent_http_test.go",
+      "original_line": 38,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "6e588db2-cc1a-479a-acc1-e4d166535fae",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/modelgovernance/managed_agent_http_test.go",
+      "original_line": 185,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "9183213a-96e9-4ffc-a158-024b78b4a23e",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/modelgovernance/managed_agent_http_test.go",
+      "original_line": 323,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "d75154b5-0a50-45fc-95e5-97e5587b085b",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/modelgovernance/managed_chat_test.go",
+      "original_line": 97,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "c53a9855-5f50-4264-850d-ed0490987eaf",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/modelgovernance/managed_config_probe_http_test.go",
+      "original_line": 100,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "d4549b29-14ec-4f0b-b5b0-d1baf73828aa",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/modelgovernance/managed_config_probe_http_test.go",
+      "original_line": 226,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "5719ee29-7260-4201-816e-0b17f1a38d0d",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/modelgovernance/managed_config_probe_http_test.go",
+      "original_line": 327,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "8303d0cd-5224-4012-b849-39040b6c0bf5",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/modelgovernance/managed_governance_refactor_test.go",
+      "original_line": 201,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "358bf845-2379-4d4b-93e6-6e324b3cf411",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/modelgovernance/managed_governance_refactor_test.go",
+      "original_line": 326,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "5ba5d602-e0e2-4d12-b50b-18f8682837aa",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/modelgovernance/managed_governance_refactor_test.go",
+      "original_line": 401,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "4c83193b-668a-4d70-bf34-df8c7edb4160",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/modelgovernance/role_binding_test.go",
+      "original_line": 52,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    }
+  ]
+}

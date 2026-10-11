@@ -84,8 +84,8 @@ func (r *ActiveCropResolver) Resolve(ctx context.Context, tenantID string, segme
 		return ResolvedActiveCrop{}, ErrActiveCropUnavailable
 	}
 
-	// Re-read tenant-scoped metadata after object I/O. An applied correction can
-	// be undone, or a segment crop can be replaced, while the object is read.
+	// 读取对象后再次读取租户作用域内元数据。
+	// 对象读取期间，已应用修正可能被撤销，分段裁剪图也可能被替换。
 	second, err := r.loadMetadata(ctx, tenantID, segmentID, questionID)
 	if err != nil || first != second {
 		return ResolvedActiveCrop{}, resolverError(ctx)

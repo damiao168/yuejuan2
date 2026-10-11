@@ -100,17 +100,28 @@ func (s *PostgresStore) ConfirmStudentMatch(ctx context.Context, tenantID, submi
 	if input.StudentID == "" || input.Revision <= 0 {
 		return MatchingSubmission{}, ErrInvalidInput
 	}
-	return s.applyStudentIdentity(ctx, tenantID, submissionID, actorID, input.Revision, "matched", input.StudentID, input.Reason)
+	return s.applyStudentIdentity(ctx, tenantID, submissionID, actorID, studentIdentityDecision{
+		Revision: input.Revision, Status: "matched", StudentID: input.StudentID, Reason: input.Reason,
+	})
 }
 
 func (s *PostgresStore) MarkStudentUnknown(ctx context.Context, tenantID, submissionID, actorID string, input MarkStudentUnknownInput) (MatchingSubmission, error) {
 	if input.Revision <= 0 || strings.TrimSpace(input.Reason) == "" {
 		return MatchingSubmission{}, ErrInvalidInput
 	}
-	return s.applyStudentIdentity(ctx, tenantID, submissionID, actorID, input.Revision, "unknown", "", input.Reason)
+	return s.applyStudentIdentity(ctx, tenantID, submissionID, actorID, studentIdentityDecision{
+		Revision: input.Revision, Status: "unknown", Reason: input.Reason,
+	})
 }
 
-func (s *PostgresStore) applyStudentIdentity(ctx context.Context, tenantID, submissionID, actorID string, revision int, status, studentID, reason string) (MatchingSubmission, error) {
+type studentIdentityDecision struct {
+	Revision  int
+	Status    string
+	StudentID string
+	Reason    string
+}
+
+func (s *PostgresStore) applyStudentIdentity(ctx context.Context, tenantID, submissionID, actorID string, decision studentIdentityDecision) (MatchingSubmission, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return MatchingSubmission{}, err
@@ -125,22 +136,22 @@ func (s *PostgresStore) applyStudentIdentity(ctx context.Context, tenantID, subm
 	if err = ensureBatchWritableTx(ctx, tx, tenantID, batchID); err != nil {
 		return MatchingSubmission{}, err
 	}
-	if currentRevision != revision {
+	if currentRevision != decision.Revision {
 		return MatchingSubmission{}, ErrConflict
 	}
 	candidateNo := ""
 	candidateName := ""
 	// 人工绑定也必须来自本次考试冻结名册，不能直接接受当前学籍中的任意学生。
-	if status == "matched" {
-		err = tx.QueryRowContext(ctx, `SELECT student_no_snapshot,student_name_snapshot FROM exam_candidate_snapshot WHERE tenant_id=$1 AND exam_id=$2::uuid AND student_id=$3::uuid`, tenantID, examID, studentID).Scan(&candidateNo, &candidateName)
+	if decision.Status == "matched" {
+		err = tx.QueryRowContext(ctx, `SELECT student_no_snapshot,student_name_snapshot FROM exam_candidate_snapshot WHERE tenant_id=$1 AND exam_id=$2::uuid AND student_id=$3::uuid`, tenantID, examID, decision.StudentID).Scan(&candidateNo, &candidateName)
 		if err != nil {
 			return MatchingSubmission{}, mapNotFound(err)
 		}
 	}
-	evidence, _ := json.Marshal(map[string]any{"method": "manual_confirmation", "actor_id": actorID, "reason": strings.TrimSpace(reason), "student_name": candidateName})
+	evidence, _ := json.Marshal(map[string]any{"method": "manual_confirmation", "actor_id": actorID, "reason": strings.TrimSpace(decision.Reason), "student_name": candidateName})
 	var out MatchingSubmission
 	var raw []byte
-	err = tx.QueryRowContext(ctx, `UPDATE submission SET student_id=NULLIF($3,'')::uuid,candidate_no=NULLIF($4,''),identity_status=$5,identity_revision=identity_revision+1,identity_evidence=$6,updated_at=now() WHERE tenant_id=$1 AND id=$2::uuid RETURNING id::text,COALESCE(student_id::text,''),COALESCE(candidate_no,''),identity_status,identity_revision,identity_evidence`, tenantID, submissionID, studentID, candidateNo, status, evidence).Scan(&out.ID, &out.StudentID, &out.CandidateNo, &out.IdentityStatus, &out.IdentityRevision, &raw)
+	err = tx.QueryRowContext(ctx, `UPDATE submission SET student_id=NULLIF($3,'')::uuid,candidate_no=NULLIF($4,''),identity_status=$5,identity_revision=identity_revision+1,identity_evidence=$6,updated_at=now() WHERE tenant_id=$1 AND id=$2::uuid RETURNING id::text,COALESCE(student_id::text,''),COALESCE(candidate_no,''),identity_status,identity_revision,identity_evidence`, tenantID, submissionID, decision.StudentID, candidateNo, decision.Status, evidence).Scan(&out.ID, &out.StudentID, &out.CandidateNo, &out.IdentityStatus, &out.IdentityRevision, &raw)
 	if err != nil {
 		if strings.Contains(err.Error(), "uq_submission_exam_student_active") || strings.Contains(err.Error(), "idx_submission_candidate") {
 			return MatchingSubmission{}, ErrConflict
@@ -150,7 +161,7 @@ func (s *PostgresStore) applyStudentIdentity(ctx context.Context, tenantID, subm
 	_ = json.Unmarshal(raw, &out.IdentityEvidence)
 	before, _ := json.Marshal(map[string]any{"identity_status": currentStatus, "identity_revision": currentRevision})
 	after, _ := json.Marshal(out)
-	_, err = tx.ExecContext(ctx, `INSERT INTO capture_operation(tenant_id,capture_batch_id,operation,target_type,target_id,actor_id,reason,before_state,after_state) VALUES($1,$2::uuid,'student_match','submission',$3::uuid,$4::uuid,$5,$6,$7)`, tenantID, batchID, submissionID, actorID, reason, before, after)
+	_, err = tx.ExecContext(ctx, `INSERT INTO capture_operation(tenant_id,capture_batch_id,operation,target_type,target_id,actor_id,reason,before_state,after_state) VALUES($1,$2::uuid,'student_match','submission',$3::uuid,$4::uuid,$5,$6,$7)`, tenantID, batchID, submissionID, actorID, decision.Reason, before, after)
 	if err != nil {
 		return MatchingSubmission{}, err
 	}

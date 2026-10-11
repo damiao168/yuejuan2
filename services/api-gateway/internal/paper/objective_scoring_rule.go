@@ -9,14 +9,13 @@ import (
 	"errors"
 )
 
-// ErrImportedObjectiveRuleConflict means an existing teacher-authored draft
-// must be reconciled before an import can change its question's type or score.
+// ErrImportedObjectiveRuleConflict 表示导入改变题型或分值前，必须先协调已有的教师编写草稿。
 var ErrImportedObjectiveRuleConflict = errors.New("imported objective rule conflicts with teacher draft")
 
 const importedObjectiveRuleOrigin = "paper_import_default"
 
-// The grading workbench stores objective policies separately from answer keys.
-// Import creates a reviewable draft; publishing remains an explicit action.
+// 评分工作台将客观题策略与答案键分开存储。
+// 导入只创建可复核草稿，发布仍需显式操作。
 func objectiveRuleConfig(draft PaperImportDraftQuestion) (map[string]any, bool) {
 	if draft.Score <= 0 || draft.AnswerKey == nil || emptyAnswer(draft.AnswerKey.StandardAnswer) {
 		return nil, false
@@ -35,8 +34,7 @@ func objectiveRuleConfig(draft PaperImportDraftQuestion) (map[string]any, bool) 
 	default:
 		return nil, false
 	}
-	// The answer key may already contain an explicit policy extracted from the
-	// teacher's material. Defaults must not override those reviewed settings.
+	// 答案键可能已有从教师材料中提取的显式策略。默认值不能覆盖这些已复核设置。
 	tolerance, _ := draft.AnswerKey.Tolerance.(map[string]any)
 	for _, field := range toleranceFields {
 		if value, exists := tolerance[field]; exists {
@@ -117,6 +115,6 @@ func teacherObjectiveDraftCompatible(ruleType string, config map[string]any, dra
 		score, valid := raw.(float64)
 		return valid && scoreEqual(score, draft.Score)
 	}
-	// Older teacher rules without max_score use question.score at grading time.
+	// 未包含 max_score 的旧教师规则在评分时使用 question.score。
 	return true
 }

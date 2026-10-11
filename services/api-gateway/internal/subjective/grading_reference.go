@@ -3,6 +3,9 @@ package subjective
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
+	"strconv"
+	"strings"
 
 	"edugrade-enterprise/services/api-gateway/internal/paper"
 )
@@ -33,6 +36,9 @@ func referenceContextFromSnapshot(raw []byte, snapshotHash string) (*GradingRefe
 	}
 	if source.Answer != nil {
 		reference.StandardAnswer = source.Answer.StandardAnswer
+		if text, ok := source.Answer.StandardAnswer.(string); ok {
+			reference.AnswerParts = gradingAnswerParts(text)
+		}
 		if source.Answer.EquivalentAnswers != nil {
 			reference.EquivalentAnswers = source.Answer.EquivalentAnswers
 		}
@@ -44,4 +50,32 @@ func referenceContextFromSnapshot(raw []byte, snapshotHash string) (*GradingRefe
 		}
 	}
 	return reference, nil
+}
+
+var answerPartMarker = regexp.MustCompile(`(?:^|[。；;\n]\s*)[（(](\d{1,2})[）)]`)
+
+// 只拆分从 (1) 开始且编号连续的答案段落，保留原答案和完整解析。
+// 区间、方程编号和没有明确序号的文字不能据此推断子题，更不能生成缺失答案。
+func gradingAnswerParts(text string) []GradingAnswerPart {
+	matches := answerPartMarker.FindAllStringSubmatchIndex(text, -1)
+	if len(matches) == 0 || strings.TrimSpace(text[:matches[0][0]]) != "" {
+		return nil
+	}
+	parts := make([]GradingAnswerPart, 0, len(matches))
+	for i, match := range matches {
+		no, _ := strconv.Atoi(text[match[2]:match[3]])
+		if no != i+1 {
+			return nil
+		}
+		end := len(text)
+		if i+1 < len(matches) {
+			end = matches[i+1][0]
+		}
+		content := strings.TrimSpace(text[match[1]:end])
+		if content == "" {
+			return nil
+		}
+		parts = append(parts, GradingAnswerPart{PartNo: no, AnswerText: content})
+	}
+	return parts
 }

@@ -1,5 +1,4 @@
-// Package commandreceipt persists command identity inside the caller's business
-// transaction. It is independent of the expiring HTTP response cache.
+// Package commandreceipt 在调用方的业务事务内持久化命令身份，独立于会过期的 HTTP 响应缓存。
 package commandreceipt
 
 import (
@@ -16,10 +15,8 @@ import (
 
 var ErrConflict = errors.New("business command request conflict")
 
-// TransportProcessingTimeout is the maximum quiet period before a synchronous
-// command reservation is considered abandoned. The recovery GET remains
-// read-only; a client must POST the frozen request again and let the
-// idempotency store acquire the reservation with a conditional update.
+// TransportProcessingTimeout 是同步命令预留被视为已放弃前允许的最长静默期。恢复 GET 保持只读；
+// 客户端必须重新 POST 冻结请求，由幂等存储通过条件更新取得预留。
 const TransportProcessingTimeout = 2 * time.Minute
 
 type contextKey struct{}
@@ -40,6 +37,15 @@ type Receipt struct {
 	Result     json.RawMessage `json:"result,omitempty"`
 }
 
+// Identity 绑定命令的租户、操作者与操作目标；命令 ID 仍从同一个调用 context 取得。
+// 输入单独传入，不能把此结构序列化进原有请求指纹，也不能用它代替调用方权限检查。
+type Identity struct {
+	TenantID  string
+	ActorID   string
+	Operation string
+	TargetID  string
+}
+
 func fingerprint(operation, target string, input any) (string, error) {
 	raw, err := json.Marshal(struct {
 		Operation, Target string
@@ -54,7 +60,7 @@ func fingerprint(operation, target string, input any) (string, error) {
 
 // Load 在业务事务内锁定命令身份并读取原结果；同一命令键改变输入时返回 ErrConflict。
 // 调用方必须在同一事务内完成业务写入和 Save，确保结果回执与业务事实一起提交。
-func Load(ctx context.Context, tx *sql.Tx, tenant, actor, operation, target string, input any, out any) (bool, error) {
+func Load(ctx context.Context, tx *sql.Tx, identity Identity, input any, out any) (bool, error) {
 	id := ID(ctx)
 	if id == "" {
 		return false, nil
@@ -62,16 +68,16 @@ func Load(ctx context.Context, tx *sql.Tx, tenant, actor, operation, target stri
 	if len(id) > 128 {
 		return false, ErrConflict
 	}
-	hash, err := fingerprint(operation, target, commandInput(ctx, input))
+	hash, err := fingerprint(identity.Operation, identity.TargetID, commandInput(ctx, input))
 	if err != nil {
 		return false, err
 	}
-	if _, err = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1,0))`, tenant+":"+actor+":"+id+":business-command"); err != nil {
+	if _, err = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1,0))`, identity.TenantID+":"+identity.ActorID+":"+id+":business-command"); err != nil {
 		return false, err
 	}
 	var existing string
 	var raw []byte
-	err = tx.QueryRowContext(ctx, `SELECT request_hash,result FROM business_command_receipt WHERE tenant_id=$1::uuid AND actor_id=$2::uuid AND command_id=$3`, tenant, actor, id).Scan(&existing, &raw)
+	err = tx.QueryRowContext(ctx, `SELECT request_hash,result FROM business_command_receipt WHERE tenant_id=$1::uuid AND actor_id=$2::uuid AND command_id=$3`, identity.TenantID, identity.ActorID, id).Scan(&existing, &raw)
 	if errors.Is(err, sql.ErrNoRows) {
 		return false, nil
 	}
@@ -83,12 +89,14 @@ func Load(ctx context.Context, tx *sql.Tx, tenant, actor, operation, target stri
 	}
 	return true, json.Unmarshal(raw, out)
 }
-func Save(ctx context.Context, tx *sql.Tx, tenant, actor, operation, target string, input, result any) error {
+
+// Save 沿用 Load 的身份和业务事务；提交由调用方完成，不能独立重开事务写回执。
+func Save(ctx context.Context, tx *sql.Tx, identity Identity, input, result any) error {
 	id := ID(ctx)
 	if id == "" {
 		return nil
 	}
-	hash, err := fingerprint(operation, target, commandInput(ctx, input))
+	hash, err := fingerprint(identity.Operation, identity.TargetID, commandInput(ctx, input))
 	if err != nil {
 		return err
 	}
@@ -96,7 +104,7 @@ func Save(ctx context.Context, tx *sql.Tx, tenant, actor, operation, target stri
 	if err != nil {
 		return err
 	}
-	_, err = tx.ExecContext(ctx, `INSERT INTO business_command_receipt(tenant_id,actor_id,command_id,operation,target_id,request_hash,result) VALUES($1::uuid,$2::uuid,$3,$4,$5,$6,$7::jsonb)`, tenant, actor, id, operation, target, hash, raw)
+	_, err = tx.ExecContext(ctx, `INSERT INTO business_command_receipt(tenant_id,actor_id,command_id,operation,target_id,request_hash,result) VALUES($1::uuid,$2::uuid,$3,$4,$5,$6,$7::jsonb)`, identity.TenantID, identity.ActorID, id, identity.Operation, identity.TargetID, hash, raw)
 	return err
 }
 func Recover(ctx context.Context, db *sql.DB, tenant, actor, id, prefix string) (Receipt, error) {
@@ -142,9 +150,7 @@ ORDER BY updated_at DESC`, tenant, actor, result.CommandID)
 		if err := rows.Scan(&route, &record.state, &record.requestBody, &record.httpStatus, &record.body, &record.updatedAt); err != nil {
 			return Receipt{}, err
 		}
-		// net/http ServeMux exposes patterns as "POST /path" while older
-		// fixtures and records stored only "/path". Method is already filtered
-		// by the query, so accept both exact representations.
+		// net/http ServeMux 提供的模式为 "POST /path"，旧夹具和记录只保存 "/path"。查询已按方法筛选，因此接受这两种精确表示。
 		if allowed[strings.TrimPrefix(route, "POST ")] {
 			matches = append(matches, record)
 		}
@@ -184,9 +190,7 @@ ORDER BY updated_at DESC`, tenant, actor, result.CommandID)
 			result.ErrorCode = envelope.Error.Code
 		}
 	default:
-		// A completed success transport receipt without the transactional
-		// business receipt is an integrity anomaly. It is never permission
-		// to submit the operation again.
+		// 成功完成的传输回执缺少事务性业务回执，属于完整性异常，不能视为允许再次提交操作。
 		result.Status = "unknown"
 		result.ErrorCode = "business_receipt_missing"
 	}

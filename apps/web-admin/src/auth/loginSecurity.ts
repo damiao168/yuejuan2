@@ -17,7 +17,7 @@ export function isWithinUtf8ByteLimit(value: string, limit: number): boolean {
   return new TextEncoder().encode(value).byteLength <= limit;
 }
 
-// Match Go's rune count and UTF-8 byte ceiling rather than UTF-16 code units.
+// 与 Go 的 rune 计数和 UTF-8 字节上限保持一致，不按 UTF-16 代码单元计算。
 export function validateNewPassword(_: unknown, value?: string): Promise<void> {
   if (!value) return Promise.resolve();
   if (Array.from(value).length < 15) return Promise.reject(new Error("密码至少 15 个字符"));
@@ -27,19 +27,19 @@ export function validateNewPassword(_: unknown, value?: string): Promise<void> {
   return Promise.resolve();
 }
 
-// One-way cleanup for versions that stored reversible login credentials.
-// Failures are intentionally ignored so restrictive browser policies cannot
-// prevent the application from reaching the login screen.
+// 单向清理旧版本保存的可逆登录凭据。
+// 这里有意忽略清理失败，避免浏览器的限制策略
+// 阻止应用进入登录页面。
 export function clearLegacyRememberedLogin(): void {
   try {
     window.localStorage.removeItem(LEGACY_STORAGE_KEY);
   } catch {
-    // Storage may be disabled by policy.
+    // 浏览器策略可能禁用存储。
   }
   try {
     window.indexedDB?.deleteDatabase(LEGACY_DATABASE_NAME);
   } catch {
-    // IndexedDB may be unavailable or disabled by policy.
+    // IndexedDB 可能不可用或被浏览器策略禁用。
   }
 }
 
@@ -54,6 +54,6 @@ export function clearPublicComputerData(tenantId: string, userId: string): void 
     }
     for (const key of keys) window.localStorage.removeItem(key);
   } catch {
-    // Browser policy can disable storage; in-memory cache is still cleared.
+    // 浏览器策略可能禁用存储；内存缓存仍会清除。
   }
 }

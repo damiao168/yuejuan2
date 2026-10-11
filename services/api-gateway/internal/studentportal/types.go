@@ -1,7 +1,6 @@
-// Package studentportal owns student-facing discovery only.  Score facts and
-// question feedback remain owned by the immutable student-safe DTOs in
-// scorerelease, so this package cannot accidentally introduce a mutable or
-// administrator-shaped result representation.
+// Package studentportal 只管理面向学生的发现功能。
+// 成绩事实和题目反馈仍归属于 scorerelease 中不可变且面向学生的受限 DTO，
+// 避免本包意外引入可变或管理员形式的结果表示。
 package studentportal
 
 import (
@@ -15,9 +14,8 @@ var (
 	ErrNotFound     = errors.New("student portal resource not found")
 )
 
-// PublishedExam is deliberately only the metadata a student needs to choose
-// a released result. It omits release identifiers, classmates, rank, quality
-// signals and any scoring provenance.
+// PublishedExam 只包含学生选择已发布结果所需的元数据。
+// 它省略发布标识、同学、排名、质量信号和全部评分来源信息。
 type PublishedExam struct {
 	ExamID         string    `json:"exam_id"`
 	Name           string    `json:"name"`

@@ -30,20 +30,28 @@ const (
 	managedProbeResponseLimit     = 1 << 20
 	managedCapabilityMaxTokens    = 1024
 	ManagedCapabilityProbeVersion = "structured-json-v3"
+	managedProbeInvalidEndpoint   = "接口地址无效"
+	managedProbeAPIKeyValid       = "API Key 有效"
+	managedProbeCapabilityOK      = "结构化输出兼容检测通过"
+	// 生成检测需要等待供应商排队和完整输出，不能沿用模型列表查询的短超时。
+	managedCapabilityTimeout = 60 * time.Second
 )
 
 type HTTPManagedAPIProber struct {
-	timeout           time.Duration
-	httpClient        *http.Client
-	capabilityFlights singleflight.Group
+	timeout              time.Duration
+	httpClient           *http.Client
+	capabilityHTTPClient *http.Client
+	capabilityFlights    singleflight.Group
 }
 
+// NewHTTPManagedAPIProber 的 timeout 只控制模型列表查询；生成检测使用独立的 60 秒预算。
 func NewHTTPManagedAPIProber(timeout time.Duration) *HTTPManagedAPIProber {
 	if timeout <= 0 || timeout > 15*time.Second {
 		timeout = 8 * time.Second
 	}
 	prober := &HTTPManagedAPIProber{timeout: timeout}
-	prober.httpClient = prober.newClient()
+	prober.httpClient = newManagedProbeHTTPClient(timeout)
+	prober.capabilityHTTPClient = newManagedProbeHTTPClient(managedCapabilityTimeout)
 	return prober
 }
 
@@ -64,11 +72,10 @@ func (p *HTTPManagedAPIProber) probeCapability(ctx context.Context, connection M
 		Model: connection.Config.ModelName, Message: "结构化输出兼容检测失败",
 	}
 	defer func() { result.LatencyMS = time.Since(started).Milliseconds() }()
-	client := p.client()
 	if connection.Config.AdapterType == "dashscope_native" {
-		return p.probeDashScope(ctx, client, connection, result)
+		return p.probeDashScope(ctx, p.capabilityHTTPClient, connection, result)
 	}
-	return p.probeOpenAICompatible(ctx, client, connection, result)
+	return p.probeOpenAICompatible(ctx, p.client(), connection, result)
 }
 
 func (p *HTTPManagedAPIProber) ProbeQuick(ctx context.Context, connection ManagedAPIConnection) ManagedAPIProbeResult {
@@ -102,7 +109,7 @@ func (p *HTTPManagedAPIProber) ListModels(ctx context.Context, connection Manage
 	}()
 	endpoint, err := managedModelsEndpoint(connection.Config.BaseURL)
 	if err != nil {
-		return list, failedManagedProbe(result, "invalid_endpoint", "接口地址无效", "credential")
+		return list, failedManagedProbe(result, "invalid_endpoint", managedProbeInvalidEndpoint, "credential")
 	}
 	client := p.client()
 	response, err := p.doReadOnlyRequest(ctx, client, endpoint, connection, &result)
@@ -112,7 +119,7 @@ func (p *HTTPManagedAPIProber) ListModels(ctx context.Context, connection Manage
 	result.StatusCode = response.StatusCode
 	body, readErr := readManagedProbeBody(response)
 	if readErr != nil {
-		return list, failedManagedProbe(result, "provider_invalid_response", "供应商返回了无法读取的响应", "credential")
+		return list, bodyManagedProbeFailure(result, readErr, "credential")
 	}
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		return list, statusManagedProbeFailure(result, response.StatusCode, "credential")
@@ -136,7 +143,7 @@ func (p *HTTPManagedAPIProber) ListModels(ctx context.Context, connection Manage
 	slices.Sort(list.Models)
 	result.OK = true
 	result.Message = "已获取可用模型"
-	result.CredentialCheck = ManagedAPICheckResult{OK: true, Message: "API Key 有效"}
+	result.CredentialCheck = ManagedAPICheckResult{OK: true, Message: managedProbeAPIKeyValid}
 	return list, result
 }
 
@@ -144,7 +151,7 @@ func (p *HTTPManagedAPIProber) ListModels(ctx context.Context, connection Manage
 func (p *HTTPManagedAPIProber) probeOpenAICompatible(ctx context.Context, client *http.Client, connection ManagedAPIConnection, result ManagedAPIProbeResult) ManagedAPIProbeResult {
 	modelsEndpoint, err := managedModelsEndpoint(connection.Config.BaseURL)
 	if err != nil {
-		return failedManagedProbe(result, "invalid_endpoint", "接口地址无效", "credential")
+		return failedManagedProbe(result, "invalid_endpoint", managedProbeInvalidEndpoint, "credential")
 	}
 	response, err := p.doReadOnlyRequest(ctx, client, modelsEndpoint, connection, &result)
 	if err != nil {
@@ -153,12 +160,12 @@ func (p *HTTPManagedAPIProber) probeOpenAICompatible(ctx context.Context, client
 	result.StatusCode = response.StatusCode
 	body, readErr := readManagedProbeBody(response)
 	if readErr != nil {
-		return failedManagedProbe(result, "provider_invalid_response", "供应商返回了无法读取的响应", "credential")
+		return bodyManagedProbeFailure(result, readErr, "credential")
 	}
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		return statusManagedProbeFailure(result, response.StatusCode, "credential")
 	}
-	result.CredentialCheck = ManagedAPICheckResult{OK: true, Message: "API Key 有效"}
+	result.CredentialCheck = ManagedAPICheckResult{OK: true, Message: managedProbeAPIKeyValid}
 	var models struct {
 		Data []struct {
 			ID string `json:"id"`
@@ -181,19 +188,20 @@ func (p *HTTPManagedAPIProber) probeOpenAICompatible(ctx context.Context, client
 
 	completionEndpoint, err := managedCompletionEndpoint(connection.Config.BaseURL)
 	if err != nil {
-		return failedManagedProbe(result, "invalid_endpoint", "接口地址无效", "capability")
+		return failedManagedProbe(result, "invalid_endpoint", managedProbeInvalidEndpoint, "capability")
 	}
 	payload, _ := json.Marshal(managedCapabilityPayload(connection))
 	result.Diagnostic.ResponseFormat = "json_object"
 	result.GeneratedRequest = true
-	response, err = p.doRequest(ctx, client, http.MethodPost, completionEndpoint, connection, payload, &result)
+	// 只对生成阶段使用较长超时；请求继承调用方取消信号，失败后不自动重试。
+	response, err = p.doRequest(ctx, p.capabilityHTTPClient, http.MethodPost, completionEndpoint, connection, payload, &result)
 	if err != nil {
 		return networkManagedProbeFailure(result, err, "capability")
 	}
 	result.StatusCode = response.StatusCode
 	body, readErr = readManagedProbeBody(response)
 	if readErr != nil {
-		return failedManagedProbe(result, "provider_invalid_response", "供应商返回了无法读取的响应", "capability")
+		return bodyManagedProbeFailure(result, readErr, "capability")
 	}
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		return capabilityStatusManagedProbeFailure(result, response.StatusCode, body)
@@ -218,10 +226,10 @@ func (p *HTTPManagedAPIProber) probeOpenAICompatible(ctx context.Context, client
 	if code, message := validateManagedCapabilityJSON(completion.Choices[0].Message.Content, completion.Choices[0].FinishReason); code != "" {
 		return failedManagedProbe(result, code, message, "capability")
 	}
-	result.CapabilityCheck = ManagedAPICheckResult{OK: true, Message: "结构化输出兼容检测通过"}
+	result.CapabilityCheck = ManagedAPICheckResult{OK: true, Message: managedProbeCapabilityOK}
 	result.OK = true
 	result.ErrorCode = ""
-	result.Message = "结构化输出兼容检测通过"
+	result.Message = managedProbeCapabilityOK
 	return result
 }
 
@@ -248,12 +256,12 @@ func (p *HTTPManagedAPIProber) probeDashScope(ctx context.Context, client *http.
 	result.StatusCode = response.StatusCode
 	body, readErr := readManagedProbeBody(response)
 	if readErr != nil {
-		return failedManagedProbe(result, "provider_invalid_response", "供应商返回了无法读取的响应", "credential")
+		return bodyManagedProbeFailure(result, readErr, "credential")
 	}
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		return statusManagedProbeFailure(result, response.StatusCode, "credential")
 	}
-	result.CredentialCheck = ManagedAPICheckResult{OK: true, Message: "API Key 有效"}
+	result.CredentialCheck = ManagedAPICheckResult{OK: true, Message: managedProbeAPIKeyValid}
 	result.ModelCheck = ManagedAPICheckResult{OK: true, Message: "模型可用"}
 	var completion struct {
 		Output struct {
@@ -284,9 +292,9 @@ func (p *HTTPManagedAPIProber) probeDashScope(ctx context.Context, client *http.
 	if code, message := validateManagedCapabilityJSON(completion.Output.Choices[0].Message.Content, completion.Output.Choices[0].FinishReason); code != "" {
 		return failedManagedProbe(result, code, message, "capability")
 	}
-	result.CapabilityCheck = ManagedAPICheckResult{OK: true, Message: "结构化输出兼容检测通过"}
+	result.CapabilityCheck = ManagedAPICheckResult{OK: true, Message: managedProbeCapabilityOK}
 	result.OK = true
-	result.Message = "结构化输出兼容检测通过"
+	result.Message = managedProbeCapabilityOK
 	return result
 }
 
@@ -294,15 +302,15 @@ func (p *HTTPManagedAPIProber) client() *http.Client {
 	return p.httpClient
 }
 
-func (p *HTTPManagedAPIProber) newClient() *http.Client {
+func newManagedProbeHTTPClient(timeout time.Duration) *http.Client {
 	transport := &http.Transport{
 		DialContext: safePublicDialContext, TLSHandshakeTimeout: 5 * time.Second,
-		ResponseHeaderTimeout: p.timeout, IdleConnTimeout: 30 * time.Second,
+		ResponseHeaderTimeout: timeout, IdleConnTimeout: 30 * time.Second,
 		MaxIdleConns: 32, MaxIdleConnsPerHost: 4,
 	}
 	return &http.Client{
 		Transport: transport,
-		Timeout:   p.timeout,
+		Timeout:   timeout,
 		CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
 			return http.ErrUseLastResponse
 		},
@@ -316,30 +324,44 @@ func (p *HTTPManagedAPIProber) doReadOnlyRequest(ctx context.Context, client *ht
 }
 
 func retryManagedReadOnlyRequest(ctx context.Context, timeout time.Duration, request func(context.Context) (*http.Response, error)) (*http.Response, error) {
-	// Two bounded attempts only for the idempotent model-list request. Never retry
-	// completion requests, which may consume tokens and duplicate work.
+	// 只对幂等的模型列表请求重试一次；生成请求可能消耗 Token，不能在这里重试。
 	jitterLimit := min(timeout/10, 100*time.Millisecond)
 	pause := min(timeout/10, 150*time.Millisecond)
 	if jitterLimit > 0 {
 		pause += time.Duration(rand.Int63n(int64(jitterLimit)))
 	}
-	// A fully timed-out first attempt gets only a short recovery window; the UI
-	// must not wait twice as long as the original probe budget.
+	// 首次请求耗尽预算后只给短暂恢复窗口，避免快速检查的等待时间翻倍。
 	totalBudget := min(2*timeout+pause, timeout+4*time.Second)
 	boundedCtx, cancel := context.WithTimeout(ctx, totalBudget)
-	defer cancel()
 	response, err := request(boundedCtx)
-	if err == nil || boundedCtx.Err() != nil || !retryableManagedProbeError(err) {
+	if err != nil && boundedCtx.Err() == nil && retryableManagedProbeError(err) {
+		timer := time.NewTimer(pause)
+		defer timer.Stop()
+		select {
+		case <-boundedCtx.Done():
+			cancel()
+			return nil, boundedCtx.Err()
+		case <-timer.C:
+		}
+		response, err = request(boundedCtx)
+	}
+	if err != nil || response == nil || response.Body == nil {
+		cancel()
 		return response, err
 	}
-	timer := time.NewTimer(pause)
-	defer timer.Stop()
-	select {
-	case <-boundedCtx.Done():
-		return nil, boundedCtx.Err()
-	case <-timer.C:
-	}
-	return request(boundedCtx)
+	// HTTP 客户端收到响应头就会返回；预算必须保留到正文关闭，提前取消会中断模型列表读取。
+	response.Body = &managedReadOnlyProbeBody{ReadCloser: response.Body, cancel: cancel}
+	return response, err
+}
+
+type managedReadOnlyProbeBody struct {
+	io.ReadCloser
+	cancel context.CancelFunc
+}
+
+func (body *managedReadOnlyProbeBody) Close() error {
+	defer body.cancel()
+	return body.ReadCloser.Close()
 }
 
 func retryableManagedProbeError(err error) bool {
@@ -399,6 +421,16 @@ func (p *HTTPManagedAPIProber) doRequest(ctx context.Context, client *http.Clien
 func readManagedProbeBody(response *http.Response) ([]byte, error) {
 	defer response.Body.Close()
 	return io.ReadAll(io.LimitReader(response.Body, managedProbeResponseLimit))
+}
+
+func bodyManagedProbeFailure(result ManagedAPIProbeResult, err error, stage string) ManagedAPIProbeResult {
+	result.ConnectionDiagnostic.FailureStage = "body"
+	// 收到响应头后仍可能等待正文超时；网络故障不能作为模型能力不合格的证据。
+	var netErr net.Error
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) || errors.As(err, &netErr) {
+		return networkManagedProbeFailure(result, err, stage)
+	}
+	return failedManagedProbe(result, "provider_invalid_response", "供应商返回了无法读取的响应", stage)
 }
 
 type managedOpenAIProbeUsage struct {
@@ -732,8 +764,7 @@ func safePublicDialContext(ctx context.Context, network, address string) (net.Co
 
 func dialPublicProviderAddresses(ctx context.Context, network, port string, addresses []net.IPAddr,
 	dial func(context.Context, string, string) (net.Conn, error), timing *managedRequestTiming) (net.Conn, error) {
-	// Reject the entire DNS answer before any connection. Fallback must never
-	// turn a mixed public/private answer into an SSRF bypass.
+	// 建立任何连接前，先整体拒绝不合格的 DNS 回答；回退不得让公私地址混合的回答成为 SSRF 绕过路径。
 	for _, address := range addresses {
 		if !publicProviderIP(address.IP) {
 			return nil, ErrInvalidManagedConfig
@@ -753,11 +784,6 @@ func dialPublicProviderAddresses(ctx context.Context, network, port string, addr
 		lastErr = err
 	}
 	return nil, errorsOrInvalid(lastErr)
-}
-
-func publicProviderIP(ip net.IP) bool {
-	return ip != nil && !ip.IsLoopback() && !ip.IsPrivate() && !ip.IsUnspecified() &&
-		!ip.IsLinkLocalUnicast() && !ip.IsLinkLocalMulticast() && !ip.IsMulticast()
 }
 
 func errorsOrInvalid(err error) error {

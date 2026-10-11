@@ -166,7 +166,6 @@
   background: transparent;
   text-align: left;
   cursor: pointer;
-  cursor: pointer;
   transition: background 140ms ease, color 140ms ease;
 }
 
@@ -387,7 +386,7 @@
 
 .teacher-summary {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   border-bottom: 1px solid var(--border);
 }
 
@@ -531,6 +530,11 @@
 .teacher-quick-links {
   padding-bottom: 8px;
 }
+.teacher-task-pane .section-head p { margin: 3px 0 0; color: var(--text-muted); font-size: var(--eg-font-caption); }
+.teacher-task-more, .teacher-learning-links > div { display: flex; flex-wrap: wrap; gap: 8px 14px; padding-top: 12px; }
+.teacher-learning-links { padding-top: 12px; border-top: 1px solid var(--border); }
+.teacher-learning-links h2 { margin: 0; font-size: var(--eg-font-reading); }
+@media (max-width: 640px) { .teacher-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } .teacher-task-list button { grid-template-columns: 30px minmax(0, 1fr) auto; } .teacher-task-list button > svg:last-child { display: none; } }
 
 .teacher-quick-links h2 {
   margin: 0 0 10px;

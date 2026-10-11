@@ -1,14 +1,14 @@
 import { EduGradeApi } from "@edugrade/sdk";
 import type {
-  AnswerGroup,
-  AnswerGroupMetrics,
   AnswerGroupSampleOutcome,
-  PutAnswerGroupDecisionRequest,
-  TeacherReferenceCase
+  PutAnswerGroupDecisionRequest
 } from "@edugrade/sdk";
 import { apiClient } from "./client";
+export type { AnswerGroupMemberContext } from "@edugrade/sdk";
+export function getAnswerGroupMemberContext(groupId: string, segmentId: string, signal?: AbortSignal) { return answerGroupApi.getAnswerGroupMemberContext({path:{groupId,segmentId},signal}); }
+export function getAnswerGroupMemberImage(groupId: string, segmentId: string, signal?: AbortSignal) { return apiClient.requestBlob(`/api/v1/answer-groups/${encodeURIComponent(groupId)}/samples/${encodeURIComponent(segmentId)}/segment-image`,{signal}); }
 
-export type { AnswerGroup, AnswerGroupMetrics, AnswerGroupSampleOutcome, TeacherReferenceCase };
+export type { AnswerGroup, AnswerGroupMetrics, AnswerGroupSampleOutcome, TeacherReferenceCase } from "@edugrade/sdk";
 
 const answerGroupApi = new EduGradeApi(apiClient);
 

@@ -63,7 +63,7 @@ func TestMFACipherRequiresIndependent256BitKeyAndBindsOwner(t *testing.T) {
 }
 
 func TestTOTPMatchesRFC6238WithBoundedSkew(t *testing.T) {
-	// RFC 6238 Appendix B SHA-1 vectors, reduced to the configured six digits.
+	// RFC 6238 附录 B 的 SHA-1 测试向量，按配置缩减为六位数字。
 	for _, vector := range []struct {
 		unix int64
 		code string
@@ -150,35 +150,7 @@ func mfaCreateTestChallenge(t *testing.T, store *MemoryStore, record TOTPRecord,
 func TestMFAEnrollmentRequiresSameLiveSessionAndEpoch(t *testing.T) {
 	for _, mode := range []string{"other-session", "expired", "locked", "revoked", "epoch", "attempts", "wrong-id"} {
 		t.Run(mode, func(t *testing.T) {
-			store, record, now := mfaMemoryFixture(t)
-			session := "session-1"
-			switch mode {
-			case "other-session":
-				session = "session-2"
-			case "expired":
-				now = now.Add(MFAEnrollmentTTL)
-			case "locked":
-				s := store.sessions[session]
-				s.LockedAt = now
-				store.sessions[session] = s
-			case "revoked":
-				delete(store.sessions, session)
-			case "epoch":
-				for key, user := range store.users {
-					user.SecurityEpoch++
-					store.users[key] = user
-				}
-			case "attempts":
-				for range 5 {
-					_ = store.RecordTOTPFailure(context.Background(), record.TenantID, record.UserID, record.ID)
-				}
-			case "wrong-id":
-				record.ID = "other"
-			}
-			_, hashes, _ := newMFARecoveryCodes()
-			if err := store.ConfirmTOTP(context.Background(), record, session, now.Unix()/30, hashes, now); !errors.Is(err, ErrMFAInvalid) {
-				t.Fatal("invalid enrollment accepted")
-			}
+			assertMFAEnrollmentRejectsInvalidSession(t, mode)
 		})
 	}
 	store, record, now := mfaMemoryFixture(t)
@@ -250,7 +222,7 @@ func TestMFAConcurrentOTPAndCommandConsumptionExactlyOnce(t *testing.T) {
 	if verified.Load() != 1 {
 		t.Fatal("same time step consumed twice")
 	}
-	// Rotate grant is deliberately chosen on a new step if disable won.
+	// 若禁用操作先完成，则刻意在新时间步选择轮换授权。
 	if winner.ChallengeHash != "rotate" {
 		winner = proofs[0]
 		winner.Step++
@@ -379,5 +351,38 @@ func TestMFAPasswordDoesNotClearOTPFailuresAndAuditPreservesRisk(t *testing.T) {
 	events, err := store.ListAudits(req.Context(), user.TenantID, AuditFilter{ActorID: user.ID, Limit: 10, ScopeMode: "tenant"})
 	if err != nil || len(events) != 1 || securityEventRisk(events[0].AfterValue) != "high" || events[0].AfterValue["risk_action"] != string(RiskActionStepUp) {
 		t.Fatal("MFA audit implied reduced dynamic risk")
+	}
+}
+
+func assertMFAEnrollmentRejectsInvalidSession(t *testing.T, mode string) {
+	t.Helper()
+	store, record, now := mfaMemoryFixture(t)
+	session := "session-1"
+	switch mode {
+	case "other-session":
+		session = "session-2"
+	case "expired":
+		now = now.Add(MFAEnrollmentTTL)
+	case "locked":
+		s := store.sessions[session]
+		s.LockedAt = now
+		store.sessions[session] = s
+	case "revoked":
+		delete(store.sessions, session)
+	case "epoch":
+		for key, user := range store.users {
+			user.SecurityEpoch++
+			store.users[key] = user
+		}
+	case "attempts":
+		for range 5 {
+			_ = store.RecordTOTPFailure(context.Background(), record.TenantID, record.UserID, record.ID)
+		}
+	case "wrong-id":
+		record.ID = "other"
+	}
+	_, hashes, _ := newMFARecoveryCodes()
+	if err := store.ConfirmTOTP(context.Background(), record, session, now.Unix()/30, hashes, now); !errors.Is(err, ErrMFAInvalid) {
+		t.Fatal("invalid enrollment accepted")
 	}
 }

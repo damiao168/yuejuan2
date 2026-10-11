@@ -34,8 +34,7 @@ func (s *PostgresStore) CreateTask(ctx context.Context, tenantID string, actorID
 	return createTask(ctx, s.db, tenantID, actorID, input)
 }
 
-// CreateTaskInTx creates an idempotent Worker Runtime task inside the caller's
-// PostgreSQL transaction.
+// CreateTaskInTx 在调用方的 PostgreSQL 事务内创建幂等 Worker Runtime 任务。
 func CreateTaskInTx(ctx context.Context, tx *sql.Tx, tenantID string, actorID string, input CreateTaskInput) (Task, error) {
 	if tx == nil {
 		return Task{}, ErrInvalidInput
@@ -65,10 +64,8 @@ RETURNING `+taskColumns,
 	return scanTask(row)
 }
 
-// CreateSucceededTaskInTx seeds a trusted, already-completed task without
-// manufacturing a worker lease. It is intentionally stricter than Complete:
-// only a never-attempted queued task may be promoted, while an identical
-// succeeded task is returned idempotently.
+// CreateSucceededTaskInTx 预置可信的已完成任务，不虚构 worker 租约。
+// 它比 Complete 更严格：只有从未尝试的 queued 任务可提升状态，相同的 succeeded 任务则幂等返回。
 func CreateSucceededTaskInTx(ctx context.Context, tx *sql.Tx, tenantID string, actorID string, create CreateTaskInput, complete CompleteInput) (Task, error) {
 	if tx == nil || complete.ResultSchemaVersion == "" || complete.DurationMS < 0 {
 		return Task{}, ErrInvalidInput
@@ -126,10 +123,12 @@ func (s *PostgresStore) claim(ctx context.Context, heartbeatTenantID string, acr
 	if err != nil {
 		return nil, err
 	}
-	// Process-owned executors do not impersonate a tenant merely to publish a
-	// heartbeat. External platform workers still provide a real tenant ID.
+	// 进程所属执行器不为发布心跳而冒充租户。外部平台 worker 仍提供真实租户 ID。
 	if heartbeatTenantID != "" {
-		if err := upsertWorkerHeartbeat(ctx, tx, heartbeatTenantID, input.WorkerService, input.WorkerInstanceID, input.QueueName, dbNow, map[string]any{"state": "polling"}); err != nil {
+		if err := upsertWorkerHeartbeat(ctx, tx, WorkerHeartbeat{
+			TenantID: heartbeatTenantID, WorkerService: input.WorkerService, WorkerInstanceID: input.WorkerInstanceID,
+			QueueName: input.QueueName, LastSeenAt: dbNow, Metadata: map[string]any{"state": "polling"},
+		}); err != nil {
 			return nil, err
 		}
 	} else if !acrossTenants {
@@ -137,9 +136,8 @@ func (s *PostgresStore) claim(ctx context.Context, heartbeatTenantID string, acr
 	}
 	var tenantScope any = heartbeatTenantID
 	if acrossTenants && heartbeatTenantID == "" {
-		// Passing an empty string still makes PostgreSQL cast $1 to uuid even
-		// when the across-tenant branch of the OR is true. NULL keeps the
-		// process-owned executor tenant-neutral without an invalid uuid cast.
+		// 即使 OR 的跨租户分支为 true，传入空字符串仍使 PostgreSQL 将 $1 转为 uuid。
+		// NULL 让进程所属执行器保持不绑定租户，并避免无效 uuid 转换。
 		tenantScope = nil
 	}
 	exhaustedRows, err := tx.QueryContext(ctx, `
@@ -344,20 +342,24 @@ WHERE tenant_id = $1 AND task_id = $2::uuid AND attempt_no = $3
 	if err != nil {
 		return Task{}, err
 	}
-	if err := upsertWorkerHeartbeat(ctx, tx, tenantID, input.WorkerService, input.WorkerInstanceID, task.QueueName, dbNow, metadataValue); err != nil {
+	if err := upsertWorkerHeartbeat(ctx, tx, WorkerHeartbeat{
+		TenantID: tenantID, WorkerService: input.WorkerService, WorkerInstanceID: input.WorkerInstanceID,
+		QueueName: task.QueueName, LastSeenAt: dbNow, Metadata: metadataValue,
+	}); err != nil {
 		return Task{}, err
 	}
 	return task, tx.Commit()
 }
 
-func upsertWorkerHeartbeat(ctx context.Context, tx *sql.Tx, tenantID string, workerService string, workerInstanceID string, queueName string, seenAt time.Time, metadataValue map[string]any) error {
-	metadata, _ := json.Marshal(metadataValue)
+// 心跳时间由调用方的数据库时钟提供，与任务租约使用同一时刻；提交或回滚由该事务负责。
+func upsertWorkerHeartbeat(ctx context.Context, tx *sql.Tx, heartbeat WorkerHeartbeat) error {
+	metadata, _ := json.Marshal(heartbeat.Metadata)
 	_, err := tx.ExecContext(ctx, `
 INSERT INTO agent_worker_heartbeat (tenant_id, worker_service, worker_instance_id, queue_name, last_seen_at, metadata)
 VALUES ($1, $2, $3, $4, $5, $6)
 ON CONFLICT (tenant_id, worker_service, worker_instance_id, queue_name)
 DO UPDATE SET last_seen_at = EXCLUDED.last_seen_at, metadata = EXCLUDED.metadata
-`, tenantID, workerService, workerInstanceID, queueName, seenAt, metadata)
+`, heartbeat.TenantID, heartbeat.WorkerService, heartbeat.WorkerInstanceID, heartbeat.QueueName, heartbeat.LastSeenAt, metadata)
 	return err
 }
 
@@ -374,9 +376,8 @@ func (s *PostgresStore) Complete(ctx context.Context, tenantID string, taskID st
 	return task, tx.Commit()
 }
 
-// CompleteTaskInTx validates and completes a Worker Runtime task inside the
-// caller's PostgreSQL transaction. Source adapters use it when the task result
-// and source-domain facts must commit together.
+// CompleteTaskInTx 在调用方的 PostgreSQL 事务内校验并完成 Worker Runtime 任务。
+// 来源适配器在任务结果与来源领域事实必须一起提交时使用它。
 func CompleteTaskInTx(ctx context.Context, tx *sql.Tx, tenantID string, taskID string, input CompleteInput) (Task, error) {
 	if tx == nil || input.LeaseToken == "" || input.ResultSchemaVersion == "" || input.DurationMS < 0 {
 		return Task{}, ErrInvalidInput
@@ -447,8 +448,7 @@ func (s *PostgresStore) Fail(ctx context.Context, tenantID string, taskID string
 	return task, tx.Commit()
 }
 
-// FailTaskInTx validates and fails (or schedules a retry for) a Worker Runtime
-// task inside the caller's PostgreSQL transaction.
+// FailTaskInTx 在调用方的 PostgreSQL 事务内校验 Worker Runtime 任务并标记失败或安排重试。
 func FailTaskInTx(ctx context.Context, tx *sql.Tx, tenantID string, taskID string, input FailInput) (Task, error) {
 	if input.LeaseToken == "" || input.ErrorCode == "" || input.DurationMS < 0 {
 		return Task{}, ErrInvalidInput
@@ -527,8 +527,7 @@ func (s *PostgresStore) Requeue(ctx context.Context, tenantID string, taskID str
 	return task, tx.Commit()
 }
 
-// RequeueTaskInTx lets a source coordinator restore source and runtime state
-// together. The caller owns the transaction and source lock.
+// RequeueTaskInTx 让来源协调器同时恢复来源与运行时状态。调用方负责事务和来源锁。
 func RequeueTaskInTx(ctx context.Context, tx *sql.Tx, tenantID, taskID string) (Task, error) {
 	task, err := getTaskForUpdate(ctx, tx, tenantID, taskID)
 	if err != nil {

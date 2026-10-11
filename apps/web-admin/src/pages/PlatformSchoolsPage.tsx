@@ -4,15 +4,28 @@ import { Building2 } from "lucide-react";
 import { listPlatformSchools, type PlatformSchoolListFilter, type PlatformSchoolSummary } from "../api/platformSchools";
 import { updateTenantStatus } from "../api/org";
 import { CreateSchoolForm } from "../features/platform/schools/CreateSchoolForm";
+import { SchoolCreatedReceipt, type SchoolDelivery } from "../features/platform/schools/SchoolCreatedReceipt";
 import { SchoolManagementToolbar } from "../features/platform/schools/SchoolManagementToolbar";
 import { SchoolSummaryTable, type SchoolDetailTab, type SchoolDetailTarget } from "../features/platform/schools/SchoolSummaryTable";
 import { SchoolDetailDrawer } from "../features/platform/schools/SchoolDetailDrawer";
 import { isStepUpCancelledError, useStepUp } from "../auth/stepUpContext";
 
+function initialSchoolFilter(): PlatformSchoolListFilter {
+  const params = new URLSearchParams(window.location.hash.split("?")[1] ?? "");
+  const status = params.get("status");
+  const modelHealth = params.get("model_health");
+  // 工作台只传入明确允许的筛选值；其他地址参数不能扩大或改变列表查询范围。
+  return {
+    usage_window: "30d", sort: "created_at", order: "desc", limit: 50,
+    ...(status === "active" || status === "disabled" ? { status } : {}),
+    ...(modelHealth === "healthy" || modelHealth === "warning" || modelHealth === "unconfigured" ? { model_health: modelHealth } : {})
+  };
+}
+
 export function PlatformSchoolsPage() {
   const { message } = AntApp.useApp();
   const { runWithStepUp } = useStepUp();
-  const [filter, setFilter] = useState<PlatformSchoolListFilter>({ usage_window: "30d", sort: "created_at", order: "desc", limit: 50 });
+  const [filter, setFilter] = useState<PlatformSchoolListFilter>(initialSchoolFilter);
   const [schools, setSchools] = useState<PlatformSchoolSummary[]>([]);
   const [summary, setSummary] = useState({ total: 0, active: 0, disabled: 0 });
   const [loading, setLoading] = useState(true);
@@ -20,6 +33,8 @@ export function PlatformSchoolsPage() {
   const [nextCursor, setNextCursor] = useState("");
   const [loadingMore, setLoadingMore] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const [delivery, setDelivery] = useState<SchoolDelivery | null>(null);
+  const [creating, setCreating] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<SchoolDetailTab>("overview");
   const [overviewFocus, setOverviewFocus] = useState<"created" | "status" | null>(null);
@@ -60,7 +75,11 @@ export function PlatformSchoolsPage() {
 
   const openSchool = useCallback((school: PlatformSchoolSummary, target: SchoolDetailTarget) => {
     setSelectedId(school.tenant_id);
-    setActiveTab(target === "created" || target === "status" ? "overview" : target === "administrator" ? "members" : target);
+    let nextTab: SchoolDetailTab;
+    if (target === "created" || target === "status") nextTab = "overview";
+    else if (target === "administrator") nextTab = "members";
+    else nextTab = target;
+    setActiveTab(nextTab);
     setOverviewFocus(target === "created" || target === "status" ? target : null);
     setMembersFocus(target === "administrator" ? "administrators" : null);
   }, []);
@@ -83,12 +102,12 @@ export function PlatformSchoolsPage() {
 
   return <div className="page-stack platform-school-page">
     <section className="page-heading platform-school-page-heading"><div><h1>学校管理</h1><p>统一管理学校账号、成员规模、AI 用量和运行状态</p></div></section>
-    <SchoolManagementToolbar filter={filter} onChange={setFilter} onRefresh={refresh} onCreate={() => setCreateOpen(true)} loading={loading} summary={summary} />
+    <SchoolManagementToolbar filter={filter} onChange={setFilter} onRefresh={refresh} onCreate={() => { setDelivery(null); setCreateOpen(true); }} loading={loading} summary={summary} />
     <SchoolSummaryTable schools={schools} loading={loading} usageWindow={filter.usage_window ?? "30d"} onOpen={openSchool} onChangeStatus={(school) => void changeStatus(school)} />
     {hasMore ? <div className="load-more-row"><Button loading={loadingMore} onClick={() => void loadMore()}>加载更多学校</Button></div> : null}
     <SchoolDetailDrawer school={selected} activeTab={activeTab} overviewFocus={overviewFocus} membersFocus={membersFocus} onTabChange={(tab) => { setActiveTab(tab); setOverviewFocus(null); setMembersFocus(null); }} onClose={() => setSelectedId(null)} />
-    <Modal title={<span className="platform-school-create-title"><Building2 size={18} /> 新建学校</span>} open={createOpen} footer={null} onCancel={() => setCreateOpen(false)} destroyOnHidden>
-      <CreateSchoolForm onCancel={() => setCreateOpen(false)} onCreated={() => { setCreateOpen(false); refresh(); }} />
+    <Modal title={<span className="platform-school-create-title"><Building2 size={18} /> 新建学校</span>} open={createOpen} footer={null} closable={!creating} maskClosable={!creating} keyboard={!creating} onCancel={() => { if (!creating) setCreateOpen(false); }} destroyOnHidden>
+      {delivery ? <SchoolCreatedReceipt delivery={delivery} onDone={() => { setCreateOpen(false); setDelivery(null); }} /> : <CreateSchoolForm onSavingChange={setCreating} onCancel={() => setCreateOpen(false)} onCreated={(_, receipt) => { setDelivery(receipt); refresh(); }} />}
     </Modal>
   </div>;
 }

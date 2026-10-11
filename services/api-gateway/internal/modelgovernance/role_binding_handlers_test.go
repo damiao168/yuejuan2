@@ -29,7 +29,8 @@ func TestPlatformPanelBindingsAreSchoolScopedAndSeparateFromChatDefault(t *testi
 	user := auth.User{ID: "00000000-0000-0000-0000-000000000010", TenantID: auth.PlatformTenantID,
 		Roles: []string{"platform_admin"}, Permissions: []string{"model:provider:manage"}}
 	input := savePlatformPanelRoleInput{TenantID: school, SaveModelRoleBindingInput: SaveModelRoleBindingInput{
-		EducationStage: "senior", SubjectCode: "math", ArchetypeCode: "structured_steps", AgentRole: ModelRolePrimaryA,
+		ExpectedRevision: ModelRoleBindingAbsent,
+		EducationStage:   "senior", SubjectCode: "math", ArchetypeCode: "structured_steps", AgentRole: ModelRolePrimaryA,
 		ManagedModelAPIConfigID: gradingModel, PromptVersion: "grader-v2", StrengthRank: 1, Status: "active",
 	}}
 	encoded, err := json.Marshal(input)
@@ -74,7 +75,8 @@ func TestPanelBindingAdminCanDisableUnverifiedModelButCannotActivateIt(t *testin
 		Roles: []string{"platform_admin"}, Permissions: []string{"model:provider:manage"}}
 	handler := NewHandler(store, auth.NewMemoryStore(), NewEnvironmentSecretResolver(t.TempDir()), testBaseline())
 	input := savePlatformPanelRoleInput{TenantID: school, SaveModelRoleBindingInput: SaveModelRoleBindingInput{
-		EducationStage: "senior", SubjectCode: "physics", ArchetypeCode: "*", AgentRole: ModelRoleArbiter,
+		ExpectedRevision: ModelRoleBindingAbsent,
+		EducationStage:   "senior", SubjectCode: "physics", ArchetypeCode: "*", AgentRole: ModelRoleArbiter,
 		ManagedModelAPIConfigID: model, PromptVersion: "arbiter-v1", StrengthRank: 2, Status: "active",
 	}}
 	encoded, _ := json.Marshal(input)
@@ -84,6 +86,8 @@ func TestPanelBindingAdminCanDisableUnverifiedModelButCannotActivateIt(t *testin
 	config := store.managedConfigs[model]
 	config.Status = "disabled"
 	store.managedConfigs[model] = config
+	before, _ := store.ListConfiguredModelRoleBindings(context.Background(), school, "senior", "physics", "*")
+	input.ExpectedRevision = before[0].Revision
 	input.Status = "disabled"
 	encoded, _ = json.Marshal(input)
 	if response := performHandlerRequest(t, user, http.MethodPut, "/api/v1/platform/panel-model-bindings", string(encoded), handler.SavePlatformPanelRoleBinding); response.Code != http.StatusOK {
@@ -93,6 +97,7 @@ func TestPanelBindingAdminCanDisableUnverifiedModelButCannotActivateIt(t *testin
 	if err != nil || len(items) != 1 || items[0].Status != "disabled" {
 		t.Fatalf("disabled role disappeared from admin view: %#v %v", items, err)
 	}
+	input.ExpectedRevision = items[0].Revision
 	input.Status = "active"
 	encoded, _ = json.Marshal(input)
 	if response := performHandlerRequest(t, user, http.MethodPut, "/api/v1/platform/panel-model-bindings", string(encoded), handler.SavePlatformPanelRoleBinding); response.Code != http.StatusConflict {

@@ -1,0 +1,34 @@
+Usage: extractor.exe [OPTIONS] [INPUTS]...
+
+Arguments:
+  [INPUTS]...  
+
+Options:
+      --scratch-dir <SCRATCH_DIR>                    
+      --trap-dir <TRAP_DIR>                          
+      --source-archive-dir <SOURCE_ARCHIVE_DIR>      
+      --diagnostic-dir <DIAGNOSTIC_DIR>              
+      --cargo-target-dir <CARGO_TARGET_DIR>          
+      --cargo-target <CARGO_TARGET>                  
+      --cargo-features <CARGO_FEATURES>              
+      --cargo-cfg-overrides <CARGO_CFG_OVERRIDES>    
+      --cargo-extra-env <CARGO_EXTRA_ENV>            
+      --cargo-extra-args <CARGO_EXTRA_ARGS>          
+      --cargo-all-targets                            
+      --logging-flamegraph <LOGGING_FLAMEGRAPH>      
+      --logging-verbosity <LOGGING_VERBOSITY>        
+      --trap-compression <TRAP_COMPRESSION>          [possible values: none, gzip, zstd]
+      --qltest                                       
+      --qltest-cargo-check                           
+      --qltest-dependencies <QLTEST_DEPENDENCIES>    
+      --qltest-use-nightly                           
+      --qltest-edition <QLTEST_EDITION>              
+      --sysroot <SYSROOT>                            
+      --sysroot-src <SYSROOT_SRC>                    
+      --rustc-src <RUSTC_SRC>                        
+      --build-script-command <BUILD_SCRIPT_COMMAND>  
+      --extra-includes <EXTRA_INCLUDES>              
+      --proc-macro-server <PROC_MACRO_SERVER>        
+      --extract-dependencies-as-source               
+      --force-library-mode                           
+  -h, --help                                         Print help

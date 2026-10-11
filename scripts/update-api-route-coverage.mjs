@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { writeIfChanged } from "./lib/openapi-sdk.mjs";
 
 // 按仓库固定的字面量注册写法扫描，遇到动态路由或其他注册方式时需扩展检测。
 const routePattern = /\b(?:mux|[A-Za-z_]\w*Mux)\.Handle\("(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS) ([^" ]+)"/g;
@@ -13,27 +14,33 @@ function walk(directory) {
   });
 }
 
-export function buildRouteCoverage({ root, gatewayRoot, openapiPath, exceptionsPath }) {
-  const openapi = JSON.parse(fs.readFileSync(openapiPath, "utf8"));
-  const ledger = JSON.parse(fs.readFileSync(exceptionsPath, "utf8"));
+function validatePolicyFields(policy) {
+  for (const field of ["id", "interface_category", "contract_carrier", "exception_scope", "owner", "review_after", "reason"]) {
+    if (typeof policy[field] !== "string" || !policy[field].trim()) {
+      throw new Error(`registered-gap policy ${policy.id ?? "<missing>"} requires ${field}`);
+    }
+  }
+}
+
+function validatePolicyDateAndRoutes(policy) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(policy.review_after) ||
+      !Number.isFinite(Date.parse(policy.review_after)) ||
+      new Date(policy.review_after).toISOString().slice(0, 10) !== policy.review_after) {
+    throw new Error(`registered-gap policy ${policy.id} has invalid review_after`);
+  }
+  if (!Array.isArray(policy.routes) || !policy.routes.length) {
+    throw new Error(`registered-gap policy ${policy.id} requires exact routes`);
+  }
+}
+
+function approvedGapRoutes(ledger) {
   const approved = new Map();
   const policyIds = new Set();
   for (const policy of ledger.policies ?? []) {
-    for (const field of ["id", "interface_category", "contract_carrier", "exception_scope", "owner", "review_after", "reason"]) {
-      if (typeof policy[field] !== "string" || !policy[field].trim()) {
-        throw new Error(`registered-gap policy ${policy.id ?? "<missing>"} requires ${field}`);
-      }
-    }
+    validatePolicyFields(policy);
     if (policyIds.has(policy.id)) throw new Error(`duplicate registered-gap policy ${policy.id}`);
     policyIds.add(policy.id);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(policy.review_after) ||
-        !Number.isFinite(Date.parse(policy.review_after)) ||
-        new Date(policy.review_after).toISOString().slice(0, 10) !== policy.review_after) {
-      throw new Error(`registered-gap policy ${policy.id} has invalid review_after`);
-    }
-    if (!Array.isArray(policy.routes) || !policy.routes.length) {
-      throw new Error(`registered-gap policy ${policy.id} requires exact routes`);
-    }
+    validatePolicyDateAndRoutes(policy);
     for (const key of policy.routes ?? []) {
       if (typeof key !== "string" || !/^(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS) \/\S+$/.test(key) || key.includes("*")) {
         throw new Error(`registered-gap policy ${policy.id} requires an exact route: ${key}`);
@@ -43,36 +50,47 @@ export function buildRouteCoverage({ root, gatewayRoot, openapiPath, exceptionsP
     }
   }
 
+  return approved;
+}
+
+function routeCoverageEntry(match, source, openapi, approved, usedApprovals) {
+  const method = match[1];
+  const routePath = match[2];
+  const operation = openapi.paths?.[routePath]?.[method.toLowerCase()];
+  if (operation) {
+    return { method, path: routePath, source, coverage: "openapi", ...(operation.operationId ? { operation_id: operation.operationId } : {}) };
+  }
+  const key = `${method} ${routePath}`;
+  const policy = approved.get(key);
+  if (!policy) throw new Error(`unapproved registered route without OpenAPI contract: ${key}`);
+  usedApprovals.add(key);
+  return {
+    method, path: routePath, source, coverage: "registered-gap",
+    interface_category: policy.interface_category, contract_carrier: policy.contract_carrier,
+    exception_scope: policy.exception_scope, exception_policy: policy.id, owner: policy.owner,
+    review_after: policy.review_after, reason: policy.reason,
+  };
+}
+
+export function buildRouteCoverage({ root, gatewayRoot, openapiPath, exceptionsPath }) {
+  const openapi = JSON.parse(fs.readFileSync(openapiPath, "utf8"));
+  const ledger = JSON.parse(fs.readFileSync(exceptionsPath, "utf8"));
+  const approved = approvedGapRoutes(ledger);
   const routes = [];
   const usedApprovals = new Set();
   for (const file of walk(gatewayRoot)) {
     const source = fs.readFileSync(file, "utf8");
+    const relativeSource = path.relative(root, file).replaceAll("\\", "/");
     for (const match of source.matchAll(routePattern)) {
-      const method = match[1].toLowerCase();
-      const routePath = match[2];
-      const key = `${match[1]} ${routePath}`;
-      const relativeSource = path.relative(root, file).replaceAll("\\", "/");
-      const operation = openapi.paths?.[routePath]?.[method];
-      if (operation) {
-        routes.push({ method: match[1], path: routePath, source: relativeSource, coverage: "openapi", ...(operation.operationId ? { operation_id: operation.operationId } : {}) });
-        continue;
-      }
-      const policy = approved.get(key);
-      if (!policy) throw new Error(`unapproved registered route without OpenAPI contract: ${key}`);
-      usedApprovals.add(key);
-      routes.push({
-        method: match[1], path: routePath, source: relativeSource, coverage: "registered-gap",
-        interface_category: policy.interface_category, contract_carrier: policy.contract_carrier,
-        exception_scope: policy.exception_scope, exception_policy: policy.id, owner: policy.owner,
-        review_after: policy.review_after, reason: policy.reason,
-      });
+      routes.push(routeCoverageEntry(match, relativeSource, openapi, approved, usedApprovals));
     }
   }
   routes.sort((left, right) => left.path.localeCompare(right.path) || left.method.localeCompare(right.method));
   const duplicates = routes.filter((route, index) => index > 0 && route.method === routes[index - 1].method && route.path === routes[index - 1].path);
-  if (duplicates.length) throw new Error(`duplicate registered routes: ${duplicates.map((route) => `${route.method} ${route.path}`).join(", ")}`);
+  const duplicateNames = duplicates.map((route) => `${route.method} ${route.path}`).join(", ");
+  if (duplicates.length) throw new Error(`duplicate registered routes: ${duplicateNames}`);
   // 路由移除或纳入契约后必须删掉旧例外，避免它将来被相同路径重新利用。
-  const stale = [...approved.keys()].filter((key) => !usedApprovals.has(key)).sort();
+  const stale = [...approved.keys()].filter((key) => !usedApprovals.has(key)).sort((left, right) => left.localeCompare(right));
   if (stale.length) throw new Error(`stale registered-gap approvals (route removed or now contracted): ${stale.join(", ")}`);
 
   return {
@@ -97,7 +115,9 @@ export function writeRouteCoverage(root = process.cwd()) {
     exceptionsPath: path.join(root, "contracts", "openapi", "registered-route-exceptions.json"),
   });
   const outputPath = path.join(root, "services", "api-gateway", "openapi", "route-coverage.json");
-  fs.writeFileSync(outputPath, `${JSON.stringify(document, null, 2)}\n`);
+  const content = `${JSON.stringify(document, null, 2)}\n`;
+  // 与 SDK 使用同一描述符比较和更新，内容未变化时不写入，文件错误也不能被当作生成成功。
+  writeIfChanged(outputPath, content);
   return document;
 }
 

@@ -1,8 +1,19 @@
 import { Form, Input, InputNumber, Select, Switch } from "antd";
 import type { QuestionBankMetadataSchema } from "@edugrade/sdk";
 import { subjects, types, archetypes } from "./questionBankOptions";
+import { defaultArchetypeForQuestionType } from "../../components/features/assessment/assessmentPolicy";
 
-export function ContentFields({ schema }: { schema?: QuestionBankMetadataSchema }) {
+const gradeOptions = {
+	junior: [{value:"grade_7",label:"七年级"},{value:"grade_8",label:"八年级"},{value:"grade_9",label:"九年级"}],
+	senior: [{value:"grade_10",label:"高一"},{value:"grade_11",label:"高二"},{value:"grade_12",label:"高三"}]
+};
+export function gradeScopeLabel(value: string) { return [...gradeOptions.junior, ...gradeOptions.senior].find(grade => grade.value === value)?.label ?? value; }
+
+export function ContentFields({ schema }: Readonly<{ schema?: QuestionBankMetadataSchema }>) {
+	const form = Form.useFormInstance();
+	const stage = Form.useWatch(["metadata", "education_stage"], form) as "junior" | "senior" | undefined;
+	const grade = Form.useWatch(["metadata", "grade_scope"], form) as string | undefined;
+	const grades = stage ? gradeOptions[stage] ?? [] : [];
 	const knowledgePointTaxonomy = schema?.taxonomies.find(
 		(taxonomy) => taxonomy.id === "knowledge_points",
 	);
@@ -22,6 +33,8 @@ export function ContentFields({ schema }: { schema?: QuestionBankMetadataSchema 
 					rules={[{ required: true }]}
 				>
 					<Select
+						placeholder="请选择题目适用学段"
+						onChange={() => form.setFieldValue(["metadata", "grade_scope"], undefined)}
 						options={[
 							{ value: "junior", label: "初中" },
 							{ value: "senior", label: "高中" },
@@ -35,7 +48,7 @@ export function ContentFields({ schema }: { schema?: QuestionBankMetadataSchema 
 					label="年级范围"
 					rules={[{ required: true, whitespace: true, max: 80 }]}
 				>
-					<Input maxLength={80} placeholder="如 grade_8" />
+					<Select disabled={!stage} placeholder={stage ? "选择适用年级" : "请先选择学段"} options={grade && !grades.some(item => item.value === grade) ? [...grades, {value:grade,label:`历史年级范围：${grade}`}] : grades} />
 				</Form.Item>
 				<Form.Item
 					name="default_score"
@@ -51,16 +64,19 @@ export function ContentFields({ schema }: { schema?: QuestionBankMetadataSchema 
 					label="题型"
 					rules={[{ required: true }]}
 				>
-					<Select options={types} />
+					<Select options={types} onChange={value => form.setFieldValue("assessment_archetype", defaultArchetypeForQuestionType(value))} />
 				</Form.Item>
+			</div>
+			<details><summary>特殊作答与评分方式（通常无需修改）</summary>
 				<Form.Item
 					name="assessment_archetype"
-					label="作答方式"
+					label="作答与评分方式"
+					extra="选择题型时自动带出常用方式；仅在实际作答形式不同时调整。"
 					rules={[{ required: true }]}
 				>
 					<Select options={archetypes} />
 				</Form.Item>
-			</div>
+			</details>
 			<Form.Item
 				name="stem"
 				label="题干"
@@ -96,7 +112,7 @@ export function ContentFields({ schema }: { schema?: QuestionBankMetadataSchema 
 					placeholder={
 						knowledgePointTaxonomy
 							? "选择受控知识点"
-							: "当前 schema 未配置 knowledge_points taxonomy"
+							: "题库尚未配置知识点目录，请联系题库负责人"
 					}
 					disabled={!knowledgePointTaxonomy}
 				/>
@@ -159,7 +175,7 @@ export function ContentFields({ schema }: { schema?: QuestionBankMetadataSchema 
 				<InputNumber min={1900} max={2200} />
 			</Form.Item>
 			{schema?.fields.length ? <section className="question-bank-custom-fields">
-				<h3>受控自定义 Metadata · schema v{schema.version}</h3>
+				<h3>题目补充信息 · 分类规则第 {schema.version} 版</h3>
 				<div className="question-bank-form-pair">
 					{schema.fields.map((field) => {
 						const rules = [{ required: field.required, message: `${field.label}为必填字段` }];

@@ -23,26 +23,7 @@ func TestSuggestMathRubricDraftUsesCurrentCandidateWithoutPersistingSuggestion(t
 	calls := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		calls++
-		if r.URL.Path != "/paper/rubric-draft" || r.Header.Get("Authorization") != "Bearer "+token {
-			t.Errorf("unexpected request: %s", r.URL.Path)
-		}
-		var input map[string]any
-		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-			t.Error(err)
-		}
-		question := input["question_candidate"].(map[string]any)
-		if question["stem"] != "解方程" || question["score"] != float64(11) {
-			t.Errorf("reviewed question context not sent: %#v", question)
-		}
-		if question["question_no_normalized"] != "16" || input["solution_candidate"].(map[string]any)["candidate_id"] != "s15" {
-			t.Errorf("renumbered question lost its bound solution: %#v", input)
-		}
-		maximum := 11.0
-		_ = json.NewEncoder(w).Encode(MathRubricDraftResponse{SuggestedRubricCandidates: []MathRubricDraftSuggestion{{
-			CandidateID: "suggested-15", QuestionNoNormalized: "16", MaxScore: &maximum, Origin: "ai_suggestion_from_solution", Status: "review_required",
-			Provenance: map[string]any{"solution_candidate_id": "s15"},
-			Points:     []MathRubricDraftPoint{{ID: "p1", Description: "正确移项", EvidenceStepIDs: []string{"step-1"}, SourceRefs: []PaperImportSourceRef{{SourceID: "source-1"}}}},
-		}}})
+		serveReviewedRubricSuggestion(t, token, w, r)
 	}))
 	defer server.Close()
 	service := &DocumentImportService{store: store, parser: NewHTTPDocumentParser(server.URL, token, time.Second)}
@@ -83,7 +64,7 @@ func TestSuggestMathRubricDraftRejectsReviewSavedDuringInference(t *testing.T) {
 	job.SolutionCandidates = []SolutionCandidate{{CandidateID: "s1", QuestionNoNormalized: "1", Steps: []SolutionStep{{StepNo: 1, Content: "先计算"}}, SourceRefs: []PaperImportSourceRef{{SourceID: "source-1"}}}}
 	store.imports[job.ID] = job
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		if _, err := store.SavePaperImportReview(context.Background(), "tenant", job.ID, "teacher", ReviewPaperImportInput{ExpectedGeneration: job.Generation, Questions: job.Questions}); err != nil {
+		if _, err := store.SavePaperImportReview(context.Background(), "tenant", job.ID, "teacher", ReviewPaperImportInput{ExpectedGeneration: job.Generation, ExpectedUpdatedAt: job.UpdatedAt.Format(time.RFC3339Nano), Questions: job.Questions}); err != nil {
 			t.Errorf("concurrent review save: %v", err)
 		}
 		maximum := 5.0
@@ -134,4 +115,29 @@ func TestMathRubricDraftRejectsUnboundModelResponse(t *testing.T) {
 			}
 		})
 	}
+}
+
+// 服务替身校验已审阅的新题干、分值与重编号后的解答绑定，再返回等待人工审阅的建议。
+func serveReviewedRubricSuggestion(t *testing.T, token string, w http.ResponseWriter, r *http.Request) {
+	t.Helper()
+	if r.URL.Path != "/paper/rubric-draft" || r.Header.Get("Authorization") != "Bearer "+token {
+		t.Errorf("unexpected request: %s", r.URL.Path)
+	}
+	var input map[string]any
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		t.Error(err)
+	}
+	question := input["question_candidate"].(map[string]any)
+	if question["stem"] != "解方程" || question["score"] != float64(11) {
+		t.Errorf("reviewed question context not sent: %#v", question)
+	}
+	if question["question_no_normalized"] != "16" || input["solution_candidate"].(map[string]any)["candidate_id"] != "s15" {
+		t.Errorf("renumbered question lost its bound solution: %#v", input)
+	}
+	maximum := 11.0
+	_ = json.NewEncoder(w).Encode(MathRubricDraftResponse{SuggestedRubricCandidates: []MathRubricDraftSuggestion{{
+		CandidateID: "suggested-15", QuestionNoNormalized: "16", MaxScore: &maximum, Origin: "ai_suggestion_from_solution", Status: "review_required",
+		Provenance: map[string]any{"solution_candidate_id": "s15"},
+		Points:     []MathRubricDraftPoint{{ID: "p1", Description: "正确移项", EvidenceStepIDs: []string{"step-1"}, SourceRefs: []PaperImportSourceRef{{SourceID: "source-1"}}}},
+	}}})
 }

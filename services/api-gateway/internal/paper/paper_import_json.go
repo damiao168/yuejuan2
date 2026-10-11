@@ -4,9 +4,8 @@ import "encoding/json"
 
 func wireList[T any](items []T) []T { return append([]T{}, items...) }
 
-// MarshalJSON keeps the public array contract even for historical/parser
-// records with absent collections. Copy before normalization: serialization
-// must never mutate the store's candidates or immutable input/result facts.
+// MarshalJSON 即使面对集合缺失的历史或解析器记录，也保持公开数组契约。
+// 规范化前先复制：序列化绝不能修改存储中的候选或不可变输入、结果事实。
 func (job PaperImportJob) MarshalJSON() ([]byte, error) {
 	type wireJob PaperImportJob
 	job.Sources = wireList(job.Sources)

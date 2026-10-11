@@ -1,0 +1,4498 @@
+{
+  "method": "正则提取非测试Go内部包import；人工审读见file-review.tsv",
+  "modules": [
+    "aidisagreement",
+    "aieligibility",
+    "answergroup",
+    "appeal",
+    "assessment",
+    "auth",
+    "backmark",
+    "binaryresource",
+    "binaryresourcehttp",
+    "buildinfo",
+    "calibration",
+    "capture",
+    "captureupload",
+    "commandreceipt",
+    "config",
+    "csvsafe",
+    "dashboard",
+    "db",
+    "deps",
+    "evidence",
+    "exam",
+    "files",
+    "goldpaper",
+    "graderdrift",
+    "grading",
+    "gradingdisagreement",
+    "gradingevaluation",
+    "handlers",
+    "httpx",
+    "idempotency",
+    "imagequality",
+    "logger",
+    "mathunderstanding",
+    "middleware",
+    "minioadapter",
+    "modelcalibration",
+    "modelgovernance",
+    "observability",
+    "ocr",
+    "onboarding",
+    "orchestrator",
+    "org",
+    "outbox",
+    "pagination",
+    "paper",
+    "platformschools",
+    "processing",
+    "qualitydashboard",
+    "questionbank",
+    "regrade",
+    "regraderelease",
+    "releasegate",
+    "report",
+    "review",
+    "reviewannotation",
+    "schoolassistant",
+    "score",
+    "scorerelease",
+    "seedquality",
+    "segment",
+    "server",
+    "studentportal",
+    "subjective",
+    "submission",
+    "taskmaterials",
+    "workerruntime",
+    "workflowactors",
+    "workspace"
+  ],
+  "imports": [
+    {
+      "source": "aidisagreement",
+      "target": "auth",
+      "file": "services/api-gateway/internal/aidisagreement/handlers.go",
+      "line": 11
+    },
+    {
+      "source": "aidisagreement",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/aidisagreement/handlers.go",
+      "line": 12
+    },
+    {
+      "source": "aidisagreement",
+      "target": "gradingdisagreement",
+      "file": "services/api-gateway/internal/aidisagreement/service.go",
+      "line": 13
+    },
+    {
+      "source": "aieligibility",
+      "target": "assessment",
+      "file": "services/api-gateway/internal/aieligibility/handlers.go",
+      "line": 10
+    },
+    {
+      "source": "aieligibility",
+      "target": "auth",
+      "file": "services/api-gateway/internal/aieligibility/handlers.go",
+      "line": 11
+    },
+    {
+      "source": "aieligibility",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/aieligibility/handlers.go",
+      "line": 12
+    },
+    {
+      "source": "aieligibility",
+      "target": "assessment",
+      "file": "services/api-gateway/internal/aieligibility/service.go",
+      "line": 11
+    },
+    {
+      "source": "aieligibility",
+      "target": "assessment",
+      "file": "services/api-gateway/internal/aieligibility/store_memory.go",
+      "line": 9
+    },
+    {
+      "source": "aieligibility",
+      "target": "assessment",
+      "file": "services/api-gateway/internal/aieligibility/store_postgres.go",
+      "line": 10
+    },
+    {
+      "source": "aieligibility",
+      "target": "assessment",
+      "file": "services/api-gateway/internal/aieligibility/types.go",
+      "line": 9
+    },
+    {
+      "source": "answergroup",
+      "target": "auth",
+      "file": "services/api-gateway/internal/answergroup/handlers.go",
+      "line": 9
+    },
+    {
+      "source": "answergroup",
+      "target": "binaryresourcehttp",
+      "file": "services/api-gateway/internal/answergroup/handlers.go",
+      "line": 10
+    },
+    {
+      "source": "answergroup",
+      "target": "goldpaper",
+      "file": "services/api-gateway/internal/answergroup/handlers.go",
+      "line": 11
+    },
+    {
+      "source": "answergroup",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/answergroup/handlers.go",
+      "line": 12
+    },
+    {
+      "source": "answergroup",
+      "target": "logger",
+      "file": "services/api-gateway/internal/answergroup/handlers.go",
+      "line": 13
+    },
+    {
+      "source": "answergroup",
+      "target": "segment",
+      "file": "services/api-gateway/internal/answergroup/handlers.go",
+      "line": 14
+    },
+    {
+      "source": "answergroup",
+      "target": "paper",
+      "file": "services/api-gateway/internal/answergroup/member_context.go",
+      "line": 6
+    },
+    {
+      "source": "answergroup",
+      "target": "taskmaterials",
+      "file": "services/api-gateway/internal/answergroup/member_context.go",
+      "line": 7
+    },
+    {
+      "source": "appeal",
+      "target": "auth",
+      "file": "services/api-gateway/internal/appeal/handlers.go",
+      "line": 9
+    },
+    {
+      "source": "appeal",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/appeal/handlers.go",
+      "line": 10
+    },
+    {
+      "source": "appeal",
+      "target": "logger",
+      "file": "services/api-gateway/internal/appeal/handlers.go",
+      "line": 11
+    },
+    {
+      "source": "appeal",
+      "target": "pagination",
+      "file": "services/api-gateway/internal/appeal/handlers.go",
+      "line": 12
+    },
+    {
+      "source": "appeal",
+      "target": "auth",
+      "file": "services/api-gateway/internal/appeal/published_question_handlers.go",
+      "line": 8
+    },
+    {
+      "source": "appeal",
+      "target": "binaryresourcehttp",
+      "file": "services/api-gateway/internal/appeal/published_question_handlers.go",
+      "line": 9
+    },
+    {
+      "source": "appeal",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/appeal/published_question_handlers.go",
+      "line": 10
+    },
+    {
+      "source": "appeal",
+      "target": "logger",
+      "file": "services/api-gateway/internal/appeal/published_question_handlers.go",
+      "line": 11
+    },
+    {
+      "source": "appeal",
+      "target": "segment",
+      "file": "services/api-gateway/internal/appeal/published_question_handlers.go",
+      "line": 12
+    },
+    {
+      "source": "assessment",
+      "target": "auth",
+      "file": "services/api-gateway/internal/assessment/http.go",
+      "line": 10
+    },
+    {
+      "source": "assessment",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/assessment/http.go",
+      "line": 11
+    },
+    {
+      "source": "assessment",
+      "target": "logger",
+      "file": "services/api-gateway/internal/assessment/http.go",
+      "line": 12
+    },
+    {
+      "source": "auth",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/auth/access_scope.go",
+      "line": 11
+    },
+    {
+      "source": "auth",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/auth/activation.go",
+      "line": 9
+    },
+    {
+      "source": "auth",
+      "target": "logger",
+      "file": "services/api-gateway/internal/auth/activation.go",
+      "line": 10
+    },
+    {
+      "source": "auth",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/auth/archive_boundary.go",
+      "line": 7
+    },
+    {
+      "source": "auth",
+      "target": "logger",
+      "file": "services/api-gateway/internal/auth/audit_record.go",
+      "line": 7
+    },
+    {
+      "source": "auth",
+      "target": "db",
+      "file": "services/api-gateway/internal/auth/context.go",
+      "line": 6
+    },
+    {
+      "source": "auth",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/auth/handlers.go",
+      "line": 11
+    },
+    {
+      "source": "auth",
+      "target": "logger",
+      "file": "services/api-gateway/internal/auth/handlers.go",
+      "line": 12
+    },
+    {
+      "source": "auth",
+      "target": "csvsafe",
+      "file": "services/api-gateway/internal/auth/handlers_audit.go",
+      "line": 12
+    },
+    {
+      "source": "auth",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/auth/handlers_audit.go",
+      "line": 13
+    },
+    {
+      "source": "auth",
+      "target": "logger",
+      "file": "services/api-gateway/internal/auth/handlers_audit.go",
+      "line": 14
+    },
+    {
+      "source": "auth",
+      "target": "pagination",
+      "file": "services/api-gateway/internal/auth/handlers_audit.go",
+      "line": 15
+    },
+    {
+      "source": "auth",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/auth/handlers_session.go",
+      "line": 10
+    },
+    {
+      "source": "auth",
+      "target": "logger",
+      "file": "services/api-gateway/internal/auth/handlers_session.go",
+      "line": 11
+    },
+    {
+      "source": "auth",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/auth/login_helpers.go",
+      "line": 10
+    },
+    {
+      "source": "auth",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/auth/managed_access_handler.go",
+      "line": 8
+    },
+    {
+      "source": "auth",
+      "target": "logger",
+      "file": "services/api-gateway/internal/auth/managed_access_handler.go",
+      "line": 9
+    },
+    {
+      "source": "auth",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/auth/mfa_handlers.go",
+      "line": 15
+    },
+    {
+      "source": "auth",
+      "target": "logger",
+      "file": "services/api-gateway/internal/auth/mfa_handlers.go",
+      "line": 16
+    },
+    {
+      "source": "auth",
+      "target": "logger",
+      "file": "services/api-gateway/internal/auth/mfa_security_changes.go",
+      "line": 11
+    },
+    {
+      "source": "auth",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/auth/middleware.go",
+      "line": 9
+    },
+    {
+      "source": "auth",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/auth/recovery.go",
+      "line": 9
+    },
+    {
+      "source": "auth",
+      "target": "logger",
+      "file": "services/api-gateway/internal/auth/recovery.go",
+      "line": 10
+    },
+    {
+      "source": "auth",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/auth/resource_scope.go",
+      "line": 10
+    },
+    {
+      "source": "auth",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/auth/security_events.go",
+      "line": 8
+    },
+    {
+      "source": "auth",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/auth/step_up.go",
+      "line": 7
+    },
+    {
+      "source": "auth",
+      "target": "logger",
+      "file": "services/api-gateway/internal/auth/store_postgres.go",
+      "line": 13
+    },
+    {
+      "source": "auth",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/auth/user_admin.go",
+      "line": 11
+    },
+    {
+      "source": "auth",
+      "target": "logger",
+      "file": "services/api-gateway/internal/auth/user_admin.go",
+      "line": 12
+    },
+    {
+      "source": "auth",
+      "target": "pagination",
+      "file": "services/api-gateway/internal/auth/user_admin.go",
+      "line": 13
+    },
+    {
+      "source": "auth",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/auth/wechat.go",
+      "line": 16
+    },
+    {
+      "source": "auth",
+      "target": "logger",
+      "file": "services/api-gateway/internal/auth/wechat.go",
+      "line": 17
+    },
+    {
+      "source": "backmark",
+      "target": "auth",
+      "file": "services/api-gateway/internal/backmark/handlers.go",
+      "line": 10
+    },
+    {
+      "source": "backmark",
+      "target": "binaryresourcehttp",
+      "file": "services/api-gateway/internal/backmark/handlers.go",
+      "line": 11
+    },
+    {
+      "source": "backmark",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/backmark/handlers.go",
+      "line": 12
+    },
+    {
+      "source": "backmark",
+      "target": "logger",
+      "file": "services/api-gateway/internal/backmark/handlers.go",
+      "line": 13
+    },
+    {
+      "source": "backmark",
+      "target": "pagination",
+      "file": "services/api-gateway/internal/backmark/handlers.go",
+      "line": 14
+    },
+    {
+      "source": "backmark",
+      "target": "regrade",
+      "file": "services/api-gateway/internal/backmark/handlers.go",
+      "line": 15
+    },
+    {
+      "source": "backmark",
+      "target": "segment",
+      "file": "services/api-gateway/internal/backmark/handlers.go",
+      "line": 16
+    },
+    {
+      "source": "backmark",
+      "target": "paper",
+      "file": "services/api-gateway/internal/backmark/service.go",
+      "line": 12
+    },
+    {
+      "source": "backmark",
+      "target": "review",
+      "file": "services/api-gateway/internal/backmark/service.go",
+      "line": 13
+    },
+    {
+      "source": "backmark",
+      "target": "paper",
+      "file": "services/api-gateway/internal/backmark/types.go",
+      "line": 9
+    },
+    {
+      "source": "binaryresourcehttp",
+      "target": "auth",
+      "file": "services/api-gateway/internal/binaryresourcehttp/serve.go",
+      "line": 8
+    },
+    {
+      "source": "binaryresourcehttp",
+      "target": "binaryresource",
+      "file": "services/api-gateway/internal/binaryresourcehttp/serve.go",
+      "line": 9
+    },
+    {
+      "source": "binaryresourcehttp",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/binaryresourcehttp/serve.go",
+      "line": 10
+    },
+    {
+      "source": "binaryresourcehttp",
+      "target": "logger",
+      "file": "services/api-gateway/internal/binaryresourcehttp/serve.go",
+      "line": 11
+    },
+    {
+      "source": "calibration",
+      "target": "auth",
+      "file": "services/api-gateway/internal/calibration/handlers.go",
+      "line": 10
+    },
+    {
+      "source": "calibration",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/calibration/handlers.go",
+      "line": 11
+    },
+    {
+      "source": "calibration",
+      "target": "logger",
+      "file": "services/api-gateway/internal/calibration/handlers.go",
+      "line": 12
+    },
+    {
+      "source": "calibration",
+      "target": "assessment",
+      "file": "services/api-gateway/internal/calibration/service.go",
+      "line": 15
+    },
+    {
+      "source": "calibration",
+      "target": "goldpaper",
+      "file": "services/api-gateway/internal/calibration/service.go",
+      "line": 16
+    },
+    {
+      "source": "calibration",
+      "target": "paper",
+      "file": "services/api-gateway/internal/calibration/service.go",
+      "line": 17
+    },
+    {
+      "source": "calibration",
+      "target": "taskmaterials",
+      "file": "services/api-gateway/internal/calibration/service.go",
+      "line": 18
+    },
+    {
+      "source": "calibration",
+      "target": "paper",
+      "file": "services/api-gateway/internal/calibration/types.go",
+      "line": 5
+    },
+    {
+      "source": "capture",
+      "target": "auth",
+      "file": "services/api-gateway/internal/capture/handlers.go",
+      "line": 11
+    },
+    {
+      "source": "capture",
+      "target": "exam",
+      "file": "services/api-gateway/internal/capture/handlers.go",
+      "line": 12
+    },
+    {
+      "source": "capture",
+      "target": "files",
+      "file": "services/api-gateway/internal/capture/handlers.go",
+      "line": 13
+    },
+    {
+      "source": "capture",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/capture/handlers.go",
+      "line": 14
+    },
+    {
+      "source": "capture",
+      "target": "logger",
+      "file": "services/api-gateway/internal/capture/handlers.go",
+      "line": 15
+    },
+    {
+      "source": "capture",
+      "target": "pagination",
+      "file": "services/api-gateway/internal/capture/handlers.go",
+      "line": 16
+    },
+    {
+      "source": "capture",
+      "target": "workerruntime",
+      "file": "services/api-gateway/internal/capture/handlers.go",
+      "line": 17
+    },
+    {
+      "source": "capture",
+      "target": "auth",
+      "file": "services/api-gateway/internal/capture/scan_context.go",
+      "line": 8
+    },
+    {
+      "source": "capture",
+      "target": "exam",
+      "file": "services/api-gateway/internal/capture/scan_context.go",
+      "line": 9
+    },
+    {
+      "source": "capture",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/capture/scan_context.go",
+      "line": 10
+    },
+    {
+      "source": "capture",
+      "target": "paper",
+      "file": "services/api-gateway/internal/capture/scan_context.go",
+      "line": 11
+    },
+    {
+      "source": "capture",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/capture/target.go",
+      "line": 5
+    },
+    {
+      "source": "capture",
+      "target": "workerruntime",
+      "file": "services/api-gateway/internal/capture/template_match_store_postgres.go",
+      "line": 10
+    },
+    {
+      "source": "captureupload",
+      "target": "auth",
+      "file": "services/api-gateway/internal/captureupload/handlers.go",
+      "line": 11
+    },
+    {
+      "source": "captureupload",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/captureupload/handlers.go",
+      "line": 12
+    },
+    {
+      "source": "captureupload",
+      "target": "logger",
+      "file": "services/api-gateway/internal/captureupload/handlers.go",
+      "line": 13
+    },
+    {
+      "source": "captureupload",
+      "target": "capture",
+      "file": "services/api-gateway/internal/captureupload/service.go",
+      "line": 14
+    },
+    {
+      "source": "captureupload",
+      "target": "config",
+      "file": "services/api-gateway/internal/captureupload/service.go",
+      "line": 15
+    },
+    {
+      "source": "captureupload",
+      "target": "files",
+      "file": "services/api-gateway/internal/captureupload/service.go",
+      "line": 16
+    },
+    {
+      "source": "dashboard",
+      "target": "auth",
+      "file": "services/api-gateway/internal/dashboard/activity_store.go",
+      "line": 8
+    },
+    {
+      "source": "dashboard",
+      "target": "auth",
+      "file": "services/api-gateway/internal/dashboard/handlers.go",
+      "line": 7
+    },
+    {
+      "source": "dashboard",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/dashboard/handlers.go",
+      "line": 8
+    },
+    {
+      "source": "dashboard",
+      "target": "auth",
+      "file": "services/api-gateway/internal/dashboard/organization_postgres.go",
+      "line": 9
+    },
+    {
+      "source": "dashboard",
+      "target": "auth",
+      "file": "services/api-gateway/internal/dashboard/service.go",
+      "line": 10
+    },
+    {
+      "source": "dashboard",
+      "target": "exam",
+      "file": "services/api-gateway/internal/dashboard/service.go",
+      "line": 11
+    },
+    {
+      "source": "dashboard",
+      "target": "review",
+      "file": "services/api-gateway/internal/dashboard/service.go",
+      "line": 12
+    },
+    {
+      "source": "dashboard",
+      "target": "submission",
+      "file": "services/api-gateway/internal/dashboard/service.go",
+      "line": 13
+    },
+    {
+      "source": "db",
+      "target": "config",
+      "file": "services/api-gateway/internal/db/postgres.go",
+      "line": 13
+    },
+    {
+      "source": "deps",
+      "target": "config",
+      "file": "services/api-gateway/internal/deps/deps.go",
+      "line": 15
+    },
+    {
+      "source": "deps",
+      "target": "minioadapter",
+      "file": "services/api-gateway/internal/deps/deps.go",
+      "line": 16
+    },
+    {
+      "source": "evidence",
+      "target": "paper",
+      "file": "services/api-gateway/internal/evidence/engine.go",
+      "line": 7
+    },
+    {
+      "source": "evidence",
+      "target": "auth",
+      "file": "services/api-gateway/internal/evidence/handlers.go",
+      "line": 7
+    },
+    {
+      "source": "evidence",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/evidence/handlers.go",
+      "line": 8
+    },
+    {
+      "source": "evidence",
+      "target": "logger",
+      "file": "services/api-gateway/internal/evidence/handlers.go",
+      "line": 9
+    },
+    {
+      "source": "evidence",
+      "target": "paper",
+      "file": "services/api-gateway/internal/evidence/store_postgres.go",
+      "line": 9
+    },
+    {
+      "source": "evidence",
+      "target": "grading",
+      "file": "services/api-gateway/internal/evidence/types.go",
+      "line": 8
+    },
+    {
+      "source": "evidence",
+      "target": "paper",
+      "file": "services/api-gateway/internal/evidence/types.go",
+      "line": 9
+    },
+    {
+      "source": "exam",
+      "target": "auth",
+      "file": "services/api-gateway/internal/exam/candidate_snapshot_postgres.go",
+      "line": 8
+    },
+    {
+      "source": "exam",
+      "target": "auth",
+      "file": "services/api-gateway/internal/exam/handlers.go",
+      "line": 9
+    },
+    {
+      "source": "exam",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/exam/handlers.go",
+      "line": 10
+    },
+    {
+      "source": "exam",
+      "target": "logger",
+      "file": "services/api-gateway/internal/exam/handlers.go",
+      "line": 11
+    },
+    {
+      "source": "exam",
+      "target": "pagination",
+      "file": "services/api-gateway/internal/exam/handlers.go",
+      "line": 12
+    },
+    {
+      "source": "exam",
+      "target": "auth",
+      "file": "services/api-gateway/internal/exam/management_archive_bulk.go",
+      "line": 8
+    },
+    {
+      "source": "exam",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/exam/management_archive_handlers.go",
+      "line": 8
+    },
+    {
+      "source": "exam",
+      "target": "auth",
+      "file": "services/api-gateway/internal/exam/management_archive_memory.go",
+      "line": 8
+    },
+    {
+      "source": "exam",
+      "target": "auth",
+      "file": "services/api-gateway/internal/exam/management_archive_postgres.go",
+      "line": 14
+    },
+    {
+      "source": "exam",
+      "target": "auth",
+      "file": "services/api-gateway/internal/exam/management_archive_types.go",
+      "line": 8
+    },
+    {
+      "source": "exam",
+      "target": "auth",
+      "file": "services/api-gateway/internal/exam/management_handlers.go",
+      "line": 9
+    },
+    {
+      "source": "exam",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/exam/management_handlers.go",
+      "line": 10
+    },
+    {
+      "source": "exam",
+      "target": "pagination",
+      "file": "services/api-gateway/internal/exam/management_handlers.go",
+      "line": 11
+    },
+    {
+      "source": "exam",
+      "target": "auth",
+      "file": "services/api-gateway/internal/exam/management_memory.go",
+      "line": 9
+    },
+    {
+      "source": "exam",
+      "target": "auth",
+      "file": "services/api-gateway/internal/exam/management_postgres.go",
+      "line": 11
+    },
+    {
+      "source": "exam",
+      "target": "auth",
+      "file": "services/api-gateway/internal/exam/management_progress.go",
+      "line": 8
+    },
+    {
+      "source": "exam",
+      "target": "auth",
+      "file": "services/api-gateway/internal/exam/management_types.go",
+      "line": 7
+    },
+    {
+      "source": "exam",
+      "target": "auth",
+      "file": "services/api-gateway/internal/exam/session_memory.go",
+      "line": 8
+    },
+    {
+      "source": "exam",
+      "target": "auth",
+      "file": "services/api-gateway/internal/exam/session_postgres.go",
+      "line": 12
+    },
+    {
+      "source": "exam",
+      "target": "auth",
+      "file": "services/api-gateway/internal/exam/store_memory.go",
+      "line": 10
+    },
+    {
+      "source": "exam",
+      "target": "auth",
+      "file": "services/api-gateway/internal/exam/store_postgres.go",
+      "line": 11
+    },
+    {
+      "source": "exam",
+      "target": "auth",
+      "file": "services/api-gateway/internal/exam/template_memory.go",
+      "line": 6
+    },
+    {
+      "source": "exam",
+      "target": "auth",
+      "file": "services/api-gateway/internal/exam/template_postgres.go",
+      "line": 8
+    },
+    {
+      "source": "exam",
+      "target": "auth",
+      "file": "services/api-gateway/internal/exam/templates.go",
+      "line": 9
+    },
+    {
+      "source": "exam",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/exam/templates.go",
+      "line": 10
+    },
+    {
+      "source": "exam",
+      "target": "auth",
+      "file": "services/api-gateway/internal/exam/types.go",
+      "line": 8
+    },
+    {
+      "source": "files",
+      "target": "auth",
+      "file": "services/api-gateway/internal/files/downloads.go",
+      "line": 10
+    },
+    {
+      "source": "files",
+      "target": "binaryresource",
+      "file": "services/api-gateway/internal/files/downloads.go",
+      "line": 11
+    },
+    {
+      "source": "files",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/files/downloads.go",
+      "line": 12
+    },
+    {
+      "source": "files",
+      "target": "auth",
+      "file": "services/api-gateway/internal/files/handlers.go",
+      "line": 13
+    },
+    {
+      "source": "files",
+      "target": "binaryresourcehttp",
+      "file": "services/api-gateway/internal/files/handlers.go",
+      "line": 14
+    },
+    {
+      "source": "files",
+      "target": "config",
+      "file": "services/api-gateway/internal/files/handlers.go",
+      "line": 15
+    },
+    {
+      "source": "files",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/files/handlers.go",
+      "line": 16
+    },
+    {
+      "source": "files",
+      "target": "logger",
+      "file": "services/api-gateway/internal/files/handlers.go",
+      "line": 17
+    },
+    {
+      "source": "files",
+      "target": "config",
+      "file": "services/api-gateway/internal/files/storage_minio.go",
+      "line": 9
+    },
+    {
+      "source": "files",
+      "target": "minioadapter",
+      "file": "services/api-gateway/internal/files/storage_minio.go",
+      "line": 10
+    },
+    {
+      "source": "files",
+      "target": "auth",
+      "file": "services/api-gateway/internal/files/store_memory.go",
+      "line": 9
+    },
+    {
+      "source": "files",
+      "target": "auth",
+      "file": "services/api-gateway/internal/files/store_postgres.go",
+      "line": 11
+    },
+    {
+      "source": "files",
+      "target": "auth",
+      "file": "services/api-gateway/internal/files/types.go",
+      "line": 9
+    },
+    {
+      "source": "goldpaper",
+      "target": "auth",
+      "file": "services/api-gateway/internal/goldpaper/handlers.go",
+      "line": 11
+    },
+    {
+      "source": "goldpaper",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/goldpaper/handlers.go",
+      "line": 12
+    },
+    {
+      "source": "goldpaper",
+      "target": "logger",
+      "file": "services/api-gateway/internal/goldpaper/handlers.go",
+      "line": 13
+    },
+    {
+      "source": "graderdrift",
+      "target": "auth",
+      "file": "services/api-gateway/internal/graderdrift/handlers.go",
+      "line": 11
+    },
+    {
+      "source": "graderdrift",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/graderdrift/handlers.go",
+      "line": 12
+    },
+    {
+      "source": "graderdrift",
+      "target": "logger",
+      "file": "services/api-gateway/internal/graderdrift/handlers.go",
+      "line": 13
+    },
+    {
+      "source": "graderdrift",
+      "target": "seedquality",
+      "file": "services/api-gateway/internal/graderdrift/service.go",
+      "line": 10
+    },
+    {
+      "source": "grading",
+      "target": "auth",
+      "file": "services/api-gateway/internal/grading/handlers.go",
+      "line": 8
+    },
+    {
+      "source": "grading",
+      "target": "files",
+      "file": "services/api-gateway/internal/grading/handlers.go",
+      "line": 9
+    },
+    {
+      "source": "grading",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/grading/handlers.go",
+      "line": 10
+    },
+    {
+      "source": "grading",
+      "target": "logger",
+      "file": "services/api-gateway/internal/grading/handlers.go",
+      "line": 11
+    },
+    {
+      "source": "grading",
+      "target": "workerruntime",
+      "file": "services/api-gateway/internal/grading/handlers.go",
+      "line": 12
+    },
+    {
+      "source": "grading",
+      "target": "paper",
+      "file": "services/api-gateway/internal/grading/omr_calibration.go",
+      "line": 14
+    },
+    {
+      "source": "grading",
+      "target": "paper",
+      "file": "services/api-gateway/internal/grading/scoring_run_omr.go",
+      "line": 10
+    },
+    {
+      "source": "grading",
+      "target": "workerruntime",
+      "file": "services/api-gateway/internal/grading/scoring_run_omr.go",
+      "line": 11
+    },
+    {
+      "source": "grading",
+      "target": "assessment",
+      "file": "services/api-gateway/internal/grading/scoring_run_routing.go",
+      "line": 6
+    },
+    {
+      "source": "grading",
+      "target": "paper",
+      "file": "services/api-gateway/internal/grading/scoring_run_routing.go",
+      "line": 7
+    },
+    {
+      "source": "grading",
+      "target": "paper",
+      "file": "services/api-gateway/internal/grading/scoring_run_start.go",
+      "line": 11
+    },
+    {
+      "source": "grading",
+      "target": "paper",
+      "file": "services/api-gateway/internal/grading/store_memory.go",
+      "line": 11
+    },
+    {
+      "source": "grading",
+      "target": "paper",
+      "file": "services/api-gateway/internal/grading/store_postgres.go",
+      "line": 9
+    },
+    {
+      "source": "grading",
+      "target": "assessment",
+      "file": "services/api-gateway/internal/grading/types.go",
+      "line": 8
+    },
+    {
+      "source": "grading",
+      "target": "paper",
+      "file": "services/api-gateway/internal/grading/types.go",
+      "line": 9
+    },
+    {
+      "source": "gradingevaluation",
+      "target": "auth",
+      "file": "services/api-gateway/internal/gradingevaluation/handlers.go",
+      "line": 10
+    },
+    {
+      "source": "gradingevaluation",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/gradingevaluation/handlers.go",
+      "line": 11
+    },
+    {
+      "source": "gradingevaluation",
+      "target": "assessment",
+      "file": "services/api-gateway/internal/gradingevaluation/panel_metrics.go",
+      "line": 11
+    },
+    {
+      "source": "gradingevaluation",
+      "target": "assessment",
+      "file": "services/api-gateway/internal/gradingevaluation/service.go",
+      "line": 13
+    },
+    {
+      "source": "handlers",
+      "target": "auth",
+      "file": "services/api-gateway/internal/handlers/handlers.go",
+      "line": 10
+    },
+    {
+      "source": "handlers",
+      "target": "buildinfo",
+      "file": "services/api-gateway/internal/handlers/handlers.go",
+      "line": 11
+    },
+    {
+      "source": "handlers",
+      "target": "config",
+      "file": "services/api-gateway/internal/handlers/handlers.go",
+      "line": 12
+    },
+    {
+      "source": "handlers",
+      "target": "deps",
+      "file": "services/api-gateway/internal/handlers/handlers.go",
+      "line": 13
+    },
+    {
+      "source": "handlers",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/handlers/handlers.go",
+      "line": 14
+    },
+    {
+      "source": "handlers",
+      "target": "workerruntime",
+      "file": "services/api-gateway/internal/handlers/handlers.go",
+      "line": 15
+    },
+    {
+      "source": "httpx",
+      "target": "logger",
+      "file": "services/api-gateway/internal/httpx/response.go",
+      "line": 7
+    },
+    {
+      "source": "idempotency",
+      "target": "commandreceipt",
+      "file": "services/api-gateway/internal/idempotency/command_identity.go",
+      "line": 7
+    },
+    {
+      "source": "idempotency",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/idempotency/command_identity.go",
+      "line": 8
+    },
+    {
+      "source": "idempotency",
+      "target": "auth",
+      "file": "services/api-gateway/internal/idempotency/middleware.go",
+      "line": 16
+    },
+    {
+      "source": "idempotency",
+      "target": "commandreceipt",
+      "file": "services/api-gateway/internal/idempotency/middleware.go",
+      "line": 17
+    },
+    {
+      "source": "idempotency",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/idempotency/middleware.go",
+      "line": 18
+    },
+    {
+      "source": "imagequality",
+      "target": "capture",
+      "file": "services/api-gateway/internal/imagequality/coordinator_postgres.go",
+      "line": 8
+    },
+    {
+      "source": "imagequality",
+      "target": "submission",
+      "file": "services/api-gateway/internal/imagequality/coordinator_postgres.go",
+      "line": 9
+    },
+    {
+      "source": "imagequality",
+      "target": "workerruntime",
+      "file": "services/api-gateway/internal/imagequality/coordinator_postgres.go",
+      "line": 10
+    },
+    {
+      "source": "imagequality",
+      "target": "auth",
+      "file": "services/api-gateway/internal/imagequality/handlers.go",
+      "line": 12
+    },
+    {
+      "source": "imagequality",
+      "target": "capture",
+      "file": "services/api-gateway/internal/imagequality/handlers.go",
+      "line": 13
+    },
+    {
+      "source": "imagequality",
+      "target": "files",
+      "file": "services/api-gateway/internal/imagequality/handlers.go",
+      "line": 14
+    },
+    {
+      "source": "imagequality",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/imagequality/handlers.go",
+      "line": 15
+    },
+    {
+      "source": "imagequality",
+      "target": "logger",
+      "file": "services/api-gateway/internal/imagequality/handlers.go",
+      "line": 16
+    },
+    {
+      "source": "imagequality",
+      "target": "submission",
+      "file": "services/api-gateway/internal/imagequality/handlers.go",
+      "line": 17
+    },
+    {
+      "source": "imagequality",
+      "target": "workerruntime",
+      "file": "services/api-gateway/internal/imagequality/handlers.go",
+      "line": 18
+    },
+    {
+      "source": "mathunderstanding",
+      "target": "auth",
+      "file": "services/api-gateway/internal/mathunderstanding/handlers.go",
+      "line": 14
+    },
+    {
+      "source": "mathunderstanding",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/mathunderstanding/handlers.go",
+      "line": 15
+    },
+    {
+      "source": "mathunderstanding",
+      "target": "logger",
+      "file": "services/api-gateway/internal/mathunderstanding/handlers.go",
+      "line": 16
+    },
+    {
+      "source": "mathunderstanding",
+      "target": "workerruntime",
+      "file": "services/api-gateway/internal/mathunderstanding/handlers.go",
+      "line": 17
+    },
+    {
+      "source": "mathunderstanding",
+      "target": "paper",
+      "file": "services/api-gateway/internal/mathunderstanding/rubric.go",
+      "line": 4
+    },
+    {
+      "source": "mathunderstanding",
+      "target": "grading",
+      "file": "services/api-gateway/internal/mathunderstanding/scorer.go",
+      "line": 11
+    },
+    {
+      "source": "mathunderstanding",
+      "target": "paper",
+      "file": "services/api-gateway/internal/mathunderstanding/scorer.go",
+      "line": 12
+    },
+    {
+      "source": "mathunderstanding",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/mathunderstanding/scoring_handler.go",
+      "line": 12
+    },
+    {
+      "source": "mathunderstanding",
+      "target": "workerruntime",
+      "file": "services/api-gateway/internal/mathunderstanding/verification_runtime.go",
+      "line": 9
+    },
+    {
+      "source": "middleware",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/middleware/middleware.go",
+      "line": 14
+    },
+    {
+      "source": "middleware",
+      "target": "logger",
+      "file": "services/api-gateway/internal/middleware/middleware.go",
+      "line": 15
+    },
+    {
+      "source": "minioadapter",
+      "target": "config",
+      "file": "services/api-gateway/internal/minioadapter/client.go",
+      "line": 10
+    },
+    {
+      "source": "modelcalibration",
+      "target": "gradingevaluation",
+      "file": "services/api-gateway/internal/modelcalibration/gradingevaluation_adapter.go",
+      "line": 6
+    },
+    {
+      "source": "modelcalibration",
+      "target": "auth",
+      "file": "services/api-gateway/internal/modelcalibration/handlers.go",
+      "line": 10
+    },
+    {
+      "source": "modelcalibration",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/modelcalibration/handlers.go",
+      "line": 11
+    },
+    {
+      "source": "modelgovernance",
+      "target": "auth",
+      "file": "services/api-gateway/internal/modelgovernance/handlers.go",
+      "line": 12
+    },
+    {
+      "source": "modelgovernance",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/modelgovernance/handlers.go",
+      "line": 13
+    },
+    {
+      "source": "modelgovernance",
+      "target": "logger",
+      "file": "services/api-gateway/internal/modelgovernance/handlers.go",
+      "line": 14
+    },
+    {
+      "source": "modelgovernance",
+      "target": "pagination",
+      "file": "services/api-gateway/internal/modelgovernance/handlers.go",
+      "line": 15
+    },
+    {
+      "source": "modelgovernance",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/modelgovernance/managed_chat.go",
+      "line": 16
+    },
+    {
+      "source": "modelgovernance",
+      "target": "logger",
+      "file": "services/api-gateway/internal/modelgovernance/managed_chat.go",
+      "line": 17
+    },
+    {
+      "source": "modelgovernance",
+      "target": "auth",
+      "file": "services/api-gateway/internal/modelgovernance/managed_config_handlers.go",
+      "line": 9
+    },
+    {
+      "source": "modelgovernance",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/modelgovernance/managed_config_handlers.go",
+      "line": 10
+    },
+    {
+      "source": "modelgovernance",
+      "target": "logger",
+      "file": "services/api-gateway/internal/modelgovernance/managed_config_handlers.go",
+      "line": 11
+    },
+    {
+      "source": "modelgovernance",
+      "target": "assessment",
+      "file": "services/api-gateway/internal/modelgovernance/role_binding.go",
+      "line": 9
+    },
+    {
+      "source": "modelgovernance",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/modelgovernance/role_binding_handlers.go",
+      "line": 7
+    },
+    {
+      "source": "modelgovernance",
+      "target": "logger",
+      "file": "services/api-gateway/internal/modelgovernance/usage_ledger.go",
+      "line": 9
+    },
+    {
+      "source": "ocr",
+      "target": "auth",
+      "file": "services/api-gateway/internal/ocr/handlers.go",
+      "line": 10
+    },
+    {
+      "source": "ocr",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/ocr/handlers.go",
+      "line": 11
+    },
+    {
+      "source": "ocr",
+      "target": "logger",
+      "file": "services/api-gateway/internal/ocr/handlers.go",
+      "line": 12
+    },
+    {
+      "source": "ocr",
+      "target": "pagination",
+      "file": "services/api-gateway/internal/ocr/handlers.go",
+      "line": 13
+    },
+    {
+      "source": "ocr",
+      "target": "submission",
+      "file": "services/api-gateway/internal/ocr/handlers.go",
+      "line": 14
+    },
+    {
+      "source": "ocr",
+      "target": "workerruntime",
+      "file": "services/api-gateway/internal/ocr/handlers.go",
+      "line": 15
+    },
+    {
+      "source": "ocr",
+      "target": "workerruntime",
+      "file": "services/api-gateway/internal/ocr/runtime_contract.go",
+      "line": 3
+    },
+    {
+      "source": "ocr",
+      "target": "workerruntime",
+      "file": "services/api-gateway/internal/ocr/runtime_coordinator.go",
+      "line": 7
+    },
+    {
+      "source": "ocr",
+      "target": "workerruntime",
+      "file": "services/api-gateway/internal/ocr/runtime_coordinator_postgres.go",
+      "line": 9
+    },
+    {
+      "source": "onboarding",
+      "target": "auth",
+      "file": "services/api-gateway/internal/onboarding/handler.go",
+      "line": 8
+    },
+    {
+      "source": "onboarding",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/onboarding/handler.go",
+      "line": 9
+    },
+    {
+      "source": "orchestrator",
+      "target": "auth",
+      "file": "services/api-gateway/internal/orchestrator/handlers.go",
+      "line": 9
+    },
+    {
+      "source": "orchestrator",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/orchestrator/handlers.go",
+      "line": 10
+    },
+    {
+      "source": "orchestrator",
+      "target": "logger",
+      "file": "services/api-gateway/internal/orchestrator/handlers.go",
+      "line": 11
+    },
+    {
+      "source": "org",
+      "target": "auth",
+      "file": "services/api-gateway/internal/org/handlers.go",
+      "line": 10
+    },
+    {
+      "source": "org",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/org/handlers.go",
+      "line": 11
+    },
+    {
+      "source": "org",
+      "target": "logger",
+      "file": "services/api-gateway/internal/org/handlers.go",
+      "line": 12
+    },
+    {
+      "source": "org",
+      "target": "pagination",
+      "file": "services/api-gateway/internal/org/handlers.go",
+      "line": 13
+    },
+    {
+      "source": "outbox",
+      "target": "logger",
+      "file": "services/api-gateway/internal/outbox/publisher_log.go",
+      "line": 6
+    },
+    {
+      "source": "paper",
+      "target": "files",
+      "file": "services/api-gateway/internal/paper/document_import.go",
+      "line": 12
+    },
+    {
+      "source": "paper",
+      "target": "files",
+      "file": "services/api-gateway/internal/paper/document_source_loader.go",
+      "line": 14
+    },
+    {
+      "source": "paper",
+      "target": "files",
+      "file": "services/api-gateway/internal/paper/document_visual_loader.go",
+      "line": 13
+    },
+    {
+      "source": "paper",
+      "target": "auth",
+      "file": "services/api-gateway/internal/paper/handlers.go",
+      "line": 12
+    },
+    {
+      "source": "paper",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/paper/handlers.go",
+      "line": 13
+    },
+    {
+      "source": "paper",
+      "target": "logger",
+      "file": "services/api-gateway/internal/paper/handlers.go",
+      "line": 14
+    },
+    {
+      "source": "paper",
+      "target": "workerruntime",
+      "file": "services/api-gateway/internal/paper/paper_import_parse_commit_postgres.go",
+      "line": 9
+    },
+    {
+      "source": "paper",
+      "target": "assessment",
+      "file": "services/api-gateway/internal/paper/paper_import_policy.go",
+      "line": 8
+    },
+    {
+      "source": "paper",
+      "target": "workerruntime",
+      "file": "services/api-gateway/internal/paper/paper_import_runtime_postgres.go",
+      "line": 15
+    },
+    {
+      "source": "paper",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/paper/paper_import_structure_handlers.go",
+      "line": 6
+    },
+    {
+      "source": "paper",
+      "target": "workerruntime",
+      "file": "services/api-gateway/internal/paper/parse_task_executor.go",
+      "line": 10
+    },
+    {
+      "source": "paper",
+      "target": "assessment",
+      "file": "services/api-gateway/internal/paper/readiness_assessment_facts.go",
+      "line": 9
+    },
+    {
+      "source": "paper",
+      "target": "assessment",
+      "file": "services/api-gateway/internal/paper/readiness_scoring_policy.go",
+      "line": 8
+    },
+    {
+      "source": "paper",
+      "target": "assessment",
+      "file": "services/api-gateway/internal/paper/recognition_policy.go",
+      "line": 6
+    },
+    {
+      "source": "paper",
+      "target": "exam",
+      "file": "services/api-gateway/internal/paper/store_postgres_configuration.go",
+      "line": 12
+    },
+    {
+      "source": "platformschools",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/platformschools/handlers.go",
+      "line": 10
+    },
+    {
+      "source": "processing",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/processing/actors.go",
+      "line": 5
+    },
+    {
+      "source": "processing",
+      "target": "workflowactors",
+      "file": "services/api-gateway/internal/processing/actors.go",
+      "line": 6
+    },
+    {
+      "source": "processing",
+      "target": "binaryresourcehttp",
+      "file": "services/api-gateway/internal/processing/context.go",
+      "line": 6
+    },
+    {
+      "source": "processing",
+      "target": "files",
+      "file": "services/api-gateway/internal/processing/context.go",
+      "line": 7
+    },
+    {
+      "source": "processing",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/processing/context.go",
+      "line": 8
+    },
+    {
+      "source": "processing",
+      "target": "auth",
+      "file": "services/api-gateway/internal/processing/handlers.go",
+      "line": 12
+    },
+    {
+      "source": "processing",
+      "target": "files",
+      "file": "services/api-gateway/internal/processing/handlers.go",
+      "line": 13
+    },
+    {
+      "source": "processing",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/processing/handlers.go",
+      "line": 14
+    },
+    {
+      "source": "processing",
+      "target": "logger",
+      "file": "services/api-gateway/internal/processing/handlers.go",
+      "line": 15
+    },
+    {
+      "source": "processing",
+      "target": "workerruntime",
+      "file": "services/api-gateway/internal/processing/handlers.go",
+      "line": 16
+    },
+    {
+      "source": "processing",
+      "target": "workerruntime",
+      "file": "services/api-gateway/internal/processing/retry_postgres.go",
+      "line": 8
+    },
+    {
+      "source": "processing",
+      "target": "assessment",
+      "file": "services/api-gateway/internal/processing/service.go",
+      "line": 7
+    },
+    {
+      "source": "processing",
+      "target": "workerruntime",
+      "file": "services/api-gateway/internal/processing/service.go",
+      "line": 8
+    },
+    {
+      "source": "processing",
+      "target": "assessment",
+      "file": "services/api-gateway/internal/processing/store_memory.go",
+      "line": 10
+    },
+    {
+      "source": "processing",
+      "target": "assessment",
+      "file": "services/api-gateway/internal/processing/store_postgres.go",
+      "line": 11
+    },
+    {
+      "source": "processing",
+      "target": "assessment",
+      "file": "services/api-gateway/internal/processing/types.go",
+      "line": 10
+    },
+    {
+      "source": "qualitydashboard",
+      "target": "backmark",
+      "file": "services/api-gateway/internal/qualitydashboard/adapters.go",
+      "line": 6
+    },
+    {
+      "source": "qualitydashboard",
+      "target": "graderdrift",
+      "file": "services/api-gateway/internal/qualitydashboard/adapters.go",
+      "line": 7
+    },
+    {
+      "source": "qualitydashboard",
+      "target": "auth",
+      "file": "services/api-gateway/internal/qualitydashboard/handlers.go",
+      "line": 7
+    },
+    {
+      "source": "qualitydashboard",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/qualitydashboard/handlers.go",
+      "line": 8
+    },
+    {
+      "source": "qualitydashboard",
+      "target": "answergroup",
+      "file": "services/api-gateway/internal/qualitydashboard/service.go",
+      "line": 11
+    },
+    {
+      "source": "qualitydashboard",
+      "target": "goldpaper",
+      "file": "services/api-gateway/internal/qualitydashboard/service.go",
+      "line": 12
+    },
+    {
+      "source": "qualitydashboard",
+      "target": "review",
+      "file": "services/api-gateway/internal/qualitydashboard/service.go",
+      "line": 13
+    },
+    {
+      "source": "qualitydashboard",
+      "target": "seedquality",
+      "file": "services/api-gateway/internal/qualitydashboard/service.go",
+      "line": 14
+    },
+    {
+      "source": "qualitydashboard",
+      "target": "answergroup",
+      "file": "services/api-gateway/internal/qualitydashboard/types.go",
+      "line": 10
+    },
+    {
+      "source": "qualitydashboard",
+      "target": "goldpaper",
+      "file": "services/api-gateway/internal/qualitydashboard/types.go",
+      "line": 11
+    },
+    {
+      "source": "qualitydashboard",
+      "target": "review",
+      "file": "services/api-gateway/internal/qualitydashboard/types.go",
+      "line": 12
+    },
+    {
+      "source": "qualitydashboard",
+      "target": "seedquality",
+      "file": "services/api-gateway/internal/qualitydashboard/types.go",
+      "line": 13
+    },
+    {
+      "source": "questionbank",
+      "target": "auth",
+      "file": "services/api-gateway/internal/questionbank/handlers.go",
+      "line": 11
+    },
+    {
+      "source": "questionbank",
+      "target": "commandreceipt",
+      "file": "services/api-gateway/internal/questionbank/handlers.go",
+      "line": 12
+    },
+    {
+      "source": "questionbank",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/questionbank/handlers.go",
+      "line": 13
+    },
+    {
+      "source": "questionbank",
+      "target": "paper",
+      "file": "services/api-gateway/internal/questionbank/import.go",
+      "line": 12
+    },
+    {
+      "source": "questionbank",
+      "target": "auth",
+      "file": "services/api-gateway/internal/questionbank/import_memory.go",
+      "line": 6
+    },
+    {
+      "source": "questionbank",
+      "target": "auth",
+      "file": "services/api-gateway/internal/questionbank/import_postgres.go",
+      "line": 13
+    },
+    {
+      "source": "questionbank",
+      "target": "commandreceipt",
+      "file": "services/api-gateway/internal/questionbank/import_postgres.go",
+      "line": 14
+    },
+    {
+      "source": "questionbank",
+      "target": "auth",
+      "file": "services/api-gateway/internal/questionbank/members.go",
+      "line": 10
+    },
+    {
+      "source": "questionbank",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/questionbank/members.go",
+      "line": 11
+    },
+    {
+      "source": "questionbank",
+      "target": "auth",
+      "file": "services/api-gateway/internal/questionbank/metadata_acl_search_memory.go",
+      "line": 11
+    },
+    {
+      "source": "questionbank",
+      "target": "auth",
+      "file": "services/api-gateway/internal/questionbank/metadata_acl_search_postgres.go",
+      "line": 11
+    },
+    {
+      "source": "questionbank",
+      "target": "auth",
+      "file": "services/api-gateway/internal/questionbank/publication_memory.go",
+      "line": 5
+    },
+    {
+      "source": "questionbank",
+      "target": "auth",
+      "file": "services/api-gateway/internal/questionbank/publication_postgres.go",
+      "line": 9
+    },
+    {
+      "source": "questionbank",
+      "target": "files",
+      "file": "services/api-gateway/internal/questionbank/publication_postgres.go",
+      "line": 10
+    },
+    {
+      "source": "questionbank",
+      "target": "paper",
+      "file": "services/api-gateway/internal/questionbank/publication_postgres.go",
+      "line": 11
+    },
+    {
+      "source": "questionbank",
+      "target": "paper",
+      "file": "services/api-gateway/internal/questionbank/scoring.go",
+      "line": 11
+    },
+    {
+      "source": "questionbank",
+      "target": "assessment",
+      "file": "services/api-gateway/internal/questionbank/service.go",
+      "line": 12
+    },
+    {
+      "source": "questionbank",
+      "target": "auth",
+      "file": "services/api-gateway/internal/questionbank/service.go",
+      "line": 13
+    },
+    {
+      "source": "questionbank",
+      "target": "paper",
+      "file": "services/api-gateway/internal/questionbank/service.go",
+      "line": 14
+    },
+    {
+      "source": "questionbank",
+      "target": "auth",
+      "file": "services/api-gateway/internal/questionbank/store_memory.go",
+      "line": 12
+    },
+    {
+      "source": "questionbank",
+      "target": "commandreceipt",
+      "file": "services/api-gateway/internal/questionbank/store_memory.go",
+      "line": 13
+    },
+    {
+      "source": "questionbank",
+      "target": "auth",
+      "file": "services/api-gateway/internal/questionbank/store_postgres.go",
+      "line": 9
+    },
+    {
+      "source": "questionbank",
+      "target": "commandreceipt",
+      "file": "services/api-gateway/internal/questionbank/store_postgres.go",
+      "line": 10
+    },
+    {
+      "source": "questionbank",
+      "target": "auth",
+      "file": "services/api-gateway/internal/questionbank/types.go",
+      "line": 9
+    },
+    {
+      "source": "questionbank",
+      "target": "paper",
+      "file": "services/api-gateway/internal/questionbank/types.go",
+      "line": 10
+    },
+    {
+      "source": "regrade",
+      "target": "assessment",
+      "file": "services/api-gateway/internal/regrade/grader_context_postgres.go",
+      "line": 9
+    },
+    {
+      "source": "regrade",
+      "target": "paper",
+      "file": "services/api-gateway/internal/regrade/grader_context_postgres.go",
+      "line": 10
+    },
+    {
+      "source": "regrade",
+      "target": "taskmaterials",
+      "file": "services/api-gateway/internal/regrade/grader_context_postgres.go",
+      "line": 11
+    },
+    {
+      "source": "regrade",
+      "target": "auth",
+      "file": "services/api-gateway/internal/regrade/handlers.go",
+      "line": 11
+    },
+    {
+      "source": "regrade",
+      "target": "binaryresourcehttp",
+      "file": "services/api-gateway/internal/regrade/handlers.go",
+      "line": 12
+    },
+    {
+      "source": "regrade",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/regrade/handlers.go",
+      "line": 13
+    },
+    {
+      "source": "regrade",
+      "target": "logger",
+      "file": "services/api-gateway/internal/regrade/handlers.go",
+      "line": 14
+    },
+    {
+      "source": "regrade",
+      "target": "segment",
+      "file": "services/api-gateway/internal/regrade/handlers.go",
+      "line": 15
+    },
+    {
+      "source": "regrade",
+      "target": "paper",
+      "file": "services/api-gateway/internal/regrade/store_memory.go",
+      "line": 11
+    },
+    {
+      "source": "regrade",
+      "target": "paper",
+      "file": "services/api-gateway/internal/regrade/types.go",
+      "line": 10
+    },
+    {
+      "source": "regraderelease",
+      "target": "auth",
+      "file": "services/api-gateway/internal/regraderelease/handlers.go",
+      "line": 9
+    },
+    {
+      "source": "regraderelease",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/regraderelease/handlers.go",
+      "line": 10
+    },
+    {
+      "source": "regraderelease",
+      "target": "regrade",
+      "file": "services/api-gateway/internal/regraderelease/handlers.go",
+      "line": 11
+    },
+    {
+      "source": "regraderelease",
+      "target": "scorerelease",
+      "file": "services/api-gateway/internal/regraderelease/handlers.go",
+      "line": 12
+    },
+    {
+      "source": "regraderelease",
+      "target": "regrade",
+      "file": "services/api-gateway/internal/regraderelease/service.go",
+      "line": 10
+    },
+    {
+      "source": "regraderelease",
+      "target": "scorerelease",
+      "file": "services/api-gateway/internal/regraderelease/service.go",
+      "line": 11
+    },
+    {
+      "source": "releasegate",
+      "target": "scorerelease",
+      "file": "services/api-gateway/internal/releasegate/coordinator.go",
+      "line": 8
+    },
+    {
+      "source": "releasegate",
+      "target": "auth",
+      "file": "services/api-gateway/internal/releasegate/handlers.go",
+      "line": 9
+    },
+    {
+      "source": "releasegate",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/releasegate/handlers.go",
+      "line": 10
+    },
+    {
+      "source": "releasegate",
+      "target": "logger",
+      "file": "services/api-gateway/internal/releasegate/handlers.go",
+      "line": 11
+    },
+    {
+      "source": "releasegate",
+      "target": "scorerelease",
+      "file": "services/api-gateway/internal/releasegate/service.go",
+      "line": 13
+    },
+    {
+      "source": "releasegate",
+      "target": "scorerelease",
+      "file": "services/api-gateway/internal/releasegate/types.go",
+      "line": 11
+    },
+    {
+      "source": "report",
+      "target": "commandreceipt",
+      "file": "services/api-gateway/internal/report/command_recovery.go",
+      "line": 5
+    },
+    {
+      "source": "report",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/report/command_recovery.go",
+      "line": 6
+    },
+    {
+      "source": "report",
+      "target": "commandreceipt",
+      "file": "services/api-gateway/internal/report/handlers.go",
+      "line": 4
+    },
+    {
+      "source": "report",
+      "target": "auth",
+      "file": "services/api-gateway/internal/report/handlers.go",
+      "line": 8
+    },
+    {
+      "source": "report",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/report/handlers.go",
+      "line": 9
+    },
+    {
+      "source": "report",
+      "target": "logger",
+      "file": "services/api-gateway/internal/report/handlers.go",
+      "line": 10
+    },
+    {
+      "source": "report",
+      "target": "csvsafe",
+      "file": "services/api-gateway/internal/report/stats.go",
+      "line": 13
+    },
+    {
+      "source": "report",
+      "target": "commandreceipt",
+      "file": "services/api-gateway/internal/report/store_memory.go",
+      "line": 5
+    },
+    {
+      "source": "report",
+      "target": "commandreceipt",
+      "file": "services/api-gateway/internal/report/store_postgres.go",
+      "line": 6
+    },
+    {
+      "source": "report",
+      "target": "commandreceipt",
+      "file": "services/api-gateway/internal/report/types.go",
+      "line": 5
+    },
+    {
+      "source": "review",
+      "target": "auth",
+      "file": "services/api-gateway/internal/review/actors.go",
+      "line": 5
+    },
+    {
+      "source": "review",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/review/actors.go",
+      "line": 6
+    },
+    {
+      "source": "review",
+      "target": "workflowactors",
+      "file": "services/api-gateway/internal/review/actors.go",
+      "line": 7
+    },
+    {
+      "source": "review",
+      "target": "commandreceipt",
+      "file": "services/api-gateway/internal/review/command_recovery.go",
+      "line": 5
+    },
+    {
+      "source": "review",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/review/command_recovery.go",
+      "line": 6
+    },
+    {
+      "source": "review",
+      "target": "commandreceipt",
+      "file": "services/api-gateway/internal/review/handlers.go",
+      "line": 5
+    },
+    {
+      "source": "review",
+      "target": "aidisagreement",
+      "file": "services/api-gateway/internal/review/handlers.go",
+      "line": 13
+    },
+    {
+      "source": "review",
+      "target": "auth",
+      "file": "services/api-gateway/internal/review/handlers.go",
+      "line": 14
+    },
+    {
+      "source": "review",
+      "target": "binaryresourcehttp",
+      "file": "services/api-gateway/internal/review/handlers.go",
+      "line": 15
+    },
+    {
+      "source": "review",
+      "target": "files",
+      "file": "services/api-gateway/internal/review/handlers.go",
+      "line": 16
+    },
+    {
+      "source": "review",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/review/handlers.go",
+      "line": 17
+    },
+    {
+      "source": "review",
+      "target": "logger",
+      "file": "services/api-gateway/internal/review/handlers.go",
+      "line": 18
+    },
+    {
+      "source": "review",
+      "target": "pagination",
+      "file": "services/api-gateway/internal/review/handlers.go",
+      "line": 19
+    },
+    {
+      "source": "review",
+      "target": "seedquality",
+      "file": "services/api-gateway/internal/review/handlers.go",
+      "line": 20
+    },
+    {
+      "source": "review",
+      "target": "segment",
+      "file": "services/api-gateway/internal/review/handlers.go",
+      "line": 21
+    },
+    {
+      "source": "review",
+      "target": "commandreceipt",
+      "file": "services/api-gateway/internal/review/store_memory.go",
+      "line": 5
+    },
+    {
+      "source": "review",
+      "target": "commandreceipt",
+      "file": "services/api-gateway/internal/review/store_postgres_arbitration.go",
+      "line": 6
+    },
+    {
+      "source": "review",
+      "target": "paper",
+      "file": "services/api-gateway/internal/review/store_postgres_context.go",
+      "line": 9
+    },
+    {
+      "source": "review",
+      "target": "commandreceipt",
+      "file": "services/api-gateway/internal/review/store_postgres_tasks.go",
+      "line": 6
+    },
+    {
+      "source": "review",
+      "target": "assessment",
+      "file": "services/api-gateway/internal/review/task_context.go",
+      "line": 8
+    },
+    {
+      "source": "review",
+      "target": "paper",
+      "file": "services/api-gateway/internal/review/task_context.go",
+      "line": 9
+    },
+    {
+      "source": "review",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/review/task_context_handler.go",
+      "line": 7
+    },
+    {
+      "source": "review",
+      "target": "assessment",
+      "file": "services/api-gateway/internal/review/task_context_postgres.go",
+      "line": 9
+    },
+    {
+      "source": "review",
+      "target": "commandreceipt",
+      "file": "services/api-gateway/internal/review/types.go",
+      "line": 5
+    },
+    {
+      "source": "review",
+      "target": "assessment",
+      "file": "services/api-gateway/internal/review/types.go",
+      "line": 9
+    },
+    {
+      "source": "review",
+      "target": "paper",
+      "file": "services/api-gateway/internal/review/types.go",
+      "line": 10
+    },
+    {
+      "source": "reviewannotation",
+      "target": "auth",
+      "file": "services/api-gateway/internal/reviewannotation/handlers.go",
+      "line": 9
+    },
+    {
+      "source": "reviewannotation",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/reviewannotation/handlers.go",
+      "line": 10
+    },
+    {
+      "source": "reviewannotation",
+      "target": "logger",
+      "file": "services/api-gateway/internal/reviewannotation/handlers.go",
+      "line": 11
+    },
+    {
+      "source": "schoolassistant",
+      "target": "scorerelease",
+      "file": "services/api-gateway/internal/schoolassistant/adapters.go",
+      "line": 10
+    },
+    {
+      "source": "schoolassistant",
+      "target": "workspace",
+      "file": "services/api-gateway/internal/schoolassistant/adapters.go",
+      "line": 11
+    },
+    {
+      "source": "schoolassistant",
+      "target": "auth",
+      "file": "services/api-gateway/internal/schoolassistant/auth.go",
+      "line": 9
+    },
+    {
+      "source": "schoolassistant",
+      "target": "auth",
+      "file": "services/api-gateway/internal/schoolassistant/conversation.go",
+      "line": 12
+    },
+    {
+      "source": "schoolassistant",
+      "target": "exam",
+      "file": "services/api-gateway/internal/schoolassistant/conversation.go",
+      "line": 13
+    },
+    {
+      "source": "schoolassistant",
+      "target": "modelgovernance",
+      "file": "services/api-gateway/internal/schoolassistant/conversation.go",
+      "line": 14
+    },
+    {
+      "source": "schoolassistant",
+      "target": "modelgovernance",
+      "file": "services/api-gateway/internal/schoolassistant/conversation_capability.go",
+      "line": 9
+    },
+    {
+      "source": "schoolassistant",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/schoolassistant/conversation_handlers.go",
+      "line": 12
+    },
+    {
+      "source": "schoolassistant",
+      "target": "modelgovernance",
+      "file": "services/api-gateway/internal/schoolassistant/conversation_handlers.go",
+      "line": 13
+    },
+    {
+      "source": "schoolassistant",
+      "target": "modelgovernance",
+      "file": "services/api-gateway/internal/schoolassistant/conversation_types.go",
+      "line": 8
+    },
+    {
+      "source": "schoolassistant",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/schoolassistant/handlers.go",
+      "line": 12
+    },
+    {
+      "source": "schoolassistant",
+      "target": "auth",
+      "file": "services/api-gateway/internal/schoolassistant/service.go",
+      "line": 9
+    },
+    {
+      "source": "schoolassistant",
+      "target": "scorerelease",
+      "file": "services/api-gateway/internal/schoolassistant/service.go",
+      "line": 10
+    },
+    {
+      "source": "schoolassistant",
+      "target": "auth",
+      "file": "services/api-gateway/internal/schoolassistant/tools.go",
+      "line": 11
+    },
+    {
+      "source": "schoolassistant",
+      "target": "exam",
+      "file": "services/api-gateway/internal/schoolassistant/tools.go",
+      "line": 12
+    },
+    {
+      "source": "schoolassistant",
+      "target": "auth",
+      "file": "services/api-gateway/internal/schoolassistant/tools_search.go",
+      "line": 10
+    },
+    {
+      "source": "schoolassistant",
+      "target": "exam",
+      "file": "services/api-gateway/internal/schoolassistant/tools_search.go",
+      "line": 11
+    },
+    {
+      "source": "schoolassistant",
+      "target": "pagination",
+      "file": "services/api-gateway/internal/schoolassistant/tools_search.go",
+      "line": 12
+    },
+    {
+      "source": "schoolassistant",
+      "target": "auth",
+      "file": "services/api-gateway/internal/schoolassistant/types.go",
+      "line": 10
+    },
+    {
+      "source": "schoolassistant",
+      "target": "exam",
+      "file": "services/api-gateway/internal/schoolassistant/types.go",
+      "line": 11
+    },
+    {
+      "source": "schoolassistant",
+      "target": "releasegate",
+      "file": "services/api-gateway/internal/schoolassistant/types.go",
+      "line": 12
+    },
+    {
+      "source": "schoolassistant",
+      "target": "scorerelease",
+      "file": "services/api-gateway/internal/schoolassistant/types.go",
+      "line": 13
+    },
+    {
+      "source": "schoolassistant",
+      "target": "workspace",
+      "file": "services/api-gateway/internal/schoolassistant/types.go",
+      "line": 14
+    },
+    {
+      "source": "score",
+      "target": "commandreceipt",
+      "file": "services/api-gateway/internal/score/command_recovery.go",
+      "line": 5
+    },
+    {
+      "source": "score",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/score/command_recovery.go",
+      "line": 6
+    },
+    {
+      "source": "score",
+      "target": "commandreceipt",
+      "file": "services/api-gateway/internal/score/handlers.go",
+      "line": 4
+    },
+    {
+      "source": "score",
+      "target": "auth",
+      "file": "services/api-gateway/internal/score/handlers.go",
+      "line": 10
+    },
+    {
+      "source": "score",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/score/handlers.go",
+      "line": 11
+    },
+    {
+      "source": "score",
+      "target": "logger",
+      "file": "services/api-gateway/internal/score/handlers.go",
+      "line": 12
+    },
+    {
+      "source": "score",
+      "target": "pagination",
+      "file": "services/api-gateway/internal/score/handlers.go",
+      "line": 13
+    },
+    {
+      "source": "score",
+      "target": "commandreceipt",
+      "file": "services/api-gateway/internal/score/store_memory.go",
+      "line": 6
+    },
+    {
+      "source": "score",
+      "target": "csvsafe",
+      "file": "services/api-gateway/internal/score/store_memory.go",
+      "line": 14
+    },
+    {
+      "source": "score",
+      "target": "commandreceipt",
+      "file": "services/api-gateway/internal/score/store_postgres.go",
+      "line": 7
+    },
+    {
+      "source": "score",
+      "target": "csvsafe",
+      "file": "services/api-gateway/internal/score/store_postgres.go",
+      "line": 14
+    },
+    {
+      "source": "score",
+      "target": "commandreceipt",
+      "file": "services/api-gateway/internal/score/types.go",
+      "line": 5
+    },
+    {
+      "source": "scorerelease",
+      "target": "binaryresource",
+      "file": "services/api-gateway/internal/scorerelease/anonymous_paper.go",
+      "line": 22
+    },
+    {
+      "source": "scorerelease",
+      "target": "files",
+      "file": "services/api-gateway/internal/scorerelease/anonymous_paper.go",
+      "line": 23
+    },
+    {
+      "source": "scorerelease",
+      "target": "paper",
+      "file": "services/api-gateway/internal/scorerelease/anonymous_paper.go",
+      "line": 24
+    },
+    {
+      "source": "scorerelease",
+      "target": "auth",
+      "file": "services/api-gateway/internal/scorerelease/handlers.go",
+      "line": 11
+    },
+    {
+      "source": "scorerelease",
+      "target": "binaryresourcehttp",
+      "file": "services/api-gateway/internal/scorerelease/handlers.go",
+      "line": 12
+    },
+    {
+      "source": "scorerelease",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/scorerelease/handlers.go",
+      "line": 13
+    },
+    {
+      "source": "scorerelease",
+      "target": "logger",
+      "file": "services/api-gateway/internal/scorerelease/handlers.go",
+      "line": 14
+    },
+    {
+      "source": "scorerelease",
+      "target": "segment",
+      "file": "services/api-gateway/internal/scorerelease/handlers.go",
+      "line": 15
+    },
+    {
+      "source": "scorerelease",
+      "target": "qualitydashboard",
+      "file": "services/api-gateway/internal/scorerelease/store_postgres.go",
+      "line": 14
+    },
+    {
+      "source": "seedquality",
+      "target": "commandreceipt",
+      "file": "services/api-gateway/internal/seedquality/command_recovery.go",
+      "line": 5
+    },
+    {
+      "source": "seedquality",
+      "target": "commandreceipt",
+      "file": "services/api-gateway/internal/seedquality/context.go",
+      "line": 6
+    },
+    {
+      "source": "seedquality",
+      "target": "assessment",
+      "file": "services/api-gateway/internal/seedquality/context.go",
+      "line": 15
+    },
+    {
+      "source": "seedquality",
+      "target": "paper",
+      "file": "services/api-gateway/internal/seedquality/context.go",
+      "line": 16
+    },
+    {
+      "source": "seedquality",
+      "target": "auth",
+      "file": "services/api-gateway/internal/seedquality/handlers.go",
+      "line": 10
+    },
+    {
+      "source": "seedquality",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/seedquality/handlers.go",
+      "line": 11
+    },
+    {
+      "source": "seedquality",
+      "target": "logger",
+      "file": "services/api-gateway/internal/seedquality/handlers.go",
+      "line": 12
+    },
+    {
+      "source": "seedquality",
+      "target": "calibration",
+      "file": "services/api-gateway/internal/seedquality/service.go",
+      "line": 17
+    },
+    {
+      "source": "seedquality",
+      "target": "goldpaper",
+      "file": "services/api-gateway/internal/seedquality/service.go",
+      "line": 18
+    },
+    {
+      "source": "seedquality",
+      "target": "commandreceipt",
+      "file": "services/api-gateway/internal/seedquality/store_memory.go",
+      "line": 5
+    },
+    {
+      "source": "seedquality",
+      "target": "commandreceipt",
+      "file": "services/api-gateway/internal/seedquality/store_postgres.go",
+      "line": 6
+    },
+    {
+      "source": "seedquality",
+      "target": "commandreceipt",
+      "file": "services/api-gateway/internal/seedquality/types.go",
+      "line": 5
+    },
+    {
+      "source": "segment",
+      "target": "auth",
+      "file": "services/api-gateway/internal/segment/handlers.go",
+      "line": 10
+    },
+    {
+      "source": "segment",
+      "target": "binaryresourcehttp",
+      "file": "services/api-gateway/internal/segment/handlers.go",
+      "line": 11
+    },
+    {
+      "source": "segment",
+      "target": "files",
+      "file": "services/api-gateway/internal/segment/handlers.go",
+      "line": 12
+    },
+    {
+      "source": "segment",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/segment/handlers.go",
+      "line": 13
+    },
+    {
+      "source": "segment",
+      "target": "logger",
+      "file": "services/api-gateway/internal/segment/handlers.go",
+      "line": 14
+    },
+    {
+      "source": "segment",
+      "target": "paper",
+      "file": "services/api-gateway/internal/segment/handlers.go",
+      "line": 15
+    },
+    {
+      "source": "segment",
+      "target": "submission",
+      "file": "services/api-gateway/internal/segment/handlers.go",
+      "line": 16
+    },
+    {
+      "source": "segment",
+      "target": "binaryresource",
+      "file": "services/api-gateway/internal/segment/images.go",
+      "line": 10
+    },
+    {
+      "source": "segment",
+      "target": "files",
+      "file": "services/api-gateway/internal/segment/images.go",
+      "line": 11
+    },
+    {
+      "source": "segment",
+      "target": "submission",
+      "file": "services/api-gateway/internal/segment/images.go",
+      "line": 12
+    },
+    {
+      "source": "server",
+      "target": "auth",
+      "file": "services/api-gateway/internal/server/application_modules.go",
+      "line": 6
+    },
+    {
+      "source": "server",
+      "target": "config",
+      "file": "services/api-gateway/internal/server/application_modules.go",
+      "line": 7
+    },
+    {
+      "source": "server",
+      "target": "files",
+      "file": "services/api-gateway/internal/server/application_modules.go",
+      "line": 8
+    },
+    {
+      "source": "server",
+      "target": "idempotency",
+      "file": "services/api-gateway/internal/server/application_modules.go",
+      "line": 9
+    },
+    {
+      "source": "server",
+      "target": "modelgovernance",
+      "file": "services/api-gateway/internal/server/application_modules.go",
+      "line": 10
+    },
+    {
+      "source": "server",
+      "target": "observability",
+      "file": "services/api-gateway/internal/server/application_modules.go",
+      "line": 11
+    },
+    {
+      "source": "server",
+      "target": "paper",
+      "file": "services/api-gateway/internal/server/application_modules.go",
+      "line": 12
+    },
+    {
+      "source": "server",
+      "target": "platformschools",
+      "file": "services/api-gateway/internal/server/application_modules.go",
+      "line": 13
+    },
+    {
+      "source": "server",
+      "target": "processing",
+      "file": "services/api-gateway/internal/server/application_modules.go",
+      "line": 14
+    },
+    {
+      "source": "server",
+      "target": "schoolassistant",
+      "file": "services/api-gateway/internal/server/application_modules.go",
+      "line": 15
+    },
+    {
+      "source": "server",
+      "target": "aidisagreement",
+      "file": "services/api-gateway/internal/server/application_stores.go",
+      "line": 6
+    },
+    {
+      "source": "server",
+      "target": "aieligibility",
+      "file": "services/api-gateway/internal/server/application_stores.go",
+      "line": 7
+    },
+    {
+      "source": "server",
+      "target": "answergroup",
+      "file": "services/api-gateway/internal/server/application_stores.go",
+      "line": 8
+    },
+    {
+      "source": "server",
+      "target": "appeal",
+      "file": "services/api-gateway/internal/server/application_stores.go",
+      "line": 9
+    },
+    {
+      "source": "server",
+      "target": "assessment",
+      "file": "services/api-gateway/internal/server/application_stores.go",
+      "line": 10
+    },
+    {
+      "source": "server",
+      "target": "auth",
+      "file": "services/api-gateway/internal/server/application_stores.go",
+      "line": 11
+    },
+    {
+      "source": "server",
+      "target": "backmark",
+      "file": "services/api-gateway/internal/server/application_stores.go",
+      "line": 12
+    },
+    {
+      "source": "server",
+      "target": "calibration",
+      "file": "services/api-gateway/internal/server/application_stores.go",
+      "line": 13
+    },
+    {
+      "source": "server",
+      "target": "capture",
+      "file": "services/api-gateway/internal/server/application_stores.go",
+      "line": 14
+    },
+    {
+      "source": "server",
+      "target": "captureupload",
+      "file": "services/api-gateway/internal/server/application_stores.go",
+      "line": 15
+    },
+    {
+      "source": "server",
+      "target": "dashboard",
+      "file": "services/api-gateway/internal/server/application_stores.go",
+      "line": 16
+    },
+    {
+      "source": "server",
+      "target": "evidence",
+      "file": "services/api-gateway/internal/server/application_stores.go",
+      "line": 17
+    },
+    {
+      "source": "server",
+      "target": "exam",
+      "file": "services/api-gateway/internal/server/application_stores.go",
+      "line": 18
+    },
+    {
+      "source": "server",
+      "target": "files",
+      "file": "services/api-gateway/internal/server/application_stores.go",
+      "line": 19
+    },
+    {
+      "source": "server",
+      "target": "goldpaper",
+      "file": "services/api-gateway/internal/server/application_stores.go",
+      "line": 20
+    },
+    {
+      "source": "server",
+      "target": "graderdrift",
+      "file": "services/api-gateway/internal/server/application_stores.go",
+      "line": 21
+    },
+    {
+      "source": "server",
+      "target": "grading",
+      "file": "services/api-gateway/internal/server/application_stores.go",
+      "line": 22
+    },
+    {
+      "source": "server",
+      "target": "gradingevaluation",
+      "file": "services/api-gateway/internal/server/application_stores.go",
+      "line": 23
+    },
+    {
+      "source": "server",
+      "target": "idempotency",
+      "file": "services/api-gateway/internal/server/application_stores.go",
+      "line": 24
+    },
+    {
+      "source": "server",
+      "target": "imagequality",
+      "file": "services/api-gateway/internal/server/application_stores.go",
+      "line": 25
+    },
+    {
+      "source": "server",
+      "target": "mathunderstanding",
+      "file": "services/api-gateway/internal/server/application_stores.go",
+      "line": 26
+    },
+    {
+      "source": "server",
+      "target": "modelcalibration",
+      "file": "services/api-gateway/internal/server/application_stores.go",
+      "line": 27
+    },
+    {
+      "source": "server",
+      "target": "modelgovernance",
+      "file": "services/api-gateway/internal/server/application_stores.go",
+      "line": 28
+    },
+    {
+      "source": "server",
+      "target": "ocr",
+      "file": "services/api-gateway/internal/server/application_stores.go",
+      "line": 29
+    },
+    {
+      "source": "server",
+      "target": "orchestrator",
+      "file": "services/api-gateway/internal/server/application_stores.go",
+      "line": 30
+    },
+    {
+      "source": "server",
+      "target": "org",
+      "file": "services/api-gateway/internal/server/application_stores.go",
+      "line": 31
+    },
+    {
+      "source": "server",
+      "target": "paper",
+      "file": "services/api-gateway/internal/server/application_stores.go",
+      "line": 32
+    },
+    {
+      "source": "server",
+      "target": "platformschools",
+      "file": "services/api-gateway/internal/server/application_stores.go",
+      "line": 33
+    },
+    {
+      "source": "server",
+      "target": "processing",
+      "file": "services/api-gateway/internal/server/application_stores.go",
+      "line": 34
+    },
+    {
+      "source": "server",
+      "target": "qualitydashboard",
+      "file": "services/api-gateway/internal/server/application_stores.go",
+      "line": 35
+    },
+    {
+      "source": "server",
+      "target": "questionbank",
+      "file": "services/api-gateway/internal/server/application_stores.go",
+      "line": 36
+    },
+    {
+      "source": "server",
+      "target": "regrade",
+      "file": "services/api-gateway/internal/server/application_stores.go",
+      "line": 37
+    },
+    {
+      "source": "server",
+      "target": "releasegate",
+      "file": "services/api-gateway/internal/server/application_stores.go",
+      "line": 38
+    },
+    {
+      "source": "server",
+      "target": "report",
+      "file": "services/api-gateway/internal/server/application_stores.go",
+      "line": 39
+    },
+    {
+      "source": "server",
+      "target": "review",
+      "file": "services/api-gateway/internal/server/application_stores.go",
+      "line": 40
+    },
+    {
+      "source": "server",
+      "target": "reviewannotation",
+      "file": "services/api-gateway/internal/server/application_stores.go",
+      "line": 41
+    },
+    {
+      "source": "server",
+      "target": "score",
+      "file": "services/api-gateway/internal/server/application_stores.go",
+      "line": 42
+    },
+    {
+      "source": "server",
+      "target": "scorerelease",
+      "file": "services/api-gateway/internal/server/application_stores.go",
+      "line": 43
+    },
+    {
+      "source": "server",
+      "target": "seedquality",
+      "file": "services/api-gateway/internal/server/application_stores.go",
+      "line": 44
+    },
+    {
+      "source": "server",
+      "target": "segment",
+      "file": "services/api-gateway/internal/server/application_stores.go",
+      "line": 45
+    },
+    {
+      "source": "server",
+      "target": "studentportal",
+      "file": "services/api-gateway/internal/server/application_stores.go",
+      "line": 46
+    },
+    {
+      "source": "server",
+      "target": "subjective",
+      "file": "services/api-gateway/internal/server/application_stores.go",
+      "line": 47
+    },
+    {
+      "source": "server",
+      "target": "submission",
+      "file": "services/api-gateway/internal/server/application_stores.go",
+      "line": 48
+    },
+    {
+      "source": "server",
+      "target": "workerruntime",
+      "file": "services/api-gateway/internal/server/application_stores.go",
+      "line": 49
+    },
+    {
+      "source": "server",
+      "target": "auth",
+      "file": "services/api-gateway/internal/server/infrastructure.go",
+      "line": 9
+    },
+    {
+      "source": "server",
+      "target": "config",
+      "file": "services/api-gateway/internal/server/infrastructure.go",
+      "line": 10
+    },
+    {
+      "source": "server",
+      "target": "db",
+      "file": "services/api-gateway/internal/server/infrastructure.go",
+      "line": 11
+    },
+    {
+      "source": "server",
+      "target": "deps",
+      "file": "services/api-gateway/internal/server/infrastructure.go",
+      "line": 12
+    },
+    {
+      "source": "server",
+      "target": "files",
+      "file": "services/api-gateway/internal/server/infrastructure.go",
+      "line": 13
+    },
+    {
+      "source": "server",
+      "target": "logger",
+      "file": "services/api-gateway/internal/server/infrastructure.go",
+      "line": 14
+    },
+    {
+      "source": "server",
+      "target": "observability",
+      "file": "services/api-gateway/internal/server/infrastructure.go",
+      "line": 15
+    },
+    {
+      "source": "server",
+      "target": "outbox",
+      "file": "services/api-gateway/internal/server/infrastructure.go",
+      "line": 16
+    },
+    {
+      "source": "server",
+      "target": "paper",
+      "file": "services/api-gateway/internal/server/infrastructure.go",
+      "line": 17
+    },
+    {
+      "source": "server",
+      "target": "processing",
+      "file": "services/api-gateway/internal/server/infrastructure.go",
+      "line": 18
+    },
+    {
+      "source": "server",
+      "target": "aidisagreement",
+      "file": "services/api-gateway/internal/server/module_ai_foundation.go",
+      "line": 4
+    },
+    {
+      "source": "server",
+      "target": "aieligibility",
+      "file": "services/api-gateway/internal/server/module_ai_foundation.go",
+      "line": 5
+    },
+    {
+      "source": "server",
+      "target": "gradingevaluation",
+      "file": "services/api-gateway/internal/server/module_ai_foundation.go",
+      "line": 6
+    },
+    {
+      "source": "server",
+      "target": "modelcalibration",
+      "file": "services/api-gateway/internal/server/module_ai_foundation.go",
+      "line": 7
+    },
+    {
+      "source": "server",
+      "target": "aidisagreement",
+      "file": "services/api-gateway/internal/server/module_ai_governance.go",
+      "line": 4
+    },
+    {
+      "source": "server",
+      "target": "aieligibility",
+      "file": "services/api-gateway/internal/server/module_ai_governance.go",
+      "line": 5
+    },
+    {
+      "source": "server",
+      "target": "auth",
+      "file": "services/api-gateway/internal/server/module_ai_governance.go",
+      "line": 6
+    },
+    {
+      "source": "server",
+      "target": "config",
+      "file": "services/api-gateway/internal/server/module_ai_governance.go",
+      "line": 7
+    },
+    {
+      "source": "server",
+      "target": "gradingevaluation",
+      "file": "services/api-gateway/internal/server/module_ai_governance.go",
+      "line": 8
+    },
+    {
+      "source": "server",
+      "target": "mathunderstanding",
+      "file": "services/api-gateway/internal/server/module_ai_governance.go",
+      "line": 9
+    },
+    {
+      "source": "server",
+      "target": "modelcalibration",
+      "file": "services/api-gateway/internal/server/module_ai_governance.go",
+      "line": 10
+    },
+    {
+      "source": "server",
+      "target": "modelgovernance",
+      "file": "services/api-gateway/internal/server/module_ai_governance.go",
+      "line": 11
+    },
+    {
+      "source": "server",
+      "target": "review",
+      "file": "services/api-gateway/internal/server/module_ai_governance.go",
+      "line": 12
+    },
+    {
+      "source": "server",
+      "target": "workerruntime",
+      "file": "services/api-gateway/internal/server/module_ai_governance.go",
+      "line": 13
+    },
+    {
+      "source": "server",
+      "target": "auth",
+      "file": "services/api-gateway/internal/server/module_capture.go",
+      "line": 4
+    },
+    {
+      "source": "server",
+      "target": "capture",
+      "file": "services/api-gateway/internal/server/module_capture.go",
+      "line": 5
+    },
+    {
+      "source": "server",
+      "target": "captureupload",
+      "file": "services/api-gateway/internal/server/module_capture.go",
+      "line": 6
+    },
+    {
+      "source": "server",
+      "target": "config",
+      "file": "services/api-gateway/internal/server/module_capture.go",
+      "line": 7
+    },
+    {
+      "source": "server",
+      "target": "exam",
+      "file": "services/api-gateway/internal/server/module_capture.go",
+      "line": 8
+    },
+    {
+      "source": "server",
+      "target": "files",
+      "file": "services/api-gateway/internal/server/module_capture.go",
+      "line": 9
+    },
+    {
+      "source": "server",
+      "target": "imagequality",
+      "file": "services/api-gateway/internal/server/module_capture.go",
+      "line": 10
+    },
+    {
+      "source": "server",
+      "target": "ocr",
+      "file": "services/api-gateway/internal/server/module_capture.go",
+      "line": 11
+    },
+    {
+      "source": "server",
+      "target": "orchestrator",
+      "file": "services/api-gateway/internal/server/module_capture.go",
+      "line": 12
+    },
+    {
+      "source": "server",
+      "target": "paper",
+      "file": "services/api-gateway/internal/server/module_capture.go",
+      "line": 13
+    },
+    {
+      "source": "server",
+      "target": "processing",
+      "file": "services/api-gateway/internal/server/module_capture.go",
+      "line": 14
+    },
+    {
+      "source": "server",
+      "target": "submission",
+      "file": "services/api-gateway/internal/server/module_capture.go",
+      "line": 15
+    },
+    {
+      "source": "server",
+      "target": "workerruntime",
+      "file": "services/api-gateway/internal/server/module_capture.go",
+      "line": 16
+    },
+    {
+      "source": "server",
+      "target": "assessment",
+      "file": "services/api-gateway/internal/server/module_exam.go",
+      "line": 5
+    },
+    {
+      "source": "server",
+      "target": "auth",
+      "file": "services/api-gateway/internal/server/module_exam.go",
+      "line": 6
+    },
+    {
+      "source": "server",
+      "target": "config",
+      "file": "services/api-gateway/internal/server/module_exam.go",
+      "line": 7
+    },
+    {
+      "source": "server",
+      "target": "dashboard",
+      "file": "services/api-gateway/internal/server/module_exam.go",
+      "line": 8
+    },
+    {
+      "source": "server",
+      "target": "exam",
+      "file": "services/api-gateway/internal/server/module_exam.go",
+      "line": 9
+    },
+    {
+      "source": "server",
+      "target": "files",
+      "file": "services/api-gateway/internal/server/module_exam.go",
+      "line": 10
+    },
+    {
+      "source": "server",
+      "target": "paper",
+      "file": "services/api-gateway/internal/server/module_exam.go",
+      "line": 11
+    },
+    {
+      "source": "server",
+      "target": "questionbank",
+      "file": "services/api-gateway/internal/server/module_exam.go",
+      "line": 12
+    },
+    {
+      "source": "server",
+      "target": "review",
+      "file": "services/api-gateway/internal/server/module_exam.go",
+      "line": 13
+    },
+    {
+      "source": "server",
+      "target": "segment",
+      "file": "services/api-gateway/internal/server/module_exam.go",
+      "line": 14
+    },
+    {
+      "source": "server",
+      "target": "submission",
+      "file": "services/api-gateway/internal/server/module_exam.go",
+      "line": 15
+    },
+    {
+      "source": "server",
+      "target": "workspace",
+      "file": "services/api-gateway/internal/server/module_exam.go",
+      "line": 16
+    },
+    {
+      "source": "server",
+      "target": "aieligibility",
+      "file": "services/api-gateway/internal/server/module_grading.go",
+      "line": 5
+    },
+    {
+      "source": "server",
+      "target": "answergroup",
+      "file": "services/api-gateway/internal/server/module_grading.go",
+      "line": 6
+    },
+    {
+      "source": "server",
+      "target": "assessment",
+      "file": "services/api-gateway/internal/server/module_grading.go",
+      "line": 7
+    },
+    {
+      "source": "server",
+      "target": "auth",
+      "file": "services/api-gateway/internal/server/module_grading.go",
+      "line": 8
+    },
+    {
+      "source": "server",
+      "target": "backmark",
+      "file": "services/api-gateway/internal/server/module_grading.go",
+      "line": 9
+    },
+    {
+      "source": "server",
+      "target": "calibration",
+      "file": "services/api-gateway/internal/server/module_grading.go",
+      "line": 10
+    },
+    {
+      "source": "server",
+      "target": "config",
+      "file": "services/api-gateway/internal/server/module_grading.go",
+      "line": 11
+    },
+    {
+      "source": "server",
+      "target": "evidence",
+      "file": "services/api-gateway/internal/server/module_grading.go",
+      "line": 12
+    },
+    {
+      "source": "server",
+      "target": "files",
+      "file": "services/api-gateway/internal/server/module_grading.go",
+      "line": 13
+    },
+    {
+      "source": "server",
+      "target": "goldpaper",
+      "file": "services/api-gateway/internal/server/module_grading.go",
+      "line": 14
+    },
+    {
+      "source": "server",
+      "target": "graderdrift",
+      "file": "services/api-gateway/internal/server/module_grading.go",
+      "line": 15
+    },
+    {
+      "source": "server",
+      "target": "grading",
+      "file": "services/api-gateway/internal/server/module_grading.go",
+      "line": 16
+    },
+    {
+      "source": "server",
+      "target": "mathunderstanding",
+      "file": "services/api-gateway/internal/server/module_grading.go",
+      "line": 17
+    },
+    {
+      "source": "server",
+      "target": "processing",
+      "file": "services/api-gateway/internal/server/module_grading.go",
+      "line": 18
+    },
+    {
+      "source": "server",
+      "target": "qualitydashboard",
+      "file": "services/api-gateway/internal/server/module_grading.go",
+      "line": 19
+    },
+    {
+      "source": "server",
+      "target": "regrade",
+      "file": "services/api-gateway/internal/server/module_grading.go",
+      "line": 20
+    },
+    {
+      "source": "server",
+      "target": "review",
+      "file": "services/api-gateway/internal/server/module_grading.go",
+      "line": 21
+    },
+    {
+      "source": "server",
+      "target": "reviewannotation",
+      "file": "services/api-gateway/internal/server/module_grading.go",
+      "line": 22
+    },
+    {
+      "source": "server",
+      "target": "seedquality",
+      "file": "services/api-gateway/internal/server/module_grading.go",
+      "line": 23
+    },
+    {
+      "source": "server",
+      "target": "segment",
+      "file": "services/api-gateway/internal/server/module_grading.go",
+      "line": 24
+    },
+    {
+      "source": "server",
+      "target": "subjective",
+      "file": "services/api-gateway/internal/server/module_grading.go",
+      "line": 25
+    },
+    {
+      "source": "server",
+      "target": "taskmaterials",
+      "file": "services/api-gateway/internal/server/module_grading.go",
+      "line": 26
+    },
+    {
+      "source": "server",
+      "target": "workerruntime",
+      "file": "services/api-gateway/internal/server/module_grading.go",
+      "line": 27
+    },
+    {
+      "source": "server",
+      "target": "auth",
+      "file": "services/api-gateway/internal/server/module_identity.go",
+      "line": 4
+    },
+    {
+      "source": "server",
+      "target": "config",
+      "file": "services/api-gateway/internal/server/module_identity.go",
+      "line": 5
+    },
+    {
+      "source": "server",
+      "target": "org",
+      "file": "services/api-gateway/internal/server/module_identity.go",
+      "line": 6
+    },
+    {
+      "source": "server",
+      "target": "appeal",
+      "file": "services/api-gateway/internal/server/module_release.go",
+      "line": 6
+    },
+    {
+      "source": "server",
+      "target": "auth",
+      "file": "services/api-gateway/internal/server/module_release.go",
+      "line": 7
+    },
+    {
+      "source": "server",
+      "target": "exam",
+      "file": "services/api-gateway/internal/server/module_release.go",
+      "line": 8
+    },
+    {
+      "source": "server",
+      "target": "files",
+      "file": "services/api-gateway/internal/server/module_release.go",
+      "line": 9
+    },
+    {
+      "source": "server",
+      "target": "regrade",
+      "file": "services/api-gateway/internal/server/module_release.go",
+      "line": 10
+    },
+    {
+      "source": "server",
+      "target": "regraderelease",
+      "file": "services/api-gateway/internal/server/module_release.go",
+      "line": 11
+    },
+    {
+      "source": "server",
+      "target": "releasegate",
+      "file": "services/api-gateway/internal/server/module_release.go",
+      "line": 12
+    },
+    {
+      "source": "server",
+      "target": "report",
+      "file": "services/api-gateway/internal/server/module_release.go",
+      "line": 13
+    },
+    {
+      "source": "server",
+      "target": "score",
+      "file": "services/api-gateway/internal/server/module_release.go",
+      "line": 14
+    },
+    {
+      "source": "server",
+      "target": "scorerelease",
+      "file": "services/api-gateway/internal/server/module_release.go",
+      "line": 15
+    },
+    {
+      "source": "server",
+      "target": "segment",
+      "file": "services/api-gateway/internal/server/module_release.go",
+      "line": 16
+    },
+    {
+      "source": "server",
+      "target": "studentportal",
+      "file": "services/api-gateway/internal/server/module_release.go",
+      "line": 17
+    },
+    {
+      "source": "server",
+      "target": "schoolassistant",
+      "file": "services/api-gateway/internal/server/module_school_assistant.go",
+      "line": 3
+    },
+    {
+      "source": "server",
+      "target": "auth",
+      "file": "services/api-gateway/internal/server/onboarding_readers.go",
+      "line": 7
+    },
+    {
+      "source": "server",
+      "target": "exam",
+      "file": "services/api-gateway/internal/server/onboarding_readers.go",
+      "line": 8
+    },
+    {
+      "source": "server",
+      "target": "handlers",
+      "file": "services/api-gateway/internal/server/onboarding_readers.go",
+      "line": 9
+    },
+    {
+      "source": "server",
+      "target": "modelgovernance",
+      "file": "services/api-gateway/internal/server/onboarding_readers.go",
+      "line": 10
+    },
+    {
+      "source": "server",
+      "target": "onboarding",
+      "file": "services/api-gateway/internal/server/onboarding_readers.go",
+      "line": 11
+    },
+    {
+      "source": "server",
+      "target": "org",
+      "file": "services/api-gateway/internal/server/onboarding_readers.go",
+      "line": 12
+    },
+    {
+      "source": "server",
+      "target": "auth",
+      "file": "services/api-gateway/internal/server/router_context.go",
+      "line": 7
+    },
+    {
+      "source": "server",
+      "target": "config",
+      "file": "services/api-gateway/internal/server/router_context.go",
+      "line": 8
+    },
+    {
+      "source": "server",
+      "target": "handlers",
+      "file": "services/api-gateway/internal/server/router_context.go",
+      "line": 9
+    },
+    {
+      "source": "server",
+      "target": "observability",
+      "file": "services/api-gateway/internal/server/router_context.go",
+      "line": 10
+    },
+    {
+      "source": "server",
+      "target": "onboarding",
+      "file": "services/api-gateway/internal/server/router_context.go",
+      "line": 11
+    },
+    {
+      "source": "server",
+      "target": "auth",
+      "file": "services/api-gateway/internal/server/router_guards.go",
+      "line": 7
+    },
+    {
+      "source": "server",
+      "target": "config",
+      "file": "services/api-gateway/internal/server/router_guards.go",
+      "line": 8
+    },
+    {
+      "source": "server",
+      "target": "idempotency",
+      "file": "services/api-gateway/internal/server/router_guards.go",
+      "line": 9
+    },
+    {
+      "source": "server",
+      "target": "workerruntime",
+      "file": "services/api-gateway/internal/server/router_guards.go",
+      "line": 10
+    },
+    {
+      "source": "server",
+      "target": "auth",
+      "file": "services/api-gateway/internal/server/routes_auth.go",
+      "line": 4
+    },
+    {
+      "source": "server",
+      "target": "dashboard",
+      "file": "services/api-gateway/internal/server/routes_auth.go",
+      "line": 5
+    },
+    {
+      "source": "server",
+      "target": "captureupload",
+      "file": "services/api-gateway/internal/server/routes_capture.go",
+      "line": 4
+    },
+    {
+      "source": "server",
+      "target": "processing",
+      "file": "services/api-gateway/internal/server/routes_capture.go",
+      "line": 5
+    },
+    {
+      "source": "server",
+      "target": "mathunderstanding",
+      "file": "services/api-gateway/internal/server/routes_exam.go",
+      "line": 4
+    },
+    {
+      "source": "server",
+      "target": "workspace",
+      "file": "services/api-gateway/internal/server/routes_exam.go",
+      "line": 5
+    },
+    {
+      "source": "server",
+      "target": "auth",
+      "file": "services/api-gateway/internal/server/routes_files.go",
+      "line": 4
+    },
+    {
+      "source": "server",
+      "target": "aidisagreement",
+      "file": "services/api-gateway/internal/server/routes_governance.go",
+      "line": 5
+    },
+    {
+      "source": "server",
+      "target": "aieligibility",
+      "file": "services/api-gateway/internal/server/routes_governance.go",
+      "line": 6
+    },
+    {
+      "source": "server",
+      "target": "auth",
+      "file": "services/api-gateway/internal/server/routes_governance.go",
+      "line": 7
+    },
+    {
+      "source": "server",
+      "target": "gradingevaluation",
+      "file": "services/api-gateway/internal/server/routes_governance.go",
+      "line": 8
+    },
+    {
+      "source": "server",
+      "target": "modelcalibration",
+      "file": "services/api-gateway/internal/server/routes_governance.go",
+      "line": 9
+    },
+    {
+      "source": "server",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/server/routes_governance.go",
+      "line": 15
+    },
+    {
+      "source": "server",
+      "target": "auth",
+      "file": "services/api-gateway/internal/server/routes_paper.go",
+      "line": 4
+    },
+    {
+      "source": "server",
+      "target": "idempotency",
+      "file": "services/api-gateway/internal/server/routes_paper.go",
+      "line": 5
+    },
+    {
+      "source": "server",
+      "target": "releasegate",
+      "file": "services/api-gateway/internal/server/routes_release.go",
+      "line": 4
+    },
+    {
+      "source": "server",
+      "target": "scorerelease",
+      "file": "services/api-gateway/internal/server/routes_release.go",
+      "line": 5
+    },
+    {
+      "source": "server",
+      "target": "studentportal",
+      "file": "services/api-gateway/internal/server/routes_release.go",
+      "line": 6
+    },
+    {
+      "source": "server",
+      "target": "answergroup",
+      "file": "services/api-gateway/internal/server/routes_review.go",
+      "line": 4
+    },
+    {
+      "source": "server",
+      "target": "auth",
+      "file": "services/api-gateway/internal/server/routes_review.go",
+      "line": 5
+    },
+    {
+      "source": "server",
+      "target": "backmark",
+      "file": "services/api-gateway/internal/server/routes_review.go",
+      "line": 6
+    },
+    {
+      "source": "server",
+      "target": "calibration",
+      "file": "services/api-gateway/internal/server/routes_review.go",
+      "line": 7
+    },
+    {
+      "source": "server",
+      "target": "goldpaper",
+      "file": "services/api-gateway/internal/server/routes_review.go",
+      "line": 8
+    },
+    {
+      "source": "server",
+      "target": "graderdrift",
+      "file": "services/api-gateway/internal/server/routes_review.go",
+      "line": 9
+    },
+    {
+      "source": "server",
+      "target": "qualitydashboard",
+      "file": "services/api-gateway/internal/server/routes_review.go",
+      "line": 10
+    },
+    {
+      "source": "server",
+      "target": "regrade",
+      "file": "services/api-gateway/internal/server/routes_review.go",
+      "line": 11
+    },
+    {
+      "source": "server",
+      "target": "regraderelease",
+      "file": "services/api-gateway/internal/server/routes_review.go",
+      "line": 12
+    },
+    {
+      "source": "server",
+      "target": "seedquality",
+      "file": "services/api-gateway/internal/server/routes_review.go",
+      "line": 13
+    },
+    {
+      "source": "server",
+      "target": "schoolassistant",
+      "file": "services/api-gateway/internal/server/routes_school_assistant.go",
+      "line": 6
+    },
+    {
+      "source": "server",
+      "target": "auth",
+      "file": "services/api-gateway/internal/server/server.go",
+      "line": 8
+    },
+    {
+      "source": "server",
+      "target": "config",
+      "file": "services/api-gateway/internal/server/server.go",
+      "line": 9
+    },
+    {
+      "source": "server",
+      "target": "deps",
+      "file": "services/api-gateway/internal/server/server.go",
+      "line": 10
+    },
+    {
+      "source": "server",
+      "target": "exam",
+      "file": "services/api-gateway/internal/server/server.go",
+      "line": 11
+    },
+    {
+      "source": "server",
+      "target": "files",
+      "file": "services/api-gateway/internal/server/server.go",
+      "line": 12
+    },
+    {
+      "source": "server",
+      "target": "logger",
+      "file": "services/api-gateway/internal/server/server.go",
+      "line": 13
+    },
+    {
+      "source": "server",
+      "target": "middleware",
+      "file": "services/api-gateway/internal/server/server.go",
+      "line": 14
+    },
+    {
+      "source": "server",
+      "target": "modelgovernance",
+      "file": "services/api-gateway/internal/server/server.go",
+      "line": 15
+    },
+    {
+      "source": "server",
+      "target": "observability",
+      "file": "services/api-gateway/internal/server/server.go",
+      "line": 16
+    },
+    {
+      "source": "server",
+      "target": "org",
+      "file": "services/api-gateway/internal/server/server.go",
+      "line": 17
+    },
+    {
+      "source": "server",
+      "target": "paper",
+      "file": "services/api-gateway/internal/server/server.go",
+      "line": 18
+    },
+    {
+      "source": "server",
+      "target": "regrade",
+      "file": "services/api-gateway/internal/server/server.go",
+      "line": 19
+    },
+    {
+      "source": "server",
+      "target": "releasegate",
+      "file": "services/api-gateway/internal/server/server.go",
+      "line": 20
+    },
+    {
+      "source": "server",
+      "target": "scorerelease",
+      "file": "services/api-gateway/internal/server/server.go",
+      "line": 21
+    },
+    {
+      "source": "server",
+      "target": "submission",
+      "file": "services/api-gateway/internal/server/server.go",
+      "line": 22
+    },
+    {
+      "source": "server",
+      "target": "imagequality",
+      "file": "services/api-gateway/internal/server/worker_source_lease.go",
+      "line": 7
+    },
+    {
+      "source": "server",
+      "target": "workerruntime",
+      "file": "services/api-gateway/internal/server/worker_source_lease.go",
+      "line": 8
+    },
+    {
+      "source": "studentportal",
+      "target": "auth",
+      "file": "services/api-gateway/internal/studentportal/handlers.go",
+      "line": 7
+    },
+    {
+      "source": "studentportal",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/studentportal/handlers.go",
+      "line": 8
+    },
+    {
+      "source": "subjective",
+      "target": "files",
+      "file": "services/api-gateway/internal/subjective/active_crop_resolver.go",
+      "line": 14
+    },
+    {
+      "source": "subjective",
+      "target": "segment",
+      "file": "services/api-gateway/internal/subjective/active_crop_resolver.go",
+      "line": 15
+    },
+    {
+      "source": "subjective",
+      "target": "grading",
+      "file": "services/api-gateway/internal/subjective/adapter.go",
+      "line": 7
+    },
+    {
+      "source": "subjective",
+      "target": "grading",
+      "file": "services/api-gateway/internal/subjective/adapter_http.go",
+      "line": 17
+    },
+    {
+      "source": "subjective",
+      "target": "aieligibility",
+      "file": "services/api-gateway/internal/subjective/eligibility.go",
+      "line": 7
+    },
+    {
+      "source": "subjective",
+      "target": "assessment",
+      "file": "services/api-gateway/internal/subjective/eligibility.go",
+      "line": 8
+    },
+    {
+      "source": "subjective",
+      "target": "modelcalibration",
+      "file": "services/api-gateway/internal/subjective/eligibility.go",
+      "line": 9
+    },
+    {
+      "source": "subjective",
+      "target": "aieligibility",
+      "file": "services/api-gateway/internal/subjective/grade_settlement_pipeline.go",
+      "line": 7
+    },
+    {
+      "source": "subjective",
+      "target": "aieligibility",
+      "file": "services/api-gateway/internal/subjective/grading_agent_v2_builder.go",
+      "line": 14
+    },
+    {
+      "source": "subjective",
+      "target": "mathunderstanding",
+      "file": "services/api-gateway/internal/subjective/grading_agent_v2_builder.go",
+      "line": 15
+    },
+    {
+      "source": "subjective",
+      "target": "paper",
+      "file": "services/api-gateway/internal/subjective/grading_agent_v2_builder.go",
+      "line": 16
+    },
+    {
+      "source": "subjective",
+      "target": "paper",
+      "file": "services/api-gateway/internal/subjective/grading_reference.go",
+      "line": 10
+    },
+    {
+      "source": "subjective",
+      "target": "assessment",
+      "file": "services/api-gateway/internal/subjective/handlers.go",
+      "line": 6
+    },
+    {
+      "source": "subjective",
+      "target": "auth",
+      "file": "services/api-gateway/internal/subjective/handlers.go",
+      "line": 7
+    },
+    {
+      "source": "subjective",
+      "target": "gradingevaluation",
+      "file": "services/api-gateway/internal/subjective/handlers.go",
+      "line": 8
+    },
+    {
+      "source": "subjective",
+      "target": "modelcalibration",
+      "file": "services/api-gateway/internal/subjective/handlers.go",
+      "line": 9
+    },
+    {
+      "source": "subjective",
+      "target": "workerruntime",
+      "file": "services/api-gateway/internal/subjective/handlers.go",
+      "line": 10
+    },
+    {
+      "source": "subjective",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/subjective/handlers_batch.go",
+      "line": 8
+    },
+    {
+      "source": "subjective",
+      "target": "workerruntime",
+      "file": "services/api-gateway/internal/subjective/handlers_batch.go",
+      "line": 9
+    },
+    {
+      "source": "subjective",
+      "target": "grading",
+      "file": "services/api-gateway/internal/subjective/handlers_grade.go",
+      "line": 7
+    },
+    {
+      "source": "subjective",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/subjective/handlers_grade.go",
+      "line": 8
+    },
+    {
+      "source": "subjective",
+      "target": "auth",
+      "file": "services/api-gateway/internal/subjective/handlers_support.go",
+      "line": 9
+    },
+    {
+      "source": "subjective",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/subjective/handlers_support.go",
+      "line": 10
+    },
+    {
+      "source": "subjective",
+      "target": "logger",
+      "file": "services/api-gateway/internal/subjective/handlers_support.go",
+      "line": 11
+    },
+    {
+      "source": "subjective",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/subjective/handlers_worker.go",
+      "line": 7
+    },
+    {
+      "source": "subjective",
+      "target": "workerruntime",
+      "file": "services/api-gateway/internal/subjective/handlers_worker.go",
+      "line": 8
+    },
+    {
+      "source": "subjective",
+      "target": "assessment",
+      "file": "services/api-gateway/internal/subjective/math_evidence.go",
+      "line": 10
+    },
+    {
+      "source": "subjective",
+      "target": "mathunderstanding",
+      "file": "services/api-gateway/internal/subjective/math_evidence.go",
+      "line": 11
+    },
+    {
+      "source": "subjective",
+      "target": "aieligibility",
+      "file": "services/api-gateway/internal/subjective/math_grading.go",
+      "line": 10
+    },
+    {
+      "source": "subjective",
+      "target": "grading",
+      "file": "services/api-gateway/internal/subjective/math_grading.go",
+      "line": 11
+    },
+    {
+      "source": "subjective",
+      "target": "mathunderstanding",
+      "file": "services/api-gateway/internal/subjective/math_grading.go",
+      "line": 12
+    },
+    {
+      "source": "subjective",
+      "target": "modelgovernance",
+      "file": "services/api-gateway/internal/subjective/panel_agent_binding.go",
+      "line": 7
+    },
+    {
+      "source": "subjective",
+      "target": "gradingdisagreement",
+      "file": "services/api-gateway/internal/subjective/panel_disagreement.go",
+      "line": 10
+    },
+    {
+      "source": "subjective",
+      "target": "paper",
+      "file": "services/api-gateway/internal/subjective/panel_disagreement.go",
+      "line": 11
+    },
+    {
+      "source": "subjective",
+      "target": "aieligibility",
+      "file": "services/api-gateway/internal/subjective/panel_orchestrator.go",
+      "line": 11
+    },
+    {
+      "source": "subjective",
+      "target": "modelgovernance",
+      "file": "services/api-gateway/internal/subjective/panel_orchestrator.go",
+      "line": 12
+    },
+    {
+      "source": "subjective",
+      "target": "assessment",
+      "file": "services/api-gateway/internal/subjective/panel_policy.go",
+      "line": 12
+    },
+    {
+      "source": "subjective",
+      "target": "gradingevaluation",
+      "file": "services/api-gateway/internal/subjective/panel_policy.go",
+      "line": 13
+    },
+    {
+      "source": "subjective",
+      "target": "assessment",
+      "file": "services/api-gateway/internal/subjective/panel_policy_store_memory.go",
+      "line": 7
+    },
+    {
+      "source": "subjective",
+      "target": "gradingevaluation",
+      "file": "services/api-gateway/internal/subjective/panel_policy_store_memory.go",
+      "line": 8
+    },
+    {
+      "source": "subjective",
+      "target": "assessment",
+      "file": "services/api-gateway/internal/subjective/panel_policy_store_postgres.go",
+      "line": 10
+    },
+    {
+      "source": "subjective",
+      "target": "gradingevaluation",
+      "file": "services/api-gateway/internal/subjective/panel_policy_store_postgres.go",
+      "line": 11
+    },
+    {
+      "source": "subjective",
+      "target": "assessment",
+      "file": "services/api-gateway/internal/subjective/panel_shadow_runner.go",
+      "line": 14
+    },
+    {
+      "source": "subjective",
+      "target": "gradingevaluation",
+      "file": "services/api-gateway/internal/subjective/panel_shadow_runner.go",
+      "line": 15
+    },
+    {
+      "source": "subjective",
+      "target": "grading",
+      "file": "services/api-gateway/internal/subjective/store_memory.go",
+      "line": 9
+    },
+    {
+      "source": "subjective",
+      "target": "paper",
+      "file": "services/api-gateway/internal/subjective/store_memory.go",
+      "line": 10
+    },
+    {
+      "source": "subjective",
+      "target": "paper",
+      "file": "services/api-gateway/internal/subjective/store_postgres.go",
+      "line": 9
+    },
+    {
+      "source": "subjective",
+      "target": "paper",
+      "file": "services/api-gateway/internal/subjective/store_postgres_batch.go",
+      "line": 9
+    },
+    {
+      "source": "subjective",
+      "target": "aieligibility",
+      "file": "services/api-gateway/internal/subjective/types.go",
+      "line": 8
+    },
+    {
+      "source": "subjective",
+      "target": "assessment",
+      "file": "services/api-gateway/internal/subjective/types.go",
+      "line": 9
+    },
+    {
+      "source": "subjective",
+      "target": "grading",
+      "file": "services/api-gateway/internal/subjective/types.go",
+      "line": 10
+    },
+    {
+      "source": "subjective",
+      "target": "mathunderstanding",
+      "file": "services/api-gateway/internal/subjective/types.go",
+      "line": 11
+    },
+    {
+      "source": "subjective",
+      "target": "paper",
+      "file": "services/api-gateway/internal/subjective/types.go",
+      "line": 12
+    },
+    {
+      "source": "subjective",
+      "target": "grading",
+      "file": "services/api-gateway/internal/subjective/validation.go",
+      "line": 8
+    },
+    {
+      "source": "subjective",
+      "target": "paper",
+      "file": "services/api-gateway/internal/subjective/validation.go",
+      "line": 9
+    },
+    {
+      "source": "subjective",
+      "target": "workerruntime",
+      "file": "services/api-gateway/internal/subjective/worker_completion_service.go",
+      "line": 7
+    },
+    {
+      "source": "subjective",
+      "target": "aieligibility",
+      "file": "services/api-gateway/internal/subjective/worker_execution_service.go",
+      "line": 7
+    },
+    {
+      "source": "subjective",
+      "target": "workerruntime",
+      "file": "services/api-gateway/internal/subjective/worker_execution_service.go",
+      "line": 8
+    },
+    {
+      "source": "submission",
+      "target": "auth",
+      "file": "services/api-gateway/internal/submission/handlers.go",
+      "line": 10
+    },
+    {
+      "source": "submission",
+      "target": "files",
+      "file": "services/api-gateway/internal/submission/handlers.go",
+      "line": 11
+    },
+    {
+      "source": "submission",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/submission/handlers.go",
+      "line": 12
+    },
+    {
+      "source": "submission",
+      "target": "logger",
+      "file": "services/api-gateway/internal/submission/handlers.go",
+      "line": 13
+    },
+    {
+      "source": "submission",
+      "target": "pagination",
+      "file": "services/api-gateway/internal/submission/handlers.go",
+      "line": 14
+    },
+    {
+      "source": "taskmaterials",
+      "target": "paper",
+      "file": "services/api-gateway/internal/taskmaterials/question.go",
+      "line": 7
+    },
+    {
+      "source": "workerruntime",
+      "target": "auth",
+      "file": "services/api-gateway/internal/workerruntime/handlers.go",
+      "line": 9
+    },
+    {
+      "source": "workerruntime",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/workerruntime/handlers.go",
+      "line": 10
+    },
+    {
+      "source": "workerruntime",
+      "target": "logger",
+      "file": "services/api-gateway/internal/workerruntime/handlers.go",
+      "line": 11
+    },
+    {
+      "source": "workerruntime",
+      "target": "auth",
+      "file": "services/api-gateway/internal/workerruntime/identity.go",
+      "line": 3
+    },
+    {
+      "source": "workerruntime",
+      "target": "auth",
+      "file": "services/api-gateway/internal/workerruntime/scope_middleware.go",
+      "line": 10
+    },
+    {
+      "source": "workerruntime",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/workerruntime/scope_middleware.go",
+      "line": 11
+    },
+    {
+      "source": "workspace",
+      "target": "auth",
+      "file": "services/api-gateway/internal/workspace/archive.go",
+      "line": 6
+    },
+    {
+      "source": "workspace",
+      "target": "exam",
+      "file": "services/api-gateway/internal/workspace/archive.go",
+      "line": 7
+    },
+    {
+      "source": "workspace",
+      "target": "auth",
+      "file": "services/api-gateway/internal/workspace/handlers.go",
+      "line": 7
+    },
+    {
+      "source": "workspace",
+      "target": "exam",
+      "file": "services/api-gateway/internal/workspace/handlers.go",
+      "line": 8
+    },
+    {
+      "source": "workspace",
+      "target": "httpx",
+      "file": "services/api-gateway/internal/workspace/handlers.go",
+      "line": 9
+    },
+    {
+      "source": "workspace",
+      "target": "assessment",
+      "file": "services/api-gateway/internal/workspace/service.go",
+      "line": 10
+    },
+    {
+      "source": "workspace",
+      "target": "auth",
+      "file": "services/api-gateway/internal/workspace/service.go",
+      "line": 11
+    },
+    {
+      "source": "workspace",
+      "target": "exam",
+      "file": "services/api-gateway/internal/workspace/service.go",
+      "line": 12
+    },
+    {
+      "source": "workspace",
+      "target": "paper",
+      "file": "services/api-gateway/internal/workspace/service.go",
+      "line": 13
+    },
+    {
+      "source": "workspace",
+      "target": "processing",
+      "file": "services/api-gateway/internal/workspace/service.go",
+      "line": 14
+    },
+    {
+      "source": "workspace",
+      "target": "review",
+      "file": "services/api-gateway/internal/workspace/service.go",
+      "line": 15
+    },
+    {
+      "source": "workspace",
+      "target": "submission",
+      "file": "services/api-gateway/internal/workspace/service.go",
+      "line": 16
+    }
+  ],
+  "static_import_cycles": []
+}

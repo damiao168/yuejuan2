@@ -36,6 +36,13 @@ type PanelResult struct {
 	Arbiter  *Grade       `json:"arbiter,omitempty"`
 }
 
+type panelAgentResult struct {
+	role  string
+	run   GradingRun
+	grade Grade
+	err   error
+}
+
 type PanelModelApprovalReader interface {
 	ListModelApprovals(context.Context, string) ([]modelgovernance.ModelApproval, error)
 }
@@ -65,10 +72,9 @@ func (o *PanelOrchestrator) WithManagedApprovals(reader PanelModelApprovalReader
 	return o
 }
 
-// GradeWithApprovedPolicy is the fail-closed production entry point. Shadow
-// experiments may still call Grade with an explicit frozen config, while this
-// path accepts thresholds only from an approved exact stage/subject/archetype
-// policy backed by a completed evaluation run.
+// GradeWithApprovedPolicy 是采取保守拒绝的生产入口。
+// 影子实验仍可使用显式冻结配置调用 Grade；此路径只接受已批准的准确学段、学科和题型原型策略中的阈值，
+// 且该策略必须有已完成评估运行作为依据。
 func (o *PanelOrchestrator) GradeWithApprovedPolicy(ctx context.Context, tenantID, actorID string, gradingContext Context) (PanelResult, error) {
 	if o == nil || o.policies == nil || o.approvals == nil || !gradingContext.AssessmentSnapshot.EducationStage.Valid() ||
 		!gradingContext.AssessmentSnapshot.SubjectCode.Valid() || strings.TrimSpace(gradingContext.AssessmentSnapshot.ArchetypeCode) == "" {
@@ -125,8 +131,7 @@ func (o *PanelOrchestrator) requireManagedApprovals(ctx context.Context, tenantI
 	return nil
 }
 
-// The math runtime is installed only by Handler, which owns the existing
-// evidence, active-crop and frozen-rule settlement governance path.
+// 数学运行时只由 Handler 安装；Handler 负责既有的证据、有效裁剪图和冻结规则结算治理路径。
 type panelMathRuntime struct {
 	prepare func(context.Context, string, *Context) error
 	input   func(context.Context, string, string, Context, ModelPolicy, PromptGuard, aieligibility.OutputConstraint) (AdapterInput, error)
@@ -185,23 +190,21 @@ func (o *PanelOrchestrator) gradeWithConfig(ctx context.Context, tenantID, actor
 	if err != nil {
 		return PanelResult{}, err
 	}
-	config = panel.DecisionConfig
 	if panel.Status == PanelHumanReview || panel.Status == PanelResolved || panel.Status == PanelFailed {
 		return o.loadTerminalPanelResult(ctx, tenantID, panel)
 	}
 	if o.math != nil && mathSubject(gradingContext) {
 		if err := o.math.prepare(ctx, tenantID, &gradingContext); err != nil || gradingContext.MathEvidence == nil {
-			return o.routeHuman(ctx, tenantID, actorID, panel,
-				UpdatePanelInput{TriggerCodes: []string{"math_evidence_unavailable"}}, Grade{}, Grade{}, nil, err)
+			return o.routeHuman(ctx, tenantID, actorID, PanelResult{Panel: panel},
+				UpdatePanelInput{TriggerCodes: []string{"math_evidence_unavailable"}})
 		}
 	}
-	type agentResult struct {
-		role  string
-		run   GradingRun
-		grade Grade
-		err   error
-	}
-	results := make(chan agentResult, 2)
+	primaryA, primaryB := o.runPrimaryAgents(ctx, tenantID, actorID, panel, gradingContext)
+	return o.resolvePrimaryResults(ctx, tenantID, actorID, panel, gradingContext, primaryA, primaryB)
+}
+
+func (o *PanelOrchestrator) runPrimaryAgents(ctx context.Context, tenantID, actorID string, panel GradingPanel, gradingContext Context) (panelAgentResult, panelAgentResult) {
+	results := make(chan panelAgentResult, 2)
 	for _, item := range []struct {
 		role    string
 		binding PanelAgentBinding
@@ -209,10 +212,11 @@ func (o *PanelOrchestrator) gradeWithConfig(ctx context.Context, tenantID, actor
 		item := item
 		go func() {
 			run, grade, runErr := o.executeBlindAgent(ctx, tenantID, actorID, panel, gradingContext, item.role, item.binding)
-			results <- agentResult{role: item.role, run: run, grade: grade, err: runErr}
+			results <- panelAgentResult{role: item.role, run: run, grade: grade, err: runErr}
 		}()
 	}
-	var primaryA, primaryB agentResult
+	// 两个主评必须收齐后再判断重放或失败，避免另一角色仍运行时提前转换评审组状态。
+	var primaryA, primaryB panelAgentResult
 	for range 2 {
 		result := <-results
 		if result.role == AgentRolePrimaryA {
@@ -221,6 +225,12 @@ func (o *PanelOrchestrator) gradeWithConfig(ctx context.Context, tenantID, actor
 			primaryB = result
 		}
 	}
+	return primaryA, primaryB
+}
+
+func (o *PanelOrchestrator) resolvePrimaryResults(ctx context.Context, tenantID, actorID string, panel GradingPanel, gradingContext Context, primaryA, primaryB panelAgentResult) (PanelResult, error) {
+	// 重试只能沿用评审组已保存的阈值，不能用本次调用的配置改写冻结决定。
+	config := panel.DecisionConfig
 	if errors.Is(primaryA.err, ErrPanelRunInProgress) || errors.Is(primaryB.err, ErrPanelRunInProgress) {
 		latest, lookupErr := o.store.GetPanel(ctx, tenantID, panel.ID)
 		if lookupErr != nil {
@@ -231,7 +241,8 @@ func (o *PanelOrchestrator) gradeWithConfig(ctx context.Context, tenantID, actor
 	baseUpdate := UpdatePanelInput{Status: PanelComparing, PrimaryARunID: primaryA.run.ID, PrimaryBRunID: primaryB.run.ID}
 	if primaryA.err != nil || primaryB.err != nil {
 		baseUpdate.TriggerCodes = []string{"primary_agent_failure"}
-		return o.routeHuman(ctx, tenantID, actorID, panel, baseUpdate, primaryA.grade, primaryB.grade, nil, errors.Join(primaryA.err, primaryB.err))
+		return o.routeHuman(ctx, tenantID, actorID,
+			PanelResult{Panel: panel, PrimaryA: primaryA.grade, PrimaryB: primaryB.grade}, baseUpdate)
 	}
 	scoreA, scoreB := primaryA.grade.SuggestedScore, primaryB.grade.SuggestedScore
 	decision := ComparePrimaryGrades(primaryA.grade, primaryB.grade, gradingContext.Rubric, config)
@@ -242,7 +253,7 @@ func (o *PanelOrchestrator) gradeWithConfig(ctx context.Context, tenantID, actor
 	baseUpdate.EvidenceConflict = decision.Facts.EvidenceConflict
 	baseUpdate.ConfidenceConflict = decision.Facts.ConfidenceGap >= config.ConfidenceGapThreshold
 	baseUpdate.TriggerCodes = decision.TriggerCodes
-	panel, err = o.store.UpdatePanel(ctx, tenantID, panel.ID, baseUpdate)
+	panel, err := o.store.UpdatePanel(ctx, tenantID, panel.ID, baseUpdate)
 	if err != nil {
 		return PanelResult{}, err
 	}
@@ -257,20 +268,21 @@ func (o *PanelOrchestrator) gradeWithConfig(ctx context.Context, tenantID, actor
 	if err != nil {
 		return PanelResult{}, err
 	}
-	// The arbiter receives a freshly constructed request from the frozen
-	// question/rubric/student evidence only. No A/B score or output is present.
+	// 仲裁方接收仅根据冻结题目、评分细则和学生证据新构建的请求，不含 A/B 分数或输出。
 	arbiterRun, arbiterGrade, arbiterErr := o.executeBlindAgent(ctx, tenantID, actorID, panel, gradingContext, AgentRoleArbiter, o.agents.Arbiter)
 	if arbiterErr != nil {
 		baseUpdate.ArbiterRunID = arbiterRun.ID
 		baseUpdate.TriggerCodes = uniqueSorted(append(baseUpdate.TriggerCodes, "arbiter_failure"))
-		return o.routeHuman(ctx, tenantID, actorID, panel, baseUpdate, primaryA.grade, primaryB.grade, nil, arbiterErr)
+		return o.routeHuman(ctx, tenantID, actorID,
+			PanelResult{Panel: panel, PrimaryA: primaryA.grade, PrimaryB: primaryB.grade}, baseUpdate)
 	}
 	scoreC := arbiterGrade.SuggestedScore
 	baseUpdate.ArbiterRunID, baseUpdate.ScoreC = arbiterRun.ID, &scoreC
 	agreement := maxFloat(ArbiterAgrees(arbiterGrade, primaryA.grade, gradingContext.Rubric), ArbiterAgrees(arbiterGrade, primaryB.grade, gradingContext.Rubric))
 	if arbiterGrade.Confidence < config.ArbiterMinConfidence || containsHardRisk(arbiterGrade.RiskFlags, config.HardRiskCodes) || agreement < config.ArbiterAgreementThreshold {
 		baseUpdate.TriggerCodes = uniqueSorted(append(baseUpdate.TriggerCodes, "arbiter_unresolved"))
-		return o.routeHuman(ctx, tenantID, actorID, panel, baseUpdate, primaryA.grade, primaryB.grade, &arbiterGrade, nil)
+		return o.routeHuman(ctx, tenantID, actorID,
+			PanelResult{Panel: panel, PrimaryA: primaryA.grade, PrimaryB: primaryB.grade, Arbiter: &arbiterGrade}, baseUpdate)
 	}
 	panel, err = o.store.UpdatePanel(ctx, tenantID, panel.ID, mergePanelUpdate(baseUpdate, UpdatePanelInput{
 		Status: PanelResolved, ResolvedScore: &scoreC, ResolutionSource: ResolutionArbiter,
@@ -278,9 +290,8 @@ func (o *PanelOrchestrator) gradeWithConfig(ctx context.Context, tenantID, actor
 	return PanelResult{Panel: panel, PrimaryA: primaryA.grade, PrimaryB: primaryB.grade, Arbiter: &arbiterGrade}, err
 }
 
-// A Shadow observation may fail to persist after all role runs have completed.
-// Recover the saved, role-bound grades on replay instead of invoking a model
-// again or silently treating an already-resolved panel as an empty result.
+// 全部角色运行完成后，影子观察仍可能持久化失败。
+// 重放时恢复已保存且绑定角色的成绩，避免再次调用模型，或静默把已解决的评审组当成空结果。
 func (o *PanelOrchestrator) loadTerminalPanelResult(ctx context.Context, tenantID string, panel GradingPanel) (PanelResult, error) {
 	result := PanelResult{Panel: panel}
 	for _, item := range []struct {
@@ -371,18 +382,10 @@ func (o *PanelOrchestrator) executeBlindAgent(ctx context.Context, tenantID, act
 	input := newBlindPanelInput(requestID, gradingContext, binding.Policy, role)
 	input.OutputConstraint = decision.OutputConstraint
 	mathRun := gradingContext.MathEvidence != nil
-	if mathRun {
-		mathAdapter, ok := binding.Adapter.(interface{ SupportsPanelMathV2() bool })
-		if !ok || !mathAdapter.SupportsPanelMathV2() || o.math == nil || o.math.input == nil || o.math.settle == nil {
-			_, _ = o.store.UpdateRun(ctx, tenantID, run.ID, UpdateRunInput{Status: RunFailed, ErrorCode: "panel_math_v2_unavailable"})
-			return run, Grade{}, ErrPanelConfiguration
-		}
-		input, err = o.math.input(ctx, tenantID, requestID, gradingContext, binding.Policy, input.PromptGuard, decision.OutputConstraint)
-		if err != nil {
-			_, _ = o.store.UpdateRun(ctx, tenantID, run.ID, UpdateRunInput{Status: RunFailed, ErrorCode: "panel_math_evidence_unavailable"})
-			return run, Grade{}, err
-		}
-		input.AgentRole = role
+	input, failureCode, err := o.preparePanelMathInput(ctx, tenantID, gradingContext, binding, input)
+	if err != nil {
+		_, _ = o.store.UpdateRun(ctx, tenantID, run.ID, UpdateRunInput{Status: RunFailed, ErrorCode: failureCode})
+		return run, Grade{}, err
 	}
 	input, err = isolatePanelAdapterInput(input)
 	if err != nil {
@@ -400,11 +403,10 @@ func (o *PanelOrchestrator) executeBlindAgent(ctx context.Context, tenantID, act
 		return run, Grade{}, ErrInvalidModelOutput
 	}
 	if mathRun {
-		// The v2 agent returns only criterion candidates. Frozen-rule math
-		// scoring also rechecks the artifact revision before persistence.
+		// v2 agent 只返回标准项候选。基于冻结规则的数学评分还会在持久化前重新检查产物修订号。
 		err = o.math.settle(ctx, tenantID, gradingContext, binding.Policy, &output)
 	} else {
-		// Never trust a model-authored point or total score.
+		// 绝不信任模型生成的评分点分数或总分。
 		err = ProjectPanelRubricScore(&output, gradingContext.Rubric)
 		if err == nil {
 			err = ValidateOutput(output, gradingContext)
@@ -427,12 +429,27 @@ func (o *PanelOrchestrator) executeBlindAgent(ctx context.Context, tenantID, act
 	return run, grade, err
 }
 
-// A/B run concurrently, and C must receive only the frozen source material.
-// Deep-copy the exported request fields before handing them to any adapter so
-// nested maps, rubric points or math evidence cannot carry peer mutations.
+func (o *PanelOrchestrator) preparePanelMathInput(ctx context.Context, tenantID string, gradingContext Context, binding PanelAgentBinding, input AdapterInput) (AdapterInput, string, error) {
+	if gradingContext.MathEvidence == nil {
+		return input, "", nil
+	}
+	mathAdapter, ok := binding.Adapter.(interface{ SupportsPanelMathV2() bool })
+	if !ok || !mathAdapter.SupportsPanelMathV2() || o.math == nil || o.math.input == nil || o.math.settle == nil {
+		return AdapterInput{}, "panel_math_v2_unavailable", ErrPanelConfiguration
+	}
+	mathInput, err := o.math.input(ctx, tenantID, input.RequestID, gradingContext, binding.Policy, input.PromptGuard, input.OutputConstraint)
+	if err != nil {
+		return AdapterInput{}, "panel_math_evidence_unavailable", err
+	}
+	mathInput.AgentRole = input.AgentRole
+	return mathInput, "", nil
+}
+
+// A/B 并发运行，C 只能接收冻结来源材料。交给任何适配器前深拷贝导出请求字段，
+// 避免嵌套 map、评分点或数学证据携带其他评审方的修改。
 func isolatePanelAdapterInput(input AdapterInput) (AdapterInput, error) {
 	crop := input.ActiveCrop
-	input.ActiveCrop = nil // image bytes are copied separately, never JSON encoded
+	input.ActiveCrop = nil // 图像字节单独复制，不编码为 JSON。
 	encoded, err := json.Marshal(input)
 	if err != nil {
 		return AdapterInput{}, err
@@ -473,9 +490,10 @@ func newBlindPanelInput(requestID string, gradingContext Context, policy ModelPo
 	}
 }
 
-func (o *PanelOrchestrator) routeHuman(ctx context.Context, tenantID, actorID string, panel GradingPanel, update UpdatePanelInput, primaryA, primaryB Grade, arbiter *Grade, cause error) (PanelResult, error) {
+func (o *PanelOrchestrator) routeHuman(ctx context.Context, tenantID, actorID string, result PanelResult, update UpdatePanelInput) (PanelResult, error) {
+	// 先保存人工状态，再建任务并关联任务 ID；前两步失败返回空结果，关联失败仍返回已取得的成绩。
 	update.Status, update.ResolutionSource = PanelHumanReview, ResolutionHuman
-	panel, err := o.store.UpdatePanel(ctx, tenantID, panel.ID, update)
+	panel, err := o.store.UpdatePanel(ctx, tenantID, result.Panel.ID, update)
 	if err != nil {
 		return PanelResult{}, err
 	}
@@ -485,13 +503,11 @@ func (o *PanelOrchestrator) routeHuman(ctx context.Context, tenantID, actorID st
 	}
 	update.ReviewTaskID = taskID
 	panel, err = o.store.UpdatePanel(ctx, tenantID, panel.ID, update)
-	result := PanelResult{Panel: panel, PrimaryA: primaryA, PrimaryB: primaryB, Arbiter: arbiter}
+	result.Panel = panel
 	if err != nil {
 		return result, err
 	}
-	// A routed human review is a successful governed outcome, not an agent
-	// error exposed to the caller. The cause remains represented by trigger codes.
-	_ = cause
+	// 转交人工复核属于成功的受治理结果，不作为 agent 错误暴露给调用方；原因仍通过触发码表示。
 	return result, nil
 }
 

@@ -81,7 +81,7 @@ func (s *Service) Members(ctx context.Context, tenantID, query, role, status str
 	if _, err := s.Get(ctx, tenantID); err != nil {
 		return MembersResult{}, err
 	}
-	if !oneOf(status, "", "active", "disabled") || (role != "" && !oneOf(role, "school_admin", "tenant_admin", "teacher", "grader", "arbitrator", "auditor")) {
+	if !oneOf(status, "", "active", "invited", "disabled") || (role != "" && !oneOf(role, "school_admin", "tenant_admin", "teacher", "grader", "arbitrator", "auditor")) {
 		return MembersResult{}, ErrInvalidFilter
 	}
 	items, err := s.store.ListMembers(ctx, tenantID)
@@ -93,21 +93,8 @@ func (s *Service) Members(ctx context.Context, tenantID, query, role, status str
 	}
 	result := MembersResult{Members: []Member{}}
 	for _, item := range items {
-		result.Summary.Total++
-		if item.Status == "active" {
-			result.Summary.Active++
-		} else {
-			result.Summary.Disabled++
-		}
-		if hasAnyRole(item.Roles, "school_admin", "tenant_admin") {
-			result.Summary.Admins++
-		}
-		if hasAnyRole(item.Roles, "teacher") {
-			result.Summary.Teachers++
-		}
-		if hasAnyRole(item.Roles, "grader", "arbitrator") {
-			result.Summary.Graders++
-		}
+		// 汇总描述全校成员，不能随当前列表的搜索、角色或状态筛选缩小。
+		accumulateMemberSummary(&result.Summary, item)
 		if query != "" && !strings.Contains(strings.ToLower(item.DisplayName+" "+item.Username+" "+item.EmployeeNo), strings.ToLower(query)) {
 			continue
 		}
@@ -120,6 +107,30 @@ func (s *Service) Members(ctx context.Context, tenantID, query, role, status str
 		result.Members = append(result.Members, item)
 	}
 	return result, nil
+}
+
+func accumulateMemberSummary(summary *MemberSummary, item Member) {
+	summary.Total++
+	switch item.Status {
+	case "active":
+		summary.Active++
+	case "disabled":
+		summary.Disabled++
+	case "invited":
+		summary.Invited++
+	default:
+		summary.Unknown++
+	}
+	// 一人可以同时计入多个角色类别，不能改为互斥分支。
+	if hasAnyRole(item.Roles, "school_admin", "tenant_admin") {
+		summary.Admins++
+	}
+	if hasAnyRole(item.Roles, "teacher") {
+		summary.Teachers++
+	}
+	if hasAnyRole(item.Roles, "grader", "arbitrator") {
+		summary.Graders++
+	}
 }
 
 func (s *Service) Usage(ctx context.Context, tenantID string, usageRange UsageRange) (UsageResult, error) {

@@ -43,33 +43,33 @@ class FakeAPI:
             },
         }]
 
-    def heartbeat_task(self, runtime_task_id, lease_token, worker_instance_id, lease_seconds, timeout_seconds, tenant_id=None, progress=None):
+    def heartbeat_task(self, runtime_task_id, lease_token, worker_instance_id, lease_seconds, timeout_seconds, *, progress=None):
         self.heartbeats.append((runtime_task_id, lease_token, worker_instance_id, lease_seconds, timeout_seconds))
         self.heartbeat_progress.append(progress)
 
-    def start_task(self, task_id, tenant_id=None):
+    def start_task(self, task_id):
         self.started.append(task_id)
 
-    def get_task_input(self, task_id, tenant_id=None):
+    def get_task_input(self, task_id):
         return {"pages": [{"id": "page-1", "download_url": "/files/file-1/download", "file_asset_id": "file-1"}]}
 
-    def download(self, url, tenant_id=None):
+    def download(self, url):
         value = self.downloads.get(url, b"image")
         if isinstance(value, Exception):
             raise value
         return value
 
-    def complete_task(self, task_id, payload, tenant_id=None):
+    def complete_task(self, task_id, payload):
         self.completed.append((task_id, payload))
 
-    def fail_task(self, task_id, message, runtime_task_id, lease_token, retryable, tenant_id=None):
+    def fail_task(self, task_id, message, runtime_task_id, lease_token, retryable):
         self.failed.append((task_id, message))
         self.runtime_failed.append((runtime_task_id, lease_token, message, retryable, 0))
 
-    def complete_paper_import_ocr(self, import_id, payload, tenant_id=None):
+    def complete_paper_import_ocr(self, import_id, payload):
         self.paper_completed.append((import_id, payload))
 
-    def fail_paper_import(self, import_id, runtime_task_id, lease_token, error_code, retryable, tenant_id=None):
+    def fail_paper_import(self, import_id, runtime_task_id, lease_token, error_code, retryable):
         self.paper_failed.append((import_id, error_code, retryable))
 
 
@@ -98,7 +98,6 @@ class RunnerTests(unittest.TestCase):
             interval=10,
             lease_seconds=300,
             request_timeout=3,
-            tenant_id="tenant-1",
         )
 
         heartbeat.set_progress({"stage": "formula_recognition", "completed": 1, "total": 2}, flush=True)
@@ -329,15 +328,14 @@ class RunnerTests(unittest.TestCase):
                 self.heartbeat_active = threading.Event()
                 self.terminal_while_heartbeat_active = False
 
-            def heartbeat_task(self, runtime_task_id, lease_token, worker_instance_id, lease_seconds, timeout_seconds, tenant_id=None, progress=None):
+            def heartbeat_task(self, runtime_task_id, lease_token, worker_instance_id, lease_seconds, timeout_seconds, *, progress=None):
                 super().heartbeat_task(
                     runtime_task_id,
                     lease_token,
                     worker_instance_id,
                     lease_seconds,
                     timeout_seconds,
-                    tenant_id,
-                    progress,
+                    progress=progress,
                 )
                 if len(self.heartbeats) != 2:
                     return
@@ -346,9 +344,9 @@ class RunnerTests(unittest.TestCase):
                 time.sleep(0.15)
                 self.heartbeat_active.clear()
 
-            def complete_task(self, task_id, payload, tenant_id=None):
+            def complete_task(self, task_id, payload):
                 self.terminal_while_heartbeat_active = self.heartbeat_active.is_set()
-                super().complete_task(task_id, payload, tenant_id)
+                super().complete_task(task_id, payload)
 
         class FinishWhileHeartbeatIsBlocked(FakeEngine):
             def recognize(self, image_bytes):
@@ -382,15 +380,14 @@ class RunnerTests(unittest.TestCase):
                 super().__init__()
                 self.periodic_attempted = threading.Event()
 
-            def heartbeat_task(self, runtime_task_id, lease_token, worker_instance_id, lease_seconds, timeout_seconds, tenant_id=None, progress=None):
+            def heartbeat_task(self, runtime_task_id, lease_token, worker_instance_id, lease_seconds, timeout_seconds, *, progress=None):
                 super().heartbeat_task(
                     runtime_task_id,
                     lease_token,
                     worker_instance_id,
                     lease_seconds,
                     timeout_seconds,
-                    tenant_id,
-                    progress,
+                    progress=progress,
                 )
                 if len(self.heartbeats) >= 2:
                     self.periodic_attempted.set()

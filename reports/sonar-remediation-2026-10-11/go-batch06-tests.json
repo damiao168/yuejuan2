@@ -1,0 +1,48 @@
+{
+  "started_at": "2026-10-11T17:09:52.718764+08:00",
+  "finished_at": "2026-10-11T17:11:00.452943+08:00",
+  "duration_seconds": 67.73399999999674,
+  "command": [
+    "go",
+    "test",
+    "-json",
+    "-p",
+    "1",
+    "-count=1",
+    "-timeout=5m",
+    "./internal/backmark",
+    "./internal/auth"
+  ],
+  "cwd": "D:\\project\\yuejuan\\services\\api-gateway",
+  "exit_code": 1,
+  "isolation": {
+    "toolchain": "local",
+    "module_proxy": "off",
+    "checksum_service": "off",
+    "GOMAXPROCS": 2,
+    "cleared_environment_names": []
+  },
+  "package_results": [
+    {
+      "Time": "2026-10-11T17:10:25.1516648+08:00",
+      "Action": "fail",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/backmark",
+      "Elapsed": 0.001,
+      "FailedBuild": "edugrade-enterprise/services/api-gateway/internal/backmark.test"
+    },
+    {
+      "Time": "2026-10-11T17:10:59.4420841+08:00",
+      "Action": "fail",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/auth",
+      "Elapsed": 0,
+      "FailedBuild": "edugrade-enterprise/services/api-gateway/internal/assessment [edugrade-enterprise/services/api-gateway/internal/auth.test]"
+    }
+  ],
+  "test_result_counts": {
+    "pass": 0,
+    "fail": 0,
+    "skip": 0
+  },
+  "skipped_tests": [],
+  "note": "只报告实际运行的包；环境缺失跳过项不算真实数据库或外部模型集成通过。"
+}

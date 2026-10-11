@@ -14,15 +14,16 @@ export function SharedScoreControl({
   rubricPoints,
   disabled = false,
   onChange
-}: {
+}: Readonly<{
   value: SharedScoreValue;
   maxScore: number;
   rubricPoints: RubricPoint[];
   disabled?: boolean;
   onChange: (value: SharedScoreValue) => void;
-}) {
+}>) {
   const rubricTotal = Number(rubricPoints.reduce((total, point) => total + (value.rubricSelections[point.id] ?? 0), 0).toFixed(1));
   const setPoint = (point: RubricPoint, score: number) => {
+    // 调整采分点后重新合计最终分；直接填写最终分产生的人工调整不继续沿用。
     const rubricSelections = { ...value.rubricSelections, [point.id]: score };
     onChange({ ...value, rubricSelections, score: Number(rubricPoints.reduce((total, item) => total + (rubricSelections[item.id] ?? 0), 0).toFixed(1)) });
   };
@@ -58,10 +59,10 @@ export function SharedScoreControl({
             </Space>
           </div>
           <p className="grading-inline-note">调整评分点会自动合计最终分；直接修改最终分属于人工调整，请记录原因。</p>
-          {rubricPoints.map((point) => (
+          {rubricPoints.map((point, index) => (
             <RubricCriterion
               key={point.id}
-              label={point.description || "未命名采分点"}
+              label={`${index + 1}. ${point.description || "未命名采分点"}`}
               score={point.score}
               required={point.required}
               leading={

@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, type MutableRefObject } from "react";
-import { resumeCaptureUpload, type CaptureUploadSource } from "../../api/captureUploads";
+import { useCallback, useEffect, useRef, type RefObject } from "react";
+import { resumeCaptureUpload, type CaptureUploadCompleteResponse, type CaptureUploadSource } from "../../api/captureUploads";
 import type { DesktopApiClient } from "../../api/client";
 import { getUserErrorMessage } from "../../api/userError";
 import { loadDurableSpoolFile, hasDurableDesktopStore, persistDurableScanQueueItem } from "../../lib/durableStore";
@@ -10,6 +10,7 @@ import { applyUploadState, uploadStateFromQueueItem } from "./uploadState";
 
 type LogEvent = (level: LocalLogEntry["level"], message: string, context?: string) => Promise<void>;
 type UpdateQueue = (updater: (current: SyncQueueItem[]) => SyncQueueItem[]) => void;
+type PreparedUploadQueueItem = SyncQueueItem & Required<Pick<SyncQueueItem, "examId" | "captureBatchId" | "idempotencyKey">>;
 
 export function useUploadSync({
   client,
@@ -29,10 +30,10 @@ export function useUploadSync({
   durableScopeKey: string;
   isOnline: boolean;
   setIsOnline: (online: boolean) => void;
-  queueRef: MutableRefObject<SyncQueueItem[]>;
-  fileBufferRef: MutableRefObject<Map<string, File | CaptureUploadSource>>;
-  uploadInFlightRef: MutableRefObject<Set<string>>;
-  durablePersistenceRef: MutableRefObject<Promise<void>>;
+  queueRef: RefObject<SyncQueueItem[]>;
+  fileBufferRef: RefObject<Map<string, File | CaptureUploadSource>>;
+  uploadInFlightRef: RefObject<Set<string>>;
+  durablePersistenceRef: RefObject<Promise<void>>;
   updateQueue: UpdateQueue;
   logEvent: LogEvent;
 }) {
@@ -46,12 +47,14 @@ export function useUploadSync({
     activeUploads.current.clear();
     scopeRef.current = durableScopeKey;
   }
-  const uploadQueueItem = useCallback(async (id: string) => {
+  // 阻断顺序先检查账号和登录，再检查联网及采集上下文；通过后才恢复原件或发起网络请求。
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 同步预检读取可变队列 ref 的最新内容，与上传回调使用相同的依赖边界。
+  const prepareUploadQueueItem = useCallback((id: string): PreparedUploadQueueItem | undefined => {
     const scope = durableScopeKey;
     if (hasDurableDesktopStore() && (!scope || scopeRef.current !== scope)) return;
     const item = queueRef.current.find((candidate) => candidate.id === id);
     const uploadState = item ? uploadStateFromQueueItem(item) : undefined;
-    if (!item || item.kind !== "scan_upload" || uploadState?.status === "succeeded"
+    if (item?.kind !== "scan_upload" || uploadState?.status === "succeeded"
       || uploadState?.status === "uploading" || uploadInFlightRef.current.has(id)) return;
     if (!token) {
       updateQueue((current) => current.map((candidate) => candidate.id === id
@@ -75,6 +78,55 @@ export function useUploadSync({
         : candidate));
       return;
     }
+    // 上面的检查已拒绝缺少上传上下文的队列项；只补足返回类型，仍返回队列中的原对象。
+    return item as PreparedUploadQueueItem;
+  }, [durableScopeKey, token, updateQueue]);
+
+  // 原件恢复期间可能切换账号；有原件后还要核对最新作用域，才能登记在途并发起上传。
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 作用域由 ref 读取最新值，不依赖其 current 成员。
+  const prepareUploadSource = useCallback((id: string, file: File | CaptureUploadSource | undefined, scope: string) => {
+    if (!file) {
+      updateQueue((current) => updateScanQueueItem(current, id, {
+        status: "failed",
+        requiresReselect: true,
+        detail: "本地队列已恢复，但文件句柄不可用；请重新选择同名文件后重试"
+      }));
+      return;
+    }
+    if (scopeRef.current !== scope) return;
+    return file;
+  }, [updateQueue]);
+
+  // 服务端未确认完成时保留原件；发出成功队列更新后才移除内存原件，耐久原件仍按保留策略保存。
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 队列和文件缓冲由 ref 管理，完成响应读取最新成员。
+  const finishUploadQueueItem = useCallback((id: string, completed: CaptureUploadCompleteResponse, controller: AbortController, scope: string) => {
+    if (isUploadInterrupted(controller, scopeRef, scope)) return false;
+    if (completed.status !== "completed") {
+      updateQueue((current) => updateScanQueueItem(current, id, {
+        status: "pending",
+        detail: `服务端状态为${genericStatusLabel(completed.status)}，将在下次同步继续确认`
+      }));
+      return false;
+    }
+    updateQueue((current) => updateScanQueueItem(current, id, {
+      status: "succeeded",
+      progress: 100,
+      fileAssetId: completed.file_asset_id ?? queueRef.current.find((candidate) => candidate.id === id)?.fileAssetId,
+      remoteUploadId: completed.remote_upload_id,
+      confirmedOffset: completed.confirmed_offset,
+      serverStatus: completed.capture_file_id ? `采集文件 ${completed.capture_file_id}` : `上传会话 ${completed.remote_upload_id} 已确认`,
+      detail: "服务端已确认采集文件；本机加密原件持续留存，归档只隐藏队列，不释放磁盘空间"
+    }));
+    fileBufferRef.current.delete(id);
+    return true;
+  }, [updateQueue]);
+
+  // 这些 ref 是跨渲染的可变队列；上传过程中必须读取最新内容，不能把 current 成员当作渲染依赖。
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 队列和上传集合由 ref 管理，依赖其 current 成员会制造不稳定回调。
+  const uploadQueueItem = useCallback(async (id: string) => {
+    const scope = durableScopeKey;
+    const item = prepareUploadQueueItem(id);
+    if (!item) return;
     let file = fileBufferRef.current.get(id);
     if (!file && item.localAssetId && hasDurableDesktopStore()) {
       try {
@@ -89,15 +141,8 @@ export function useUploadSync({
         return;
       }
     }
-    if (!file) {
-      updateQueue((current) => updateScanQueueItem(current, id, {
-        status: "failed",
-        requiresReselect: true,
-        detail: "本地队列已恢复，但文件句柄不可用；请重新选择同名文件后重试"
-      }));
-      return;
-    }
-    if (scopeRef.current !== scope) return;
+    file = prepareUploadSource(id, file, scope);
+    if (!file) return;
     uploadInFlightRef.current.add(id);
     const controller = new AbortController();
     activeUploads.current.add(controller);
@@ -114,7 +159,7 @@ export function useUploadSync({
         remoteUploadId: item.remoteUploadId,
         idempotency_key: item.idempotencyKey
       }, async (progress) => {
-        if (controller.signal.aborted || scopeRef.current !== scope) throw new Error("登录账号已切换，上传已停止");
+        if (isUploadInterrupted(controller, scopeRef, scope)) throw new Error("登录账号已切换，上传已停止");
         const currentItem = queueRef.current.find((candidate) => candidate.id === id);
         if (!currentItem) throw new Error("本地耐久队列记录已丢失，已停止继续上传");
         const nextItem = transitionScanQueueItem(currentItem, {
@@ -136,27 +181,10 @@ export function useUploadSync({
           await persisted;
         }
       }, controller.signal);
-      if (controller.signal.aborted || scopeRef.current !== scope) return;
-      if (completed.status !== "completed") {
-        updateQueue((current) => updateScanQueueItem(current, id, {
-          status: "pending",
-          detail: `服务端状态为${genericStatusLabel(completed.status)}，将在下次同步继续确认`
-        }));
-        return;
-      }
-      updateQueue((current) => updateScanQueueItem(current, id, {
-        status: "succeeded",
-        progress: 100,
-        fileAssetId: completed.file_asset_id ?? queueRef.current.find((candidate) => candidate.id === id)?.fileAssetId,
-        remoteUploadId: completed.remote_upload_id,
-        confirmedOffset: completed.confirmed_offset,
-        serverStatus: completed.capture_file_id ? `采集文件 ${completed.capture_file_id}` : `上传会话 ${completed.remote_upload_id} 已确认`,
-        detail: "服务端已确认采集文件；本地加密原件按保留策略继续保存"
-      }));
-      fileBufferRef.current.delete(id);
+      if (!finishUploadQueueItem(id, completed, controller, scope)) return;
       await logEvent("info", "scan queue item uploaded", `${item.fileName ?? item.title} -> ${completed.capture_file_id ?? completed.remote_upload_id}`);
     } catch (error) {
-      if (controller.signal.aborted || scopeRef.current !== scope) return;
+      if (isUploadInterrupted(controller, scopeRef, scope)) return;
       const message = getUserErrorMessage(error, "上传失败");
       updateQueue((current) => updateScanQueueItem(current, id, { status: "failed", detail: message }));
       await logEvent("error", "scan queue item failed", `${item.fileName ?? item.title}: ${message}`);
@@ -164,10 +192,12 @@ export function useUploadSync({
       activeUploads.current.delete(controller);
       uploadInFlightRef.current.delete(id);
     }
-  }, [client, durableScopeKey, logEvent, token, updateQueue]);
+  }, [client, durableScopeKey, finishUploadQueueItem, logEvent, prepareUploadQueueItem, prepareUploadSource, updateQueue]);
 
-  const uploadQueueItems = useCallback(async (mode: "pending" | "failed" | "all") => {
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 批量上传读取可变队列 ref 的最新快照。
+  const uploadQueueItems = useCallback(async (mode: "pending" | "failed" | "all", context?: { examId: string; captureBatchId: string }) => {
     const candidates = queueRef.current.filter((item) => item.kind === "scan_upload"
+      && (!context || item.examId === context.examId && item.captureBatchId === context.captureBatchId)
       && (mode === "all" ? item.status === "pending" || item.status === "failed" : item.status === mode));
     for (const item of candidates) await uploadQueueItem(item.id);
   }, [uploadQueueItem]);
@@ -176,8 +206,8 @@ export function useUploadSync({
     const handleOnline = () => {
       onlineRef.current = true;
       setIsOnline(true);
-      void logEvent("info", "network online", "scan queue auto resume");
-      if (scopeRef.current) void uploadQueueItems("all");
+      // 恢复网络只更新可用性，教师先核对归属再主动上传；误导入文件不能趁联网自动发送。
+      void logEvent("info", "network online", "scan queue awaits teacher confirmation");
     };
     const handleOffline = () => {
       onlineRef.current = false;
@@ -190,7 +220,11 @@ export function useUploadSync({
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
-  }, [logEvent, uploadQueueItems]);
+  }, [logEvent, setIsOnline, uploadQueueItems]);
 
   return { uploadQueueItem, uploadQueueItems };
+}
+
+function isUploadInterrupted(controller: AbortController, scopeRef: RefObject<string>, scope: string) {
+  return controller.signal.aborted || scopeRef.current !== scope;
 }

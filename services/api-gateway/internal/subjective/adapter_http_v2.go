@@ -142,8 +142,7 @@ func (a *HTTPAdapterV2) request(ctx context.Context, requestID string, body []by
 	return response, nil
 }
 
-// Go zero values must not make an omitted contract field (notably mock,
-// confidence or the alternative-solution flag) look like a valid assertion.
+// Go 零值不能使省略的契约字段（尤其是 mock、confidence 或替代解法标记）看起来像有效断言。
 func validateMathV2RequiredFields(body []byte) error {
 	fields, err := mathV2RequiredObject(body, "schema_version", "request_id", "status", "delivery", "criterion_candidates", "alternative_solution_candidate", "risk_flags", "needs_human_review", "model_version", "prompt_version", "rubric_version", "capability_profile", "mock", "telemetry")
 	if err != nil {
@@ -198,6 +197,23 @@ func (a *HTTPAdapterV2) mapResponse(input AdapterInput, response gradingAgentV2R
 			return AdapterOutput{}, &GradingAgentError{Code: "agent_telemetry_invalid"}
 		}
 	}
+	// 契约与遥测通过后才解释候选；候选失败仍先于风险标记失败。
+	candidates, confidence, err := mapMathV2Candidates(input, response.CriterionCandidates)
+	if err != nil {
+		return AdapterOutput{}, err
+	}
+	if err := validateMathV2Risks(response.RiskFlags, response.AlternativeSolutionCandidate); err != nil {
+		return AdapterOutput{}, err
+	}
+	telemetry := AdapterTelemetry{Adapter: response.Telemetry.Adapter, Provider: response.Telemetry.Provider, Deployment: response.Telemetry.Deployment, Region: response.Telemetry.Region, Attempts: response.Telemetry.Attempts, RepairAttempted: response.Telemetry.RepairAttempted, PriorErrorCodes: nonNilStrings(response.Telemetry.PriorErrorCodes), ElapsedMS: response.Telemetry.ElapsedMS, Usage: response.Telemetry.Usage}
+	return AdapterOutput{SchemaVersion: response.SchemaVersion, RequestID: response.RequestID, Confidence: confidence, RiskFlags: nonNilStrings(response.RiskFlags), NeedsHumanReview: true,
+		StudentFeedback: "数学评分建议须由教师确认。", TeacherNote: "模型只提供语义候选映射；分值由服务器依据冻结评分规则计算。",
+		ModelVersion: response.ModelVersion, PromptVersion: response.PromptVersion, RubricVersion: response.RubricVersion, DeliveryMode: response.Delivery,
+		CapabilityProfile: response.CapabilityProfile, Telemetry: telemetry, MathCandidates: candidates, AlternativeSolutionCandidate: response.AlternativeSolutionCandidate,
+		RawOutput: map[string]any{"adapter": a.Name(), "schema_version": response.SchemaVersion, "criterion_candidates": candidates, "alternative_solution_candidate": response.AlternativeSolutionCandidate, "risk_flags": nonNilStrings(response.RiskFlags), "telemetry": telemetry}, Mock: false}, nil
+}
+
+func mapMathV2Candidates(input AdapterInput, values []gradingAgentV2Candidate) ([]MathCriterionCandidate, float64, error) {
 	knownPoints, knownEvidence := map[string]bool{}, map[string]bool{}
 	for _, point := range input.Rubric.Points {
 		knownPoints[point.ID] = true
@@ -209,24 +225,11 @@ func (a *HTTPAdapterV2) mapResponse(input AdapterInput, response gradingAgentV2R
 		knownEvidence[formula.ID] = true
 	}
 	seen := map[string]bool{}
-	candidates := make([]MathCriterionCandidate, 0, len(response.CriterionCandidates))
+	candidates := make([]MathCriterionCandidate, 0, len(values))
 	confidence := 1.0
-	for _, candidate := range response.CriterionCandidates {
-		if !knownPoints[candidate.RubricPointID] || seen[candidate.RubricPointID] ||
-			(candidate.Status != "supported" && candidate.Status != "contradicted" && candidate.Status != "uncertain") ||
-			candidate.Confidence < 0 || candidate.Confidence > 1 || strings.TrimSpace(candidate.ReasonCode) == "" || len(candidate.ReasonCode) > 256 || candidate.EvidenceIDs == nil || len(candidate.EvidenceIDs) > 100 {
-			return AdapterOutput{}, &GradingAgentError{Code: "agent_math_candidate_invalid"}
-		}
-		seen[candidate.RubricPointID] = true
-		seenEvidence := map[string]bool{}
-		for _, id := range candidate.EvidenceIDs {
-			if !knownEvidence[id] || seenEvidence[id] {
-				return AdapterOutput{}, &GradingAgentError{Code: "agent_math_candidate_invalid"}
-			}
-			seenEvidence[id] = true
-		}
-		if (candidate.Status == "supported" || candidate.Status == "contradicted") && len(candidate.EvidenceIDs) == 0 {
-			return AdapterOutput{}, &GradingAgentError{Code: "agent_math_candidate_invalid"}
+	for _, candidate := range values {
+		if err := validateMathV2Candidate(candidate, knownPoints, knownEvidence, seen); err != nil {
+			return nil, 0, err
 		}
 		if candidate.Confidence < confidence {
 			confidence = candidate.Confidence
@@ -236,26 +239,52 @@ func (a *HTTPAdapterV2) mapResponse(input AdapterInput, response gradingAgentV2R
 	if len(candidates) == 0 {
 		confidence = 0
 	}
+	return candidates, confidence, nil
+}
+
+func validateMathV2Candidate(candidate gradingAgentV2Candidate, knownPoints, knownEvidence, seen map[string]bool) error {
+	if !knownPoints[candidate.RubricPointID] || seen[candidate.RubricPointID] ||
+		(candidate.Status != "supported" && candidate.Status != "contradicted" && candidate.Status != "uncertain") ||
+		candidate.Confidence < 0 || candidate.Confidence > 1 || strings.TrimSpace(candidate.ReasonCode) == "" || len(candidate.ReasonCode) > 256 || candidate.EvidenceIDs == nil || len(candidate.EvidenceIDs) > 100 {
+		return &GradingAgentError{Code: "agent_math_candidate_invalid"}
+	}
+	seen[candidate.RubricPointID] = true
+	if err := validateMathV2EvidenceIDs(candidate.EvidenceIDs, knownEvidence); err != nil {
+		return err
+	}
+	if (candidate.Status == "supported" || candidate.Status == "contradicted") && len(candidate.EvidenceIDs) == 0 {
+		return &GradingAgentError{Code: "agent_math_candidate_invalid"}
+	}
+	return nil
+}
+
+func validateMathV2EvidenceIDs(ids []string, knownEvidence map[string]bool) error {
+	seenEvidence := map[string]bool{}
+	for _, id := range ids {
+		if !knownEvidence[id] || seenEvidence[id] {
+			return &GradingAgentError{Code: "agent_math_candidate_invalid"}
+		}
+		seenEvidence[id] = true
+	}
+	return nil
+}
+
+func validateMathV2Risks(flags []string, alternativeSolution bool) error {
 	allowedRisks := map[string]bool{"alternative_solution_candidate": true, "schema_repaired": true, "prompt_injection_suspected": true, "human_review_required": true}
-	if response.RiskFlags == nil || len(response.RiskFlags) > 20 {
-		return AdapterOutput{}, &GradingAgentError{Code: "agent_risk_flag_invalid"}
+	if flags == nil || len(flags) > 20 {
+		return &GradingAgentError{Code: "agent_risk_flag_invalid"}
 	}
 	seenRisks := map[string]bool{}
-	for _, flag := range response.RiskFlags {
+	for _, flag := range flags {
 		if !allowedRisks[flag] || seenRisks[flag] {
-			return AdapterOutput{}, &GradingAgentError{Code: "agent_risk_flag_invalid"}
+			return &GradingAgentError{Code: "agent_risk_flag_invalid"}
 		}
 		seenRisks[flag] = true
 	}
-	if response.AlternativeSolutionCandidate && !containsString(response.RiskFlags, "alternative_solution_candidate") {
-		return AdapterOutput{}, &GradingAgentError{Code: "agent_risk_flag_invalid"}
+	if alternativeSolution && !containsString(flags, "alternative_solution_candidate") {
+		return &GradingAgentError{Code: "agent_risk_flag_invalid"}
 	}
-	telemetry := AdapterTelemetry{Adapter: response.Telemetry.Adapter, Provider: response.Telemetry.Provider, Deployment: response.Telemetry.Deployment, Region: response.Telemetry.Region, Attempts: response.Telemetry.Attempts, RepairAttempted: response.Telemetry.RepairAttempted, PriorErrorCodes: nonNilStrings(response.Telemetry.PriorErrorCodes), ElapsedMS: response.Telemetry.ElapsedMS, Usage: response.Telemetry.Usage}
-	return AdapterOutput{SchemaVersion: response.SchemaVersion, RequestID: response.RequestID, Confidence: confidence, RiskFlags: nonNilStrings(response.RiskFlags), NeedsHumanReview: true,
-		StudentFeedback: "数学评分建议须由教师确认。", TeacherNote: "模型只提供语义候选映射；分值由服务器依据冻结评分规则计算。",
-		ModelVersion: response.ModelVersion, PromptVersion: response.PromptVersion, RubricVersion: response.RubricVersion, DeliveryMode: response.Delivery,
-		CapabilityProfile: response.CapabilityProfile, Telemetry: telemetry, MathCandidates: candidates, AlternativeSolutionCandidate: response.AlternativeSolutionCandidate,
-		RawOutput: map[string]any{"adapter": a.Name(), "schema_version": response.SchemaVersion, "criterion_candidates": candidates, "alternative_solution_candidate": response.AlternativeSolutionCandidate, "risk_flags": nonNilStrings(response.RiskFlags), "telemetry": telemetry}, Mock: false}, nil
+	return nil
 }
 
 var _ LLMGradingAdapter = (*HTTPAdapterV2)(nil)

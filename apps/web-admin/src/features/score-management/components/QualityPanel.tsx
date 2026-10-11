@@ -1,4 +1,4 @@
-import { Empty, List } from "antd";
+import { Button, Empty, List } from "antd";
 import { ShieldCheck } from "lucide-react";
 import { getSafeUserText } from "../../../api/client";
 import type { QualityCheckResult, QualityIssue } from "../../../api/scores";
@@ -17,7 +17,7 @@ const qualityLabels: Record<string, string> = {
   missing_pages_unresolved: "答卷缺页或页面质量异常"
 };
 
-export function QualityPanel({ quality, publishedOrLocked }: { quality: QualityCheckResult | null; publishedOrLocked: boolean }) {
+export function QualityPanel({ quality, publishedOrLocked, actionFor }: Readonly<{ quality: QualityCheckResult | null; publishedOrLocked: boolean; actionFor?: (code: string) => { label: string; run: () => void } | undefined }>) {
   if (!quality) {
     return <EmptyState title="暂无质量检查" description="选择考试后，这里会列出发布前需要处理的问题。" />;
   }
@@ -39,6 +39,7 @@ export function QualityPanel({ quality, publishedOrLocked }: { quality: QualityC
         <StatusTag tone={issue.blocking ? "danger" : "warning"}>{issue.blocking ? "须处理后才能发布" : "提醒"}</StatusTag>
         <strong>{qualityLabels[issue.code] ?? issue.code}</strong>
         <span>{issue.count} 项</span>
+        {actionFor?.(issue.code) ? <Button size="small" onClick={actionFor(issue.code)!.run}>{actionFor(issue.code)!.label}</Button> : null}
       </div>
     </List.Item>}
   />;

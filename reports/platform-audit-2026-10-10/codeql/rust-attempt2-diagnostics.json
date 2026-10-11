@@ -1,0 +1,389 @@
+{
+  "generated_at": "2026-10-11T14:11:46+08:00",
+  "log": "rust-create-attempt2.log",
+  "log_sha256": "1fd57b7d3f032c2b3d40558741f0fe04bc57bcf055f6a50d09d68cb76ecab57d",
+  "database_create_exit_code": 2,
+  "query_analysis_executed": false,
+  "counts": {
+    "crlf_escape_warnings": 28,
+    "expected_expression_warnings": 1,
+    "macro_expansion_warnings": 1,
+    "failed_trap_file_entries": 74,
+    "unique_failed_trap_paths": 74,
+    "native_allocation_failure_lines": 1
+  },
+  "failed_trap_entries": [
+    {
+      "log_line": 42,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\core_arch\\src\\x86_64\\avx512f.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 43,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\core_arch\\src\\x86_64\\avx512fp16.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 44,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\core_arch\\src\\x86_64\\bmi.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 45,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\core_arch\\src\\x86_64\\bmi2.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 46,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\core_arch\\src\\x86_64\\bswap.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 47,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\core_arch\\src\\x86_64\\bt.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 48,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\core_arch\\src\\x86_64\\cmpxchg16b.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 49,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\core_arch\\src\\x86_64\\fxsr.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 50,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\core_arch\\src\\x86_64\\macros.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 51,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\core_arch\\src\\x86_64\\mod.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 52,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\core_arch\\src\\x86_64\\movrs.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 53,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\core_arch\\src\\x86_64\\rdrand.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 54,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\core_arch\\src\\x86_64\\sse.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 55,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\core_arch\\src\\x86_64\\sse2.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 56,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\core_arch\\src\\x86_64\\sse41.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 57,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\core_arch\\src\\x86_64\\sse42.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 58,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\core_arch\\src\\x86_64\\tbm.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 59,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\core_arch\\src\\x86_64\\xsave.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 60,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\intrinsic-test\\src\\arm\\intrinsic.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 61,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\intrinsic-test\\src\\common\\argument.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 62,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\intrinsic-test\\src\\common\\constraint.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 63,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\intrinsic-test\\src\\common\\gen_c.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 64,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\intrinsic-test\\src\\common\\gen_rust.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 65,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\intrinsic-test\\src\\common\\intrinsic.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 66,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\intrinsic-test\\src\\common\\intrinsic_helpers.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 67,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\intrinsic-test\\src\\common\\mod.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 68,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\intrinsic-test\\src\\common\\values.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 69,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\intrinsic-test\\src\\main.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 70,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\intrinsic-test\\src\\x86\\constraint.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 71,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\intrinsic-test\\src\\x86\\intrinsic.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 72,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\intrinsic-test\\src\\x86\\mod.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 73,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\intrinsic-test\\src\\x86\\types.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 74,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\intrinsic-test\\src\\x86\\xml_parser.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 75,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\simd-test-macro\\src\\lib.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 76,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\stdarch-gen-arm\\src\\assert_instr.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 77,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\stdarch-gen-arm\\src\\big_endian.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 78,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\stdarch-gen-arm\\src\\context.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 79,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\stdarch-gen-arm\\src\\expression.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 80,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\stdarch-gen-arm\\src\\fn_suffix.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 81,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\stdarch-gen-arm\\src\\input.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 82,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\stdarch-gen-arm\\src\\intrinsic.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 83,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\stdarch-gen-arm\\src\\load_store_tests.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 84,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\stdarch-gen-arm\\src\\main.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 85,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\stdarch-gen-arm\\src\\matching.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 86,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\stdarch-gen-arm\\src\\predicate_forms.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 87,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\stdarch-gen-arm\\src\\typekinds.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 88,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\stdarch-gen-arm\\src\\wildcards.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 89,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\stdarch-gen-arm\\src\\wildstring.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 90,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\stdarch-gen-common\\src\\lib.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 91,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\stdarch-gen-hexagon\\src\\main.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 92,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\stdarch-gen-hexagon-scalar\\src\\main.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 93,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\stdarch-gen-loongarch\\src\\main.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 94,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\stdarch-test\\src\\disassembly.rs",
+      "message": "Not enough memory resources are available to process this command. (os error 8)"
+    },
+    {
+      "log_line": 95,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\stdarch-test\\src\\lib.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 96,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\stdarch-test\\src\\wasm.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 97,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\stdarch-verify\\build.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 98,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\stdarch-verify\\src\\lib.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 99,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\stdarch-verify\\tests\\arm.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 100,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\stdarch-verify\\tests\\mips.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 101,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\crates\\stdarch-verify\\tests\\x86-intel.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 102,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\examples\\connect5.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 103,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\examples\\gaussian.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 104,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\examples\\hex.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 105,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\stdarch\\examples\\wasm.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 106,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\std_detect\\src\\detect\\arch\\aarch64.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 107,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\std_detect\\src\\detect\\arch\\arm.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 108,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\std_detect\\src\\detect\\arch\\loongarch.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 109,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\std_detect\\src\\detect\\arch\\mips.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 110,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\std_detect\\src\\detect\\arch\\mips64.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 111,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\std_detect\\src\\detect\\arch\\mod.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 112,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\std_detect\\src\\detect\\arch\\powerpc.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 113,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\std_detect\\src\\detect\\arch\\powerpc64.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 114,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\std_detect\\src\\detect\\arch\\riscv.rs",
+      "message": "Allocation error : not enough memory"
+    },
+    {
+      "log_line": 115,
+      "path": "D:\\rust\\.rustup\\toolchains\\1.98.1-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust\\library\\std_detect\\src\\detect\\arch\\s390x.rs",
+      "message": "Allocation error : not enough memory"
+    }
+  ],
+  "scope_of_failures": "外部本地依赖/标准库 TRAP 写入期间发生原生内存分配失败；不产生有效 Rust 查询结论，不将平台崩溃解释成业务漏洞。",
+  "peak_constraints": "--ram 与 --threads 不能被视为 Rust 原生提取器的硬限制。"
+}

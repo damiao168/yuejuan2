@@ -38,8 +38,7 @@ const (
 	CandidateRolledBack       = "rolled_back"
 )
 
-// SourceAnswer is an authoritative projection of the latest recorded answer
-// and frozen question assessment. API callers cannot submit these facts.
+// SourceAnswer 是最新已记录答案和冻结题目评估的权威投影；API 调用方不能提交这些事实。
 type SourceAnswer struct {
 	SubmissionID  string
 	SegmentID     string
@@ -56,9 +55,7 @@ type Representation struct {
 	Hash       string
 }
 
-// RepresentationProvider is deliberately replaceable. The default provider
-// is deterministic text normalization and character shingles; it is not
-// described as an embedding model or as evidence of semantic quality.
+// RepresentationProvider 允许替换实现。默认实现使用确定性文本归一化和字符片段，不应称为嵌入模型，也不能作为语义质量证据。
 type RepresentationProvider interface {
 	Version() string
 	Represent(string) Representation
@@ -166,9 +163,7 @@ type Metrics struct {
 	PostAuditEvidenceStatus string   `json:"post_audit_evidence_status"`
 }
 
-// TeacherReferenceCase is deliberately sourced only from an active,
-// human-approved Gold Paper. It is not a nearest-neighbour result over raw
-// student answers and does not expose source grade or reviewer identities.
+// TeacherReferenceCase 只取自启用且经人工批准的 Gold Paper；它不是对原始学生答案的近邻搜索结果，也不暴露来源成绩或复核者身份。
 type TeacherReferenceCase struct {
 	GoldPaperID    string         `json:"gold_paper_id"`
 	SubmissionID   string         `json:"submission_id"`

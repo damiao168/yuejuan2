@@ -1,17 +1,11 @@
 import { createAssessmentApi } from "@edugrade/sdk";
 import type {
-  EducationStage,
-  EvidenceType,
   ExamQuestionAssessmentSnapshot,
   ExamRiskTier,
   PutQuestionAssessmentProfileRequest,
-  QuestionArchetype,
-  QuestionArchetypeCode,
   QuestionAssessmentProfile,
   QuestionScoringPolicy,
-  ScoringMode,
-  SubjectCode,
-  SubjectProfile
+  ScoringMode
 } from "@edugrade/sdk";
 import { apiClient } from "./client";
 
@@ -24,7 +18,7 @@ export type {
   QuestionArchetypeCode,
   SubjectCode,
   SubjectProfile
-};
+} from "@edugrade/sdk";
 export type AssessmentScoringMode = ScoringMode;
 export type AssessmentRiskTier = ExamRiskTier;
 export type AssessmentProfileInput = PutQuestionAssessmentProfileRequest;

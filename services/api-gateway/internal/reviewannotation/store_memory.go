@@ -16,13 +16,14 @@ type MemoryStore struct {
 	taskRefs                   map[string]memoryTaskReference
 	published                  map[string]bool
 	studentQuestionAnnotations map[string][]StudentAnnotation
+	studentPublishedReleases   map[string]string
 }
 
 func NewMemoryStore() *MemoryStore {
 	return &MemoryStore{
 		next: 1, annotations: map[string]Annotation{}, templates: map[string]CommentTemplate{},
 		taskRefs: map[string]memoryTaskReference{}, published: map[string]bool{},
-		studentQuestionAnnotations: map[string][]StudentAnnotation{},
+		studentQuestionAnnotations: map[string][]StudentAnnotation{}, studentPublishedReleases: map[string]string{},
 	}
 }
 
@@ -95,9 +96,12 @@ func (s *MemoryStore) ListStudentAnnotations(_ context.Context, tenantID, submis
 	return StudentAnnotations(items), nil
 }
 
-func (s *MemoryStore) ListStudentQuestionAnnotations(_ context.Context, tenantID, examID, studentID, questionID string) ([]StudentAnnotation, error) {
+func (s *MemoryStore) ListStudentQuestionAnnotations(_ context.Context, tenantID, examID, studentID, questionID string, expectedReleaseID ...string) ([]StudentAnnotation, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
+	if len(expectedReleaseID) > 0 && expectedReleaseID[0] != "" && s.studentPublishedReleases[memoryKey(tenantID, examID)] != expectedReleaseID[0] {
+		return nil, ErrStudentReleaseChanged
+	}
 	return cloneStudentAnnotations(s.studentQuestionAnnotations[studentQuestionKey(tenantID, examID, studentID, questionID)]), nil
 }
 
@@ -312,4 +316,12 @@ func cloneAnnotation(item Annotation) Annotation {
 
 func cloneStudentAnnotations(items []StudentAnnotation) []StudentAnnotation {
 	return append([]StudentAnnotation(nil), items...)
+}
+
+// SetStudentPublishedRelease 由跨域内存夹具注入当前发布；校验与批注读取共用同一把锁。
+// 生产实现从 PostgreSQL 同一只读快照取得发布，不依赖这项测试注入。
+func (s *MemoryStore) SetStudentPublishedRelease(tenantID, examID, releaseID string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.studentPublishedReleases[memoryKey(tenantID, examID)] = releaseID
 }

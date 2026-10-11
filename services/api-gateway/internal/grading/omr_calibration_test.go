@@ -1,6 +1,12 @@
 package grading
 
-import "testing"
+import (
+	"errors"
+	"reflect"
+	"testing"
+
+	"edugrade-enterprise/services/api-gateway/internal/paper"
+)
 
 func TestSummarizeOMRCalibrationRequiresCompleteBalancedZeroErrorEvidence(t *testing.T) {
 	session := OMRCalibrationSession{
@@ -107,6 +113,97 @@ func TestSummarizeTemplateOMRCalibrationRequiresStrataAndOnlyBlocksEligibleError
 	summary = summarizeOMRCalibration(session, cases)
 	if summary.ReadyToApprove || !containsString(summary.Blockers, "stratum_coverage_incomplete") {
 		t.Fatalf("missing a result stratum must block template approval: %#v", summary)
+	}
+}
+
+func TestSummarizeOMRCalibrationKeepsPendingCoverageAndBlockerOrder(t *testing.T) {
+	session := OMRCalibrationSession{
+		ScopeType:                "template",
+		QuestionIDs:              []string{"q1", "q2"},
+		OptionLabels:             []string{"A", "B"},
+		MinimumSamples:           4,
+		MinimumSamplesPerOption:  2,
+		MinimumSamplesPerStratum: 1,
+		Status:                   "approved",
+	}
+	mismatch := false
+	// 标签和比对结果只要缺少一个就仍待标注，不能提前贡献选项覆盖或错例计数。
+	cases := []OMRCalibrationCase{
+		{QuestionID: "q1", SampleStratum: "selected_high", ExpectedOptions: []string{"B"}},
+		{QuestionID: "q1", SampleStratum: "selected_low", Matches: &mismatch},
+		{QuestionID: "q1", SampleStratum: "selected_high", ExpectedOptions: []string{"A"}, Matches: &mismatch},
+	}
+	summary := summarizeOMRCalibration(session, cases)
+	if summary.TotalCount != 3 || summary.PendingCount != 2 || summary.LabeledCount != 1 || summary.EligibleCount != 2 || summary.EligibleMismatchCount != 1 || summary.MismatchCount != 1 {
+		t.Fatalf("pending samples must retain coverage without contributing comparison counts: %#v", summary)
+	}
+	if summary.QuestionCoverage["q1"] != 3 || summary.StratumCoverage["selected_high"] != 2 || summary.StratumCoverage["selected_low"] != 1 || summary.OptionCoverage["A"] != 1 || summary.OptionCoverage["B"] != 0 {
+		t.Fatalf("pending samples must not contribute option coverage: %#v", summary)
+	}
+	wantBlockers := []string{
+		"sample_count_below_minimum",
+		"calibration_labels_pending",
+		"eligible_calibration_mismatch_detected",
+		"option_coverage_incomplete",
+		"question_coverage_incomplete",
+		"stratum_coverage_incomplete",
+		"calibration_not_draft",
+	}
+	if summary.ReadyToApprove || !reflect.DeepEqual(summary.Blockers, wantBlockers) {
+		t.Fatalf("approval blockers must preserve their order: got %v, want %v", summary.Blockers, wantBlockers)
+	}
+}
+
+func TestCalibrationQuestionsForLayoutKeepsFirstOMRRegionOrder(t *testing.T) {
+	metadata := map[string]calibrationQuestion{
+		"q1": {ID: "q1", No: "1", Type: "single_choice"},
+		"q2": {ID: "q2", No: "2", Type: "multiple_choice"},
+		"q3": {ID: "q3", No: "3", Type: "true_false"},
+		"q4": {ID: "q4", No: "4", Type: "essay"},
+	}
+	// 页码和数据库顺序不能重排题集；重复题目只采用模板中第一个题区的选项。
+	layout := paper.TemplateLayout{Pages: []paper.TemplatePage{
+		{PageNo: 9, QuestionRegions: []paper.LayoutRegion{
+			{QuestionID: "q2", OptionRegions: []paper.OptionRegion{{Label: " C "}, {Label: "A"}}},
+			{QuestionID: "missing"},
+			{QuestionID: "q4"},
+			{QuestionID: "q1", OptionRegions: []paper.OptionRegion{{Label: "A"}, {Label: "B"}}},
+		}},
+		{PageNo: 1, QuestionRegions: []paper.LayoutRegion{
+			{QuestionID: "q2"},
+			{QuestionID: "q3", OptionRegions: []paper.OptionRegion{{Label: "T"}, {Label: "F"}}},
+		}},
+	}}
+	want := []calibrationQuestion{
+		{ID: "q2", No: "2", Type: "multiple_choice", OptionLabels: []string{"C", "A"}},
+		{ID: "q1", No: "1", Type: "single_choice", OptionLabels: []string{"A", "B"}},
+		{ID: "q3", No: "3", Type: "true_false", OptionLabels: []string{"T", "F"}},
+	}
+	got, err := calibrationQuestionsForLayout(layout, metadata)
+	if err != nil || !reflect.DeepEqual(got, want) {
+		t.Fatalf("calibration questions must follow eligible first regions: got %#v, err %v", got, err)
+	}
+}
+
+func TestCalibrationQuestionsForLayoutRejectsInvalidOptionLabels(t *testing.T) {
+	metadata := map[string]calibrationQuestion{"q1": {ID: "q1", Type: "single_choice"}}
+	tests := []struct {
+		name    string
+		options []paper.OptionRegion
+	}{
+		{name: "no options"},
+		{name: "only one option", options: []paper.OptionRegion{{Label: "A"}}},
+		{name: "empty after trimming", options: []paper.OptionRegion{{Label: "A"}, {Label: " "}}},
+		{name: "duplicate after trimming", options: []paper.OptionRegion{{Label: " A "}, {Label: "A"}}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			layout := paper.TemplateLayout{Pages: []paper.TemplatePage{{QuestionRegions: []paper.LayoutRegion{{QuestionID: "q1", OptionRegions: test.options}}}}}
+			got, err := calibrationQuestionsForLayout(layout, metadata)
+			if !errors.Is(err, ErrInvalidInput) || got != nil {
+				t.Fatalf("invalid options must reject the entire question set: got %#v, err %v", got, err)
+			}
+		})
 	}
 }
 

@@ -7,7 +7,7 @@ import (
 
 func mfaOwnerKey(tenantID, userID string) string { return tenantID + "|" + userID }
 
-// Caller holds s.mu. All mutations use the same live session/epoch check.
+// 调用方持有 s.mu；所有修改采用相同的存活会话和 epoch 检查。
 func (s *MemoryStore) liveMFAPrincipal(tenantID, userID, sessionHash string, now time.Time) (UserWithPassword, error) {
 	session, ok := s.sessions[sessionHash]
 	if !ok || session.TenantID != tenantID || session.UserID != userID || !session.ExpiresAt.After(now) || !session.LockedAt.IsZero() {
@@ -213,32 +213,28 @@ func (s *MemoryStore) FinishMFACommand(ctx context.Context, proof MFAProof, oper
 		s.mfaChallenges[proof.ChallengeHash] = challenge
 	case MFAOperationDisable:
 		// 关闭 MFA 同时撤销会话、设备并推进安全版本，已有登录状态不能继续沿用。
-		delete(s.totpRecords, key)
-		delete(s.mfaRecovery, challenge.CredentialID)
-		for hash, old := range s.mfaChallenges {
-			if old.TenantID == proof.TenantID && old.UserID == proof.UserID {
-				delete(s.mfaChallenges, hash)
-			}
-		}
-		for hash, session := range s.sessions {
-			if session.TenantID == proof.TenantID && session.UserID == proof.UserID {
-				delete(s.sessions, hash)
-			}
-		}
-		for hash, device := range s.devices {
-			if device.TenantID == proof.TenantID && device.UserID == proof.UserID {
-				delete(s.devices, hash)
-			}
-		}
-		for loginKey, user := range s.users {
-			if user.ID == proof.UserID && user.TenantID == proof.TenantID {
-				user.SecurityEpoch++
-				s.users[loginKey] = user
-			}
-		}
+		s.disableMFA(proof, key, challenge.CredentialID)
 	default:
 		return ErrMFAInvalid
 	}
 	s.recordMFASecurityChange(ctx, change)
 	return nil
+}
+
+// 调用方持有 MFA 命令的写锁；撤销凭据和推进安全版本后，再记录同次安全变更。
+func (s *MemoryStore) disableMFA(proof MFAProof, ownerKey, credentialID string) {
+	delete(s.totpRecords, ownerKey)
+	delete(s.mfaRecovery, credentialID)
+	for hash, old := range s.mfaChallenges {
+		if old.TenantID == proof.TenantID && old.UserID == proof.UserID {
+			delete(s.mfaChallenges, hash)
+		}
+	}
+	s.revokeUserCredentials(proof.TenantID, proof.UserID)
+	for loginKey, user := range s.users {
+		if user.ID == proof.UserID && user.TenantID == proof.TenantID {
+			user.SecurityEpoch++
+			s.users[loginKey] = user
+		}
+	}
 }

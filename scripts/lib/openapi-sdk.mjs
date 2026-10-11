@@ -15,8 +15,32 @@ function propertyKey(value) {
   return JSON.stringify(value);
 }
 
+function objectSchemaToType(schema) {
+  const required = new Set(schema.required ?? []);
+  const properties = Object.entries(schema.properties ?? {}).map(([name, child]) => {
+    return `${propertyKey(name)}${required.has(name) ? "" : "?"}: ${schemaToType(child)};`;
+  });
+  const objectType = properties.length ? `{ ${properties.join(" ")} }` : "Record<string, never>";
+  if (schema.additionalProperties === true) {
+    return properties.length ? `(${objectType} & Record<string, unknown>)` : "Record<string, unknown>";
+  }
+  if (schema.additionalProperties && typeof schema.additionalProperties === "object") {
+    return `(${objectType} & Record<string, ${schemaToType(schema.additionalProperties)}>)`;
+  }
+  return objectType;
+}
+
+function primitiveSchemaToType(schema) {
+  if (schema.type === "string") return schema.format === "binary" ? "Blob | ArrayBuffer | Uint8Array" : "string";
+  if (schema.type === "integer" || schema.type === "number") return "number";
+  if (schema.type === "boolean") return "boolean";
+  if (schema.type === "null") return "null";
+  return "unknown";
+}
+
 export function schemaToType(schema) {
   if (!schema || typeof schema !== "object") return "unknown";
+  // $ref 直接输出引用名；其余节点先算基础类型，再拼接 allOf，最后追加 nullable。
   if (schema.$ref) return refName(schema.$ref);
 
   let result;
@@ -31,28 +55,9 @@ export function schemaToType(schema) {
   } else if (schema.type === "array") {
     result = `Array<${schemaToType(schema.items)}>`;
   } else if (schema.type === "object" || schema.properties || schema.additionalProperties) {
-    const required = new Set(schema.required ?? []);
-    const properties = Object.entries(schema.properties ?? {}).map(([name, child]) => {
-      return `${propertyKey(name)}${required.has(name) ? "" : "?"}: ${schemaToType(child)};`;
-    });
-    const objectType = properties.length ? `{ ${properties.join(" ")} }` : "Record<string, never>";
-    if (schema.additionalProperties === true) {
-      result = properties.length ? `(${objectType} & Record<string, unknown>)` : "Record<string, unknown>";
-    } else if (schema.additionalProperties && typeof schema.additionalProperties === "object") {
-      result = `(${objectType} & Record<string, ${schemaToType(schema.additionalProperties)}>)`;
-    } else {
-      result = objectType;
-    }
-  } else if (schema.type === "string") {
-    result = schema.format === "binary" ? "Blob | ArrayBuffer | Uint8Array" : "string";
-  } else if (schema.type === "integer" || schema.type === "number") {
-    result = "number";
-  } else if (schema.type === "boolean") {
-    result = "boolean";
-  } else if (schema.type === "null") {
-    result = "null";
+    result = objectSchemaToType(schema);
   } else {
-    result = "unknown";
+    result = primitiveSchemaToType(schema);
   }
 
   if (Array.isArray(schema.allOf) && schema.allOf.length) {
@@ -154,9 +159,10 @@ export function generateClient(spec) {
     })
     .join("\n");
 
-  const referencedSchemas = Object.keys(spec.components?.schemas ?? {}).filter((name) =>
-    new RegExp(`\\b${name.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&")}\\b`).test(operationTypes)
-  );
+  const referencedSchemas = Object.keys(spec.components?.schemas ?? {}).filter((name) => {
+    const escapedName = name.replace(/[.*+?^${}()|[\\]\\\\]/g, String.raw`\$&`);
+    return new RegExp(String.raw`\b${escapedName}\b`).test(operationTypes);
+  });
 
   const methods = entries
     .map(({ method, pathTemplate, operation, parameters }) => {
@@ -176,7 +182,7 @@ export function generateClient(spec) {
       const initParts = [`method: ${JSON.stringify(method.toUpperCase())}`, "signal: args.signal"];
       if (request) {
         initParts.push(request.json ? "body: args.body === undefined ? undefined : JSON.stringify(args.body)" : "body: args.body as BodyInit");
-        if (!request.json) initParts.push(`headers: { \"Content-Type\": ${JSON.stringify(request.contentType)}, ...Object.fromEntries(Object.entries(args.headers ?? {}).map(([name, value]) => [name, String(value)])) }`);
+        if (!request.json) initParts.push(`headers: { "Content-Type": ${JSON.stringify(request.contentType)}, ...Object.fromEntries(Object.entries(args.headers ?? {}).map(([name, value]) => [name, String(value)])) }`);
         else if (parameters.some((parameter) => parameter?.in === "header")) {
           initParts.push("headers: Object.fromEntries(Object.entries(args.headers ?? {}).map(([name, value]) => [name, String(value)]))");
         }
@@ -238,11 +244,73 @@ export function stableJson(value) {
   return `${JSON.stringify(value, null, 2)}\n`;
 }
 
+function verifyArtifactPath(file, opened) {
+  const current = fs.statSync(file, { bigint: true });
+  // 这里只决定本次能否报告成功，之后不按路径重新读写；打开后被替换或删除的产物必须交由调用方重试。
+  if (current.dev !== opened.dev || current.ino !== opened.ino) throw new Error(`Generated artifact path changed while open: ${file}`);
+}
+
+function readonlyArtifactUnchanged(file, content, originalError) {
+  // 只读产物仅在内容和路径身份均未变化时通过；这个分支不能再按路径打开写入。
+  const descriptor = fs.openSync(file, fs.constants.O_RDONLY | (fs.constants.O_NONBLOCK ?? 0));
+  try {
+    const opened = fs.fstatSync(descriptor, { bigint: true });
+    if (!opened.isFile()) throw originalError;
+    if (fs.readFileSync(descriptor, "utf8") !== content) return false;
+    verifyArtifactPath(file, opened);
+    return true;
+  } finally { fs.closeSync(descriptor); }
+}
+
+function openExistingArtifact(file, content) {
+  // undefined 表示路径缺失，可尝试排他创建；null 表示只读内容已校验，无需交出写入描述符。
+  try {
+    return { descriptor: fs.openSync(file, fs.constants.O_RDWR | (fs.constants.O_NONBLOCK ?? 0)), created: false };
+  } catch (error) {
+    if (error.code === "EACCES" || error.code === "EPERM") {
+      if (readonlyArtifactUnchanged(file, content, error)) return null;
+      throw error;
+    }
+    if (error.code === "ENOENT") return undefined;
+    throw error;
+  }
+}
+
+function openArtifactForUpdate(file, content) {
+  // 已有文件用 r+ 保留权限及 Windows 兼容性；缺失时排他创建，最多尝试三轮。
+  // 另一进程抢先创建时重新打开它，不能使用截断模式；null 沿用已完成只读校验的结果。
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const existing = openExistingArtifact(file, content);
+    if (existing !== undefined) return existing;
+    try { return { descriptor: fs.openSync(file, "wx+"), created: true }; }
+    catch (createError) {
+      if (createError.code !== "EEXIST" || attempt >= 2) throw createError;
+    }
+  }
+  throw new Error(`Generated artifact could not be opened: ${file}`);
+}
+
 export function writeIfChanged(file, content) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  if (fs.existsSync(file) && fs.readFileSync(file, "utf8") === content) return false;
-  fs.writeFileSync(file, content, "utf8");
-  return true;
+  const openedArtifact = openArtifactForUpdate(file, content);
+  if (openedArtifact === null) return false;
+  const { descriptor, created } = openedArtifact;
+  try {
+    // 链接按系统规则在打开时解析；内容比较和写入绑定同一文件，路径身份另在返回前核对。
+    const opened = fs.fstatSync(descriptor, { bigint: true });
+    if (!opened.isFile()) throw new Error(`Generated artifact is not a regular file: ${file}`);
+    if (fs.readFileSync(descriptor, "utf8") === content) { verifyArtifactPath(file, opened); return created; }
+    const buffer = Buffer.from(content, "utf8");
+    // 读取已移动文件位置，必须从字节 0 写入；短写继续补齐，写入失败直接报错，不能返回生成成功。
+    for (let offset = 0; offset < buffer.length;) {
+      const written = fs.writeSync(descriptor, buffer, offset, buffer.length - offset, offset);
+      if (written === 0) throw new Error(`Generated artifact write made no progress: ${file}`);
+      offset += written;
+    }
+    fs.ftruncateSync(descriptor, buffer.length);
+    verifyArtifactPath(file, opened);
+    return true;
+  } finally { fs.closeSync(descriptor); }
 }
 
 function banner() {

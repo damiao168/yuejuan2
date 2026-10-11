@@ -16,9 +16,8 @@ import (
 	"github.com/google/uuid"
 )
 
-// This exercises an upgrade with real preexisting records, rather than only
-// replaying migrations into an empty database. The E2E helper uses an isolated
-// database and records applied migrations so the second call applies 000155+.
+// 此测试使用实际已有记录进行升级，不只是向空数据库重放迁移。
+// 端到端辅助函数使用隔离数据库并记录已应用迁移，因此第二次调用只应用 000155 及后续迁移。
 func TestPostgresMigrationUpgradeFrom000154(t *testing.T) {
 	dsn := strings.TrimSpace(os.Getenv("EDUGRADE_E2E_DATABASE_URL"))
 	if dsn == "" {
@@ -64,6 +63,14 @@ WHERE ur.tenant_id=$1::uuid AND u.username='school_admin' AND u.school_id=$2::uu
 		t.Fatalf("school administrator scope expanded or changed after upgrade: %s err=%v", schoolScope, err)
 	}
 
+	assertUpgradePreservedGradingGraph(t, ctx, db, fixture)
+	assertUpgradePreservedModelCredentials(t, ctx, db, fixture)
+	assertUpgradeModelBindingsAndDeletion(t, ctx, db, fixture)
+}
+
+// 升级前的学校、学生、答卷、评分运行和成绩必须仍以原关系连接。
+func assertUpgradePreservedGradingGraph(t *testing.T, ctx context.Context, db *sql.DB, fixture pre155UpgradeFixture) {
+	t.Helper()
 	var schoolName, studentName, examName, answerText, runStatus string
 	var score float64
 	if err := db.QueryRowContext(ctx, `
@@ -89,6 +96,11 @@ WHERE school.tenant_id=$1::uuid AND school.id=$2::uuid AND student.id=$3::uuid
 		t.Fatalf("upgrade changed preexisting grading data: school=%q student=%q exam=%q answer=%q run=%q score=%v", schoolName, studentName, examName, answerText, runStatus, score)
 	}
 
+}
+
+// 逐份检查历史密文、版本与成功测试时间，且仍能用原租户和配置身份解密。
+func assertUpgradePreservedModelCredentials(t *testing.T, ctx context.Context, db *sql.DB, fixture pre155UpgradeFixture) {
+	t.Helper()
 	for index, configID := range fixture.modelIDs {
 		var ciphertext, nonce []byte
 		var modelName, testStatus string
@@ -109,8 +121,12 @@ FROM managed_model_api_config WHERE tenant_id=$1::uuid AND id=$2::uuid AND delet
 		}
 	}
 
-	// 000156 adds the binding FK. Verify that all three preexisting model rows
-	// remain valid targets for the new A/B/C configuration.
+}
+
+// 先绑定历史 A/B/C 配置，再删除第四份未绑定配置；跨租户平台操作者的归属和历史密文必须保留。
+func assertUpgradeModelBindingsAndDeletion(t *testing.T, ctx context.Context, db *sql.DB, fixture pre155UpgradeFixture) {
+	t.Helper()
+	// 000156 添加绑定外键。核验全部三个已有模型行仍是新 A/B/C 配置的有效目标。
 	for index, role := range []string{"primary_a", "primary_b", "arbiter"} {
 		mustUpgradeExec(t, ctx, db, `
 INSERT INTO model_role_binding(tenant_id,education_stage,subject_code,agent_role,
@@ -126,8 +142,7 @@ WHERE binding.tenant_id=$1::uuid AND binding.status='active' AND config.deleted_
 		t.Fatalf("A/B/C bindings could not reference upgraded model configs: count=%d err=%v", bindingCount, err)
 	}
 
-	// The fourth historical config is deliberately unbound. A platform actor
-	// belongs to another tenant, so this also checks the 000168 deleted_by FK.
+	// 第四个历史配置刻意不绑定。平台操作者属于另一个租户，因此也检查 000168 的 deleted_by 外键。
 	managedStore := modelgovernance.NewPostgresStore(db, fixture.cipher)
 	if err := managedStore.DeleteManagedAPIConfig(ctx, fixture.tenantID, fixture.platformActorID, fixture.modelIDs[1]); !errors.Is(err, modelgovernance.ErrManagedConfigInUse) {
 		t.Fatalf("active panel binding did not block PostgreSQL soft deletion: %v", err)
@@ -155,6 +170,7 @@ FROM managed_model_api_config WHERE tenant_id=$1::uuid AND id=$2::uuid AND delet
 	if err := db.QueryRowContext(ctx, `SELECT count(*) FROM model_role_binding WHERE tenant_id=$1::uuid`, fixture.tenantID).Scan(&bindingCount); err != nil || bindingCount != 3 {
 		t.Fatalf("soft deletion damaged other model binding FKs: count=%d err=%v", bindingCount, err)
 	}
+
 }
 
 type pre155UpgradeFixture struct {

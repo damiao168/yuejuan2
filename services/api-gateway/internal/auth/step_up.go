@@ -9,9 +9,7 @@ import (
 
 const DefaultRecentAuthTTL = time.Hour
 
-// RequireRecentAuth protects a sensitive handler after the ordinary session,
-// tenant, resource and permission checks have succeeded. A password login and
-// an explicit reauthentication both refresh the trusted session timestamp.
+// RequireRecentAuth 在普通会话、租户、资源及权限检查通过后保护敏感处理器。密码登录和显式重新认证都会刷新可信会话时间戳。
 func RequireRecentAuth(maxAge time.Duration) func(http.Handler) http.Handler {
 	if maxAge <= 0 {
 		maxAge = DefaultRecentAuthTTL
@@ -34,8 +32,7 @@ func RequireRecentAuth(maxAge time.Duration) func(http.Handler) http.Handler {
 	}
 }
 
-// RequireAuthLevel is the server-side boundary for future MFA/WebAuthn and
-// enterprise IdP sessions. Password-only sessions are level 1 today.
+// RequireAuthLevel 是未来 MFA/WebAuthn 和企业 IdP 会话的服务端边界；当前仅密码会话的等级为 1。
 func RequireAuthLevel(level int) func(http.Handler) http.Handler {
 	if level < 1 {
 		level = 1

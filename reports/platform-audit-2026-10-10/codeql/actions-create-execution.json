@@ -1,0 +1,21 @@
+{
+  "language": "actions",
+  "stage": "create",
+  "started": "2026-10-11T11:17:27+08:00",
+  "command": [
+    "D:\\tools\\audit-codeql-20261010\\codeql\\codeql.exe",
+    "database",
+    "create",
+    "D:\\tools\\audit-codeql-20261010\\databases\\actions-20261011-process-policy",
+    "--language=actions",
+    "--source-root=D:\\tools\\audit-codeql-20261010\\source-20261011",
+    "--threads=2",
+    "--ram=2048",
+    "--build-mode=none",
+    "--common-caches=D:\\tools\\audit-codeql-20261010\\common-caches"
+  ],
+  "log": "D:\\project\\yuejuan\\reports\\platform-audit-2026-10-10\\codeql\\actions-create.log",
+  "exit_code": 0,
+  "finished": "2026-10-11T11:17:58+08:00",
+  "elapsed_seconds": 31.28
+}

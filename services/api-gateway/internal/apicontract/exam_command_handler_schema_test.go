@@ -127,41 +127,66 @@ func validateOpenAPIValue(document map[string]any, schema map[string]any, value 
 	}
 	switch schema["type"] {
 	case "object":
-		objectValue, ok := value.(map[string]any)
-		if !ok {
-			return fmt.Errorf("%s must be object, got %T", location, value)
-		}
-		properties, _ := schema["properties"].(map[string]any)
-		requiredFields, _ := schema["required"].([]any)
-		for _, required := range requiredFields {
-			if _, exists := objectValue[required.(string)]; !exists {
-				return fmt.Errorf("%s is missing required field %s", location, required)
-			}
-		}
-		if schema["additionalProperties"] == false {
-			for name := range objectValue {
-				if _, exists := properties[name]; !exists {
-					return fmt.Errorf("%s contains undeclared field %s", location, name)
-				}
-			}
-		}
-		for name, property := range properties {
-			if propertyValue, exists := objectValue[name]; exists {
-				if err := validateOpenAPIValue(document, property.(map[string]any), propertyValue, location+"."+name); err != nil {
-					return err
-				}
-			}
-		}
+		return validateOpenAPIObject(document, schema, value, location)
 	case "array":
-		items, ok := value.([]any)
-		if !ok {
-			return fmt.Errorf("%s must be array, got %T", location, value)
-		}
-		for index, item := range items {
-			if err := validateOpenAPIValue(document, schema["items"].(map[string]any), item, fmt.Sprintf("%s[%d]", location, index)); err != nil {
+		return validateOpenAPIArray(document, schema, value, location)
+	default:
+		return validateOpenAPIPrimitive(schema, value, location)
+	}
+}
+
+// 字段存在性和额外字段限制先检查，再递归核验各已提供字段的值。
+func validateOpenAPIObject(document map[string]any, schema map[string]any, value any, location string) error {
+	objectValue, ok := value.(map[string]any)
+	if !ok {
+		return fmt.Errorf("%s must be object, got %T", location, value)
+	}
+	properties, _ := schema["properties"].(map[string]any)
+	if err := validateOpenAPIObjectFields(schema, objectValue, properties, location); err != nil {
+		return err
+	}
+	for name, property := range properties {
+		if propertyValue, exists := objectValue[name]; exists {
+			if err := validateOpenAPIValue(document, property.(map[string]any), propertyValue, location+"."+name); err != nil {
 				return err
 			}
 		}
+	}
+	return nil
+}
+
+func validateOpenAPIObjectFields(schema map[string]any, objectValue map[string]any, properties map[string]any, location string) error {
+	requiredFields, _ := schema["required"].([]any)
+	for _, required := range requiredFields {
+		if _, exists := objectValue[required.(string)]; !exists {
+			return fmt.Errorf("%s is missing required field %s", location, required)
+		}
+	}
+	if schema["additionalProperties"] == false {
+		for name := range objectValue {
+			if _, exists := properties[name]; !exists {
+				return fmt.Errorf("%s contains undeclared field %s", location, name)
+			}
+		}
+	}
+	return nil
+}
+
+func validateOpenAPIArray(document map[string]any, schema map[string]any, value any, location string) error {
+	items, ok := value.([]any)
+	if !ok {
+		return fmt.Errorf("%s must be array, got %T", location, value)
+	}
+	for index, item := range items {
+		if err := validateOpenAPIValue(document, schema["items"].(map[string]any), item, fmt.Sprintf("%s[%d]", location, index)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateOpenAPIPrimitive(schema map[string]any, value any, location string) error {
+	switch schema["type"] {
 	case "string":
 		if _, ok := value.(string); !ok {
 			return fmt.Errorf("%s must be string, got %T", location, value)

@@ -9,9 +9,11 @@ export interface ManagedUser {
   employee_no?: string;
   status: string;
   roles: string[];
+  class_ids?: string[];
   school_id?: string;
   created_at?: string;
   activated_at?: string;
+  activation_expires_at?: string;
   last_login_at?: string;
 }
 
@@ -28,7 +30,8 @@ export interface CreateManagedUserPayload {
   employee_no?: string;
   display_name: string;
   password?: string;
-  role_code: string;
+  role_code?: string;
+  role_codes?: string[];
   school_id?: string;
   class_ids?: string[];
 }
@@ -46,6 +49,36 @@ export interface ManagedUserRecovery extends ManagedUserActivation {
 
 export async function listManagedUsers(filter: { q?: string; role?: string; limit?: number; cursor?: string } = {}) {
   return apiClient.request<{ users: ManagedUser[]; next_cursor: string; has_more: boolean }>(`/api/v1/users${buildQueryString(filter)}`);
+}
+
+export async function listAllManagedUsers(filter: { q?: string; role?: string } = {}): Promise<ManagedUser[]> {
+  const users = new Map<string, ManagedUser>();
+  const seenCursors = new Set<string>();
+  let cursor: string | undefined;
+  do {
+    const page = await listManagedUsers({ ...filter, limit: 200, cursor });
+    for (const user of page.users) users.set(user.id, user);
+    if (!page.has_more) break;
+    // 搜索和职责管理需要完整授权名单；游标异常必须报错，不能将部分名单标成全部人员。
+    if (!page.next_cursor || seenCursors.has(page.next_cursor)) throw new Error("人员分页异常，请刷新后重试");
+    seenCursors.add(page.next_cursor);
+    cursor = page.next_cursor;
+  } while (cursor);
+  return [...users.values()];
+}
+
+export interface UpdateManagedUserAccessPayload {
+  role_codes: string[];
+  class_ids: string[];
+  expected_roles: string[];
+  expected_class_ids: string[];
+  reason: string;
+}
+
+export function updateManagedUserAccess(id: string, payload: UpdateManagedUserAccessPayload) {
+  return apiClient.request<{ user: ManagedUser }>(`/api/v1/users/${encodeURIComponent(id)}/access`, {
+    method: "PATCH", body: JSON.stringify(payload)
+  });
 }
 
 export async function listAllActiveGraders(): Promise<ManagedUser[]> {

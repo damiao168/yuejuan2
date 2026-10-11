@@ -18,6 +18,11 @@ import (
 )
 
 const (
+	managedChatContentTypeHeader = "Content-Type"
+	managedChatJSONContentType   = "application/json"
+)
+
+const (
 	managedChatMaxMessages     = 50
 	managedChatMaxMessageRunes = 20_000
 	managedChatMaxAttachments  = 3
@@ -137,7 +142,7 @@ func (c *HTTPManagedAPIChatter) StreamChat(ctx context.Context, connection Manag
 	}
 	req.Header.Set("Authorization", "Bearer "+connection.APIKey)
 	req.Header.Set("Accept", "text/event-stream")
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(managedChatContentTypeHeader, managedChatJSONContentType)
 	req.Header.Set("User-Agent", "EduGrade-Admin-Chat/1.0")
 	if dashscope {
 		req.Header.Set("X-DashScope-SSE", "enable")
@@ -151,9 +156,41 @@ func (c *HTTPManagedAPIChatter) StreamChat(ctx context.Context, connection Manag
 		io.Copy(io.Discard, io.LimitReader(response.Body, managedProbeResponseLimit))
 		return ManagedChatProviderError{StatusCode: response.StatusCode}
 	}
-	var content, reasoning, finishReason string
-	var usage ManagedAPIProbeUsage
-	scanner := bufio.NewScanner(response.Body)
+	return consumeManagedChatStream(response.Body, connection, dashscope, emit)
+}
+
+type managedChatStreamChunk struct {
+	Choices []struct {
+		Delta struct {
+			Content          string `json:"content"`
+			ReasoningContent string `json:"reasoning_content"`
+		} `json:"delta"`
+		Message struct {
+			Content          string `json:"content"`
+			ReasoningContent string `json:"reasoning_content"`
+		} `json:"message"`
+		FinishReason string `json:"finish_reason"`
+	} `json:"choices"`
+	Output struct {
+		Choices []struct {
+			Message struct {
+				Content          string `json:"content"`
+				ReasoningContent string `json:"reasoning_content"`
+			} `json:"message"`
+			FinishReason string `json:"finish_reason"`
+		} `json:"choices"`
+	} `json:"output"`
+	Usage json.RawMessage `json:"usage"`
+}
+
+type managedChatStreamState struct {
+	content, reasoning, finishReason string
+	usage                            ManagedAPIProbeUsage
+}
+
+func consumeManagedChatStream(reader io.Reader, connection ManagedAPIConnection, dashscope bool, emit func(ManagedChatEvent) error) error {
+	var state managedChatStreamState
+	scanner := bufio.NewScanner(reader)
 	scanner.Buffer(make([]byte, 64*1024), 4*1024*1024)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -164,82 +201,73 @@ func (c *HTTPManagedAPIChatter) StreamChat(ctx context.Context, connection Manag
 		if data == "[DONE]" {
 			break
 		}
-		var chunk struct {
-			Choices []struct {
-				Delta struct {
-					Content          string `json:"content"`
-					ReasoningContent string `json:"reasoning_content"`
-				} `json:"delta"`
-				Message struct {
-					Content          string `json:"content"`
-					ReasoningContent string `json:"reasoning_content"`
-				} `json:"message"`
-				FinishReason string `json:"finish_reason"`
-			} `json:"choices"`
-			Output struct {
-				Choices []struct {
-					Message struct {
-						Content          string `json:"content"`
-						ReasoningContent string `json:"reasoning_content"`
-					} `json:"message"`
-					FinishReason string `json:"finish_reason"`
-				} `json:"choices"`
-			} `json:"output"`
-			Usage json.RawMessage `json:"usage"`
-		}
+		var chunk managedChatStreamChunk
 		if json.Unmarshal([]byte(data), &chunk) != nil {
 			continue
 		}
-		var answerDelta, reasoningDelta string
-		if dashscope && len(chunk.Output.Choices) > 0 {
-			choice := chunk.Output.Choices[0]
-			answerDelta, reasoningDelta, finishReason = choice.Message.Content, choice.Message.ReasoningContent, choice.FinishReason
-		} else if len(chunk.Choices) > 0 {
-			choice := chunk.Choices[0]
-			answerDelta, reasoningDelta = choice.Delta.Content, choice.Delta.ReasoningContent
-			if choice.FinishReason != "" {
-				finishReason = choice.FinishReason
-			}
-		}
-		if reasoningDelta != "" {
-			reasoning += reasoningDelta
-			if err := emit(ManagedChatEvent{Type: "reasoning", Delta: reasoningDelta}); err != nil {
-				return err
-			}
-		}
-		if answerDelta != "" {
-			content += answerDelta
-			if err := emit(ManagedChatEvent{Type: "content", Delta: answerDelta}); err != nil {
-				return err
-			}
-		}
-		if len(chunk.Usage) > 0 && string(chunk.Usage) != "null" {
-			if dashscope {
-				var value struct {
-					InputTokens  int64 `json:"input_tokens"`
-					OutputTokens int64 `json:"output_tokens"`
-					TotalTokens  int64 `json:"total_tokens"`
-				}
-				if json.Unmarshal(chunk.Usage, &value) == nil {
-					usage = ManagedAPIProbeUsage{InputTokens: value.InputTokens, OutputTokens: value.OutputTokens, TotalTokens: value.TotalTokens}
-				}
-			} else {
-				var value managedOpenAIProbeUsage
-				if json.Unmarshal(chunk.Usage, &value) == nil {
-					usage = value.normalized()
-				}
-			}
+		if err := state.consumeChunk(chunk, dashscope, emit); err != nil {
+			return err
 		}
 	}
 	if err := scanner.Err(); err != nil {
 		return err
 	}
-	completion, err := managedChatCompletion(connection, content, finishReason, usage)
+	completion, err := managedChatCompletion(connection, state.content, state.finishReason, state.usage)
 	if err != nil {
 		return err
 	}
-	completion.Message.ReasoningContent = reasoning
+	completion.Message.ReasoningContent = state.reasoning
 	return emit(ManagedChatEvent{Type: "done", Completion: &completion})
+}
+
+// 一帧中先发送思考、再发送正文、最后更新用量；回调失败时不能处理同帧后续数据。
+func (state *managedChatStreamState) consumeChunk(chunk managedChatStreamChunk, dashscope bool, emit func(ManagedChatEvent) error) error {
+	var answerDelta, reasoningDelta string
+	if dashscope && len(chunk.Output.Choices) > 0 {
+		choice := chunk.Output.Choices[0]
+		answerDelta, reasoningDelta, state.finishReason = choice.Message.Content, choice.Message.ReasoningContent, choice.FinishReason
+	} else if len(chunk.Choices) > 0 {
+		choice := chunk.Choices[0]
+		answerDelta, reasoningDelta = choice.Delta.Content, choice.Delta.ReasoningContent
+		if choice.FinishReason != "" {
+			state.finishReason = choice.FinishReason
+		}
+	}
+	if reasoningDelta != "" {
+		state.reasoning += reasoningDelta
+		if err := emit(ManagedChatEvent{Type: "reasoning", Delta: reasoningDelta}); err != nil {
+			return err
+		}
+	}
+	if answerDelta != "" {
+		state.content += answerDelta
+		if err := emit(ManagedChatEvent{Type: "content", Delta: answerDelta}); err != nil {
+			return err
+		}
+	}
+	state.updateUsage(chunk.Usage, dashscope)
+	return nil
+}
+
+func (state *managedChatStreamState) updateUsage(raw json.RawMessage, dashscope bool) {
+	if len(raw) == 0 || string(raw) == "null" {
+		return
+	}
+	if dashscope {
+		var value struct {
+			InputTokens  int64 `json:"input_tokens"`
+			OutputTokens int64 `json:"output_tokens"`
+			TotalTokens  int64 `json:"total_tokens"`
+		}
+		if json.Unmarshal(raw, &value) == nil {
+			state.usage = ManagedAPIProbeUsage{InputTokens: value.InputTokens, OutputTokens: value.OutputTokens, TotalTokens: value.TotalTokens}
+		}
+	} else {
+		var value managedOpenAIProbeUsage
+		if json.Unmarshal(raw, &value) == nil {
+			state.usage = value.normalized()
+		}
+	}
 }
 
 func (c *HTTPManagedAPIChatter) chatOpenAICompatible(ctx context.Context, connection ManagedAPIConnection, messages []ManagedChatMessage) (ManagedChatCompletion, error) {
@@ -325,8 +353,8 @@ func (c *HTTPManagedAPIChatter) request(ctx context.Context, endpoint string, co
 		return nil, 0, err
 	}
 	req.Header.Set("Authorization", "Bearer "+connection.APIKey)
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", managedChatJSONContentType)
+	req.Header.Set(managedChatContentTypeHeader, managedChatJSONContentType)
 	req.Header.Set("User-Agent", "EduGrade-Admin-Chat/1.0")
 	response, err := client.Do(req)
 	if err != nil {
@@ -357,28 +385,9 @@ func normalizeManagedChatMessages(messages []ManagedChatMessage) ([]ManagedChatM
 	normalized := make([]ManagedChatMessage, 0, len(messages))
 	totalRunes := 0
 	for _, message := range messages {
-		message.Role = strings.ToLower(strings.TrimSpace(message.Role))
-		message.Content = strings.TrimSpace(message.Content)
-		count := utf8.RuneCountInString(message.Content)
-		if (message.Role != "user" && message.Role != "assistant") || count > managedChatMaxMessageRunes || len(message.Attachments) > managedChatMaxAttachments {
-			return nil, ErrManagedChatInvalidRequest
-		}
-		if message.Role == "assistant" && len(message.Attachments) > 0 {
-			return nil, ErrManagedChatInvalidRequest
-		}
-		for index := range message.Attachments {
-			attachment := &message.Attachments[index]
-			attachment.Name = strings.TrimSpace(attachment.Name)
-			attachment.MediaType = strings.ToLower(strings.TrimSpace(attachment.MediaType))
-			attachment.Content = strings.TrimSpace(attachment.Content)
-			fileRunes := utf8.RuneCountInString(attachment.Content)
-			if !validManagedChatAttachment(*attachment, fileRunes) {
-				return nil, ErrManagedChatInvalidRequest
-			}
-			count += fileRunes
-		}
-		if count == 0 {
-			return nil, ErrManagedChatInvalidRequest
+		message, count, err := normalizeManagedChatMessage(message)
+		if err != nil {
+			return nil, err
 		}
 		totalRunes += count
 		if totalRunes > managedChatMaxTotalRunes {
@@ -390,6 +399,44 @@ func normalizeManagedChatMessages(messages []ManagedChatMessage) ([]ManagedChatM
 		return nil, ErrManagedChatInvalidRequest
 	}
 	return normalized, nil
+}
+
+func normalizeManagedChatMessage(message ManagedChatMessage) (ManagedChatMessage, int, error) {
+	message.Role = strings.ToLower(strings.TrimSpace(message.Role))
+	message.Content = strings.TrimSpace(message.Content)
+	count := utf8.RuneCountInString(message.Content)
+	if (message.Role != "user" && message.Role != "assistant") || count > managedChatMaxMessageRunes || len(message.Attachments) > managedChatMaxAttachments {
+		return ManagedChatMessage{}, 0, ErrManagedChatInvalidRequest
+	}
+	if message.Role == "assistant" && len(message.Attachments) > 0 {
+		return ManagedChatMessage{}, 0, ErrManagedChatInvalidRequest
+	}
+	fileRunes, err := normalizeManagedChatAttachments(message.Attachments)
+	if err != nil {
+		return ManagedChatMessage{}, 0, err
+	}
+	count += fileRunes
+	if count == 0 {
+		return ManagedChatMessage{}, 0, ErrManagedChatInvalidRequest
+	}
+	return message, count, nil
+}
+
+// 附件沿用调用方的切片，失败前已处理的附件也保留规范化结果。
+func normalizeManagedChatAttachments(attachments []ManagedChatAttachment) (int, error) {
+	totalRunes := 0
+	for index := range attachments {
+		attachment := &attachments[index]
+		attachment.Name = strings.TrimSpace(attachment.Name)
+		attachment.MediaType = strings.ToLower(strings.TrimSpace(attachment.MediaType))
+		attachment.Content = strings.TrimSpace(attachment.Content)
+		fileRunes := utf8.RuneCountInString(attachment.Content)
+		if !validManagedChatAttachment(*attachment, fileRunes) {
+			return 0, ErrManagedChatInvalidRequest
+		}
+		totalRunes += fileRunes
+	}
+	return totalRunes, nil
 }
 
 func validManagedChatAttachment(attachment ManagedChatAttachment, contentRunes int) bool {
@@ -543,7 +590,7 @@ func (h *Handler) StreamManagedChatCompletion(w http.ResponseWriter, r *http.Req
 		chatter = NewHTTPManagedAPIChatter(0)
 	}
 	flusher := http.NewResponseController(w)
-	w.Header().Set("Content-Type", "text/event-stream; charset=utf-8")
+	w.Header().Set(managedChatContentTypeHeader, "text/event-stream; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-cache, no-transform")
 	w.Header().Set("X-Accel-Buffering", "no")
 	w.WriteHeader(http.StatusOK)

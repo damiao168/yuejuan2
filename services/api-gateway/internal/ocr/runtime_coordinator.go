@@ -64,16 +64,25 @@ func (c *memoryRuntimeCoordinator) CreateTask(ctx context.Context, tenantID, sub
 	return sourceTask, err
 }
 
+// 调用时仍持有两侧事务锁；来源不匹配或读取失败时，必须先返回错误，不能更新来源任务。
+func getOCRRuntimeTask(ctx context.Context, runtimeTx *workerruntime.MemoryTx, tenantID, runtimeTaskID, sourceTaskID string) (workerruntime.Task, error) {
+	runtimeTask, err := runtimeTx.Get(ctx, tenantID, runtimeTaskID)
+	if err != nil {
+		return workerruntime.Task{}, err
+	}
+	if runtimeTask.SourceType != "ocr_task" || runtimeTask.SourceID != sourceTaskID {
+		return workerruntime.Task{}, workerruntime.ErrInvalidInput
+	}
+	return runtimeTask, nil
+}
+
 func (c *memoryRuntimeCoordinator) CompleteTask(ctx context.Context, tenantID, taskID string, input CompleteTaskInput) (Task, error) {
 	var sourceTask Task
 	err := c.source.runAtomic(func(sourceTx *memoryTx) error {
 		return c.runtime.RunAtomic(func(runtimeTx *workerruntime.MemoryTx) error {
-			runtimeTask, err := runtimeTx.Get(ctx, tenantID, input.RuntimeTaskID)
+			runtimeTask, err := getOCRRuntimeTask(ctx, runtimeTx, tenantID, input.RuntimeTaskID, taskID)
 			if err != nil {
 				return err
-			}
-			if runtimeTask.SourceType != "ocr_task" || runtimeTask.SourceID != taskID {
-				return workerruntime.ErrInvalidInput
 			}
 			sourceTask, err = sourceTx.CompleteTask(ctx, tenantID, taskID, input)
 			if err != nil {
@@ -95,12 +104,9 @@ func (c *memoryRuntimeCoordinator) FailTask(ctx context.Context, tenantID, taskI
 	var sourceTask Task
 	err := c.source.runAtomic(func(sourceTx *memoryTx) error {
 		return c.runtime.RunAtomic(func(runtimeTx *workerruntime.MemoryTx) error {
-			runtimeTask, err := runtimeTx.Get(ctx, tenantID, input.RuntimeTaskID)
+			runtimeTask, err := getOCRRuntimeTask(ctx, runtimeTx, tenantID, input.RuntimeTaskID, taskID)
 			if err != nil {
 				return err
-			}
-			if runtimeTask.SourceType != "ocr_task" || runtimeTask.SourceID != taskID {
-				return workerruntime.ErrInvalidInput
 			}
 			sourceTask, err = sourceTx.FailTask(ctx, tenantID, taskID, input.ErrorMessage)
 			if err != nil {

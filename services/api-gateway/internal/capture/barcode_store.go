@@ -36,29 +36,16 @@ func (s *PostgresStore) IssueTemplateBarcodes(ctx context.Context, tenantID, tem
 	return out, nil
 }
 
-// IssueStudentBarcodes signs one barcode set per student for a locked template.
-// Every sheet gets a fresh serial, so two printouts for the same student are
-// distinguishable and a re-observed serial can be routed to manual review.
-// Identity in the claims is the student row UUID — school numbers or names
-// never enter the printed payload.
+// IssueStudentBarcodes 为锁定模板中的每名学生签发一组条码。每张答题纸取得新序列号，使同一学生的两份打印件可区分，重复出现的序列号可转人工复核。
+// 声明中的身份使用学生记录 UUID，学号和姓名不进入印刷载荷。
 func (s *PostgresStore) IssueStudentBarcodes(ctx context.Context, tenantID, templateID, actorID string, input IssueStudentBarcodesInput) (IssuedStudentBarcodes, error) {
 	idempotencyKey := strings.TrimSpace(input.IdempotencyKey)
 	if len(input.StudentIDs) == 0 || len(input.StudentIDs) > 2000 || len(idempotencyKey) == 0 || len(idempotencyKey) > 120 {
 		return IssuedStudentBarcodes{}, ErrInvalidInput
 	}
-	studentIDs := make([]string, 0, len(input.StudentIDs))
-	seen := map[string]bool{}
-	for _, rawStudentID := range input.StudentIDs {
-		parsed, err := uuid.Parse(strings.TrimSpace(rawStudentID))
-		if err != nil {
-			return IssuedStudentBarcodes{}, ErrInvalidInput
-		}
-		studentID := parsed.String()
-		if seen[studentID] {
-			return IssuedStudentBarcodes{}, ErrInvalidInput
-		}
-		seen[studentID] = true
-		studentIDs = append(studentIDs, studentID)
+	studentIDs, err := barcodeStudentIDs(input.StudentIDs)
+	if err != nil {
+		return IssuedStudentBarcodes{}, err
 	}
 	requestHash := studentBarcodeRequestHash(studentIDs)
 
@@ -183,6 +170,25 @@ VALUES ($1,$2::uuid,$3,$4::uuid,$5)
 		out.Students = append(out.Students, set)
 	}
 	return out, tx.Commit()
+}
+
+// 先转为标准 UUID 再查重；同一学生的不同文本写法也不能生成两张纸。
+func barcodeStudentIDs(rawIDs []string) ([]string, error) {
+	studentIDs := make([]string, 0, len(rawIDs))
+	seen := map[string]bool{}
+	for _, rawStudentID := range rawIDs {
+		parsed, err := uuid.Parse(strings.TrimSpace(rawStudentID))
+		if err != nil {
+			return nil, ErrInvalidInput
+		}
+		studentID := parsed.String()
+		if seen[studentID] {
+			return nil, ErrInvalidInput
+		}
+		seen[studentID] = true
+		studentIDs = append(studentIDs, studentID)
+	}
+	return studentIDs, nil
 }
 
 // 幂等比较按学生集合进行；仅改变请求顺序仍恢复原签发批次及其原有排序。
@@ -331,8 +337,7 @@ func (s *PostgresStore) evaluateBarcodesTx(ctx context.Context, tx *sql.Tx, tena
 		out.AssignedTemplateID = ""
 		out.NeedsReview = true
 	}
-	// Two different verified student identities on one page can only come from
-	// a scan mix-up or a forged sheet: never guess, always route to a human.
+	// 同一页面出现两个不同的已验证学生身份，只能来自扫描混淆或伪造答题纸；不要猜测归属，始终转人工处理。
 	if len(students) > 1 {
 		out.AssignedStudentID = ""
 		out.AssignedSheetSerial = ""

@@ -91,6 +91,7 @@ RETURNING id::text,mode,status,started_at`, mode).Scan(&run.ID, &run.Mode, &run.
 			detail = truncateStorageError(runErr.Error())
 		}
 		var completed time.Time
+		// 完结写入不受巡检取消影响，但仍沿用调用方的租户或维护作用域。
 		finishErr := r.db.QueryRowContext(context.WithoutCancel(ctx), `
 UPDATE file_reconciliation_run
 SET status=$2,scanned_assets=$3,scanned_objects=$4,finding_count=$5,
@@ -106,32 +107,8 @@ RETURNING completed_at`, run.ID, status, run.ScannedAssets, run.ScannedObjects,
 		run.CompletedAt = &completed
 	}()
 
-	cursor := ""
-	for {
-		assets, err := r.listAssets(ctx, cursor, options.BatchSize)
-		if err != nil {
-			return run, err
-		}
-		if len(assets) == 0 {
-			break
-		}
-		for _, asset := range assets {
-			run.ScannedAssets++
-			findings, err := r.inspectAsset(ctx, run.ID, asset, options)
-			if err != nil {
-				return run, err
-			}
-			run.FindingCount += len(findings)
-			for _, finding := range findings {
-				if finding.Repaired {
-					run.RepairedCount++
-				}
-			}
-			cursor = asset.ID
-		}
-		if len(assets) < options.BatchSize {
-			break
-		}
+	if err := r.scanAssets(ctx, options, &run); err != nil {
+		return run, err
 	}
 
 	// 孤立对象只在本次限定数量内检查并记录，不能据此认定整个桶已检查完毕。
@@ -148,13 +125,47 @@ SELECT 1 FROM file_asset WHERE storage_bucket=$1 AND storage_key=$2 AND deleted_
 			return run, err
 		}
 		if !exists {
-			if _, err := r.addFinding(ctx, run.ID, FileAsset{}, object.Bucket, object.Key, "orphan_object", map[string]any{"size_bytes": object.SizeBytes}, false); err != nil {
+			if _, err := r.addFinding(ctx, run.ID, FileAsset{}, reconciliationFindingInput{
+				bucket: object.Bucket, key: object.Key, code: "orphan_object",
+				detail: map[string]any{"size_bytes": object.SizeBytes},
+			}); err != nil {
 				return run, err
 			}
 			run.FindingCount++
 		}
 	}
 	return run, nil
+}
+
+func (r *Reconciler) scanAssets(ctx context.Context, options ReconciliationOptions, run *ReconciliationRun) error {
+	cursor := ""
+	for {
+		assets, err := r.listAssets(ctx, cursor, options.BatchSize)
+		if err != nil {
+			return err
+		}
+		if len(assets) == 0 {
+			break
+		}
+		for _, asset := range assets {
+			run.ScannedAssets++
+			findings, err := r.inspectAsset(ctx, run.ID, asset, options)
+			if err != nil {
+				return err
+			}
+			run.FindingCount += len(findings)
+			for _, finding := range findings {
+				if finding.Repaired {
+					run.RepairedCount++
+				}
+			}
+			cursor = asset.ID
+		}
+		if len(assets) < options.BatchSize {
+			break
+		}
+	}
+	return nil
 }
 
 func (r *Reconciler) LatestReconciliation(ctx context.Context) (ReconciliationRun, []ReconciliationFinding, error) {
@@ -219,7 +230,9 @@ ORDER BY id LIMIT $2`, cursor, limit)
 func (r *Reconciler) inspectAsset(ctx context.Context, runID string, asset FileAsset, options ReconciliationOptions) ([]ReconciliationFinding, error) {
 	findings := make([]ReconciliationFinding, 0, 2)
 	add := func(code string, detail map[string]any, repaired bool) error {
-		finding, err := r.addFinding(ctx, runID, asset, asset.StorageBucket, asset.StorageKey, code, detail, repaired)
+		finding, err := r.addFinding(ctx, runID, asset, reconciliationFindingInput{
+			bucket: asset.StorageBucket, key: asset.StorageKey, code: code, detail: detail, repaired: repaired,
+		})
 		if err == nil {
 			findings = append(findings, finding)
 		}
@@ -234,25 +247,9 @@ func (r *Reconciler) inspectAsset(ctx context.Context, runID string, asset FileA
 
 	info, err := r.objects.Stat(ctx, asset.StorageBucket, asset.StorageKey)
 	if errors.Is(err, ErrObjectNotFound) {
-		code := "object_missing"
-		if asset.Lifecycle == LifecyclePendingUpload || asset.Lifecycle == LifecycleUploadFailed {
-			// 上传元数据可能先于对象落盘；等待宽限期，避免把进行中的上传判为遗失。
-			if time.Since(asset.CreatedAt) < options.StaleAfter {
-				return findings, nil
-			}
-			code = "stale_pending_upload"
-		}
-		repaired := false
-		if options.Repair {
-			repaired, err = r.repairMissing(ctx, asset)
-			if err != nil {
-				return findings, err
-			}
-		}
-		if err := add(code, map[string]any{"lifecycle_status": asset.Lifecycle}, repaired); err != nil {
-			return findings, err
-		}
-		return findings, nil
+		// 回调可能追加发现；先执行分支，再取返回切片，避免返回旧的长度。
+		err = r.inspectMissingAsset(ctx, asset, options, add)
+		return findings, err
 	}
 	if err != nil {
 		return findings, fmt.Errorf("stat object %s: %w", asset.StorageKey, err)
@@ -289,50 +286,78 @@ func (r *Reconciler) inspectAsset(ctx context.Context, runID string, asset FileA
 	}
 
 	// 只有大小和完整内容哈希都匹配，才允许把已有对象恢复为可继续处理的状态。
+	err = r.inspectVerifiedAsset(ctx, asset, options, add)
+	return findings, err
+}
+
+func (r *Reconciler) inspectMissingAsset(ctx context.Context, asset FileAsset, options ReconciliationOptions, add func(string, map[string]any, bool) error) error {
+	code := "object_missing"
+	if asset.Lifecycle == LifecyclePendingUpload || asset.Lifecycle == LifecycleUploadFailed {
+		// 上传元数据可能先于对象落盘；等待宽限期，避免把进行中的上传判为遗失。
+		if time.Since(asset.CreatedAt) < options.StaleAfter {
+			return nil
+		}
+		code = "stale_pending_upload"
+	}
+	repaired := false
+	if options.Repair {
+		var err error
+		repaired, err = r.repairMissing(ctx, asset)
+		if err != nil {
+			return err
+		}
+	}
+	return add(code, map[string]any{"lifecycle_status": asset.Lifecycle}, repaired)
+}
+
+func (r *Reconciler) inspectVerifiedAsset(ctx context.Context, asset FileAsset, options ReconciliationOptions, add func(string, map[string]any, bool) error) error {
+	var err error
 	switch asset.Lifecycle {
 	case LifecyclePendingUpload, LifecycleUploadFailed:
 		repaired := false
 		if options.Repair {
 			repaired, err = r.setLifecycle(ctx, asset, LifecycleOrphanRecovered, "")
 			if err != nil {
-				return findings, err
+				return err
 			}
 		}
 		if err := add("recoverable_pending_upload", map[string]any{}, repaired); err != nil {
-			return findings, err
+			return err
 		}
 	case LifecycleMissingObject, LifecycleQuarantined:
 		repaired := false
 		if options.Repair {
 			repaired, err = r.setLifecycle(ctx, asset, LifecycleActive, "")
 			if err != nil {
-				return findings, err
+				return err
 			}
 		}
 		if err := add("recoverable_metadata_state", map[string]any{"lifecycle_status": asset.Lifecycle}, repaired); err != nil {
-			return findings, err
+			return err
 		}
 	case LifecyclePendingDelete, LifecycleDeleteFailed:
 		repaired := false
 		if options.Repair && !asset.LegalHold && (asset.RetentionUntil == nil || !asset.RetentionUntil.After(time.Now().UTC())) {
+			// 远端删除成功后才标记 deleted；SQL 版本检查失败不会恢复已删除的对象。
 			if removeErr := r.objects.Remove(ctx, asset.StorageBucket, asset.StorageKey); removeErr == nil {
 				repaired, err = r.markDeleted(ctx, asset)
 			} else {
+				// 删除失败只写入待重试状态；这里返回补偿更新的错误，不直接返回远端错误。
 				_, err = r.setLifecycle(ctx, asset, LifecycleDeleteFailed, "object_remove_failed")
 			}
 			if err != nil {
-				return findings, err
+				return err
 			}
 		}
 		if err := add("delete_cleanup_pending", map[string]any{"legal_hold": asset.LegalHold}, repaired); err != nil {
-			return findings, err
+			return err
 		}
 	default:
 		if options.Repair {
 			_, err = r.db.ExecContext(ctx, `UPDATE file_asset SET verified_at=now(),updated_at=now() WHERE id=$1::uuid AND revision=$2`, asset.ID, asset.Revision)
 		}
 	}
-	return findings, err
+	return err
 }
 
 func (r *Reconciler) repairMissing(ctx context.Context, asset FileAsset) (bool, error) {
@@ -390,8 +415,14 @@ func (r *Reconciler) objectHash(ctx context.Context, bucket string, key string) 
 	return hex.EncodeToString(hash.Sum(nil)), nil
 }
 
-func (r *Reconciler) addFinding(ctx context.Context, runID string, asset FileAsset, bucket, key, code string, detail map[string]any, repaired bool) (ReconciliationFinding, error) {
-	encoded, _ := json.Marshal(detail)
+type reconciliationFindingInput struct {
+	bucket, key, code string
+	detail            map[string]any
+	repaired          bool
+}
+
+func (r *Reconciler) addFinding(ctx context.Context, runID string, asset FileAsset, input reconciliationFindingInput) (ReconciliationFinding, error) {
+	encoded, _ := json.Marshal(input.detail)
 	var finding ReconciliationFinding
 	var detailRaw []byte
 	err := r.db.QueryRowContext(ctx, `
@@ -399,7 +430,7 @@ INSERT INTO file_reconciliation_finding(run_id,tenant_id,file_asset_id,storage_b
 VALUES($1::uuid,NULLIF($2,'')::uuid,NULLIF($3,'')::uuid,$4,$5,$6,$7,$8)
 RETURNING id::text,run_id::text,COALESCE(tenant_id::text,''),COALESCE(file_asset_id::text,''),
           storage_bucket,storage_key,code,detail,repaired,created_at`, runID, asset.TenantID, asset.ID,
-		bucket, key, code, encoded, repaired).Scan(&finding.ID, &finding.RunID, &finding.TenantID,
+		input.bucket, input.key, input.code, encoded, input.repaired).Scan(&finding.ID, &finding.RunID, &finding.TenantID,
 		&finding.FileAssetID, &finding.Bucket, &finding.Key, &finding.Code, &detailRaw, &finding.Repaired, &finding.CreatedAt)
 	if err == nil {
 		_ = json.Unmarshal(detailRaw, &finding.Detail)

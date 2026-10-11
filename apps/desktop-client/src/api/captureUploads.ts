@@ -27,9 +27,9 @@ export function initCaptureUpload(client: DesktopApiClient, input: CaptureUpload
   });
 }
 
-// The server advances confirmed_offset atomically.  Retrying the same chunk
-// is safe; callers must persist the returned offset before scheduling another
-// chunk so a process crash cannot produce duplicate answer-sheet pages.
+// 服务端原子推进 confirmed_offset，重试同一分块是安全的；
+// 调用方必须先持久化返回的偏移，再调度下一个分块，
+// 防止进程崩溃造成答题卡页面重复。
 export async function putCaptureUploadChunk(client: DesktopApiClient, uploadId: string, offset: number, chunk: Blob, signal?: AbortSignal) {
   const bytes = new Uint8Array(await chunk.arrayBuffer());
   const hash = await sha256ForBytes(bytes);

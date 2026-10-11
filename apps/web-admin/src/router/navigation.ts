@@ -18,6 +18,15 @@ export function normalizeEntryPath(path: string): string {
   return path === "/" || path === "" ? "/dashboard" : path;
 }
 
+export function examWorkspaceNavigationPath(section: string): string {
+  if (["capture", "processing", "grading"].includes(section)) return "/grading";
+  if (section === "quality") return "/arbitration";
+  if (section === "scores") return "/scores";
+  if (section === "reports") return "/reports";
+  if (section === "appeals") return "/appeals";
+  return "/exams";
+}
+
 export function legacyRedirectForPath(path: string, user: SessionUser): string | null {
   const normalized = normalizeEntryPath(path);
   if (experienceFromPath(normalized)) {

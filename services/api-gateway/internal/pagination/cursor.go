@@ -41,8 +41,7 @@ func Decode(value string) (Cursor, error) {
 	return Cursor{CreatedAt: createdAt, ID: parts[1]}, nil
 }
 
-// EncodeParts creates an opaque cursor for lists whose stable ordering needs
-// more than created_at and id (for example priority queues).
+// EncodeParts 为稳定排序需要 created_at 和 id 之外字段的列表（如优先级队列）创建不透明游标。
 func EncodeParts(parts ...string) string {
 	return base64.RawURLEncoding.EncodeToString([]byte(strings.Join(parts, "\x1f")))
 }

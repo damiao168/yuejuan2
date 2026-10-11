@@ -4,9 +4,9 @@
   "exception_ledger": "contracts/openapi/registered-route-exceptions.json",
   "policy": "Every registered route is covered by OpenAPI or an exact, reviewed exception-ledger entry; generation never invents approvals.",
   "counts": {
-    "registered": 509,
-    "openapi": 257,
-    "registered_gaps": 252
+    "registered": 536,
+    "openapi": 288,
+    "registered_gaps": 248
   },
   "routes": [
     {
@@ -211,6 +211,20 @@
       "source": "services/api-gateway/internal/answergroup/handlers.go",
       "coverage": "openapi",
       "operation_id": "reviewAnswerGroupSample"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/answer-groups/{groupId}/samples/{segmentId}/context",
+      "source": "services/api-gateway/internal/answergroup/handlers.go",
+      "coverage": "openapi",
+      "operation_id": "getAnswerGroupMemberContext"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/answer-groups/{groupId}/samples/{segmentId}/segment-image",
+      "source": "services/api-gateway/internal/answergroup/handlers.go",
+      "coverage": "openapi",
+      "operation_id": "downloadAnswerGroupMemberImage"
     },
     {
       "method": "PATCH",
@@ -1026,6 +1040,13 @@
       "reason": "Legacy command surface predates the OpenAPI migration; this exact list is a temporary reviewed exception."
     },
     {
+      "method": "GET",
+      "path": "/api/v1/capture-batches/{id}/scan-context",
+      "source": "services/api-gateway/internal/server/routes_capture.go",
+      "coverage": "openapi",
+      "operation_id": "getCaptureScanContext"
+    },
+    {
       "method": "POST",
       "path": "/api/v1/capture-batches/{id}/submissions/merge",
       "source": "services/api-gateway/internal/server/routes_capture.go",
@@ -1236,6 +1257,55 @@
       "reason": "Legacy read surface predates the OpenAPI migration and remains tracked as bounded debt."
     },
     {
+      "method": "GET",
+      "path": "/api/v1/exam-management",
+      "source": "services/api-gateway/internal/server/routes_exam.go",
+      "coverage": "openapi",
+      "operation_id": "listManagementExams"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/exam-management/{kind}/{id}",
+      "source": "services/api-gateway/internal/server/routes_exam.go",
+      "coverage": "openapi",
+      "operation_id": "getManagementExam"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/exam-management/{kind}/{id}",
+      "source": "services/api-gateway/internal/server/routes_exam.go",
+      "coverage": "openapi",
+      "operation_id": "updateManagementExam"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/exam-management/{kind}/{id}/archive",
+      "source": "services/api-gateway/internal/server/routes_exam.go",
+      "coverage": "openapi",
+      "operation_id": "archiveManagementExam"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/exam-management/{kind}/{id}/archive-check",
+      "source": "services/api-gateway/internal/server/routes_exam.go",
+      "coverage": "openapi",
+      "operation_id": "checkManagementArchive"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/exam-management/{kind}/{id}/restore",
+      "source": "services/api-gateway/internal/server/routes_exam.go",
+      "coverage": "openapi",
+      "operation_id": "restoreManagementExam"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/exam-management/commands/{commandID}",
+      "source": "services/api-gateway/internal/server/routes_exam.go",
+      "coverage": "openapi",
+      "operation_id": "recoverManagementArchiveCommand"
+    },
+    {
       "method": "POST",
       "path": "/api/v1/exam-sessions",
       "source": "services/api-gateway/internal/server/routes_exam.go",
@@ -1388,6 +1458,13 @@
       "operation_id": "recoverCaptureBatchCommand"
     },
     {
+      "method": "GET",
+      "path": "/api/v1/exams/{examId}/capture-targets",
+      "source": "services/api-gateway/internal/server/routes_capture.go",
+      "coverage": "openapi",
+      "operation_id": "findExamCaptureTargets"
+    },
+    {
       "method": "POST",
       "path": "/api/v1/exams/{examId}/confirm-grades",
       "source": "services/api-gateway/internal/server/routes_release.go",
@@ -1498,6 +1575,13 @@
       "owner": "api-platform",
       "review_after": "2026-12-31",
       "reason": "Legacy command surface predates the OpenAPI migration; this exact list is a temporary reviewed exception."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/exams/{examId}/processing/actors",
+      "source": "services/api-gateway/internal/processing/handlers.go",
+      "coverage": "openapi",
+      "operation_id": "listExamProcessingActors"
     },
     {
       "method": "GET",
@@ -1722,14 +1806,8 @@
       "method": "POST",
       "path": "/api/v1/exams/{examId}/readiness/confirm",
       "source": "services/api-gateway/internal/server/routes_paper.go",
-      "coverage": "registered-gap",
-      "interface_category": "legacy-public-command",
-      "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
-      "exception_scope": "Frozen existing command routes only; critical/new commands must move to OpenAPI.",
-      "exception_policy": "legacy-public-command-v1",
-      "owner": "api-platform",
-      "review_after": "2026-12-31",
-      "reason": "Legacy command surface predates the OpenAPI migration; this exact list is a temporary reviewed exception."
+      "coverage": "openapi",
+      "operation_id": "confirmExamReadiness"
     },
     {
       "method": "GET",
@@ -1817,6 +1895,13 @@
       "owner": "api-platform",
       "review_after": "2026-12-31",
       "reason": "Legacy read surface predates the OpenAPI migration and remains tracked as bounded debt."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/exams/{examId}/review-actors",
+      "source": "services/api-gateway/internal/server/routes_review.go",
+      "coverage": "openapi",
+      "operation_id": "listExamReviewActors"
     },
     {
       "method": "GET",
@@ -3364,6 +3449,13 @@
     },
     {
       "method": "POST",
+      "path": "/api/v1/paper-imports/{id}/adopt-structure",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
+      "coverage": "openapi",
+      "operation_id": "adoptPaperStructure"
+    },
+    {
+      "method": "POST",
       "path": "/api/v1/paper-imports/{id}/apply",
       "source": "services/api-gateway/internal/server/routes_paper.go",
       "coverage": "openapi",
@@ -3375,6 +3467,13 @@
       "source": "services/api-gateway/internal/server/routes_paper.go",
       "coverage": "openapi",
       "operation_id": "cancelPaperImport"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/paper-imports/{id}/fill-content",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
+      "coverage": "openapi",
+      "operation_id": "fillPaperImportContent"
     },
     {
       "method": "POST",
@@ -3410,6 +3509,13 @@
       "source": "services/api-gateway/internal/server/routes_paper.go",
       "coverage": "openapi",
       "operation_id": "replacePaperImportSources"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/paper-imports/{id}/structure-preview",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
+      "coverage": "openapi",
+      "operation_id": "previewPaperStructure"
     },
     {
       "method": "GET",
@@ -3599,6 +3705,20 @@
       "operation_id": "assignProcessingException"
     },
     {
+      "method": "GET",
+      "path": "/api/v1/processing/exceptions/{id}/context",
+      "source": "services/api-gateway/internal/processing/handlers.go",
+      "coverage": "openapi",
+      "operation_id": "getProcessingExceptionContext"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/processing/exceptions/{id}/page-image",
+      "source": "services/api-gateway/internal/processing/handlers.go",
+      "coverage": "openapi",
+      "operation_id": "downloadProcessingExceptionPageImage"
+    },
+    {
       "method": "POST",
       "path": "/api/v1/processing/exceptions/{id}/resolve",
       "source": "services/api-gateway/internal/processing/handlers.go",
@@ -3660,6 +3780,13 @@
       "source": "services/api-gateway/internal/server/routes_release.go",
       "coverage": "openapi",
       "operation_id": "resolveQuestionAppeal"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/question-appeals/{id}/review-opinion",
+      "source": "services/api-gateway/internal/server/routes_release.go",
+      "coverage": "openapi",
+      "operation_id": "submitQuestionAppealReviewOpinion"
     },
     {
       "method": "POST",
@@ -3852,6 +3979,13 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/question-banks/{bankId}/members",
+      "source": "services/api-gateway/internal/server/routes_questionbank.go",
+      "coverage": "openapi",
+      "operation_id": "listQuestionBankMembers"
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/question-banks/{bankId}/metadata-schema",
       "source": "services/api-gateway/internal/server/routes_questionbank.go",
       "coverage": "openapi",
@@ -3971,6 +4105,20 @@
       "source": "services/api-gateway/internal/regrade/handlers.go",
       "coverage": "openapi",
       "operation_id": "reviewRegradeItem"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/regrade-items/{itemId}/review-context",
+      "source": "services/api-gateway/internal/regrade/handlers.go",
+      "coverage": "openapi",
+      "operation_id": "getRegradeItemReviewContext"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/regrade-items/{itemId}/review-segment-image",
+      "source": "services/api-gateway/internal/regrade/handlers.go",
+      "coverage": "openapi",
+      "operation_id": "downloadRegradeItemReviewImage"
     },
     {
       "method": "GET",
@@ -4370,6 +4518,27 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/school-assistant/capabilities",
+      "source": "services/api-gateway/internal/schoolassistant/handlers.go",
+      "coverage": "openapi",
+      "operation_id": "getSchoolAssistantCapabilities"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/school-assistant/conversations/stream",
+      "source": "services/api-gateway/internal/schoolassistant/handlers.go",
+      "coverage": "openapi",
+      "operation_id": "streamSchoolConversation"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/school-assistant/queries/stream",
+      "source": "services/api-gateway/internal/schoolassistant/handlers.go",
+      "coverage": "openapi",
+      "operation_id": "streamSchoolAssistantQuery"
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/schools",
       "source": "services/api-gateway/internal/server/routes_org.go",
       "coverage": "registered-gap",
@@ -4428,6 +4597,13 @@
       "source": "services/api-gateway/internal/scorerelease/handlers.go",
       "coverage": "openapi",
       "operation_id": "publishScoreRelease"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/score-releases/{id}/student-preview",
+      "source": "services/api-gateway/internal/scorerelease/handlers.go",
+      "coverage": "openapi",
+      "operation_id": "getScoreReleaseStudentPreview"
     },
     {
       "method": "PATCH",
@@ -4523,14 +4699,8 @@
       "method": "GET",
       "path": "/api/v1/student/exams/{examId}/questions/{questionId}/page-image",
       "source": "services/api-gateway/internal/scorerelease/handlers.go",
-      "coverage": "registered-gap",
-      "interface_category": "legacy-public-read",
-      "contract_carrier": "Go handler tests and existing consumer behavior tests",
-      "exception_scope": "Frozen existing read routes only; any newly registered route must be reviewed explicitly.",
-      "exception_policy": "legacy-public-read-v1",
-      "owner": "api-platform",
-      "review_after": "2026-12-31",
-      "reason": "Legacy read surface predates the OpenAPI migration and remains tracked as bounded debt."
+      "coverage": "openapi",
+      "operation_id": "getStudentPublishedPaperPageImage"
     },
     {
       "method": "GET",
@@ -5002,27 +5172,22 @@
       "method": "GET",
       "path": "/api/v1/users",
       "source": "services/api-gateway/internal/server/routes_auth.go",
-      "coverage": "registered-gap",
-      "interface_category": "legacy-public-read",
-      "contract_carrier": "Go handler tests and existing consumer behavior tests",
-      "exception_scope": "Frozen existing read routes only; any newly registered route must be reviewed explicitly.",
-      "exception_policy": "legacy-public-read-v1",
-      "owner": "api-platform",
-      "review_after": "2026-12-31",
-      "reason": "Legacy read surface predates the OpenAPI migration and remains tracked as bounded debt."
+      "coverage": "openapi",
+      "operation_id": "listManagedOrganizationUsers"
     },
     {
       "method": "POST",
       "path": "/api/v1/users",
       "source": "services/api-gateway/internal/server/routes_auth.go",
-      "coverage": "registered-gap",
-      "interface_category": "legacy-public-command",
-      "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
-      "exception_scope": "Frozen existing command routes only; critical/new commands must move to OpenAPI.",
-      "exception_policy": "legacy-public-command-v1",
-      "owner": "api-platform",
-      "review_after": "2026-12-31",
-      "reason": "Legacy command surface predates the OpenAPI migration; this exact list is a temporary reviewed exception."
+      "coverage": "openapi",
+      "operation_id": "createManagedOrganizationUser"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/users/{id}/access",
+      "source": "services/api-gateway/internal/server/routes_auth.go",
+      "coverage": "openapi",
+      "operation_id": "updateManagedUserAccess"
     },
     {
       "method": "POST",

@@ -1,0 +1,22 @@
+{
+  "recorded_at": "2026-10-11T15:34:34+08:00",
+  "create_exit_code": 0,
+  "analyze_exit_code": 99,
+  "elapsed_seconds": 7.3,
+  "selected_queries_resolved": 41,
+  "queries_loaded_in_stdout": 0,
+  "queries_evaluated": 0,
+  "requested_ram_mib": 4096,
+  "resolved_max_heap_mib": 1800,
+  "resolved_off_heap_mib": 1108,
+  "failed_off_heap_allocation_bytes": 1161822208,
+  "cause_evidence": "java.lang.OutOfMemoryError at Unsafe.allocateMemory in OffHeapBulkProvider constructor, before query loading",
+  "interpretation": "This is a CodeQL process resource failure, not a project vulnerability. Both too low or too high a memory option can fail; record the actual resolved budgets. Successful new context database is preserved for analysis-only recovery.",
+  "machine_snapshot_after_failure": {
+    "available_physical_kib": 455260,
+    "available_virtual_kib": 1258288,
+    "total_physical_kib": 14538488,
+    "total_virtual_kib": 31142412
+  },
+  "changes_to_system_or_other_applications": false
+}

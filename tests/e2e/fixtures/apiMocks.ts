@@ -1,5 +1,6 @@
 import type { Page, Route } from "@playwright/test";
 import roleMatrix from "../../../contracts/authorization/role-matrix.json" with { type: "json" };
+import type { ManagementExam } from "../../../apps/web-admin/src/api/exams";
 
 type TestRole = "school_admin" | "platform_admin" | "teacher" | "grader" | "arbitrator";
 
@@ -35,11 +36,30 @@ function json(route: Route, body: unknown, status = 200) {
 // 统一模拟权限和页面数据；专用夹具应后注册并 fallback 到这里，未配置接口统一报错以暴露漏配。
 export async function installApiMocks(
   page: Page,
-  options: { role?: TestRole; initiallyAuthenticated?: boolean; dashboardMode?: "default" | "empty"; sessionSubjects?: boolean } = {}
+  options: { role?: TestRole; initiallyAuthenticated?: boolean; dashboardMode?: "default" | "empty"; onboardingReady?: boolean; sessionSubjects?: boolean } = {}
 ) {
   const role = options.role ?? "school_admin";
   const user = userFor(role);
+  // 空看板与学校初始化未完成是两种状态；专用用例可独立指定启用状态，旧夹具默认行为保持不变。
+  const onboardingReady = options.onboardingReady ?? options.dashboardMode !== "empty";
   let authenticated = options.initiallyAuthenticated ?? false;
+  const managementExam: ManagementExam = {
+    id: options.sessionSubjects ? "session-1" : "exam-1", kind: options.sessionSubjects ? "session" : "standalone",
+    school_id: "school-1", grade_id: "grade-1", name: options.sessionSubjects ? "2026 春季期中考试" : "2026 春季数学期中考试",
+    exam_type: "midterm_exam", revision: 3, created_by: "user-school_admin", created_at: "2026-08-01T00:00:00Z",
+    class_ids: ["class-1"], default_class_ids: ["class-1"], inherited_subject_ids: options.sessionSubjects ? ["exam-1", "exam-physics"] : ["exam-1"],
+    scope_complete: true, can_manage: true, can_edit: true, can_archive: false, can_restore: false,
+    exams: (options.sessionSubjects ? [{ id: "exam-1", subject: "math", total_score: 150 }, { id: "exam-physics", subject: "physics", total_score: 100 }] : [{ id: "exam-1", subject: "math", total_score: 150 }]).map((subject) => ({
+      ...subject, tenant_id: "tenant-school", school_id: "school-1", name: subject.subject === "physics" ? "2026 春季物理期中考试" : "2026 春季数学期中考试",
+      exam_type: "midterm_exam", status: "collecting", grading_mode: "ai_assisted", appeal_enabled: true, publish_policy: "manual_publish",
+      created_by: "user-school_admin", class_ids: ["class-1"], revision: 3, created_at: "2026-08-01T00:00:00Z",
+      ...(options.sessionSubjects ? { exam_session_id: "session-1", exam_session_name: "2026 春季期中考试", exam_session_grade_id: "grade-1" } : {})
+    })),
+    progress: { status: "collecting", label: "答卷导入中", total_count: options.sessionSubjects ? 2 : 1, ready_count: options.sessionSubjects ? 2 : 1, published_count: 0, counts: { collecting: options.sessionSubjects ? 2 : 1 }, facts_available: true },
+    archive_blockers: [{ code: "exam_in_progress", message: "考试仍在答卷导入阶段" }]
+  };
+  let createdManagementExam: ManagementExam | null = null;
+  const managementReceipts = new Map<string, { request: string; exam: ManagementExam }>();
 
   await page.route(/\/api\/v1(?:\/|$)/, async (route) => {
     const request = route.request();
@@ -69,6 +89,12 @@ export async function installApiMocks(
     ] });
     if (path.startsWith("/api/v1/auth/sessions/") && request.method() === "DELETE") return json(route, { status: "revoked" });
     if (path === "/api/v1/auth/logout-all" && request.method() === "POST") return json(route, { status: "ok", revoked_count: 2 });
+    if (path === "/api/v1/school-assistant/capabilities" && request.method() === "GET") return json(route, { mode: "school_business", model_required: false, intents: [] });
+    if (path === "/api/v1/onboarding/readiness" && request.method() === "GET") return json(route, {
+      scope: role === "platform_admin" ? "platform" : "school", ready_for_use: onboardingReady,
+      completed_count: onboardingReady ? 1 : 0, total_required: 1,
+      checks: [{ key: "organization", state: onboardingReady ? "ready" : "action_required", severity: "blocking", title: "学校组织", action_code: "setup_organization", action_path: "/organization/setup" }]
+    });
 
     if (path === "/api/v1/dashboard/summary") {
       if (options.dashboardMode === "empty") {
@@ -208,6 +234,42 @@ export async function installApiMocks(
       });
     }
 
+    if (path === "/api/v1/exam-management" && request.method() === "GET") return json(route, { exams: createdManagementExam ? [managementExam, createdManagementExam] : [managementExam], has_more: false });
+    const managementCommandMatch = path.match(/^\/api\/v1\/exam-management\/commands\/([^/]+)$/);
+    if (managementCommandMatch) {
+      const commandId = decodeURIComponent(managementCommandMatch[1]);
+      const receipt = managementReceipts.get(commandId);
+      return json(route, { command: { command_id: commandId, status: receipt ? "succeeded" : "not_accepted", ...(receipt ? { exam: receipt.exam } : {}) } });
+    }
+    const managementMatch = path.match(/^\/api\/v1\/exam-management\/(session|standalone)\/([^/]+)(?:\/(archive-check|archive|restore))?$/);
+    const selectedManagementExam = managementMatch ? [managementExam, createdManagementExam].find((exam) => exam && exam.kind === managementMatch[1] && exam.id === decodeURIComponent(managementMatch[2])) : null;
+    if (managementMatch && selectedManagementExam) {
+      const action = managementMatch[3];
+      if (action === "archive-check") return json(route, { check: { allowed: selectedManagementExam.can_archive, blockers: selectedManagementExam.archive_blockers ?? [] } });
+      if (action === "archive" || action === "restore") {
+        const input = request.postDataJSON() as { command_id: string };
+        const requestKey = `${path}:${request.postData()}`;
+        const receipt = managementReceipts.get(input.command_id);
+        if (receipt) return receipt.request === requestKey ? json(route, { exam: receipt.exam }) : json(route, { error: { code: "idempotency_key_reused_with_different_request" } }, 409);
+        if (action === "archive" ? !selectedManagementExam.can_archive : !selectedManagementExam.can_restore) return json(route, { error: { code: "exam_archive_blocked", message: "模拟考试尚不满足操作条件" } }, 409);
+        if (action === "archive") selectedManagementExam.archived_at = "2026-10-04T00:00:00Z";
+        else delete selectedManagementExam.archived_at;
+        selectedManagementExam.can_edit = action === "restore";
+        selectedManagementExam.can_archive = action === "restore";
+        selectedManagementExam.can_restore = action === "archive";
+        selectedManagementExam.revision += 1;
+        managementReceipts.set(input.command_id, { request: requestKey, exam: structuredClone(selectedManagementExam) });
+      }
+      if (!action && request.method() === "PATCH") {
+        const input = request.postDataJSON() as { name?: string; exam_type?: string; class_ids?: string[] };
+        if (input.name) selectedManagementExam.name = input.name;
+        if (input.exam_type) selectedManagementExam.exam_type = input.exam_type;
+        if (input.class_ids) selectedManagementExam.default_class_ids = input.class_ids;
+        selectedManagementExam.revision += 1;
+      }
+      return json(route, { exam: selectedManagementExam });
+    }
+
     if (path === "/api/v1/exams") {
       if (route.request().method() === "POST") {
         return json(route, { exam: { id: "exam-created", school_id: "school-1", name: "2026-2027学年高二期中考试", subject: "math", exam_type: "midterm_exam", total_score: 150, status: "draft", grading_mode: "ai_assisted", appeal_enabled: true, publish_policy: "after_admin_approval", class_ids: ["class-1"] } });
@@ -255,6 +317,12 @@ export async function installApiMocks(
       } });
     }
     if (path === "/api/v1/exam-sessions" && route.request().method() === "POST") {
+      createdManagementExam = {
+        ...managementExam, id: "session-created", kind: "session", name: "2026-2027学年高二期中考试", revision: 1,
+        exams: [{ ...managementExam.exams[0], id: "exam-created-math", subject: "math", status: "draft", name: "2026-2027学年高二期中考试 · 数学", exam_session_id: "session-created", exam_session_name: "2026-2027学年高二期中考试", revision: 1 }],
+        inherited_subject_ids: ["exam-created-math"], can_archive: true, archive_blockers: [],
+        progress: { status: "draft", label: "草稿", total_count: 1, ready_count: 0, published_count: 0, counts: { draft: 1 }, facts_available: true }
+      };
       return json(route, {
         exam_session: {
           id: "session-created",
@@ -315,6 +383,8 @@ export async function installApiMocks(
       return json(route, {
         workspace: {
           exam_id: examID,
+          read_only: examID.startsWith("exam-created") ? Boolean(createdManagementExam?.archived_at) : Boolean(managementExam.archived_at),
+          ...(newlyCreated ? { exam_session_id: "session-created" } : options.sessionSubjects ? { exam_session_id: "session-1" } : {}),
           exam_name: newlyCreated ? "2026-2027学年高二期中考试 · 数学" : "2026 春季数学期中考试",
           ...(options.sessionSubjects ? { exam_session_name: "2026 春季期中考试" } : {}),
           subject_exams: options.sessionSubjects ? [

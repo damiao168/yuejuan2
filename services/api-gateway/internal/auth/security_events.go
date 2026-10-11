@@ -37,9 +37,7 @@ var personalSecurityActions = map[string]struct{}{
 	"auth.mfa_recovery_rotated":          {},
 }
 
-// ListSecurityEvents projects the existing audit trail into a deliberately
-// small, self-only view. Raw IP addresses, user agents, request IDs and audit
-// before/after payloads never leave this endpoint.
+// ListSecurityEvents 将已有审计轨迹投影为仅供本人查看的有限视图；原始 IP、用户代理、请求 ID 和审计前后载荷不会通过此端点返回。
 func (h *Handler) ListSecurityEvents(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "private, no-store")
 	user, ok := UserFromContext(r.Context())

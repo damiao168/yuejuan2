@@ -10,9 +10,7 @@ import (
 var _ MFAStore = (*PostgresStore)(nil)
 var _ MFAStore = (*MemoryStore)(nil)
 
-// All MFA mutations lock in this order: principal, session, credential,
-// challenge. A stale password check or an in-flight revoked session cannot
-// create/consume a grant. Keep this order when adding future command scopes.
+// 所有 MFA 修改按主体、会话、凭据、挑战的顺序加锁。过时的密码校验或正在处理的已撤销会话不能创建或消耗授权；后续增加命令作用域时保留此顺序。
 func lockMFAPrincipal(ctx context.Context, tx *sql.Tx, tenantID, userID, sessionHash string, now time.Time) (int64, string, error) {
 	var epoch int64
 	var passwordHash string
@@ -200,7 +198,7 @@ func validStoredChallenge(challenge MFAChallenge, record TOTPRecord, epoch int64
 }
 
 func (s *PostgresStore) FindMFAChallenge(ctx context.Context, tenantID, userID, sessionHash, hash string, now time.Time) (MFAChallenge, error) {
-	// A short read transaction also checks revocation under the same lock order.
+	// 短读取事务也按相同锁顺序检查撤销状态。
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return MFAChallenge{}, err

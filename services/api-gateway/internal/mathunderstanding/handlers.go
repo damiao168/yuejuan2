@@ -17,6 +17,10 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/workerruntime"
 )
 
+const (
+	verificationTaskNotFound = "math verification task was not found"
+)
+
 type Handler struct {
 	artifacts   Store
 	corrections CorrectionStore
@@ -168,7 +172,7 @@ func (h *Handler) GetVerificationRuntimeInput(w http.ResponseWriter, r *http.Req
 	}
 	task, err := h.runtime.Get(r.Context(), user.TenantID, r.PathValue("taskId"))
 	if err != nil || !isVerificationTask(task) {
-		httpx.Error(w, r, http.StatusNotFound, "math_verification_task_not_found", "math verification task was not found")
+		httpx.Error(w, r, http.StatusNotFound, "math_verification_task_not_found", verificationTaskNotFound)
 		return
 	}
 	artifact, contract, correctionRevision, err := h.verificationTaskContract(r.Context(), user.TenantID, task)
@@ -196,7 +200,7 @@ func (h *Handler) CompleteVerificationRuntimeTask(w http.ResponseWriter, r *http
 	}
 	task, err := h.runtime.Get(r.Context(), user.TenantID, r.PathValue("taskId"))
 	if err != nil || !isVerificationTask(task) {
-		httpx.Error(w, r, http.StatusNotFound, "math_verification_task_not_found", "math verification task was not found")
+		httpx.Error(w, r, http.StatusNotFound, "math_verification_task_not_found", verificationTaskNotFound)
 		return
 	}
 	artifact, contract, correctionRevision, err := h.verificationTaskContract(r.Context(), user.TenantID, task)
@@ -214,7 +218,10 @@ func (h *Handler) CompleteVerificationRuntimeTask(w http.ResponseWriter, r *http
 		writeMathError(w, r, err)
 		return
 	}
-	derived, superseded, err := h.completeVerifiedRuntime(r.Context(), task, artifact, correctionRevision, verifiedContract, quality, input.LeaseToken, input.DurationMS)
+	derived, superseded, err := h.completeVerifiedRuntime(r.Context(), verifiedRuntimeCompletion{
+		Task: task, Parent: artifact, CorrectionRevision: correctionRevision, Contract: verifiedContract,
+		Quality: quality, LeaseToken: input.LeaseToken, DurationMS: input.DurationMS,
+	})
 	if err != nil {
 		httpx.Error(w, r, http.StatusConflict, "math_verification_completion_failed", "math verification lease is no longer valid")
 		return
@@ -237,7 +244,7 @@ func (h *Handler) FailVerificationRuntimeTask(w http.ResponseWriter, r *http.Req
 	}
 	task, err := h.runtime.Get(r.Context(), user.TenantID, r.PathValue("taskId"))
 	if err != nil || !isVerificationTask(task) {
-		httpx.Error(w, r, http.StatusNotFound, "math_verification_task_not_found", "math verification task was not found")
+		httpx.Error(w, r, http.StatusNotFound, "math_verification_task_not_found", verificationTaskNotFound)
 		return
 	}
 	updated, err := h.runtime.Fail(r.Context(), user.TenantID, task.ID, input)
@@ -311,59 +318,26 @@ func int64Payload(payload map[string]any, key string) (int64, bool) {
 }
 
 func applySymbolicVerifications(contract CreateArtifactInput, checks []MathVerification, correctionRevision int64) (CreateArtifactInput, map[string]any, error) {
-	if len(checks) == 0 || len(checks) > 2048 {
+	// 先限制已有记录，避免在拒绝过量结果前深拷贝整个历史契约。
+	if len(checks) == 0 || len(checks) > 2048 || len(contract.Verifications) > maxArtifactVerificationCount {
 		return CreateArtifactInput{}, nil, ErrInvalidInput
 	}
 	contract = cloneInput(contract)
-	retained := make([]MathVerification, 0, len(contract.Verifications)+len(checks))
-	knownIDs := map[string]bool{}
-	criticalConfidence := contract.SolutionGraph.OverallConfidence
-	requiresReview := false
-	// 保留识别阶段的语法检查，再替换符号验证结果；后续计算成功不能抹掉原先的识别疑点。
-	for _, check := range contract.Verifications {
-		if check.Kind == "syntax" {
-			retained = append(retained, check)
-			knownIDs[check.ID] = true
-			if check.Status == "uncertain" || check.Status == "contradicted" {
-				criticalConfidence = min(criticalConfidence, check.Confidence)
-				if check.Status == "contradicted" {
-					criticalConfidence = 0
-				}
-				requiresReview = true
-			}
-		}
+	retained, knownIDs, criticalConfidence, requiresReview, err := retainSyntaxVerifications(contract, len(checks))
+	if err != nil {
+		return CreateArtifactInput{}, nil, err
 	}
 	statusCounts := map[string]int{"verified": 0, "contradicted": 0, "uncertain": 0, "not_applicable": 0}
-	activeFormulas := map[string]bool{}
-	for _, step := range contract.SolutionGraph.Steps {
-		for _, id := range step.FormulaIDs {
-			activeFormulas[id] = true
-		}
-	}
+	activeFormulas := activeSolutionFormulas(contract.SolutionGraph)
 	checkedFormulas := map[string]bool{}
 	for _, check := range checks {
 		if check.Engine != "sympy" || !set("equivalence", "constraint")[check.Kind] || knownIDs[check.ID] || !validSymbolicBinding(contract, check) {
 			return CreateArtifactInput{}, nil, ErrInvalidInput
 		}
 		knownIDs[check.ID] = true
-		if activeFormulas[check.FormulaID] {
-			checkedFormulas[check.FormulaID] = true
-		}
-		if fromID, ok := check.Details["from_formula_id"].(string); ok {
-			if activeFormulas[fromID] {
-				checkedFormulas[fromID] = true
-			}
-		}
+		recordCheckedFormula(check, activeFormulas, checkedFormulas)
 		statusCounts[check.Status]++
-		if check.Status == "contradicted" {
-			criticalConfidence = 0
-			requiresReview = true
-		} else if check.Status == "uncertain" {
-			if check.Confidence < criticalConfidence {
-				criticalConfidence = check.Confidence
-			}
-			requiresReview = true
-		}
+		criticalConfidence, requiresReview = updateSymbolicConfidence(check, criticalConfidence, requiresReview)
 		retained = append(retained, check)
 	}
 	contract.Verifications = retained
@@ -380,6 +354,58 @@ func applySymbolicVerifications(contract CreateArtifactInput, checks []MathVerif
 		"unchecked_formula_count": len(activeFormulas) - len(checkedFormulas),
 	}
 	return contract, quality, nil
+}
+
+func retainSyntaxVerifications(contract CreateArtifactInput, incomingCount int) ([]MathVerification, map[string]bool, float64, bool, error) {
+	if len(contract.Verifications) > maxArtifactVerificationCount || incomingCount < 0 || incomingCount > 2048 {
+		return nil, nil, 0, false, ErrInvalidInput
+	}
+	syntaxCount := 0
+	for _, check := range contract.Verifications {
+		if check.Kind == "syntax" {
+			syntaxCount++
+		}
+	}
+	// 旧符号结果会被替换；只为保留的语法记录和本轮结果计预算，减法检查在容量相加前执行。
+	if incomingCount > maxArtifactVerificationCount-syntaxCount {
+		return nil, nil, 0, false, ErrInvalidInput
+	}
+	retained, knownIDs, criticalConfidence, requiresReview := collectRetainedSyntaxEvidence(contract, syntaxCount+incomingCount)
+	return retained, knownIDs, criticalConfidence, requiresReview, nil
+}
+
+func activeSolutionFormulas(graph SolutionGraph) map[string]bool {
+	active := map[string]bool{}
+	for _, step := range graph.Steps {
+		for _, id := range step.FormulaIDs {
+			active[id] = true
+		}
+	}
+	return active
+}
+
+func recordCheckedFormula(check MathVerification, active, checked map[string]bool) {
+	if active[check.FormulaID] {
+		checked[check.FormulaID] = true
+	}
+	if fromID, ok := check.Details["from_formula_id"].(string); ok {
+		if active[fromID] {
+			checked[fromID] = true
+		}
+	}
+}
+
+func updateSymbolicConfidence(check MathVerification, confidence float64, requiresReview bool) (float64, bool) {
+	if check.Status == "contradicted" {
+		confidence = 0
+		requiresReview = true
+	} else if check.Status == "uncertain" {
+		if check.Confidence < confidence {
+			confidence = check.Confidence
+		}
+		requiresReview = true
+	}
+	return confidence, requiresReview
 }
 
 func validSymbolicBinding(contract CreateArtifactInput, check MathVerification) bool {
@@ -584,8 +610,7 @@ func (h *Handler) CreateCorrection(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	h.auditEvent(r, user, "math_understanding.corrected", artifact.ID, map[string]any{"revision": item.Revision, "operation_count": len(item.Operations)})
-	// Saving the append-only correction and scheduling verification are distinct
-	// outcomes. Never report "running" when the queue is absent or failed.
+	// 保存只追加的更正与安排验证是两种独立结果；队列不存在或失败时，不得报告 "running"。
 	response := map[string]any{"correction": item, "verification_status": verificationStatus}
 	if verificationTaskID != "" {
 		response["verification_task_id"] = verificationTaskID
@@ -672,4 +697,27 @@ func writeMathError(w http.ResponseWriter, r *http.Request, err error) {
 	default:
 		httpx.Error(w, r, http.StatusInternalServerError, "math_understanding_failed", "math understanding operation failed")
 	}
+}
+
+// 容量由调用方在分配前检查；收集保留的语法证据同时累积识别疑点，不能由后续符号验证抹掉。
+func collectRetainedSyntaxEvidence(contract CreateArtifactInput, capacity int) ([]MathVerification, map[string]bool, float64, bool) {
+	retained := make([]MathVerification, 0, capacity)
+	knownIDs := map[string]bool{}
+	criticalConfidence := contract.SolutionGraph.OverallConfidence
+	requiresReview := false
+	// 保留识别阶段的语法检查，再替换符号验证结果；后续计算成功不能抹掉原先的识别疑点。
+	for _, check := range contract.Verifications {
+		if check.Kind == "syntax" {
+			retained = append(retained, check)
+			knownIDs[check.ID] = true
+			if check.Status == "uncertain" || check.Status == "contradicted" {
+				criticalConfidence = min(criticalConfidence, check.Confidence)
+				if check.Status == "contradicted" {
+					criticalConfidence = 0
+				}
+				requiresReview = true
+			}
+		}
+	}
+	return retained, knownIDs, criticalConfidence, requiresReview
 }

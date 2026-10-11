@@ -38,12 +38,12 @@ function wechatStatusMessage(code?: string) {
   return "微信登录未完成，请刷新二维码或使用账号密码登录。";
 }
 
-export function LoginPage({ onLogin, onWechatLogin, loading = false, error }: {
+export function LoginPage({ onLogin, onWechatLogin, loading = false, error }: Readonly<{
   onLogin: (values: LoginFormValues) => void | Promise<void>;
   onWechatLogin: (response: LoginResponse) => void | Promise<void>;
   loading?: boolean;
   error?: string;
-}) {
+}>) {
   const tenantHint = tenantHintFromLocation();
   const [method, setMethod] = useState<LoginMethod>("password");
   const [form] = Form.useForm<LoginFormValues>();
@@ -179,7 +179,7 @@ function TenantField({ tenantHint }: { tenantHint?: string }) {
   );
 }
 
-function DeviceOptions({ form }: { form: FormInstance }) {
+function DeviceOptions({ form }: Readonly<{ form: FormInstance }>) {
   return <>
     <div className="login-options">
       <Form.Item name="remember_device" valuePropName="checked" noStyle><Checkbox onChange={(event) => { if (event.target.checked) form.setFieldValue("public_device", false); }}>这是我的常用电脑，30 天内减少验证</Checkbox></Form.Item>

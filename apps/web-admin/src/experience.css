@@ -1,6 +1,6 @@
-/* Shared business UI: typography, readable controls and workspace reflow. */
+/* 共享业务界面：字体排版、易读控件和工作区布局重排。 */
 body { font-family: var(--eg-font-family); font-size: var(--eg-font-body); line-height: var(--eg-line-body); }
-.workspace { min-width: 0; container: workspace / inline-size; }
+.workspace { min-width: 0; container: workspace / inline-size; scrollbar-color: #98a2b3 transparent; scrollbar-gutter: stable; }
 .workspace h1 { font-size: var(--eg-font-title); line-height: 1.35; overflow-wrap: anywhere; }
 .workspace h2 { line-height: 1.45; }
 .workspace p { line-height: var(--eg-line-body); }
@@ -10,7 +10,6 @@ body { font-family: var(--eg-font-family); font-size: var(--eg-font-body); line-
 .mobile-page-context strong { font-size: var(--eg-font-reading); }
 .mobile-page-context span { font-size: var(--eg-font-caption); color: var(--eg-color-muted); overflow-wrap: anywhere; }
 .mobile-shellbar { min-height: 48px; height: 48px; padding-block: 0; }
-.workspace { scrollbar-color: #98a2b3 transparent; scrollbar-gutter: stable; }
 .ant-form-item-label > label, .ant-select, .ant-input, .ant-btn, .ant-input-number { font-size: var(--eg-font-body); }
 .ant-input-number-input { min-height: 36px; }
 .ant-btn { white-space: normal; height: auto; min-height: 36px; line-height: 1.5; }
@@ -32,11 +31,17 @@ body { font-family: var(--eg-font-family); font-size: var(--eg-font-body); line-
 .eg-rubric-criterion-main { align-items: flex-start; font-size: var(--eg-font-reading); line-height: var(--eg-line-reading); }
 .eg-rubric-criterion-main > span { white-space: normal; overflow: visible; overflow-wrap: anywhere; }
 .eg-rubric-criterion-meta { font-size: var(--eg-font-body); }
-.identity-workspace { max-width: 1100px; }
+.identity-workspace { max-width: 760px; margin-inline: auto; }
 .identity-heading { display: flex; gap: 16px; align-items: flex-start; padding-bottom: 24px; border-bottom: 1px solid var(--border); }
+.identity-heading > svg { flex: none; color: var(--primary); }
 .identity-heading h1 { margin: 0 0 8px; }
+.identity-heading p { max-width: 44em; margin: 0; color: var(--text-muted); }
+.identity-content { padding-top: 24px; }
+.identity-account { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; color: var(--text-muted); }
 .identity-start { padding-block: 32px; }
-.identity-start p { max-width: 48em; }
+.identity-start h2 { margin: 0 0 8px; }
+.identity-start p { max-width: 48em; color: var(--text-muted); }
+.identity-start .ant-alert { max-width: 600px; margin-top: 24px; }
 .exam-context-header { flex-wrap: wrap; gap: 12px; }
 .exam-context-title { min-width: 0; flex: 1 1 280px; }
 .exam-context-title h1 { white-space: normal; }

@@ -25,11 +25,10 @@ class ApplicationTests(unittest.TestCase):
         self.assertEqual(first["telemetry"]["region"], "on_premise")
 
     def test_capability_profile_identity_must_match_the_governed_matrix(self):
-        with self.assertRaisesRegex(ValueError, "capability profile"):
-            GradingAgentApplication(
-                settings(capability_profile="unapproved-profile"),
-                model=FakeModel(),
-            )
+        test_settings = settings(capability_profile='unapproved-profile')
+        model = FakeModel()
+        with self.assertRaisesRegex(ValueError, 'capability profile'):
+            GradingAgentApplication(test_settings, model=model)
 
     def test_idempotency_key_reuse_with_different_request_is_rejected(self):
         app = GradingAgentApplication(settings(), model=FakeModel())

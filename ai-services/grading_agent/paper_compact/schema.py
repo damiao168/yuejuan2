@@ -15,19 +15,23 @@ MAX_BLOCKS_PER_CHUNK = 48
 MAX_TEXT_CHARS_PER_CHUNK = 1_100
 MAX_DIRECT_TEXT_CHARS_PER_CHUNK = 2_400
 MAX_REFS_PER_CANDIDATE = 6
+# 单页页脚规则只识别去掉首尾空白后的短候选；超长候选不按该规则排除，不截断原始证据。
+MAX_PAGE_FOOTER_TEXT_CHARS = 80
 
-_QUESTION_START = re.compile(r"^\s*(?:第\s*)?(?:[1-9]\d{0,2})(?:\s*题|[.．、)）])")
+_QUESTION_START = re.compile(r"^\s*(?:第\s*)?[1-9]\d{0,2}(?:\s*题|[.．、)）])")
 _SECTION_START = re.compile(
     r"^\s*(?:[一二三四五六七八九十]+[、.．]|选择题|填空题|判断题|解答题|计算题|作文题)"
 )
+# 正文前的空白仍按原规则全部跳过；占有量词避免失败时在空白与正文之间反复回溯。
 _QUESTION_NUMBER = re.compile(
-    r"^\s*(?:第\s*)?([1-9]\d{0,2})(?:\s*题|[.．、)）])\s*(.*)$"
+    r"^\s*+(?:第\s*+)?([1-9]\d{0,2})(?:\s*+题|[.．、)）])\s*+(.*)$"
 )
-_ANSWER_MARKER = re.compile(r"^\s*[【\[]?答案[】\]]?\s*[:：]?\s*(.*)$")
-_SOLUTION_MARKER = re.compile(r"^\s*[【\[]?(?:详解|解析|分析)[】\]]?\s*[:：]?\s*(.*)$")
+_ANSWER_MARKER = re.compile(r"^\s*+[【\[]?答案[】\]]?\s*+[:：]?\s*+(.*)$")
+_SOLUTION_MARKER = re.compile(r"^\s*+[【\[]?(?:详解|解析|分析)[】\]]?\s*+[:：]?\s*+(.*)$")
 _OPTION = re.compile(r"(?:^|\s)([A-DＡ-Ｄ])[.．、]\s*")
+# 页码数字、空白与后续字面量互不重叠；占有量词防止失败后重新分配长空白。
 _PAGE_FOOTER = re.compile(
-    r"(?:试卷|答题卡)?\s*第\s*\d+\s*页\s*[,，、]?\s*(?:共\s*\d+\s*页)?"
+    r"(?:试卷|答题卡)?\s*+第\s*+\d++\s*+页\s*+(?:[,，、]\s*+)?(?:共\s*+\d++\s*+页)?"
 )
 _DISTRIBUTION_MARKER = re.compile(
     r"公众号|资料分享|微信(?:公众)?号|更多资料|版权所有|扫码(?:关注|领取|下载|获取)|关注(?:公众号|我们)"

@@ -13,8 +13,10 @@ export function SchoolModelSelector({
   activeCount,
   healthyCount,
   temporarilyUnavailableCount,
+  capabilityCount = 0,
+  onFilter,
   onChange
-}: {
+}: Readonly<{
   schools: Tenant[];
   selectedTenantID: string;
   currentConfig?: ManagedModelAPIConfig;
@@ -23,8 +25,10 @@ export function SchoolModelSelector({
   activeCount: number;
   healthyCount: number;
   temporarilyUnavailableCount: number;
+  capabilityCount?: number;
+  onFilter?: (filter: "enabled" | "connection" | "capability") => void;
   onChange: (tenantID: string) => void;
-}) {
+}>) {
   return (
     <section className="platform-model-schoolbar">
       <div className="platform-model-school-select">
@@ -42,9 +46,10 @@ export function SchoolModelSelector({
         />
       </div>
       <div className="platform-model-school-summary">
-        <span><Building2 size={15} /> 日常对话模型：{currentConfig ? `${currentConfig.display_name} · ${currentConfig.model_name} · ${connectionStatusLabel(currentConfig)}` : "本地模型"}</span>
-        <span><Zap size={15} /> {activeCount} 个可用配置</span>
-        <span><CheckCircle2 size={15} /> {healthyCount} 个连接正常</span>
+        <span><Building2 size={15} /> 日常对话模型：{currentConfig ? `${currentConfig.display_name} · ${currentConfig.model_name} · ${connectionStatusLabel(currentConfig)}` : "未指定学校默认模型"}</span>
+        <button type="button" disabled={disabled} onClick={() => onFilter?.("enabled")}><Zap size={15} /> 已启用 {activeCount} 个</button>
+        <button type="button" disabled={disabled} onClick={() => onFilter?.("connection")}><CheckCircle2 size={15} /> 访问检查通过 {healthyCount} 个</button>
+        <button type="button" disabled={disabled} onClick={() => onFilter?.("capability")}>结构化能力已验证 {capabilityCount} 个</button>
         {temporarilyUnavailableCount > 0 ? <span>{temporarilyUnavailableCount} 个暂时无法验证</span> : null}
       </div>
     </section>

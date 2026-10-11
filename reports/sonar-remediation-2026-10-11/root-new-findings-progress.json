@@ -1,0 +1,326 @@
+{
+  "updated_at": "2026-10-11T19:20:38.460022+08:00",
+  "scope": "checkpoint02新增47项中root独占23项；不混入原2223账本",
+  "issue_states": [
+    {
+      "key": "eb390af3-af14-4c27-b33c-0b1442f95181",
+      "rule": "python:S125",
+      "severity": "MAJOR",
+      "file": "docs/architecture/tools/build_preview.py",
+      "state": "reviewed_false_positive_awaiting_current_source_scan",
+      "reason": "两行中文解释离线机器字体回退及仅修改HTML内嵌SVG副本的边界，非注释掉的代码；该文件已有另外的XML解析改动，本次保留，误报处置必须以当前SHA复扫为准。",
+      "current_source_sha256": "56d94138d0123f4ae3f7beba356fbde9703403ba955aa85638871ed6e9bdc9bd",
+      "evidence": [
+        "root-new-findings-baseline.json"
+      ]
+    },
+    {
+      "key": "98688ff8-f75e-4bbb-897a-2eaf11ee1c8f",
+      "rule": "javascript:S905",
+      "severity": "MAJOR",
+      "file": "docs/architecture/tools/check_preview_typography.js",
+      "state": "reviewed_false_positive_awaiting_current_source_scan",
+      "reason": "整段async函数是playwright-cli run-code的函数输入，由runner注入page调用；不是无用的模块表达式。6处Error显式构造已更新，待当前SHA复扫后逐项处置。",
+      "current_source_sha256": "1ef9d115d07883936333d8c4b77cbd46832e3a01f563b4c5da45e3a7841714b2",
+      "evidence": [
+        "root-new-findings-baseline.json"
+      ]
+    },
+    {
+      "key": "98f70be4-6910-4366-863a-5abc7700606c",
+      "rule": "javascript:S7723",
+      "severity": "MINOR",
+      "file": "docs/architecture/tools/check_preview_typography.js",
+      "state": "modified_syntax_validated_pending_platform_rescan",
+      "reason": "6处Error(...)改为new Error(...)，错误文本和触发条件保持；Node语法检查通过，本批未重跑真实浏览器图纸预览。",
+      "current_source_sha256": "1ef9d115d07883936333d8c4b77cbd46832e3a01f563b4c5da45e3a7841714b2",
+      "evidence": [
+        "root-new-findings-baseline.json",
+        "root-new-js-syntax.json"
+      ]
+    },
+    {
+      "key": "8febb06f-cab8-43cd-86ab-46f92e136812",
+      "rule": "javascript:S7723",
+      "severity": "MINOR",
+      "file": "docs/architecture/tools/check_preview_typography.js",
+      "state": "modified_syntax_validated_pending_platform_rescan",
+      "reason": "6处Error(...)改为new Error(...)，错误文本和触发条件保持；Node语法检查通过，本批未重跑真实浏览器图纸预览。",
+      "current_source_sha256": "1ef9d115d07883936333d8c4b77cbd46832e3a01f563b4c5da45e3a7841714b2",
+      "evidence": [
+        "root-new-findings-baseline.json",
+        "root-new-js-syntax.json"
+      ]
+    },
+    {
+      "key": "6a3cdaff-8a12-4050-902f-c1c38234ccad",
+      "rule": "javascript:S7723",
+      "severity": "MINOR",
+      "file": "docs/architecture/tools/check_preview_typography.js",
+      "state": "modified_syntax_validated_pending_platform_rescan",
+      "reason": "6处Error(...)改为new Error(...)，错误文本和触发条件保持；Node语法检查通过，本批未重跑真实浏览器图纸预览。",
+      "current_source_sha256": "1ef9d115d07883936333d8c4b77cbd46832e3a01f563b4c5da45e3a7841714b2",
+      "evidence": [
+        "root-new-findings-baseline.json",
+        "root-new-js-syntax.json"
+      ]
+    },
+    {
+      "key": "2e016610-69ca-4d27-bba1-168afefc9575",
+      "rule": "javascript:S7723",
+      "severity": "MINOR",
+      "file": "docs/architecture/tools/check_preview_typography.js",
+      "state": "modified_syntax_validated_pending_platform_rescan",
+      "reason": "6处Error(...)改为new Error(...)，错误文本和触发条件保持；Node语法检查通过，本批未重跑真实浏览器图纸预览。",
+      "current_source_sha256": "1ef9d115d07883936333d8c4b77cbd46832e3a01f563b4c5da45e3a7841714b2",
+      "evidence": [
+        "root-new-findings-baseline.json",
+        "root-new-js-syntax.json"
+      ]
+    },
+    {
+      "key": "11f4ff09-a505-464c-8997-f10a9ff4a9dc",
+      "rule": "javascript:S7723",
+      "severity": "MINOR",
+      "file": "docs/architecture/tools/check_preview_typography.js",
+      "state": "modified_syntax_validated_pending_platform_rescan",
+      "reason": "6处Error(...)改为new Error(...)，错误文本和触发条件保持；Node语法检查通过，本批未重跑真实浏览器图纸预览。",
+      "current_source_sha256": "1ef9d115d07883936333d8c4b77cbd46832e3a01f563b4c5da45e3a7841714b2",
+      "evidence": [
+        "root-new-findings-baseline.json",
+        "root-new-js-syntax.json"
+      ]
+    },
+    {
+      "key": "3e0ff2dc-7579-4597-b79d-473f08119cb4",
+      "rule": "javascript:S7723",
+      "severity": "MINOR",
+      "file": "docs/architecture/tools/check_preview_typography.js",
+      "state": "modified_syntax_validated_pending_platform_rescan",
+      "reason": "6处Error(...)改为new Error(...)，错误文本和触发条件保持；Node语法检查通过，本批未重跑真实浏览器图纸预览。",
+      "current_source_sha256": "1ef9d115d07883936333d8c4b77cbd46832e3a01f563b4c5da45e3a7841714b2",
+      "evidence": [
+        "root-new-findings-baseline.json",
+        "root-new-js-syntax.json"
+      ]
+    },
+    {
+      "key": "2ee484a5-dc71-4fa6-b44f-92596aaeddd4",
+      "rule": "javascript:S7721",
+      "severity": "MAJOR",
+      "file": "docs/architecture/tools/frontend-api-scan.mjs",
+      "state": "validated_fix_pending_platform_rescan",
+      "reason": "15个每文件helper移至模块作用域并显式传入每文件context，保留符号隔离和递归深度边界；完整盘点报告1,176,650字节等价。首次常量递归漏参已修正，失败日志保留。",
+      "current_source_sha256": "11fcb6c8245c78186be7e49661773805d99d6ecc8d5e42e9b9373f1221169dc7",
+      "evidence": [
+        "root-new-findings-baseline.json",
+        "frontend-api-scope-equivalence-02.json",
+        "root-new-js-independent-review-python-agent.json"
+      ]
+    },
+    {
+      "key": "531deed5-59d4-4340-8206-00f36d6bd876",
+      "rule": "javascript:S7721",
+      "severity": "MAJOR",
+      "file": "docs/architecture/tools/frontend-api-scan.mjs",
+      "state": "validated_fix_pending_platform_rescan",
+      "reason": "15个每文件helper移至模块作用域并显式传入每文件context，保留符号隔离和递归深度边界；完整盘点报告1,176,650字节等价。首次常量递归漏参已修正，失败日志保留。",
+      "current_source_sha256": "11fcb6c8245c78186be7e49661773805d99d6ecc8d5e42e9b9373f1221169dc7",
+      "evidence": [
+        "root-new-findings-baseline.json",
+        "frontend-api-scope-equivalence-02.json",
+        "root-new-js-independent-review-python-agent.json"
+      ]
+    },
+    {
+      "key": "b9c007e6-f680-474b-b7a4-9140eaccf39f",
+      "rule": "javascript:S7721",
+      "severity": "MAJOR",
+      "file": "docs/architecture/tools/frontend-api-scan.mjs",
+      "state": "validated_fix_pending_platform_rescan",
+      "reason": "15个每文件helper移至模块作用域并显式传入每文件context，保留符号隔离和递归深度边界；完整盘点报告1,176,650字节等价。首次常量递归漏参已修正，失败日志保留。",
+      "current_source_sha256": "11fcb6c8245c78186be7e49661773805d99d6ecc8d5e42e9b9373f1221169dc7",
+      "evidence": [
+        "root-new-findings-baseline.json",
+        "frontend-api-scope-equivalence-02.json",
+        "root-new-js-independent-review-python-agent.json"
+      ]
+    },
+    {
+      "key": "d159b35e-7804-43d4-ab28-035850e2f995",
+      "rule": "javascript:S7721",
+      "severity": "MAJOR",
+      "file": "docs/architecture/tools/frontend-api-scan.mjs",
+      "state": "validated_fix_pending_platform_rescan",
+      "reason": "15个每文件helper移至模块作用域并显式传入每文件context，保留符号隔离和递归深度边界；完整盘点报告1,176,650字节等价。首次常量递归漏参已修正，失败日志保留。",
+      "current_source_sha256": "11fcb6c8245c78186be7e49661773805d99d6ecc8d5e42e9b9373f1221169dc7",
+      "evidence": [
+        "root-new-findings-baseline.json",
+        "frontend-api-scope-equivalence-02.json",
+        "root-new-js-independent-review-python-agent.json"
+      ]
+    },
+    {
+      "key": "c500cfe3-80be-44ab-a6c9-61d245f1dd3d",
+      "rule": "javascript:S7721",
+      "severity": "MAJOR",
+      "file": "docs/architecture/tools/frontend-api-scan.mjs",
+      "state": "validated_fix_pending_platform_rescan",
+      "reason": "15个每文件helper移至模块作用域并显式传入每文件context，保留符号隔离和递归深度边界；完整盘点报告1,176,650字节等价。首次常量递归漏参已修正，失败日志保留。",
+      "current_source_sha256": "11fcb6c8245c78186be7e49661773805d99d6ecc8d5e42e9b9373f1221169dc7",
+      "evidence": [
+        "root-new-findings-baseline.json",
+        "frontend-api-scope-equivalence-02.json",
+        "root-new-js-independent-review-python-agent.json"
+      ]
+    },
+    {
+      "key": "ddfb8621-2e53-4458-b521-a975be48f4e0",
+      "rule": "javascript:S7721",
+      "severity": "MAJOR",
+      "file": "docs/architecture/tools/frontend-api-scan.mjs",
+      "state": "validated_fix_pending_platform_rescan",
+      "reason": "15个每文件helper移至模块作用域并显式传入每文件context，保留符号隔离和递归深度边界；完整盘点报告1,176,650字节等价。首次常量递归漏参已修正，失败日志保留。",
+      "current_source_sha256": "11fcb6c8245c78186be7e49661773805d99d6ecc8d5e42e9b9373f1221169dc7",
+      "evidence": [
+        "root-new-findings-baseline.json",
+        "frontend-api-scope-equivalence-02.json",
+        "root-new-js-independent-review-python-agent.json"
+      ]
+    },
+    {
+      "key": "e2bfffe6-f04e-4675-aa35-d9df1da68f36",
+      "rule": "javascript:S7721",
+      "severity": "MAJOR",
+      "file": "docs/architecture/tools/frontend-api-scan.mjs",
+      "state": "validated_fix_pending_platform_rescan",
+      "reason": "15个每文件helper移至模块作用域并显式传入每文件context，保留符号隔离和递归深度边界；完整盘点报告1,176,650字节等价。首次常量递归漏参已修正，失败日志保留。",
+      "current_source_sha256": "11fcb6c8245c78186be7e49661773805d99d6ecc8d5e42e9b9373f1221169dc7",
+      "evidence": [
+        "root-new-findings-baseline.json",
+        "frontend-api-scope-equivalence-02.json",
+        "root-new-js-independent-review-python-agent.json"
+      ]
+    },
+    {
+      "key": "af537f0e-bb13-4310-821f-1528022d1cff",
+      "rule": "javascript:S7721",
+      "severity": "MAJOR",
+      "file": "docs/architecture/tools/frontend-api-scan.mjs",
+      "state": "validated_fix_pending_platform_rescan",
+      "reason": "15个每文件helper移至模块作用域并显式传入每文件context，保留符号隔离和递归深度边界；完整盘点报告1,176,650字节等价。首次常量递归漏参已修正，失败日志保留。",
+      "current_source_sha256": "11fcb6c8245c78186be7e49661773805d99d6ecc8d5e42e9b9373f1221169dc7",
+      "evidence": [
+        "root-new-findings-baseline.json",
+        "frontend-api-scope-equivalence-02.json",
+        "root-new-js-independent-review-python-agent.json"
+      ]
+    },
+    {
+      "key": "ae9bde8c-38e1-458d-9216-cdd5998fc7d5",
+      "rule": "javascript:S7721",
+      "severity": "MAJOR",
+      "file": "docs/architecture/tools/render_native.js",
+      "state": "platform_false_positive_verified",
+      "reason": "几何判定函数处于 page.evaluate 的浏览器回调内。Playwright 将该回调序列化到浏览器执行，外部Node闭包不会一并序列化；提升到文件或外部循环作用域会令浏览器缺少这两个函数。当前位置已是该浏览器执行单元内可用的最高作用域。",
+      "current_source_sha256": "85e0b8d9604713f3506c56758a3af02977ef66e35bc66ff7d3136e129eefac65",
+      "evidence": [
+        "root-new-findings-baseline.json",
+        "root-platform-disposition-phase02-results.json"
+      ]
+    },
+    {
+      "key": "90763f53-5107-4902-9ea6-e4c6b6d7607e",
+      "rule": "javascript:S7721",
+      "severity": "MAJOR",
+      "file": "docs/architecture/tools/render_native.js",
+      "state": "platform_false_positive_verified",
+      "reason": "几何判定函数处于 page.evaluate 的浏览器回调内。Playwright 将该回调序列化到浏览器执行，外部Node闭包不会一并序列化；提升到文件或外部循环作用域会令浏览器缺少这两个函数。当前位置已是该浏览器执行单元内可用的最高作用域。",
+      "current_source_sha256": "85e0b8d9604713f3506c56758a3af02977ef66e35bc66ff7d3136e129eefac65",
+      "evidence": [
+        "root-new-findings-baseline.json",
+        "root-platform-disposition-phase02-results.json"
+      ]
+    },
+    {
+      "key": "94179e65-b9dc-432d-b598-248933881477",
+      "rule": "javascript:S3782",
+      "severity": "MAJOR",
+      "file": "scripts/check-story052-production-deployment.mjs",
+      "state": "validated_fix_pending_platform_rescan",
+      "reason": "迁移编号仅接收正则产生的字符串或undefined，显式string谓词保留原真值过滤与排序结果；只读部署检查exit0。",
+      "current_source_sha256": "688b7952d124a8208bd4f650c191862f6124993a471a66affa956420f3334676",
+      "evidence": [
+        "root-new-findings-baseline.json",
+        "root-production-deployment-check-01.log"
+      ]
+    },
+    {
+      "key": "ac150e87-db4d-4100-9366-4c2d00788c18",
+      "rule": "javascript:S4043",
+      "severity": "MAJOR",
+      "file": "scripts/ci/check-generated-contracts.mjs",
+      "state": "validated_fix_pending_platform_rescan",
+      "reason": "保持当前行为，按告警修正；具体差异与验证见证据。",
+      "current_source_sha256": "35fef0a11c6d6b35c07b321eed2c7ef27d2471f244899aec03d8c0002ab4d5aa",
+      "evidence": [
+        "root-new-findings-baseline.json",
+        "root-new-js-tests-02.json",
+        "root-new-js-tests-02.tap",
+        "root-new-js-independent-review-python-agent.json",
+        "root-new-js-independent-review02-python-agent.json"
+      ]
+    },
+    {
+      "key": "f62a5b8f-53e8-4e5d-9a00-3f0c56c777d2",
+      "rule": "javascript:S3776",
+      "severity": "CRITICAL",
+      "file": "scripts/lib/openapi-sdk.mjs",
+      "state": "validated_fix_pending_platform_rescan",
+      "reason": "保持当前行为，按告警修正；具体差异与验证见证据。",
+      "current_source_sha256": "257f2b7281b3ce2fcce5d2463a25960dd7da75ad8a16eb69c2dc165d6fd940e6",
+      "evidence": [
+        "root-new-findings-baseline.json",
+        "root-new-js-tests-02.json",
+        "root-new-js-tests-02.tap",
+        "root-new-js-independent-review-python-agent.json",
+        "root-new-js-independent-review02-python-agent.json"
+      ]
+    },
+    {
+      "key": "b1bfde62-2641-4a54-b363-94a6e135a57d",
+      "rule": "javascript:S1994",
+      "severity": "CRITICAL",
+      "file": "scripts/lib/openapi-sdk.mjs",
+      "state": "validated_fix_pending_platform_rescan",
+      "reason": "保持当前行为，按告警修正；具体差异与验证见证据。",
+      "current_source_sha256": "257f2b7281b3ce2fcce5d2463a25960dd7da75ad8a16eb69c2dc165d6fd940e6",
+      "evidence": [
+        "root-new-findings-baseline.json",
+        "root-new-js-tests-02.json",
+        "root-new-js-tests-02.tap",
+        "root-new-js-independent-review-python-agent.json",
+        "root-new-js-independent-review02-python-agent.json"
+      ]
+    },
+    {
+      "key": "b8dffefc-d89c-4721-8a3a-0816b76d9631",
+      "rule": "docker:S7031",
+      "severity": "MINOR",
+      "file": "services/api-gateway/tools/story056-real-worker-e2e/Dockerfile",
+      "state": "modified_syntax_validated_pending_platform_rescan",
+      "reason": "合并连续apk安装与addgroup/adduser为一个RUN，以&&保持顺序和失败短路；USER/COPY/CMD不变。本批未拉镜像或Docker构建，待平台规则复验。",
+      "current_source_sha256": "5bc8b8f4be73543ac4c77752ebffb4daea510c48e850c75a37447d1980b3a557",
+      "evidence": [
+        "root-new-findings-baseline.json"
+      ]
+    }
+  ],
+  "state_counts": {
+    "reviewed_false_positive_awaiting_current_source_scan": 2,
+    "modified_syntax_validated_pending_platform_rescan": 7,
+    "validated_fix_pending_platform_rescan": 12,
+    "platform_false_positive_verified": 2
+  },
+  "final_platform_rescan_required": true
+}

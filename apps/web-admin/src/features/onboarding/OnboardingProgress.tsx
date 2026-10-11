@@ -1,6 +1,6 @@
 import { Progress } from "antd";
 
-export function OnboardingProgress({ completed, total, ready }: { completed: number; total: number; ready: boolean }) {
+export function OnboardingProgress({ completed, total, ready }: Readonly<{ completed: number; total: number; ready: boolean }>) {
   const percent = total > 0 ? Math.round((completed / total) * 100) : 100;
   return (
     <div className="onboarding-progress" aria-label={`基础启用进度 ${completed}/${total}`}>

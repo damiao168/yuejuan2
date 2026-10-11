@@ -3,7 +3,7 @@ from __future__ import annotations
 import io
 
 import numpy as np
-from PIL import Image, ImageOps, UnidentifiedImageError
+from PIL import Image, ImageOps
 
 from image_quality.errors import ImageQualityError
 from image_quality.geometry import (
@@ -29,6 +29,8 @@ from image_quality.metrics import (
 )
 from image_quality.policy import _decision, _hard_gates, _issues, _quality_score
 from image_quality.report import (
+    QualityMeasurements,
+    QualityReportDecision,
     build_normalization_transform,
     build_quality_report,
 )
@@ -58,7 +60,7 @@ def analyze_and_normalize(data: bytes) -> QualityAnalysisResult:
                 exif_orientation, source_width, source_height
             )
             normalized_image = ImageOps.exif_transpose(source).convert("RGB")
-    except (UnidentifiedImageError, OSError, Image.DecompressionBombError) as exc:
+    except (OSError, Image.DecompressionBombError) as exc:
         raise ImageQualityError("unreadable_image") from exc
 
     try:
@@ -138,17 +140,21 @@ def analyze_and_normalize(data: bytes) -> QualityAnalysisResult:
         pixel_height=pixel_height,
         source_dpi=source_dpi,
         source_format=source_format,
-        metrics=metrics,
         geometry=geometry,
-        focus=focus,
-        illumination=illumination,
-        occlusion=occlusion,
-        degradation=degradation,
-        dimensions=dimensions,
-        hard_gates=hard_gates,
-        quality_score=quality_score,
-        decision=decision,
-        enhancements=enhancements,
+        measurements=QualityMeasurements(
+            metrics=metrics,
+            focus=focus,
+            illumination=illumination,
+            occlusion=occlusion,
+            degradation=degradation,
+            dimensions=dimensions,
+        ),
+        assessment=QualityReportDecision(
+            hard_gates=hard_gates,
+            quality_score=quality_score,
+            decision=decision,
+            enhancements=enhancements,
+        ),
     )
     transform = build_normalization_transform(
         source_width=source_width,

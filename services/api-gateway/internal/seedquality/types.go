@@ -24,8 +24,7 @@ const (
 	PolicyPaused PolicyStatus = "paused"
 )
 
-// Policy is question scoped. ActiveGoldFingerprint binds sampling to the
-// approved Gold versions that were reviewed when the policy was enabled.
+// Policy 受题目作用域限制。ActiveGoldFingerprint 将采样绑定到启用策略时已经复核并批准的 Gold 版本。
 type Policy struct {
 	ID                    string       `json:"id"`
 	ExamID                string       `json:"exam_id"`
@@ -49,10 +48,8 @@ type PutPolicyInput struct {
 	ExpectedRevision int64        `json:"expected_revision"`
 }
 
-// Task is deliberately shaped like a normal grading work item. Its JSON omits
-// Gold identifiers, reference scores, submission IDs and the fact that it is a
-// Seed. The review composition root can return this through the normal claim
-// response and route its opaque ID back through TrySubmit.
+// Task 的结构与普通评分工作项相似。其 JSON 省略 Gold 标识、参考分数、提交 ID 以及它是 Seed 的事实。
+// 复核组装入口可通过正常领取响应返回它，并将其不透明 ID 路由回 TrySubmit。
 type Task struct {
 	ID             string    `json:"id"`
 	ExamID         string    `json:"exam_id"`
@@ -84,8 +81,8 @@ type SubmitInput struct {
 	ExpectedRevision int64          `json:"expected_revision"`
 }
 
-// SubmitReceipt intentionally reveals neither the reference answer nor whether
-// the completed item was a Seed. Quality observations are manager-only facts.
+// SubmitReceipt 不泄漏参考答案，也不泄漏已完成条目是否为 Seed。
+// 质量观察只属于管理员可见事实。
 type SubmitReceipt struct {
 	TaskID   string `json:"task_id"`
 	Status   string `json:"status"`
@@ -108,8 +105,8 @@ type Observation struct {
 	GoldVersion    int     `json:"gold_version"`
 	SubmittedScore float64 `json:"submitted_score"`
 	ReferenceScore float64 `json:"reference_score"`
-	// MaxScore is server-only quality context. It keeps the A11 middle-score
-	// slice honest without making any Gold fact visible on grader routes.
+	// MaxScore 是仅供服务器使用的质量上下文。
+	// 它使 A11 的中间分数切片保持准确，同时不在阅卷路由中暴露任何 Gold 事实。
 	MaxScore             float64         `json:"-"`
 	RubricSelections     map[string]any  `json:"rubric_selections"`
 	AbsoluteError        float64         `json:"error"`

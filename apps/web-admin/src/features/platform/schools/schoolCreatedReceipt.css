@@ -1,0 +1,6 @@
+.school-created-receipt h3 { margin: 0 0 16px; }
+.school-created-receipt dl { margin: 0 0 16px; }
+.school-created-receipt dl > div { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 12px; margin: 10px 0; }
+.school-created-receipt dt { color: var(--text-secondary, #667085); }
+.school-created-receipt dd { margin: 0; overflow-wrap: anywhere; user-select: text; }
+.school-created-receipt p { line-height: 1.65; }

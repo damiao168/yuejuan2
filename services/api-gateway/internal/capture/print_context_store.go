@@ -5,9 +5,7 @@ import (
 	"database/sql"
 )
 
-// GetStudentPrintContext returns the immutable print history together with the
-// current exam roster. It lives under exam:manage so the printing workflow
-// does not depend on score-management permissions.
+// GetStudentPrintContext 返回不可变打印历史和当前考试考生名单。它归属 exam:manage，使打印工作流不依赖成绩管理权限。
 func (s *PostgresStore) GetStudentPrintContext(ctx context.Context, tenantID, templateID string) (StudentPrintContext, error) {
 	out := StudentPrintContext{
 		TemplateID: templateID,

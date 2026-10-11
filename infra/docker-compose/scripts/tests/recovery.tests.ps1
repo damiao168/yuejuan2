@@ -54,7 +54,7 @@ function Assert-WritersRestored {
   Assert (($starts[0][1..($starts[0].Count - 1)] -join ',') -eq ($global:recoveryMock.InitialWriters -join ',')) 'Restart must include exactly the original running writer IDs.'
 }
 
-# Every Docker call is intercepted. This test never starts or contacts a Docker daemon.
+# 所有 Docker 调用均被拦截；本测试不会启动或连接 Docker 守护进程。
 function global:docker {
   $arguments = @($args)
   $global:recoveryMock.Calls.Add($arguments)

@@ -126,32 +126,10 @@ func (h *Handler) EnqueueBatch(w http.ResponseWriter, r *http.Request) {
 	}
 	plan, err := h.store.GetEnqueuePlan(r.Context(), user.TenantID, user.ID, batch.ID)
 	if errors.Is(err, ErrNotFound) {
-		policy := NormalizePolicy(ModelPolicy{})
-		if governed, ok := h.adapter.(GovernedPolicyProvider); ok {
-			policy = governed.Policy()
-		}
-		if err := ValidatePolicy(policy); err != nil {
+		plan, err = h.newBatchEnqueuePlan(r.Context(), user.TenantID, batch)
+		if err != nil {
 			writeStoreError(w, r, err)
 			return
-		}
-		contexts, loadErr := loadBatchContexts(r.Context(), h.store, user.TenantID, batch.SegmentIDs)
-		if loadErr != nil {
-			writeStoreError(w, r, loadErr)
-			return
-		}
-		plan = BatchEnqueuePlan{CommandID: "enqueue:" + batch.ID, BatchID: batch.ID, Runs: make([]CreateRunInput, 0, len(contexts))}
-		for index := range contexts {
-			ctx := &contexts[index]
-			if prepErr := h.prepareMathEvidence(r.Context(), user.TenantID, ctx); prepErr != nil {
-				writeStoreError(w, r, prepErr)
-				return
-			}
-			requestID, idErr := stableRequestID(user.TenantID, *ctx, policy, batch.IdempotencyKey+":"+ctx.SegmentID)
-			if idErr != nil {
-				writeStoreError(w, r, idErr)
-				return
-			}
-			plan.Runs = append(plan.Runs, runInputFor(*ctx, batch.ID, policy, requestID))
 		}
 		plan, err = h.store.SaveEnqueuePlan(r.Context(), user.TenantID, user.ID, plan)
 	}
@@ -159,51 +137,18 @@ func (h *Handler) EnqueueBatch(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, err)
 		return
 	}
-	tasks := make([]workerruntime.Task, 0, len(plan.Runs))
-	failures := make([]BatchEnqueueFailure, 0)
-	queued, processing, succeeded, failed := 0, 0, 0, 0
-	for _, input := range plan.Runs {
-		segmentID := input.AnswerSegmentID
-		requestID := input.RequestID
-		run, runErr := h.store.GetOrCreateRun(r.Context(), user.TenantID, user.ID, input)
-		if runErr != nil {
-			failures = append(failures, BatchEnqueueFailure{SegmentID: segmentID, Code: "run_creation_failed"})
-			continue
-		}
-		if run.Status == RunSucceeded {
-			succeeded++
-			continue
-		}
-		if run.Status == RunFailed {
-			failed++
-			continue
-		}
-		task, taskErr := h.runtime.CreateTask(r.Context(), user.TenantID, user.ID, workerruntime.CreateTaskInput{TaskType: "ai_grade", QueueName: "subjective-grading", SourceType: "subjective_grading_run", SourceID: run.ID, Priority: 100, Payload: map[string]any{"run_id": run.ID, "answer_segment_id": input.AnswerSegmentID, "answer_version": input.AnswerVersion, "question_id": input.QuestionID, "rubric_version": input.RubricVersion, "model_version": input.ModelVersion, "prompt_version": input.PromptVersion}, PayloadSchemaVersion: "subjective-grade-v1", IdempotencyKey: requestID, DedupeKey: "subjective:" + batch.ID + ":" + input.AnswerSegmentID, MaxAttempts: 3, RetryBackoffSeconds: 30})
-		if taskErr != nil {
-			failures = append(failures, BatchEnqueueFailure{SegmentID: segmentID, Code: "task_creation_failed"})
-			continue
-		}
-		tasks = append(tasks, task)
-		switch task.Status {
-		case workerruntime.StatusQueued:
-			queued++
-		case workerruntime.StatusLeased, workerruntime.StatusRunning:
-			processing++
-		case workerruntime.StatusSucceeded:
-			succeeded++
-		case workerruntime.StatusFailed, workerruntime.StatusDeadLetter:
-			failed++
-		}
-	}
+	// 保存时可能取回并发请求的旧计划，后续只使用持久化返回的冻结运行输入。
+	tasks, failures, counts := h.enqueueBatchRuns(r.Context(), user.TenantID, user.ID, batch.ID, plan.Runs)
 	status := "processing"
-	if succeeded+failed == batch.TotalCount {
-		if failed > 0 {
+	if counts.SucceededCount+counts.FailedCount == batch.TotalCount {
+		if counts.FailedCount > 0 {
 			status = "failed"
 		} else {
 			status = "completed"
 		}
 	}
-	updated, err := h.store.UpdateBatch(r.Context(), user.TenantID, batch.ID, UpdateBatchInput{Status: status, QueuedCount: queued, ProcessingCount: processing, SucceededCount: succeeded, FailedCount: failed})
+	counts.Status = status
+	updated, err := h.store.UpdateBatch(r.Context(), user.TenantID, batch.ID, counts)
 	if err != nil {
 		writeStoreError(w, r, err)
 		return
@@ -230,6 +175,74 @@ func (h *Handler) EnqueueBatch(w http.ResponseWriter, r *http.Request) {
 	}
 	h.auditAction(r, auditAction, "subjective_grading_batch", batch.ID, auditReason)
 	httpx.JSON(w, http.StatusOK, map[string]any{"batch": updated, "tasks": tasks, "enqueue_result": result})
+}
+
+func (h *Handler) newBatchEnqueuePlan(ctx context.Context, tenantID string, batch GradingBatch) (BatchEnqueuePlan, error) {
+	policy := NormalizePolicy(ModelPolicy{})
+	if governed, ok := h.adapter.(GovernedPolicyProvider); ok {
+		policy = governed.Policy()
+	}
+	if err := ValidatePolicy(policy); err != nil {
+		return BatchEnqueuePlan{}, err
+	}
+	contexts, err := loadBatchContexts(ctx, h.store, tenantID, batch.SegmentIDs)
+	if err != nil {
+		return BatchEnqueuePlan{}, err
+	}
+	plan := BatchEnqueuePlan{CommandID: "enqueue:" + batch.ID, BatchID: batch.ID, Runs: make([]CreateRunInput, 0, len(contexts))}
+	for index := range contexts {
+		value := &contexts[index]
+		if err := h.prepareMathEvidence(ctx, tenantID, value); err != nil {
+			return BatchEnqueuePlan{}, err
+		}
+		requestID, err := stableRequestID(tenantID, *value, policy, batch.IdempotencyKey+":"+value.SegmentID)
+		if err != nil {
+			return BatchEnqueuePlan{}, err
+		}
+		plan.Runs = append(plan.Runs, runInputFor(*value, batch.ID, policy, requestID))
+	}
+	return plan, nil
+}
+
+// 单项失败只记录可重试项；成功或失败的运行不再创建任务，其他项继续按原计划顺序入队。
+func (h *Handler) enqueueBatchRuns(ctx context.Context, tenantID, actorID, batchID string, runs []CreateRunInput) ([]workerruntime.Task, []BatchEnqueueFailure, UpdateBatchInput) {
+	tasks := make([]workerruntime.Task, 0, len(runs))
+	failures := make([]BatchEnqueueFailure, 0)
+	counts := UpdateBatchInput{}
+	for _, input := range runs {
+		segmentID := input.AnswerSegmentID
+		requestID := input.RequestID
+		run, runErr := h.store.GetOrCreateRun(ctx, tenantID, actorID, input)
+		if runErr != nil {
+			failures = append(failures, BatchEnqueueFailure{SegmentID: segmentID, Code: "run_creation_failed"})
+			continue
+		}
+		if run.Status == RunSucceeded {
+			counts.SucceededCount++
+			continue
+		}
+		if run.Status == RunFailed {
+			counts.FailedCount++
+			continue
+		}
+		task, taskErr := h.runtime.CreateTask(ctx, tenantID, actorID, workerruntime.CreateTaskInput{TaskType: "ai_grade", QueueName: "subjective-grading", SourceType: "subjective_grading_run", SourceID: run.ID, Priority: 100, Payload: map[string]any{"run_id": run.ID, "answer_segment_id": input.AnswerSegmentID, "answer_version": input.AnswerVersion, "question_id": input.QuestionID, "rubric_version": input.RubricVersion, "model_version": input.ModelVersion, "prompt_version": input.PromptVersion}, PayloadSchemaVersion: "subjective-grade-v1", IdempotencyKey: requestID, DedupeKey: "subjective:" + batchID + ":" + input.AnswerSegmentID, MaxAttempts: 3, RetryBackoffSeconds: 30})
+		if taskErr != nil {
+			failures = append(failures, BatchEnqueueFailure{SegmentID: segmentID, Code: "task_creation_failed"})
+			continue
+		}
+		tasks = append(tasks, task)
+		switch task.Status {
+		case workerruntime.StatusQueued:
+			counts.QueuedCount++
+		case workerruntime.StatusLeased, workerruntime.StatusRunning:
+			counts.ProcessingCount++
+		case workerruntime.StatusSucceeded:
+			counts.SucceededCount++
+		case workerruntime.StatusFailed, workerruntime.StatusDeadLetter:
+			counts.FailedCount++
+		}
+	}
+	return tasks, failures, counts
 }
 
 func loadBatchContexts(ctx context.Context, store Store, tenantID string, segmentIDs []string) ([]Context, error) {

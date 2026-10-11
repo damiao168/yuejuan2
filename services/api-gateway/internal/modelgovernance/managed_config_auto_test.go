@@ -277,7 +277,8 @@ func TestManagedAPIConfigSoftDeleteRejectsActivePanelBinding(t *testing.T) {
 	item.LastCapabilityVersion = ManagedCapabilityProbeVersion
 	store.managedConfigs[item.ID] = item
 	binding := SaveModelRoleBindingInput{
-		EducationStage: "senior", SubjectCode: "physics", ArchetypeCode: "*", AgentRole: ModelRolePrimaryA,
+		ExpectedRevision: ModelRoleBindingAbsent,
+		EducationStage:   "senior", SubjectCode: "physics", ArchetypeCode: "*", AgentRole: ModelRolePrimaryA,
 		ManagedModelAPIConfigID: item.ID, PromptVersion: "grader-v1", StrengthRank: 1, Status: "active",
 	}
 	if _, err = store.SaveModelRoleBinding(ctx, tenantID, "actor", binding); err != nil {
@@ -286,6 +287,8 @@ func TestManagedAPIConfigSoftDeleteRejectsActivePanelBinding(t *testing.T) {
 	if err = store.DeleteManagedAPIConfig(ctx, tenantID, "actor", item.ID); !errors.Is(err, ErrManagedConfigInUse) {
 		t.Fatalf("active panel binding did not block deletion: %v", err)
 	}
+	itemsBefore, _ := store.ListConfiguredModelRoleBindings(ctx, tenantID, "senior", "physics", "*")
+	binding.ExpectedRevision = itemsBefore[0].Revision
 	binding.Status = "disabled"
 	if _, err = store.SaveModelRoleBinding(ctx, tenantID, "actor", binding); err != nil {
 		t.Fatal(err)

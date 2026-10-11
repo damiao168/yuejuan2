@@ -1,0 +1,19 @@
+{
+  "version": "1.179.0",
+  "findings": 27,
+  "rules": {
+    "D.project.yuejuan.reports.platform-audit-2026-10-10.semgrep.remediation.rescan.python.lang.security.audit.httpsconnection-detected.httpsconnection-detected": 1,
+    "D.project.yuejuan.reports.platform-audit-2026-10-10.semgrep.remediation.rescan.generic.nginx.security.header-redefinition.header-redefinition": 8,
+    "D.project.yuejuan.reports.platform-audit-2026-10-10.semgrep.remediation.rescan.javascript.lang.security.audit.unknown-value-with-script-tag.unknown-value-with-script-tag": 3,
+    "D.project.yuejuan.reports.platform-audit-2026-10-10.semgrep.remediation.rescan.python.lang.security.use-defused-xml.use-defused-xml": 3,
+    "D.project.yuejuan.reports.platform-audit-2026-10-10.semgrep.remediation.rescan.python.lang.security.use-defused-xml-parse.use-defused-xml-parse": 1,
+    "D.project.yuejuan.reports.platform-audit-2026-10-10.semgrep.remediation.rescan.javascript.lang.security.detect-child-process.detect-child-process": 2,
+    "D.project.yuejuan.reports.platform-audit-2026-10-10.semgrep.remediation.rescan.python.lang.security.audit.exec-detected.exec-detected": 1,
+    "D.project.yuejuan.reports.platform-audit-2026-10-10.semgrep.remediation.rescan.go.lang.security.audit.net.cookie-missing-secure.cookie-missing-secure": 4,
+    "D.project.yuejuan.reports.platform-audit-2026-10-10.semgrep.remediation.rescan.go.lang.security.audit.database.string-formatted-query.string-formatted-query": 2,
+    "D.project.yuejuan.reports.platform-audit-2026-10-10.semgrep.remediation.rescan.go.lang.security.audit.crypto.math_random.math-random-used": 1,
+    "D.project.yuejuan.reports.platform-audit-2026-10-10.semgrep.remediation.rescan.dockerfile.security.last-user-is-root.last-user-is-root": 1
+  },
+  "errors": 18,
+  "scanned_files": 2605
+}

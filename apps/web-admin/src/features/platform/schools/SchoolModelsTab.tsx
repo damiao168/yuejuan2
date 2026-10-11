@@ -6,7 +6,19 @@ import { fullDate } from "./schoolPresentation";
 
 const roleLabel = { primary_a: "主评 A", primary_b: "主评 B", arbiter: "仲裁" };
 
-export function SchoolModelsTab({ tenantId }: { tenantId: string }) {
+function detectionLabel(status: string | undefined, success: string, failed: string): string {
+  if (status === "success") return success;
+  if (status === "failed") return failed;
+  return "未检测";
+}
+
+function agentStatusLabel(status: string): string {
+  if (status === "healthy") return "正常";
+  if (status === "disabled") return "已停用";
+  return "需检测";
+}
+
+export function SchoolModelsTab({ tenantId }: Readonly<{ tenantId: string }>) {
   const [data, setData] = useState<SchoolModelHealthResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -19,21 +31,23 @@ export function SchoolModelsTab({ tenantId }: { tenantId: string }) {
   }, [tenantId]);
   if (loading) return <div className="platform-school-panel-loading"><Spin /></div>;
   if (error) return <Alert type="error" showIcon message="模型服务加载失败" />;
-  if (!data || data.default_model.status === "unconfigured") return <div className="platform-school-empty-model"><h3>尚未配置 AI 模型</h3><p>为这所学校配置并检测默认模型后，将显示连接与能力状态。</p><Button href={`#/platform/model-config?tenant_id=${encodeURIComponent(tenantId)}`}>配置模型</Button></div>;
+  if (!data) return <Alert type="warning" showIcon message="暂时无法确认模型状态" />;
   const model = data.default_model;
+  const configURL = `#/admin/platform/model-config?tenant_id=${encodeURIComponent(tenantId)}`;
+  // 对话默认配置与评分角色独立；缺少默认模型时仍须展示已经存在的评分绑定。
   return <div className="platform-school-detail-sections">
-    <section><h3>默认模型</h3><div className="platform-school-model-head"><strong>{model.model_name}</strong><span>{model.display_name || model.provider_key}</span></div><dl className="platform-school-facts">
-      <div><dt>API 连接</dt><dd>{model.connection_status === "success" ? "正常" : model.connection_status === "failed" ? "异常" : "未检测"}</dd></div>
-      <div><dt>能力检测</dt><dd>{model.capability_status === "success" ? "通过" : model.capability_status === "failed" ? "未通过" : "未检测"}</dd></div>
+    <section><h3>日常对话默认模型</h3>{model.status === "unconfigured" ? <div className="platform-school-empty-model"><p>尚未指定学校默认对话模型。下方评分模型独立配置；日常对话的回退方式由平台设置决定。</p><Button href={`${configURL}&tab=models`}>配置对话模型</Button></div> : <><div className="platform-school-model-head"><strong>{model.model_name}</strong><span>{model.display_name || model.provider_key}</span></div><dl className="platform-school-facts">
+      <div><dt>API 连接</dt><dd>{detectionLabel(model.connection_status, "正常", "异常")}</dd></div>
+      <div><dt>能力检测</dt><dd>{detectionLabel(model.capability_status, "通过", "未通过")}</dd></div>
       <div><dt>检测延迟</dt><dd>{model.latency_ms ? `${model.latency_ms} ms` : "—"}</dd></div>
       <div><dt>最近检测</dt><dd>{fullDate(model.last_tested_at)}</dd></div>
       <div><dt>API Key</dt><dd>{model.credential_hint || "已加密保存"}</dd></div>
-    </dl>{model.connection_message || model.capability_message ? <p className="platform-school-readonly-note">{model.connection_message || model.capability_message}</p> : null}</section>
-    <section><h3>三智能体模型</h3>{data.roles.length ? <ResponsiveTable<SchoolModelHealthResponse["roles"][number]> className="dense-data-table platform-school-detail-table" rowKey="agent_role" pagination={false} dataSource={data.roles} columns={[
+    </dl>{model.connection_message || model.capability_message ? <p className="platform-school-readonly-note">{model.connection_message || model.capability_message}</p> : null}</>}</section>
+    <section><h3>三智能体评分模型</h3><p className="platform-school-readonly-note">角色状态用于排查配置，不代表正式评分准入已经通过。</p>{data.roles.length ? <ResponsiveTable<SchoolModelHealthResponse["roles"][number]> className="dense-data-table platform-school-detail-table" rowKey="agent_role" pagination={false} dataSource={data.roles} columns={[
       { title: "智能体", dataIndex: "agent_role", width: 120, render: (value: keyof typeof roleLabel) => roleLabel[value] },
       { title: "模型", dataIndex: "model_name" },
-      { title: "状态", dataIndex: "status", width: 100, render: (value: string) => value === "healthy" ? "正常" : value === "disabled" ? "已停用" : "需检测" }
+      { title: "状态", dataIndex: "status", width: 100, render: agentStatusLabel }
     ]} /> : <p className="platform-school-readonly-note">尚未配置主评与仲裁模型。</p>}</section>
-    <Button href={`#/platform/model-config?tenant_id=${encodeURIComponent(tenantId)}`}>前往模型配置</Button>
+    <Button href={`${configURL}&tab=bindings`}>配置评分模型</Button>
   </div>;
 }

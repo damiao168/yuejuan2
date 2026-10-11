@@ -13,7 +13,7 @@ import { ErrorState, LoadingState } from "../components/PageState";
 
 const fallbackCheck = (key: string, title: string): OnboardingCheck => ({ key, title, state: "unavailable", severity: key === "system_core" || key === "first_school" || key === "platform_admin" ? "blocking" : "recommended", description: "暂时无法确认此项状态，请刷新后重试。" });
 
-export function PlatformGettingStartedPage({ onNavigate }: { onNavigate: (path: string) => void }) {
+export function PlatformGettingStartedPage({ onNavigate }: Readonly<{ onNavigate: (path: string) => void }>) {
   const readiness = useOnboardingReadiness();
   const refresh = async () => { await readiness.refetch(); };
   if (readiness.isLoading) return <LoadingState label="正在检查首次启用状态" />;

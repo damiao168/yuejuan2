@@ -15,9 +15,8 @@ type Service struct {
 
 func NewService(store Store) *Service { return &Service{store: store} }
 
-// WithContextSource supplies the independent, read-only answer evidence for
-// a claimed regrade item. It never exposes a source-release score or invokes
-// the normal review submission workflow.
+// WithContextSource 为已领取的重评条目提供独立、只读答案证据。
+// 它绝不暴露来源发布分数，也不调用普通复核提交流程。
 func (s *Service) WithContextSource(source ContextSource) *Service {
 	s.context = source
 	return s
@@ -30,9 +29,8 @@ func (s *Service) Preview(ctx context.Context, tenantID, examID, questionID, sou
 	return s.store.Preview(ctx, strings.TrimSpace(tenantID), strings.TrimSpace(examID), strings.TrimSpace(questionID), strings.TrimSpace(sourceReleaseID), normalizeSelector(selector))
 }
 
-// Create freezes the selected source-release question facts into regrade_item
-// rows. It creates neither a human/final grade nor a release, so retrying a
-// request through its idempotency key is safe.
+// Create 将选定来源发布的题目事实冻结到 regrade_item 行。
+// 它不创建人工成绩、最终成绩或发布，因此通过幂等键重试请求是安全的。
 func (s *Service) Create(ctx context.Context, tenantID, examID, questionID, actorID string, input CreateInput) (Summary, error) {
 	if !validScope(tenantID, examID, questionID) || strings.TrimSpace(actorID) == "" || !validCreate(input) {
 		return Summary{}, ErrInvalidInput
@@ -45,8 +43,7 @@ func (s *Service) Create(ctx context.Context, tenantID, examID, questionID, acto
 	if preview.AffectedCount == 0 {
 		return Summary{}, ErrNoAffectedItems
 	}
-	// The Store owns a transaction and repeats the source read under its lock;
-	// the preview is for UX only, never treated as authority.
+	// Store 负责事务并在持锁时重新读取来源；预览只服务于用户体验，不能作为权威依据。
 	sources, err := sourceItemsForPreview(ctx, s.store, tenantID, examID, questionID, input.SourceReleaseID, input.Selector)
 	if err != nil {
 		return Summary{}, err
@@ -61,9 +58,8 @@ func (s *Service) Create(ctx context.Context, tenantID, examID, questionID, acto
 	return summarize(Summary{Job: job, Items: items}), nil
 }
 
-// sourceItemsForPreview keeps the public Store compact. Concrete stores expose
-// this internal optional capability so Create can freeze exact release facts.
-// It is intentionally not implemented by querying current final_grade.
+// sourceItemsForPreview 保持公开 Store 接口精简。
+// 具体存储提供此内部可选能力，让 Create 冻结准确发布事实；不能通过查询当前 final_grade 实现。
 func sourceItemsForPreview(ctx context.Context, store Store, tenantID, examID, questionID, releaseID string, selector Selector) ([]SourceItem, error) {
 	reader, ok := store.(interface {
 		SourceItems(context.Context, string, string, string, string, Selector) ([]SourceItem, error)
@@ -172,8 +168,8 @@ func (s *Service) Review(ctx context.Context, tenantID, itemID, actorID string, 
 	return s.store.Review(ctx, strings.TrimSpace(tenantID), strings.TrimSpace(itemID), strings.TrimSpace(actorID), input)
 }
 
-// Finalize only marks an entirely reviewed correction as ready for a successor
-// Score Release. It does not publish or update current score facts.
+// Finalize 只将已全部复核的修正标记为可用于后续成绩发布。
+// 它不会发布或更新当前成绩事实。
 func (s *Service) Finalize(ctx context.Context, tenantID, jobID, actorID string) (Job, error) {
 	if !validActor(tenantID, jobID, actorID) {
 		return Job{}, ErrInvalidInput

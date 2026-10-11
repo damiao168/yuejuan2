@@ -21,9 +21,8 @@ func NewHandler(service *Service, audit auth.AuditRecorder) *Handler {
 	return &Handler{service: service, audit: audit}
 }
 
-// Only managers receive policy and observation routes. Claim, context and
-// submit deliberately stay on the ordinary review routes so graders cannot
-// infer that an item is a Seed from its endpoint.
+// 只有管理员可访问策略和观察路由。领取、上下文和提交保留在普通复核路由中，
+// 使阅卷人员无法根据端点推断条目是 Seed。
 func RegisterRoutes(mux *http.ServeMux, h *Handler, requireRead, requireManage func(http.HandlerFunc) http.Handler) {
 	mux.Handle("GET /api/v1/exams/{examId}/questions/{questionId}/seed-policy", requireRead(h.GetPolicy))
 	mux.Handle("PUT /api/v1/exams/{examId}/questions/{questionId}/seed-policy", requireManage(h.PutPolicy))

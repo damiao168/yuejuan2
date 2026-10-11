@@ -148,24 +148,9 @@ func applyTemplateMatchResultInTx(ctx context.Context, tx *sql.Tx, tenantID, run
 	}
 	decision := input.Decision
 	if decision == "matched" {
-		var valid bool
-		err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM answer_sheet_template WHERE tenant_id=$1::uuid AND exam_id=$2::uuid AND id=$3::uuid AND content_hash=$4 AND status='locked' AND deleted_at IS NULL)`, tenantID, current.ExamID, input.SelectedTemplateID, input.SelectedTemplateContentHash).Scan(&valid)
-		if err != nil || !valid {
-			return TemplateMatchRun{}, nil, ErrInvalidInput
-		}
-		result, bindErr := tx.ExecContext(ctx, `INSERT INTO exam_answer_sheet_template_binding (tenant_id,exam_id,template_id,template_content_hash,mode,source,bound_by) VALUES ($1::uuid,$2::uuid,$3::uuid,$4,'bound_auto','automatic',$5::uuid) ON CONFLICT (tenant_id,exam_id) DO NOTHING`, tenantID, current.ExamID, input.SelectedTemplateID, input.SelectedTemplateContentHash, current.CreatedBy)
-		if bindErr != nil {
-			return TemplateMatchRun{}, nil, bindErr
-		}
-		// 同一考试只能保留一个绑定；并发自动匹配选中不同模板时转人工冲突，不覆盖先前绑定。
-		if affected, _ := result.RowsAffected(); affected == 0 {
-			var boundID, boundHash string
-			if bindErr = tx.QueryRowContext(ctx, `SELECT template_id::text,template_content_hash FROM exam_answer_sheet_template_binding WHERE tenant_id=$1::uuid AND exam_id=$2::uuid`, tenantID, current.ExamID).Scan(&boundID, &boundHash); bindErr != nil {
-				return TemplateMatchRun{}, nil, bindErr
-			}
-			if boundID != input.SelectedTemplateID || boundHash != input.SelectedTemplateContentHash {
-				decision = "conflict"
-			}
+		decision, err = bindMatchedTemplateInTx(ctx, tx, tenantID, current, input)
+		if err != nil {
+			return TemplateMatchRun{}, nil, err
 		}
 	}
 	candidates, _ := json.Marshal(input.Candidates)
@@ -196,6 +181,30 @@ func applyTemplateMatchResultInTx(ctx context.Context, tx *sql.Tx, tenantID, run
 		return TemplateMatchRun{}, nil, err
 	}
 	return out, registrations, nil
+}
+
+// 同一考试只能保留一个绑定；并发自动匹配选中不同模板时转人工冲突，不覆盖先前绑定。
+func bindMatchedTemplateInTx(ctx context.Context, tx *sql.Tx, tenantID string, current TemplateMatchRun, input TemplateMatchResultInput) (string, error) {
+	var valid bool
+	err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM answer_sheet_template WHERE tenant_id=$1::uuid AND exam_id=$2::uuid AND id=$3::uuid AND content_hash=$4 AND status='locked' AND deleted_at IS NULL)`, tenantID, current.ExamID, input.SelectedTemplateID, input.SelectedTemplateContentHash).Scan(&valid)
+	if err != nil || !valid {
+		return "", ErrInvalidInput
+	}
+	result, err := tx.ExecContext(ctx, `INSERT INTO exam_answer_sheet_template_binding (tenant_id,exam_id,template_id,template_content_hash,mode,source,bound_by) VALUES ($1::uuid,$2::uuid,$3::uuid,$4,'bound_auto','automatic',$5::uuid) ON CONFLICT (tenant_id,exam_id) DO NOTHING`, tenantID, current.ExamID, input.SelectedTemplateID, input.SelectedTemplateContentHash, current.CreatedBy)
+	if err != nil {
+		return "", err
+	}
+	if affected, _ := result.RowsAffected(); affected != 0 {
+		return "matched", nil
+	}
+	var boundID, boundHash string
+	if err := tx.QueryRowContext(ctx, `SELECT template_id::text,template_content_hash FROM exam_answer_sheet_template_binding WHERE tenant_id=$1::uuid AND exam_id=$2::uuid`, tenantID, current.ExamID).Scan(&boundID, &boundHash); err != nil {
+		return "", err
+	}
+	if boundID != input.SelectedTemplateID || boundHash != input.SelectedTemplateContentHash {
+		return "conflict", nil
+	}
+	return "matched", nil
 }
 
 func (s *PostgresStore) SubmitTemplateMatchResultCommand(ctx context.Context, tenantID, runID string, input TemplateMatchResultInput) (TemplateMatchRun, []RegistrationRun, error) {

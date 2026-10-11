@@ -56,12 +56,7 @@ func (s *MemoryStore) Build(_ context.Context, tenantID, examID, questionID, act
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	source := s.sources[questionKey(tenantID, examID, questionID)]
-	eligibleAnswers := make([]SourceAnswer, 0, len(source))
-	for _, answer := range source {
-		if eligible(answer, s.policy) {
-			eligibleAnswers = append(eligibleAnswers, answer)
-		}
-	}
+	eligibleAnswers := eligibleSourceAnswers(source, s.policy)
 	if len(eligibleAnswers) == 0 {
 		return nil, ErrNoEligibleAnswers
 	}
@@ -85,34 +80,49 @@ func (s *MemoryStore) Build(_ context.Context, tenantID, examID, questionID, act
 	clusters := clusterAnswers(eligibleAnswers, s.provider, threshold)
 	ids := make([]string, 0, len(clusters))
 	for _, cluster := range clusters {
-		members, homogeneity := materializeMembers(cluster, s.policy.HighOutlierThreshold)
-		group := Group{
-			ID: s.id("answer-group"), TenantID: tenantID, ExamID: examID, QuestionID: questionID,
-			ExamQuestionSnapshotID: cluster.Answers[0].Source.SnapshotID,
-			AlgorithmVersion:       algorithm, RepresentationVersion: s.provider.Version(),
-			MemberCount: len(members), Homogeneity: homogeneity, Status: StatusSampling,
-			MinimumSample: minimumSample(len(members), homogeneity), Members: members,
-			CreatedAt: now, UpdatedAt: now,
-		}
-		for _, member := range members {
-			if member.Representative {
-				group.RepresentativeSubmissionID = member.SubmissionID
-			}
-			if member.Outlier {
-				s.candidates[itemKey(tenantID, group.ID)] = append(s.candidates[itemKey(tenantID, group.ID)], Candidate{
-					ID: s.id("answer-candidate"), GroupID: group.ID, SubmissionID: member.SubmissionID,
-					SegmentID: member.SegmentID, Kind: CandidateIndividualReview, Status: CandidateManualRequired,
-					ScoreCandidate: map[string]any{"reason": "high_outlier"}, RubricSelection: map[string]any{},
-					AlgorithmVersion: algorithm, CreatedAt: now,
-				})
-			}
-		}
-		refreshReadiness(&group)
-		s.groups[itemKey(tenantID, group.ID)] = group
-		ids = append(ids, group.ID)
+		ids = append(ids, s.createClusterGroup(tenantID, examID, questionID, algorithm, cluster, now))
 	}
 	s.buildIndex[indexKey] = ids
 	return s.groupsByID(ids), nil
+}
+
+func eligibleSourceAnswers(source []SourceAnswer, policy Policy) []SourceAnswer {
+	answers := make([]SourceAnswer, 0, len(source))
+	for _, answer := range source {
+		if eligible(answer, policy) {
+			answers = append(answers, answer)
+		}
+	}
+	return answers
+}
+
+// 调用方持有构建的写锁，成员、离群候选和组索引在同一次构建中发布。
+func (s *MemoryStore) createClusterGroup(tenantID, examID, questionID, algorithm string, cluster groupedAnswers, now time.Time) string {
+	members, homogeneity := materializeMembers(cluster, s.policy.HighOutlierThreshold)
+	group := Group{
+		ID: s.id("answer-group"), TenantID: tenantID, ExamID: examID, QuestionID: questionID,
+		ExamQuestionSnapshotID: cluster.Answers[0].Source.SnapshotID,
+		AlgorithmVersion:       algorithm, RepresentationVersion: s.provider.Version(),
+		MemberCount: len(members), Homogeneity: homogeneity, Status: StatusSampling,
+		MinimumSample: minimumSample(len(members), homogeneity), Members: members,
+		CreatedAt: now, UpdatedAt: now,
+	}
+	for _, member := range members {
+		if member.Representative {
+			group.RepresentativeSubmissionID = member.SubmissionID
+		}
+		if member.Outlier {
+			s.candidates[itemKey(tenantID, group.ID)] = append(s.candidates[itemKey(tenantID, group.ID)], Candidate{
+				ID: s.id("answer-candidate"), GroupID: group.ID, SubmissionID: member.SubmissionID,
+				SegmentID: member.SegmentID, Kind: CandidateIndividualReview, Status: CandidateManualRequired,
+				ScoreCandidate: map[string]any{"reason": "high_outlier"}, RubricSelection: map[string]any{},
+				AlgorithmVersion: algorithm, CreatedAt: now,
+			})
+		}
+	}
+	refreshReadiness(&group)
+	s.groups[itemKey(tenantID, group.ID)] = group
+	return group.ID
 }
 
 func (s *MemoryStore) List(_ context.Context, tenantID, examID, questionID string) ([]Group, error) {

@@ -1,4 +1,4 @@
-/* Platform school operations: dense list first, focused inspector second. */
+/* 平台学校运营：先呈现紧凑列表，再展示当前学校的详情检查面板。 */
 .platform-school-page { gap: 16px; }
 .platform-school-page-heading { margin-bottom: 0; }
 .platform-school-page-heading h1 { margin-bottom: 4px; }

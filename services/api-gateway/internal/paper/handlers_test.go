@@ -331,6 +331,22 @@ func TestAnswerTemplateReadinessGateAndInvalidation(t *testing.T) {
 		t.Fatalf("lock template expected 200, got %d %s", lockRec.Code, lockRec.Body.String())
 	}
 
+	// 请求带着旧 hash 时必须在冻结前拒绝；兼容的空请求仍由下方用例验证。
+	for _, invalid := range []struct {
+		body   string
+		status int
+		code   string
+	}{
+		{`{"expected_configuration_hash":"reviewed-old-version"}`, http.StatusConflict, "readiness_configuration_changed"},
+		{`{"expected_configuration_hash":" bad "}`, http.StatusBadRequest, "invalid_request"},
+		{`{"unexpected":true}`, http.StatusBadRequest, "invalid_request"},
+	} {
+		rejected := httptest.NewRecorder()
+		router.ServeHTTP(rejected, authedRequest(http.MethodPost, "/api/v1/exams/exam-1/readiness/confirm", bytes.NewBufferString(invalid.body), token))
+		if rejected.Code != invalid.status || !strings.Contains(rejected.Body.String(), invalid.code) || paperStore.ExamStatus("exam-1") != "configured" {
+			t.Fatalf("invalid confirmation changed state: %d %s", rejected.Code, rejected.Body.String())
+		}
+	}
 	confirmReq := authedRequest(http.MethodPost, "/api/v1/exams/exam-1/readiness/confirm", nil, token)
 	confirmRec := httptest.NewRecorder()
 	router.ServeHTTP(confirmRec, confirmReq)

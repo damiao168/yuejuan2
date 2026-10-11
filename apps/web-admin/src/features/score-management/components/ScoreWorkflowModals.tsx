@@ -1,5 +1,6 @@
 import { Alert, Button, Checkbox, Input, InputNumber, List, Modal, Select, Space } from "antd";
 import { ClipboardCheck } from "lucide-react";
+import { RegradeCandidateEvidence } from "./RegradeCandidateEvidence";
 import type { Exam } from "../../../api/exams";
 import type { useRegradeWorkflow } from "../hooks/useRegradeWorkflow";
 import type { useRosterAttendance } from "../hooks/useRosterAttendance";
@@ -33,7 +34,7 @@ export function ScoreWorkflowModals({
   attendanceWorkflow,
   releaseWorkflow,
   regradeWorkflow
-}: {
+}: Readonly<{
   selectedExam?: Exam;
   gradeTotal: number;
   publishedReleaseExists: boolean;
@@ -41,7 +42,7 @@ export function ScoreWorkflowModals({
   attendanceWorkflow: ReturnType<typeof useRosterAttendance>;
   releaseWorkflow: ReturnType<typeof useScoreReleaseWorkflow>;
   regradeWorkflow: ReturnType<typeof useRegradeWorkflow>;
-}) {
+}>) {
   const {
     attendanceEditor, attendanceReason, setAttendanceReason,
     closeAttendanceEditor, saveAttendance
@@ -104,15 +105,16 @@ export function ScoreWorkflowModals({
         renderItem={(item) => {
           const selections = item.candidate_rubric_selections ?? [];
           return <List.Item actions={[
-            <Button key="accept" type="primary" loading={actioning === `regrade-review-${item.id}`} onClick={() => decideRegradeItem(item, "accept")}>接受</Button>,
-            <Button key="reject" loading={actioning === `regrade-review-${item.id}`} onClick={() => decideRegradeItem(item, "reject")}>驳回</Button>,
-            <Button key="exception" danger loading={actioning === `regrade-review-${item.id}`} onClick={() => decideRegradeItem(item, "exception")}>标记异常</Button>
+            <Button key="accept" type="primary" disabled={regradeWorkflow.reviewedEvidence[item.id] !== item.revision || Boolean(actioning)} loading={actioning === `regrade-review-${item.id}`} onClick={() => decideRegradeItem(item, "accept")}>接受</Button>,
+            <Button key="reject" disabled={regradeWorkflow.reviewedEvidence[item.id] !== item.revision || Boolean(actioning)} loading={actioning === `regrade-review-${item.id}`} onClick={() => decideRegradeItem(item, "reject")}>驳回</Button>,
+            <Button key="exception" danger disabled={regradeWorkflow.reviewedEvidence[item.id] !== item.revision || Boolean(actioning)} loading={actioning === `regrade-review-${item.id}`} onClick={() => decideRegradeItem(item, "exception")}>标记异常</Button>
           ]}>
             <List.Item.Meta
               title={<Space><strong>重评候选</strong><span>建议得分</span><InputNumber min={0} max={item.max_score} precision={1} value={regradeReviewScores[item.id] ?? undefined} onChange={(value) => setRegradeReviewScores((current) => ({ ...current, [item.id]: value === null ? null : Number(value) }))} /><span>/ {item.max_score}</span></Space>}
               description={<div className="score-regrade-review-detail">
                 {selections.length ? <span>采分点：{selections.map((selection) => `${selection.point_id} ${selection.score}分`).join("；")}</span> : <span>未记录采分点明细</span>}
                 {item.candidate_comment ? <span>评分依据：{item.candidate_comment}</span> : null}
+                <RegradeCandidateEvidence key={`${item.id}:${item.revision}`} id={item.id} revision={item.revision} onReady={revision => regradeWorkflow.markEvidenceReviewed(item.id, revision)} />
               </div>}
             />
           </List.Item>;
@@ -129,9 +131,11 @@ export function ScoreWorkflowModals({
       onOk={createRelease}
       onCancel={closeReleaseModal}
     >
-      <Alert type="info" showIcon message="草稿不会立即对学生生效" description="提交后会冻结当前已确认的成绩事实。请在发布门禁通过后，单独确认发布。" />
+      <Alert type="info" showIcon message="草稿不会立即对学生生效" description="先创建草稿，核对冻结版本的学生视角，再通过发布门禁正式发布。草稿创建后，以下公开策略随成绩一起冻结。" />
       <p><strong>{selectedExam?.name}</strong> · {gradeTotal} 份成绩</p>
-      <fieldset className="release-visibility-options"><legend>学生可见内容</legend>{(Object.keys(releaseVisibilityLabels) as Array<keyof typeof releaseVisibilityLabels>).map((key) => <Checkbox key={key} checked={releaseVisibility[key]} disabled={key === "show_high_score_paper" && !releaseVisibility.show_question_scores} onChange={(event) => setReleaseVisibility((current) => ({ ...current, [key]: event.target.checked, ...(key === "show_question_scores" && !event.target.checked ? { show_high_score_paper: false } : {}) }))}>{releaseVisibilityLabels[key]}</Checkbox>)}</fieldset>
+      {selectedExam?.appeal_enabled ? <Alert type={releaseVisibility.show_question_scores ? "info" : "error"} showIcon message="允许学生申请成绩复核" description="当前仅支持针对题目申请复核，必须公开逐题得分。学生打开题目详情后可选择原因并提交；整卷或总分复核暂未提供在线申请。" /> : null}
+      <fieldset className="release-visibility-options"><legend>学生可见内容</legend>{(Object.keys(releaseVisibilityLabels) as Array<keyof typeof releaseVisibilityLabels>).map((key) => <Checkbox key={key} checked={releaseVisibility[key]} disabled={(key === "show_high_score_paper" && !releaseVisibility.show_question_scores) || (key === "show_question_scores" && Boolean(selectedExam?.appeal_enabled) && releaseVisibility.show_question_scores)} onChange={(event) => setReleaseVisibility((current) => ({ ...current, [key]: event.target.checked, ...(key === "show_question_scores" && !event.target.checked ? { show_high_score_paper: false } : {}) }))}>{releaseVisibilityLabels[key]}</Checkbox>)}</fieldset>
+      {!releaseVisibility.show_question_scores ? <p>关闭逐题得分后，题目原文、答案、反馈、评分要点、知识点和题目统计也不会出现在逐题详情中。</p> : null}
       <label className="score-attendance-label" htmlFor="score-release-reason">发布说明（必填）</label>
       <Input.TextArea id="score-release-reason" rows={3} maxLength={1000} showCount value={releaseReason} placeholder="例如：期末考试首次正式发布" onChange={(event) => setReleaseReason(event.target.value)} />
       {releaseVisibility.show_high_score_paper ? <Alert type="warning" showIcon message="发布前自动生成匿名范例卷" description="请确认最高分答卷的每页均有已锁定模板、完成页面配准，并配置覆盖姓名、学号和二维码的身份区域；缺少任一条件将阻断发布。" /> : null}

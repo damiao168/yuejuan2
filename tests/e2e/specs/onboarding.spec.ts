@@ -66,6 +66,13 @@ test("创建第一所学校后 readiness 刷新且刷新浏览器仍保持完成
   await page.getByLabel("初始密码").fill("Strong-First-Password-2026!");
   await page.getByRole("button", { name: "创建学校并继续" }).click();
   await patientExpect(page.getByText("3 / 3")).toBeVisible();
+  const receipt = page.getByRole("region", { name: "学校创建回执" });
+  await patientExpect(receipt).toBeVisible();
+  await expect(receipt.getByText("school-admin", { exact: true })).toBeVisible();
+  await expect(receipt.getByRole("link")).toHaveAttribute("href", /\?tenant=new-school$/);
+  await expect(receipt).not.toContainText("Strong-First-Password-2026!");
+  await receipt.getByRole("button", { name: "已完成交接" }).click();
+  await expect(receipt).toHaveCount(0);
   await page.reload();
   await patientExpect(page.getByText("3 / 3")).toBeVisible();
 });

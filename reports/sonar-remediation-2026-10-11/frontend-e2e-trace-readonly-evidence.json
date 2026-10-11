@@ -1,0 +1,210 @@
+{
+  "recorded_at": "2026-10-11T10:48:24.644474+00:00",
+  "method": "只读现有 trace.zip，未运行浏览器、未修改源码或快照。",
+  "traces": [
+    {
+      "test": "dashboard-workbench-移动端只保留导航触发条，账户位于抽屉底部-chromium",
+      "trace_path": "D:\\project\\yuejuan\\output\\playwright\\test-results\\dashboard-workbench-移动端只保留导航触发条，账户位于抽屉底部-chromium\\trace.zip",
+      "trace_sha256": "c5c382e81ee9aac695788df81d89cd3d4f9ff106594f27219a1aeed6ed45d6c2",
+      "events": [
+        {
+          "type": "console",
+          "messageType": "error",
+          "text": "Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES",
+          "args": [],
+          "location": {
+            "url": "http://127.0.0.1:4173/@fs/D:/project/yuejuan/packages/design-tokens/src/zIndex.ts",
+            "lineNumber": 0,
+            "columnNumber": 0
+          },
+          "time": 85928.569,
+          "pageId": "page@3b5857a5d5a6ec7eb3ef082501f54ca3"
+        },
+        {
+          "type": "console",
+          "messageType": "error",
+          "text": "Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES",
+          "args": [],
+          "location": {
+            "url": "http://127.0.0.1:4173/src/api/schoolAssistant.ts",
+            "lineNumber": 0,
+            "columnNumber": 0
+          },
+          "time": 85938.689,
+          "pageId": "page@3b5857a5d5a6ec7eb3ef082501f54ca3"
+        }
+      ],
+      "compact_events": [
+        {
+          "type": "console",
+          "text": "Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES",
+          "location": {
+            "url": "http://127.0.0.1:4173/@fs/D:/project/yuejuan/packages/design-tokens/src/zIndex.ts",
+            "lineNumber": 0,
+            "columnNumber": 0
+          },
+          "url": null,
+          "status": null
+        },
+        {
+          "type": "console",
+          "text": "Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES",
+          "location": {
+            "url": "http://127.0.0.1:4173/src/api/schoolAssistant.ts",
+            "lineNumber": 0,
+            "columnNumber": 0
+          },
+          "url": null,
+          "status": null
+        }
+      ]
+    },
+    {
+      "test": "exam-workspace-考试工作区按四阶段导航，并让阻断项跳到可处理环节-chromium",
+      "trace_path": "D:\\project\\yuejuan\\output\\playwright\\test-results\\exam-workspace-考试工作区按四阶段导航，并让阻断项跳到可处理环节-chromium\\trace.zip",
+      "trace_sha256": "7ea048e24c6462055bb2e08854cf924d19af630a2c8b8c2995c351e47e6cd4df",
+      "events": [],
+      "compact_events": []
+    },
+    {
+      "test": "exam-workspace-左侧显示固定准备任务，右侧仅显示当前任务-chromium",
+      "trace_path": "D:\\project\\yuejuan\\output\\playwright\\test-results\\exam-workspace-左侧显示固定准备任务，右侧仅显示当前任务-chromium\\trace.zip",
+      "trace_sha256": "d701df2f6187cff2b599e72b63fa11f81e38e18ece8c3de98657763020d34a3e",
+      "events": [
+        {
+          "type": "console",
+          "messageType": "error",
+          "text": "Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES",
+          "args": [],
+          "location": {
+            "url": "http://127.0.0.1:4173/src/api/papers.ts",
+            "lineNumber": 0,
+            "columnNumber": 0
+          },
+          "time": 130999.615,
+          "pageId": "page@408fd0d773f463da1c7f6c62caf05c61"
+        },
+        {
+          "type": "console",
+          "messageType": "error",
+          "text": "Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES",
+          "args": [],
+          "location": {
+            "url": "http://127.0.0.1:4173/src/api/assessment.ts",
+            "lineNumber": 0,
+            "columnNumber": 0
+          },
+          "time": 130999.889,
+          "pageId": "page@408fd0d773f463da1c7f6c62caf05c61"
+        },
+        {
+          "type": "console",
+          "messageType": "error",
+          "text": "%o\n\n%s\n\n%s\n TypeError: Failed to fetch dynamically imported module: http://127.0.0.1:4173/src/pages/ExamPreparationPage.tsx The above error occurred in one of your React components. React will try to recreate this component tree from scratch using the error boundary you provided, ErrorBoundary.",
+          "args": [
+            {
+              "preview": "%o\n\n%s\n\n%s\n",
+              "value": "%o\n\n%s\n\n%s\n"
+            },
+            {
+              "preview": "TypeError: Failed to fetch dynamically imported module: http://127.0.0.1:4173/src/pages/ExamPreparationPage.tsx"
+            },
+            {
+              "preview": "The above error occurred in one of your React components.",
+              "value": "The above error occurred in one of your React components."
+            },
+            {
+              "preview": "React will try to recreate this component tree from scratch using the error boundary you provided, ErrorBoundary.",
+              "value": "React will try to recreate this component tree from scratch using the error boundary you provided, ErrorBoundary."
+            }
+          ],
+          "location": {
+            "url": "http://127.0.0.1:4173/node_modules/.vite/deps/chunk-D74XIIO3.js?v=fe8c1876",
+            "lineNumber": 7000,
+            "columnNumber": 18
+          },
+          "time": 131044.815,
+          "pageId": "page@408fd0d773f463da1c7f6c62caf05c61"
+        },
+        {
+          "type": "console",
+          "messageType": "error",
+          "text": "页面渲染异常 TypeError: Failed to fetch dynamically imported module: http://127.0.0.1:4173/src/pages/ExamPreparationPage.tsx \n    at Lazy (<anonymous>)\n    at Suspense (<anonymous>)\n    at ErrorBoundary (http://127.0.0.1:4173/src/components/ErrorBoundary.tsx:5:8)\n    at div (<anonymous>)\n    at div (<anonymous>)\n    at div (<anonymous>)\n    at div (<anonymous>)\n    at WorkspaceLayout (http://127.0.0.1:4173/@fs/D:/project/yuejuan/packages/ui/src/workspace/WorkspaceLayout.tsx:3:3)\n    at div (<anonymous>)\n    at ExamWorkspaceLayout (http://127.0.0.1:4173/src/features/exams/workspace/ExamWorkspaceLayout.tsx:26:39)\n    at ExamWorkspacePage (http://127.0.0.1:4173/src/pages/ExamWorkspacePage.tsx:8:3)\n    at Suspense (<anonymous>)\n    at ErrorBoundary (http://127.0.0.1:4173/src/components/ErrorBoundary.tsx:5:8)\n    at AccountAssistant (http://127.0.0.1:4173/src/features/school-assistant/SchoolAssistantProvider.tsx:19:3)\n    at SchoolAssistantProvider (http://127.0.0.1:4173/src/features/school-assistant/SchoolAssistantProvider.tsx:99:3)\n    at main (<anonymous>)\n    at http://127.0.0.1:4173/node_modules/.vite/deps/chunk-UP5XKXYB.js?v=fe8c1876:68493:16\n    at Content (<anonymous>)\n    at div (<anonymous>)\n    at http://127.0.0.1:4173/node_modules/.vite/deps/chunk-UP5XKXYB.js?v=fe8c1876:68512:16\n    at Layout (<anonymous>)\n    at div (<anonymous>)\n    at http://127.0.0.1:4173/node_modules/.vite/deps/chunk-UP5XKXYB.js?v=fe8c1876:68512:16\n    at Layout (<anonymous>)\n    at MotionWrapper (http://127.0.0.1:4173/node_modules/.vite/deps/chunk-UP5XKXYB.js?v=fe8c1876:7626:32)\n    at ProviderChildren (http://127.0.0.1:4173/node_modules/.vite/deps/chunk-UP5XKXYB.js?v=fe8c1876:7734:5)\n    at ConfigProvider (http://127.0.0.1:4173/node_modules/.vite/deps/chunk-UP5XKXYB.js?v=fe8c1876:8025:27)\n    at AppLayout (http://127.0.0.1:4173/src/components/AppLayout.tsx:19:3)\n    at StepUpProvider (http://127.0.0.1:4173/src/auth/stepUpContext.tsx:19:34)\n    at div (<anonymous>)\n    at App (http://127.0.0.1:4173/node_modules/.vite/deps/chunk-UP5XKXYB.js?v=fe8c1876:22708:16)\n    at AppShell (http://127.0.0.1:4173/src/AppShell.tsx:39:18)\n    at MatchInnerImpl (http://127.0.0.1:4173/node_modules/.vite/deps/@tanstack_react-router.js?v=fe8c1876:7809:59)\n    at CatchBoundaryImpl (http://127.0.0.1:4173/node_modules/.vite/deps/@tanstack_react-router.js?v=fe8c1876:6226:5)\n    at CatchBoundary (<anonymous>)\n    at CatchNotFound (http://127.0.0.1:4173/node_modules/.vite/deps/@tanstack_react-router.js?v=fe8c1876:7663:18)\n    at SafeFragment (http://127.0.0.1:4173/node_modules/.vite/deps/@tanstack_react-router.js?v=fe8c1876:7717:87)\n    at SafeFragment (http://127.0.0.1:4173/node_modules/.vite/deps/@tanstack_react-router.js?v=fe8c1876:7717:87)\n    at SafeFragment (http://127.0.0.1:4173/node_modules/.vite/deps/@tanstack_react-router.js?v=fe8c1876:7717:87)\n    at MatchView (http://127.0.0.1:4173/node_modules/.vite/deps/@tanstack_react-router.js?v=fe8c1876:7768:22)\n    at MatchImpl (http://127.0.0.1:4173/node_modules/.vite/deps/@tanstack_react-router.js?v=fe8c1876:7757:49)\n    at CatchBoundaryImpl (http://127.0.0.1:4173/node_modules/.vite/deps/@tanstack_react-router.js?v=fe8c1876:6226:5)\n    at CatchBoundary (<anonymous>)\n    at MatchesInner (http://127.0.0.1:4173/node_modules/.vite/deps/@tanstack_react-router.js?v=fe8c1876:7959:18)\n    at Suspense (<anonymous>)\n    at Matches (http://127.0.0.1:4173/node_modules/.vite/deps/@tanstack_react-router.js?v=fe8c1876:7948:18)\n    at RouterContextProvider (http://127.0.0.1:4173/node_modules/.vite/deps/@tanstack_react-router.js?v=fe8c1876:8058:34)\n    at RouterProvider (http://127.0.0.1:4173/node_modules/.vite/deps/@tanstack_react-router.js?v=fe8c1876:8074:27)\n    at QueryClientProvider (http://127.0.0.1:4173/node_modules/.vite/deps/@tanstack_react-query.js?v=fe8c1876:3253:3)\n    at ErrorBoundary (http://127.0.0.1:4173/src/components/ErrorBoundary.tsx:5:8)\n    at App (<anonymous>)\n    at LocaleProvider (http://127.0.0.1:4173/node_modules/.vite/deps/chunk-UP5XKXYB.js?v=fe8c1876:4417:13)\n    at MotionWrapper (http://127.0.0.1:4173/node_modules/.vite/deps/chunk-UP5XKXYB.js?v=fe8c1876:7626:32)\n    at ProviderChildren (http://127.0.0.1:4173/node_modules/.vite/deps/chunk-UP5XKXYB.js?v=fe8c1876:7734:5)\n    at ConfigProvider (http://127.0.0.1:4173/node_modules/.vite/deps/chunk-UP5XKXYB.js?v=fe8c1876:8025:27)",
+          "args": [
+            {
+              "preview": "页面渲染异常",
+              "value": "页面渲染异常"
+            },
+            {
+              "preview": "TypeError: Failed to fetch dynamically imported module: http://127.0.0.1:4173/src/pages/ExamPreparationPage.tsx"
+            },
+            {
+              "preview": "\n    at Lazy (<anonymous>)\n    at Suspense (<anonymous>)\n    at ErrorBoundary (http://127.0.0.1:4173/src/components/ErrorBoundary.tsx:5:8)\n    at div (<anonymous>)\n    at div (<anonymous>)\n    at div (<anonymous>)\n    at div (<anonymous>)\n    at WorkspaceLayout (http://127.0.0.1:4173/@fs/D:/project/yuejuan/packages/ui/src/workspace/WorkspaceLayout.tsx:3:3)\n    at div (<anonymous>)\n    at ExamWorkspaceLayout (http://127.0.0.1:4173/src/features/exams/workspace/ExamWorkspaceLayout.tsx:26:39)\n    at ExamWorkspacePage (http://127.0.0.1:4173/src/pages/ExamWorkspacePage.tsx:8:3)\n    at Suspense (<anonymous>)\n    at ErrorBoundary (http://127.0.0.1:4173/src/components/ErrorBoundary.tsx:5:8)\n    at AccountAssistant (http://127.0.0.1:4173/src/features/school-assistant/SchoolAssistantProvider.tsx:19:3)\n    at SchoolAssistantProvider (http://127.0.0.1:4173/src/features/school-assistant/SchoolAssistantProvider.tsx:99:3)\n    at main (<anonymous>)\n    at http://127.0.0.1:4173/node_modules/.vite/deps/chunk-UP5XKXYB.js?v=fe8c1876:68493:16\n    at Content (<anonymous>)\n    at div (<anonymous>)\n    at http://127.0.0.1:4173/node_modules/.vite/deps/chunk-UP5XKXYB.js?v=fe8c1876:68512:16\n    at Layout (<anonymous>)\n    at div (<anonymous>)\n    at http://127.0.0.1:4173/node_modules/.vite/deps/chunk-UP5XKXYB.js?v=fe8c1876:68512:16\n    at Layout (<anonymous>)\n    at MotionWrapper (http://127.0.0.1:4173/node_modules/.vite/deps/chunk-UP5XKXYB.js?v=fe8c1876:7626:32)\n    at ProviderChildren (http://127.0.0.1:4173/node_modules/.vite/deps/chunk-UP5XKXYB.js?v=fe8c1876:7734:5)\n    at ConfigProvider (http://127.0.0.1:4173/node_modules/.vite/deps/chunk-UP5XKXYB.js?v=fe8c1876:8025:27)\n    at AppLayout (http://127.0.0.1:4173/src/components/AppLayout.tsx:19:3)\n    at StepUpProvider (http://127.0.0.1:4173/src/auth/stepUpContext.tsx:19:34)\n    at div (<anonymous>)\n    at App (http://127.0.0.1:4173/node_modules/.vite/deps/chunk-UP5XKXYB.js?v=fe8c1876:22708:16)\n    at AppShell (http://127.0.0.1:4173/src/AppShell.tsx:39:18)\n    at MatchInnerImpl (http://127.0.0.1:4173/node_modules/.vite/deps/@tanstack_react-router.js?v=fe8c1876:7809:59)\n    at CatchBoundaryImpl (http://127.0.0.1:4173/node_modules/.vite/deps/@tanstack_react-router.js?v=fe8c1876:6226:5)\n    at CatchBoundary (<anonymous>)\n    at CatchNotFound (http://127.0.0.1:4173/node_modules/.vite/deps/@tanstack_react-router.js?v=fe8c1876:7663:18)\n    at SafeFragment (http://127.0.0.1:4173/node_modules/.vite/deps/@tanstack_react-router.js?v=fe8c1876:7717:87)\n    at SafeFragment (http://127.0.0.1:4173/node_modules/.vite/deps/@tanstack_react-router.js?v=fe8c1876:7717:87)\n    at SafeFragment (http://127.0.0.1:4173/node_modules/.vite/deps/@tanstack_react-router.js?v=fe8c1876:7717:87)\n    at MatchView (http://127.0.0.1:4173/node_modules/.vite/deps/@tanstack_react-router.js?v=fe8c1876:7768:22)\n    at MatchImpl (http://127.0.0.1:4173/node_modules/.vite/deps/@tanstack_react-router.js?v=fe8c1876:7757:49)\n    at CatchBoundaryImpl (http://127.0.0.1:4173/node_modules/.vite/deps/@tanstack_react-router.js?v=fe8c1876:6226:5)\n    at CatchBoundary (<anonymous>)\n    at MatchesInner (http://127.0.0.1:4173/node_modules/.vite/deps/@tanstack_react-router.js?v=fe8c1876:7959:18)\n    at Suspense (<anonymous>)\n    at Matches (http://127.0.0.1:4173/node_modules/.vite/deps/@tanstack_react-router.js?v=fe8c1876:7948:18)\n    at RouterContextProvider (http://127.0.0.1:4173/node_modules/.vite/deps/@tanstack_react-router.js?v=fe8c1876:8058:34)\n    at RouterProvider (http://127.0.0.1:4173/node_modules/.vite/deps/@tanstack_react-router.js?v=fe8c1876:8074:27)\n    at QueryClientProvider (http://127.0.0.1:4173/node_modules/.vite/deps/@tanstack_react-query.js?v=fe8c1876:3253:3)\n    at ErrorBoundary (http://127.0.0.1:4173/src/components/ErrorBoundary.tsx:5:8)\n    at App (<anonymous>)\n    at LocaleProvider (http://127.0.0.1:4173/node_modules/.vite/deps/chunk-UP5XKXYB.js?v=fe8c1876:4417:13)\n    at MotionWrapper (http://127.0.0.1:4173/node_modules/.vite/deps/chunk-UP5XKXYB.js?v=fe8c1876:7626:32)\n    at ProviderChildren (http://127.0.0.1:4173/node_modules/.vite/deps/chunk-UP5XKXYB.js?v=fe8c1876:7734:5)\n    at ConfigProvider (http://127.0.0.1:4173/node_modules/.vite/deps/chunk-UP5XKXYB.js?v=fe8c1876:8025:27)",
+              "value": "\n    at Lazy (<anonymous>)\n    at Suspense (<anonymous>)\n    at ErrorBoundary (http://127.0.0.1:4173/src/components/ErrorBoundary.tsx:5:8)\n    at div (<anonymous>)\n    at div (<anonymous>)\n    at div (<anonymous>)\n    at div (<anonymous>)\n    at WorkspaceLayout (http://127.0.0.1:4173/@fs/D:/project/yuejuan/packages/ui/src/workspace/WorkspaceLayout.tsx:3:3)\n    at div (<anonymous>)\n    at ExamWorkspaceLayout (http://127.0.0.1:4173/src/features/exams/workspace/ExamWorkspaceLayout.tsx:26:39)\n    at ExamWorkspacePage (http://127.0.0.1:4173/src/pages/ExamWorkspacePage.tsx:8:3)\n    at Suspense (<anonymous>)\n    at ErrorBoundary (http://127.0.0.1:4173/src/components/ErrorBoundary.tsx:5:8)\n    at AccountAssistant (http://127.0.0.1:4173/src/features/school-assistant/SchoolAssistantProvider.tsx:19:3)\n    at SchoolAssistantProvider (http://127.0.0.1:4173/src/features/school-assistant/SchoolAssistantProvider.tsx:99:3)\n    at main (<anonymous>)\n    at http://127.0.0.1:4173/node_modules/.vite/deps/chunk-UP5XKXYB.js?v=fe8c1876:68493:16\n    at Content (<anonymous>)\n    at div (<anonymous>)\n    at http://127.0.0.1:4173/node_modules/.vite/deps/chunk-UP5XKXYB.js?v=fe8c1876:68512:16\n    at Layout (<anonymous>)\n    at div (<anonymous>)\n    at http://127.0.0.1:4173/node_modules/.vite/deps/chunk-UP5XKXYB.js?v=fe8c1876:68512:16\n    at Layout (<anonymous>)\n    at MotionWrapper (http://127.0.0.1:4173/node_modules/.vite/deps/chunk-UP5XKXYB.js?v=fe8c1876:7626:32)\n    at ProviderChildren (http://127.0.0.1:4173/node_modules/.vite/deps/chunk-UP5XKXYB.js?v=fe8c1876:7734:5)\n    at ConfigProvider (http://127.0.0.1:4173/node_modules/.vite/deps/chunk-UP5XKXYB.js?v=fe8c1876:8025:27)\n    at AppLayout (http://127.0.0.1:4173/src/components/AppLayout.tsx:19:3)\n    at StepUpProvider (http://127.0.0.1:4173/src/auth/stepUpContext.tsx:19:34)\n    at div (<anonymous>)\n    at App (http://127.0.0.1:4173/node_modules/.vite/deps/chunk-UP5XKXYB.js?v=fe8c1876:22708:16)\n    at AppShell (http://127.0.0.1:4173/src/AppShell.tsx:39:18)\n    at MatchInnerImpl (http://127.0.0.1:4173/node_modules/.vite/deps/@tanstack_react-router.js?v=fe8c1876:7809:59)\n    at CatchBoundaryImpl (http://127.0.0.1:4173/node_modules/.vite/deps/@tanstack_react-router.js?v=fe8c1876:6226:5)\n    at CatchBoundary (<anonymous>)\n    at CatchNotFound (http://127.0.0.1:4173/node_modules/.vite/deps/@tanstack_react-router.js?v=fe8c1876:7663:18)\n    at SafeFragment (http://127.0.0.1:4173/node_modules/.vite/deps/@tanstack_react-router.js?v=fe8c1876:7717:87)\n    at SafeFragment (http://127.0.0.1:4173/node_modules/.vite/deps/@tanstack_react-router.js?v=fe8c1876:7717:87)\n    at SafeFragment (http://127.0.0.1:4173/node_modules/.vite/deps/@tanstack_react-router.js?v=fe8c1876:7717:87)\n    at MatchView (http://127.0.0.1:4173/node_modules/.vite/deps/@tanstack_react-router.js?v=fe8c1876:7768:22)\n    at MatchImpl (http://127.0.0.1:4173/node_modules/.vite/deps/@tanstack_react-router.js?v=fe8c1876:7757:49)\n    at CatchBoundaryImpl (http://127.0.0.1:4173/node_modules/.vite/deps/@tanstack_react-router.js?v=fe8c1876:6226:5)\n    at CatchBoundary (<anonymous>)\n    at MatchesInner (http://127.0.0.1:4173/node_modules/.vite/deps/@tanstack_react-router.js?v=fe8c1876:7959:18)\n    at Suspense (<anonymous>)\n    at Matches (http://127.0.0.1:4173/node_modules/.vite/deps/@tanstack_react-router.js?v=fe8c1876:7948:18)\n    at RouterContextProvider (http://127.0.0.1:4173/node_modules/.vite/deps/@tanstack_react-router.js?v=fe8c1876:8058:34)\n    at RouterProvider (http://127.0.0.1:4173/node_modules/.vite/deps/@tanstack_react-router.js?v=fe8c1876:8074:27)\n    at QueryClientProvider (http://127.0.0.1:4173/node_modules/.vite/deps/@tanstack_react-query.js?v=fe8c1876:3253:3)\n    at ErrorBoundary (http://127.0.0.1:4173/src/components/ErrorBoundary.tsx:5:8)\n    at App (<anonymous>)\n    at LocaleProvider (http://127.0.0.1:4173/node_modules/.vite/deps/chunk-UP5XKXYB.js?v=fe8c1876:4417:13)\n    at MotionWrapper (http://127.0.0.1:4173/node_modules/.vite/deps/chunk-UP5XKXYB.js?v=fe8c1876:7626:32)\n    at ProviderChildren (http://127.0.0.1:4173/node_modules/.vite/deps/chunk-UP5XKXYB.js?v=fe8c1876:7734:5)\n    at ConfigProvider (http://127.0.0.1:4173/node_modules/.vite/deps/chunk-UP5XKXYB.js?v=fe8c1876:8025:27)"
+            }
+          ],
+          "location": {
+            "url": "http://127.0.0.1:4173/src/components/ErrorBoundary.tsx",
+            "lineNumber": 10,
+            "columnNumber": 12
+          },
+          "time": 131045.767,
+          "pageId": "page@408fd0d773f463da1c7f6c62caf05c61"
+        }
+      ],
+      "compact_events": [
+        {
+          "type": "console",
+          "text": "Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES",
+          "location": {
+            "url": "http://127.0.0.1:4173/src/api/papers.ts",
+            "lineNumber": 0,
+            "columnNumber": 0
+          },
+          "url": null,
+          "status": null
+        },
+        {
+          "type": "console",
+          "text": "Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES",
+          "location": {
+            "url": "http://127.0.0.1:4173/src/api/assessment.ts",
+            "lineNumber": 0,
+            "columnNumber": 0
+          },
+          "url": null,
+          "status": null
+        },
+        {
+          "type": "console",
+          "text": "%o\n\n%s\n\n%s\n TypeError: Failed to fetch dynamically imported module: http://127.0.0.1:4173/src/pages/ExamPreparationPage.tsx The above error occurred in one of your React components. React will try to recreate this component tree from scratch using the error boundary you provided, ErrorBoundary.",
+          "location": {
+            "url": "http://127.0.0.1:4173/node_modules/.vite/deps/chunk-D74XIIO3.js?v=fe8c1876",
+            "lineNumber": 7000,
+            "columnNumber": 18
+          },
+          "url": null,
+          "status": null
+        },
+        {
+          "type": "console",
+          "text": "页面渲染异常 TypeError: Failed to fetch dynamically imported module: http://127.0.0.1:4173/src/pages/ExamPreparationPage.tsx \n    at Lazy (<anonymous>)\n    at Suspense (<anonymous>)\n    at ErrorBoundary (http://127.0.0.1:4173/src/components/ErrorBoundary.tsx:5:8)\n    at div (<anonymous>)\n    at div (<anonymous>)\n    at div (<anonymous>)\n    at div (<anonymous>)\n    at WorkspaceLayout (http://127.0.0.1:4173/@fs/D:/project/yuejuan/packages/ui/src/workspace/WorkspaceLayout.tsx:3:3)\n    at div (<anonymous>)\n    at ExamWorkspaceLayout (http://127.0.0.1:41",
+          "location": {
+            "url": "http://127.0.0.1:4173/src/components/ErrorBoundary.tsx",
+            "lineNumber": 10,
+            "columnNumber": 12
+          },
+          "url": null,
+          "status": null
+        }
+      ]
+    },
+    {
+      "test": "exam-create.visual-lightwe-ab063-mposer-is-stable-at-390x844-chromium",
+      "trace_path": "D:\\project\\yuejuan\\output\\playwright\\test-results\\exam-create.visual-lightwe-ab063-mposer-is-stable-at-390x844-chromium\\trace.zip",
+      "trace_sha256": "7e9ad2026ae97840e85534f28a157aa115fc97106b2888e6ea1bc1af1950f904",
+      "events": [],
+      "compact_events": []
+    }
+  ]
+}

@@ -1,0 +1,95 @@
+{
+  "audited_at": "2026-10-11T19:34:17.275180+08:00",
+  "project": "yuejuan-local-workspace-20261010",
+  "checkpoint": "full-checkpoint-03",
+  "analysis_id": "a741715d-5427-49a6-ac74-7dd92ad5cfa1",
+  "scanner_exit_code": 0,
+  "compute_engine_status": "SUCCESS",
+  "export_complete": true,
+  "original_count": 2223,
+  "checkpoint02_new_count": 47,
+  "tracked_count": 2270,
+  "original_identity_complete": true,
+  "checkpoint02_new_identity_complete": true,
+  "original_status_counts": {
+    "FALSE_POSITIVE": 30,
+    "FIXED": 2190,
+    "ACCEPTED": 1,
+    "OPEN": 2
+  },
+  "checkpoint02_new_status_counts": {
+    "FIXED": 43,
+    "FALSE_POSITIVE": 4
+  },
+  "active_count": 2,
+  "active_counts_by_rule": {
+    "go:S3776": 2
+  },
+  "untracked_active_count": 0,
+  "untracked_active_keys": [],
+  "active_issues": [
+    {
+      "key": "6eb1de9a-c6f8-4662-9a79-01e20787127a",
+      "rule": "go:S3776",
+      "file": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+      "line": 198,
+      "message": "Refactor this method to reduce its Cognitive Complexity from 21 to the 15 allowed."
+    },
+    {
+      "key": "32ec19c6-7711-4694-b5dd-6577c7ecf0e9",
+      "rule": "go:S3776",
+      "file": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+      "line": 659,
+      "message": "Refactor this method to reduce its Cognitive Complexity from 19 to the 15 allowed."
+    }
+  ],
+  "original_quality_profiles_and_rules_unchanged": true,
+  "original_exclusions_unchanged": true,
+  "original_issue_files_included": 291,
+  "maintained_files": 2654,
+  "changed_since_snapshot": [
+    "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go"
+  ],
+  "changed_type_support_since_snapshot": [],
+  "current_workspace_matches_checkpoint": false,
+  "quality_gate": {
+    "status": "ERROR",
+    "conditions": [
+      {
+        "status": "ERROR",
+        "metricKey": "new_coverage",
+        "comparator": "LT",
+        "errorThreshold": "80",
+        "actualValue": "0.0"
+      },
+      {
+        "status": "OK",
+        "metricKey": "new_duplicated_lines_density",
+        "comparator": "GT",
+        "errorThreshold": "3",
+        "actualValue": "0.48932"
+      },
+      {
+        "status": "ERROR",
+        "metricKey": "new_violations",
+        "comparator": "GT",
+        "errorThreshold": "0",
+        "actualValue": "2"
+      }
+    ],
+    "ignoredConditions": false,
+    "period": {
+      "mode": "PREVIOUS_VERSION",
+      "date": "2026-10-11T11:43:02+0800",
+      "parameter": "2026-10-11-local-uncommitted"
+    },
+    "caycStatus": "compliant"
+  },
+  "coverage_imported_in_checkpoint": false,
+  "all_issue_work_complete": false,
+  "limits": [
+    "工具已扫描文件不代表人工已逐文件审读，审读状态以各分工证据为准。",
+    "扫描未导入测试覆盖率，平台覆盖率0不能解释为实际测试覆盖率0%。",
+    "源码FIXED、人工FALSE_POSITIVE及明确ACCEPTED分别统计；条件skip不计测试通过。"
+  ]
+}

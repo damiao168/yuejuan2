@@ -1,0 +1,1283 @@
+{
+  "docker:S7031": {
+    "rule": {
+      "key": "docker:S7031",
+      "repo": "docker",
+      "name": "Reduce the amount of consecutive RUN instructions",
+      "createdAt": "2026-10-02T19:32:03+0800",
+      "severity": "MINOR",
+      "status": "READY",
+      "isTemplate": false,
+      "tags": [],
+      "sysTags": [],
+      "lang": "docker",
+      "langName": "Docker",
+      "params": [],
+      "defaultDebtRemFnType": "CONSTANT_ISSUE",
+      "debtRemFnType": "CONSTANT_ISSUE",
+      "type": "CODE_SMELL",
+      "defaultRemFnType": "CONSTANT_ISSUE",
+      "defaultRemFnBaseEffort": "5min",
+      "remFnType": "CONSTANT_ISSUE",
+      "remFnBaseEffort": "5min",
+      "remFnOverloaded": false,
+      "scope": "ALL",
+      "isExternal": false,
+      "descriptionSections": [
+        {
+          "key": "how_to_fix",
+          "content": "<h4>Noncompliant code example</h4>\n<pre data-diff-id=\"1\" data-diff-type=\"noncompliant\">\nRUN curl -SL \"https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.gz\" --output nodejs.tar.gz\nRUN echo \"$NODE_DOWNLOAD_SHA nodejs.tar.gz\" | sha256sum -c -\nRUN tar -xzf \"nodejs.tar.gz\" -C /usr/local --strip-components=1\nRUN rm nodejs.tar.gz\nRUN ln -s /usr/local/bin/node /usr/local/bin/nodejs\n</pre>\n<h4>Compliant solution</h4>\n<pre data-diff-id=\"1\" data-diff-type=\"compliant\">\nRUN curl -SL \"https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.gz\" --output nodejs.tar.gz \\\n&amp;&amp; echo \"$NODE_DOWNLOAD_SHA nodejs.tar.gz\" | sha256sum -c - \\\n&amp;&amp; tar -xzf \"nodejs.tar.gz\" -C /usr/local --strip-components=1 \\\n&amp;&amp; rm nodejs.tar.gz \\\n&amp;&amp; ln -s /usr/local/bin/node /usr/local/bin/nodejs\n</pre>"
+        },
+        {
+          "key": "resources",
+          "content": "<h3>Documentation</h3>\n<ul>\n  <li>Dockerfile Best Practices - <a href=\"https://github.com/dnaprawa/dockerfile-best-practices?tab=readme-ov-file#limit-image-layers-amount\">Limit\n  image layers amount</a></li>\n</ul>"
+        },
+        {
+          "key": "introduction",
+          "content": "<p>Multiplying the number of <code>RUN</code> instructions increases the final image build time and size.</p>"
+        },
+        {
+          "key": "root_cause",
+          "content": "<p>Each time a <code>RUN</code> instruction is added, a new layer is introduced in the final image.\n  <br>\n  This has a direct impact on the build time and image size. Chaining commands in a single <code>RUN</code> instruction using <code>&amp;&amp;</code>\n  will use a single layer, thereby reducing the number of layers in the image.\n  <br>\n  This practice can make Docker images more efficient and easier to manage.\n  <br>\n  Each layer in a Docker image is essentially a change to the image, like a version control system.\n  <br>\n  So, fewer layers mean fewer changes to track, which simplifies management and troubleshooting.</p>\n<h3>Exceptions</h3>\n<p>In multi-stage builds, the rule only scans instructions that are part of the final image.</p>"
+        }
+      ],
+      "educationPrinciples": [],
+      "updatedAt": "2026-10-02T19:32:03+0800",
+      "cleanCodeAttribute": "CONVENTIONAL",
+      "cleanCodeAttributeCategory": "CONSISTENT",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "LOW"
+        }
+      ]
+    },
+    "actives": []
+  },
+  "go:S107": {
+    "rule": {
+      "key": "go:S107",
+      "repo": "go",
+      "name": "Functions should not have too many parameters",
+      "createdAt": "2026-10-02T19:32:06+0800",
+      "severity": "MAJOR",
+      "status": "READY",
+      "isTemplate": false,
+      "tags": [],
+      "sysTags": [
+        "brain-overload"
+      ],
+      "lang": "go",
+      "langName": "Go",
+      "params": [
+        {
+          "key": "Max",
+          "htmlDesc": "Maximum authorized number of parameters",
+          "defaultValue": "7",
+          "type": "INTEGER"
+        }
+      ],
+      "defaultDebtRemFnType": "CONSTANT_ISSUE",
+      "debtRemFnType": "CONSTANT_ISSUE",
+      "type": "CODE_SMELL",
+      "defaultRemFnType": "CONSTANT_ISSUE",
+      "defaultRemFnBaseEffort": "20min",
+      "remFnType": "CONSTANT_ISSUE",
+      "remFnBaseEffort": "20min",
+      "remFnOverloaded": false,
+      "scope": "ALL",
+      "isExternal": false,
+      "descriptionSections": [
+        {
+          "key": "root_cause",
+          "content": "<p>Functions with a long parameter list are difficult to use because maintainers must figure out the role of each parameter and keep track of their\nposition.</p>\n<pre>\nfunc setCoordinates(x1 int, y1 int, z1 int, x2 int, y2 int, z2 int) { // Noncompliant\n    // ...\n}\n</pre>\n<p>The solution can be to:</p>\n<ul>\n  <li>Split the function into smaller ones</li>\n</ul>\n<pre>\n// Each function does a part of what the original setCoordinates function was doing, so confusion risks are lower\nfunc setOrigin(x int, y int, z int) {\n   // ...\n}\n\nfunc setSize(width int, height int, depth int) {\n   // ...\n}\n</pre>\n<ul>\n  <li>Find a better data structure for the parameters that group data in a way that makes sense for the specific application domain</li>\n</ul>\n<pre>\ntype point struct { // In geometry, Point is a logical structure to group data\n    x int\n    y int\n    z int\n}\n\nfunc setCoordinates(p1 point, p2 point) {\n    // ...\n}\n</pre>\n<p>This rule raises an issue when a function has more parameters than the provided threshold.</p>"
+        }
+      ],
+      "educationPrinciples": [],
+      "updatedAt": "2026-10-02T19:32:06+0800",
+      "cleanCodeAttribute": "FOCUSED",
+      "cleanCodeAttributeCategory": "ADAPTABLE",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ]
+    },
+    "actives": []
+  },
+  "go:S3776": {
+    "rule": {
+      "key": "go:S3776",
+      "repo": "go",
+      "name": "Cognitive Complexity of functions should not be too high",
+      "createdAt": "2026-10-02T19:32:06+0800",
+      "severity": "CRITICAL",
+      "status": "READY",
+      "isTemplate": false,
+      "tags": [],
+      "sysTags": [
+        "brain-overload"
+      ],
+      "lang": "go",
+      "langName": "Go",
+      "params": [
+        {
+          "key": "threshold",
+          "htmlDesc": "The maximum authorized complexity.",
+          "defaultValue": "15",
+          "type": "INTEGER"
+        }
+      ],
+      "defaultDebtRemFnType": "LINEAR_OFFSET",
+      "debtRemFnType": "LINEAR_OFFSET",
+      "type": "CODE_SMELL",
+      "defaultRemFnType": "LINEAR_OFFSET",
+      "defaultRemFnGapMultiplier": "1min",
+      "defaultRemFnBaseEffort": "5min",
+      "remFnType": "LINEAR_OFFSET",
+      "remFnGapMultiplier": "1min",
+      "remFnBaseEffort": "5min",
+      "remFnOverloaded": false,
+      "gapDescription": "per complexity point over the threshold",
+      "scope": "ALL",
+      "isExternal": false,
+      "descriptionSections": [
+        {
+          "key": "root_cause",
+          "content": "<p>Cognitive Complexity is a measure of how hard it is to understand the control flow of a unit of code. Code with high cognitive complexity is hard\nto read, understand, test, and modify.</p>\n<p>As a rule of thumb, high cognitive complexity is a sign that the code should be refactored into smaller, easier-to-manage pieces.</p>\n<h3>Which syntax in code does impact cognitive complexity score?</h3>\n<p>Here are the core concepts:</p>\n<ul>\n  <li><strong>Cognitive complexity is incremented each time the code breaks the normal linear reading flow.</strong>\n    <br>\n    This concerns, for example, loop structures, conditionals, catches, switches, jumps to labels, and conditions mixing multiple operators.</li>\n  <li><strong>Each nesting level increases complexity.</strong>\n    <br>\n    During code reading, the deeper you go through nested layers, the harder it becomes to keep the context in mind.</li>\n  <li><strong>Method calls are free</strong>\n    <br>\n    A well-picked method name is a summary of multiple lines of code. A reader can first explore a high-level view of what the code is performing then\n    go deeper and deeper by looking at called functions content.\n    <br>\n    <em>Note:</em> This does not apply to recursive calls, those will increment cognitive score.</li>\n</ul>\n<p>The method of computation is fully detailed in the pdf linked in the resources.</p>\n<h3>What is the potential impact?</h3>\n<p>Developers spend more time reading and understanding code than writing it. High cognitive complexity slows down changes and increases the cost of\nmaintenance.</p>"
+        },
+        {
+          "key": "introduction",
+          "content": "<p>This rule raises an issue when the code cognitive complexity of a function is above a certain threshold.</p>"
+        },
+        {
+          "key": "resources",
+          "content": "<h3>Documentation</h3>\n<ul>\n  <li>Sonar - <a href=\"https://www.sonarsource.com/docs/CognitiveComplexity.pdf\">Cognitive Complexity</a></li>\n</ul>\n<h3>Articles &amp; blog posts</h3>\n<ul>\n  <li>Sonar Blog - <a href=\"https://www.sonarsource.com/blog/5-clean-code-tips-for-reducing-cognitive-complexity/\">5 Clean Code Tips for Reducing\n  Cognitive Complexity</a></li>\n</ul>"
+        }
+      ],
+      "educationPrinciples": [],
+      "updatedAt": "2026-10-02T19:32:06+0800",
+      "cleanCodeAttribute": "FOCUSED",
+      "cleanCodeAttributeCategory": "ADAPTABLE",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ]
+    },
+    "actives": []
+  },
+  "javascript:S1994": {
+    "rule": {
+      "key": "javascript:S1994",
+      "repo": "javascript",
+      "name": "\"for\" loop increment clauses should modify the loops' counters",
+      "createdAt": "2026-10-02T19:31:58+0800",
+      "severity": "CRITICAL",
+      "status": "READY",
+      "isTemplate": false,
+      "tags": [],
+      "sysTags": [
+        "editable-source",
+        "confusing"
+      ],
+      "lang": "js",
+      "langName": "JavaScript",
+      "params": [],
+      "defaultDebtRemFnType": "CONSTANT_ISSUE",
+      "debtRemFnType": "CONSTANT_ISSUE",
+      "type": "CODE_SMELL",
+      "defaultRemFnType": "CONSTANT_ISSUE",
+      "defaultRemFnBaseEffort": "20min",
+      "remFnType": "CONSTANT_ISSUE",
+      "remFnBaseEffort": "20min",
+      "remFnOverloaded": false,
+      "scope": "MAIN",
+      "isExternal": false,
+      "descriptionSections": [
+        {
+          "key": "root_cause",
+          "content": "<p>It can be extremely confusing when a <code>for</code> loop’s counter is incremented outside of its increment clause. In such cases, the increment\nshould be moved to the loop’s increment clause if at all possible.</p>\n<h3>Noncompliant code example</h3>\n<pre>\nfor (i = 0; i &lt; 10; j++) { // Noncompliant\n  // ...\n  i++;\n}\n</pre>\n<h3>Compliant solution</h3>\n<pre>\nfor (i = 0; i &lt; 10; i++, j++) {\n  // ...\n}\n</pre>\n<p>Or</p>\n<pre>\nfor (i = 0; i &lt; 10; i++) {\n  // ...\n  j++;\n}\n</pre>"
+        }
+      ],
+      "educationPrinciples": [],
+      "updatedAt": "2026-10-02T19:31:58+0800",
+      "cleanCodeAttribute": "CLEAR",
+      "cleanCodeAttributeCategory": "INTENTIONAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ]
+    },
+    "actives": []
+  },
+  "javascript:S3776": {
+    "rule": {
+      "key": "javascript:S3776",
+      "repo": "javascript",
+      "name": "Cognitive Complexity of functions should not be too high",
+      "createdAt": "2026-10-02T19:31:58+0800",
+      "severity": "CRITICAL",
+      "status": "READY",
+      "isTemplate": false,
+      "tags": [],
+      "sysTags": [
+        "brain-overload",
+        "editable-source"
+      ],
+      "lang": "js",
+      "langName": "JavaScript",
+      "params": [
+        {
+          "key": "threshold",
+          "htmlDesc": "The maximum authorized complexity.",
+          "defaultValue": "15",
+          "type": "INTEGER"
+        }
+      ],
+      "defaultDebtRemFnType": "LINEAR_OFFSET",
+      "debtRemFnType": "LINEAR_OFFSET",
+      "type": "CODE_SMELL",
+      "defaultRemFnType": "LINEAR_OFFSET",
+      "defaultRemFnGapMultiplier": "1min",
+      "defaultRemFnBaseEffort": "5min",
+      "remFnType": "LINEAR_OFFSET",
+      "remFnGapMultiplier": "1min",
+      "remFnBaseEffort": "5min",
+      "remFnOverloaded": false,
+      "gapDescription": "per complexity point over the threshold",
+      "scope": "MAIN",
+      "isExternal": false,
+      "descriptionSections": [
+        {
+          "key": "root_cause",
+          "content": "<p>Cognitive Complexity is a measure of how hard it is to understand the control flow of a unit of code. Code with high cognitive complexity is hard\nto read, understand, test, and modify.</p>\n<p>As a rule of thumb, high cognitive complexity is a sign that the code should be refactored into smaller, easier-to-manage pieces.</p>\n<h3>Which syntax in code does impact cognitive complexity score?</h3>\n<p>Here are the core concepts:</p>\n<ul>\n  <li><strong>Cognitive complexity is incremented each time the code breaks the normal linear reading flow.</strong>\n    <br>\n    This concerns, for example, loop structures, conditionals, catches, switches, jumps to labels, and conditions mixing multiple operators.</li>\n  <li><strong>Each nesting level increases complexity.</strong>\n    <br>\n    During code reading, the deeper you go through nested layers, the harder it becomes to keep the context in mind.</li>\n  <li><strong>Method calls are free</strong>\n    <br>\n    A well-picked method name is a summary of multiple lines of code. A reader can first explore a high-level view of what the code is performing then\n    go deeper and deeper by looking at called functions content.\n    <br>\n    <em>Note:</em> This does not apply to recursive calls, those will increment cognitive score.</li>\n</ul>\n<p>The method of computation is fully detailed in the pdf linked in the resources.</p>\n<p>Note that the calculation of cognitive complexity at function level deviates from the documented process. Given the functional nature of\nJavaScript, nesting functions is a prevalent practice, especially within frameworks like React.js. Consequently, the cognitive complexity of functions\nremains independent from one another. This means that the complexity of a nesting function does not increase with the complexity of nested\nfunctions.</p>\n<h3>What is the potential impact?</h3>\n<p>Developers spend more time reading and understanding code than writing it. High cognitive complexity slows down changes and increases the cost of\nmaintenance.</p>\n<h3>Exceptions</h3>\n<p>Cognitive complexity calculations exclude logical expressions using the <code>||</code> and <code>??</code> operators.</p>\n<pre>\nfunction greet(name) {\n    name = name || 'Guest';\n    console.log('Hello, ' + name + '!');\n}\n</pre>"
+        },
+        {
+          "key": "how_to_fix",
+          "content": "<p>Reducing cognitive complexity can be challenging.\n  <br>\n  Here are a few suggestions:</p>\n<ul>\n  <li><strong>Extract complex conditions in a new function.</strong>\n    <br>\n    Mixed operators in condition will increase complexity. Extracting the condition in a new function with an appropriate name will reduce cognitive\n    load.</li>\n  <li><strong>Break down large functions.</strong>\n    <br>\n    Large functions can be hard to understand and maintain. If a function is doing too many things, consider breaking it down into smaller, more\n    manageable functions. Each function should have a single responsibility.</li>\n  <li><strong>Avoid deep nesting by returning early.</strong>\n    <br>\n    To avoid the nesting of conditions, process exceptional cases first and return early.</li>\n  <li><strong>Use null-safe operations (if available in the language).</strong>\n    <br>\n    When available the <code>.?</code> or <code>??</code> operator replaces multiple tests and simplifies the flow.</li>\n</ul>\n\n<p><strong>Extraction of a complex condition in a new function.</strong></p>\n<h4>Noncompliant code example</h4>\n<p>The code is using a complex condition and has a cognitive cost of 3.</p>\n<pre data-diff-id=\"1\" data-diff-type=\"noncompliant\">\nfunction calculateFinalPrice(user, cart) {\n  let total = calculateTotal(cart);\n  if (user.hasMembership                       // +1 (if)\n    &amp;&amp; user.orders &gt; 10                        // +1 (more than one condition)\n    &amp;&amp; user.accountActive\n    &amp;&amp; !user.hasDiscount\n    || user.orders === 1) {                    // +1 (change of operator in condition)\n      total = applyDiscount(user, total);\n  }\n  return total;\n}\n</pre>\n<h4>Compliant solution</h4>\n<p>Even if the cognitive complexity of the whole program did not change, it is easier for a reader to understand the code of the\n<code>calculateFinalPrice</code> function, which now only has a cognitive cost of 1.</p>\n<pre data-diff-id=\"1\" data-diff-type=\"compliant\">\nfunction calculateFinalPrice(user, cart) {\n  let total = calculateTotal(cart);\n  if (isEligibleForDiscount(user)) {       // +1 (if)\n    total = applyDiscount(user, total);\n  }\n  return total;\n}\n\nfunction isEligibleForDiscount(user) {\n  return user.hasMembership\n    &amp;&amp; user.orders &gt; 10                     // +1 (more than one condition)\n    &amp;&amp; user.accountActive\n    &amp;&amp; !user.hasDiscount\n    || user.orders === 1                    // +1 (change of operator in condition)\n}\n</pre>\n<p><strong>Break down large functions.</strong></p>\n<h4>Noncompliant code example</h4>\n<p>For example, consider a function that calculates the total price of a shopping cart, including sales tax and shipping.\n  <br>\n  <em>Note:</em> The code is simplified here, to illustrate the purpose. Please imagine there is more happening in the <code>for</code> loops.</p>\n<pre data-diff-id=\"3\" data-diff-type=\"noncompliant\">\nfunction calculateTotal(cart) {\n  let total = 0;\n  for (let i = 0; i &lt; cart.length; i++) {       // +1 (for)\n    total += cart[i].price;\n  }\n\n  // calculateSalesTax\n  for (let i = 0; i &lt; cart.length; i++) {       // +1 (for)\n    total += 0.2 * cart[i].price;\n  }\n\n  //calculateShipping\n  total += 5 * cart.length;\n\n  return total;\n}\n</pre>\n<p>This function could be refactored into smaller functions: The complexity is spread over multiple functions and the complex\n<code>calculateTotal</code> has now a complexity score of zero.</p>\n<h4>Compliant solution</h4>\n<pre data-diff-id=\"3\" data-diff-type=\"compliant\">\nfunction calculateTotal(cart) {\n  let total = calculateSubtotal(cart);\n  total += calculateSalesTax(cart);\n  total += calculateShipping(cart);\n  return total;\n}\n\nfunction calculateSubtotal(cart) {\n  let subTotal = 0;\n  for (const item of cart) {        // +1 (for)\n    subTotal += item.price;\n  }\n  return subTotal;\n}\n\nfunction calculateSalesTax(cart) {\n  let salesTax = 0;\n  for (const item of cart) {        // +1 (for)\n    salesTax += 0.2 * item.price;\n  }\n  return salesTax;\n}\n\nfunction calculateShipping(cart) {\n  return 5 * cart.length;\n}\n</pre>\n<p><strong>Avoid deep nesting by returning early.</strong></p>\n<h4>Noncompliant code example</h4>\n<p>The below code has a cognitive complexity of 6.</p>\n<pre data-diff-id=\"4\" data-diff-type=\"noncompliant\">\nfunction calculateDiscount(price, user) {\n  if (isEligibleForDiscount(user)) {  // +1 ( if )\n    if (user?.hasMembership) {        // +2 ( nested if )\n      return price * 0.9;\n  } else if (user?.orders === 1 ) {   // +1 ( else )\n          return price * 0.95;\n    } else {                          // +1 ( else )\n      return price;\n    }\n  } else {                            // +1 ( else )\n    return price;\n  }\n}\n</pre>\n<h4>Compliant solution</h4>\n<p>Checking for the edge case first flattens the <code>if</code> statements and reduces the cognitive complexity to 3.</p>\n<pre data-diff-id=\"4\" data-diff-type=\"compliant\">\nfunction calculateDiscount(price, user) {\n    if (!isEligibleForDiscount(user)) {  // +1 ( if )\n      return price;\n    }\n    if (user?.hasMembership) {           // +1 ( if )\n      return price * 0.9;\n    }\n    if (user?.orders === 1) {            // +1 ( if )\n      return price * 0.95;\n    }\n    return price;\n}\n</pre>\n<p><strong>Use the optional chaining operator to access data.</strong></p>\n<p>In the below code, the cognitive complexity is increased due to the multiple checks required to access the manufacturer’s name. This can be\nsimplified using the optional chaining operator.</p>\n<h4>Noncompliant code example</h4>\n<pre data-diff-id=\"2\" data-diff-type=\"noncompliant\">\nlet manufacturerName = null;\n\nif (product &amp;&amp; product.details &amp;&amp; product.details.manufacturer) { // +1 (if) +1 (multiple condition)\n    manufacturerName = product.details.manufacturer.name;\n}\nif (manufacturerName) { // +1 (if)\n  console.log(manufacturerName);\n} else {\n  console.log('Manufacturer name not found');\n}\n</pre>\n<h4>Compliant solution</h4>\n<p>The optional chaining operator will return <code>undefined</code> if any reference in the chain is <code>undefined</code> or <code>null</code>,\navoiding multiple checks:</p>\n<pre data-diff-id=\"2\" data-diff-type=\"compliant\">\nlet manufacturerName = product?.details?.manufacturer?.name;\n\nif (manufacturerName) { // +1 (if)\n  console.log(manufacturerName);\n} else {\n  console.log('Manufacturer name not found');\n}\n</pre>\n<h3>Pitfalls</h3>\n<p>As this code is complex, ensure that you have unit tests that cover the code before refactoring.</p>"
+        },
+        {
+          "key": "introduction",
+          "content": "<p>This rule raises an issue when the code cognitive complexity of a function is above a certain threshold.</p>"
+        },
+        {
+          "key": "resources",
+          "content": "<h3>Documentation</h3>\n<ul>\n  <li>Sonar - <a href=\"https://www.sonarsource.com/docs/CognitiveComplexity.pdf\">Cognitive Complexity</a></li>\n</ul>\n<h3>Articles &amp; blog posts</h3>\n<ul>\n  <li>Sonar Blog - <a href=\"https://www.sonarsource.com/blog/5-clean-code-tips-for-reducing-cognitive-complexity/\">5 Clean Code Tips for Reducing\n  Cognitive Complexity</a></li>\n</ul>"
+        }
+      ],
+      "educationPrinciples": [],
+      "updatedAt": "2026-10-02T19:31:58+0800",
+      "cleanCodeAttribute": "FOCUSED",
+      "cleanCodeAttributeCategory": "ADAPTABLE",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ]
+    },
+    "actives": []
+  },
+  "javascript:S3782": {
+    "rule": {
+      "key": "javascript:S3782",
+      "repo": "javascript",
+      "name": "Arguments to built-in functions should match documented types",
+      "createdAt": "2026-10-02T19:31:58+0800",
+      "severity": "MAJOR",
+      "status": "READY",
+      "isTemplate": false,
+      "tags": [],
+      "sysTags": [
+        "type-dependent"
+      ],
+      "lang": "js",
+      "langName": "JavaScript",
+      "params": [],
+      "defaultDebtRemFnType": "CONSTANT_ISSUE",
+      "debtRemFnType": "CONSTANT_ISSUE",
+      "type": "CODE_SMELL",
+      "defaultRemFnType": "CONSTANT_ISSUE",
+      "defaultRemFnBaseEffort": "5min",
+      "remFnType": "CONSTANT_ISSUE",
+      "remFnBaseEffort": "5min",
+      "remFnOverloaded": false,
+      "scope": "MAIN",
+      "isExternal": false,
+      "descriptionSections": [
+        {
+          "key": "root_cause",
+          "content": "<p>The types of the arguments that built-in functions accept are specified in the JavaScript language specification. Calls to these functions should\nconform to the documented types as they are designed to work with specific data types. If the arguments passed to these functions do not match the\nexpected types, it can lead to type errors or unexpected behavior.</p>\n<p>Additionally, passing the correct types of arguments to built-in functions can improve performance by reducing the need for type conversions and\nother operations.</p>\n<pre data-diff-id=\"1\" data-diff-type=\"noncompliant\">\nconst isTooSmall = Math.abs(x &lt; 0.0042); // Noncompliant: 'Math.abs' takes a number as argument\n</pre>\n<p>Ensure that the arguments passed to built-in functions match the documented types. This is an important aspect of writing high-quality,\nmaintainable, and performant code. You can refer to the Mozilla Developer Network (MDN) documentation for the built-in functions. The documentation\ntypically includes information about the expected types of arguments, the return type of the function, and any other relevant details.</p>\n<pre data-diff-id=\"1\" data-diff-type=\"compliant\">\nconst isTooSmall = Math.abs(x) &lt; 0.0042;\n</pre>"
+        },
+        {
+          "key": "resources",
+          "content": "<h3>Documentation</h3>\n<ul>\n  <li>MDN web docs - <a href=\"https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects\">Global Objects</a></li>\n  <li>MDN web docs - <a href=\"https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#type_coercion\">Type coercion</a></li>\n</ul>"
+        }
+      ],
+      "educationPrinciples": [],
+      "updatedAt": "2026-10-02T19:31:58+0800",
+      "cleanCodeAttribute": "LOGICAL",
+      "cleanCodeAttributeCategory": "INTENTIONAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ]
+    },
+    "actives": []
+  },
+  "javascript:S4043": {
+    "rule": {
+      "key": "javascript:S4043",
+      "repo": "javascript",
+      "name": "Array-mutating methods should not be used misleadingly",
+      "createdAt": "2026-10-02T19:31:58+0800",
+      "severity": "MAJOR",
+      "status": "READY",
+      "isTemplate": false,
+      "tags": [],
+      "sysTags": [
+        "editable-source",
+        "type-dependent"
+      ],
+      "lang": "js",
+      "langName": "JavaScript",
+      "params": [],
+      "defaultDebtRemFnType": "CONSTANT_ISSUE",
+      "debtRemFnType": "CONSTANT_ISSUE",
+      "type": "CODE_SMELL",
+      "defaultRemFnType": "CONSTANT_ISSUE",
+      "defaultRemFnBaseEffort": "5min",
+      "remFnType": "CONSTANT_ISSUE",
+      "remFnBaseEffort": "5min",
+      "remFnOverloaded": false,
+      "scope": "MAIN",
+      "isExternal": false,
+      "descriptionSections": [
+        {
+          "key": "root_cause",
+          "content": "<p>In JavaScript, some <code>Array</code> methods do not mutate the existing array that the method was called on, but instead return a new array.\nOther methods mutate the array, and their return value differs depending on the method.</p>\n<p><code>reverse</code> and <code>sort</code> are mutating methods and, in addition, return the altered version. This rule raises an issue when the\nreturn values of these methods are assigned, which could lead maintainers to overlook the fact that the original array has been modified.</p>\n<pre data-diff-id=\"1\" data-diff-type=\"noncompliant\">\nconst reversed = a.reverse(); // Noncompliant: mutating method, no need to assign return value\nconst sorted = b.sort(); // Noncompliant: mutating method, no need to assign return value\n</pre>\n<p>Remove the assignment, so that the intent of mutating the original array is clear.</p>\n<pre data-diff-id=\"1\" data-diff-type=\"compliant\">\na.reverse();\nb.sort();\n</pre>\n<p>Or use non-mutating alternatives <code>toReversed</code> and <code>toSorted</code>.</p>\n<pre data-diff-id=\"1\" data-diff-type=\"compliant\">\nconst reversed = a.toReversed();\nconst sorted = b.toSorted();\n</pre>\n<p>Alternatively, change a mutating method into a non-mutating alternative using the spread syntax (<code>…​</code>).</p>\n<pre data-diff-id=\"1\" data-diff-type=\"compliant\">\nconst reversed = [...a].reverse();\nconst sorted = [...b].sort();\n</pre>\n<p>Or <code>slice()</code> to create a copy first.</p>\n<pre data-diff-id=\"1\" data-diff-type=\"compliant\">\nconst reversed = a.slice().reverse();\nconst sorted = b.slice().sort();\n</pre>"
+        },
+        {
+          "key": "resources",
+          "content": "<h3>Documentation</h3>\n<ul>\n  <li>MDN web docs - <a\n  href=\"https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array#copying_methods_and_mutating_methods\">Array copying\n  methods and mutating methods</a></li>\n  <li>MDN web docs - <a\n  href=\"https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/reverse\">Array.prototype.reverse()</a></li>\n  <li>MDN web docs - <a\n  href=\"https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort\">Array.prototype.sort()</a></li>\n  <li>MDN web docs - <a\n  href=\"https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/toReversed\">Array.prototype.toReversed()</a></li>\n  <li>MDN web docs - <a\n  href=\"https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/toSorted\">Array.prototype.toSorted()</a></li>\n  <li>MDN web docs - <a href=\"https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax\">Spread syntax\n  (<code>...</code>)</a></li>\n  <li>MDN web docs - <a\n  href=\"https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice\">Array.prototype.slice()</a></li>\n</ul>"
+        }
+      ],
+      "educationPrinciples": [],
+      "updatedAt": "2026-10-02T19:31:58+0800",
+      "cleanCodeAttribute": "CLEAR",
+      "cleanCodeAttributeCategory": "INTENTIONAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ]
+    },
+    "actives": []
+  },
+  "javascript:S7721": {
+    "rule": {
+      "key": "javascript:S7721",
+      "repo": "javascript",
+      "name": "Functions should be moved to the highest possible scope",
+      "createdAt": "2026-10-02T19:31:58+0800",
+      "severity": "MAJOR",
+      "status": "READY",
+      "isTemplate": false,
+      "tags": [],
+      "sysTags": [
+        "performance",
+        "optimization",
+        "editable-source",
+        "javascript"
+      ],
+      "lang": "js",
+      "langName": "JavaScript",
+      "params": [],
+      "defaultDebtRemFnType": "CONSTANT_ISSUE",
+      "debtRemFnType": "CONSTANT_ISSUE",
+      "type": "CODE_SMELL",
+      "defaultRemFnType": "CONSTANT_ISSUE",
+      "defaultRemFnBaseEffort": "5min",
+      "remFnType": "CONSTANT_ISSUE",
+      "remFnBaseEffort": "5min",
+      "remFnOverloaded": false,
+      "scope": "MAIN",
+      "isExternal": false,
+      "descriptionSections": [
+        {
+          "key": "introduction",
+          "content": "<p>This is an issue when a function is defined in a nested scope but doesn’t use any variables from that scope, meaning it could be moved to a higher\nscope.</p>"
+        },
+        {
+          "key": "root_cause",
+          "content": "<p>When functions are defined in nested scopes unnecessarily, it creates several problems:</p>\n<p><strong>Performance Impact</strong>: Functions defined inside other functions are recreated every time the outer function runs. This wastes memory\nand processing time, especially in frequently called code.</p>\n<p><strong>Engine Optimization</strong>: JavaScript engines like V8 have optimization limits. Functions in nested scopes are harder to optimize, which\ncan slow down your application.</p>\n<p><strong>Code Readability</strong>: Functions at higher scopes are easier to find and understand. When a function doesn’t depend on its surrounding\ncontext, placing it at the top level makes the code structure clearer.</p>\n<p><strong>Memory Usage</strong>: Each function instance takes up memory. Creating the same function repeatedly in nested scopes increases memory\nconsumption unnecessarily.</p>\n<p>The rule identifies functions that capture no variables from their enclosing scope, meaning they can be safely moved to a higher level without\nchanging their behavior.</p>\n<h3>What is the potential impact?</h3>\n<p>Moving functions to appropriate scopes improves application performance by reducing function recreation overhead and enabling better JavaScript\nengine optimizations. It also enhances code maintainability by making function dependencies clearer and reducing memory usage in frequently executed\ncode paths.</p>\n<h3>How to fix?</h3>\n<p>Move the function declaration to the module level when it doesn’t capture any variables from the enclosing scope.</p>\n<h4>Non-compliant code example</h4>\n<pre data-diff-id=\"1\" data-diff-type=\"noncompliant\">\nexport function doFoo(foo) {\n\t// Does not capture anything from the scope\n\tfunction doBar(bar) { // Noncompliant\n\t\treturn bar === 'bar';\n\t}\n\n\treturn doBar;\n}\n</pre>\n<h4>Compliant code example</h4>\n<pre data-diff-id=\"1\" data-diff-type=\"compliant\">\nfunction doBar(bar) {\n\treturn bar === 'bar';\n}\n\nexport function doFoo(foo) {\n\treturn doBar;\n}\n</pre>\n<h3>Documentation</h3>\n<ul>\n  <li><a href=\"https://github.com/sindresorhus/eslint-plugin-unicorn#readme\">eslint-plugin-unicorn</a> - Rule <a\n  href=\"https://github.com/sindresorhus/eslint-plugin-unicorn/blob/HEAD/docs/rules/consistent-function-scoping.md\">consistent-function-scoping</a></li>\n  <li>JavaScript Function Hoisting - <a href=\"https://developer.mozilla.org/en-US/docs/Glossary/Hoisting\">MDN documentation on JavaScript hoisting\n  behavior</a></li>\n</ul>\n<h3>Standards</h3>\n<ul>\n  <li>ESLint: prefer-const - <a href=\"https://eslint.org/docs/latest/rules/prefer-const\">Related ESLint rule for variable declaration\n  optimization</a></li>\n</ul>"
+        }
+      ],
+      "educationPrinciples": [],
+      "updatedAt": "2026-10-02T19:31:58+0800",
+      "cleanCodeAttribute": "EFFICIENT",
+      "cleanCodeAttributeCategory": "INTENTIONAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ]
+    },
+    "actives": []
+  },
+  "javascript:S7723": {
+    "rule": {
+      "key": "javascript:S7723",
+      "repo": "javascript",
+      "name": "Built-in constructors should be called consistently with or without \"new\"",
+      "createdAt": "2026-10-02T19:31:58+0800",
+      "severity": "MINOR",
+      "status": "READY",
+      "isTemplate": false,
+      "tags": [],
+      "sysTags": [
+        "convention"
+      ],
+      "lang": "js",
+      "langName": "JavaScript",
+      "params": [],
+      "defaultDebtRemFnType": "CONSTANT_ISSUE",
+      "debtRemFnType": "CONSTANT_ISSUE",
+      "type": "CODE_SMELL",
+      "defaultRemFnType": "CONSTANT_ISSUE",
+      "defaultRemFnBaseEffort": "5min",
+      "remFnType": "CONSTANT_ISSUE",
+      "remFnBaseEffort": "5min",
+      "remFnOverloaded": false,
+      "scope": "MAIN",
+      "isExternal": false,
+      "descriptionSections": [
+        {
+          "key": "introduction",
+          "content": "<p>This rule raises an issue when built-in constructors are called without the <code>new</code> keyword (except for <code>String</code>,\n<code>Number</code>, <code>Boolean</code>, <code>Symbol</code>, and <code>BigInt</code> which should not use <code>new</code>).</p>"
+        },
+        {
+          "key": "root_cause",
+          "content": "<p>JavaScript allows calling most built-in constructors both with and without the <code>new</code> keyword, but this inconsistency can lead to\nconfusion and unexpected behavior.</p>\n<p>For most built-in constructors like <code>Array</code>, <code>Object</code>, <code>Date</code>, <code>Map</code>, etc., both <code>Array()</code>\nand <code>new Array()</code> work the same way. However, using <code>new</code> makes the intent clearer - you are creating a new instance of an\nobject. This consistency helps other developers understand your code better.</p>\n<p>There are important exceptions: <code>String</code>, <code>Number</code>, <code>Boolean</code>, <code>Symbol</code>, and <code>BigInt</code> should\nNOT use <code>new</code>. When called without <code>new</code>, these functions convert values to primitive types. When called with <code>new</code>,\nthey create wrapper objects instead of primitives, which is rarely what you want and can cause unexpected behavior in comparisons and type checks.</p>\n<p>For example, <code>new String('hello')</code> creates a String object, while <code>String('hello')</code> creates a primitive string. The object\nversion behaves differently in boolean contexts and equality comparisons.</p>\n<h3>What is the potential impact?</h3>\n<p>Inconsistent constructor usage reduces code readability and maintainability. Using <code>new</code> with primitive wrapper constructors\n(<code>String</code>, <code>Number</code>, <code>Boolean</code>) creates wrapper objects that can cause subtle bugs in equality comparisons and type\nchecks, potentially leading to unexpected application behavior.</p>\n<h3>How to fix?</h3>\n<p>Add the <code>new</code> keyword when calling built-in constructors (except for primitive wrapper constructors).</p>\n<h4>Non-compliant code example</h4>\n<pre data-diff-id=\"1\" data-diff-type=\"noncompliant\">\nconst list = Array(10); // Noncompliant\nconst now = Date(); // Noncompliant\nconst map = Map([['foo', 'bar']]); // Noncompliant\n</pre>\n<h4>Compliant code example</h4>\n<pre data-diff-id=\"1\" data-diff-type=\"compliant\">\nconst list = new Array(10);\nconst now = new Date();\nconst map = new Map([['foo', 'bar']]);\n</pre>\n<h3>Exceptions</h3>\n<p>No issue is raised when <code>Object()</code> is called with one or more arguments. Calling <code>Object(value)</code> is a type coercion pattern\nthat converts the value to an object, preserving existing objects while wrapping primitives. This is semantically different from <code>new\nObject()</code> which creates a new empty object, and is a common pattern in polyfills and utility code.</p>\n<pre>\nconst obj = Object(value); // Compliant - type coercion\nconst wrapped = Object(this); // Compliant - commonly used in polyfills\n</pre>\n<h3>Documentation</h3>\n<ul>\n  <li><a href=\"https://github.com/sindresorhus/eslint-plugin-unicorn#readme\">eslint-plugin-unicorn</a> - Rule <a\n  href=\"https://github.com/sindresorhus/eslint-plugin-unicorn/blob/HEAD/docs/rules/new-for-builtins.md\">new-for-builtins</a></li>\n  <li>MDN - new operator - <a href=\"https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/new\">Documentation about the new\n  operator in JavaScript</a></li>\n  <li>MDN - String constructor - <a\n  href=\"https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/String\">Documentation about String constructor and the\n  difference between primitive strings and String objects</a></li>\n  <li>MDN - Primitive vs Object - <a href=\"https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#primitive_values\">Explanation of\n  primitive values vs objects in JavaScript</a></li>\n</ul>"
+        }
+      ],
+      "educationPrinciples": [],
+      "updatedAt": "2026-10-02T19:31:58+0800",
+      "cleanCodeAttribute": "CONVENTIONAL",
+      "cleanCodeAttributeCategory": "CONSISTENT",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "LOW"
+        },
+        {
+          "softwareQuality": "RELIABILITY",
+          "severity": "LOW"
+        }
+      ]
+    },
+    "actives": []
+  },
+  "javascript:S905": {
+    "rule": {
+      "key": "javascript:S905",
+      "repo": "javascript",
+      "name": "Non-empty statements should change control flow or have at least one side-effect",
+      "createdAt": "2026-10-02T19:31:58+0800",
+      "severity": "MAJOR",
+      "status": "READY",
+      "isTemplate": false,
+      "tags": [],
+      "sysTags": [
+        "cwe",
+        "unused"
+      ],
+      "lang": "js",
+      "langName": "JavaScript",
+      "params": [],
+      "defaultDebtRemFnType": "CONSTANT_ISSUE",
+      "debtRemFnType": "CONSTANT_ISSUE",
+      "type": "BUG",
+      "defaultRemFnType": "CONSTANT_ISSUE",
+      "defaultRemFnBaseEffort": "10min",
+      "remFnType": "CONSTANT_ISSUE",
+      "remFnBaseEffort": "10min",
+      "remFnOverloaded": false,
+      "scope": "MAIN",
+      "isExternal": false,
+      "descriptionSections": [
+        {
+          "key": "resources",
+          "content": "<h3>Documentation</h3>\n<ul>\n  <li><a href=\"https://typescript-eslint.io/\">typescript-eslint</a> - Rule <a\n  href=\"https://github.com/typescript-eslint/typescript-eslint/blob/main/packages/eslint-plugin/docs/rules/no-unused-expressions.mdx\">no-unused-expressions</a></li>\n</ul>\n<h3>Standards</h3>\n<ul>\n  <li>CWE - <a href=\"https://cwe.mitre.org/data/definitions/482\">CWE-482 Comparing instead of Assigning</a></li>\n</ul>"
+        },
+        {
+          "key": "introduction",
+          "content": "<p>Statements with no side effects and no change of control flow do not contribute to the functionality of the code and can indicate a programming\nerror.</p>"
+        },
+        {
+          "key": "root_cause",
+          "content": "<p>When writing code, it is important to ensure that each statement serves a purpose and contributes to the overall functionality of the program. When\nthey have no side effects or do not change the control flow, they can either indicate a programming error or be redundant:</p>\n<ol>\n  <li>The code does not behave as intended: The statements are expected to have an effect but they do not. This can be caused by mistyping,\n  copy-and-paste errors, etc.</li>\n  <li>The statements are residual after a refactoring.</li>\n</ol>\n<h3>Exceptions</h3>\n<p>The rule does not raise an issue on statements containing only a semicolon (<code>;</code>).</p>"
+        },
+        {
+          "key": "how_to_fix",
+          "content": "<p>Identify statements that do not contribute to the functionality of the code and verify if they are intended to be part of the logic. If they are,\nthere is a bug to be fixed. If they are not, then they are redundant and should be removed.</p>\n\n<h4>Noncompliant code example</h4>\n<pre data-diff-id=\"1\" data-diff-type=\"noncompliant\">\nfunction getResult() {\n    let result = 42;\n    if (shouldBeZero()) {\n        result == 0; // Noncompliant: no side effect, was an assignment intended?\n    }\n    return result;\n}\n</pre>\n<pre data-diff-id=\"2\" data-diff-type=\"noncompliant\">\nvar msg = \"Hello, \"\n  \"World!\"; // Noncompliant; have we forgotten '+' operator on previous line?\n</pre>\n<h4>Compliant solution</h4>\n<pre data-diff-id=\"1\" data-diff-type=\"compliant\">\nfunction getResult() {\n    let result = 42;\n    if (shouldBeZero()) {\n        result = 0; // Compliant\n    }\n    return result;\n}\n</pre>\n<pre data-diff-id=\"2\" data-diff-type=\"compliant\">\nvar msg = \"Hello, \" +\n  \"World!\"; // Compliant\n</pre>"
+        }
+      ],
+      "educationPrinciples": [],
+      "updatedAt": "2026-10-02T19:31:58+0800",
+      "cleanCodeAttribute": "CLEAR",
+      "cleanCodeAttributeCategory": "INTENTIONAL",
+      "impacts": [
+        {
+          "softwareQuality": "RELIABILITY",
+          "severity": "MEDIUM"
+        }
+      ]
+    },
+    "actives": []
+  },
+  "python:S1192": {
+    "rule": {
+      "key": "python:S1192",
+      "repo": "python",
+      "name": "String literals should not be duplicated",
+      "createdAt": "2026-10-02T19:31:57+0800",
+      "severity": "CRITICAL",
+      "status": "READY",
+      "isTemplate": false,
+      "tags": [],
+      "sysTags": [
+        "design"
+      ],
+      "lang": "py",
+      "langName": "Python",
+      "params": [
+        {
+          "key": "exclusionRegex",
+          "htmlDesc": "RegEx matching literals to exclude from triggering an issue",
+          "type": "STRING"
+        },
+        {
+          "key": "threshold",
+          "htmlDesc": "Number of times a literal must be duplicated to trigger an issue",
+          "defaultValue": "3",
+          "type": "INTEGER"
+        }
+      ],
+      "defaultDebtRemFnType": "LINEAR_OFFSET",
+      "debtRemFnType": "LINEAR_OFFSET",
+      "type": "CODE_SMELL",
+      "defaultRemFnType": "LINEAR_OFFSET",
+      "defaultRemFnGapMultiplier": "2min",
+      "defaultRemFnBaseEffort": "2min",
+      "remFnType": "LINEAR_OFFSET",
+      "remFnGapMultiplier": "2min",
+      "remFnBaseEffort": "2min",
+      "remFnOverloaded": false,
+      "gapDescription": "per duplicate instance",
+      "scope": "MAIN",
+      "isExternal": false,
+      "descriptionSections": [
+        {
+          "key": "root_cause",
+          "content": "<p>Duplicated string literals make the process of refactoring complex and error-prone, as any change would need to be propagated on all\noccurrences.</p>\n<h3>Exceptions</h3>\n<p>No issue will be raised on:</p>\n<ul>\n  <li>duplicated string in decorators</li>\n  <li>strings with less than 5 characters</li>\n  <li>strings with only letters, numbers and underscores</li>\n</ul>"
+        },
+        {
+          "key": "how_to_fix",
+          "content": "<p>Use constants to replace the duplicated string literals. Constants can be referenced from many places, but only need to be updated in a single\nplace.</p>\n\n<h4>Noncompliant code example</h4>\n<p>With the default threshold of 3:</p>\n<pre data-diff-id=\"1\" data-diff-type=\"noncompliant\">\ndef run():\n    prepare(\"action1\")  # Noncompliant - \"action1\" is duplicated 3 times\n    execute(\"action1\")\n    release(\"action1\")\n\n@app.route(\"/api/users/\", methods=['GET', 'POST', 'PUT'])\ndef users():\n    pass\n\n@app.route(\"/api/projects/\", methods=['GET', 'POST', 'PUT'])  # Compliant - strings inside decorators are ignored\ndef projects():\n    pass\n</pre>\n<h4>Compliant solution</h4>\n<pre data-diff-id=\"1\" data-diff-type=\"compliant\">\nACTION_1 = \"action1\"\n\ndef run():\n    prepare(ACTION_1)\n    execute(ACTION_1)\n    release(ACTION_1)\n</pre>"
+        }
+      ],
+      "educationPrinciples": [],
+      "updatedAt": "2026-10-02T19:31:57+0800",
+      "cleanCodeAttribute": "DISTINCT",
+      "cleanCodeAttributeCategory": "ADAPTABLE",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ]
+    },
+    "actives": []
+  },
+  "python:S125": {
+    "rule": {
+      "key": "python:S125",
+      "repo": "python",
+      "name": "Sections of code should not be commented out",
+      "createdAt": "2026-10-02T19:31:57+0800",
+      "severity": "MAJOR",
+      "status": "READY",
+      "isTemplate": false,
+      "tags": [],
+      "sysTags": [
+        "unused"
+      ],
+      "lang": "py",
+      "langName": "Python",
+      "params": [
+        {
+          "key": "exception",
+          "htmlDesc": "Regular expression used to ignore commented out code. Only a full match is excluded.",
+          "defaultValue": "(fmt|py\\w+):.*",
+          "type": "STRING"
+        }
+      ],
+      "defaultDebtRemFnType": "CONSTANT_ISSUE",
+      "debtRemFnType": "CONSTANT_ISSUE",
+      "type": "CODE_SMELL",
+      "defaultRemFnType": "CONSTANT_ISSUE",
+      "defaultRemFnBaseEffort": "5min",
+      "remFnType": "CONSTANT_ISSUE",
+      "remFnBaseEffort": "5min",
+      "remFnOverloaded": false,
+      "scope": "ALL",
+      "isExternal": false,
+      "descriptionSections": [
+        {
+          "key": "root_cause",
+          "content": "<p>Commented-out code distracts the focus from the actual executed code. It creates a noise that increases maintenance code. And because it is never\nexecuted, it quickly becomes out of date and invalid.</p>\n<p>Commented-out code should be deleted and can be retrieved from source control history if required.</p>"
+        }
+      ],
+      "educationPrinciples": [],
+      "updatedAt": "2026-10-02T19:31:57+0800",
+      "cleanCodeAttribute": "CLEAR",
+      "cleanCodeAttributeCategory": "INTENTIONAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ]
+    },
+    "actives": []
+  },
+  "python:S2245": {
+    "rule": {
+      "key": "python:S2245",
+      "repo": "python",
+      "name": "Pseudorandom number generators (PRNGs) should not be used in security contexts",
+      "createdAt": "2026-10-02T19:31:57+0800",
+      "severity": "MAJOR",
+      "status": "READY",
+      "isTemplate": false,
+      "tags": [],
+      "sysTags": [
+        "cwe",
+        "former-hotspot"
+      ],
+      "lang": "py",
+      "langName": "Python",
+      "params": [],
+      "defaultDebtRemFnType": "CONSTANT_ISSUE",
+      "debtRemFnType": "CONSTANT_ISSUE",
+      "type": "VULNERABILITY",
+      "defaultRemFnType": "CONSTANT_ISSUE",
+      "defaultRemFnBaseEffort": "10min",
+      "remFnType": "CONSTANT_ISSUE",
+      "remFnBaseEffort": "10min",
+      "remFnOverloaded": false,
+      "scope": "MAIN",
+      "isExternal": false,
+      "descriptionSections": [
+        {
+          "key": "how_to_fix",
+          "content": "<p>Use a cryptographically secure pseudorandom number generator (CSPRNG) instead of a non-cryptographic PRNG.</p>\n<h4>Noncompliant code example</h4>\n<pre data-diff-id=\"1\" data-diff-type=\"noncompliant\">\nimport random\n\nrandom.getrandbits(1) # Noncompliant\nrandom.randint(0,9) # Noncompliant\nrandom.random()  # Noncompliant\n\n# These functions are sometimes used to generate salts by selecting characters from a string:\nrandom.sample(['a', 'b'], 1)  # Noncompliant\nrandom.choice(['a', 'b'])  # Noncompliant\nrandom.choices(['a', 'b'])  # Noncompliant\n</pre>\n<h4>Compliant solution</h4>\n<pre data-diff-id=\"1\" data-diff-type=\"compliant\">\nimport secrets\nimport random\n\nsecrets.randbits(1)\nsecrets.randbelow(10)\nsecrets.token_hex(16)\n\nrandom.SystemRandom().sample(['a', 'b'], 1)\nsecrets.choice(['a', 'b'])\nrandom.SystemRandom().choices(['a', 'b'])\n</pre>"
+        },
+        {
+          "key": "resources",
+          "content": "<h3>Documentation</h3>\n<ul>\n  <li>OWASP - <a href=\"https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html#secure-random-number-generation\">Secure\n  Random Number Generation Cheat Sheet</a></li>\n</ul>\n<h3>Standards</h3>\n<ul>\n  <li>OWASP - <a href=\"https://owasp.org/Top10/A02_2021-Cryptographic_Failures/\">Top 10 2021 Category A2 - Cryptographic Failures</a></li>\n  <li>OWASP - <a href=\"https://owasp.org/www-project-top-ten/2017/A3_2017-Sensitive_Data_Exposure\">Top 10 2017 Category A3 - Sensitive Data\n  Exposure</a></li>\n  <li>CWE - <a href=\"https://cwe.mitre.org/data/definitions/338\">CWE-338 - Use of Cryptographically Weak Pseudo-Random Number Generator\n  (PRNG)</a></li>\n  <li>CWE - <a href=\"https://cwe.mitre.org/data/definitions/330\">CWE-330 - Use of Insufficiently Random Values</a></li>\n  <li>CWE - <a href=\"https://cwe.mitre.org/data/definitions/326\">CWE-326 - Inadequate Encryption Strength</a></li>\n  <li>CWE - <a href=\"https://cwe.mitre.org/data/definitions/1241\">CWE-1241 - Use of Predictable Algorithm in Random Number Generator</a></li>\n</ul>"
+        },
+        {
+          "key": "introduction",
+          "content": "<p>Pseudorandom number generators (PRNGs) produce sequences that only approximate true randomness and are not suitable for security-sensitive\ncontexts.</p>"
+        },
+        {
+          "key": "root_cause",
+          "content": "<p>When software generates predictable values in a context requiring unpredictability, an attacker who knows or can guess the internal state of the\nPRNG may predict the next value that will be generated. The rule flags the use of non-cryptographic PRNGs in contexts where a cryptographically secure\npseudorandom number generator (CSPRNG) is required, such as generating encryption keys, tokens, or other secret values.</p>\n<h3>What is the potential impact?</h3>\n<h4>Predictable values</h4>\n<p>If an attacker can predict the values generated by a PRNG, they may be able to guess session tokens, encryption keys, password reset links, or\nother secrets, leading to unauthorized access or impersonation.</p>\n<h4>Broken cryptography</h4>\n<p>Using a non-cryptographic PRNG to generate keys or initialization vectors weakens the security of the cryptographic scheme, potentially making it\ntrivially breakable.</p>"
+        }
+      ],
+      "educationPrinciples": [],
+      "updatedAt": "2026-10-02T19:31:57+0800",
+      "cleanCodeAttribute": "TRUSTWORTHY",
+      "cleanCodeAttributeCategory": "RESPONSIBLE",
+      "impacts": [
+        {
+          "softwareQuality": "SECURITY",
+          "severity": "MEDIUM"
+        }
+      ]
+    },
+    "actives": []
+  },
+  "python:S3415": {
+    "rule": {
+      "key": "python:S3415",
+      "repo": "python",
+      "name": "Assertion argument order should be consistent within a file",
+      "createdAt": "2026-10-02T19:31:57+0800",
+      "severity": "MAJOR",
+      "status": "READY",
+      "isTemplate": false,
+      "tags": [],
+      "sysTags": [
+        "tests",
+        "suspicious"
+      ],
+      "lang": "py",
+      "langName": "Python",
+      "params": [],
+      "defaultDebtRemFnType": "CONSTANT_ISSUE",
+      "debtRemFnType": "CONSTANT_ISSUE",
+      "type": "CODE_SMELL",
+      "defaultRemFnType": "CONSTANT_ISSUE",
+      "defaultRemFnBaseEffort": "2min",
+      "remFnType": "CONSTANT_ISSUE",
+      "remFnBaseEffort": "2min",
+      "remFnOverloaded": false,
+      "scope": "TEST",
+      "isExternal": false,
+      "descriptionSections": [
+        {
+          "key": "resources",
+          "content": "<h3>Documentation</h3>\n<ul>\n  <li>Python Documentation - <a href=\"https://docs.python.org/3/library/unittest.html#assert-methods\">unittest - Unit testing framework</a></li>\n  <li>pytest documentation - <a href=\"https://docs.pytest.org/en/stable/how-to/assert.html\">How to write and report assertions in tests</a></li>\n  <li>assertpy documentation - <a href=\"https://assertpy.github.io/docs.html\">assertpy docs</a></li>\n</ul>"
+        },
+        {
+          "key": "introduction",
+          "content": "<p>This rule raises an issue when a test file mixes both assertion argument-order conventions: some assertions put the actual value first, and others\nput the expected value first.</p>"
+        },
+        {
+          "key": "root_cause",
+          "content": "<p>Assertions check that the code under test produces the expected results. When you write an equality assertion, one operand is the value from the\ncode under test (the <strong>actual</strong> value) and the other is what you expect (the <strong>expected</strong> value).</p>\n<p>Python testing frameworks commonly recommend putting the expected value second (the actual value first):</p>\n<ul>\n  <li>In <code>unittest</code>, methods like <code>assertEqual()</code> and <code>assertIs()</code> take the actual value first and the expected value\n  second, for example <code>self.assertEqual(s.split(), ['hello', 'world'])</code>.</li>\n  <li>In <code>pytest</code>, equality assertions place the actual value on the left and the expected value on the right, for example <code>assert\n  result == 42</code>. Helpers such as <code>pytest.approx()</code> wrap the expected value on the right-hand side.</li>\n  <li>In <code>assertpy</code>, fluent assertions place the actual value in <code>assert_that(…​)</code> and the expected value in the assertion\n  method, such as <code>.is_equal_to(…​)</code>.</li>\n</ul>\n<p>This rule does not enforce that framework default. It does not raise when a file consistently uses a different order, including when every\nassertion puts the expected value first. It raises only when the same file mixes both orders: readers must then re-interpret each assertion, and\nfailure messages become harder to scan.</p>\n<p>The rule reports at most one issue per file. The primary location is the first assertion whose order can be determined. Two data flows group every\norder-determinable assertion in the file: one for actual-first usages and one for expected-first usages.</p>\n<p>A true positive is a file that mixes both orders among assertions whose operands can be classified. Using an order other than the framework’s\ndocumented default is fine as long as the file is consistent. Mid-migration inconsistency is still a true positive; finish unifying or temporarily\nsuppress the issue until the file is consistent. A false positive would mean the analyzer misclassified an operand (for example, treating a\nnon-constant expression as expected, or the reverse), so the reported \"mix\" is not real.</p>\n<h3>What is the potential impact?</h3>\n<p>Mixing conventions does not change whether tests pass or fail. It does make failures harder to read and slows down reviews, because each assertion\nmust be interpreted individually instead of following one file-wide pattern.</p>\n<p>For example, if one test writes <code>self.assertEqual(runner.exit_code, 0)</code> and another in the same file writes <code>self.assertEqual(0,\nrunner.exit_code)</code>, both may be correct in isolation, but the file no longer has a single readable convention.</p>"
+        },
+        {
+          "key": "how_to_fix",
+          "content": "<p>Unify the file so every order-determinable assertion follows the same convention. Prefer picking one convention for the whole file and swapping the\noperands of the assertions that use the other convention.</p>\n<p>Quick fixes can rewrite every mismatched assertion in the file in either direction: put all expected values second (actual first), or put all\nactual values second (expected first).</p>\n\n<h4>Noncompliant code example</h4>\n<pre data-diff-id=\"1\" data-diff-type=\"noncompliant\">\nimport unittest\n\nclass TestRunner(unittest.TestCase):\n    def test_exit_code(self):\n        runner = Runner()\n        self.assertEqual(0, runner.exit_code)  # Noncompliant; file mixes both orders\n        self.assertEqual(runner.name, \"ok\")\n</pre>\n<h4>Compliant solution</h4>\n<pre data-diff-id=\"1\" data-diff-type=\"compliant\">\nimport unittest\n\nclass TestRunner(unittest.TestCase):\n    def test_exit_code(self):\n        runner = Runner()\n        self.assertEqual(runner.exit_code, 0)\n        self.assertEqual(runner.name, \"ok\")\n</pre>\n<h4>Noncompliant code example</h4>\n<pre data-diff-id=\"2\" data-diff-type=\"noncompliant\">\nimport pytest\n\nEXPECTED_PI = 3.14\n\ndef test_calculation():\n    result = perform_calculation()\n    assert 3.14 == result  # Noncompliant; file mixes both orders\n    assert result == pytest.approx(EXPECTED_PI)\n</pre>\n<h4>Compliant solution</h4>\n<pre data-diff-id=\"2\" data-diff-type=\"compliant\">\nimport pytest\n\nEXPECTED_PI = 3.14\n\ndef test_calculation():\n    result = perform_calculation()\n    assert result == 3.14\n    assert result == pytest.approx(EXPECTED_PI)\n</pre>\n<h4>Noncompliant code example</h4>\n<pre data-diff-id=\"3\" data-diff-type=\"noncompliant\">\nfrom assertpy import assert_that\n\nEXPECTED_EXIT_CODE = 0\n\ndef test_exit_code():\n    runner = Runner()\n    assert_that(EXPECTED_EXIT_CODE).is_equal_to(runner.exit_code)  # Noncompliant; file mixes both orders\n    assert_that(runner.name).is_equal_to(\"ok\")\n</pre>\n<h4>Compliant solution</h4>\n<pre data-diff-id=\"3\" data-diff-type=\"compliant\">\nfrom assertpy import assert_that\n\nEXPECTED_EXIT_CODE = 0\n\ndef test_exit_code():\n    runner = Runner()\n    assert_that(runner.exit_code).is_equal_to(EXPECTED_EXIT_CODE)\n    assert_that(runner.name).is_equal_to(\"ok\")\n</pre>"
+        }
+      ],
+      "educationPrinciples": [],
+      "updatedAt": "2026-10-02T19:31:57+0800",
+      "cleanCodeAttribute": "LOGICAL",
+      "cleanCodeAttributeCategory": "INTENTIONAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ]
+    },
+    "actives": []
+  },
+  "python:S3776": {
+    "rule": {
+      "key": "python:S3776",
+      "repo": "python",
+      "name": "Cognitive Complexity of functions should not be too high",
+      "createdAt": "2026-10-02T19:31:57+0800",
+      "severity": "CRITICAL",
+      "status": "READY",
+      "isTemplate": false,
+      "tags": [],
+      "sysTags": [
+        "brain-overload"
+      ],
+      "lang": "py",
+      "langName": "Python",
+      "params": [
+        {
+          "key": "threshold",
+          "htmlDesc": "The maximum authorized complexity.",
+          "defaultValue": "15",
+          "type": "INTEGER"
+        }
+      ],
+      "defaultDebtRemFnType": "LINEAR_OFFSET",
+      "debtRemFnType": "LINEAR_OFFSET",
+      "type": "CODE_SMELL",
+      "defaultRemFnType": "LINEAR_OFFSET",
+      "defaultRemFnGapMultiplier": "1min",
+      "defaultRemFnBaseEffort": "5min",
+      "remFnType": "LINEAR_OFFSET",
+      "remFnGapMultiplier": "1min",
+      "remFnBaseEffort": "5min",
+      "remFnOverloaded": false,
+      "gapDescription": "per complexity point over the threshold",
+      "scope": "ALL",
+      "isExternal": false,
+      "descriptionSections": [
+        {
+          "key": "root_cause",
+          "content": "<p>Cognitive Complexity is a measure of how hard it is to understand the control flow of a unit of code. Code with high cognitive complexity is hard\nto read, understand, test, and modify.</p>\n<p>As a rule of thumb, high cognitive complexity is a sign that the code should be refactored into smaller, easier-to-manage pieces.</p>\n<h3>Which syntax in code does impact cognitive complexity score?</h3>\n<p>Here are the core concepts:</p>\n<ul>\n  <li><strong>Cognitive complexity is incremented each time the code breaks the normal linear reading flow.</strong>\n    <br>\n    This concerns, for example, loop structures, conditionals, catches, switches, jumps to labels, and conditions mixing multiple operators.</li>\n  <li><strong>Each nesting level increases complexity.</strong>\n    <br>\n    During code reading, the deeper you go through nested layers, the harder it becomes to keep the context in mind.</li>\n  <li><strong>Method calls are free</strong>\n    <br>\n    A well-picked method name is a summary of multiple lines of code. A reader can first explore a high-level view of what the code is performing then\n    go deeper and deeper by looking at called functions content.\n    <br>\n    <em>Note:</em> This does not apply to recursive calls, those will increment cognitive score.</li>\n</ul>\n<p>The method of computation is fully detailed in the pdf linked in the resources.</p>\n<h3>What is the potential impact?</h3>\n<p>Developers spend more time reading and understanding code than writing it. High cognitive complexity slows down changes and increases the cost of\nmaintenance.</p>"
+        },
+        {
+          "key": "how_to_fix",
+          "content": "<p>Reducing cognitive complexity can be challenging.\n  <br>\n  Here are a few suggestions:</p>\n<ul>\n  <li><strong>Extract complex conditions in a new function.</strong>\n    <br>\n    Mixed operators in condition will increase complexity. Extracting the condition in a new function with an appropriate name will reduce cognitive\n    load.</li>\n  <li><strong>Break down large functions.</strong>\n    <br>\n    Large functions can be hard to understand and maintain. If a function is doing too many things, consider breaking it down into smaller, more\n    manageable functions. Each function should have a single responsibility.</li>\n  <li><strong>Avoid deep nesting by returning early.</strong>\n    <br>\n    To avoid the nesting of conditions, process exceptional cases first and return early.</li>\n</ul>\n\n<p><strong>Extraction of a complex condition in a new function.</strong></p>\n<h4>Noncompliant code example</h4>\n<p>The code is using a complex condition and has a cognitive cost of 5.</p>\n<pre data-diff-id=\"1\" data-diff-type=\"noncompliant\">\ndef process_eligible_users(users):\n    for user in users:             # +1 (for)\n        if ((user.is_active and    # +1 (if) +1 (nested) +1 (multiple conditions)\n            user.has_profile) or   # +1 (mixed operator)\n            user.age &gt; 18 ):\n            user.process()\n</pre>\n<h4>Compliant solution</h4>\n<p>Even if the cognitive complexity of the whole program did not change, it is easier for a reader to understand the code of the\n<code>process_eligible_users</code> function, which now only has a cognitive cost of 3.</p>\n<pre data-diff-id=\"1\" data-diff-type=\"compliant\">\ndef process_eligible_users(users):\n    for user in users:             # +1 (for)\n        if is_eligible_user(user): # +1 (if) +1 (nested)\n            user.process()\n\ndef is_eligible_user(user):\n    return ((user.is_active and user.has_profile) or user.age &gt; 18) # +1 (multiple conditions) +1 (mixed operators)\n</pre>\n<p><strong>Break down large functions.</strong></p>\n<h4>Noncompliant code example</h4>\n<p><em>Note:</em> The code is simplified here, to illustrate the purpose. Please imagine there is more happening in the process.\n  <br></p>\n<p>The bellow code has a cognitive complexity score of 8.</p>\n<pre data-diff-id=\"3\" data-diff-type=\"noncompliant\">\ndef process_user(user):\n    if user.is_active():             # +1 (if)\n        if user.has_profile():       # +1 (if) +1 (nested)\n            ... # process active user with profile\n        else:                        # +1 (else)\n            ... # process active user without profile\n    else:                            # +1 (else)\n        if user.has_profile():       # +1 (if) +1 (nested)\n            ... # process inactive user with profile\n        else:                        # +1 (else)\n            ... # process inactive user without profile\n</pre>\n<p>This function could be refactored into smaller functions: The complexity is spread over multiple functions and the breaks in flow are no more\nnested.\n  <br>\n  The <code>process_user</code> has now a complexity score of two.</p>\n<h4>Compliant solution</h4>\n<pre data-diff-id=\"3\" data-diff-type=\"compliant\">\ndef process_user(user):\n    if user.is_active():             # +1 (if)\n        process_active_user(user)\n    else:                            # +1 (else)\n        process_inactive_user(user)\n\ndef process_active_user(user):\n    if user.has_profile():           # +1 (if) +1 (nested)\n        ... # process active user with profile\n    else:                            # +1 (else)\n        ... # process active user without profile\n\ndef process_inactive_user(user):\n    if user.has_profile():           # +1 (if) +1 (nested)\n        ... # process inactive user with profile\n    else:                            # +1 (else)\n        ... # process inactive user without profile\n</pre>\n<p><strong>Avoid deep nesting by returning early.</strong></p>\n<h4>Noncompliant code example</h4>\n<p>The below code has a cognitive complexity of 6.</p>\n<pre data-diff-id=\"4\" data-diff-type=\"noncompliant\">\ndef calculate(data):\n    if data is not None:  # +1 (if)\n        total = 0\n        for item in data: # +1 (for) +1 (nested)\n            if item &gt; 0:  # +1 (if)  +2 (nested)\n                total += item * 2\n        return total\n</pre>\n<h4>Compliant solution</h4>\n<p>Checking for the edge case first flattens the <code>if</code> statements and reduces the cognitive complexity to 4.</p>\n<pre data-diff-id=\"4\" data-diff-type=\"compliant\">\ndef calculate(data):\n    if data is None:      # +1 (if)\n        return None\n    total = 0\n    for item in data:     # +1 (for)\n        if item &gt; 0:      # +1 (if) +1 (nested)\n            total += item * 2\n    return total\n</pre>\n<h3>Pitfalls</h3>\n<p>As this code is complex, ensure that you have unit tests that cover the code before refactoring.</p>"
+        },
+        {
+          "key": "introduction",
+          "content": "<p>This rule raises an issue when the code cognitive complexity of a function is above a certain threshold.</p>"
+        },
+        {
+          "key": "resources",
+          "content": "<h3>Documentation</h3>\n<ul>\n  <li>Sonar - <a href=\"https://www.sonarsource.com/docs/CognitiveComplexity.pdf\">Cognitive Complexity</a></li>\n</ul>\n<h3>Articles &amp; blog posts</h3>\n<ul>\n  <li>Sonar Blog - <a href=\"https://www.sonarsource.com/blog/5-clean-code-tips-for-reducing-cognitive-complexity/\">5 Clean Code Tips for Reducing\n  Cognitive Complexity</a></li>\n</ul>"
+        }
+      ],
+      "educationPrinciples": [],
+      "updatedAt": "2026-10-02T19:31:57+0800",
+      "cleanCodeAttribute": "FOCUSED",
+      "cleanCodeAttributeCategory": "ADAPTABLE",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ]
+    },
+    "actives": []
+  },
+  "python:S5332": {
+    "rule": {
+      "key": "python:S5332",
+      "repo": "python",
+      "name": "Clear-text protocols should not be used",
+      "createdAt": "2026-10-02T19:31:57+0800",
+      "severity": "MINOR",
+      "status": "READY",
+      "isTemplate": false,
+      "tags": [],
+      "sysTags": [
+        "cwe",
+        "former-hotspot"
+      ],
+      "lang": "py",
+      "langName": "Python",
+      "params": [],
+      "defaultDebtRemFnType": "CONSTANT_ISSUE",
+      "debtRemFnType": "CONSTANT_ISSUE",
+      "type": "VULNERABILITY",
+      "defaultRemFnType": "CONSTANT_ISSUE",
+      "defaultRemFnBaseEffort": "30min",
+      "remFnType": "CONSTANT_ISSUE",
+      "remFnBaseEffort": "30min",
+      "remFnOverloaded": false,
+      "scope": "MAIN",
+      "isExternal": false,
+      "descriptionSections": [
+        {
+          "key": "how_to_fix",
+          "content": "<p>The following code uses a clear-text protocol or disables encryption for a network connection, leaving transmitted data exposed to\ninterception.</p>\n<h4>Noncompliant code example</h4>\n<p>For <a\nhref=\"https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_elasticache/CfnReplicationGroup.html\">aws_cdk.aws_elasticache.CfnReplicationGroup</a>:</p>\n<pre data-diff-id=\"3\" data-diff-type=\"noncompliant\">\nfrom aws_cdk import (\n    aws_elasticache as elasticache\n)\n\nelasticache.CfnReplicationGroup(\n    self,\n    \"example-explicit\",\n    replication_group_description=\"a replication group\",\n    automatic_failover_enabled=False,\n    transit_encryption_enabled=False, # Noncompliant\n    cache_subnet_group_name=\"test\",\n    engine=\"redis\",\n    engine_version=\"3.2.6\",\n    num_cache_clusters=1,\n    cache_node_type=\"cache.t2.micro\"\n)\n\nelasticache.CfnReplicationGroup( # Noncompliant: encryption is disabled by default\n    self,\n    \"example-implicit\",\n    replication_group_description=\"a replication group\",\n    automatic_failover_enabled=False,\n    cache_subnet_group_name=\"test\",\n    engine=\"redis\",\n    engine_version=\"3.2.6\",\n    num_cache_clusters=1,\n    cache_node_type=\"cache.t2.micro\"\n)\n</pre>\n<h4>Compliant solution</h4>\n<pre data-diff-id=\"3\" data-diff-type=\"compliant\">\nfrom aws_cdk import (\n    aws_elasticache as elasticache\n)\n\nelasticache.CfnReplicationGroup(\n    self,\n    \"example-explicit\",\n    replication_group_description=\"a test replication group\",\n    automatic_failover_enabled=False,\n    transit_encryption_enabled=True,\n    cache_subnet_group_name=\"test\",\n    engine=\"redis\",\n    engine_version=\"3.2.6\",\n    num_cache_clusters=1,\n    cache_node_type=\"cache.t2.micro\"\n)\n</pre>",
+          "context": {
+            "displayName": "Amazon ElastiCache",
+            "key": "amazon_elasticache"
+          }
+        },
+        {
+          "key": "how_to_fix",
+          "content": "<p>The following code uses a clear-text protocol or disables encryption for a network connection, leaving transmitted data exposed to\ninterception.</p>\n<h4>Noncompliant code example</h4>\n<p>For <a href=\"https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_kinesis/CfnStream.html\">aws_cdk.aws_kinesis.CfnStream</a>:</p>\n<pre data-diff-id=\"4\" data-diff-type=\"noncompliant\">\nfrom aws_cdk import (\n    aws_kinesis as kinesis,\n)\n\nkinesis.CfnStream( # Noncompliant: encryption is disabled by default for CfnStreams\n    self,\n    \"example-cfnstream-implicit\",\n    shard_count=1\n)\n\nkinesis.CfnStream(self,\n    \"example-cfnstream-explicit\",\n    shard_count=1,\n    stream_encryption=None # Noncompliant\n)\n</pre>\n<p>For <a href=\"https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_kinesis/Stream.html\">aws_cdk.aws_kinesis.Stream</a>:</p>\n<pre data-diff-id=\"5\" data-diff-type=\"noncompliant\">\nfrom aws_cdk import (\n    aws_kinesis as kinesis,\n)\n\nstream = kinesis.Stream(self,\n    \"example-stream\",\n    shard_count=1,\n    encryption=kinesis.StreamEncryption.UNENCRYPTED # Noncompliant\n)\n</pre>\n<h4>Compliant solution</h4>\n<pre data-diff-id=\"4\" data-diff-type=\"compliant\">\nfrom aws_cdk import (\n    aws_kinesis as kinesis,\n)\n\nkinesis.CfnStream(\n    self,\n    \"example-cfnstream-explicit\",\n    shard_count=1,\n    stream_encryption=kinesis.CfnStream.StreamEncryptionProperty(\n        encryption_type=\"KMS\",\n        key_id=\"alias/aws/kinesis\"\n    )\n)\n</pre>\n<pre data-diff-id=\"5\" data-diff-type=\"compliant\">\nfrom aws_cdk import (\n    aws_kinesis as kinesis,\n    aws_kms as kms\n)\n\nstream = kinesis.Stream( # Encryption is enabled by default for Streams\n    self,\n    \"example-stream\",\n    shard_count=1\n)\n\nstream = kinesis.Stream(\n    self,\n    \"example-stream-managed\",\n    shard_count=1,\n    encryption=kinesis.StreamEncryption.MANAGED\n)\n</pre>\n<h2>Exceptions</h2>\n<p>No issue is reported for the following cases:</p>\n<ul>\n  <li>URLs whose host resolves only within a private runtime environment and is not reachable from the public internet (including loopback and cloud\n  metadata hosts)</li>\n  <li>Well-known namespace URI authorities used in in XML, JSON-LD, RDF, or similar formats (for example, <code>www.w3.org</code>,\n  <code>schemas.android.com</code>, <code>schema.org</code>).</li>\n  <li>IANA-reserved documentation and test domains like <code>example.com</code>, <code>example.net</code>, <code>example.org</code> (RFC 6761). These\n  are almost always placeholders in source code, not real connection targets.</li>\n</ul>",
+          "context": {
+            "displayName": "AWS Kinesis",
+            "key": "aws_kinesis"
+          }
+        },
+        {
+          "key": "how_to_fix",
+          "content": "<p>The following code uses a clear-text protocol or disables encryption for a network connection, leaving transmitted data exposed to\ninterception.</p>\n<h4>Noncompliant code example</h4>\n<pre data-diff-id=\"1\" data-diff-type=\"noncompliant\">\nurl = \"http://example.com\" # Noncompliant\nurl = \"ftp://anonymous@example.com\" # Noncompliant\nurl = \"telnet://anonymous@example.com\" # Noncompliant\n\nimport telnetlib\ncnx = telnetlib.Telnet(\"telnet.example.com\") # Noncompliant\n\nimport ftplib\ncnx = ftplib.FTP(\"ftp.example.com\") # Noncompliant\n\nimport smtplib\nsmtp = smtplib.SMTP(\"smtp.example.com\", port=587) # Noncompliant\n</pre>\n<h4>Compliant solution</h4>\n<pre data-diff-id=\"1\" data-diff-type=\"compliant\">\nurl = \"https://example.com\"\nurl = \"sftp://anonymous@example.com\"\nurl = \"ssh://anonymous@example.com\"\n\nimport ftplib\ncnx = ftplib.FTP_TLS(\"ftp.example.com\")\n\nimport smtplib\nsmtp = smtplib.SMTP(\"smtp.example.com\", port=587)\nsmtp.starttls(context=context)\n\nsmtp_ssl = smtplib.SMTP_SSL(\"smtp.example.com\", port=465)\n</pre>",
+          "context": {
+            "displayName": "Python Standard Library",
+            "key": "python_standard_library"
+          }
+        },
+        {
+          "key": "how_to_fix",
+          "content": "<p>The following code uses a clear-text protocol or disables encryption for a network connection, leaving transmitted data exposed to\ninterception.</p>\n<h4>Noncompliant code example</h4>\n<p>For <a\nhref=\"https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_elasticloadbalancingv2/ApplicationLoadBalancer.html\">aws_cdk.aws_elasticloadbalancingv2.ApplicationLoadBalancer</a>:</p>\n<pre data-diff-id=\"2\" data-diff-type=\"noncompliant\">\nfrom aws_cdk import (\n    aws_elasticloadbalancingv2 as elbv2,\n)\n\nlb = elbv2.ApplicationLoadBalancer(\n    self,\n    \"LB\",\n    vpc=vpc,\n    internet_facing=True\n)\n\nlb.add_listener(\n    \"Listener-default\",\n    port=80, # Noncompliant\n    open=True\n)\nlb.add_listener(\n    \"Listener-http-explicit\",\n    protocol=elbv2.ApplicationProtocol.HTTP, # Noncompliant\n    port=8080,\n    open=True\n)\n</pre>\n<h4>Compliant solution</h4>\n<pre data-diff-id=\"2\" data-diff-type=\"compliant\">\nfrom aws_cdk import (\n    aws_elasticloadbalancingv2 as elbv2,\n)\n\nlb = elbv2.ApplicationLoadBalancer(\n    self,\n    \"LB\",\n    vpc=vpc,\n    internet_facing=True\n)\n\nlb.add_listener(\n    \"Listener-https-explicit\",\n    protocol=elbv2.ApplicationProtocol.HTTPS,\n    certificates=[elbv2.ListenerCertificate(\"certificateARN\")],\n    port=443,\n    open=True\n)\n\nlb.add_listener(\n    \"Listener-https-implicit\",\n    certificates=[elbv2.ListenerCertificate(\"certificateARN\")],\n    port=8443,\n    open=True\n)\n</pre>",
+          "context": {
+            "displayName": "AWS Elastic Load Balancing",
+            "key": "aws_elastic_load_balancing"
+          }
+        },
+        {
+          "key": "root_cause",
+          "content": "<p>An attacker who can observe network traffic — for example through a compromised network device, a position on the same network segment, or a cloud\nenvironment breach — can read, modify, or inject data sent over <code>ftp</code>, <code>telnet</code>, <code>http</code>, or unencrypted SMTP without\ndetection. This is true even on internal or isolated networks, where insider threats or lateral movement after an initial compromise can expose\nunencrypted traffic. This rule raises an issue when a clear-text protocol scheme is used or when encryption is explicitly disabled for a network\nconnection.</p>\n<h3>What is the potential impact?</h3>\n<h4>Sensitive data exposure</h4>\n<p>An attacker who can intercept network traffic can read all data transmitted over clear-text connections, including credentials, session tokens, API\nkeys, or personal data.</p>\n<h4>Data tampering</h4>\n<p>Because clear-text protocols provide no integrity protection, an attacker in a man-in-the-middle position can silently modify data in transit —\nredirecting users to malicious endpoints, injecting malicious content into responses, or altering commands sent to remote services.</p>"
+        },
+        {
+          "key": "introduction",
+          "content": "<p>Using clear-text protocols exposes data in transit to eavesdropping and man-in-the-middle attacks.</p>"
+        },
+        {
+          "key": "resources",
+          "content": "<h3>Documentation</h3>\n<ul>\n  <li>AWS Documentation - <a href=\"https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-listeners.html\">Listeners for\n  your Application Load Balancers</a></li>\n  <li>AWS Documentation - <a\n  href=\"https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-kinesis-stream-streamencryption.html\">Stream Encryption</a></li>\n</ul>\n<h3>Articles &amp; blog posts</h3>\n<ul>\n  <li>Google - <a href=\"https://security.googleblog.com/2016/09/moving-towards-more-secure-web.html\">Moving towards more secure web</a></li>\n  <li>Mozilla - <a href=\"https://blog.mozilla.org/security/2015/04/30/deprecating-non-secure-http/\">Deprecating non secure http</a></li>\n</ul>\n<h3>Standards</h3>\n<ul>\n  <li>OWASP - <a href=\"https://owasp.org/www-project-top-ten/2017/A3_2017-Sensitive_Data_Exposure\">Top 10 2017 Category A3 - Sensitive Data\n  Exposure</a></li>\n  <li>OWASP - <a href=\"https://owasp.org/Top10/A02_2021-Cryptographic_Failures/\">Top 10 2021 Category A2 - Cryptographic Failures</a></li>\n  <li>CWE - <a href=\"https://cwe.mitre.org/data/definitions/200\">CWE-200 - Exposure of Sensitive Information to an Unauthorized Actor</a></li>\n  <li>CWE - <a href=\"https://cwe.mitre.org/data/definitions/319\">CWE-319 - Cleartext Transmission of Sensitive Information</a></li>\n  <li>STIG Viewer - <a href=\"https://stigviewer.com/stigs/application_security_and_development/2024-12-06/finding/V-222397\">Application Security and\n  Development: V-222397</a> - The application must implement cryptographic mechanisms to protect the integrity of remote access sessions.</li>\n  <li>STIG Viewer - <a href=\"https://stigviewer.com/stigs/application_security_and_development/2024-12-06/finding/V-222534\">Application Security and\n  Development: V-222534</a> - Service-Oriented Applications handling non-releasable data must authenticate endpoint devices via mutual SSL/TLS.</li>\n  <li>STIG Viewer - <a href=\"https://stigviewer.com/stigs/application_security_and_development/2024-12-06/finding/V-222562\">Application Security and\n  Development: V-222562</a> - Applications used for non-local maintenance must implement cryptographic mechanisms to protect the integrity of\n  maintenance and diagnostic communications.</li>\n  <li>STIG Viewer - <a href=\"https://stigviewer.com/stigs/application_security_and_development/2024-12-06/finding/V-222563\">Application Security and\n  Development: V-222563</a> - Applications used for non-local maintenance must implement cryptographic mechanisms to protect the confidentiality of\n  maintenance and diagnostic communications.</li>\n  <li>STIG Viewer - <a href=\"https://stigviewer.com/stigs/application_security_and_development/2024-12-06/finding/V-222577\">Application Security and\n  Development: V-222577</a> - The application must not expose session IDs.</li>\n  <li>STIG Viewer - <a href=\"https://stigviewer.com/stigs/application_security_and_development/2024-12-06/finding/V-222596\">Application Security and\n  Development: V-222596</a> - The application must protect the confidentiality and integrity of transmitted information.</li>\n  <li>STIG Viewer - <a href=\"https://stigviewer.com/stigs/application_security_and_development/2024-12-06/finding/V-222597\">Application Security and\n  Development: V-222597</a> - The application must implement cryptographic mechanisms to prevent unauthorized disclosure of information and/or detect\n  changes to information during transmission.</li>\n  <li>STIG Viewer - <a href=\"https://stigviewer.com/stigs/application_security_and_development/2024-12-06/finding/V-222598\">Application Security and\n  Development: V-222598</a> - The application must maintain the confidentiality and integrity of information during preparation for transmission.</li>\n  <li>STIG Viewer - <a href=\"https://stigviewer.com/stigs/application_security_and_development/2024-12-06/finding/V-222599\">Application Security and\n  Development: V-222599</a> - The application must maintain the confidentiality and integrity of information during reception.</li>\n</ul>"
+        }
+      ],
+      "educationPrinciples": [],
+      "updatedAt": "2026-10-02T19:31:57+0800",
+      "cleanCodeAttribute": "COMPLETE",
+      "cleanCodeAttributeCategory": "INTENTIONAL",
+      "impacts": [
+        {
+          "softwareQuality": "SECURITY",
+          "severity": "LOW"
+        }
+      ]
+    },
+    "actives": []
+  },
+  "python:S5778": {
+    "rule": {
+      "key": "python:S5778",
+      "repo": "python",
+      "name": "Only one method invocation is expected when testing runtime exceptions",
+      "createdAt": "2026-10-02T19:31:57+0800",
+      "severity": "MAJOR",
+      "status": "READY",
+      "isTemplate": false,
+      "tags": [],
+      "sysTags": [
+        "tests",
+        "pytest",
+        "unittest"
+      ],
+      "lang": "py",
+      "langName": "Python",
+      "params": [],
+      "defaultDebtRemFnType": "CONSTANT_ISSUE",
+      "debtRemFnType": "CONSTANT_ISSUE",
+      "type": "CODE_SMELL",
+      "defaultRemFnType": "CONSTANT_ISSUE",
+      "defaultRemFnBaseEffort": "5min",
+      "remFnType": "CONSTANT_ISSUE",
+      "remFnBaseEffort": "5min",
+      "remFnOverloaded": false,
+      "scope": "TEST",
+      "isExternal": false,
+      "descriptionSections": [
+        {
+          "key": "how_to_fix",
+          "content": "<p>When using unittest’s <code>assertRaises()</code> method, extract intermediate method calls before the assertion. This makes it clear which\nspecific method is being tested for the exception.</p>\n\n<h4>Noncompliant code example</h4>\n<pre data-diff-id=\"2\" data-diff-type=\"noncompliant\">\nimport unittest\n\nclass TestPayment(unittest.TestCase):\n    def test_normalize_rejects_negative_amount(self):\n        self.assertRaises(ValueError, lambda: parse_payment(payload).normalize())  # Noncompliant\n</pre>\n<h4>Compliant solution</h4>\n<pre data-diff-id=\"2\" data-diff-type=\"compliant\">\nimport unittest\n\nclass TestPayment(unittest.TestCase):\n    def test_normalize_rejects_negative_amount(self):\n        payment = parse_payment(payload)\n        self.assertRaises(ValueError, payment.normalize)\n</pre>",
+          "context": {
+            "displayName": "unittest",
+            "key": "unittest"
+          }
+        },
+        {
+          "key": "root_cause",
+          "content": "<p>When writing tests for exception handling, clarity is essential. If you chain multiple method calls within the code being tested for an exception,\nit becomes ambiguous which specific call is expected to raise that exception.</p>\n<p>For example, both <code>parse_payment(payload)</code> and <code>normalize()</code> could raise a <code>ValueError</code>:</p>\n<pre>\nwith pytest.raises(ValueError):\n    parse_payment(payload).normalize()\n</pre>\n<p>The test does not make it explicit which method is expected to raise the exception. This ambiguity makes the test harder to read and maintain.</p>\n<p>By isolating the method call you want to test, you make your test explicit and unambiguous. This improves readability and maintainability, and\nmakes your test suite a better specification of expected behavior.</p>\n<h3>What is the potential impact?</h3>\n<p>Writing tests with multiple method calls when testing for exceptions reduces test quality:</p>\n<ul>\n  <li><strong>Incorrect test coverage</strong>: You may think you’re testing one method’s exception behavior when you’re actually testing\n  another’s.</li>\n  <li><strong>Maintenance burden</strong>: Other developers (or future you) will struggle to understand what the test is verifying.</li>\n  <li><strong>Reduced confidence</strong>: Passing tests don’t guarantee that the specific behavior you intended to test is working correctly.</li>\n</ul>"
+        },
+        {
+          "key": "resources",
+          "content": "<h3>Documentation</h3>\n<ul>\n  <li>pytest documentation - <a href=\"https://docs.pytest.org/en/stable/how-to/assert.html#assertions-about-expected-exceptions\">Official pytest guide\n  on testing exceptions</a></li>\n  <li>unittest documentation - <a href=\"https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertRaises\">Python standard library\n  documentation on assertRaises</a></li>\n</ul>"
+        },
+        {
+          "key": "how_to_fix",
+          "content": "<p>When using pytest’s <code>pytest.raises()</code> context manager, extract intermediate method calls into separate variables before the assertion.\nThis ensures only the final method call that you want to test is inside the exception-testing block.</p>\n\n<h4>Noncompliant code example</h4>\n<pre data-diff-id=\"1\" data-diff-type=\"noncompliant\">\nimport pytest\n\ndef test_normalize_rejects_negative_amount():\n    with pytest.raises(ValueError):  # Noncompliant\n        parse_payment(payload).normalize()\n</pre>\n<h4>Compliant solution</h4>\n<pre data-diff-id=\"1\" data-diff-type=\"compliant\">\nimport pytest\n\ndef test_normalize_rejects_negative_amount():\n    payment = parse_payment(payload)\n    with pytest.raises(ValueError):\n        payment.normalize()\n</pre>",
+          "context": {
+            "displayName": "pytest",
+            "key": "pytest"
+          }
+        },
+        {
+          "key": "introduction",
+          "content": "<p>This rule raises an issue when a test for an expected exception contains multiple method calls, making it unclear which call is expected to raise\nthe exception.</p>"
+        }
+      ],
+      "educationPrinciples": [],
+      "updatedAt": "2026-10-02T19:31:57+0800",
+      "cleanCodeAttribute": "CLEAR",
+      "cleanCodeAttributeCategory": "INTENTIONAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ]
+    },
+    "actives": []
+  },
+  "python:S7498": {
+    "rule": {
+      "key": "python:S7498",
+      "repo": "python",
+      "name": "Literal syntax should be preferred when creating empty collections or dictionaries with keyword arguments",
+      "createdAt": "2026-10-02T19:31:57+0800",
+      "severity": "MINOR",
+      "status": "READY",
+      "isTemplate": false,
+      "tags": [],
+      "sysTags": [],
+      "lang": "py",
+      "langName": "Python",
+      "params": [],
+      "defaultDebtRemFnType": "CONSTANT_ISSUE",
+      "debtRemFnType": "CONSTANT_ISSUE",
+      "type": "CODE_SMELL",
+      "defaultRemFnType": "CONSTANT_ISSUE",
+      "defaultRemFnBaseEffort": "5min",
+      "remFnType": "CONSTANT_ISSUE",
+      "remFnBaseEffort": "5min",
+      "remFnOverloaded": false,
+      "scope": "ALL",
+      "isExternal": false,
+      "descriptionSections": [
+        {
+          "key": "introduction",
+          "content": "<p>This rule raises an issue when <code>dict()</code>, <code>list()</code>, or <code>tuple()</code> are used to create empty collections or to\ninitialize dictionaries with keyword arguments.</p>"
+        },
+        {
+          "key": "how_to_fix",
+          "content": "<p>To fix this replace the function calls <code>dict()</code>, <code>list()</code>, and <code>tuple()</code> with their equivalent literal syntax.</p>\n<ul>\n  <li>To create an empty dictionary, replace <code>dict()</code> with <code>{}</code>.</li>\n  <li>To create an empty list, replace <code>list()</code> with <code>[]</code>.</li>\n  <li>To create an empty tuple, replace <code>tuple()</code> with <code>()</code>.</li>\n  <li>To initialize a dictionary with keyword arguments (where keys are simple strings that are valid identifiers), replace <code>dict(key1=value1,\n  key2=value2)</code> with <code>{'key1': value1, 'key2': value2}</code>.</li>\n</ul>\n<pre data-diff-id=\"1\" data-diff-type=\"noncompliant\">\nempty_d = dict() # Noncompliant: the dict constructor is used instead of the literal syntax\n</pre>\n<pre data-diff-id=\"1\" data-diff-type=\"compliant\">\nempty_d = {} # Compliant\n</pre>"
+        },
+        {
+          "key": "root_cause",
+          "content": "<p>Python provides concise literal syntax for creating empty dictionaries (<code>{}</code>), lists (<code>[]</code>), and tuples (<code>()</code>). It\nalso offers a direct literal syntax for initializing dictionaries with key-value pairs (e.g., <code>{'a': 1, 'b': 2}</code>).</p>\n<p>Using the function calls <code>dict()</code>, <code>list()</code>, and <code>tuple()</code> for these purposes is generally less preferred for a\nfew reasons:</p>\n<ul>\n  <li>Readability and Directness: Literals are often considered more \"Pythonic\" and directly express the intent of creating an empty container or a\n  dictionary with specific initial values.</li>\n  <li>Consistency: Python encourages the use of literals where they are clear and effective.</li>\n  <li>Performance: Calling a function involves overhead, including name lookup for <code>dict</code>, <code>list</code>, or <code>tuple</code> in the\n  current scope. While often negligible for single calls, using literals is a direct instruction to the interpreter and can be marginally faster,\n  especially in performance-sensitive code or tight loops.</li>\n</ul>\n<p>Specifically, the following patterns are discouraged:</p>\n<ul>\n  <li>Using <code>dict()</code> to create an empty dictionary instead of <code>{}</code>.</li>\n  <li>Using <code>list()</code> to create an empty list instead of <code>[]</code>.</li>\n  <li>Using <code>tuple()</code> to create an empty tuple instead of <code>()</code>.</li>\n  <li>Using <code>dict(key='value', …​)</code> to initialize a dictionary instead of <code>{'key': 'value', …​}</code> when keys are simple strings\n  valid as identifiers.</li>\n</ul>\n<p>While the functional difference is minimal for creating empty collections or simple dictionaries, adopting literals promotes a more direct and\nidiomatic coding style.</p>"
+        },
+        {
+          "key": "resources",
+          "content": "<h3>Documentation</h3>\n<ul>\n  <li>Python Documentation - <a href=\"https://docs.python.org/3/library/stdtypes.html#dict\">dict()</a></li>\n  <li>Python Documentation - <a href=\"https://docs.python.org/3/library/stdtypes.html#list\">list()</a></li>\n  <li>Python Documentation - <a href=\"https://docs.python.org/3/library/stdtypes.html#tuple\">tuple()</a></li>\n</ul>"
+        }
+      ],
+      "educationPrinciples": [],
+      "updatedAt": "2026-10-02T19:31:57+0800",
+      "cleanCodeAttribute": "CONVENTIONAL",
+      "cleanCodeAttributeCategory": "CONSISTENT",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "LOW"
+        }
+      ]
+    },
+    "actives": []
+  },
+  "python:S9073": {
+    "rule": {
+      "key": "python:S9073",
+      "repo": "python",
+      "name": "Composite assertions should be split",
+      "createdAt": "2026-10-02T19:31:57+0800",
+      "severity": "MAJOR",
+      "status": "READY",
+      "isTemplate": false,
+      "tags": [],
+      "sysTags": [
+        "pytest"
+      ],
+      "lang": "py",
+      "langName": "Python",
+      "params": [],
+      "defaultDebtRemFnType": "CONSTANT_ISSUE",
+      "debtRemFnType": "CONSTANT_ISSUE",
+      "type": "CODE_SMELL",
+      "defaultRemFnType": "CONSTANT_ISSUE",
+      "defaultRemFnBaseEffort": "5min",
+      "remFnType": "CONSTANT_ISSUE",
+      "remFnBaseEffort": "5min",
+      "remFnOverloaded": false,
+      "scope": "MAIN",
+      "isExternal": false,
+      "descriptionSections": [
+        {
+          "key": "root_cause",
+          "content": "<p>Composite assertions hide which condition failed. When several checks are joined in a single <code>assert</code>, a failure reports the whole\nexpression as false instead of pointing at the specific condition that broke.</p>\n<h3>Assertions joined with <code>and</code></h3>\n<p><code>assert a and b</code> verifies two independent facts in one statement. If the assertion fails, the message does not clearly identify whether\n<code>a</code>, <code>b</code>, or both were false:</p>\n<pre>\ndef test_user(user):\n    assert user.is_active and user.is_verified  # Which condition failed?\n</pre>\n<p>Splitting into separate asserts makes each failure actionable:</p>\n<pre>\ndef test_user(user):\n    assert user.is_active\n    assert user.is_verified\n</pre>\n<h3>Negated <code>or</code> expressions</h3>\n<p><code>assert not (a or b)</code> is equivalent to asserting that both <code>a</code> and <code>b</code> are false (De Morgan’s law). It has the\nsame opacity problem as an <code>and</code> chain:</p>\n<pre>\ndef test_axis_hidden(axis):\n    assert not (axis.visible or axis.label_visible)  # Which flag is still true?\n</pre>\n<p>Split it into independent negated asserts:</p>\n<pre>\ndef test_axis_hidden(axis):\n    assert not axis.visible\n    assert not axis.label_visible\n</pre>\n<h3>Why plain <code>or</code> is excluded</h3>\n<p><code>assert a or b</code> means at least one condition must hold. Replacing it with two separate asserts would require both to hold and would\nchange the test’s intent. This rule therefore does not flag that form.</p>\n<h3>What is the potential impact?</h3>\n<p>When a composite assertion fails, developers spend extra time deciphering which condition broke. Opaque failure messages slow down debugging and\nmake flaky or partial regressions harder to diagnose. Splitting assertions keeps each check independent and produces clearer failure reports.</p>"
+        },
+        {
+          "key": "how_to_fix",
+          "content": "<p>Split composite assertions into separate <code>assert</code> statements, one per independent condition. For <code>assert not (a or b)</code>, use\nDe Morgan’s law and write <code>assert not a</code> and <code>assert not b</code>.</p>\n<p>This applies to:</p>\n<ul>\n  <li><code>assert a and b</code> (and longer <code>and</code> chains) that combine independent conditions</li>\n  <li><code>assert not (a or b)</code> (De Morgan-equivalent negation of an <code>or</code> expression)</li>\n</ul>\n<p>Plain <code>assert a or b</code> is not flagged, because splitting it would change the meaning of the test.</p>\n\n<h4>Noncompliant code example</h4>\n<pre data-diff-id=\"1\" data-diff-type=\"noncompliant\">\ndef test_user(user):\n    assert user.is_active and user.is_verified  # Noncompliant\n</pre>\n<h4>Compliant solution</h4>\n<pre data-diff-id=\"1\" data-diff-type=\"compliant\">\ndef test_user(user):\n    assert user.is_active\n    assert user.is_verified\n</pre>\n<h4>Noncompliant code example</h4>\n<pre data-diff-id=\"2\" data-diff-type=\"noncompliant\">\ndef test_axis_hidden(axis):\n    assert not (axis.visible or axis.label_visible)  # Noncompliant\n</pre>\n<h4>Compliant solution</h4>\n<pre data-diff-id=\"2\" data-diff-type=\"compliant\">\ndef test_axis_hidden(axis):\n    assert not axis.visible\n    assert not axis.label_visible\n</pre>"
+        },
+        {
+          "key": "introduction",
+          "content": "<p>This rule raises an issue when a test assertion combines multiple independent conditions with <code>and</code>, or when it asserts the negation of\nan <code>or</code> expression (<code>assert not (a or b)</code>).</p>\n<p>It does not raise an issue on plain <code>assert a or b</code>, because splitting that form would change the meaning from \"at least one condition\nholds\" to \"all conditions hold\".</p>"
+        },
+        {
+          "key": "resources",
+          "content": "<h3>Documentation</h3>\n<ul>\n  <li>Ruff - <a href=\"https://docs.astral.sh/ruff/rules/pytest-composite-assertion/\">pytest-composite-assertion (PT018)</a></li>\n  <li>flake8-pytest-style - <a href=\"https://github.com/m-burst/flake8-pytest-style/blob/master/docs/rules/PT018.md\">PT018</a></li>\n  <li>pytest documentation - <a href=\"https://docs.pytest.org/en/stable/how-to/assert.html#asserting-with-the-assert-statement\">Asserting with the\n  assert statement</a></li>\n</ul>"
+        }
+      ],
+      "educationPrinciples": [],
+      "updatedAt": "2026-10-02T19:31:57+0800",
+      "cleanCodeAttribute": "CLEAR",
+      "cleanCodeAttributeCategory": "INTENTIONAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ]
+    },
+    "actives": []
+  },
+  "typescript:S6544": {
+    "rule": {
+      "key": "typescript:S6544",
+      "repo": "typescript",
+      "name": "Promises should not be misused",
+      "createdAt": "2026-10-02T19:32:03+0800",
+      "severity": "MAJOR",
+      "status": "READY",
+      "isTemplate": false,
+      "tags": [],
+      "sysTags": [
+        "async",
+        "underscore.js",
+        "lodash",
+        "es2017",
+        "type-dependent",
+        "promise"
+      ],
+      "lang": "ts",
+      "langName": "TypeScript",
+      "params": [],
+      "defaultDebtRemFnType": "CONSTANT_ISSUE",
+      "debtRemFnType": "CONSTANT_ISSUE",
+      "type": "BUG",
+      "defaultRemFnType": "CONSTANT_ISSUE",
+      "defaultRemFnBaseEffort": "5min",
+      "remFnType": "CONSTANT_ISSUE",
+      "remFnBaseEffort": "5min",
+      "remFnOverloaded": false,
+      "scope": "MAIN",
+      "isExternal": false,
+      "descriptionSections": [
+        {
+          "key": "root_cause",
+          "content": "<p>Promises need to be resolved or awaited to return the expected value, otherwise, they return the promise object.</p>\n<p><span><strong>Unresolved promises:</strong></span></p>\n<p>Forgetting to await a promise is a frequent mistake. There are places where the use of a promise object is confusing or unclear because the\ndeveloper forgot to resolve it.</p>\n<p>This rule forbids returning promises where another type is expected such as in:</p>\n<ul>\n  <li>conditionals</li>\n  <li>void returns</li>\n  <li>spread operators</li>\n</ul>\n<p>The rule also reports asynchronous predicates passed to synchronous collection methods. This includes the native\n<code>Array.prototype.every()</code>, <code>filter()</code>, <code>find()</code>, <code>findIndex()</code>, <code>findLast()</code>,\n<code>findLastIndex()</code>, and <code>some()</code> methods, as well as the Lodash, <code>lodash-es</code>, and Underscore.js <code>every</code>,\n<code>filter</code>, <code>find</code>, <code>findIndex</code>, <code>some</code>, and <code>reject</code> functions. These methods evaluate predicate\nresults synchronously and do not await returned promises.</p>\n<p>Currently, the library-specific detection applies only to direct calls to these methods. It does not report asynchronous callbacks passed to\n<code>map()</code> or <code>forEach()</code>, where returning a promise can be intentional, or to dynamically computed methods, fluent chains, and\n<code>lodash/fp</code> pipeline calls.</p>\n<h3>What is the potential impact?</h3>\n<p>Using a promise instead of its resolved value can have unexpected results leading to bugs.</p>\n<ul>\n  <li>In conditionals, it will always return a truthy value.</li>\n  <li>In places where the expected type is void, returning a promise is often a mistake.</li>\n  <li>Using the spread operator on a promise will raise an exception.</li>\n  <li>In synchronous collection predicates, a returned promise is always truthy, so the method behaves as if the predicate always matched. For\n  example, with a non-empty collection, <code>filter()</code> keeps every element, <code>find()</code> returns the first one, and\n  <code>reject()</code> discards them all.</li>\n</ul>\n<p>The executor function of a promise can also be an async function. However, this usually denotes a mistake:</p>\n<ul>\n  <li>If an async executor function throws an error, the error won’t cause the created promise to reject and will be lost. Therefore, this could make\n  it difficult to debug and handle runtime errors.</li>\n  <li>If a promise executor function is using <code>await</code>, this means that it’s not necessary to use the <code>Promise</code> constructor, or\n  the scope of the Promise constructor can be reduced.</li>\n</ul>\n<h3>Exceptions</h3>\n<p>This rule can be ignored for promises that you know will always resolve like timers.</p>\n<pre>\nawait new Promise(resolve =&gt; time.setTimeout(1000));\n</pre>\n<p>This rule does not flag conditionals that check whether a Promise-typed variable has been initialized when the same variable is assigned within the\nconditional body. This is a common lazy initialization pattern.</p>\n<pre>\nlet cachedData;\nfunction getData() {\n  if (!cachedData) {\n    cachedData = fetchData();\n  }\n  return cachedData;\n}\n</pre>"
+        },
+        {
+          "key": "how_to_fix",
+          "content": "<p>If you mistakenly treated a promise as its resolved value, you can ensure it is properly resolved by using await or resolve on the promise. In some\ncases, you may need to use an \"immediately invoked function expression\" (IIFE):</p>\n<pre>\n(async function foo() {\n  const result = await bar();\n  // work with result\n})();\n</pre>\n<p>When a predicate performs asynchronous work, await its result before applying the collection operation. A <code>for…​of</code> loop makes the\nordering explicit. If concurrent evaluation is safe, resolve all predicate results with <code>Promise.all()</code> before selecting the matching\nelements. For example:</p>\n<pre>\nconst results = await Promise.all(\n  users.map(async user =&gt; ({ user, active: await isActive(user) }))\n);\nconst activeUsers = results\n  .filter(({ active }) =&gt; active)\n  .map(({ user }) =&gt; user);\n</pre>\n\n<h4>Noncompliant code example</h4>\n<pre data-diff-id=\"1\" data-diff-type=\"noncompliant\">\nconst promise = new Promise((resolve, reject) =&gt; {\n  // ...\n  resolve(false)\n});\nif (promise) {\n  // ...\n}\n</pre>\n<h4>Compliant solution</h4>\n<pre data-diff-id=\"1\" data-diff-type=\"compliant\">\nconst promise = new Promise((resolve, reject) =&gt; {\n  // ...\n  resolve(false)\n});\nif (await promise) {\n  // ...\n}\n</pre>\n<h4>Noncompliant code example</h4>\n<pre data-diff-id=\"2\" data-diff-type=\"noncompliant\">\nconst p = new Promise(async (resolve, reject) =&gt; {\n  doSomething('Hey, there!', function(error, result) {\n    if (error) {\n      reject(error);\n      return;\n    }\n    await saveResult(result)\n    resolve(result);\n  });\n});\n\nawait p;\n</pre>\n<h4>Compliant solution</h4>\n<pre data-diff-id=\"2\" data-diff-type=\"compliant\">\nconst p = new Promise((resolve, reject) =&gt; {\n  doSomething('Hey, there!', function(error, result) {\n    if (error) {\n      reject(error);\n      return;\n    }\n    resolve(result);\n  });\n});\n\nconst result = await p;\nawait saveResult(result);\n</pre>\n<h4>Noncompliant code example</h4>\n<pre data-diff-id=\"3\" data-diff-type=\"noncompliant\">\napiCalls.forEach(async (apiCall) =&gt; {\n  await apiCall.send();\n});\n</pre>\n<h4>Compliant solution</h4>\n<pre data-diff-id=\"3\" data-diff-type=\"compliant\">\nfor (const apiCall of apiCalls) {\n  await apiCall.send();\n}\n</pre>\n<h4>Noncompliant code example</h4>\n<pre data-diff-id=\"4\" data-diff-type=\"noncompliant\">\nconst activeUsers = users.filter(async user =&gt; { // Noncompliant: the synchronous predicate treats the returned promise as truthy\n  return isActive(user);\n});\n</pre>\n<h4>Compliant solution</h4>\n<pre data-diff-id=\"4\" data-diff-type=\"compliant\">\nconst activeUsers = [];\nfor (const user of users) {\n  if (await isActive(user)) {\n    activeUsers.push(user);\n  }\n}\n</pre>\n<h4>Noncompliant code example</h4>\n<pre data-diff-id=\"5\" data-diff-type=\"noncompliant\">\nimport _ from \"lodash\";\n\nconst activeUsers = _.filter(users, async user =&gt; { // Noncompliant: the synchronous predicate treats the returned promise as truthy\n  return isActive(user);\n});\n</pre>\n<h4>Compliant solution</h4>\n<pre data-diff-id=\"5\" data-diff-type=\"compliant\">\nimport _ from \"lodash\";\n\nconst activeUsers = [];\nfor (const user of users) {\n  if (await isActive(user)) {\n    activeUsers.push(user);\n  }\n}\n</pre>\n<h3>How does this work?</h3>\n<p>In JavaScript, a promise is a mechanism to perform tasks asynchronously. To this end, the language provides the <code>Promise</code> object which\nrepresents the eventual completion or failure of an asynchronous operation and its resulting value. A promise can be created with the\n<code>Promise</code> constructor accepting an executor function as an argument, which has <code>resolve</code> and <code>reject</code> parameters that\nare invoked when the promise completes or fails.</p>\n<p>The logic of the promise is executed when it is called, however, its result is obtained only when the promise is resolved or awaited.</p>"
+        },
+        {
+          "key": "resources",
+          "content": "<h3>Documentation</h3>\n<ul>\n  <li><a href=\"https://typescript-eslint.io/\">typescript-eslint</a> - Rule <a\n  href=\"https://github.com/typescript-eslint/typescript-eslint/blob/main/packages/eslint-plugin/docs/rules/no-misused-promises.mdx\">no-misused-promises</a></li>\n  <li><a href=\"https://eslint.org\">eslint</a> - Rule <a\n  href=\"https://eslint.org/docs/latest/rules/no-async-promise-executor\">no-async-promise-executor</a></li>\n  <li>Lodash Documentation - <a href=\"https://lodash.com/docs/\">Lodash API reference</a></li>\n  <li>Underscore.js Documentation - <a href=\"https://underscorejs.org/#collections\">Collections</a></li>\n  <li>MDN web docs - <a href=\"https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise\">Promise</a></li>\n  <li>MDN web docs - <a href=\"https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Using_promises\">Using promises</a></li>\n  <li>MDN web docs - <a href=\"https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/async_function\">Async function</a></li>\n  <li>MDN web docs - <a href=\"https://developer.mozilla.org/en-US/docs/Glossary/IIFE\">IIFE</a></li>\n</ul>"
+        }
+      ],
+      "educationPrinciples": [],
+      "updatedAt": "2026-10-02T19:32:03+0800",
+      "cleanCodeAttribute": "LOGICAL",
+      "cleanCodeAttributeCategory": "INTENTIONAL",
+      "impacts": [
+        {
+          "softwareQuality": "RELIABILITY",
+          "severity": "MEDIUM"
+        }
+      ]
+    },
+    "actives": []
+  },
+  "typescript:S6822": {
+    "rule": {
+      "key": "typescript:S6822",
+      "repo": "typescript",
+      "name": "No redundant ARIA role",
+      "createdAt": "2026-10-02T19:32:03+0800",
+      "severity": "MAJOR",
+      "status": "READY",
+      "isTemplate": false,
+      "tags": [],
+      "sysTags": [
+        "accessibility",
+        "editable-source",
+        "react"
+      ],
+      "lang": "ts",
+      "langName": "TypeScript",
+      "params": [],
+      "defaultDebtRemFnType": "CONSTANT_ISSUE",
+      "debtRemFnType": "CONSTANT_ISSUE",
+      "type": "CODE_SMELL",
+      "defaultRemFnType": "CONSTANT_ISSUE",
+      "defaultRemFnBaseEffort": "5min",
+      "remFnType": "CONSTANT_ISSUE",
+      "remFnBaseEffort": "5min",
+      "remFnOverloaded": false,
+      "scope": "MAIN",
+      "isExternal": false,
+      "descriptionSections": [
+        {
+          "key": "resources",
+          "content": "<h3>Documentation</h3>\n<ul>\n  <li><a href=\"https://github.com/jsx-eslint/eslint-plugin-jsx-a11y\">eslint-plugin-jsx-a11y</a> - Rule <a\n  href=\"https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/no-redundant-roles.md\">no-redundant-roles</a></li>\n  <li>MDN web docs - <a href=\"https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/ARIA_Techniques\">Using ARIA: Roles, states, and\n  properties</a></li>\n  <li>MDN web docs - <a href=\"https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Roles\">ARIA roles (Reference)</a></li>\n</ul>\n<h3>Standards</h3>\n<ul>\n  <li>W3C - <a href=\"https://www.w3.org/TR/wai-aria-1.2/\">https://www.w3.org/TR/wai-aria-1.2/</a>[Acces</li>\n</ul>"
+        },
+        {
+          "key": "root_cause",
+          "content": "<p>ARIA (Accessible Rich Internet Applications) attributes are used to enhance the accessibility of web content and web applications. These attributes\nprovide additional information about an element’s role, state, properties, and values to assistive technologies like screen readers.</p>\n<p>In HTML, certain elements have default roles. Default roles, also known as implicit roles, are roles that are inherently associated with certain\nHTML elements. These roles provide information about what an element does or the type of content it contains, which is especially useful for assistive\ntechnologies like screen readers.</p>\n<p>For example, a <code>&lt;button&gt;</code> element has a default role of <code>button</code>. If you explicitly define the role of a\n<code>&lt;button&gt;</code> element as <code>button</code>, it’s considered redundant because it’s the default role of that element.</p>\n<pre data-diff-id=\"1\" data-diff-type=\"noncompliant\">\n&lt;button role=\"button\" onClick={handleClick}&gt;OK&lt;/button&gt;\n</pre>\n<p>Remove ARIA role attributes when they are redundant.</p>\n<pre data-diff-id=\"1\" data-diff-type=\"compliant\">\n&lt;button onClick={handleClick}&gt;OK&lt;/button&gt;\n</pre>"
+        }
+      ],
+      "educationPrinciples": [],
+      "updatedAt": "2026-10-02T19:32:03+0800",
+      "cleanCodeAttribute": "CONVENTIONAL",
+      "cleanCodeAttributeCategory": "CONSISTENT",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        },
+        {
+          "softwareQuality": "RELIABILITY",
+          "severity": "LOW"
+        }
+      ]
+    },
+    "actives": []
+  },
+  "typescript:S8980": {
+    "rule": {
+      "key": "typescript:S8980",
+      "repo": "typescript",
+      "name": "React Testing Library calls should not be wrapped in \"act()\"",
+      "createdAt": "2026-10-02T19:32:03+0800",
+      "severity": "MINOR",
+      "status": "READY",
+      "isTemplate": false,
+      "tags": [],
+      "sysTags": [
+        "tests",
+        "react"
+      ],
+      "lang": "ts",
+      "langName": "TypeScript",
+      "params": [],
+      "defaultDebtRemFnType": "CONSTANT_ISSUE",
+      "debtRemFnType": "CONSTANT_ISSUE",
+      "type": "CODE_SMELL",
+      "defaultRemFnType": "CONSTANT_ISSUE",
+      "defaultRemFnBaseEffort": "5min",
+      "remFnType": "CONSTANT_ISSUE",
+      "remFnBaseEffort": "5min",
+      "remFnOverloaded": false,
+      "scope": "TEST",
+      "isExternal": false,
+      "descriptionSections": [
+        {
+          "key": "resources",
+          "content": "<h3>Documentation</h3>\n<ul>\n  <li><a href=\"https://github.com/testing-library/eslint-plugin-testing-library\">eslint-plugin-testing-library</a> - Rule <a\n  href=\"https://github.com/testing-library/eslint-plugin-testing-library/blob/main/docs/rules/no-unnecessary-act.md\">no-unnecessary-act</a></li>\n  <li>Testing Library Documentation - <a href=\"https://testing-library.com/docs/react-testing-library/faq/\">React Testing Library FAQ</a></li>\n  <li>React Documentation - <a href=\"https://react.dev/reference/react/act\"><code>act</code></a></li>\n</ul>\n<h3>Articles &amp; blog posts</h3>\n<ul>\n  <li>Kent C. Dodds - <a href=\"https://kentcdodds.com/blog/fix-the-not-wrapped-in-act-warning\">Fix the \"not wrapped in act(…​)\" warning</a></li>\n</ul>"
+        },
+        {
+          "key": "introduction",
+          "content": "<p>This rule raises an issue when a call to <code>act</code> only wraps calls to React Testing Library or <code>user-event</code> utilities.</p>"
+        },
+        {
+          "key": "root_cause",
+          "content": "<p>React’s <code>act()</code> testing helper makes sure that all updates related to a \"unit\" of interaction, such as a render, a user event, or a\nstate update, have been processed and applied to the DOM before assertions run. Calling React APIs directly, such as <code>ReactDOM.render</code> or\ndispatching a raw DOM event, can leave pending updates unflushed, which is why <code>act()</code> exists.</p>\n<p>React Testing Library builds this guarantee in for you: <code>render</code>, <code>fireEvent</code>, the <code>userEvent</code> API, and the async\nutilities <code>waitFor</code> and <code>waitForElementToBeRemoved</code> are already wrapped in <code>act()</code> internally. Wrapping a call to one\nof these utilities in another <code>act()</code> does not change what gets flushed and does not make the test more correct, it just adds noise around\ncode that is already safe.</p>\n<h3>What is the potential impact?</h3>\n<p>Developers often add an unnecessary <code>act()</code> wrapper to silence a \"not wrapped in act(…​)\" warning. That warning is not incidental: it\nusually means a state update happened outside of any tracked render, for example because of an unawaited asynchronous callback, a timer, or a\nsubscription firing after the test moved on. Wrapping the wrong piece of code in <code>act()</code> hides the warning without addressing what caused\nit, so the underlying issue can resurface later as a flaky or genuinely broken test.</p>\n<p>Remove the redundant <code>act()</code> call and use the Testing Library utility directly; it already flushes its own updates. If an\n<code>act()</code> warning remains after removing the wrapper, <code>act()</code> should be moved to wrap the actual source of the untracked update\ninstead, such as a manual timer advance or a call into non-Testing-Library code, rather than the Testing Library call itself.</p>\n<pre data-diff-id=\"1\" data-diff-type=\"noncompliant\">\nimport { render, screen, fireEvent, act } from '@testing-library/react';\n\ntest(\"submits the form\", () =&gt; {\n  act(() =&gt; { // Noncompliant: \"render()\" already wraps itself in \"act()\"\n    render(&lt;Form /&gt;);\n  });\n\n  act(() =&gt; { // Noncompliant: \"fireEvent\" already wraps itself in \"act()\"\n    fireEvent.click(screen.getByRole('button'));\n  });\n});\n</pre>\n<pre data-diff-id=\"1\" data-diff-type=\"compliant\">\nimport { render, screen, fireEvent } from '@testing-library/react';\n\ntest(\"submits the form\", () =&gt; {\n  render(&lt;Form /&gt;);\n  fireEvent.click(screen.getByRole('button'));\n});\n</pre>"
+        }
+      ],
+      "educationPrinciples": [],
+      "updatedAt": "2026-10-02T19:32:03+0800",
+      "cleanCodeAttribute": "CONVENTIONAL",
+      "cleanCodeAttributeCategory": "CONSISTENT",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ]
+    },
+    "actives": []
+  }
+}

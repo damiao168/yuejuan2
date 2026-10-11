@@ -35,7 +35,7 @@ def test_heartbeat_renews_runtime_and_source_lease(monkeypatch) -> None:
         captured.update(url=req.full_url, timeout=timeout, payload=json.loads(req.data))
         return Response()
 
-    monkeypatch.setattr("image_quality.api.request.urlopen", urlopen)
+    monkeypatch.setattr("image_quality.api._open_request", urlopen)
     client = EduGradeImageQualityClient(
         "http://api-gateway:8080", "demo", "worker", "secret", token="worker-token", worker_instance_id="worker-1"
     )

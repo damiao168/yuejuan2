@@ -16,11 +16,8 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/paper"
 )
 
-// This proves the production permission is earned from independent evidence,
-// then remains revocable until the worker result is actually applied. The
-// seeded OMR facts are deliberately database-level test fixtures; the worker
-// extraction algorithm itself is validated by the page-processing acceptance
-// suite.
+// 此测试验证生产权限来自独立证据，且在实际应用 worker 结果之前仍可撤销。
+// 预置的 OMR 事实是数据库级测试夹具；worker 提取算法本身由页面处理验收套件验证。
 func TestStory056TemplateDifferenceCalibrationApprovalAndRevocationE2E(t *testing.T) {
 	dsn := strings.TrimSpace(os.Getenv("EDUGRADE_E2E_DATABASE_URL"))
 	if dsn == "" {
@@ -44,6 +41,84 @@ func TestStory056TemplateDifferenceCalibrationApprovalAndRevocationE2E(t *testin
 	seedRunID := e2eString(t, seedRun, "id")
 	e2eSeedStory056CalibrationOMRFacts(t, db, fixture.TenantID, seedRunID)
 
+	approved := e2eApproveStory056Calibration(t, db, router, story056CalibrationActors{AdminToken: adminToken, ApproverToken: approverToken, ApproverID: approverID}, fixture)
+	calibrationID, approvedSession, approvedCases := approved.ID, approved.Session, approved.Cases
+
+	firstCase := e2eStory056CalibrationCaseForQuestionAndStratum(t, approvedCases, fixture.QuestionIDs["single_choice"], "selected_high")
+	firstSegmentID := e2eString(t, firstCase, "answer_segment_id")
+	firstRunID, firstItem, firstLease := e2eStory056CalibrationReprocessAndClaim(t, router, adminToken, firstSegmentID, suffix+"-approved")
+	var profileVersion, profileHash, referenceSHA256, runCalibrationID, runEvidenceHash, autoReason string
+	var autoEligible bool
+	var minimumConfidence float64
+	if err := db.QueryRow(`
+SELECT profile_version,profile_hash,reference_sha256,calibration_session_id::text,calibration_evidence_hash,
+  auto_confirm_eligible,auto_confirm_reason,auto_confirm_min_confidence
+FROM omr_run
+WHERE tenant_id=$1::uuid AND scoring_run_id=$2::uuid AND deleted_at IS NULL`, fixture.TenantID, firstRunID).Scan(
+		&profileVersion, &profileHash, &referenceSHA256, &runCalibrationID, &runEvidenceHash,
+		&autoEligible, &autoReason, &minimumConfidence); err != nil {
+		t.Fatalf("load approved OMR policy snapshot: %v", err)
+	}
+	if !autoEligible || autoReason != paper.OMRAutoConfirmReasonCalibrationApproved || runCalibrationID != calibrationID || runEvidenceHash != e2eString(t, approvedSession, "evidence_hash") || minimumConfidence != paper.OMRCalibrationMinimumConfidence {
+		t.Fatalf("new OMR work must snapshot the exact approved calibration: eligible=%t reason=%s calibration=%s evidence=%s minimum=%v", autoEligible, autoReason, runCalibrationID, runEvidenceHash, minimumConfidence)
+	}
+	overlay := e2eCreateStory056Overlay(t, files.NewPostgresStore(db), fixture, firstLease.OMRRunID, 59)
+	firstResult := e2ePostJSON(t, router, http.MethodPost, "/api/v1/internal/omr-runs/"+firstLease.OMRRunID+"/result", adminToken,
+		story056JSON(t, e2eStory056CalibrationResultPayload(t, firstLease, firstItem, overlay, story056CalibrationProfile{Version: "story056-calibration-approved-" + firstLease.OMRRunID, ProfileVersion: profileVersion, ProfileHash: profileHash, ReferenceSHA256: referenceSHA256})), http.StatusOK)
+	if _, found := firstResult["question_grade"]; !found {
+		t.Fatalf("approved calibration must permit a high-confidence automatic grade: %#v", firstResult)
+	}
+
+	// 模板批准也必须授权另一道被覆盖的题目。
+	secondCase := e2eStory056CalibrationCaseForQuestionAndStratum(t, approvedCases, fixture.QuestionIDs["true_false"], "selected_high")
+	secondSegmentID := e2eString(t, secondCase, "answer_segment_id")
+	secondRunID, secondItem, secondLease := e2eStory056CalibrationReprocessAndClaim(t, router, adminToken, secondSegmentID, suffix+"-revoke")
+	var queuedCalibrationID string
+	if err := db.QueryRow(`SELECT calibration_session_id::text FROM omr_run WHERE tenant_id=$1::uuid AND scoring_run_id=$2::uuid AND deleted_at IS NULL`, fixture.TenantID, secondRunID).Scan(&queuedCalibrationID); err != nil {
+		t.Fatalf("load queued calibrated OMR run: %v", err)
+	}
+	if queuedCalibrationID != calibrationID {
+		t.Fatalf("queued OMR must retain the calibration snapshot before revocation: %s", queuedCalibrationID)
+	}
+	e2ePostJSON(t, router, http.MethodPost, "/api/v1/omr-calibrations/"+calibrationID+"/revoke", approverToken, story056JSON(t, map[string]any{
+		"reason": "observed drift requires an immediate automatic-grade stop",
+	}), http.StatusOK)
+	secondOverlay := e2eCreateStory056Overlay(t, files.NewPostgresStore(db), fixture, secondLease.OMRRunID, 60)
+	secondResult := e2ePostJSON(t, router, http.MethodPost, "/api/v1/internal/omr-runs/"+secondLease.OMRRunID+"/result", adminToken,
+		story056JSON(t, e2eStory056CalibrationResultPayload(t, secondLease, secondItem, secondOverlay, story056CalibrationProfile{Version: "story056-calibration-revoked-" + secondLease.OMRRunID, ProfileVersion: profileVersion, ProfileHash: profileHash, ReferenceSHA256: referenceSHA256})), http.StatusOK)
+	if _, found := secondResult["question_grade"]; found {
+		t.Fatalf("revocation before callback must prevent automatic grading: %#v", secondResult)
+	}
+	var blockedEligible bool
+	var blockedReason, reviewReason string
+	var blockedGrades int
+	if err := db.QueryRow(`
+SELECT o.auto_confirm_eligible,o.auto_confirm_reason,
+  (SELECT count(*) FROM question_grade g WHERE g.tenant_id=o.tenant_id AND g.scoring_run_id=o.scoring_run_id AND g.answer_segment_id=o.answer_segment_id AND g.deleted_at IS NULL),
+  COALESCE((SELECT reason_code FROM review_task r WHERE r.tenant_id=o.tenant_id AND r.scoring_run_id=o.scoring_run_id AND r.answer_segment_id=o.answer_segment_id AND r.source='omr_ambiguous' AND r.deleted_at IS NULL ORDER BY r.created_at DESC LIMIT 1),'')
+FROM omr_run o
+WHERE o.tenant_id=$1::uuid AND o.id=$2::uuid`, fixture.TenantID, secondLease.OMRRunID).Scan(&blockedEligible, &blockedReason, &blockedGrades, &reviewReason); err != nil {
+		t.Fatalf("inspect revoked OMR result: %v", err)
+	}
+	if blockedEligible || blockedReason != paper.OMRAutoConfirmReasonCalibrationRevoked || blockedGrades != 0 || reviewReason != "omr_"+paper.OMRAutoConfirmReasonCalibrationRevoked {
+		t.Fatalf("revoked calibration must become a human-review result: eligible=%t reason=%s grades=%d review=%s", blockedEligible, blockedReason, blockedGrades, reviewReason)
+	}
+}
+
+type story056CalibrationActors struct {
+	AdminToken, ApproverToken, ApproverID string
+}
+
+type story056ApprovedCalibration struct {
+	ID      string
+	Session map[string]any
+	Cases   []any
+}
+
+// 先冻结样本并完整盲标，创建者始终不能自批；只有独立审批者能冻结证据哈希。
+func e2eApproveStory056Calibration(t *testing.T, db *sql.DB, router http.Handler, actors story056CalibrationActors, fixture story056AcceptanceFixture) story056ApprovedCalibration {
+	t.Helper()
+	adminToken, approverToken, approverID := actors.AdminToken, actors.ApproverToken, actors.ApproverID
 	created := e2ePostJSON(t, router, http.MethodPost, "/api/v1/answer-sheet-templates/"+fixture.TemplateID+"/omr-calibrations", adminToken, `{}`, http.StatusCreated)["calibration"].(map[string]any)
 	session := created["session"].(map[string]any)
 	calibrationID := e2eString(t, session, "id")
@@ -58,7 +133,7 @@ func TestStory056TemplateDifferenceCalibrationApprovalAndRevocationE2E(t *testin
 		t.Fatalf("new calibration must cover the immutable template: %#v", session)
 	}
 
-	// The creator cannot self-approve, before or after doing the label work.
+	// 创建者在完成标注工作之前或之后都不能自我批准。
 	e2eExpectStatus(t, router, http.MethodPost, "/api/v1/omr-calibrations/"+calibrationID+"/approve", adminToken, story056JSON(t, map[string]any{
 		"approval_note": "creator must not approve this calibration",
 	}), http.StatusForbidden)
@@ -86,65 +161,7 @@ func TestStory056TemplateDifferenceCalibrationApprovalAndRevocationE2E(t *testin
 	}
 	approvedCases := approved["cases"].([]any)
 
-	firstCase := e2eStory056CalibrationCaseForQuestionAndStratum(t, approvedCases, fixture.QuestionIDs["single_choice"], "selected_high")
-	firstSegmentID := e2eString(t, firstCase, "answer_segment_id")
-	firstRunID, firstItem, firstLease := e2eStory056CalibrationReprocessAndClaim(t, router, adminToken, firstSegmentID, suffix+"-approved")
-	var profileVersion, profileHash, referenceSHA256, runCalibrationID, runEvidenceHash, autoReason string
-	var autoEligible bool
-	var minimumConfidence float64
-	if err := db.QueryRow(`
-SELECT profile_version,profile_hash,reference_sha256,calibration_session_id::text,calibration_evidence_hash,
-  auto_confirm_eligible,auto_confirm_reason,auto_confirm_min_confidence
-FROM omr_run
-WHERE tenant_id=$1::uuid AND scoring_run_id=$2::uuid AND deleted_at IS NULL`, fixture.TenantID, firstRunID).Scan(
-		&profileVersion, &profileHash, &referenceSHA256, &runCalibrationID, &runEvidenceHash,
-		&autoEligible, &autoReason, &minimumConfidence); err != nil {
-		t.Fatalf("load approved OMR policy snapshot: %v", err)
-	}
-	if !autoEligible || autoReason != paper.OMRAutoConfirmReasonCalibrationApproved || runCalibrationID != calibrationID || runEvidenceHash != e2eString(t, approvedSession, "evidence_hash") || minimumConfidence != paper.OMRCalibrationMinimumConfidence {
-		t.Fatalf("new OMR work must snapshot the exact approved calibration: eligible=%t reason=%s calibration=%s evidence=%s minimum=%v", autoEligible, autoReason, runCalibrationID, runEvidenceHash, minimumConfidence)
-	}
-	overlay := e2eCreateStory056Overlay(t, files.NewPostgresStore(db), fixture, firstLease.OMRRunID, 59)
-	firstResult := e2ePostJSON(t, router, http.MethodPost, "/api/v1/internal/omr-runs/"+firstLease.OMRRunID+"/result", adminToken,
-		story056JSON(t, e2eStory056CalibrationResultPayload(t, firstLease, firstItem, overlay, "story056-calibration-approved-"+firstLease.OMRRunID, profileVersion, profileHash, referenceSHA256)), http.StatusOK)
-	if _, found := firstResult["question_grade"]; !found {
-		t.Fatalf("approved calibration must permit a high-confidence automatic grade: %#v", firstResult)
-	}
-
-	// A template approval must also authorize a different covered question.
-	secondCase := e2eStory056CalibrationCaseForQuestionAndStratum(t, approvedCases, fixture.QuestionIDs["true_false"], "selected_high")
-	secondSegmentID := e2eString(t, secondCase, "answer_segment_id")
-	secondRunID, secondItem, secondLease := e2eStory056CalibrationReprocessAndClaim(t, router, adminToken, secondSegmentID, suffix+"-revoke")
-	var queuedCalibrationID string
-	if err := db.QueryRow(`SELECT calibration_session_id::text FROM omr_run WHERE tenant_id=$1::uuid AND scoring_run_id=$2::uuid AND deleted_at IS NULL`, fixture.TenantID, secondRunID).Scan(&queuedCalibrationID); err != nil {
-		t.Fatalf("load queued calibrated OMR run: %v", err)
-	}
-	if queuedCalibrationID != calibrationID {
-		t.Fatalf("queued OMR must retain the calibration snapshot before revocation: %s", queuedCalibrationID)
-	}
-	e2ePostJSON(t, router, http.MethodPost, "/api/v1/omr-calibrations/"+calibrationID+"/revoke", approverToken, story056JSON(t, map[string]any{
-		"reason": "observed drift requires an immediate automatic-grade stop",
-	}), http.StatusOK)
-	secondOverlay := e2eCreateStory056Overlay(t, files.NewPostgresStore(db), fixture, secondLease.OMRRunID, 60)
-	secondResult := e2ePostJSON(t, router, http.MethodPost, "/api/v1/internal/omr-runs/"+secondLease.OMRRunID+"/result", adminToken,
-		story056JSON(t, e2eStory056CalibrationResultPayload(t, secondLease, secondItem, secondOverlay, "story056-calibration-revoked-"+secondLease.OMRRunID, profileVersion, profileHash, referenceSHA256)), http.StatusOK)
-	if _, found := secondResult["question_grade"]; found {
-		t.Fatalf("revocation before callback must prevent automatic grading: %#v", secondResult)
-	}
-	var blockedEligible bool
-	var blockedReason, reviewReason string
-	var blockedGrades int
-	if err := db.QueryRow(`
-SELECT o.auto_confirm_eligible,o.auto_confirm_reason,
-  (SELECT count(*) FROM question_grade g WHERE g.tenant_id=o.tenant_id AND g.scoring_run_id=o.scoring_run_id AND g.answer_segment_id=o.answer_segment_id AND g.deleted_at IS NULL),
-  COALESCE((SELECT reason_code FROM review_task r WHERE r.tenant_id=o.tenant_id AND r.scoring_run_id=o.scoring_run_id AND r.answer_segment_id=o.answer_segment_id AND r.source='omr_ambiguous' AND r.deleted_at IS NULL ORDER BY r.created_at DESC LIMIT 1),'')
-FROM omr_run o
-WHERE o.tenant_id=$1::uuid AND o.id=$2::uuid`, fixture.TenantID, secondLease.OMRRunID).Scan(&blockedEligible, &blockedReason, &blockedGrades, &reviewReason); err != nil {
-		t.Fatalf("inspect revoked OMR result: %v", err)
-	}
-	if blockedEligible || blockedReason != paper.OMRAutoConfirmReasonCalibrationRevoked || blockedGrades != 0 || reviewReason != "omr_"+paper.OMRAutoConfirmReasonCalibrationRevoked {
-		t.Fatalf("revoked calibration must become a human-review result: eligible=%t reason=%s grades=%d review=%s", blockedEligible, blockedReason, blockedGrades, reviewReason)
-	}
+	return story056ApprovedCalibration{ID: calibrationID, Session: approvedSession, Cases: approvedCases}
 }
 
 func TestStory056ApprovedCalibrationIsInheritedByTemplateCloneE2E(t *testing.T) {
@@ -396,10 +413,8 @@ WHERE task.tenant_id=o.tenant_id AND task.id=o.runtime_task_id
 	}
 }
 
-// This fixture creates completed worker evidence without moving the exam into
-// its runtime lifecycle. It keeps clone inheritance in the configuration
-// phase while the production scoring-run API remains correctly restricted to
-// collecting and grading exams.
+// 此夹具创建已完成的 worker 证据，但不把考试推进到运行阶段。
+// 这样克隆继承仍发生在配置阶段，生产评分运行 API 也仍正确地限制为 collecting 和 grading 考试。
 func e2eSeedStory056MutableCalibrationOMRFacts(t *testing.T, db *sql.DB, fixture story056AcceptanceFixture) {
 	t.Helper()
 	var layoutRaw []byte
@@ -532,8 +547,14 @@ func e2eStory056CalibrationReprocessAndClaim(t *testing.T, router http.Handler, 
 	return runID, item, lease
 }
 
-func e2eStory056CalibrationResultPayload(t *testing.T, lease story056WorkerLease, item map[string]any, overlay files.FileAsset, version, profileVersion, profileHash, referenceSHA256 string) map[string]any {
+// 校准结果仍分别携带算法版本、配置版本、配置哈希和参考图哈希，不能用一个版本值替代其余证据。
+type story056CalibrationProfile struct {
+	Version, ProfileVersion, ProfileHash, ReferenceSHA256 string
+}
+
+func e2eStory056CalibrationResultPayload(t *testing.T, lease story056WorkerLease, item map[string]any, overlay files.FileAsset, profile story056CalibrationProfile) map[string]any {
 	t.Helper()
+	version, profileVersion, profileHash, referenceSHA256 := profile.Version, profile.ProfileVersion, profile.ProfileHash, profile.ReferenceSHA256
 	payload := e2eStory056OMRResultPayload(t, lease, item, overlay, version, []map[string]any{{"option": "A", "foreground_delta": 0.9}}, false)
 	payload["profile_version"] = profileVersion
 	payload["profile_hash"] = profileHash

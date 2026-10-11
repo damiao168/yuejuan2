@@ -49,8 +49,13 @@ func loginFieldsWithinLimits(tenantCode string, username string, password string
 }
 
 func managedUserFieldsWithinLimits(input CreateManagedUserInput) bool {
-	if len(input.ClassIDs) > 200 || len(input.SchoolID) > 128 {
+	if len(input.ClassIDs) > 200 || len(input.RoleCodes) > 8 || len(input.SchoolID) > 128 {
 		return false
+	}
+	for _, code := range input.RoleCodes {
+		if len(code) > maxRoleCodeBytes {
+			return false
+		}
 	}
 	for _, classID := range input.ClassIDs {
 		if len(classID) > 128 {

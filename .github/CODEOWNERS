@@ -1,4 +1,4 @@
-# Security-sensitive delivery and runtime boundaries require repository-owner review.
+# 涉及安全的交付和运行时边界需要仓库所有者评审。
 /.github/workflows/ @damiao168
 /services/api-gateway/migrations/ @damiao168
 /services/api-gateway/internal/auth/ @damiao168

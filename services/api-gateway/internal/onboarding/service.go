@@ -6,6 +6,13 @@ import (
 	"strings"
 )
 
+const (
+	systemStatusPath        = "/system/status"
+	platformModelConfigPath = "/platform/model-config"
+	systemModelsPath        = "/system/models"
+	organizationSetupPath   = "/organization/setup"
+)
+
 var ErrUnsupportedActor = errors.New("onboarding readiness is unavailable for this role")
 
 type TenantReader interface {
@@ -60,11 +67,11 @@ func (s *Service) platformReadiness(ctx context.Context, actor Actor) Onboarding
 	checks := make([]ReadinessCheck, 0, 5)
 	systemSummary, systemErr := s.deps.System.Summary(ctx)
 	if systemErr != nil {
-		checks = append(checks, unavailableCheck("system_core", SeverityBlocking, "暂时无法读取系统状态", "/system/status"))
+		checks = append(checks, unavailableCheck("system_core", SeverityBlocking, "暂时无法读取系统状态", systemStatusPath))
 	} else if systemSummary.CoreReady {
-		checks = append(checks, ReadinessCheck{Key: "system_core", State: CheckReady, Severity: SeverityBlocking, Title: "系统运行正常", Description: "数据库、缓存与文件存储等关键依赖可用。", ActionPath: "/system/status"})
+		checks = append(checks, ReadinessCheck{Key: "system_core", State: CheckReady, Severity: SeverityBlocking, Title: "系统运行正常", Description: "数据库、缓存与文件存储等关键依赖可用。", ActionPath: systemStatusPath})
 	} else {
-		checks = append(checks, ReadinessCheck{Key: "system_core", State: CheckAction, Severity: SeverityBlocking, Title: "系统关键依赖需要处理", Description: "请先在系统运维中检查关键服务。", ActionCode: "check_system", ActionPath: "/system/status"})
+		checks = append(checks, ReadinessCheck{Key: "system_core", State: CheckAction, Severity: SeverityBlocking, Title: "系统关键依赖需要处理", Description: "请先在系统运维中检查关键服务。", ActionCode: "check_system", ActionPath: systemStatusPath})
 	}
 
 	// 空状态只兼容历史调用；明确的非 active 状态必须阻断平台初始化。
@@ -79,14 +86,14 @@ func (s *Service) platformReadiness(ctx context.Context, actor Actor) Onboarding
 	}
 
 	if systemErr != nil {
-		checks = append(checks, unavailableCheck("ai_mode", SeverityRecommended, "暂时无法读取 AI 状态", "/platform/model-config"))
+		checks = append(checks, unavailableCheck("ai_mode", SeverityRecommended, "暂时无法读取 AI 状态", platformModelConfigPath))
 	} else {
 		checks = append(checks, aiCheck(systemSummary))
 	}
 
 	policy, policyErr := s.deps.Governance.DataPolicy(ctx, actor.TenantID)
 	if policyErr != nil {
-		checks = append(checks, unavailableCheck("data_policy", SeverityRecommended, "暂时无法读取数据处理策略", "/system/models"))
+		checks = append(checks, unavailableCheck("data_policy", SeverityRecommended, "暂时无法读取数据处理策略", systemModelsPath))
 	} else {
 		checks = append(checks, dataPolicyCheck(policy))
 	}
@@ -102,11 +109,11 @@ func (s *Service) schoolReadiness(ctx context.Context, actor Actor) OnboardingRe
 	}
 	results := []result{}
 	organization, organizationErr := s.deps.Organization.Summary(ctx, actor.TenantID, actor.Scope)
-	results = append(results, result{"school", "学校资料", "填写学校或考试机构资料。", "/organization/setup", organization.HasSchool, organizationErr})
-	results = append(results, result{"teaching_structure", "年级与班级", "至少创建一个年级和班级。", "/organization/setup", organization.HasTeachingStructure, organizationErr})
-	results = append(results, result{"students", "学生", "导入或创建学生名单。", "/organization/setup", organization.HasStudents, organizationErr})
+	results = append(results, result{"school", "学校资料", "填写学校或考试机构资料。", organizationSetupPath, organization.HasSchool, organizationErr})
+	results = append(results, result{"teaching_structure", "年级与班级", "至少创建一个年级和班级。", organizationSetupPath, organization.HasTeachingStructure, organizationErr})
+	results = append(results, result{"students", "学生", "导入或创建学生名单。", organizationSetupPath, organization.HasStudents, organizationErr})
 	hasStaff, err := s.deps.Users.HasBusinessUser(ctx, actor.TenantID, actor.Scope)
-	results = append(results, result{"staff", "教师与管理员", "创建至少一位学校管理员或教学人员。", "/organization/setup", hasStaff, err})
+	results = append(results, result{"staff", "教师与管理员", "创建至少一位学校管理员或教学人员。", organizationSetupPath, hasStaff, err})
 
 	checks := make([]ReadinessCheck, 0, 5)
 	for _, item := range results {
@@ -134,10 +141,10 @@ func aiCheck(summary SystemReadinessSummary) ReadinessCheck {
 		metadata["model"] = summary.AIModel
 	}
 	if !summary.AIConfigured {
-		return ReadinessCheck{Key: "ai_mode", State: CheckAction, Severity: SeverityRecommended, Title: "选择 AI 工作模式", Description: "可以配置本地或第三方模型，也可以继续使用人工阅卷。", ActionCode: "configure_ai", ActionPath: "/platform/model-config", Metadata: metadata}
+		return ReadinessCheck{Key: "ai_mode", State: CheckAction, Severity: SeverityRecommended, Title: "选择 AI 工作模式", Description: "可以配置本地或第三方模型，也可以继续使用人工阅卷。", ActionCode: "configure_ai", ActionPath: platformModelConfigPath, Metadata: metadata}
 	}
 	if !summary.AIAvailable {
-		return ReadinessCheck{Key: "ai_mode", State: CheckWarning, Severity: SeverityRecommended, Title: "AI 阅卷当前不可用", Description: "这不会阻断人工阅卷，请检查模型运行状态。", ActionCode: "check_ai", ActionPath: "/platform/model-config", Metadata: metadata}
+		return ReadinessCheck{Key: "ai_mode", State: CheckWarning, Severity: SeverityRecommended, Title: "AI 阅卷当前不可用", Description: "这不会阻断人工阅卷，请检查模型运行状态。", ActionCode: "check_ai", ActionPath: platformModelConfigPath, Metadata: metadata}
 	}
 	title := "AI 阅卷已准备"
 	if summary.AIMode == "local" {
@@ -145,18 +152,19 @@ func aiCheck(summary SystemReadinessSummary) ReadinessCheck {
 	} else if summary.AIMode == "external" {
 		title = "当前使用第三方模型"
 	}
-	return ReadinessCheck{Key: "ai_mode", State: CheckReady, Severity: SeverityRecommended, Title: title, Description: "模型状态已确认。", ActionPath: "/platform/model-config", Metadata: metadata}
+	return ReadinessCheck{Key: "ai_mode", State: CheckReady, Severity: SeverityRecommended, Title: title, Description: "模型状态已确认。", ActionPath: platformModelConfigPath, Metadata: metadata}
 }
 
 func dataPolicyCheck(policy DataPolicySummary) ReadinessCheck {
 	metadata := map[string]any{
+		"policy_scope": "platform_default",
 		"external_enabled": policy.ExternalEnabled, "text_export_enabled": policy.TextExportEnabled,
 		"image_export_enabled": policy.ImageExportEnabled, "fallback_mode": policy.FallbackMode,
 	}
 	if policy.ExternalEnabled && (policy.TextExportEnabled || policy.ImageExportEnabled) {
-		return ReadinessCheck{Key: "data_policy", State: CheckWarning, Severity: SeverityRecommended, Title: "当前允许部分答题数据发送到外部 AI", Description: "请确认文本与图片外发范围符合学校的数据政策。", ActionCode: "review_data_policy", ActionPath: "/system/models", Metadata: metadata}
+		return ReadinessCheck{Key: "data_policy", State: CheckWarning, Severity: SeverityRecommended, Title: "平台默认政策允许部分数据外发", Description: "此检查属于平台默认政策，不代表任何学校已完成授权。请选择学校核对其使用策略。", ActionCode: "review_data_policy", ActionPath: "/platform/model-config?tab=governance&view=policy&choose_school=1", Metadata: metadata}
 	}
-	return ReadinessCheck{Key: "data_policy", State: CheckReady, Severity: SeverityRecommended, Title: "答题数据保持在本地", Description: "当前模型策略未开启答题文本或图片外发。", ActionPath: "/system/models", Metadata: metadata}
+	return ReadinessCheck{Key: "data_policy", State: CheckReady, Severity: SeverityRecommended, Title: "平台默认政策未开启数据外发", Description: "仅说明平台默认政策；学校的授权范围须逐校检查，不继承此处的完成标记。", ActionPath: "/platform/model-config?tab=governance&view=policy&choose_school=1", Metadata: metadata}
 }
 
 func booleanCheck(key string, ready bool, severity Severity, title, description, actionCode, actionPath string) ReadinessCheck {

@@ -105,9 +105,8 @@ func NewMemoryApplicationStores() ApplicationStores {
 	return stores
 }
 
-// NewPostgresApplicationStores is the single production persistence graph.
-// Integration tests use this factory too, so adding a new application store
-// cannot silently leave the production-style suite backed by memory.
+// NewPostgresApplicationStores 是唯一的生产持久化依赖图。
+// 集成测试也使用此工厂，避免新增应用存储后，生产式测试套件仍静默使用内存实现。
 // 生产图统一从同一个数据库构造存储；新增模块若漏接这里，会在事务路由中悄悄退回内存或空实现。
 func NewPostgresApplicationStores(infra *Infrastructure) (ApplicationStores, error) {
 	assessmentStore := assessment.NewPostgresStore(infra.DB)
@@ -179,7 +178,7 @@ func NewPostgresApplicationStores(infra *Infrastructure) (ApplicationStores, err
 	return stores, nil
 }
 
-// 递归检查只验证持久化接口已装配；OCRQueue 是由 durable worker runtime 取代的历史兼容槽位。
+// 递归检查只验证持久化接口已装配；OCRQueue 是由持久化 Worker Runtime 取代的历史兼容槽位。
 func validatePostgresStoreGraph(stores ApplicationStores) error {
 	return validatePostgresStoreValue(reflect.ValueOf(stores), "stores")
 }
@@ -190,8 +189,8 @@ func validatePostgresStoreValue(value reflect.Value, path string) error {
 		field := value.Field(index)
 		name := path + "." + typeOfValue.Field(index).Name
 		if name == "stores.Capture.OCRQueue" {
-			// PostgreSQL worker runtime is the durable OCR queue. This legacy
-			// seam is used only by the memory router when no runtime is present.
+			// PostgreSQL Worker Runtime 是持久化 OCR 队列。
+			// 这个旧版接口只用于没有运行时的内存路由。
 			continue
 		}
 		switch field.Kind() {
@@ -200,16 +199,24 @@ func validatePostgresStoreValue(value reflect.Value, path string) error {
 				return err
 			}
 		case reflect.Interface, reflect.Pointer:
-			for field.Kind() == reflect.Interface && !field.IsNil() {
-				field = field.Elem()
-			}
-			if field.Kind() != reflect.Pointer && field.Kind() != reflect.Interface {
-				continue
-			}
-			if field.IsNil() {
-				return fmt.Errorf("production application store %s is not configured", name)
+			if err := validatePostgresStoreReference(field, name); err != nil {
+				return err
 			}
 		}
+	}
+	return nil
+}
+
+func validatePostgresStoreReference(field reflect.Value, path string) error {
+	// interface 内的 typed nil 也属于缺失依赖；只检查引用本身，不递归其对象内部字段。
+	for field.Kind() == reflect.Interface && !field.IsNil() {
+		field = field.Elem()
+	}
+	if field.Kind() != reflect.Pointer && field.Kind() != reflect.Interface {
+		return nil
+	}
+	if field.IsNil() {
+		return fmt.Errorf("production application store %s is not configured", path)
 	}
 	return nil
 }

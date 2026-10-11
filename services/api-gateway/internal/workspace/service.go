@@ -47,10 +47,8 @@ type AssessmentSummaryReader interface {
 	GetExamAssessmentSummary(context.Context, string, string) (assessment.ExamAssessmentSummary, error)
 }
 
-// ProcessingReader gives the five-stage exam workspace a bounded view of the
-// canonical page-processing projection.  The processing service remains the
-// source of its own facts; the workspace only turns blocking exceptions into
-// actionable links for the exam owner.
+// ProcessingReader 为五阶段考试工作区提供标准页面处理投影的受限视图。
+// processing 服务仍负责自身事实；工作区只将阻断异常转换为考试负责人可操作的链接。
 type ProcessingReader interface {
 	Summary(context.Context, string, string) (processing.Summary, error)
 	ListExceptions(context.Context, string, processing.ExceptionFilter) (processing.ListResult, error)
@@ -78,7 +76,7 @@ func NewService(deps Dependencies) *Service {
 	return &Service{deps: deps}
 }
 
-// 工作台把各子系统的读取失败降级为 warning，只有考试本身不可访问才让整个请求失败。
+// Get 要求必需 reader 已接入；考试读取失败原样返回，后续子系统失败降级为 warning。
 func (s *Service) Get(ctx context.Context, scope auth.AccessScope, examID string) (Projection, error) {
 	if s.deps.Exams == nil || s.deps.Papers == nil || s.deps.Submissions == nil || s.deps.Reviews == nil {
 		return Projection{}, fmt.Errorf("workspace dependencies are incomplete")
@@ -90,6 +88,7 @@ func (s *Service) Get(ctx context.Context, scope auth.AccessScope, examID string
 
 	result := Projection{
 		ExamID:          item.ID,
+		ExamSessionID:   item.SessionID,
 		ExamName:        item.Name,
 		ExamSessionName: item.SessionName,
 		SubjectExams:    []SubjectExam{{ExamID: item.ID, Subject: item.Subject, TotalScore: item.TotalScore}},
@@ -109,127 +108,164 @@ func (s *Service) Get(ctx context.Context, scope auth.AccessScope, examID string
 		},
 		UpdatedAt: s.deps.Now().UTC(),
 	}
-	if item.SessionID != "" {
-		if reader, ok := s.deps.Exams.(sessionExamReader); ok {
-			siblings, listErr := reader.ListSessionExams(ctx, scope, item.SessionID)
-			if listErr != nil {
-				result.Warnings = append(result.Warnings, unavailableNotice("session_subjects_unavailable", "同场次学科暂不可用"))
-			} else {
-				result.SubjectExams = []SubjectExam{}
-				for _, sibling := range siblings {
-					result.SubjectExams = append(result.SubjectExams, SubjectExam{ExamID: sibling.ID, Subject: sibling.Subject, TotalScore: sibling.TotalScore})
-				}
-			}
-		}
+	s.applyArchiveReadOnly(ctx, scope, item, &result)
+	// 各来源按原顺序串行读取并追加通知；任一来源降级后仍继续，投影不承诺跨来源同一快照。
+	s.applySessionSubjects(ctx, scope, item, &result)
+	s.applyAssessmentSummary(ctx, item, &result)
+	s.applyPaperCounts(ctx, item, &result)
+	readiness := s.applyPreparation(ctx, item, &result)
+	submissionsReliable := s.applySubmissionCounts(ctx, item, &result)
+	appendProcessingNotices(ctx, s.deps.Processing, item.TenantID, item.ID, &result)
+	taskTotal := s.applyReviewCounts(ctx, item, &result)
+	arbitrationTotal := s.applyArbitrationCounts(ctx, item, &result)
+
+	result.NextActions = buildNextActions(result)
+	if result.ReadOnly {
+		// 归档仅保存历史事实；工作区不能再推荐修改配置、重新处理或进入下一业务阶段。
+		result.NextActions = []NextAction{}
 	}
+	result.StageProgress = buildStageProgress(result, readiness, submissionsReliable, taskTotal, arbitrationTotal)
+	return result, nil
+}
+
+func (s *Service) applySessionSubjects(ctx context.Context, scope auth.AccessScope, item exam.Exam, result *Projection) {
+	if item.SessionID == "" {
+		return
+	}
+	reader, ok := s.deps.Exams.(sessionExamReader)
+	if !ok {
+		return
+	}
+	siblings, listErr := reader.ListSessionExams(ctx, scope, item.SessionID)
+	if listErr != nil {
+		result.Warnings = append(result.Warnings, unavailableNotice("session_subjects_unavailable", "同场次学科暂不可用"))
+		return
+	}
+	result.SubjectExams = []SubjectExam{}
+	for _, sibling := range siblings {
+		result.SubjectExams = append(result.SubjectExams, SubjectExam{ExamID: sibling.ID, Subject: sibling.Subject, TotalScore: sibling.TotalScore})
+	}
+}
+
+func (s *Service) applyAssessmentSummary(ctx context.Context, item exam.Exam, result *Projection) {
 	if s.deps.Assessments == nil {
 		result.Warnings = append(result.Warnings, riskUnavailableNotice("风险汇总服务尚未接入"))
-	} else if summary, summaryErr := s.deps.Assessments.GetExamAssessmentSummary(ctx, item.TenantID, item.ID); summaryErr != nil {
+		return
+	}
+	summary, summaryErr := s.deps.Assessments.GetExamAssessmentSummary(ctx, item.TenantID, item.ID)
+	if summaryErr != nil {
 		message := "暂时无法读取每道题的评估配置"
 		if errors.Is(summaryErr, assessment.ErrNotFound) {
 			message = "题目评估配置尚未完成"
 		}
 		result.Warnings = append(result.Warnings, riskUnavailableNotice(message))
-	} else {
-		result.RiskTier = string(summary.RiskTier)
-		result.SubjectSummary.Code = string(summary.SubjectCode)
-		result.SubjectSummary.Label = subjectLabel(string(summary.SubjectCode))
-		result.SubjectSummary.ConfiguredQuestionCount = summary.ConfiguredQuestionCount
-		result.SubjectSummary.FrozenQuestionCount = summary.FrozenQuestionCount
-		result.SubjectSummary.RiskTierSource = summary.Source
+		return
 	}
-	var readiness *paper.ReadinessResult
+	result.RiskTier = string(summary.RiskTier)
+	result.SubjectSummary.Code = string(summary.SubjectCode)
+	result.SubjectSummary.Label = subjectLabel(string(summary.SubjectCode))
+	result.SubjectSummary.ConfiguredQuestionCount = summary.ConfiguredQuestionCount
+	result.SubjectSummary.FrozenQuestionCount = summary.FrozenQuestionCount
+	result.SubjectSummary.RiskTierSource = summary.Source
+}
 
+func (s *Service) applyPaperCounts(ctx context.Context, item exam.Exam, result *Projection) {
 	papers, papersErr := s.deps.Papers.ListPapers(ctx, item.TenantID, item.ID)
 	if papersErr != nil {
 		result.Warnings = append(result.Warnings, unavailableNotice("papers_unavailable", "试卷数据暂不可用"))
 	} else {
-		result.Counts.PaperCount = len(papers)
+		result.Counts.PaperCount = len(paper.PapersForPurpose(papers, paper.PaperPurposeQuestion))
 	}
 	questions, questionsErr := s.deps.Papers.ListQuestions(ctx, item.TenantID, item.ID)
 	if questionsErr != nil {
 		result.Warnings = append(result.Warnings, unavailableNotice("questions_unavailable", "题目数据暂不可用"))
-	} else {
-		result.Counts.QuestionCount = len(questions)
-		result.SubjectSummary.QuestionCount = len(questions)
-		for _, question := range questions {
-			result.SubjectSummary.QuestionTypes[question.QuestionType]++
-		}
+		return
 	}
+	result.Counts.QuestionCount = len(questions)
+	result.SubjectSummary.QuestionCount = len(questions)
+	for _, question := range questions {
+		result.SubjectSummary.QuestionTypes[question.QuestionType]++
+	}
+}
 
-	if isPreparationStatus(item.Status) {
-		if readinessResult, readinessErr := s.deps.Papers.Readiness(ctx, item.TenantID, item.ID); readinessErr != nil {
-			result.Warnings = append(result.Warnings, unavailableNotice("readiness_unavailable", "开考准备状态暂不可用"))
-		} else {
-			readiness = &readinessResult
-			for _, check := range readinessResult.Checks {
-				if check.Passed {
-					continue
-				}
-				result.Blockers = append(result.Blockers, Notice{
-					Code: check.Code, Title: check.Label, Message: check.Message, Severity: "blocker",
-					ActionLabel: "前往处理", ActionRoute: examRoute(item.ID, check.Section),
-				})
-			}
-		}
-		appendPaperImportNotices(ctx, s.deps.PaperImports, item.TenantID, item.ID, readiness, &result)
+func (s *Service) applyPreparation(ctx context.Context, item exam.Exam, result *Projection) *paper.ReadinessResult {
+	if !isPreparationStatus(item.Status) {
+		return nil
 	}
-
-	submissions, submissionsErr := s.deps.Submissions.ListByExam(ctx, item.TenantID, item.ID, submission.ListFilter{})
-	submissionsReliable := submissionsErr == nil
-	if submissionsErr != nil {
-		result.Warnings = append(result.Warnings, unavailableNotice("submissions_unavailable", "答卷处理数据暂不可用"))
+	var readiness *paper.ReadinessResult
+	if readinessResult, readinessErr := s.deps.Papers.Readiness(ctx, item.TenantID, item.ID); readinessErr != nil {
+		result.Warnings = append(result.Warnings, unavailableNotice("readiness_unavailable", "开考准备状态暂不可用"))
 	} else {
-		for _, answerSheet := range submissions {
-			result.Counts.SubmissionCount++
-			if submissionFailed(answerSheet) {
-				result.Counts.FailedSubmissionCount++
+		readiness = &readinessResult
+		for _, check := range readinessResult.Checks {
+			if check.Passed {
+				continue
 			}
-			if answerSheet.StudentID == "" {
-				result.Counts.UnmatchedSubmissionCount++
-			}
-			if answerSheet.QualityStatus == "failed" || answerSheet.QualityStatus == "review" || len(answerSheet.QualityIssues) > 0 {
-				result.Counts.QualityIssueSubmissionCount++
-			}
-		}
-		appendSubmissionNotices(&result)
-	}
-	appendProcessingNotices(ctx, s.deps.Processing, item.TenantID, item.ID, &result)
-
-	taskTotal := -1
-	tasks, tasksErr := s.deps.Reviews.ListTasks(ctx, item.TenantID, review.ListFilter{ExamID: item.ID})
-	if tasksErr != nil {
-		result.Warnings = append(result.Warnings, unavailableNotice("review_tasks_unavailable", "阅卷任务统计暂不可用"))
-	} else {
-		taskTotal = len(tasks)
-		for _, task := range tasks {
-			if task.Status != "submitted" && task.Status != "completed" {
-				result.Counts.PendingReviewCount++
-			}
-		}
-	}
-	arbitrationTotal := -1
-	arbitrations, arbitrationErr := s.deps.Reviews.ListArbitrationTasks(ctx, item.TenantID, review.ArbitrationFilter{ExamID: item.ID})
-	if arbitrationErr != nil {
-		result.Warnings = append(result.Warnings, unavailableNotice("arbitration_tasks_unavailable", "复核任务统计暂不可用"))
-	} else {
-		arbitrationTotal = len(arbitrations)
-		for _, task := range arbitrations {
-			if task.Status != "completed" && task.Status != "cancelled" {
-				result.Counts.PendingArbitrationCount++
-			}
-		}
-		if result.Counts.PendingArbitrationCount > 0 {
 			result.Blockers = append(result.Blockers, Notice{
-				Code: "pending_arbitration", Title: "待人工复核", Message: fmt.Sprintf("仍有 %d 个复核任务未完成", result.Counts.PendingArbitrationCount),
-				Severity: "blocker", ActionLabel: "开始复核", ActionRoute: examRoute(item.ID, "quality"),
+				Code: check.Code, Title: check.Label, Message: check.Message, Severity: "blocker",
+				ActionLabel: "前往处理", ActionRoute: examRoute(item.ID, check.Section),
 			})
 		}
 	}
+	// 准备度读取失败时仍读取导入事实；nil readiness 不能把待核对导入降为已准备好的 warning。
+	appendPaperImportNotices(ctx, s.deps.PaperImports, item.TenantID, item.ID, readiness, result)
+	return readiness
+}
 
-	result.NextActions = buildNextActions(result)
-	result.StageProgress = buildStageProgress(result, readiness, submissionsReliable, taskTotal, arbitrationTotal)
-	return result, nil
+func (s *Service) applySubmissionCounts(ctx context.Context, item exam.Exam, result *Projection) bool {
+	submissions, submissionsErr := s.deps.Submissions.ListByExam(ctx, item.TenantID, item.ID, submission.ListFilter{})
+	if submissionsErr != nil {
+		result.Warnings = append(result.Warnings, unavailableNotice("submissions_unavailable", "答卷处理数据暂不可用"))
+		return false
+	}
+	for _, answerSheet := range submissions {
+		result.Counts.SubmissionCount++
+		if submissionFailed(answerSheet) {
+			result.Counts.FailedSubmissionCount++
+		}
+		if answerSheet.StudentID == "" {
+			result.Counts.UnmatchedSubmissionCount++
+		}
+		if answerSheet.QualityStatus == "failed" || answerSheet.QualityStatus == "review" || len(answerSheet.QualityIssues) > 0 {
+			result.Counts.QualityIssueSubmissionCount++
+		}
+	}
+	appendSubmissionNotices(result)
+	return true
+}
+
+func (s *Service) applyReviewCounts(ctx context.Context, item exam.Exam, result *Projection) int {
+	tasks, tasksErr := s.deps.Reviews.ListTasks(ctx, item.TenantID, review.ListFilter{ExamID: item.ID})
+	if tasksErr != nil {
+		result.Warnings = append(result.Warnings, unavailableNotice("review_tasks_unavailable", "阅卷任务统计暂不可用"))
+		return -1
+	}
+	for _, task := range tasks {
+		if task.Status != "submitted" && task.Status != "completed" {
+			result.Counts.PendingReviewCount++
+		}
+	}
+	return len(tasks)
+}
+
+func (s *Service) applyArbitrationCounts(ctx context.Context, item exam.Exam, result *Projection) int {
+	arbitrations, arbitrationErr := s.deps.Reviews.ListArbitrationTasks(ctx, item.TenantID, review.ArbitrationFilter{ExamID: item.ID})
+	if arbitrationErr != nil {
+		result.Warnings = append(result.Warnings, unavailableNotice("arbitration_tasks_unavailable", "复核任务统计暂不可用"))
+		return -1
+	}
+	for _, task := range arbitrations {
+		if task.Status != "completed" && task.Status != "cancelled" {
+			result.Counts.PendingArbitrationCount++
+		}
+	}
+	if result.Counts.PendingArbitrationCount > 0 {
+		result.Blockers = append(result.Blockers, Notice{
+			Code: "pending_arbitration", Title: "待人工复核", Message: fmt.Sprintf("仍有 %d 个复核任务未完成", result.Counts.PendingArbitrationCount),
+			Severity: "blocker", ActionLabel: "开始复核", ActionRoute: examRoute(item.ID, "quality"),
+		})
+	}
+	return len(arbitrations)
 }
 
 func appendPaperImportNotices(ctx context.Context, reader PaperImportReader, tenantID, examID string, readiness *paper.ReadinessResult, result *Projection) {
@@ -260,10 +296,8 @@ func appendPaperImportNotices(ctx context.Context, reader PaperImportReader, ten
 			notice.Severity = "warning"
 			result.Warnings = append(result.Warnings, notice)
 		} else {
-			// Reviewing extracted materials is the actionable prerequisite for
-			// readiness failures caused by the same unconfirmed import. Put it
-			// first so buildNextActions does not hide it behind a generic paper
-			// readiness action with the same route.
+			// 复核提取材料是解决同一未确认导入引起的准备度失败的可操作前提。
+			// 将其放在首位，避免 buildNextActions 将它隐藏在使用相同路由的通用试卷准备度操作之后。
 			result.Blockers = append([]Notice{notice}, result.Blockers...)
 		}
 	case "failed":
@@ -273,17 +307,8 @@ func appendPaperImportNotices(ctx context.Context, reader PaperImportReader, ten
 
 func buildStageProgress(result Projection, readiness *paper.ReadinessResult, submissionsReliable bool, taskTotal int, arbitrationTotal int) []StageProgress {
 	progress := make([]StageProgress, 0, 5)
-	if readiness != nil {
-		passed := 0
-		for _, check := range readiness.Checks {
-			if check.Passed {
-				passed++
-			}
-		}
-		progress = append(progress, measuredProgress("prepare", result.Stages[0].State, passed, len(readiness.Checks), "项", fmt.Sprintf("已通过 %d / %d 项开考检查", passed, len(readiness.Checks))))
-	} else {
-		progress = append(progress, statusProgress("prepare", result.Stages[0].State, "暂无可靠的开考检查分母"))
-	}
+	progress = append(progress, preparationStageProgress(result.Stages[0].State, readiness))
+	// 读取失败是未知分母，成功的空列表是可靠的零分母；答卷应收总数始终未知。
 	if submissionsReliable {
 		progress = append(progress, StageProgress{
 			Stage: "capture", Status: result.Stages[1].State, Completed: intPointer(result.Counts.SubmissionCount), Unit: "份",
@@ -312,6 +337,19 @@ func buildStageProgress(result Projection, readiness *paper.ReadinessResult, sub
 	}
 	progress = append(progress, statusProgress("results", result.Stages[4].State, resultSummary))
 	return progress
+}
+
+func preparationStageProgress(state string, readiness *paper.ReadinessResult) StageProgress {
+	if readiness == nil {
+		return statusProgress("prepare", state, "暂无可靠的开考检查分母")
+	}
+	passed := 0
+	for _, check := range readiness.Checks {
+		if check.Passed {
+			passed++
+		}
+	}
+	return measuredProgress("prepare", state, passed, len(readiness.Checks), "项", fmt.Sprintf("已通过 %d / %d 项开考检查", passed, len(readiness.Checks)))
 }
 
 func measuredProgress(stage string, status string, completed int, total int, unit string, summary string) StageProgress {
@@ -345,10 +383,9 @@ func appendSubmissionNotices(result *Projection) {
 	}
 }
 
-// appendProcessingNotices deliberately does not duplicate every capture/OCR
-// metric in the workspace.  It only lifts blocking canonical exceptions into
-// the owner's next-action list, where each link preserves the exact exception
-// ID and opens the unified processing centre rather than an opaque worker page.
+// appendProcessingNotices 不在工作区重复每项捕获或 OCR 指标。
+// 它只将阻断性的标准异常提升到负责人的下一步操作清单；
+// 每个链接保留准确异常 ID，并打开统一处理中心，而非不透明的 worker 页面。
 func appendProcessingNotices(ctx context.Context, reader ProcessingReader, tenantID, examID string, result *Projection) {
 	if reader == nil {
 		return

@@ -68,6 +68,26 @@ export function validateRubricPoint(point, index = 0) {
   return errors;
 }
 
+function validateRubricExtras(rubric, errors) {
+  if (Array.isArray(rubric.deductions)) {
+    rubric.deductions.forEach((deduction, index) => {
+      if (!isObject(deduction)) errors.push(`rubric.deductions[${index}] must be an object`);
+      if (isObject(deduction) && !isNonEmptyString(deduction.id)) {
+        errors.push(`rubric.deductions[${index}].id is required`);
+      }
+      if (isObject(deduction) && (!isNumber(deduction.max_deduction) || deduction.max_deduction < 0)) {
+        errors.push(`rubric.deductions[${index}].max_deduction must be >= 0`);
+      }
+    });
+  }
+  if (rubric.question_type === "essay" && !rubric.dimensions) {
+    errors.push("essay rubric must declare dimensions");
+  }
+  if (rubric.question_type === "calculation" && !rubric.steps) {
+    errors.push("calculation rubric must declare steps");
+  }
+}
+
 export function validateRubric(rubric) {
   const errors = [];
   if (!isObject(rubric)) return validationResult(["rubric must be an object"]);
@@ -87,7 +107,7 @@ export function validateRubric(rubric) {
     let total = 0;
     rubric.points.forEach((point, index) => {
       errors.push(...validateRubricPoint(point, index));
-      if (point && point.id) {
+      if (point?.id) {
         if (seen.has(point.id)) errors.push(`rubric point id is duplicated: ${point.id}`);
         seen.add(point.id);
       }
@@ -104,24 +124,19 @@ export function validateRubric(rubric) {
       errors.push(`rubric points total ${round(total)} must equal max_score ${rubric.max_score}`);
     }
   }
-  if (Array.isArray(rubric.deductions)) {
-    rubric.deductions.forEach((deduction, index) => {
-      if (!isObject(deduction)) errors.push(`rubric.deductions[${index}] must be an object`);
-      if (isObject(deduction) && !isNonEmptyString(deduction.id)) {
-        errors.push(`rubric.deductions[${index}].id is required`);
-      }
-      if (isObject(deduction) && (!isNumber(deduction.max_deduction) || deduction.max_deduction < 0)) {
-        errors.push(`rubric.deductions[${index}].max_deduction must be >= 0`);
-      }
-    });
-  }
-  if (rubric.question_type === "essay" && !rubric.dimensions) {
-    errors.push("essay rubric must declare dimensions");
-  }
-  if (rubric.question_type === "calculation" && !rubric.steps) {
-    errors.push("calculation rubric must declare steps");
-  }
+  validateRubricExtras(rubric, errors);
   return validationResult(errors);
+}
+
+function validateInputRubricBinding(input, errors) {
+  if (isObject(input.rubric) && isNumber(input.max_score) && isNumber(input.rubric.max_score)) {
+    if (round(input.max_score) !== round(input.rubric.max_score)) {
+      errors.push("input.max_score must equal input.rubric.max_score");
+    }
+  }
+  if (isObject(input.rubric) && input.rubric_version !== input.rubric.rubric_version) {
+    errors.push("input.rubric_version must equal input.rubric.rubric_version");
+  }
 }
 
 export function validateGradingInput(input) {
@@ -154,14 +169,7 @@ export function validateGradingInput(input) {
 
   const rubricValidation = validateRubric(input.rubric);
   errors.push(...rubricValidation.errors.map((error) => `input.${error}`));
-  if (isObject(input.rubric) && isNumber(input.max_score) && isNumber(input.rubric.max_score)) {
-    if (round(input.max_score) !== round(input.rubric.max_score)) {
-      errors.push("input.max_score must equal input.rubric.max_score");
-    }
-  }
-  if (isObject(input.rubric) && input.rubric_version !== input.rubric.rubric_version) {
-    errors.push("input.rubric_version must equal input.rubric.rubric_version");
-  }
+  validateInputRubricBinding(input, errors);
   return validationResult(errors);
 }
 
@@ -180,15 +188,20 @@ export function validateEvidence(evidence, index = 0) {
   return errors;
 }
 
-export function validateGradingOutput(output, input = undefined) {
-  const errors = [];
-  if (!isObject(output)) return validationResult(["output must be an object"]);
-  const evidenceItems = Array.isArray(output.evidence) ? output.evidence : [];
-  const matchedItems = Array.isArray(output.matched_points) ? output.matched_points : [];
-  const missingItems = Array.isArray(output.missing_points) ? output.missing_points : [];
-  // 命中和缺失共用集合，防止同一个采分点被重复或矛盾归类。
-  const classifiedPointIds = new Set();
+function validateOutputScores(output, errors) {
+  if (!isNumber(output.suggested_score) || output.suggested_score < 0) {
+    errors.push("output.suggested_score must be >= 0");
+  }
+  if (!isNumber(output.max_score) || output.max_score <= 0) errors.push("output.max_score must be > 0");
+  if (isNumber(output.suggested_score) && isNumber(output.max_score) && output.suggested_score > output.max_score) {
+    errors.push("output.suggested_score cannot exceed output.max_score");
+  }
+  if (!isNumber(output.confidence) || output.confidence < 0 || output.confidence > 1) {
+    errors.push("output.confidence must be between 0 and 1");
+  }
+}
 
+function validateOutputFields(output, errors) {
   const requiredStrings = [
     "request_id",
     "student_feedback",
@@ -200,22 +213,15 @@ export function validateGradingOutput(output, input = undefined) {
   for (const field of requiredStrings) {
     if (!isNonEmptyString(output[field])) errors.push(`output.${field} is required`);
   }
-  if (!isNumber(output.suggested_score) || output.suggested_score < 0) {
-    errors.push("output.suggested_score must be >= 0");
-  }
-  if (!isNumber(output.max_score) || output.max_score <= 0) errors.push("output.max_score must be > 0");
-  if (isNumber(output.suggested_score) && isNumber(output.max_score) && output.suggested_score > output.max_score) {
-    errors.push("output.suggested_score cannot exceed output.max_score");
-  }
-  if (!isNumber(output.confidence) || output.confidence < 0 || output.confidence > 1) {
-    errors.push("output.confidence must be between 0 and 1");
-  }
+  validateOutputScores(output, errors);
   for (const key of ["matched_points", "missing_points", "deductions", "evidence", "risk_flags"]) {
     if (!Array.isArray(output[key])) errors.push(`output.${key} must be an array`);
   }
   if (typeof output.needs_human_review !== "boolean") errors.push("output.needs_human_review must be boolean");
   if (typeof output.mock !== "boolean") errors.push("output.mock must be boolean");
+}
 
+function validateOutputRiskFlags(output, errors) {
   if (Array.isArray(output.risk_flags)) {
     const seenFlags = new Set();
     output.risk_flags.forEach((flag) => {
@@ -224,6 +230,9 @@ export function validateGradingOutput(output, input = undefined) {
       seenFlags.add(flag);
     });
   }
+}
+
+function validateOutputEvidence(output, errors) {
   if (Array.isArray(output.evidence)) {
     const evidenceIds = new Set();
     output.evidence.forEach((evidence, index) => {
@@ -234,56 +243,67 @@ export function validateGradingOutput(output, input = undefined) {
       }
     });
   }
-  if (Array.isArray(output.matched_points)) {
-    let total = 0;
-    output.matched_points.forEach((point, index) => {
-      if (!isObject(point)) {
-        errors.push(`output.matched_points[${index}] must be an object`);
-        return;
-      }
-      if (!isNonEmptyString(point.rubric_point_id)) errors.push(`output.matched_points[${index}].rubric_point_id is required`);
-      if (isNonEmptyString(point.rubric_point_id)) {
-        if (classifiedPointIds.has(point.rubric_point_id)) {
-          errors.push(`output rubric point is classified more than once: ${point.rubric_point_id}`);
-        }
-        classifiedPointIds.add(point.rubric_point_id);
-      }
-      if (!isNumber(point.score) || point.score < 0) errors.push(`output.matched_points[${index}].score must be >= 0`);
-      if (!Array.isArray(point.evidence_ids)) errors.push(`output.matched_points[${index}].evidence_ids must be an array`);
-      if (Array.isArray(point.evidence_ids)) {
-        const linkedIds = new Set();
-        point.evidence_ids.forEach((evidenceId, evidenceIndex) => {
-          if (!isNonEmptyString(evidenceId)) {
-            errors.push(`output.matched_points[${index}].evidence_ids[${evidenceIndex}] must be a non-empty string`);
-          } else if (linkedIds.has(evidenceId)) {
-            errors.push(`output.matched_points[${index}].evidence_ids contains duplicate id: ${evidenceId}`);
-          }
-          linkedIds.add(evidenceId);
-        });
-      }
-      if (isNumber(point.score)) total += point.score;
-    });
-    if (isNumber(output.max_score) && total > output.max_score) {
-      errors.push("output.matched_points score total cannot exceed output.max_score");
+}
+
+function classifyOutputPoint(point, path, classifiedPointIds, errors) {
+  if (!isNonEmptyString(point.rubric_point_id)) {
+    errors.push(`${path}.rubric_point_id is required`);
+  } else {
+    if (classifiedPointIds.has(point.rubric_point_id)) {
+      errors.push(`output rubric point is classified more than once: ${point.rubric_point_id}`);
     }
+    classifiedPointIds.add(point.rubric_point_id);
   }
+}
+
+function validateMatchedEvidenceIds(point, path, errors) {
+  if (!Array.isArray(point.evidence_ids)) errors.push(`${path}.evidence_ids must be an array`);
+  if (Array.isArray(point.evidence_ids)) {
+    const linkedIds = new Set();
+    point.evidence_ids.forEach((evidenceId, evidenceIndex) => {
+      if (!isNonEmptyString(evidenceId)) {
+        errors.push(`${path}.evidence_ids[${evidenceIndex}] must be a non-empty string`);
+      } else if (linkedIds.has(evidenceId)) {
+        errors.push(`${path}.evidence_ids contains duplicate id: ${evidenceId}`);
+      }
+      linkedIds.add(evidenceId);
+    });
+  }
+}
+
+function validateOutputMatchedPoints(output, classifiedPointIds, errors) {
+  if (!Array.isArray(output.matched_points)) return;
+  let total = 0;
+  output.matched_points.forEach((point, index) => {
+    const path = `output.matched_points[${index}]`;
+    if (!isObject(point)) {
+      errors.push(`${path} must be an object`);
+      return;
+    }
+    classifyOutputPoint(point, path, classifiedPointIds, errors);
+    if (!isNumber(point.score) || point.score < 0) errors.push(`${path}.score must be >= 0`);
+    validateMatchedEvidenceIds(point, path, errors);
+    if (isNumber(point.score)) total += point.score;
+  });
+  if (isNumber(output.max_score) && total > output.max_score) {
+    errors.push("output.matched_points score total cannot exceed output.max_score");
+  }
+}
+
+function validateOutputMissingPoints(output, classifiedPointIds, errors) {
   if (Array.isArray(output.missing_points)) {
     output.missing_points.forEach((point, index) => {
       if (!isObject(point)) {
         errors.push(`output.missing_points[${index}] must be an object`);
         return;
       }
-      if (!isNonEmptyString(point.rubric_point_id)) {
-        errors.push(`output.missing_points[${index}].rubric_point_id is required`);
-      } else {
-        if (classifiedPointIds.has(point.rubric_point_id)) {
-          errors.push(`output rubric point is classified more than once: ${point.rubric_point_id}`);
-        }
-        classifiedPointIds.add(point.rubric_point_id);
-      }
+      classifyOutputPoint(point, `output.missing_points[${index}]`, classifiedPointIds, errors);
       if (!isNonEmptyString(point.reason)) errors.push(`output.missing_points[${index}].reason is required`);
     });
   }
+}
+
+function validateOutputDeductionsAndMock(output, errors) {
   if (Array.isArray(output.deductions)) {
     output.deductions.forEach((deduction, index) => {
       if (!isObject(deduction)) errors.push(`output.deductions[${index}] must be an object`);
@@ -295,66 +315,109 @@ export function validateGradingOutput(output, input = undefined) {
   if (output.mock === false && output.risk_flags?.includes("MOCK_OUTPUT")) {
     errors.push("non-mock output cannot include MOCK_OUTPUT risk flag");
   }
+}
+
+function validateOutputInputFields(output, input, errors) {
+  if (output.request_id !== input.request_id) errors.push("output.request_id must equal input.request_id");
+  if (round(output.max_score) !== round(input.max_score)) errors.push("output.max_score must equal input.max_score");
+  if (output.prompt_version !== input.prompt_version) errors.push("output.prompt_version must equal input.prompt_version");
+  if (output.rubric_version !== input.rubric_version) errors.push("output.rubric_version must equal input.rubric_version");
+  if (["essay", "discussion"].includes(input.question_type) && output.needs_human_review !== true) {
+    errors.push("essay and discussion outputs must set needs_human_review=true");
+  }
+  if (input.ocr_confidence < OCR_REVIEW_THRESHOLD && output.needs_human_review !== true) {
+    errors.push("low OCR confidence outputs must set needs_human_review=true");
+  }
+}
+
+function indexEvidenceByRubricPoint(evidenceItems, rubricPoints, errors) {
+  const evidenceByRubricPoint = new Map();
+  for (const evidence of evidenceItems) {
+    if (!isObject(evidence)) continue;
+    if (!rubricPoints.has(evidence.rubric_point_id)) {
+      errors.push(`evidence rubric point does not exist: ${evidence.rubric_point_id}`);
+    }
+    if (!evidenceByRubricPoint.has(evidence.rubric_point_id)) evidenceByRubricPoint.set(evidence.rubric_point_id, []);
+    evidenceByRubricPoint.get(evidence.rubric_point_id).push(evidence);
+  }
+  return evidenceByRubricPoint;
+}
+
+function validateRequiredPointEvidence(point, rubricPoint, evidenceByRubricPoint, errors) {
+  if (rubricPoint.required && rubricPoint.evidence_required) {
+    const linkedEvidence = evidenceByRubricPoint.get(point.rubric_point_id) ?? [];
+    if (linkedEvidence.length === 0 || (Array.isArray(point.evidence_ids) && point.evidence_ids.length === 0)) {
+      errors.push(`matched required point lacks evidence: ${point.rubric_point_id}`);
+    }
+  }
+}
+
+function validatePointEvidenceLinks(point, evidenceById, errors) {
+  // 证据存在还不够，链接必须归属当前采分点，不能借用其他点的证据。
+  for (const evidenceId of Array.isArray(point.evidence_ids) ? point.evidence_ids : []) {
+    const linked = evidenceById.get(evidenceId);
+    if (!linked || linked.rubric_point_id !== point.rubric_point_id) {
+      errors.push(`matched point has invalid evidence_id link: ${point.rubric_point_id}:${evidenceId}`);
+    }
+  }
+}
+
+function validateMatchedPointBinding(point, rubricPoints, evidenceById, evidenceByRubricPoint, errors) {
+  if (!isObject(point)) return;
+  const rubricPoint = rubricPoints.get(point.rubric_point_id);
+  if (!rubricPoint) {
+    errors.push(`matched rubric point does not exist: ${point.rubric_point_id}`);
+    return;
+  }
+  if (isNumber(point.score) && point.score > rubricPoint.score) {
+    errors.push(`matched point score exceeds rubric allowance: ${point.rubric_point_id}`);
+  }
+  validateRequiredPointEvidence(point, rubricPoint, evidenceByRubricPoint, errors);
+  validatePointEvidenceLinks(point, evidenceById, errors);
+}
+
+function validateOutputBinding(output, input, evidenceItems, matchedItems, missingItems, classifiedPointIds, errors) {
+  validateOutputInputFields(output, input, errors);
+  const rubricPoints = new Map(input.rubric.points.map((point) => [point.id, point]));
+  const evidenceById = new Map(evidenceItems.map((evidence) => [evidence?.evidence_id, evidence]));
+  const evidenceByRubricPoint = indexEvidenceByRubricPoint(evidenceItems, rubricPoints, errors);
+  for (const point of matchedItems) {
+    validateMatchedPointBinding(point, rubricPoints, evidenceById, evidenceByRubricPoint, errors);
+  }
+  for (const point of missingItems) {
+    if (isObject(point) && isNonEmptyString(point.rubric_point_id) && !rubricPoints.has(point.rubric_point_id)) {
+      errors.push(`missing rubric point does not exist: ${point.rubric_point_id}`);
+    }
+  }
+  // 每个量规点都必须显式归为命中或缺失，不能通过漏报难判项目提高完整性。
+  for (const rubricPointId of rubricPoints.keys()) {
+    if (!classifiedPointIds.has(rubricPointId)) errors.push(`rubric point was not classified: ${rubricPointId}`);
+  }
+}
+
+export function validateGradingOutput(output, input = undefined) {
+  const errors = [];
+  if (!isObject(output)) return validationResult(["output must be an object"]);
+  const evidenceItems = Array.isArray(output.evidence) ? output.evidence : [];
+  const matchedItems = Array.isArray(output.matched_points) ? output.matched_points : [];
+  const missingItems = Array.isArray(output.missing_points) ? output.missing_points : [];
+  // 命中和缺失共用集合，防止同一个采分点被重复或矛盾归类。
+  const classifiedPointIds = new Set();
+
+  validateOutputFields(output, errors);
+  validateOutputRiskFlags(output, errors);
+  validateOutputEvidence(output, errors);
+  validateOutputMatchedPoints(output, classifiedPointIds, errors);
+  validateOutputMissingPoints(output, classifiedPointIds, errors);
+  validateOutputDeductionsAndMock(output, errors);
 
   const inputValidation = input === undefined ? undefined : validateGradingInput(input);
   if (inputValidation && !inputValidation.valid) {
     errors.push(...inputValidation.errors.map((error) => `output validation input is invalid: ${error}`));
   }
-  // 只有输入本身有效，才能依其量规校验输出关联关系，避免把损坏输入当作权威。
-  if (inputValidation?.valid) {
-    if (output.request_id !== input.request_id) errors.push("output.request_id must equal input.request_id");
-    if (round(output.max_score) !== round(input.max_score)) errors.push("output.max_score must equal input.max_score");
-    if (output.prompt_version !== input.prompt_version) errors.push("output.prompt_version must equal input.prompt_version");
-    if (output.rubric_version !== input.rubric_version) errors.push("output.rubric_version must equal input.rubric_version");
-    if (["essay", "discussion"].includes(input.question_type) && output.needs_human_review !== true) {
-      errors.push("essay and discussion outputs must set needs_human_review=true");
-    }
-    if (input.ocr_confidence < OCR_REVIEW_THRESHOLD && output.needs_human_review !== true) {
-      errors.push("low OCR confidence outputs must set needs_human_review=true");
-    }
-    const rubricPoints = new Map(input.rubric.points.map((point) => [point.id, point]));
-    const evidenceById = new Map(evidenceItems.map((evidence) => [evidence?.evidence_id, evidence]));
-    const evidenceByRubricPoint = new Map();
-    for (const evidence of evidenceItems) {
-      if (!isObject(evidence)) continue;
-      if (!rubricPoints.has(evidence.rubric_point_id)) {
-        errors.push(`evidence rubric point does not exist: ${evidence.rubric_point_id}`);
-      }
-      if (!evidenceByRubricPoint.has(evidence.rubric_point_id)) evidenceByRubricPoint.set(evidence.rubric_point_id, []);
-      evidenceByRubricPoint.get(evidence.rubric_point_id).push(evidence);
-    }
-    for (const point of matchedItems) {
-      if (!isObject(point)) continue;
-      const rubricPoint = rubricPoints.get(point.rubric_point_id);
-      if (!rubricPoint) {
-        errors.push(`matched rubric point does not exist: ${point.rubric_point_id}`);
-        continue;
-      }
-      if (isNumber(point.score) && point.score > rubricPoint.score) {
-        errors.push(`matched point score exceeds rubric allowance: ${point.rubric_point_id}`);
-      }
-      if (rubricPoint.required && rubricPoint.evidence_required) {
-        const linkedEvidence = evidenceByRubricPoint.get(point.rubric_point_id) ?? [];
-        if (linkedEvidence.length === 0 || (Array.isArray(point.evidence_ids) && point.evidence_ids.length === 0)) {
-          errors.push(`matched required point lacks evidence: ${point.rubric_point_id}`);
-        }
-      }
-      for (const evidenceId of Array.isArray(point.evidence_ids) ? point.evidence_ids : []) {
-        const linked = evidenceById.get(evidenceId);
-        if (!linked || linked.rubric_point_id !== point.rubric_point_id) {
-          errors.push(`matched point has invalid evidence_id link: ${point.rubric_point_id}:${evidenceId}`);
-        }
-      }
-    }
-    for (const point of missingItems) {
-      if (isObject(point) && isNonEmptyString(point.rubric_point_id) && !rubricPoints.has(point.rubric_point_id)) {
-        errors.push(`missing rubric point does not exist: ${point.rubric_point_id}`);
-      }
-    }
-    // 每个量规点都必须显式归为命中或缺失，不能通过漏报难判项目提高完整性。
-    for (const rubricPointId of rubricPoints.keys()) {
-      if (!classifiedPointIds.has(rubricPointId)) errors.push(`rubric point was not classified: ${rubricPointId}`);
-    }
+  // 输入校验已排除 null；只有有效输入才能作为量规和版本关联的依据。
+  if (inputValidation?.valid && typeof input === "object") {
+    validateOutputBinding(output, input, evidenceItems, matchedItems, missingItems, classifiedPointIds, errors);
   }
   return validationResult(errors);
 }

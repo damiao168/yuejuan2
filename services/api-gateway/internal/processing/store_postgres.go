@@ -15,9 +15,8 @@ type PostgresStore struct{ db *sql.DB }
 
 func NewPostgresStore(db *sql.DB) *PostgresStore { return &PostgresStore{db: db} }
 
-// RefreshExam is a set-based projection. It reads the existing durable
-// pipeline facts in one statement, so an exam with a large page count does
-// not turn into an application-level N+1 query.
+// RefreshExam 基于集合生成投影，通过一条语句读取已有持久化流水线事实，
+// 避免页面很多的考试变成应用层 N+1 查询。
 func (s *PostgresStore) RefreshExam(ctx context.Context, tenantID, examID string) error {
 	if strings.TrimSpace(tenantID) == "" || strings.TrimSpace(examID) == "" {
 		return ErrInvalidInput
@@ -27,6 +26,13 @@ func (s *PostgresStore) RefreshExam(ctx context.Context, tenantID, examID string
 		return err
 	}
 	defer tx.Rollback()
+	archived, err := lockProjectionArchiveBoundary(ctx, tx, tenantID, examID)
+	if err != nil {
+		return err
+	}
+	if archived {
+		return tx.Commit()
+	}
 	if _, err = tx.ExecContext(ctx, refreshStateSQL, tenantID, examID); err != nil {
 		return err
 	}
@@ -36,9 +42,8 @@ func (s *PostgresStore) RefreshExam(ctx context.Context, tenantID, examID string
 	if _, err = tx.ExecContext(ctx, deleteInvalidPageStatesSQL, tenantID, examID); err != nil {
 		return err
 	}
-	// An exception is keyed by the concrete source which can be retried. If a
-	// registration/image-quality retry creates a new run, the stale exception
-	// is closed below and a new one names the new source run.
+	// 异常以可重试的具体来源为键。若配准或图像质量重试创建新运行，
+	// 下方关闭过时异常，并创建指向新来源运行的异常。
 	if _, err = tx.ExecContext(ctx, upsertExceptionsSQL, tenantID, examID); err != nil {
 		return err
 	}
@@ -48,10 +53,9 @@ func (s *PostgresStore) RefreshExam(ctx context.Context, tenantID, examID string
 	return tx.Commit()
 }
 
-// ApplyProjection publishes one claimed source version and acknowledges that
-// exact version in the same transaction. If the lease expired, every state and
-// exception write is rolled back. A newer request that arrives concurrently is
-// left pending because requested_version is never copied into projected_version.
+// ApplyProjection 在同一事务中发布一个已领取的来源版本，并确认该准确版本。
+// 租约过期时回滚所有状态和异常写入。并发到达的新请求仍保持待处理，
+// 因为 requested_version 从不复制到 projected_version。
 func (s *PostgresStore) ApplyProjection(ctx context.Context, owner string, refresh ProjectionRefresh) error {
 	if strings.TrimSpace(owner) == "" || refresh.TenantID == "" || refresh.ExamID == "" || refresh.RequestedVersion <= 0 {
 		return ErrInvalidInput
@@ -61,6 +65,11 @@ func (s *PostgresStore) ApplyProjection(ctx context.Context, owner string, refre
 		return err
 	}
 	defer tx.Rollback()
+	// 先取考试业务锁再取投影游标锁，与归档及源数据触发器保持一致的顺序。
+	archived, err := lockProjectionArchiveBoundary(ctx, tx, refresh.TenantID, refresh.ExamID)
+	if err != nil {
+		return err
+	}
 	var leasedVersion int64
 	if err = tx.QueryRowContext(ctx, `SELECT requested_version FROM processing_projection_cursor
 WHERE tenant_id=$1::uuid AND exam_id=$2::uuid AND lease_owner=$3 AND lease_expires_at>clock_timestamp()
@@ -73,9 +82,11 @@ FOR UPDATE`, refresh.TenantID, refresh.ExamID, owner+":"+refresh.claimID).Scan(&
 	if leasedVersion < refresh.RequestedVersion {
 		return ErrProjectionLeaseLost
 	}
-	for _, statement := range []string{refreshStateSQL, closeInvalidPageExceptionsSQL, deleteInvalidPageStatesSQL, upsertExceptionsSQL, closeStaleExceptionsSQL} {
-		if _, err = tx.ExecContext(ctx, statement, refresh.TenantID, refresh.ExamID); err != nil {
-			return err
+	if !archived {
+		for _, statement := range []string{refreshStateSQL, closeInvalidPageExceptionsSQL, deleteInvalidPageStatesSQL, upsertExceptionsSQL, closeStaleExceptionsSQL} {
+			if _, err = tx.ExecContext(ctx, statement, refresh.TenantID, refresh.ExamID); err != nil {
+				return err
+			}
 		}
 	}
 	result, err := tx.ExecContext(ctx, `UPDATE processing_projection_cursor
@@ -179,10 +190,14 @@ func (s *PostgresStore) ListExceptions(ctx context.Context, tenantID string, fil
 	rows, err := s.db.QueryContext(ctx, `
 SELECT e.id::text,e.exam_id::text,e.page_id::text,e.source_type,e.source_id::text,e.code,e.severity,e.blocking,e.status,
        COALESCE(e.assigned_to::text,''),e.details_json,e.created_at,e.updated_at,e.resolved_at,COALESCE(e.resolution,''),
-       COALESCE(e.details_json->>'retry_source_type',''),COALESCE(e.details_json->>'retry_source_id','')
+       COALESCE(e.details_json->>'retry_source_type',''),COALESCE(e.details_json->>'retry_source_id',''),
+       COALESCE(assignee.display_name,''),COALESCE(assignee.username,''),COALESCE(sub.candidate_no,''),COALESCE(CASE WHEN sub.id IS NOT NULL THEN page.page_no END,0)
 FROM operational_exception e
 JOIN submission_page_processing_state ps ON ps.tenant_id=e.tenant_id AND ps.page_id=e.page_id AND ps.exam_id=e.exam_id
 JOIN exam x ON x.tenant_id=e.tenant_id AND x.id=e.exam_id AND x.deleted_at IS NULL
+LEFT JOIN app_user assignee ON assignee.tenant_id=e.tenant_id AND assignee.id=e.assigned_to AND assignee.school_id=x.school_id AND assignee.deleted_at IS NULL
+LEFT JOIN submission_page page ON page.tenant_id=e.tenant_id AND page.id=e.page_id AND page.deleted_at IS NULL
+LEFT JOIN submission sub ON sub.tenant_id=page.tenant_id AND sub.id=page.submission_id AND sub.exam_id=e.exam_id AND sub.deleted_at IS NULL
 WHERE e.tenant_id=$1::uuid
   AND ($2='' OR e.exam_id::text=$2)
   AND ($3='' OR e.severity=$3)
@@ -200,7 +215,8 @@ LIMIT $9
 	items := make([]Exception, 0, filter.Limit)
 	for rows.Next() {
 		var item Exception
-		if err := scanException(rows, &item); err != nil {
+		// 列表只附带当前异常的同校处理人和本考试页号；读取者无需取得完整人员目录权限。
+		if err := scanException(exceptionListScanner{rows, &item}, &item); err != nil {
 			return ListResult{}, err
 		}
 		items = append(items, item)
@@ -245,10 +261,19 @@ func (s *PostgresStore) AssignException(ctx context.Context, tenantID, exception
 	if strings.TrimSpace(input.AssigneeID) == "" {
 		return Exception{}, ErrInvalidInput
 	}
+	// 选人列表只提供候选；实际写入仍原子校验同校、启用状态和任务权限，防止旧列表或手工 ID 绕过分派范围。
 	row := s.db.QueryRowContext(ctx, `
 UPDATE operational_exception
 SET assigned_to=$3::uuid,status='assigned',updated_at=now()
 WHERE tenant_id=$1::uuid AND id=$2::uuid AND status IN ('open','assigned')
+AND EXISTS (
+  SELECT 1 FROM app_user u JOIN exam e ON e.tenant_id=u.tenant_id AND e.school_id=u.school_id AND e.id=operational_exception.exam_id AND e.deleted_at IS NULL
+  JOIN user_role ur ON ur.tenant_id=u.tenant_id AND ur.user_id=u.id AND ur.deleted_at IS NULL
+  JOIN role r ON r.tenant_id=ur.tenant_id AND r.id=ur.role_id AND r.deleted_at IS NULL
+  JOIN role_permission rp ON rp.tenant_id=r.tenant_id AND rp.role_id=r.id AND rp.deleted_at IS NULL
+  JOIN permission p ON p.tenant_id=rp.tenant_id AND p.id=rp.permission_id AND p.deleted_at IS NULL AND p.code='capture:manage'
+  WHERE u.tenant_id=$1::uuid AND u.id=$3::uuid AND u.status='active' AND u.deleted_at IS NULL
+)
 RETURNING id::text,exam_id::text,page_id::text,source_type,source_id::text,code,severity,blocking,status,
   COALESCE(assigned_to::text,''),details_json,created_at,updated_at,resolved_at,COALESCE(resolution,''),
   COALESCE(details_json->>'retry_source_type',''),COALESCE(details_json->>'retry_source_id','')
@@ -257,7 +282,7 @@ RETURNING id::text,exam_id::text,page_id::text,source_type,source_id::text,code,
 	if err := scanException(row, &item); err != nil {
 		return Exception{}, err
 	}
-	_ = actorID // Audit ownership is recorded by the HTTP boundary.
+	_ = actorID // 审计归属由 HTTP 边界记录。
 	return item, nil
 }
 
@@ -350,6 +375,15 @@ FROM operational_exception e`
 
 type exceptionScanner interface{ Scan(...any) error }
 
+type exceptionListScanner struct {
+	row  exceptionScanner
+	item *Exception
+}
+
+func (row exceptionListScanner) Scan(dest ...any) error {
+	return row.row.Scan(append(dest, &row.item.AssignedToName, &row.item.AssignedToUsername, &row.item.CandidateNo, &row.item.PageNo)...)
+}
+
 func scanException(row exceptionScanner, out *Exception) error {
 	var details []byte
 	var resolved sql.NullTime
@@ -374,9 +408,8 @@ func scanException(row exceptionScanner, out *Exception) error {
 	return nil
 }
 
-// The source query intentionally selects only metadata, worker states and
-// numeric quality. It never copies OCR text, page images or answer crops into
-// the operational projection.
+// 来源查询只选择元数据、worker 状态和数值质量。
+// 它绝不把 OCR 文本、页面图像或答案裁剪图复制到业务投影中。
 const refreshStateSQL = `
 WITH facts AS (
   SELECT p.tenant_id,p.id AS page_id,p.submission_id,sub.exam_id,

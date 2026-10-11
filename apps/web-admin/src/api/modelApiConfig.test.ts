@@ -20,14 +20,14 @@ it("keeps panel-role API calls scoped to a school and separate from the chat def
   await savePanelModelRoleBinding({
     tenant_id: "school-1", education_stage: "senior", subject_code: "mathematics", archetype_code: "structured_steps",
     agent_role: "arbiter", managed_model_api_config_id: "model-c", prompt_version: "arbiter-v1", strength_rank: 2,
-    status: "active"
+    status: "active", expected_revision: "absent"
   });
   expect(new URL(fetch.mock.calls[1][0], "http://local").pathname).toBe("/api/v1/platform/panel-model-bindings");
   expect(fetch.mock.calls[1][1].method).toBe("PUT");
   expect(JSON.parse(fetch.mock.calls[1][1].body)).toEqual({
     tenant_id: "school-1", education_stage: "senior", subject_code: "mathematics", archetype_code: "structured_steps",
     agent_role: "arbiter", managed_model_api_config_id: "model-c", prompt_version: "arbiter-v1", strength_rank: 2,
-    status: "active"
+    status: "active", expected_revision: "absent"
   });
   expect(JSON.parse(fetch.mock.calls[1][1].body)).not.toHaveProperty("is_default");
 });

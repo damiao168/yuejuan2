@@ -1,0 +1,101 @@
+{
+  "checked_at_utc": "2026-10-11T10:38:33.169810+00:00",
+  "passed": true,
+  "count": 2,
+  "checkpoint02_snapshot_at": "2026-10-11T18:01:04.114063+08:00",
+  "rule_export": {
+    "file": "full-checkpoint-02/rules.json",
+    "name": "Clear-text protocols should not be used",
+    "type": "VULNERABILITY"
+  },
+  "rule_context_note": "规则导出的 URL 例外包含 loopback，但不能仅凭这个文档条目跳过服务端构造告警；本评审另外核对 TLS 包装先于服务、生产拒绝明文与真实握手。",
+  "test_snapshot_binding_note": "生产 server/config SHA 与 checkpoint02 完全一致；本次部分测试文件为随后 S5778 修复版，测试自己的当前 SHA 绑定在 python-new-test-execution.json，不冒充冻结测试源码。",
+  "platform_state_modified": false,
+  "records": [
+    {
+      "key": "7f939914-9bb6-4005-80a0-4c2efe12eedb",
+      "file": "ai-services/grading_agent/server.py",
+      "current_sha256": "62c2b234657f1f29d444968d8ce815647f820b1b8c7b3eb7d6a6db6d617c637e",
+      "checkpoint02_status_observed": "OPEN",
+      "checks": {
+        "key_in_original": true,
+        "original_rule_and_file_match": true,
+        "key_in_checkpoint02": true,
+        "checkpoint_rule_and_file_match": true,
+        "source_sha_matches_record_current_and_frozen_bytes": true,
+        "source_sha_matches_before_after_real_tests": true,
+        "junit_no_failures_errors_or_skips": true,
+        "actual_exit_zero": true,
+        "every_required_real_handshake_case_present_and_passed": true,
+        "all_policy_and_serving_excerpts_sha_match_checkpoint02": true
+      },
+      "policy_and_serving_excerpts": [
+        {
+          "file": "ai-services/grading_agent/config.py",
+          "same_sha_frozen_current_before_after_tests_and_excerpt": true,
+          "current_sha256": "2ff9cbe6105aa62ab6098f53cc5d8cf0bde0d858e8bf7bc5992ec48648d3b460"
+        },
+        {
+          "file": "ai-services/grading_agent/server.py",
+          "same_sha_frozen_current_before_after_tests_and_excerpt": true,
+          "current_sha256": "62c2b234657f1f29d444968d8ce815647f820b1b8c7b3eb7d6a6db6d617c637e"
+        }
+      ],
+      "required_real_handshake_test_names": [
+        "test_production_https_preserves_health_readiness_and_service_authentication",
+        "test_wrong_or_missing_ca_rejects_the_same_real_listener",
+        "test_san_mismatch_rejects_a_trusted_certificate",
+        "test_plaintext_does_not_receive_an_http_or_json_response",
+        "test_missing_invalid_or_mismatched_certificate_closes_real_resources"
+      ],
+      "passed": true,
+      "context_assessment": "满足按当前实际运行路径人工评审生产明文告警误报的证据要求；开发明文例外须在平台说明中明确保留，不可声称所有执行路径都用 HTTPS。",
+      "bounded_exception": "只有 local/development/dev/test、真实 bool opt-in、字面 IPv4 loopback 可明文；生产、未知和缺省环境必须 TLS。",
+      "platform_action": "none; root owns disposition"
+    },
+    {
+      "key": "0cb24e71-bce5-4ed4-b2c5-ca9aac275754",
+      "file": "services/math-verification-worker/math_verification_worker/server.py",
+      "current_sha256": "d9d6a02c89cea615738f507e3462e185e4c9992537acdb6b93ce28427f9a4f1f",
+      "checkpoint02_status_observed": "OPEN",
+      "checks": {
+        "key_in_original": true,
+        "original_rule_and_file_match": true,
+        "key_in_checkpoint02": true,
+        "checkpoint_rule_and_file_match": true,
+        "source_sha_matches_record_current_and_frozen_bytes": true,
+        "source_sha_matches_before_after_real_tests": true,
+        "junit_no_failures_errors_or_skips": true,
+        "actual_exit_zero": true,
+        "every_required_real_handshake_case_present_and_passed": true,
+        "all_policy_and_serving_excerpts_sha_match_checkpoint02": true
+      },
+      "policy_and_serving_excerpts": [
+        {
+          "file": "services/math-verification-worker/math_verification_worker/server.py",
+          "same_sha_frozen_current_before_after_tests_and_excerpt": true,
+          "current_sha256": "d9d6a02c89cea615738f507e3462e185e4c9992537acdb6b93ce28427f9a4f1f"
+        },
+        {
+          "file": "services/math-verification-worker/math_verification_worker/server.py",
+          "same_sha_frozen_current_before_after_tests_and_excerpt": true,
+          "current_sha256": "d9d6a02c89cea615738f507e3462e185e4c9992537acdb6b93ce28427f9a4f1f"
+        }
+      ],
+      "required_real_handshake_test_names": [
+        "test_actual_main_serves_health_and_bounded_normalization_over_tls",
+        "test_actual_tls_listener_preserves_internal_token_rejection",
+        "test_actual_tls_listener_rejects_untrusted_certificate",
+        "test_actual_tls_listener_rejects_wrong_certificate_san",
+        "test_actual_tls_listener_rejects_plaintext_http",
+        "test_actual_tls_listener_negotiates_supported_protocols",
+        "test_actual_tls_listener_rejects_a_tls11_client_hello",
+        "test_actual_certificate_load_failure_releases_listener"
+      ],
+      "passed": true,
+      "context_assessment": "满足按当前实际运行路径人工评审生产明文告警误报的证据要求；开发明文例外须在平台说明中明确保留，不可声称所有执行路径都用 HTTPS。",
+      "bounded_exception": "只有 local/development/dev/test、真实 bool opt-in、字面 IPv4 loopback 可明文；生产、未知和缺省环境必须 TLS。",
+      "platform_action": "none; root owns disposition"
+    }
+  ]
+}

@@ -15,6 +15,10 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/pagination"
 )
 
+const (
+	modelProviderInspectionFailed = "failed to inspect model provider"
+)
+
 type Handler struct {
 	store                   Store
 	audit                   auth.AuditRecorder
@@ -131,7 +135,7 @@ func (h *Handler) UpdateProviderStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	providers, err := h.store.ListProviders(r.Context(), tenantID)
 	if err != nil {
-		httpx.Error(w, r, http.StatusInternalServerError, "model_provider_list_failed", "failed to inspect model provider")
+		httpx.Error(w, r, http.StatusInternalServerError, "model_provider_list_failed", modelProviderInspectionFailed)
 		return
 	}
 	current, exists := providerByID(providers, r.PathValue("id"))
@@ -183,7 +187,7 @@ func (h *Handler) CreateDeployment(w http.ResponseWriter, r *http.Request) {
 	}
 	providers, err := h.store.ListProviders(r.Context(), tenantID)
 	if err != nil {
-		httpx.Error(w, r, http.StatusInternalServerError, "model_provider_list_failed", "failed to inspect model provider")
+		httpx.Error(w, r, http.StatusInternalServerError, "model_provider_list_failed", modelProviderInspectionFailed)
 		return
 	}
 	provider, exists := providerByID(providers, input.ProviderID)
@@ -244,7 +248,7 @@ func (h *Handler) UpdateDeploymentState(w http.ResponseWriter, r *http.Request) 
 	}
 	providers, err := h.store.ListProviders(r.Context(), tenantID)
 	if err != nil {
-		httpx.Error(w, r, http.StatusInternalServerError, "model_provider_list_failed", "failed to inspect model provider")
+		httpx.Error(w, r, http.StatusInternalServerError, "model_provider_list_failed", modelProviderInspectionFailed)
 		return
 	}
 	provider, exists := providerByID(providers, current.ProviderID)
@@ -306,37 +310,8 @@ func (h *Handler) UpdatePolicy(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, r, http.StatusBadRequest, "mixed_model_policy_sources", "model config IDs and deployment keys cannot be mixed")
 		return
 	}
-	if len(input.AllowedModelConfigIDs) > 0 {
-		store, ready := h.managedAPIStore(w, r)
-		if !ready {
-			return
-		}
-		configs, err := store.ListManagedAPIConfigs(r.Context(), tenantID)
-		if err != nil {
-			writeStoreError(w, r, err, "model_config_list_failed", "failed to validate allowed model configurations")
-			return
-		}
-		eligible := make(map[string]bool, len(configs))
-		for _, config := range configs {
-			eligible[config.ID] = config.TenantID == tenantID && config.Status == "active" &&
-				config.LastCapabilityStatus == "success" && config.LastCapabilityVersion == "structured-json-v3"
-		}
-		for _, id := range input.AllowedModelConfigIDs {
-			if !eligible[id] {
-				httpx.Error(w, r, http.StatusBadRequest, "unknown_model_config", "allowed_model_config_ids contains an unavailable school model")
-				return
-			}
-		}
-	} else if len(input.AllowedDeployments) > 0 {
-		deployments, err := h.store.ListDeployments(r.Context(), tenantID)
-		if err != nil {
-			httpx.Error(w, r, http.StatusInternalServerError, "model_deployment_list_failed", "failed to validate allowed deployments")
-			return
-		}
-		if !deploymentKeysExist(input.AllowedDeployments, deployments) {
-			httpx.Error(w, r, http.StatusBadRequest, "unknown_model_deployment", "allowed_deployments contains an unknown tenant deployment")
-			return
-		}
+	if !h.validatePolicyModelSources(w, r, tenantID, input) {
+		return
 	}
 	item, err := h.store.UpdatePolicy(r.Context(), tenantID, mustUser(r).ID, input)
 	if err != nil {
@@ -346,6 +321,50 @@ func (h *Handler) UpdatePolicy(w http.ResponseWriter, r *http.Request) {
 	h.auditAction(r, "model.policy_updated", "tenant_model_policy", item.ID, input.Reason,
 		map[string]any{"tenant_id": tenantID, "mode": item.Mode, "external_enabled": item.ExternalEnabled, "text_export_enabled": item.TextExportEnabled, "image_export_enabled": item.ImageExportEnabled, "allowed_model_config_ids": item.AllowedModelConfigIDs, "version": item.Version})
 	httpx.JSON(w, http.StatusOK, map[string]any{"policy": item})
+}
+
+// 先完成请求和租户校验，再检查该租户的白名单来源；写入时仍由 store 检查当前版本及配置状态。
+func (h *Handler) validatePolicyModelSources(w http.ResponseWriter, r *http.Request, tenantID string, input PolicyUpdateInput) bool {
+	if len(input.AllowedModelConfigIDs) > 0 {
+		return h.validatePolicyManagedConfigs(w, r, tenantID, input.AllowedModelConfigIDs)
+	}
+	if len(input.AllowedDeployments) == 0 {
+		return true
+	}
+	deployments, err := h.store.ListDeployments(r.Context(), tenantID)
+	if err != nil {
+		httpx.Error(w, r, http.StatusInternalServerError, "model_deployment_list_failed", "failed to validate allowed deployments")
+		return false
+	}
+	if !deploymentKeysExist(input.AllowedDeployments, deployments) {
+		httpx.Error(w, r, http.StatusBadRequest, "unknown_model_deployment", "allowed_deployments contains an unknown tenant deployment")
+		return false
+	}
+	return true
+}
+
+func (h *Handler) validatePolicyManagedConfigs(w http.ResponseWriter, r *http.Request, tenantID string, ids []string) bool {
+	store, ready := h.managedAPIStore(w, r)
+	if !ready {
+		return false
+	}
+	configs, err := store.ListManagedAPIConfigs(r.Context(), tenantID)
+	if err != nil {
+		writeStoreError(w, r, err, "model_config_list_failed", "failed to validate allowed model configurations")
+		return false
+	}
+	eligible := make(map[string]bool, len(configs))
+	for _, config := range configs {
+		eligible[config.ID] = config.TenantID == tenantID && config.Status == "active" &&
+			config.LastCapabilityStatus == "success" && config.LastCapabilityVersion == "structured-json-v3"
+	}
+	for _, id := range ids {
+		if !eligible[id] {
+			httpx.Error(w, r, http.StatusBadRequest, "unknown_model_config", "allowed_model_config_ids contains an unavailable school model")
+			return false
+		}
+	}
+	return true
 }
 
 func (h *Handler) ListSandboxApprovals(w http.ResponseWriter, r *http.Request) {

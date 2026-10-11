@@ -7,8 +7,8 @@ function toneFor(state: WorkspaceStage["state"]): StatusBadgeTone {
   return "neutral";
 }
 
-/** Small status fact for page headers and lists; it is not a second navigator. */
-export function ExamStageIndicator({ stage }: { stage?: WorkspaceStage }) {
+/** 供页头和列表展示的小型状态信息，不作为第二套导航。 */
+export function ExamStageIndicator({ stage }: Readonly<{ stage?: WorkspaceStage }>) {
   if (!stage) return <StatusBadge>阶段待确认</StatusBadge>;
   return <StatusBadge tone={toneFor(stage.state)}>{stage.label}</StatusBadge>;
 }

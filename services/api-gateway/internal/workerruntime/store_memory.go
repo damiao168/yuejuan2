@@ -20,9 +20,8 @@ type MemoryStore struct {
 	heartbeats map[string]WorkerHeartbeat
 }
 
-// MemoryTx exposes lock-safe operations while MemoryStore.RunAtomic holds the
-// store lock. Callers must not invoke the parent store's public methods from an
-// atomic callback because those methods acquire the same lock.
+// MemoryTx 在 MemoryStore.RunAtomic 持有存储锁时提供无需重复加锁的操作。
+// 调用方不能在原子回调中调用父存储的公开方法，因为这些方法会获取同一把锁。
 type MemoryTx struct {
 	store *MemoryStore
 }
@@ -38,10 +37,8 @@ func NewMemoryStore() *MemoryStore {
 	return &MemoryStore{next: 1, tasks: map[string]Task{}, idempotent: map[string]string{}, heartbeats: map[string]WorkerHeartbeat{}}
 }
 
-// RunAtomic executes runtime mutations under one lock and restores the store
-// snapshot if the callback returns an error or panics. Source-domain memory
-// stores can nest this transaction while holding their own lock to keep source
-// facts and runtime state consistent in tests and local development.
+// RunAtomic 在一把锁内执行运行时变更，回调返回错误或 panic 时恢复存储快照。
+// 来源领域内存存储可在持有自身锁时嵌套此事务，使测试和本地开发中的来源事实与运行时状态保持一致。
 func (s *MemoryStore) RunAtomic(fn func(*MemoryTx) error) (err error) {
 	if fn == nil {
 		return ErrInvalidInput
@@ -112,26 +109,7 @@ func (s *MemoryStore) claim(heartbeatTenantID string, acrossTenants bool, input 
 	defer s.mu.Unlock()
 	now := time.Now().UTC()
 	s.recordWorkerHeartbeat(heartbeatTenantID, input.WorkerService, input.WorkerInstanceID, input.QueueName, now, map[string]any{"state": "polling"})
-	candidates := make([]Task, 0)
-	for _, task := range s.tasks {
-		if (!acrossTenants && task.TenantID != heartbeatTenantID) || task.QueueName != input.QueueName {
-			continue
-		}
-		ready := task.Status == StatusQueued && (task.NotBefore == nil || !task.NotBefore.After(now))
-		expired := (task.Status == StatusLeased || task.Status == StatusRunning) && task.LeaseExpiresAt != nil && task.LeaseExpiresAt.Before(now)
-		if ready || expired {
-			candidates = append(candidates, task)
-		}
-	}
-	sort.Slice(candidates, func(i, j int) bool {
-		if candidates[i].Priority != candidates[j].Priority {
-			return candidates[i].Priority < candidates[j].Priority
-		}
-		if candidates[i].CreatedAt.Equal(candidates[j].CreatedAt) {
-			return candidates[i].ID < candidates[j].ID
-		}
-		return candidates[i].CreatedAt.Before(candidates[j].CreatedAt)
-	})
+	candidates := s.claimCandidatesLocked(heartbeatTenantID, acrossTenants, input.QueueName, now)
 	out := make([]Task, 0, input.Limit)
 	for _, candidate := range candidates {
 		if len(out) >= input.Limit {
@@ -142,22 +120,8 @@ func (s *MemoryStore) claim(heartbeatTenantID string, acrossTenants bool, input 
 		if activeLease {
 			s.finishAttempt(&task, "lease_expired", 0, "lease_expired", map[string]any{})
 		}
-		if task.AttemptCount >= task.MaxAttempts {
-			// Preserve observed history for defensive handling of legacy rows that
-			// already exceeded their configured maximum.
-			if task.AttemptCount > task.MaxAttempts {
-				task.MaxAttempts = task.AttemptCount
-			}
-			errorCode := "max_attempts_exhausted"
-			if activeLease {
-				errorCode = "lease_expired"
-			}
-			task.Status = StatusDeadLetter
-			task.ErrorCode = errorCode
-			task.ErrorDetail = map[string]any{"reason": "max_attempts_exhausted"}
-			task.LeaseToken = ""
-			task.LeaseExpiresAt = nil
-			task.LeasedBy = ""
+		// 耗尽项转入死信但不占返回名额；后续候选仍可领取。
+		if deadLetterExhaustedClaim(&task, activeLease) {
 			task.CompletedAt = &now
 			task.UpdatedAt = now
 			task.Revision++
@@ -185,6 +149,56 @@ func (s *MemoryStore) claim(heartbeatTenantID string, acrossTenants bool, input 
 		out = append(out, cloneTask(task))
 	}
 	return out, nil
+}
+
+// 调用方持有 claim 的写锁；筛选与排序后仍在同一锁内关闭旧尝试或生成新租约。
+func (s *MemoryStore) claimCandidatesLocked(tenantID string, acrossTenants bool, queueName string, now time.Time) []Task {
+	candidates := make([]Task, 0)
+	for _, task := range s.tasks {
+		if (!acrossTenants && task.TenantID != tenantID) || task.QueueName != queueName {
+			continue
+		}
+		ready := task.Status == StatusQueued && (task.NotBefore == nil || !task.NotBefore.After(now))
+		expired := (task.Status == StatusLeased || task.Status == StatusRunning) && task.LeaseExpiresAt != nil && task.LeaseExpiresAt.Before(now)
+		if ready || expired {
+			candidates = append(candidates, task)
+		}
+	}
+	sort.Slice(candidates, func(i, j int) bool {
+		return claimPrecedes(candidates[i], candidates[j])
+	})
+	return candidates
+}
+
+func claimPrecedes(left, right Task) bool {
+	if left.Priority != right.Priority {
+		return left.Priority < right.Priority
+	}
+	if left.CreatedAt.Equal(right.CreatedAt) {
+		return left.ID < right.ID
+	}
+	return left.CreatedAt.Before(right.CreatedAt)
+}
+
+func deadLetterExhaustedClaim(task *Task, activeLease bool) bool {
+	if task.AttemptCount < task.MaxAttempts {
+		return false
+	}
+	// 防御性处理已超过配置上限的旧行时，保留已观察到的历史。
+	if task.AttemptCount > task.MaxAttempts {
+		task.MaxAttempts = task.AttemptCount
+	}
+	errorCode := "max_attempts_exhausted"
+	if activeLease {
+		errorCode = "lease_expired"
+	}
+	task.Status = StatusDeadLetter
+	task.ErrorCode = errorCode
+	task.ErrorDetail = map[string]any{"reason": "max_attempts_exhausted"}
+	task.LeaseToken = ""
+	task.LeaseExpiresAt = nil
+	task.LeasedBy = ""
+	return true
 }
 
 func (s *MemoryStore) Heartbeat(_ context.Context, tenantID string, taskID string, input HeartbeatInput) (Task, error) {
@@ -339,8 +353,7 @@ func (s *MemoryStore) failLocked(tenantID string, taskID string, input FailInput
 	return cloneTask(task), nil
 }
 
-// CreateSucceededTask creates (or idempotently reuses) a runtime task and
-// records a trusted imported result without manufacturing a worker lease.
+// CreateSucceededTask 创建或幂等复用运行时任务，记录可信导入结果，不虚构 worker 租约。
 func (s *MemoryStore) CreateSucceededTask(ctx context.Context, tenantID string, actorID string, create CreateTaskInput, complete CompleteInput) (Task, error) {
 	var task Task
 	err := s.RunAtomic(func(tx *MemoryTx) error {
@@ -501,6 +514,7 @@ func (s *MemoryStore) MetricsAcrossTenants(_ context.Context, platformTenantID s
 }
 
 func (s *MemoryStore) metrics(tenantID string, acrossTenants bool) Metrics {
+	// 任务和 worker 心跳在同一读锁内统计，期间写入方不能改动这些存储记录。
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	byQueue := map[string]*QueueMetrics{}
@@ -515,33 +529,12 @@ func (s *MemoryStore) metrics(tenantID string, acrossTenants bool) Metrics {
 			metric = &QueueMetrics{QueueName: task.QueueName}
 			byQueue[task.QueueName] = metric
 		}
-		switch task.Status {
-		case StatusQueued:
-			metric.Queued++
-		case StatusLeased:
-			metric.Leased++
-		case StatusRunning:
-			metric.Running++
-		case StatusSucceeded:
-			metric.Succeeded++
-		case StatusFailed:
-			metric.Failed++
-		case StatusDeadLetter:
-			metric.DeadLetter++
-		case StatusCancelled:
-			metric.Cancelled++
-		}
-		if (task.Status == StatusFailed || task.Status == StatusDeadLetter) && task.UpdatedAt.After(cutoff) {
-			metric.FailedLastHour++
-		}
+		updateTaskQueueMetrics(metric, task, cutoff)
+		// 时长来自任务上的正值，包含非成功状态；不能改用尝试记录的时长。
 		if task.DurationMS > 0 {
 			durations[task.QueueName] = append(durations[task.QueueName], task.DurationMS)
 		}
-		for _, attempt := range task.Attempts {
-			if attempt.Status == StatusFailed && attempt.CompletedAt != nil && attempt.CompletedAt.After(cutoff) && task.AttemptCount < task.MaxAttempts {
-				metric.RetryLastHour++
-			}
-		}
+		metric.RetryLastHour += taskRetriesAfter(task, cutoff)
 	}
 	out := Metrics{Queues: []QueueMetrics{}, Workers: []WorkerHeartbeat{}}
 	for queue, metric := range byQueue {
@@ -556,6 +549,39 @@ func (s *MemoryStore) metrics(tenantID string, acrossTenants bool) Metrics {
 	}
 	sort.Slice(out.Workers, func(i, j int) bool { return out.Workers[i].LastSeenAt.After(out.Workers[j].LastSeenAt) })
 	return out
+}
+
+func updateTaskQueueMetrics(metric *QueueMetrics, task Task, cutoff time.Time) {
+	switch task.Status {
+	case StatusQueued:
+		metric.Queued++
+	case StatusLeased:
+		metric.Leased++
+	case StatusRunning:
+		metric.Running++
+	case StatusSucceeded:
+		metric.Succeeded++
+	case StatusFailed:
+		metric.Failed++
+	case StatusDeadLetter:
+		metric.DeadLetter++
+	case StatusCancelled:
+		metric.Cancelled++
+	}
+	if (task.Status == StatusFailed || task.Status == StatusDeadLetter) && task.UpdatedAt.After(cutoff) {
+		metric.FailedLastHour++
+	}
+}
+
+func taskRetriesAfter(task Task, cutoff time.Time) int {
+	retries := 0
+	// 统计失败的尝试记录，仅在任务当前尝试数小于上限时计数；不能改用尝试自身序号。
+	for _, attempt := range task.Attempts {
+		if attempt.Status == StatusFailed && attempt.CompletedAt != nil && attempt.CompletedAt.After(cutoff) && task.AttemptCount < task.MaxAttempts {
+			retries++
+		}
+	}
+	return retries
 }
 
 func (s *MemoryStore) ForceExpireLeaseForTest(taskID string) {

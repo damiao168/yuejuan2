@@ -1,12 +1,4 @@
 import { EduGradeApi } from "@edugrade/sdk";
-import type {
-  ExamWorkspaceCounts,
-  ExamWorkspaceNextAction,
-  ExamWorkspaceNotice,
-  ExamWorkspaceProjection,
-  ExamWorkspaceStage,
-  ExamWorkspaceStageProgress
-} from "@edugrade/sdk";
 import { apiClient } from "./client";
 
 export type {
@@ -16,7 +8,7 @@ export type {
   ExamWorkspaceProjection,
   ExamWorkspaceStage,
   ExamWorkspaceStageProgress
-};
+} from "@edugrade/sdk";
 
 const workspaceApi = new EduGradeApi(apiClient);
 

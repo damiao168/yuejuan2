@@ -230,6 +230,7 @@ FROM file_asset WHERE tenant_id=$1::uuid AND id=$2::uuid FOR SHARE
 	return nil
 }
 
+// ImportQuestion 从冻结资料生成草稿；草稿、导入来源记录、审计和回执由 pgMutation 的同一事务提交。
 func (s *PostgresStore) ImportQuestion(ctx context.Context, scope auth.AccessScope, questionID string, in ImportQuestionInput) (ImportResult, error) {
 	if !validID(questionID) || !validID(in.TargetBankID) || !validID(in.SourceSnapshotID) || !validID(in.AssessmentSnapshotID) ||
 		in.ScoringSource != "original_exam" || !oneOf(in.DedupDecision, "new_item", "new_version") ||
@@ -244,104 +245,44 @@ func (s *PostgresStore) ImportQuestion(ctx context.Context, scope auth.AccessSco
 		return ImportResult{}, ErrInvalidInput
 	}
 	selection := ImportPreviewSelection{QuestionID: questionID, TargetBankID: in.TargetBankID, SourceSnapshotID: in.SourceSnapshotID, Mapping: in.Mapping}
-	return pgMutation(ctx, s, scope, "question_bank.import.from_question", questionID, in, "create", func(tx *sql.Tx) (ImportResult, error) {
-		bank, err := s.bank(ctx, tx, scope, in.TargetBankID, "create", " FOR SHARE OF b")
-		if err != nil {
-			return ImportResult{}, err
-		}
-		if bank.MetadataSchemaVersion != in.ExpectedTargetSchemaVersion {
-			return ImportResult{}, ErrConflict
-		}
-		prepared, err := s.prepareImport(ctx, tx, scope, selection, in.AssessmentSnapshotID)
-		if err != nil {
-			return ImportResult{}, err
-		}
-		if !prepared.ScoringConsistent {
-			return ImportResult{}, ErrSourceUnavailable
-		}
-		// 评分来源不一致时拒绝导入；其余映射问题随草稿保存，交给后续编辑和发布检查处理。
-		for _, asset := range prepared.Scoring.Assets {
-			if err = s.validateImportAsset(ctx, tx, scope, asset); err != nil {
-				return ImportResult{}, err
-			}
-		}
-		contentHashValue := contentHash(prepared.Content)
-		bundleHashValue := bundleHash(prepared.Content, prepared.Scoring)
-		hints, err := s.duplicateHints(ctx, tx, scope, in.TargetBankID, contentHashValue, bundleHashValue, prepared.Content.Stem)
-		if err != nil {
-			return ImportResult{}, err
-		}
-		var item Item
-		var version Version
-		var linked any
-		if in.DedupDecision == "new_item" {
-			bank, lockErr := s.bank(ctx, tx, scope, in.TargetBankID, "create", " FOR SHARE OF b")
-			if lockErr != nil {
-				return ImportResult{}, lockErr
-			}
-			if bank.Status != "active" {
-				return ImportResult{}, ErrLocked
-			}
-			if bank.Revision != in.ExpectedTargetRevision {
-				return ImportResult{}, ErrConflict
-			}
-			item, err = scanItem(tx.QueryRowContext(ctx, `
-INSERT INTO question_bank_item(tenant_id,bank_id,item_code,subject_code,grade_scope,created_by,kind)
-VALUES($1::uuid,$2::uuid,$3,$4,$5,$6::uuid,'question') RETURNING `+itemCols,
-				scope.TenantID, in.TargetBankID, in.Mapping.ItemCode,
-				prepared.Content.Metadata.SubjectCode, prepared.Content.Metadata.GradeScope, scope.ActorID))
-			if err != nil {
-				return ImportResult{}, err
-			}
-			version, err = s.insertVersion(ctx, tx, scope, item.ID, 1, prepared.Schema.Version, nil, prepared.Content, prepared.Scoring)
-		} else {
-			item, err = s.item(ctx, tx, scope, in.ExistingItemID, "edit", " FOR UPDATE")
-			if err != nil {
-				return ImportResult{}, err
-			}
-			if item.BankID != in.TargetBankID || item.Kind != "question" || item.Status != "active" {
-				return ImportResult{}, ErrNotFound
-			}
-			if item.Revision != in.ExpectedTargetRevision {
-				return ImportResult{}, ErrConflict
-			}
-			var next int
-			if err = tx.QueryRowContext(ctx, `SELECT COALESCE(max(version_no),0)+1 FROM question_bank_item_version WHERE tenant_id=$1::uuid AND item_id=$2::uuid`, scope.TenantID, item.ID).Scan(&next); err != nil {
-				return ImportResult{}, err
-			}
-			version, err = s.insertVersion(ctx, tx, scope, item.ID, next, prepared.Schema.Version, nil, prepared.Content, prepared.Scoring)
-			if err == nil {
-				item, err = scanItem(tx.QueryRowContext(ctx, `UPDATE question_bank_item SET revision=revision+1 WHERE tenant_id=$1::uuid AND id=$2::uuid RETURNING `+itemCols, scope.TenantID, item.ID))
-			}
-			linked = item.ID
-		}
-		if err != nil {
-			return ImportResult{}, err
-		}
-		if version.ContentHash != contentHashValue || version.BundleHash != bundleHashValue {
-			// 同时核对 Go 预览和数据库生成的哈希，避免两端使用不同规则却接受同一份导入。
-			return ImportResult{}, ErrConflict
-		}
-		mappingRaw, _ := json.Marshal(in.Mapping)
-		if in.DedupDecision == "new_version" {
-			filtered := []ImportIssue{}
-			for _, issue := range prepared.Issues {
-				if issue.Code != "item_code_required" {
-					filtered = append(filtered, issue)
-				}
-			}
-			prepared.Issues = filtered
-		}
-		issuesRaw, _ := json.Marshal(prepared.Issues)
-		provenanceID := uuid.NewString()
-		provenance := ImportProvenance{
-			ID: provenanceID, TargetBankID: in.TargetBankID, TargetSchemaVersion: prepared.Schema.Version,
-			Source: prepared.Source, ScoringSource: in.ScoringSource, DedupDecision: in.DedupDecision,
-			LinkedItemID: in.ExistingItemID, Mapping: in.Mapping, CommandID: in.CommandID,
-		}
-		provenanceRaw, _ := json.Marshal(provenance)
-		var createdAt sql.NullTime
-		err = tx.QueryRowContext(ctx, `
+	return pgMutation(ctx, s, scope, pgMutationCommand{op: "question_bank.import.from_question", target: questionID, input: in, action: "create"}, func(tx *sql.Tx) (ImportResult, error) {
+		return s.importQuestionTransaction(ctx, tx, scope, selection, in)
+	})
+}
+
+// 由 pgMutation 提供原事务；各步骤失败直接返回，由调用方回滚并跳过回执保存。
+func (s *PostgresStore) importQuestionTransaction(ctx context.Context, tx *sql.Tx, scope auth.AccessScope, selection ImportPreviewSelection, in ImportQuestionInput) (ImportResult, error) {
+	prepared, err := s.prepareConfirmedImport(ctx, tx, scope, selection, in)
+	if err != nil {
+		return ImportResult{}, err
+	}
+	contentHashValue := contentHash(prepared.Content)
+	bundleHashValue := bundleHash(prepared.Content, prepared.Scoring)
+	hints, err := s.duplicateHints(ctx, tx, scope, in.TargetBankID, contentHashValue, bundleHashValue, prepared.Content.Stem)
+	if err != nil {
+		return ImportResult{}, err
+	}
+	target, err := s.writeImportTarget(ctx, tx, scope, in, prepared)
+	if err != nil {
+		return ImportResult{}, err
+	}
+	item, version, linked := target.item, target.version, target.linked
+	if version.ContentHash != contentHashValue || version.BundleHash != bundleHashValue {
+		// 同时核对 Go 预览和数据库生成的哈希，避免两端使用不同规则却接受同一份导入。
+		return ImportResult{}, ErrConflict
+	}
+	mappingRaw, _ := json.Marshal(in.Mapping)
+	prepared.Issues = importIssuesForDecision(in.DedupDecision, prepared.Issues)
+	issuesRaw, _ := json.Marshal(prepared.Issues)
+	provenanceID := uuid.NewString()
+	provenance := ImportProvenance{
+		ID: provenanceID, TargetBankID: in.TargetBankID, TargetSchemaVersion: prepared.Schema.Version,
+		Source: prepared.Source, ScoringSource: in.ScoringSource, DedupDecision: in.DedupDecision,
+		LinkedItemID: in.ExistingItemID, Mapping: in.Mapping, CommandID: in.CommandID,
+	}
+	provenanceRaw, _ := json.Marshal(provenance)
+	var createdAt sql.NullTime
+	err = tx.QueryRowContext(ctx, `
 INSERT INTO question_bank_import(
  tenant_id,target_bank_id,target_item_id,target_version_id,target_schema_version,
  source_exam_id,source_question_id,source_question_no,source_readiness_snapshot_id,
@@ -351,19 +292,116 @@ INSERT INTO question_bank_import(
 ) VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5,$6::uuid,$7::uuid,$8,$9::uuid,$10,$11,$12::uuid,$13,$14,$15,$16,$17,$18::uuid,$19::jsonb,$20::jsonb,$21,$22::uuid,$23::uuid,$24::jsonb)
 RETURNING id::text,created_at
 `, scope.TenantID, in.TargetBankID, item.ID, version.ID, prepared.Schema.Version,
-			prepared.Source.ExamID, prepared.Source.QuestionID, prepared.Source.QuestionNo,
-			prepared.Source.ReadinessSnapshotID, prepared.Source.ConfigurationHash, prepared.Source.SnapshotHash,
-			prepared.Source.AssessmentSnapshotID, prepared.Source.AssessmentSnapshotHash,
-			contentHashValue, bundleHashValue, in.ScoringSource, in.DedupDecision, linked,
-			mappingRaw, issuesRaw, in.CommandID, scope.ActorID, provenanceID, provenanceRaw).Scan(&provenanceID, &createdAt)
-		if err != nil {
-			return ImportResult{}, err
+		prepared.Source.ExamID, prepared.Source.QuestionID, prepared.Source.QuestionNo,
+		prepared.Source.ReadinessSnapshotID, prepared.Source.ConfigurationHash, prepared.Source.SnapshotHash,
+		prepared.Source.AssessmentSnapshotID, prepared.Source.AssessmentSnapshotHash,
+		contentHashValue, bundleHashValue, in.ScoringSource, in.DedupDecision, linked,
+		mappingRaw, issuesRaw, in.CommandID, scope.ActorID, provenanceID, provenanceRaw).Scan(&provenanceID, &createdAt)
+	if err != nil {
+		return ImportResult{}, err
+	}
+	provenance.CreatedAt = createdAt.Time
+	version.ImportProvenance = &provenance
+	return ImportResult{
+		Item: item, Version: version, DuplicateHints: hints, Issues: prepared.Issues,
+		Provenance: provenance,
+	}, nil
+}
+
+// 沿用 pgMutation 的事务；先锁题库并核对 schema，再核对冻结来源和附件，失败时尚未写入题目。
+func (s *PostgresStore) prepareConfirmedImport(ctx context.Context, tx *sql.Tx, scope auth.AccessScope, selection ImportPreviewSelection, in ImportQuestionInput) (preparedImport, error) {
+	bank, err := s.bank(ctx, tx, scope, in.TargetBankID, "create", " FOR SHARE OF b")
+	if err != nil {
+		return preparedImport{}, err
+	}
+	if bank.MetadataSchemaVersion != in.ExpectedTargetSchemaVersion {
+		return preparedImport{}, ErrConflict
+	}
+	prepared, err := s.prepareImport(ctx, tx, scope, selection, in.AssessmentSnapshotID)
+	if err != nil {
+		return preparedImport{}, err
+	}
+	if !prepared.ScoringConsistent {
+		return preparedImport{}, ErrSourceUnavailable
+	}
+	// 评分来源不一致时拒绝导入；其余映射问题随草稿保存，交给后续编辑和发布检查处理。
+	for _, asset := range prepared.Scoring.Assets {
+		if err = s.validateImportAsset(ctx, tx, scope, asset); err != nil {
+			return preparedImport{}, err
 		}
-		provenance.CreatedAt = createdAt.Time
-		version.ImportProvenance = &provenance
-		return ImportResult{
-			Item: item, Version: version, DuplicateHints: hints, Issues: prepared.Issues,
-			Provenance: provenance,
-		}, nil
-	})
+	}
+	return prepared, nil
+}
+
+type importTarget struct {
+	item    Item
+	version Version
+	// 新建题目时写入 SQL NULL；追加版本时保存被关联的条目 ID。
+	linked any
+}
+
+func (s *PostgresStore) writeImportTarget(ctx context.Context, tx *sql.Tx, scope auth.AccessScope, in ImportQuestionInput, prepared preparedImport) (importTarget, error) {
+	if in.DedupDecision == "new_item" {
+		return s.createImportTarget(ctx, tx, scope, in, prepared)
+	}
+	return s.appendImportTargetVersion(ctx, tx, scope, in, prepared)
+}
+
+func (s *PostgresStore) createImportTarget(ctx context.Context, tx *sql.Tx, scope auth.AccessScope, in ImportQuestionInput, prepared preparedImport) (importTarget, error) {
+	bank, lockErr := s.bank(ctx, tx, scope, in.TargetBankID, "create", " FOR SHARE OF b")
+	if lockErr != nil {
+		return importTarget{}, lockErr
+	}
+	if bank.Status != "active" {
+		return importTarget{}, ErrLocked
+	}
+	if bank.Revision != in.ExpectedTargetRevision {
+		return importTarget{}, ErrConflict
+	}
+	item, err := scanItem(tx.QueryRowContext(ctx, `
+INSERT INTO question_bank_item(tenant_id,bank_id,item_code,subject_code,grade_scope,created_by,kind)
+VALUES($1::uuid,$2::uuid,$3,$4,$5,$6::uuid,'question') RETURNING `+itemCols,
+		scope.TenantID, in.TargetBankID, in.Mapping.ItemCode,
+		prepared.Content.Metadata.SubjectCode, prepared.Content.Metadata.GradeScope, scope.ActorID))
+	if err != nil {
+		return importTarget{}, err
+	}
+	version, err := s.insertVersion(ctx, tx, scope, versionInsert{itemID: item.ID, no: 1, schemaVersion: prepared.Schema.Version, content: prepared.Content, scoring: prepared.Scoring})
+	return importTarget{item: item, version: version}, err
+}
+
+// 追加版本先持有条目行锁，再分配版本号；插入成功后才递增条目修订号。
+func (s *PostgresStore) appendImportTargetVersion(ctx context.Context, tx *sql.Tx, scope auth.AccessScope, in ImportQuestionInput, prepared preparedImport) (importTarget, error) {
+	item, err := s.item(ctx, tx, scope, in.ExistingItemID, "edit", " FOR UPDATE")
+	if err != nil {
+		return importTarget{}, err
+	}
+	if item.BankID != in.TargetBankID || item.Kind != "question" || item.Status != "active" {
+		return importTarget{}, ErrNotFound
+	}
+	if item.Revision != in.ExpectedTargetRevision {
+		return importTarget{}, ErrConflict
+	}
+	var next int
+	if err = tx.QueryRowContext(ctx, `SELECT COALESCE(max(version_no),0)+1 FROM question_bank_item_version WHERE tenant_id=$1::uuid AND item_id=$2::uuid`, scope.TenantID, item.ID).Scan(&next); err != nil {
+		return importTarget{}, err
+	}
+	version, err := s.insertVersion(ctx, tx, scope, versionInsert{itemID: item.ID, no: next, schemaVersion: prepared.Schema.Version, content: prepared.Content, scoring: prepared.Scoring})
+	if err == nil {
+		item, err = scanItem(tx.QueryRowContext(ctx, `UPDATE question_bank_item SET revision=revision+1 WHERE tenant_id=$1::uuid AND id=$2::uuid RETURNING `+itemCols, scope.TenantID, item.ID))
+	}
+	return importTarget{item: item, version: version, linked: item.ID}, err
+}
+
+func importIssuesForDecision(decision string, issues []ImportIssue) []ImportIssue {
+	if decision != "new_version" {
+		return issues
+	}
+	filtered := []ImportIssue{}
+	for _, issue := range issues {
+		if issue.Code != "item_code_required" {
+			filtered = append(filtered, issue)
+		}
+	}
+	return filtered
 }

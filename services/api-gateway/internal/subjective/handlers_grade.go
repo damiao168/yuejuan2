@@ -48,14 +48,8 @@ func (h *Handler) Grade(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, err)
 		return
 	}
-	if input.IdempotencyKey != "" {
-		if existing, lookupErr := h.store.GetGradeByAdapterRequestID(r.Context(), user.TenantID, requestID); lookupErr == nil {
-			httpx.JSON(w, http.StatusOK, map[string]any{"grade": existing, "idempotent_replay": true})
-			return
-		} else if !errors.Is(lookupErr, ErrNotFound) {
-			writeStoreError(w, r, lookupErr)
-			return
-		}
+	if input.IdempotencyKey != "" && h.replayGrade(w, r, user.TenantID, requestID) {
+		return
 	}
 	runID := ""
 	if run, runErr := h.store.GetOrCreateRun(r.Context(), user.TenantID, user.ID, runInputFor(ctx, "", policy, requestID)); runErr != nil {
@@ -105,16 +99,7 @@ func (h *Handler) Grade(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		var agentErr *GradingAgentError
 		if errors.As(err, &agentErr) {
-			code := "ai_service_unavailable"
-			if agentErr.Code == "adapter_not_configured" {
-				code = "ai_service_not_configured"
-			}
-			if _, updateErr := h.store.UpdateRun(r.Context(), user.TenantID, runID, UpdateRunInput{Status: RunFailed, ErrorCode: code}); updateErr != nil {
-				writeStoreError(w, r, updateErr)
-				return
-			}
-			h.auditAction(r, "subjective.ai_service_unavailable", "subjective_grading_run", runID, code)
-			httpx.Error(w, r, http.StatusServiceUnavailable, code, "AI grading service is unavailable; use manual review")
+			h.writeAgentFailure(w, r, user.TenantID, runID, agentErr)
 			return
 		}
 		ApplyPromptGuard(&output, promptGuard)
@@ -134,19 +119,7 @@ func (h *Handler) Grade(w http.ResponseWriter, r *http.Request) {
 	settlement := GradeSettlementInput{TenantID: user.TenantID, RunID: runID, Context: ctx, Policy: policy, Decision: decision, MathRun: usedMathV2}
 	if settleErr := h.gradeSettlementPipeline().Settle(r.Context(), settlement, &output); settleErr != nil {
 		if usedMathV2 {
-			if errors.Is(settleErr, ErrMathHumanReviewRequired) {
-				_, _ = h.store.UpdateRun(r.Context(), user.TenantID, runID, UpdateRunInput{Status: RunFailed, ErrorCode: "math_human_review_required"})
-				h.auditAction(r, "subjective.math_human_review_required", "subjective_grading_run", runID, "math scoring remained unresolved")
-				httpx.JSON(w, http.StatusUnprocessableEntity, mathReviewPayload(ctx, output))
-				return
-			}
-			if isMathRevisionConflict(settleErr) {
-				_, _ = h.store.UpdateRun(r.Context(), user.TenantID, runID, UpdateRunInput{Status: RunConflict, ErrorCode: "math_evidence_version_conflict"})
-				httpx.Error(w, r, http.StatusConflict, "math_evidence_version_conflict", "math evidence changed during grading")
-				return
-			}
-			_, _ = h.store.UpdateRun(r.Context(), user.TenantID, runID, UpdateRunInput{Status: RunFailed, ErrorCode: "invalid_model_output"})
-			writeStoreError(w, r, settleErr)
+			h.writeMathSettlementFailure(w, r, user.TenantID, runID, ctx, output, settleErr)
 			return
 		}
 		if errors.Is(settleErr, ErrGradeCalibration) {
@@ -177,6 +150,51 @@ func (h *Handler) Grade(w http.ResponseWriter, r *http.Request) {
 	}
 	h.auditAction(r, "subjective.ai_grade_created", "ai_grade", grade.ID, "create subjective ai grade")
 	httpx.JSON(w, http.StatusCreated, map[string]any{"grade": grade})
+}
+
+// 证据准备和请求身份计算在回放前完成；只有未找到结果才继续创建运行，查询失败不能当作首次请求。
+func (h *Handler) replayGrade(w http.ResponseWriter, r *http.Request, tenantID, requestID string) bool {
+	existing, err := h.store.GetGradeByAdapterRequestID(r.Context(), tenantID, requestID)
+	if err == nil {
+		httpx.JSON(w, http.StatusOK, map[string]any{"grade": existing, "idempotent_replay": true})
+		return true
+	}
+	if !errors.Is(err, ErrNotFound) {
+		writeStoreError(w, r, err)
+		return true
+	}
+	return false
+}
+
+// 服务不可用时先保存运行失败状态；保存失败仍优先返回存储错误，不生成失败成绩。
+func (h *Handler) writeAgentFailure(w http.ResponseWriter, r *http.Request, tenantID, runID string, agentErr *GradingAgentError) {
+	code := "ai_service_unavailable"
+	if agentErr.Code == "adapter_not_configured" {
+		code = "ai_service_not_configured"
+	}
+	if _, err := h.store.UpdateRun(r.Context(), tenantID, runID, UpdateRunInput{Status: RunFailed, ErrorCode: code}); err != nil {
+		writeStoreError(w, r, err)
+		return
+	}
+	h.auditAction(r, "subjective.ai_service_unavailable", "subjective_grading_run", runID, code)
+	httpx.Error(w, r, http.StatusServiceUnavailable, code, "AI grading service is unavailable; use manual review")
+}
+
+// 数学结算失败不生成成绩；状态更新仍为尽力记录，响应保留原来的复核、版本冲突或校验错误。
+func (h *Handler) writeMathSettlementFailure(w http.ResponseWriter, r *http.Request, tenantID, runID string, value Context, output AdapterOutput, err error) {
+	if errors.Is(err, ErrMathHumanReviewRequired) {
+		_, _ = h.store.UpdateRun(r.Context(), tenantID, runID, UpdateRunInput{Status: RunFailed, ErrorCode: "math_human_review_required"})
+		h.auditAction(r, "subjective.math_human_review_required", "subjective_grading_run", runID, "math scoring remained unresolved")
+		httpx.JSON(w, http.StatusUnprocessableEntity, mathReviewPayload(value, output))
+		return
+	}
+	if isMathRevisionConflict(err) {
+		_, _ = h.store.UpdateRun(r.Context(), tenantID, runID, UpdateRunInput{Status: RunConflict, ErrorCode: "math_evidence_version_conflict"})
+		httpx.Error(w, r, http.StatusConflict, "math_evidence_version_conflict", "math evidence changed during grading")
+		return
+	}
+	_, _ = h.store.UpdateRun(r.Context(), tenantID, runID, UpdateRunInput{Status: RunFailed, ErrorCode: "invalid_model_output"})
+	writeStoreError(w, r, err)
 }
 
 func successfulGrade(ctx Context, policy ModelPolicy, runID string, output AdapterOutput) Grade {

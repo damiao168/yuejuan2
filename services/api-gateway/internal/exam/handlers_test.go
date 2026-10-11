@@ -167,6 +167,17 @@ func TestExamSessionAllowsSubjectsWithoutPaperSections(t *testing.T) {
 	}
 }
 
+func TestMaterialModeDiscardsStaleTemplateBeforeCreation(t *testing.T) {
+	router := testRouter(authStoreWithPermissions(t, []string{"exam:manage"}), exam.NewMemoryStore())
+	token := login(t, router)
+	payload := `{"creation_mode":"materials","template_id":"old-template","school_id":"school-1","grade_id":"grade-1","name":"按资料创建","exam_type":"quiz","grading_mode":"ai_assisted","publish_policy":"after_admin_approval","class_ids":["class-1"],"subjects":[{"subject":"math","total_score":150,"duration_minutes":120,"sections":[{"title":"旧方案","question_type":"calculation","question_count":21,"score_per_question":11}]}]}`
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, authedRequest(http.MethodPost, "/api/v1/exam-sessions", bytes.NewBufferString(payload), token))
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("material mode kept stale blueprint: %d %s", rec.Code, rec.Body.String())
+	}
+}
+
 func TestExamSessionRejectsMismatchedCommandIdentity(t *testing.T) {
 	router := testRouter(authStoreWithPermissions(t, []string{"exam:manage"}), exam.NewMemoryStore())
 	token := login(t, router)
@@ -293,17 +304,31 @@ func TestCollectionCannotBypassReadinessGate(t *testing.T) {
 	}
 }
 
-func TestArchiveExam(t *testing.T) {
+func TestLegacyArchiveRoutesRequireWholeExamManagement(t *testing.T) {
 	authStore := authStoreWithPermissions(t, []string{"exam:manage"})
-	router := testRouter(authStore, exam.NewMemoryStore())
+	store := exam.NewMemoryStore()
+	router := testRouter(authStore, store)
 	token := login(t, router)
 	created := createExam(t, router, token)
 
-	req := authedRequest(http.MethodPost, "/api/v1/exams/"+created.ID+"/archive", bytes.NewBufferString(`{"expected_revision":1}`), token)
+	for _, suffix := range []string{"archive", "status"} {
+		req := authedRequest(http.MethodPost, "/api/v1/exams/"+created.ID+"/"+suffix, bytes.NewBufferString(`{"status":"archived","expected_revision":1}`), token)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		if rec.Code != http.StatusConflict || !strings.Contains(rec.Body.String(), "exam_management_archive_required") {
+			t.Fatalf("legacy %s bypassed whole exam archive: %d %s", suffix, rec.Code, rec.Body.String())
+		}
+	}
+	unchanged, err := store.GetExam(t.Context(), tenantScope("tenant-exam", "u-exam"), created.ID)
+	if err != nil || unchanged.Status != "draft" || unchanged.Revision != 1 {
+		t.Fatalf("legacy route mutated exam: %#v %v", unchanged, err)
+	}
+	req := authedRequest(http.MethodPost, "/api/v1/exam-management/standalone/"+created.ID+"/archive", bytes.NewBufferString(`{"expected_revision":1,"command_id":"whole-archive-handler"}`), token)
+	req.Header.Set("Idempotency-Key", "whole-archive-handler")
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
-	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"status":"archived"`) {
-		t.Fatalf("expected archive success, got %d %s", rec.Code, rec.Body.String())
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"archived_at"`) || !strings.Contains(rec.Body.String(), `"status":"draft"`) {
+		t.Fatalf("whole archive lost independent metadata/stage: %d %s", rec.Code, rec.Body.String())
 	}
 }
 

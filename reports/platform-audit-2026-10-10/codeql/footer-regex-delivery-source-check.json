@@ -1,0 +1,18 @@
+{
+  "checked_at": "2026-10-11T13:43:35.241507+08:00",
+  "files": [
+    {
+      "path": "ai-services/grading_agent/paper_compact/anchors.py",
+      "snapshot_sha256": "7c0280d45533f9411587c5116bf0d46cb9a91c9614707cc801abf3dafa0b6251",
+      "workspace_sha256": "7c0280d45533f9411587c5116bf0d46cb9a91c9614707cc801abf3dafa0b6251",
+      "unchanged": true
+    },
+    {
+      "path": "ai-services/grading_agent/paper_compact/schema.py",
+      "snapshot_sha256": "38958370509b66e456f8cf739888032635e6885256c17b76b587af342de3cdf4",
+      "workspace_sha256": "38958370509b66e456f8cf739888032635e6885256c17b76b587af342de3cdf4",
+      "unchanged": true
+    }
+  ],
+  "scope": "只核两个直接正则相关文件，不声称全仓及调用上下文无变化。"
+}

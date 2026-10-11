@@ -81,51 +81,7 @@ func TestPanelPolicyApprovalRequiresCompletedAlignedShadowEvidence(t *testing.T)
 	if err != nil || resolved.ID != approved.ID {
 		t.Fatalf("approved canonical scope did not resolve: %#v err=%v", resolved, err)
 	}
-	a := &panelTestAdapter{supported: map[string]bool{"p1": true}, confidence: .9}
-	b := &panelTestAdapter{supported: map[string]bool{"p1": true}, confidence: .9}
-	c := &panelTestAdapter{supported: map[string]bool{"p1": true}, confidence: .99}
-	orchestrator := newTestPanelOrchestrator(t, a, b, c)
-	orchestrator.agents.PrimaryA.ModelConfigID = "config-a"
-	orchestrator.agents.PrimaryB.ModelConfigID = "config-b"
-	orchestrator.agents.Arbiter.ModelConfigID = "config-c"
-	approvals := readyPanelModelApprovals()
-	orchestrator.WithApprovedPolicyStore(store).WithManagedApprovals(approvals)
-	gradingContext := panelTestContext()
-	gradingContext.AssessmentSnapshot.EducationStage = assessment.StageSenior
-	gradingContext.AssessmentSnapshot.SubjectCode = assessment.SubjectMathematics
-	gradingContext.AssessmentSnapshot.ArchetypeCode = "structured_steps"
-	if _, err := orchestrator.Grade(ctx, "tenant-1", "actor-1", gradingContext, PanelDecisionConfig{}); !errors.Is(err, ErrPanelPolicyRequired) {
-		t.Fatalf("approved-only orchestrator accepted an unapproved explicit config: %v", err)
-	}
-	now := time.Now().UTC()
-	approvals.items[0].RevokedAt = &now
-	if _, err := orchestrator.GradeWithApprovedPolicy(ctx, "tenant-1", "actor-1", gradingContext); !errors.Is(err, ErrPanelPolicyRequired) || len(a.inputs) != 0 || len(b.inputs) != 0 {
-		t.Fatalf("revoked model approval dispatched grading: err=%v A=%d B=%d", err, len(a.inputs), len(b.inputs))
-	}
-	approvals.items[0].RevokedAt = nil
-	result, err := orchestrator.GradeWithApprovedPolicy(ctx, "tenant-1", "actor-1", gradingContext)
-	if err != nil || result.Panel.Status != PanelResolved || result.Panel.PolicyVersion != approved.PolicyVersion {
-		t.Fatalf("approved thresholds were not used by the governed entry point: %#v err=%v", result.Panel, err)
-	}
-	approvals.items[0].RevokedAt = &now
-	if _, err := orchestrator.GradeWithApprovedPolicy(ctx, "tenant-1", "actor-1", gradingContext); !errors.Is(err, ErrPanelPolicyRequired) {
-		t.Fatalf("revoked model approval remained runnable: %v", err)
-	}
-	approvals.items[0].RevokedAt = nil
-	orchestrator.agents.PrimaryB.Policy.ModelVersion = "changed-model-b"
-	if _, err := orchestrator.GradeWithApprovedPolicy(ctx, "tenant-1", "actor-1", gradingContext); !errors.Is(err, ErrPanelPolicyRequired) {
-		t.Fatalf("changed model set reused old policy: %v", err)
-	}
-	invalidated, err := service.Invalidate(ctx, "tenant-1", "actor-1", policy.ID, "new calibration required")
-	if err != nil || invalidated.Status != PanelPolicyInvalidated {
-		t.Fatalf("approved policy was not invalidated: %#v err=%v", invalidated, err)
-	}
-	if _, err := service.FindApproved(ctx, "tenant-1", "senior", "mathematics", "structured_steps"); !errors.Is(err, ErrNotFound) {
-		t.Fatalf("invalidated policy remained active: %v", err)
-	}
-	if _, err := orchestrator.GradeWithApprovedPolicy(ctx, "tenant-1", "actor-1", gradingContext); !errors.Is(err, ErrPanelPolicyRequired) {
-		t.Fatalf("invalidated policy remained runnable: %v", err)
-	}
+	assertApprovedPanelPolicyRuntimeGuards(t, ctx, store, service, policy, approved)
 }
 
 func TestPanelPolicyApprovalFailsClosedForWeakOrMismatchedEvidence(t *testing.T) {
@@ -310,4 +266,54 @@ func readyPolicyObservations() []gradingevaluation.PanelObservation {
 		})
 	}
 	return values
+}
+
+// 批准后仍逐次核对模型准入与策略状态，撤销后不能复用已经批准的阈值。
+func assertApprovedPanelPolicyRuntimeGuards(t *testing.T, ctx context.Context, store *MemoryStore, service *PanelPolicyService, policy, approved PanelPolicy) {
+	t.Helper()
+	a := &panelTestAdapter{supported: map[string]bool{"p1": true}, confidence: .9}
+	b := &panelTestAdapter{supported: map[string]bool{"p1": true}, confidence: .9}
+	c := &panelTestAdapter{supported: map[string]bool{"p1": true}, confidence: .99}
+	orchestrator := newTestPanelOrchestrator(t, a, b, c)
+	orchestrator.agents.PrimaryA.ModelConfigID = "config-a"
+	orchestrator.agents.PrimaryB.ModelConfigID = "config-b"
+	orchestrator.agents.Arbiter.ModelConfigID = "config-c"
+	approvals := readyPanelModelApprovals()
+	orchestrator.WithApprovedPolicyStore(store).WithManagedApprovals(approvals)
+	gradingContext := panelTestContext()
+	gradingContext.AssessmentSnapshot.EducationStage = assessment.StageSenior
+	gradingContext.AssessmentSnapshot.SubjectCode = assessment.SubjectMathematics
+	gradingContext.AssessmentSnapshot.ArchetypeCode = "structured_steps"
+	if _, err := orchestrator.Grade(ctx, "tenant-1", "actor-1", gradingContext, PanelDecisionConfig{}); !errors.Is(err, ErrPanelPolicyRequired) {
+		t.Fatalf("approved-only orchestrator accepted an unapproved explicit config: %v", err)
+	}
+	now := time.Now().UTC()
+	approvals.items[0].RevokedAt = &now
+	if _, err := orchestrator.GradeWithApprovedPolicy(ctx, "tenant-1", "actor-1", gradingContext); !errors.Is(err, ErrPanelPolicyRequired) || len(a.inputs) != 0 || len(b.inputs) != 0 {
+		t.Fatalf("revoked model approval dispatched grading: err=%v A=%d B=%d", err, len(a.inputs), len(b.inputs))
+	}
+	approvals.items[0].RevokedAt = nil
+	result, err := orchestrator.GradeWithApprovedPolicy(ctx, "tenant-1", "actor-1", gradingContext)
+	if err != nil || result.Panel.Status != PanelResolved || result.Panel.PolicyVersion != approved.PolicyVersion {
+		t.Fatalf("approved thresholds were not used by the governed entry point: %#v err=%v", result.Panel, err)
+	}
+	approvals.items[0].RevokedAt = &now
+	if _, err := orchestrator.GradeWithApprovedPolicy(ctx, "tenant-1", "actor-1", gradingContext); !errors.Is(err, ErrPanelPolicyRequired) {
+		t.Fatalf("revoked model approval remained runnable: %v", err)
+	}
+	approvals.items[0].RevokedAt = nil
+	orchestrator.agents.PrimaryB.Policy.ModelVersion = "changed-model-b"
+	if _, err := orchestrator.GradeWithApprovedPolicy(ctx, "tenant-1", "actor-1", gradingContext); !errors.Is(err, ErrPanelPolicyRequired) {
+		t.Fatalf("changed model set reused old policy: %v", err)
+	}
+	invalidated, err := service.Invalidate(ctx, "tenant-1", "actor-1", policy.ID, "new calibration required")
+	if err != nil || invalidated.Status != PanelPolicyInvalidated {
+		t.Fatalf("approved policy was not invalidated: %#v err=%v", invalidated, err)
+	}
+	if _, err := service.FindApproved(ctx, "tenant-1", "senior", "mathematics", "structured_steps"); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("invalidated policy remained active: %v", err)
+	}
+	if _, err := orchestrator.GradeWithApprovedPolicy(ctx, "tenant-1", "actor-1", gradingContext); !errors.Is(err, ErrPanelPolicyRequired) {
+		t.Fatalf("invalidated policy remained runnable: %v", err)
+	}
 }

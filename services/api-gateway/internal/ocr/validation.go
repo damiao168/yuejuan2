@@ -56,8 +56,7 @@ func CanStart(status string) bool {
 	return status == "queued" || status == "failed"
 }
 
-// IsStarted reports the sole state in which a repeated start request is an
-// idempotent acknowledgement rather than a state transition.
+// IsStarted 判断是否处于唯一允许把重复启动请求作为幂等确认、而非状态转换的状态。
 func IsStarted(status string) bool {
 	return status == "processing"
 }

@@ -23,32 +23,18 @@ var validGradingModes = map[string]bool{
 var allowedTransitions = map[string]map[string]bool{
 	"draft": {
 		"configured": true,
-		"archived":   true,
-	},
-	"configured": {
-		"archived": true,
 	},
 	"ready": {
 		"configured": true,
-		"archived":   true,
 	},
 	"collecting": {
-		"grading":  true,
-		"archived": true,
+		"grading": true,
 	},
 	"grading": {
 		"reviewing": true,
-		"archived":  true,
 	},
 	"reviewing": {
 		"finalized": true,
-		"archived":  true,
-	},
-	"finalized": {
-		"archived": true,
-	},
-	"published": {
-		"archived": true,
 	},
 }
 
@@ -61,9 +47,8 @@ func IsValidGradingMode(mode string) bool {
 }
 
 func CanTransition(from string, to string) bool {
-	// Grade publication is guarded by the score quality and confirmation
-	// workflow. The generic exam status API must never publish an exam.
-	if to == "published" {
+	// 发布由成绩质量与确认流程控制；归档使用独立元数据和整场资格，普通状态转换不能替代它们。
+	if to == "published" || to == "archived" {
 		return false
 	}
 	if from == to {

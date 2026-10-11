@@ -1,0 +1,91 @@
+{
+  "date": "2026-10-11",
+  "review_mode": "independent read-only aggregation and evidence review",
+  "reviewed_files": [
+    "aggregate_results.py",
+    "root-results.json",
+    "worker-results.json",
+    "infra-results.json",
+    "model-results.json"
+  ],
+  "scope_boundary": "审读汇总脚本与分工结果，并在内存独立聚合和核对测试参数数量；不运行汇总脚本，不改业务源码或原始审计文件，不重复执行测试。复扫结果逐条判定由根代理另行完成。",
+  "aggregation": {
+    "result": "pass",
+    "original_ids": "SG-001 through SG-105, 105 unique consecutive identifiers",
+    "explicit_decisions": 37,
+    "evidence_counts": {
+      "infra-results.json": 19,
+      "model-results.json": 4,
+      "worker-results.json": 10,
+      "root-results.json": 4
+    },
+    "status_counts": {
+      "fixed": 36,
+      "already_fixed": 1,
+      "existing_control": 68
+    },
+    "already_fixed_ids": ["SG-090"],
+    "duplicates": [],
+    "unknown_ids": [],
+    "unhandled_actionable_ids": [],
+    "evidence": "独立读取四份 findings，以 ids/id 展开且归一化 already_fixed_verified；确认每个剩余原项的 human_status 为 false_positive。结果与汇总脚本逻辑及预期计数完全一致。"
+  },
+  "tests_237": {
+    "result": "pass_static_composition_check",
+    "cross_origin_redirect": 85,
+    "same_origin_redirect": 17,
+    "direct_success": 17,
+    "expired_lease": 12,
+    "redirect_normal_lease_subtotal": 131,
+    "close_original_response": 20,
+    "xml": 12,
+    "existing_network_tls_errors": 74,
+    "total": 237,
+    "existing_file_case_counts": {
+      "services/image-quality-worker/tests/test_api.py": 2,
+      "services/ocr-worker/tests/test_api.py": 4,
+      "services/ocr-worker/tests/test_api_batch51.py": 36,
+      "services/ocr-worker/tests/test_symbolic_runner.py": 7,
+      "services/ocr-worker/tests/test_math_client_tls_batch54.py": 9,
+      "services/page-processing-worker/tests/test_api.py": 5,
+      "services/page-processing-worker/tests/test_api_batch31.py": 9,
+      "services/subjective-grading-worker/tests/test_api_integration.py": 2
+    },
+    "evidence": "通过源码 AST 读取 test 函数和 parametrize 取值数量，不导入或执行测试。四个跳转测试文件分别为 39/38/39/15 个网络用例和各 5 个关闭用例；XML 为 1+10+1；八个既有文件为 2+4+36+7+9+5+9+2。运行通过结论引用 worker-results.json，静态计数不冒充新一轮执行。"
+  },
+  "baseline_and_snapshot": {
+    "result": "pass",
+    "all_105_baseline_paths_present": true,
+    "all_105_current_paths_present": true,
+    "original_paths_missing_rescan_inventory": [],
+    "original_paths_stale_against_rescan_inventory": [],
+    "external_changed_finding_files": [
+      "services/api-gateway/internal/minioadapter/client_test.go",
+      "services/api-gateway/internal/modelgovernance/managed_config_probe.go",
+      "services/api-gateway/internal/server/e2e_business_command_test.go",
+      "services/api-gateway/internal/server/e2e_mfa_test.go",
+      "services/api-gateway/internal/server/e2e_postgres_test.go",
+      "services/api-gateway/internal/server/e2e_question_bank_import_test.go",
+      "services/api-gateway/internal/server/e2e_question_bank_test.go",
+      "services/page-processing-worker/tests/test_main.py"
+    ],
+    "evidence": "所有原命中当前文件 SHA-256 均与复扫 source_files 的对应记录一致。已有控制命中文件的字节变化共 11 个，扣除本次同时承载已有控制命中的三份 Nginx 修复文件，正文所说另有 8 个外部变动文件成立。"
+  },
+  "preservation_and_review_boundary": {
+    "result": "pass_with_one_metadata_note",
+    "evidence": "aggregate_results.py 读取原 findings-triage.json，所有写入仅在 remediation 下的新结果；不覆盖首次报告或原始扫描。正文明确较晚 workspace-after-xml.patch 不冒充开工前全仓补丁，并将字节清单 full_file_review 全部设为 pending。root/worker 和独立评审记录均限定增量与部分回归，不声明全文件审读。",
+    "metadata_note": {
+      "file": "model-results.json",
+      "field": "file_review[0].status",
+      "current_value": "annotated",
+      "recommended_value": "pending",
+      "reason": "该条 reviewed_scope 只涵盖 model.py 的传输和关联错误函数，不是全文件审读；AGENTS/commenting-standard 要求部分审读文件保留 pending。可另列 increment_review=annotated，保留本次注释增量已核对的事实。",
+      "owner": "根代理统一维护分工结果元数据"
+    }
+  },
+  "limitations": [
+    "此独立核对证明原命中处置记录完整和测试组成一致，不把静态计数冒充测试执行或生产安全证明。",
+    "未执行 aggregate_results.py，最终新报告和复扫逐条判断由根代理生成。",
+    "当前快照哈希一致结论只针对原105命中的文件，不能扩展为全仓全文审读结论。"
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "recorded_at": "2026-10-11T14:11:09.326119+08:00",
+  "method": "Read-only local official tool help/schema/scripts/binary-string inspection and public official documentation; no database or scan was run",
+  "commands": [
+    {
+      "command": [
+        "D:\\tools\\audit-codeql-20261010\\codeql\\rust\\tools\\win64\\extractor.exe",
+        "--help"
+      ],
+      "exit_code": 0,
+      "output_file": "rust-extractor-help.log",
+      "output_sha256": "669602613c058539b091055731b5677e788b26a7d6a109e51a04ef8c335feb0c"
+    },
+    {
+      "command": [
+        "D:\\tools\\audit-codeql-20261010\\codeql\\codeql.exe",
+        "resolve",
+        "extractor",
+        "--language=rust",
+        "--format=betterjson"
+      ],
+      "exit_code": 0,
+      "output_file": "rust-extractor-options.json",
+      "output_sha256": "f6b5d449c1f745b169b02ecd99c379e5eeb8f899996feaf6b236fae2ac716356"
+    }
+  ],
+  "local_file_sha256": {
+    "rust/codeql-extractor.yml": "9ccacfcc5791e0cb5060c66808b963cbeb290280fa6b30c9778681cc17054cd6",
+    "rust/tools/index-files.cmd": "9f8fa1fa8cf65b142dad8b7f50b81d92b8e1ebf84d8828433353338cf9ba41f3",
+    "rust/tools/autobuild.cmd": "31fe8d129605b83306fb8291183f650866218be0f3cae3178807828a527bb33e",
+    "rust/tools/win64/extractor.exe": "a7b632f6cfa6d48d2c4de8872496ae882663ba2ea238b3a6d671976b5925ce74"
+  },
+  "binary_ascii_occurrence_counts": {
+    "RAYON_NUM_THREADS": 1,
+    "RAYON_RS_NUM_CPUS": 1,
+    "CODEQL_THREADS": 0,
+    "CODEQL_RAM": 0,
+    "compile-time-deps": 1,
+    "CARGO_BUILD_JOBS": 0,
+    "rayon-core-1.13.0": 16
+  },
+  "interpretation": "Binary string presence supports a runtime-control experiment but does not prove every thread pool honors it; absence of CODEQL_THREADS/RAM strings does not prove no propagated control",
+  "declared_thread_option": false,
+  "declared_memory_limit_option": false,
+  "proposed_child_environment": {
+    "RAYON_NUM_THREADS": "1",
+    "CARGO_BUILD_JOBS": "1"
+  },
+  "source_file_scope_to_preserve": 16,
+  "query_scope_to_preserve": 41,
+  "original_database_modified": false,
+  "system_settings_modified": false
+}

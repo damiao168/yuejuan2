@@ -121,6 +121,40 @@ class ContractTests(unittest.TestCase):
         raw["suggested_score"] = 1
         self.assertEqual(self._normalize(request, raw)["suggested_score"], 4)
 
+    def test_point_classification_fails_before_malformed_evidence_is_checked(self):
+        raw = valid_raw_output()
+        raw["missing_points"] = [{"rubric_point_id": "unknown", "reason": "missing"}]
+        raw["evidence"] = [None]
+        request = valid_request()
+        with self.assertRaises(AgentError) as caught:
+            self._normalize(request, raw)
+        self.assertEqual(caught.exception.code, "model_output_invalid")
+        self.assertEqual(caught.exception.message, "model referenced an unknown or duplicate missing rubric point")
+
+    def test_strict_alias_rejection_discards_its_evidence_before_excerpt_validation(self):
+        request = valid_request()
+        request["rubric"]["points"][0]["match_policy"] = "strict_alias"
+        request["rubric"]["points"][0]["aliases"] = ["absent literal"]
+        raw = valid_raw_output()
+        raw["evidence"][0]["text_excerpt"] = "invented evidence"
+        suggestion = self._normalize(request, raw)
+        self.assertEqual([point["rubric_point_id"] for point in suggestion["matched_points"]], ["p2"])
+        self.assertEqual([item["evidence_id"] for item in suggestion["evidence"]], ["e2"])
+        self.assertEqual(suggestion["suggested_score"], 2)
+        self.assertEqual(suggestion["missing_points"][0]["reason"], "strict_alias_not_found")
+
+    def test_normalized_alias_uniqueness_is_shared_across_rubric_points(self):
+        request = valid_request()
+        first = request["rubric"]["points"][0]
+        first["aliases"] = ["AB C"]
+        second = copy.deepcopy(first)
+        second["id"] = "second-point"
+        second["aliases"] = ["ABC"]
+        request["rubric"]["points"].append(second)
+        with self.assertRaises(AgentError) as caught:
+            validate_request(request)
+        self.assertEqual(caught.exception.message, "rubric aliases must not be shared")
+
     def test_low_ocr_and_injection_force_canonical_risks(self):
         request = valid_request()
         request["ocr_confidence"] = 0.5

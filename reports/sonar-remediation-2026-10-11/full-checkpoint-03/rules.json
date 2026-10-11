@@ -1,0 +1,175 @@
+{
+  "go:S3776": {
+    "rule": {
+      "key": "go:S3776",
+      "repo": "go",
+      "name": "Cognitive Complexity of functions should not be too high",
+      "createdAt": "2026-10-02T19:32:06+0800",
+      "severity": "CRITICAL",
+      "status": "READY",
+      "isTemplate": false,
+      "tags": [],
+      "sysTags": [
+        "brain-overload"
+      ],
+      "lang": "go",
+      "langName": "Go",
+      "params": [
+        {
+          "key": "threshold",
+          "htmlDesc": "The maximum authorized complexity.",
+          "defaultValue": "15",
+          "type": "INTEGER"
+        }
+      ],
+      "defaultDebtRemFnType": "LINEAR_OFFSET",
+      "debtRemFnType": "LINEAR_OFFSET",
+      "type": "CODE_SMELL",
+      "defaultRemFnType": "LINEAR_OFFSET",
+      "defaultRemFnGapMultiplier": "1min",
+      "defaultRemFnBaseEffort": "5min",
+      "remFnType": "LINEAR_OFFSET",
+      "remFnGapMultiplier": "1min",
+      "remFnBaseEffort": "5min",
+      "remFnOverloaded": false,
+      "gapDescription": "per complexity point over the threshold",
+      "scope": "ALL",
+      "isExternal": false,
+      "descriptionSections": [
+        {
+          "key": "root_cause",
+          "content": "<p>Cognitive Complexity is a measure of how hard it is to understand the control flow of a unit of code. Code with high cognitive complexity is hard\nto read, understand, test, and modify.</p>\n<p>As a rule of thumb, high cognitive complexity is a sign that the code should be refactored into smaller, easier-to-manage pieces.</p>\n<h3>Which syntax in code does impact cognitive complexity score?</h3>\n<p>Here are the core concepts:</p>\n<ul>\n  <li><strong>Cognitive complexity is incremented each time the code breaks the normal linear reading flow.</strong>\n    <br>\n    This concerns, for example, loop structures, conditionals, catches, switches, jumps to labels, and conditions mixing multiple operators.</li>\n  <li><strong>Each nesting level increases complexity.</strong>\n    <br>\n    During code reading, the deeper you go through nested layers, the harder it becomes to keep the context in mind.</li>\n  <li><strong>Method calls are free</strong>\n    <br>\n    A well-picked method name is a summary of multiple lines of code. A reader can first explore a high-level view of what the code is performing then\n    go deeper and deeper by looking at called functions content.\n    <br>\n    <em>Note:</em> This does not apply to recursive calls, those will increment cognitive score.</li>\n</ul>\n<p>The method of computation is fully detailed in the pdf linked in the resources.</p>\n<h3>What is the potential impact?</h3>\n<p>Developers spend more time reading and understanding code than writing it. High cognitive complexity slows down changes and increases the cost of\nmaintenance.</p>"
+        },
+        {
+          "key": "introduction",
+          "content": "<p>This rule raises an issue when the code cognitive complexity of a function is above a certain threshold.</p>"
+        },
+        {
+          "key": "resources",
+          "content": "<h3>Documentation</h3>\n<ul>\n  <li>Sonar - <a href=\"https://www.sonarsource.com/docs/CognitiveComplexity.pdf\">Cognitive Complexity</a></li>\n</ul>\n<h3>Articles &amp; blog posts</h3>\n<ul>\n  <li>Sonar Blog - <a href=\"https://www.sonarsource.com/blog/5-clean-code-tips-for-reducing-cognitive-complexity/\">5 Clean Code Tips for Reducing\n  Cognitive Complexity</a></li>\n</ul>"
+        }
+      ],
+      "educationPrinciples": [],
+      "updatedAt": "2026-10-02T19:32:06+0800",
+      "cleanCodeAttribute": "FOCUSED",
+      "cleanCodeAttributeCategory": "ADAPTABLE",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ]
+    },
+    "actives": []
+  },
+  "javascript:S905": {
+    "rule": {
+      "key": "javascript:S905",
+      "repo": "javascript",
+      "name": "Non-empty statements should change control flow or have at least one side-effect",
+      "createdAt": "2026-10-02T19:31:58+0800",
+      "severity": "MAJOR",
+      "status": "READY",
+      "isTemplate": false,
+      "tags": [],
+      "sysTags": [
+        "cwe",
+        "unused"
+      ],
+      "lang": "js",
+      "langName": "JavaScript",
+      "params": [],
+      "defaultDebtRemFnType": "CONSTANT_ISSUE",
+      "debtRemFnType": "CONSTANT_ISSUE",
+      "type": "BUG",
+      "defaultRemFnType": "CONSTANT_ISSUE",
+      "defaultRemFnBaseEffort": "10min",
+      "remFnType": "CONSTANT_ISSUE",
+      "remFnBaseEffort": "10min",
+      "remFnOverloaded": false,
+      "scope": "MAIN",
+      "isExternal": false,
+      "descriptionSections": [
+        {
+          "key": "resources",
+          "content": "<h3>Documentation</h3>\n<ul>\n  <li><a href=\"https://typescript-eslint.io/\">typescript-eslint</a> - Rule <a\n  href=\"https://github.com/typescript-eslint/typescript-eslint/blob/main/packages/eslint-plugin/docs/rules/no-unused-expressions.mdx\">no-unused-expressions</a></li>\n</ul>\n<h3>Standards</h3>\n<ul>\n  <li>CWE - <a href=\"https://cwe.mitre.org/data/definitions/482\">CWE-482 Comparing instead of Assigning</a></li>\n</ul>"
+        },
+        {
+          "key": "introduction",
+          "content": "<p>Statements with no side effects and no change of control flow do not contribute to the functionality of the code and can indicate a programming\nerror.</p>"
+        },
+        {
+          "key": "root_cause",
+          "content": "<p>When writing code, it is important to ensure that each statement serves a purpose and contributes to the overall functionality of the program. When\nthey have no side effects or do not change the control flow, they can either indicate a programming error or be redundant:</p>\n<ol>\n  <li>The code does not behave as intended: The statements are expected to have an effect but they do not. This can be caused by mistyping,\n  copy-and-paste errors, etc.</li>\n  <li>The statements are residual after a refactoring.</li>\n</ol>\n<h3>Exceptions</h3>\n<p>The rule does not raise an issue on statements containing only a semicolon (<code>;</code>).</p>"
+        },
+        {
+          "key": "how_to_fix",
+          "content": "<p>Identify statements that do not contribute to the functionality of the code and verify if they are intended to be part of the logic. If they are,\nthere is a bug to be fixed. If they are not, then they are redundant and should be removed.</p>\n\n<h4>Noncompliant code example</h4>\n<pre data-diff-id=\"1\" data-diff-type=\"noncompliant\">\nfunction getResult() {\n    let result = 42;\n    if (shouldBeZero()) {\n        result == 0; // Noncompliant: no side effect, was an assignment intended?\n    }\n    return result;\n}\n</pre>\n<pre data-diff-id=\"2\" data-diff-type=\"noncompliant\">\nvar msg = \"Hello, \"\n  \"World!\"; // Noncompliant; have we forgotten '+' operator on previous line?\n</pre>\n<h4>Compliant solution</h4>\n<pre data-diff-id=\"1\" data-diff-type=\"compliant\">\nfunction getResult() {\n    let result = 42;\n    if (shouldBeZero()) {\n        result = 0; // Compliant\n    }\n    return result;\n}\n</pre>\n<pre data-diff-id=\"2\" data-diff-type=\"compliant\">\nvar msg = \"Hello, \" +\n  \"World!\"; // Compliant\n</pre>"
+        }
+      ],
+      "educationPrinciples": [],
+      "updatedAt": "2026-10-02T19:31:58+0800",
+      "cleanCodeAttribute": "CLEAR",
+      "cleanCodeAttributeCategory": "INTENTIONAL",
+      "impacts": [
+        {
+          "softwareQuality": "RELIABILITY",
+          "severity": "MEDIUM"
+        }
+      ]
+    },
+    "actives": []
+  },
+  "python:S125": {
+    "rule": {
+      "key": "python:S125",
+      "repo": "python",
+      "name": "Sections of code should not be commented out",
+      "createdAt": "2026-10-02T19:31:57+0800",
+      "severity": "MAJOR",
+      "status": "READY",
+      "isTemplate": false,
+      "tags": [],
+      "sysTags": [
+        "unused"
+      ],
+      "lang": "py",
+      "langName": "Python",
+      "params": [
+        {
+          "key": "exception",
+          "htmlDesc": "Regular expression used to ignore commented out code. Only a full match is excluded.",
+          "defaultValue": "(fmt|py\\w+):.*",
+          "type": "STRING"
+        }
+      ],
+      "defaultDebtRemFnType": "CONSTANT_ISSUE",
+      "debtRemFnType": "CONSTANT_ISSUE",
+      "type": "CODE_SMELL",
+      "defaultRemFnType": "CONSTANT_ISSUE",
+      "defaultRemFnBaseEffort": "5min",
+      "remFnType": "CONSTANT_ISSUE",
+      "remFnBaseEffort": "5min",
+      "remFnOverloaded": false,
+      "scope": "ALL",
+      "isExternal": false,
+      "descriptionSections": [
+        {
+          "key": "root_cause",
+          "content": "<p>Commented-out code distracts the focus from the actual executed code. It creates a noise that increases maintenance code. And because it is never\nexecuted, it quickly becomes out of date and invalid.</p>\n<p>Commented-out code should be deleted and can be retrieved from source control history if required.</p>"
+        }
+      ],
+      "educationPrinciples": [],
+      "updatedAt": "2026-10-02T19:31:57+0800",
+      "cleanCodeAttribute": "CLEAR",
+      "cleanCodeAttributeCategory": "INTENTIONAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ]
+    },
+    "actives": []
+  }
+}

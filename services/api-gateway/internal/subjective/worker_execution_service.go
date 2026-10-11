@@ -16,8 +16,7 @@ var (
 	ErrAIEligibilityAbstained      = errors.New("subjective ai eligibility abstained")
 )
 
-// EligibilityAbstainedError retains the admission decision for callers that
-// need to report or audit it without coupling the workflow to HTTP concerns.
+// EligibilityAbstainedError 保留准入决定，供调用方报告或审计，而无需将流程耦合到 HTTP。
 type EligibilityAbstainedError struct {
 	Decision aieligibility.Decision
 }
@@ -25,8 +24,7 @@ type EligibilityAbstainedError struct {
 func (e *EligibilityAbstainedError) Error() string { return ErrAIEligibilityAbstained.Error() }
 func (e *EligibilityAbstainedError) Unwrap() error { return ErrAIEligibilityAbstained }
 
-// WorkerResultVersionError distinguishes the math envelope constraint while
-// retaining one application-level conflict category for handlers.
+// WorkerResultVersionError 区分数学结果封装约束，同时为 handler 保留统一的应用级冲突类别。
 type WorkerResultVersionError struct {
 	MathSchema bool
 }
@@ -77,9 +75,8 @@ func NewWorkerExecutionService(store workerExecutionStore, runtime workerExecuti
 	return &WorkerExecutionService{store: store, runtime: runtime, prepareMath: prepareMath, decideEligibility: decideEligibility}
 }
 
-// Prepare owns the shared ExecuteWorker/CompleteWorker admission path. Its
-// mutation order intentionally matches the former handlers: the run is marked
-// processing before result-version, context, evidence, and eligibility checks.
+// Prepare 负责 ExecuteWorker/CompleteWorker 共用的准入路径。
+// 变更顺序与此前 handler 保持一致：先把运行标记为 processing，再检查结果版本、上下文、证据和准入资格。
 // worker 准备阶段先确认租约并标记 processing，再检查版本、证据和准入；失败路径会同步结束任务和运行。
 func (s *WorkerExecutionService) Prepare(ctx context.Context, input WorkerPrepareInput) (WorkerExecutionContext, error) {
 	prepared := WorkerExecutionContext{}

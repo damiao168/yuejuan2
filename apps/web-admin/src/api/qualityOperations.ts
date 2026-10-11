@@ -1,5 +1,5 @@
 import { apiClient } from "./client";
-import { listBackmarkBatches as listGeneratedBackmarkBatches, type BackmarkBatch } from "./backmark";
+import { listBackmarkBatches as listGeneratedBackmarkBatches } from "./backmark";
 
 export interface SeedPolicy {
   id: string;
@@ -12,7 +12,7 @@ export interface SeedPolicy {
   revision: number;
 }
 
-export type { BackmarkBatch };
+export type { BackmarkBatch } from "./backmark";
 
 export function getSeedPolicy(examId: string, questionId: string) {
   return apiClient.request<{ policy: SeedPolicy }>(`/api/v1/exams/${encodeURIComponent(examId)}/questions/${encodeURIComponent(questionId)}/seed-policy`);

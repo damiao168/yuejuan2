@@ -55,8 +55,7 @@ func TestCaptureBatchCommandHandlerResponsesValidateAgainstOpenAPI(t *testing.T)
 	}
 }
 
-// The contract fixture records accepted commands without running worker IO.
-// Database atomicity is exercised separately by the PostgreSQL workflow suite.
+// 契约夹具记录已接受的命令，不运行工作器 I/O；数据库原子性由 PostgreSQL 工作流测试单独验证。
 type contractDispatchStore struct{ *paper.MemoryStore }
 
 func (*contractDispatchStore) ReconcileExpiredPaperImportTask(context.Context) (bool, error) {
@@ -73,21 +72,21 @@ func TestImportAcceptedCommandHandlerResponsesValidateAgainstOpenAPI(t *testing.
 	document := readOpenAPIDocument(t)
 	store := &contractDispatchStore{paper.NewMemoryStore()}
 	handler := paper.NewHandler(store, auth.NewMemoryStore()).WithDocumentImport(paper.NewDocumentImportService(store, nil, nil, "", "", time.Second))
-	submit := func(route, method, idKey, id string, body any, status string, code int, handle http.HandlerFunc) paper.PaperImportJob {
+	submit := func(command importAcceptedContractCommand) paper.PaperImportJob {
 		t.Helper()
-		raw, err := json.Marshal(body)
+		raw, err := json.Marshal(command.body)
 		if err != nil {
 			t.Fatal(err)
 		}
-		request := scopedContractRequest(httptest.NewRequest(method, "/contract-command", bytes.NewReader(raw)))
-		request.SetPathValue(idKey, id)
-		request.Header.Set("Idempotency-Key", "contract-"+method+"-"+status)
+		request := scopedContractRequest(httptest.NewRequest(command.method, "/contract-command", bytes.NewReader(raw)))
+		request.SetPathValue(command.idKey, command.id)
+		request.Header.Set("Idempotency-Key", "contract-"+command.method+"-"+command.status)
 		response := httptest.NewRecorder()
-		handle(response, request)
-		if response.Code != code {
-			t.Fatalf("%s: status=%d body=%s", route, response.Code, response.Body.String())
+		command.handle(response, request)
+		if response.Code != command.code {
+			t.Fatalf("%s: status=%d body=%s", command.route, response.Code, response.Body.String())
 		}
-		validateResponseBody(t, document, route, strings.ToLower(method), status, response.Body.Bytes())
+		validateResponseBody(t, document, command.route, strings.ToLower(command.method), command.status, response.Body.Bytes())
 		var result struct {
 			Import paper.PaperImportJob `json:"import"`
 		}
@@ -96,24 +95,26 @@ func TestImportAcceptedCommandHandlerResponsesValidateAgainstOpenAPI(t *testing.
 		}
 		return result.Import
 	}
-	job := submit("/api/v1/exams/{examId}/paper-imports", "POST", "examId", "exam-1", paper.CreatePaperImportInput{Subject: "math", Sources: []paper.CreatePaperImportSourceInput{{FileAssetID: "file-1", RoleHint: "question"}}}, "201", 201, handler.CreatePaperImport)
-	job = submit("/api/v1/paper-imports/{id}/sources", "POST", "id", job.ID, paper.AddPaperImportSourcesInput{ExpectedGeneration: job.Generation, Sources: []paper.CreatePaperImportSourceInput{{FileAssetID: "file-2", DocumentIndex: 1, RoleHint: "answer"}}}, "202", 202, handler.AddPaperImportSources)
-	job = submit("/api/v1/paper-imports/{id}/sources", "PUT", "id", job.ID, paper.ReplacePaperImportSourcesInput{ExpectedGeneration: job.Generation, Sources: []paper.ReplacePaperImportSourceInput{{ID: job.Sources[0].ID, RoleHint: "question"}}}, "202", 202, handler.ReplacePaperImportSources)
+	job := submit(importAcceptedContractCommand{"/api/v1/exams/{examId}/paper-imports", "POST", "examId", "exam-1", paper.CreatePaperImportInput{Subject: "math", Sources: []paper.CreatePaperImportSourceInput{{FileAssetID: "file-1", RoleHint: "question"}}}, "201", 201, handler.CreatePaperImport})
+	job = submit(importAcceptedContractCommand{"/api/v1/paper-imports/{id}/sources", "POST", "id", job.ID, paper.AddPaperImportSourcesInput{ExpectedGeneration: job.Generation, Sources: []paper.CreatePaperImportSourceInput{{FileAssetID: "file-2", DocumentIndex: 1, RoleHint: "answer"}}}, "202", 202, handler.AddPaperImportSources})
+	job = submit(importAcceptedContractCommand{"/api/v1/paper-imports/{id}/sources", "PUT", "id", job.ID, paper.ReplacePaperImportSourcesInput{ExpectedGeneration: job.Generation, Sources: []paper.ReplacePaperImportSourceInput{{ID: job.Sources[0].ID, RoleHint: "question"}}}, "202", 202, handler.ReplacePaperImportSources})
 	if job.Generation != 3 || job.Status != "processing" {
 		t.Fatalf("accepted response lost operation identity: %#v", job)
 	}
-	submit("/api/v1/paper-imports/{id}/review", "PUT", "id", job.ID, map[string]any{}, "400", 400, handler.SavePaperImportReview)
-	submit("/api/v1/paper-imports/{id}/apply", "POST", "id", job.ID, map[string]any{}, "409", 409, handler.ApplyPaperImport)
+	submit(importAcceptedContractCommand{"/api/v1/paper-imports/{id}/review", "PUT", "id", job.ID, map[string]any{}, "400", 400, handler.SavePaperImportReview})
+	submit(importAcceptedContractCommand{"/api/v1/paper-imports/{id}/apply", "POST", "id", job.ID, map[string]any{}, "409", 409, handler.ApplyPaperImport})
 	score := 3.0
-	processed, err := store.CompletePaperImportCandidates(context.Background(), "tenant-1", job.ID, nil,
-		[]paper.QuestionCandidate{{CandidateID: "q1", QuestionNoRaw: "1", QuestionType: "single_choice", Score: &score, Stem: "Choose", Confidence: .95, SourceRefs: []paper.PaperImportSourceRef{}}},
-		[]paper.AnswerCandidate{{CandidateID: "a1", QuestionNoHint: "1", StandardAnswer: "A", Confidence: .95, SourceRefs: []paper.PaperImportSourceRef{}}}, []paper.SolutionCandidate{}, []paper.RubricCandidate{}, []paper.PaperImportIssue{})
+	processed, err := store.CompletePaperImportCandidates(context.Background(), "tenant-1", job.ID, paper.PaperImportParseResult{
+		QuestionCandidates: []paper.QuestionCandidate{{CandidateID: "q1", QuestionNoRaw: "1", QuestionType: "single_choice", Score: &score, Stem: "Choose", Confidence: .95, SourceRefs: []paper.PaperImportSourceRef{}}},
+		AnswerCandidates:   []paper.AnswerCandidate{{CandidateID: "a1", QuestionNoHint: "1", StandardAnswer: "A", Confidence: .95, SourceRefs: []paper.PaperImportSourceRef{}}},
+		SolutionCandidates: []paper.SolutionCandidate{}, RubricCandidates: []paper.RubricCandidate{}, Issues: []paper.PaperImportIssue{},
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	processed.Questions[0].HumanConfirmedFields = []string{"question_no", "question_type", "score", "stem", "answer", "rubric"}
-	job = submit("/api/v1/paper-imports/{id}/review", "PUT", "id", job.ID, paper.ReviewPaperImportInput{ExpectedGeneration: job.Generation, Questions: processed.Questions}, "200", 200, handler.SavePaperImportReview)
-	job = submit("/api/v1/paper-imports/{id}/apply", "POST", "id", job.ID, map[string]any{}, "200", 200, handler.ApplyPaperImport)
+	job = submit(importAcceptedContractCommand{"/api/v1/paper-imports/{id}/review", "PUT", "id", job.ID, paper.ReviewPaperImportInput{ExpectedGeneration: job.Generation, ExpectedUpdatedAt: processed.UpdatedAt.Format(time.RFC3339Nano), Questions: processed.Questions}, "200", 200, handler.SavePaperImportReview})
+	job = submit(importAcceptedContractCommand{"/api/v1/paper-imports/{id}/apply", "POST", "id", job.ID, map[string]any{}, "200", 200, handler.ApplyPaperImport})
 	if job.Status != "applied" {
 		t.Fatalf("apply response lost terminal state: %#v", job)
 	}
@@ -135,8 +136,7 @@ func TestReliabilitySharedClientContract(t *testing.T) {
 	invalid := httptest.NewRecorder()
 	handler.ListExceptions(invalid, scopedContractRequest(httptest.NewRequest(http.MethodGet, "/api/v1/processing/exceptions?status=invalid", nil)))
 	validateResponseBody(t, document, "/api/v1/processing/exceptions", "get", "400", invalid.Body.Bytes())
-	// Both clients receive identical bytes produced above by real handlers and
-	// already validated against OpenAPI, including correlation metadata.
+	// 两个客户端接收上面真实处理器生成、已通过 OpenAPI 校验的相同字节，其中包含关联元数据。
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		response := summary
 		if r.URL.Path == "/api/v1/processing/exceptions" {
@@ -242,4 +242,13 @@ func TestReliabilityWriteHandlerResponsesValidateAgainstOpenAPI(t *testing.T) {
 			validateResponseBody(t, document, scenario.route, "post", scenario.status, response.Body.Bytes())
 		})
 	}
+}
+
+// 同一命令的路由、路径绑定、请求与期望状态放在一起，避免复用调用中交换参数；请求时序仍由测试顺序决定。
+type importAcceptedContractCommand struct {
+	route, method, idKey, id string
+	body                     any
+	status                   string
+	code                     int
+	handle                   http.HandlerFunc
 }

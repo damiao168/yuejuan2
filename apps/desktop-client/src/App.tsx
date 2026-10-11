@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { applyReadingSize, readReadingSize } from "@edugrade/design-tokens";
+import { subscribeBeforeUnload } from "@edugrade/sdk";
 import {
   Alert,
   Button,
@@ -32,9 +33,10 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { getUserErrorMessage } from "./api/userError";
-import { OfflineWorkbench } from "./components/OfflineWorkbench";
-import { CapabilityTag, QueueList, SectionHead, StatusLine } from "./components/DesktopStatusViews";
+import { OfflineWorkbench, type OfflineLeaveGuard } from "./components/OfflineWorkbench";
+import { CapabilityTag, QueueList, ScanQueueRecovery, SectionHead, StatusLine } from "./components/DesktopStatusViews";
 import { claimLegacyDurableStore, hasDurableDesktopStore } from "./lib/durableStore";
+import { listOfflineDraftEnvelopes, type OfflineDraftEnvelope } from "./lib/offlineStore";
 import {
   dependencyLabel,
   dependencyTone,
@@ -43,8 +45,10 @@ import {
   formatDate
 } from "./lib/scanFiles";
 import type {
+  LocalLogEntry,
   ReviewTask,
   SyncQueueItem,
+  SystemStatus,
   WorkspaceKey
 } from "./types";
 import { useDesktopSession } from "./features/session/useDesktopSession";
@@ -57,6 +61,8 @@ import { useScanQueue } from "./features/scan-queue/useScanQueue";
 import { useUploadSync } from "./features/upload/useUploadSync";
 import { useSubmissionQuality } from "./features/quality/useSubmissionQuality";
 import { ScanWorkspace } from "./features/scan/ScanWorkspace";
+import { reviewTaskState } from "./statusLabels";
+import { NativeStoragePanel } from "./components/NativeStoragePanel";
 
 const defaultServer = "http://127.0.0.1:8080";
 
@@ -80,22 +86,68 @@ const sourceLabels: Record<string, string> = {
   manual_sample: "人工抽检"
 };
 
+function serviceStatusTone(status: SystemStatus | null): "idle" | "ready" | "warning" {
+  if (!status) return "idle";
+  if (status.status === "healthy") return "ready";
+  return "warning";
+}
+
+function logTagColor(level: LocalLogEntry["level"]) {
+  if (level === "error") return "error";
+  if (level === "warning") return "warning";
+  return "blue";
+}
+
 function App() {
   const [readingSize, setReadingSize] = useState(readReadingSize);
   useEffect(() => { applyReadingSize(readingSize); }, [readingSize]);
   const [workspace, setWorkspace] = useState<WorkspaceKey>("connect");
+  const [offlineTaskId, setOfflineTaskId] = useState("");
+  const [offlineDrafts, setOfflineDrafts] = useState<OfflineDraftEnvelope[]>([]);
+  const [offlineQueueError, setOfflineQueueError] = useState<string | null>(null);
+  const leaveGuard = useRef<OfflineLeaveGuard | null>(null);
+  const leaving = useRef(false);
+  const registerLeaveGuard = useCallback((guard: OfflineLeaveGuard | null) => { leaveGuard.current = guard; }, []);
+  const leaveThen = async (action: () => void | Promise<unknown>) => {
+    if (leaving.current) return;
+    leaving.current = true;
+    try { if (!leaveGuard.current || await leaveGuard.current.requestLeave()) await action(); }
+    finally { leaving.current = false; }
+  };
+  useEffect(() => {
+    return subscribeBeforeUnload(() => leaveGuard.current?.shouldBlockClose() ?? false);
+  }, []);
+  useEffect(() => {
+    if (!hasDurableDesktopStore()) return;
+    let disposed = false;
+    let unlisten: (() => void) | undefined;
+    // Windows 标题栏关闭走 Tauri 事件；浏览器 beforeunload 不能单独保证原生窗口等待草稿写盘。
+    void import("@tauri-apps/api/window").then(async ({ getCurrentWindow }) => {
+      const stop = await getCurrentWindow().onCloseRequested(async (event) => {
+        if (leaving.current) { event.preventDefault(); return; }
+        leaving.current = true;
+        try { if (leaveGuard.current && !await leaveGuard.current.requestLeave()) event.preventDefault(); }
+        catch { event.preventDefault(); }
+        finally { leaving.current = false; }
+      });
+      if (disposed) stop(); else unlisten = stop;
+    });
+    return () => { disposed = true; unlisten?.(); };
+  }, []);
   const { logs, logEvent, clearLogs } = useLocalLogs();
   const {
-    client, serverUrl, setServerUrl, tenantCode, setTenantCode, username, setUsername,
+    client, serverUrl, setServerUrl, confirmServerUrl, tenantCode, setTenantCode, username, setUsername,
     password, setPassword, rememberLogin, setRememberLogin, credentialStoreMessage,
     credentialStoreReady, token, expiresAt, user, authError, isLoggingIn, isLoggingOut, durableScopeKey,
-    handleLogin, handleLogout, handleForgetStoredLogin, handleCheckSession
+    handleLogin, handleLogout, handleForgetStoredLogin, handleCheckSession,
+    enableOfflineAccess, setEnableOfflineAccess, offlineAccess, offlineAccessMessage, offlineUnlocked, handleUnlockOffline,
+    handleRenewOfflineAccess, editorAccountKey = durableScopeKey
   } = useDesktopSession(defaultServer, logEvent);
   const {
     capabilities, diagnostics, localCacheSecurity, serviceStatus, isCheckingServiceStatus,
     diagnosticError, setDiagnosticError, refreshCapabilities, saveServerForSession,
-    handleHealthCheck, handleSystemStatusCheck
-  } = useRuntimeDiagnostics(client, serverUrl, durableScopeKey, setServerUrl, logEvent);
+    handleHealthCheck, handleSystemStatusCheck, healthResult, isCheckingHealth
+  } = useRuntimeDiagnostics(client, serverUrl, durableScopeKey, setServerUrl, logEvent, confirmServerUrl, !offlineUnlocked);
   const [legacyClaimConfirmed, setLegacyClaimConfirmed] = useState(false);
   const [legacyClaimError, setLegacyClaimError] = useState<string | null>(null);
   const [isClaimingLegacy, setIsClaimingLegacy] = useState(false);
@@ -120,15 +172,22 @@ function App() {
     if (durableScopeKey) void refreshCapabilities();
   }, [durableScopeKey, refreshCapabilities]);
 
-  const { tasks, taskError, isLoadingTasks, handleLoadTasks } = useReviewTasks(client, durableScopeKey, logEvent);
+  const { tasks, taskError, isLoadingTasks, handleLoadTasks, examNames = {} } = useReviewTasks(client, durableScopeKey, logEvent, user?.id);
   const capture = useExamCaptureContext({ client, token, durableScopeKey, workspace, logEvent });
   const { exams, selectedExamId, scanSubmissionId, captureBatchId, scanStartPage } = capture;
   const scanner = useScannerController({ workspace, isOnline, durableScopeKey, logEvent });
-  const { scannerPreflight } = scanner;
+  const templatePreset = capture.scanContext?.template_status === "ready" ? capture.scanContext.template?.id ?? "" : "";
+  useEffect(() => {
+    scanner.setExpectedTemplatePreset(templatePreset);
+    scanner.setScannerPreflight(null);
+  }, [templatePreset, scanner.setExpectedTemplatePreset, scanner.setScannerPreflight]);
   const scanQueue = useScanQueue({
     durableScopeKey,
     exams, selectedExamId, captureBatchId, scanSubmissionId, scanStartPage,
-    scannerPreflight, setDiagnosticError, logEvent
+    captureBatches: capture.captureBatches,
+    scanContext: capture.scanContext, client, token,
+    fileImportTemplate: { templatePreset, paperSize: scanner.expectedPaperSize, dpi: scanner.expectedDpi, duplex: scanner.expectedDuplex },
+    setDiagnosticError, logEvent
   });
   const {
     queue, offlineDraftCount, fileBufferRef,
@@ -138,11 +197,32 @@ function App() {
     client, token, durableScopeKey, isOnline, setIsOnline, queueRef, fileBufferRef,
     uploadInFlightRef, durablePersistenceRef, updateQueue, logEvent
   });
-  const quality = useSubmissionQuality(client, scanSubmissionId, durableScopeKey, logEvent);
+  const quality = useSubmissionQuality({ client, token, scanSubmissionId, durableScopeKey, selectedExamId, captureBatchId,
+    linkedSubmissionIds: capture.linkedSubmissionIds ?? [], logEvent });
+  useEffect(() => { setOfflineTaskId(""); setOfflineDrafts([]); }, [durableScopeKey]);
+  useEffect(() => {
+    if (workspace !== "sync" || hasDurableDesktopStore() && !durableScopeKey) return;
+    let current = true;
+    setOfflineQueueError(null);
+    void listOfflineDraftEnvelopes(durableScopeKey).then((drafts) => {
+      if (current) { setOfflineDrafts(drafts); scanQueue.setOfflineDraftCount(drafts.length); }
+    }).catch((error) => { if (current) setOfflineQueueError(getUserErrorMessage(error, "本机草稿同步状态读取失败，请重试。")); });
+    return () => { current = false; };
+  }, [durableScopeKey, workspace]);
 
 
 
   const activeCapabilityWarnings = capabilities.filter((item) => item.status !== "ready");
+  let sessionStatusColor = "default";
+  let sessionStatusLabel = "未登录";
+  // 在线令牌优先；仅解锁本机草稿时不能显示为已登录。
+  if (token) {
+    sessionStatusColor = "success";
+    sessionStatusLabel = "已登录";
+  } else if (offlineUnlocked) {
+    sessionStatusColor = "warning";
+    sessionStatusLabel = "本机草稿已解锁";
+  }
 
   return (
     <ConfigProvider
@@ -179,7 +259,7 @@ function App() {
                 className={workspace === item.key ? "active" : ""}
                 key={item.key}
                 type="button"
-                onClick={() => setWorkspace(item.key)}
+                onClick={() => { if (workspace !== item.key) void leaveThen(() => setWorkspace(item.key)); }}
               >
                 {item.icon}
                 <span>{item.label}</span>
@@ -200,7 +280,7 @@ function App() {
             </div>
               <div className="topbar-actions">
                 <Button aria-pressed={readingSize === "large"} onClick={() => setReadingSize((size) => size === "large" ? "standard" : "large")}>{readingSize === "large" ? "标准字号" : "大字阅读"}</Button>
-              <Tag color={token ? "success" : "default"}>{token ? "已登录" : "未登录"}</Tag>
+              <Tag color={sessionStatusColor}>{sessionStatusLabel}</Tag>
               <Tag color={activeCapabilityWarnings.length ? "warning" : "success"}>
                 {activeCapabilityWarnings.length ? "存在待接入能力" : "本地能力就绪"}
               </Tag>
@@ -242,57 +322,62 @@ function App() {
     return (
       <div className="workspace-grid two">
         <section className="panel">
-          <SectionHead icon={<ServerCog size={20} />} title="服务端地址配置" description="当前 Story 不启用安全落盘；地址只保存到本次会话。" />
+          <SectionHead icon={<ServerCog size={20} />} title="连接学校服务器" description="请向学校教务处或技术老师索取服务器地址和学校代码。地址先检查并保存，再填写账号登录。" />
           <Form layout="vertical">
-            <Form.Item label="API 服务端地址">
-              <Input value={serverUrl} disabled={Boolean(token)} onChange={(event) => setServerUrl(event.target.value)} placeholder={defaultServer} />
+            <Form.Item label="学校服务器地址">
+              <Input value={serverUrl} disabled={Boolean(token) || offlineUnlocked} onChange={(event) => setServerUrl(event.target.value)} placeholder="例如：https://grade.school.edu" />
             </Form.Item>
             <Space wrap>
               <Button type="primary" icon={<Settings size={16} />} disabled={Boolean(token)} onClick={saveServerForSession}>
-                保存到当前会话
+                保存服务器地址
               </Button>
-              <Button icon={<Wifi size={16} />} onClick={handleHealthCheck}>
-                检查 /health
+              <Button icon={<Wifi size={16} />} loading={isCheckingHealth} disabled={offlineUnlocked || !isOnline} onClick={handleHealthCheck}>
+                检查连接
               </Button>
             </Space>
           </Form>
+          {healthResult && <Alert className="section-alert" showIcon type={healthResult.ok ? "success" : "error"} message={healthResult.message} description={`${healthResult.server} · ${healthResult.elapsedMs} 毫秒`} />}
           {diagnosticError && <Alert className="section-alert" type="warning" message={diagnosticError} showIcon />}
         </section>
 
         <section className="panel">
-          <SectionHead icon={<LogIn size={20} />} title="登录" description="访问令牌只保存在内存中；勾选保存后，密码仅写入当前 Windows 用户的系统凭据库。" />
+          <SectionHead icon={<LogIn size={20} />} title="学校账号登录" description="使用学校分配的账号。勾选自动登录后，密码仅保存到当前 Windows 用户的系统凭据库。" />
           <Form layout="vertical">
-            <Form.Item label="租户代码">
+            <Form.Item label="学校代码">
               <Input value={tenantCode} onChange={(event) => setTenantCode(event.target.value)} />
             </Form.Item>
-            <Form.Item label="用户名">
+            <Form.Item label="账号">
               <Input value={username} onChange={(event) => setUsername(event.target.value)} />
             </Form.Item>
             <Form.Item label="密码">
-              <Input.Password value={password} onChange={(event) => setPassword(event.target.value)} onPressEnter={() => void handleLogin()} />
+              <Input.Password value={password} onChange={(event) => setPassword(event.target.value)} onPressEnter={() => void leaveThen(handleLogin)} />
             </Form.Item>
             <Form.Item>
               <Checkbox checked={rememberLogin} disabled={!credentialStoreReady} onChange={(event) => setRememberLogin(event.target.checked)}>
                 保存到 Windows 凭据库，下次自动登录
               </Checkbox>
             </Form.Item>
+            {hasDurableDesktopStore() && <Form.Item><Checkbox checked={enableOfflineAccess} onChange={(event) => setEnableOfflineAccess(event.target.checked)}>允许当前 Windows 用户在有效期内离线解锁本账号草稿</Checkbox><p className="muted">联网登录后建立授权，有效期不超过这次登录且最多七天。仅解锁本机加密数据；退出登录或清除保存信息会撤销授权。</p></Form.Item>}
             <Space wrap>
-              <Button type="primary" icon={<LogIn size={16} />} loading={isLoggingIn} onClick={() => void handleLogin()}>
-                登录后端
+              <Button type="primary" icon={<LogIn size={16} />} loading={isLoggingIn} onClick={() => void leaveThen(handleLogin)}>
+                登录
               </Button>
               <Button icon={<ShieldAlert size={16} />} disabled={!token} onClick={handleCheckSession}>
-                校验 session
+                查看登录状态
               </Button>
-              <Button disabled={!token} loading={isLoggingOut} onClick={() => void handleLogout()}>
+              <Button disabled={!token && !durableScopeKey} loading={isLoggingOut} onClick={() => void leaveThen(handleLogout)}>
                 退出登录
               </Button>
-              <Button disabled={!credentialStoreReady} onClick={() => void handleForgetStoredLogin()}>
+              <Button disabled={!credentialStoreReady} onClick={() => void leaveThen(handleForgetStoredLogin)}>
                 清除已保存登录
               </Button>
             </Space>
           </Form>
+          {offlineAccess && !token && <Button loading={isLoggingIn} onClick={() => void leaveThen(async () => { if (await handleUnlockOffline()) setWorkspace("offline"); })}>解锁 {offlineAccess.username}（{offlineAccess.tenantCode}）的本机草稿</Button>}
+          {offlineAccessMessage && <Alert className="section-alert" type="info" message={offlineAccessMessage} showIcon />}
           {credentialStoreMessage && <Alert className="section-alert" type={credentialStoreReady ? "info" : "warning"} message={credentialStoreMessage} showIcon />}
           {authError && <Alert className="section-alert" type="error" message={authError} showIcon />}
+          {token && <Space wrap className="section-alert"><span>登录成功，接下来：</span><Button type="primary" onClick={() => void leaveThen(() => setWorkspace("tasks"))}>查看我的任务</Button><Button onClick={() => void leaveThen(() => setWorkspace("scan"))}>导入答卷</Button></Space>}
           {legacyDataPresent && token && <div className="legacy-claim-panel">
             <Alert type="warning" showIcon message="检测到旧版未绑定账号的本地数据" description="请先由管理员核对该工作站旧扫描队列和离线草稿确属当前登录账号。认领会迁入当前账号的加密存储；若当前账号已有本地记录，操作会拒绝。" />
             <Checkbox checked={legacyClaimConfirmed} onChange={(event) => setLegacyClaimConfirmed(event.target.checked)}>我已核对旧数据归属当前账号</Checkbox>
@@ -325,24 +410,27 @@ function App() {
         title: "状态",
         dataIndex: "status",
         width: 110,
-        render: (value: string) => <Tag>{value}</Tag>
+        render: (value: string) => <Tooltip title={reviewTaskState(value).detail}><Tag>{reviewTaskState(value).label}</Tag></Tooltip>
       },
       { title: "优先级", dataIndex: "priority", width: 90 },
-      { title: "创建时间", dataIndex: "created_at", render: formatDate }
+      { title: "创建时间", dataIndex: "created_at", render: formatDate },
+      { title: "考试", dataIndex: "exam_id", render: (value: string) => <Tooltip title={value}>{examNames[value] ?? "考试名称暂不可读"}</Tooltip> },
+      { title: "截止时间", dataIndex: "due_at", render: (value?: string) => value ? formatDate(value) : "未设置" },
+      { title: "操作", key: "open", render: (_value, task) => <Button disabled={!token || !reviewTaskState(task.status).canGrade} onClick={() => void leaveThen(() => { setOfflineTaskId(task.id); setWorkspace("offline"); })}>开始阅卷</Button> }
     ];
     return (
       <section className="panel full">
         <SectionHead
           icon={<ListChecks size={20} />}
           title="复核任务列表"
-          description="调用真实 GET /api/v1/review-tasks；无权限或无 token 时显示后端错误，不填充假任务。"
+          description={`当前列表 ${tasks.length} 项。选择开始阅卷会打开已有本机草稿，或下载所选任务材料。`}
           action={
             <Button icon={<RefreshCw size={16} />} loading={isLoadingTasks} disabled={!token} onClick={handleLoadTasks}>
               刷新任务
             </Button>
           }
         />
-        {!token && <Alert type="warning" message="未登录：任务列表不会读取，也不会回退到 mock 数据。" showIcon />}
+        {!token && <Alert type="warning" message="请先在线登录，再读取分配给你的任务。已保存草稿可在离线阅卷中加载。" showIcon />}
         {taskError && <Alert className="section-alert" type="error" message={taskError} showIcon />}
         <Table rowKey="id" size="middle" columns={columns} dataSource={tasks} loading={isLoadingTasks} scroll={{ x: 760 }} locale={{ emptyText: <Empty description="暂无真实任务" /> }} />
       </section>
@@ -351,25 +439,51 @@ function App() {
 
 
   function renderOffline() {
+    const canRecoverAfterRestart = offlineAccess?.actorId === user?.id && offlineAccess?.tenantId === user?.tenant_id
+      && offlineAccess?.server === serverUrl && new Date(offlineAccess.expiresAt).getTime() > Date.now();
+    let offlineRecoveryDescription: string;
+    if (canRecoverAfterRestart) {
+      offlineRecoveryDescription = "请先加密保存草稿；重启后可在连接登录页解锁本账号草稿。答卷图片仍需联网恢复，上传和下载任务需在线登录。";
+    } else if (offlineAccess && user) {
+      offlineRecoveryDescription = "当前未保存评分仍保留。请在本页联网验证同一账号后续期，再加密保存；续期失败也可以留在本页重试。";
+    } else {
+      offlineRecoveryDescription = "跨重启继续阅卷前，请到连接登录页勾选本机离线授权并再次在线登录。当前编辑内容仍须加密保存。";
+    }
     return (
-      <OfflineWorkbench key={durableScopeKey} durableScopeKey={durableScopeKey} client={client} token={token} user={user} isOnline={isOnline} onLog={logEvent} />
+      <>
+      {hasDurableDesktopStore() && <Alert className="section-alert" type={canRecoverAfterRestart ? "info" : "warning"} showIcon
+        message={canRecoverAfterRestart ? `本机离线恢复有效至 ${new Date(offlineAccess!.expiresAt).toLocaleString("zh-CN")}` : "本机离线恢复尚未启用或已过期"}
+        description={offlineRecoveryDescription} />}
+      {hasDurableDesktopStore() && offlineAccess && user && (offlineUnlocked || !canRecoverAfterRestart) && <section className="panel full">
+        <p>续期当前账号：{offlineAccess.username}（{offlineAccess.tenantCode}） · {offlineAccess.server}</p>
+        <Form layout="vertical"><Form.Item label="当前账号密码"><Input.Password value={password} disabled={isLoggingIn} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" /></Form.Item>
+          <Button loading={isLoggingIn} disabled={!isOnline || !password || isLoggingIn || isLoggingOut} onClick={() => void handleRenewOfflineAccess(password)}>联网续期并保留当前评分</Button></Form>
+      </section>}
+      {offlineAccessMessage && <Alert className="section-alert" type="info" message={offlineAccessMessage} showIcon />}
+      {authError && <Alert className="section-alert" type="error" message={authError} showIcon />}
+      {/* 同账号续期不离开工作区；新租约传给原编辑器，未保存输入继续由统一离开保护负责。 */}
+      <OfflineWorkbench key={editorAccountKey} durableScopeKey={durableScopeKey} client={client} token={token} user={user} isOnline={isOnline} onLog={logEvent} registerLeaveGuard={registerLeaveGuard} initialTaskId={offlineTaskId} />
+      </>
     );
   }
 
   function renderSync() {
-    const offlinePlaceholder: SyncQueueItem = {
-      id: "offline-sync-not-configured",
-      title: "离线阅卷同步",
-      kind: "offline_grade",
-      status: "not_configured",
-      progress: 0,
-      detail: "未配置/待接入：离线草稿同步 API 尚未实现。",
-      updatedAt: new Date().toISOString()
-    };
+    const draftItems: SyncQueueItem[] = offlineDrafts.map((draft) => ({ id: draft.taskId, title: `评分草稿 · ${draft.anonymousCode}`, kind: "offline_grade",
+      status: ({ draft: "pending", syncing: "uploading", synced: "succeeded", failed: "failed", conflict: "conflict" } as const)[draft.syncStatus],
+      progress: draft.syncStatus === "synced" ? 100 : 0, updatedAt: draft.savedAt,
+      detail: `${draft.syncMessage ?? "已保存到本机，尚未提交"} / 保存 ${formatDate(draft.savedAt)}` }));
     return (
       <section className="panel full">
-        <SectionHead icon={<CloudUpload size={20} />} title="同步队列" description="显示真实上传操作和未接入离线同步能力；不伪造同步成功。" />
-        <QueueList items={[...queue, offlinePlaceholder]} />
+        <SectionHead icon={<CloudUpload size={20} />} title="同步队列" description="查看答卷上传和本机评分草稿的真实状态；评分草稿可打开继续同步或核对回执。" />
+        {offlineQueueError && <Alert type="error" message={offlineQueueError} showIcon />}
+        <ScanQueueRecovery status={scanQueue.queueRestoreStatus} error={scanQueue.queueRestoreError} onRetry={() => void scanQueue.restoreQueue()} onDiagnostics={() => setWorkspace("diagnostics")} />
+        {scanQueue.queueContextError && <Alert type="warning" showIcon message={scanQueue.queueContextError} />}
+        <Button disabled={!token || !isOnline || !queue.length} loading={scanQueue.loadingQueueContext} onClick={() => void scanQueue.refreshQueueContext()}>重新读取考试与批次名称</Button>
+        <QueueList items={[...queue, ...draftItems]} emptyText={scanQueue.queueRestoreStatus === "ready" ? undefined : false} onOpen={(item) => void leaveThen(() => {
+          if (item.kind === "offline_grade") { setOfflineTaskId(item.id); setWorkspace("offline"); }
+          else if (item.examId && item.captureBatchId) { capture.handleOpenQueueContext(item.examId, item.captureBatchId); setWorkspace("scan"); }
+          else setOfflineQueueError("该文件缺少原考试或采集批次，请联系学校管理员核对上传记录后再定位。");
+        })} />
       </section>
     );
   }
@@ -403,9 +517,10 @@ function App() {
           ) : (
             <Empty description="诊断信息读取中" />
           )}
-          <Button className="section-button" icon={<Wifi size={16} />} onClick={handleHealthCheck}>
-            检查后端 /health
+          <Button className="section-button" icon={<Wifi size={16} />} loading={isCheckingHealth} disabled={offlineUnlocked || !isOnline} onClick={handleHealthCheck}>
+            检查连接
           </Button>
+          {healthResult && <Alert className="section-alert" showIcon type={healthResult.ok ? "success" : "error"} message={healthResult.message} description={`${healthResult.server} · ${healthResult.elapsedMs} 毫秒`} />}
           {diagnosticError && <Alert className="section-alert" type="warning" message={diagnosticError} showIcon />}
         </section>
 
@@ -415,14 +530,14 @@ function App() {
             title="服务端连接"
             description="调用真实 /api/v1/system/status；依赖未配置会显示未配置/待接入。"
             action={
-              <Button icon={<RefreshCw size={16} />} loading={isCheckingServiceStatus} onClick={handleSystemStatusCheck}>
+              <Button icon={<RefreshCw size={16} />} loading={isCheckingServiceStatus} disabled={!token || !isOnline} onClick={handleSystemStatusCheck}>
                 检查状态
               </Button>
             }
           />
           <div className="diagnostic-list">
-            <StatusLine label="Server" value={serverUrl} tone={serviceStatus ? (serviceStatus.status === "healthy" ? "ready" : "warning") : "idle"} />
-            <StatusLine label="Status" value={serviceStatus?.status ?? "未检查"} tone={serviceStatus ? (serviceStatus.status === "healthy" ? "ready" : "warning") : "idle"} />
+            <StatusLine label="Server" value={serverUrl} tone={serviceStatusTone(serviceStatus)} />
+            <StatusLine label="Status" value={serviceStatus?.status ?? "未检查"} tone={serviceStatusTone(serviceStatus)} />
             <StatusLine label="Service" value={serviceStatus ? `${serviceStatus.service} / ${serviceStatus.environment}` : "未返回"} tone="idle" />
             <StatusLine label="Generated" value={serviceStatus ? formatDate(serviceStatus.generated_at) : "未返回"} tone="idle" />
           </div>
@@ -458,9 +573,9 @@ function App() {
           <SectionHead icon={<HardDrive size={20} />} title="本地缓存与上传队列" description="基于当前客户端本地缓存和真实上传队列统计。" />
           <div className="diagnostic-summary-grid">
             <div>
-              <span>缓存大小</span>
+              <span>界面缓存大小</span>
               <strong>{formatBytes(localCacheBytes)}</strong>
-              <small>localStorage 估算</small>
+              <small>localStorage 估算，不含原件</small>
             </div>
             <div>
               <span>离线草稿</span>
@@ -478,6 +593,7 @@ function App() {
               <small>需人工处理</small>
             </div>
           </div>
+          <NativeStoragePanel scope={durableScopeKey} />
           <div className="local-cache-security">
             <StatusLine
               label="缓存安全"
@@ -541,7 +657,7 @@ function App() {
           {logs.length ? (
             logs.map((entry) => (
               <div className="log-row" key={entry.id}>
-                <Tag color={entry.level === "error" ? "error" : entry.level === "warning" ? "warning" : "blue"}>{entry.level}</Tag>
+                <Tag color={logTagColor(entry.level)}>{entry.level}</Tag>
                 <span>{formatDate(entry.at)}</span>
                 <strong>{entry.message}</strong>
                 {entry.context && <p>{entry.context}</p>}

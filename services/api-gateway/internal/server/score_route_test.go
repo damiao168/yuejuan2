@@ -21,29 +21,10 @@ func TestScoreRoutesFinalizeConfirmPublishStudentLookupAndExport(t *testing.T) {
 	router := scoreRouter(authStore, scoreStore)
 	token := reviewLogin(t, router, "review_manager")
 
-	req := reviewAuthedRequest(http.MethodPost, "/api/v1/exams/exam-1/finalize", "", token)
+	scoreAssertUnconfirmedPublicationBlocked(t, router, token)
+
+	req := reviewAuthedRequest(http.MethodPost, "/api/v1/exams/exam-1/confirm-grades", `{"reason":"checked by subject lead"}`, token)
 	rec := httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
-	if rec.Code != http.StatusCreated || !strings.Contains(rec.Body.String(), `"status":"pending_confirmation"`) || !strings.Contains(rec.Body.String(), `"total_score":8`) {
-		t.Fatalf("finalize expected pending confirmation grade, got %d %s", rec.Code, rec.Body.String())
-	}
-
-	req = reviewAuthedRequest(http.MethodGet, "/api/v1/exams/exam-1/grades/quality?stage=publish", "", token)
-	rec = httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
-	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"can_publish":false`) || !strings.Contains(rec.Body.String(), `"grades_not_confirmed"`) {
-		t.Fatalf("quality before confirmation expected publish block, got %d %s", rec.Code, rec.Body.String())
-	}
-
-	req = reviewAuthedRequest(http.MethodPost, "/api/v1/exams/exam-1/publish", `{"reason":"too early"}`, token)
-	rec = httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
-	if rec.Code != http.StatusConflict || !strings.Contains(rec.Body.String(), `"grades_not_confirmed"`) {
-		t.Fatalf("publish before confirmation expected quality conflict, got %d %s", rec.Code, rec.Body.String())
-	}
-
-	req = reviewAuthedRequest(http.MethodPost, "/api/v1/exams/exam-1/confirm-grades", `{"reason":"checked by subject lead"}`, token)
-	rec = httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"status":"confirmed"`) {
 		t.Fatalf("confirm expected confirmed, got %d %s", rec.Code, rec.Body.String())
@@ -88,6 +69,31 @@ func TestScoreRoutesFinalizeConfirmPublishStudentLookupAndExport(t *testing.T) {
 	reviewAssertAuditAction(t, authStore, "score.confirmed")
 	reviewAssertAuditAction(t, authStore, "score.published")
 	reviewAssertAuditAction(t, authStore, "score.exported")
+}
+
+// 先形成待确认成绩，再验证质量门禁与发布均拒绝；此阶段不能跳过直接确认。
+func scoreAssertUnconfirmedPublicationBlocked(t *testing.T, router http.Handler, token string) {
+	t.Helper()
+	req := reviewAuthedRequest(http.MethodPost, "/api/v1/exams/exam-1/finalize", "", token)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusCreated || !strings.Contains(rec.Body.String(), `"status":"pending_confirmation"`) || !strings.Contains(rec.Body.String(), `"total_score":8`) {
+		t.Fatalf("finalize expected pending confirmation grade, got %d %s", rec.Code, rec.Body.String())
+	}
+
+	req = reviewAuthedRequest(http.MethodGet, "/api/v1/exams/exam-1/grades/quality?stage=publish", "", token)
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"can_publish":false`) || !strings.Contains(rec.Body.String(), `"grades_not_confirmed"`) {
+		t.Fatalf("quality before confirmation expected publish block, got %d %s", rec.Code, rec.Body.String())
+	}
+
+	req = reviewAuthedRequest(http.MethodPost, "/api/v1/exams/exam-1/publish", `{"reason":"too early"}`, token)
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusConflict || !strings.Contains(rec.Body.String(), `"grades_not_confirmed"`) {
+		t.Fatalf("publish before confirmation expected quality conflict, got %d %s", rec.Code, rec.Body.String())
+	}
 }
 
 func TestScoreRoutesRequirePermission(t *testing.T) {

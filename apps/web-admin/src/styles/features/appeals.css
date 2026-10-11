@@ -1,16 +1,28 @@
-/* Appeal v2: full-width queue followed by a focused case workspace. */
-.appeal-shell-v2 { display: grid; gap: 14px; }
+/* 复核队列与答卷同时展示；面板宽度决定切换布局，避免侧栏占宽后仍套用视口断点。 */
+.appeal-shell-v2 { display: grid; gap: 14px; min-width: 0; container-type: inline-size; }
+.appeal-body { display: grid; grid-template-columns: minmax(240px, 280px) minmax(0, 1fr); align-items: start; gap: 16px; min-width: 0; }
 .appeal-shell-v2 .appeal-summary-strip.compact { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .appeal-queue-panel, .appeal-case-panel { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
-.appeal-queue-panel { padding: 16px; }
+.appeal-queue-panel { min-width: 0; padding: 14px; position: sticky; top: 76px; }
 .appeal-queue-head, .appeal-case-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
-.appeal-queue-head { margin-bottom: 12px; }
+.appeal-queue-head { display: grid; margin-bottom: 12px; }
 .appeal-queue-head h2, .appeal-case-head h2, .appeal-evidence-main h3, .appeal-decision-panel h3 { margin: 0; }
 .appeal-queue-head p, .appeal-case-head p { margin: 4px 0 0; color: var(--text-muted); }
-.appeal-queue-head .ant-input-affix-wrapper { width: min(360px, 40vw); }
+.appeal-queue-head .ant-input-affix-wrapper { width: 100%; }
+.appeal-task-list { margin: 0; padding: 0; list-style: none; max-height: calc(100svh - 240px); min-height: 160px; overflow: auto; scrollbar-gutter: stable; }
+.appeal-task-list > li + li { border-top: 1px solid var(--border); }
+.appeal-task-item { display: grid; width: 100%; gap: 7px; padding: 12px; border: 0; border-radius: 6px; background: transparent; color: var(--text); text-align: left; cursor: pointer; }
+.appeal-task-item:hover, .appeal-task-item.active { background: var(--hover-bg); }
+.appeal-task-item.active { box-shadow: inset 3px 0 var(--primary); }
+.appeal-task-item:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
+.appeal-task-first { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.appeal-task-first strong { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.appeal-task-first .ant-tag { flex: 0 0 auto; margin: 0; }
+.appeal-task-reason { color: var(--text-muted); }
+.appeal-task-item small { color: var(--text-muted); line-height: 1.5; }
 .appeal-table-primary { display: grid; gap: 3px; }
 .appeal-table-primary span { color: var(--text-muted); font-size: var(--eg-font-caption); }
-.appeal-case-panel { overflow: hidden; }
+.appeal-case-panel { min-width: 0; overflow: hidden; container-type: inline-size; }
 .appeal-case-head { padding: 18px 20px; border-bottom: 1px solid var(--border); }
 .appeal-case-head h2 { font-size: 1.25rem; }
 .appeal-case-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; }
@@ -25,6 +37,7 @@
 .appeal-answer-grid span { color: var(--text-muted); font-size: var(--eg-font-caption); }
 .appeal-answer-grid p { margin: 8px 0 0; white-space: pre-wrap; line-height: 1.7; }
 .appeal-decision-panel { display: grid; align-content: start; gap: 12px; padding: 20px; border-left: 1px solid var(--border); background: #fbfcfe; }
+.appeal-draft-note { margin: 0; padding: 9px 10px; border-left: 3px solid var(--warning); background: var(--surface); color: var(--text-muted); line-height: 1.5; }
 .appeal-decision-panel .ant-select, .appeal-decision-panel .ant-input-number { width: 100%; }
 .appeal-routing { display: grid; gap: 5px; padding: 13px; border: 1px solid var(--border); border-radius: 8px; background: #fff; }
 .appeal-routing span, .appeal-routing small { color: var(--text-muted); }
@@ -34,9 +47,17 @@
 .appeal-reassign .ant-btn { width: 100%; margin-top: 8px; }
 .appeal-decision-divider { border-top: 1px solid var(--border); }
 .appeal-shell-v2.teacher .appeal-case-grid { grid-template-columns: minmax(0, 1fr) 360px; }
-@media (max-width: 1080px) {
+@container (max-width: 760px) {
   .appeal-case-grid, .appeal-shell-v2.teacher .appeal-case-grid { grid-template-columns: 1fr; }
   .appeal-decision-panel { border-top: 1px solid var(--border); border-left: 0; }
+}
+@container (max-width: 850px) {
+  .appeal-body { grid-template-columns: minmax(0, 1fr); }
+  .appeal-queue-panel { position: static; }
+  .appeal-task-list { max-height: 260px; min-height: 0; }
+}
+@container (max-width: 920px) {
+  .appeal-answer-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 720px) {
   .appeal-queue-head, .appeal-case-head { flex-direction: column; }

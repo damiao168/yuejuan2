@@ -17,7 +17,10 @@ if (!args.input || !args.out || !args.report) throw new Error("Usage: build-gold
 const bundles = readFileSync(args.input, "utf8").split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line));
 const policy = loadAnnotationPolicy();
 const invalid = bundles.map((bundle) => ({ bundle, validation: validateAnnotationBundle(bundle, policy) })).filter((item) => !item.validation.valid);
-if (invalid.length) throw new Error(`Invalid annotation bundles: ${invalid.map((item) => `${item.bundle.bundle_id}: ${item.validation.errors.join("; ")}`).join(" | ")}`);
+if (invalid.length) {
+  const details = invalid.map((item) => `${item.bundle.bundle_id}: ${item.validation.errors.join("; ")}`).join(" | ");
+  throw new Error(`Invalid annotation bundles: ${details}`);
+}
 const gold = bundles.map((bundle) => buildGoldRecord(bundle, policy));
 const metrics = computeInterRaterAgreement(bundles, policy);
 const gate = checkAgreementGate(metrics, args.gate ?? "dev", policy);

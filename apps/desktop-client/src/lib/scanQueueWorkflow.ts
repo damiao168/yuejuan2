@@ -11,9 +11,9 @@ const transitions: Record<QueueStatus, ReadonlySet<QueueStatus>> = {
 };
 
 /**
- * The renderer's single queue-transition boundary. In native builds SQLite is
- * authoritative and validates the same transitions; React state is only its
- * current projection. Browser localStorage is an explicit development fallback.
+ * 渲染层唯一的队列状态转换边界。原生构建以 SQLite 为准，
+ * 并由其校验相同的状态转换；React 状态只表示当前投影。
+ * 浏览器 localStorage 是显式启用的开发回退。
  */
 export function transitionScanQueueItem(
   item: SyncQueueItem,

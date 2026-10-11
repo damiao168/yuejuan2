@@ -209,33 +209,7 @@ def _validate_rubric(rubric, request, request_id):
     if not isinstance(rubric["points"], list) or not 1 <= len(rubric["points"]) <= 100:
         _fail("rubric.points must contain between 1 and 100 points", request_id)
 
-    point_ids = set()
-    aliases = set()
-    total = 0.0
-    point_fields = {"id", "description", "score", "required", "aliases", "evidence_required", "match_policy"}
-    for index, point in enumerate(rubric["points"]):
-        _exact_fields(point, point_fields, f"rubric.points[{index}]", request_id)
-        _string(point["id"], f"rubric.points[{index}].id", request_id)
-        _string(point["description"], f"rubric.points[{index}].description", request_id, 1, 4000)
-        if point["id"] in point_ids:
-            _fail("rubric point ids must be unique", request_id)
-        point_ids.add(point["id"])
-        _number(point["score"], f"rubric.points[{index}].score", request_id, 0, 1000, exclusive_minimum=True)
-        total += point["score"]
-        if not isinstance(point["required"], bool) or not isinstance(point["evidence_required"], bool):
-            _fail("rubric point review fields must be boolean", request_id)
-        if point["match_policy"] not in {"semantic", "strict_alias"}:
-            _fail("rubric point match_policy is unsupported", request_id)
-        if not isinstance(point["aliases"], list) or len(point["aliases"]) > 100:
-            _fail("rubric point aliases must be a bounded array", request_id)
-        for alias in point["aliases"]:
-            _string(alias, "rubric point alias", request_id, 1, 500)
-            normalized = normalize_evidence_text(alias)
-            if normalized in aliases:
-                _fail("rubric aliases must not be shared", request_id)
-            aliases.add(normalized)
-        if point["match_policy"] == "strict_alias" and not point["aliases"]:
-            _fail("strict_alias points must define aliases", request_id)
+    total = _validate_rubric_points(rubric["points"], request_id)
     if not rubric["allow_partial_total"] and not math.isclose(total, rubric["max_score"], abs_tol=1e-6):
         _fail("rubric point total must equal max_score", request_id)
     for field in ("deductions", "equivalent_answers", "examples", "scoring_notes"):
@@ -243,7 +217,86 @@ def _validate_rubric(rubric, request, request_id):
             _fail(f"rubric.{field} must be a bounded array", request_id)
 
 
+def _validate_rubric_points(points, request_id):
+    point_ids = set()
+    aliases = set()
+    total = 0.0
+    for index, point in enumerate(points):
+        _validate_rubric_point(point, index, point_ids, aliases, request_id)
+        total += point["score"]
+    return total
+
+
+def _validate_rubric_point(point, index, point_ids, aliases, request_id):
+    point_fields = {"id", "description", "score", "required", "aliases", "evidence_required", "match_policy"}
+    _exact_fields(point, point_fields, f"rubric.points[{index}]", request_id)
+    _string(point["id"], f"rubric.points[{index}].id", request_id)
+    _string(point["description"], f"rubric.points[{index}].description", request_id, 1, 4000)
+    if point["id"] in point_ids:
+        _fail("rubric point ids must be unique", request_id)
+    point_ids.add(point["id"])
+    _number(point["score"], f"rubric.points[{index}].score", request_id, 0, 1000, exclusive_minimum=True)
+    if not isinstance(point["required"], bool) or not isinstance(point["evidence_required"], bool):
+        _fail("rubric point review fields must be boolean", request_id)
+    if point["match_policy"] not in {"semantic", "strict_alias"}:
+        _fail("rubric point match_policy is unsupported", request_id)
+    _validate_rubric_aliases(point, aliases, request_id)
+
+
+def _validate_rubric_aliases(point, aliases, request_id):
+    if not isinstance(point["aliases"], list) or len(point["aliases"]) > 100:
+        _fail("rubric point aliases must be a bounded array", request_id)
+    # 别名在整份标准内按统一文本归一化去重，不能由不同采分点共享。
+    for alias in point["aliases"]:
+        _string(alias, "rubric point alias", request_id, 1, 500)
+        normalized = normalize_evidence_text(alias)
+        if normalized in aliases:
+            _fail("rubric aliases must not be shared", request_id)
+        aliases.add(normalized)
+    if point["match_policy"] == "strict_alias" and not point["aliases"]:
+        _fail("strict_alias points must define aliases", request_id)
+
+
 def normalize_model_output(raw, request, route, model_version, prompt_version, profile_id, telemetry):
+    request_id = request["request_id"]
+    _validate_model_envelope(raw, request)
+    # 分类先于证据校验；严格别名不命中的点降为缺失，并丢弃它引用的证据。
+    matched, missing, rejected_evidence_ids = _classify_model_points(raw, request)
+    evidence = _normalize_model_evidence(raw, request, matched, rejected_evidence_ids)
+    risk_flags = _model_risk_flags(raw, request, telemetry)
+
+    # 只对证据校验后保留的采分点重算建议总分，不采用模型自行报告的总分。
+    score = sum(point["score"] for point in matched)
+    feedback, teacher_note = _review_feedback(request, matched, missing)
+    suggestion = {
+        "schema_version": SCHEMA_VERSION,
+        "request_id": request_id,
+        "status": "suggestion",
+        "delivery": route["delivery"],
+        "suggested_score": max(0, min(score, request["max_score"])),
+        "max_score": request["max_score"],
+        # 模型自报置信度尚未校准，不能把它转换成可自动放行的可靠度。
+        "confidence": 0,
+        "matched_points": matched,
+        "missing_points": missing,
+        "deductions": [],
+        "evidence": evidence,
+        "risk_flags": risk_flags,
+        "needs_human_review": True,
+        "student_feedback": feedback,
+        "teacher_note": teacher_note,
+        "model_version": model_version,
+        "prompt_version": prompt_version,
+        "rubric_version": request["rubric_version"],
+        "capability_profile": profile_id,
+        "mock": False,
+        "telemetry": telemetry,
+    }
+    validate_suggestion(suggestion, request)
+    return suggestion
+
+
+def _validate_model_envelope(raw, request):
     request_id = request["request_id"]
     expected = {
         "suggested_score",
@@ -272,35 +325,22 @@ def normalize_model_output(raw, request, route, model_version, prompt_version, p
     if not isinstance(raw["teacher_note"], str) or not raw["teacher_note"].strip():
         _fail_model("teacher_note must be non-empty", request_id)
 
+
+def _classify_model_points(raw, request):
+    request_id = request["request_id"]
     rubric_points = {point["id"]: point for point in request["rubric"]["points"]}
     classified = set()
     matched = []
     missing = []
     rejected_evidence_ids = set()
     for index, item in enumerate(_model_array(raw, "matched_points", request_id, 100)):
-        if not isinstance(item, dict) or set(item) != {"rubric_point_id", "score", "evidence_ids"}:
-            _fail_model(f"matched_points[{index}] is invalid", request_id)
-        point_id = item.get("rubric_point_id")
-        if not isinstance(point_id, str) or not point_id.strip():
-            _fail_model("matched rubric point id must be non-empty", request_id)
-        point = rubric_points.get(point_id)
-        if not point or point_id in classified:
-            _fail_model("model referenced an unknown or duplicate rubric point", request_id)
-        _number_model(item.get("score"), "matched point score", request_id, 0, point["score"])
-        if not isinstance(item.get("evidence_ids"), list) or not item["evidence_ids"]:
-            _fail_model("matched rubric point must link evidence", request_id)
-        for evidence_id in item["evidence_ids"]:
-            if not isinstance(evidence_id, str) or not evidence_id.strip():
-                _fail_model("evidence id must be non-empty", request_id)
-        if len(set(item["evidence_ids"])) != len(item["evidence_ids"]):
-            _fail_model("matched rubric point contains duplicate evidence links", request_id)
+        point = _validate_matched_point(item, index, rubric_points, classified, request_id)
+        point_id = item["rubric_point_id"]
         classified.add(point_id)
-        if point["match_policy"] == "strict_alias":
-            answer = normalize_evidence_text(request["answer_text"])
-            if not any(normalize_evidence_text(alias) in answer for alias in point["aliases"]):
-                missing.append({"rubric_point_id": point_id, "label": point["description"], "reason": "strict_alias_not_found"})
-                rejected_evidence_ids.update(item["evidence_ids"])
-                continue
+        if _strict_alias_not_found(point, request["answer_text"]):
+            missing.append({"rubric_point_id": point_id, "label": point["description"], "reason": "strict_alias_not_found"})
+            rejected_evidence_ids.update(item["evidence_ids"])
+            continue
         matched.append({
             "rubric_point_id": point_id,
             "label": point["description"],
@@ -309,48 +349,73 @@ def normalize_model_output(raw, request, route, model_version, prompt_version, p
         })
 
     for index, item in enumerate(_model_array(raw, "missing_points", request_id, 100)):
-        if not isinstance(item, dict) or set(item) != {"rubric_point_id", "reason"}:
-            _fail_model(f"missing_points[{index}] is invalid", request_id)
-        point_id = item.get("rubric_point_id")
-        if not isinstance(point_id, str) or not point_id.strip():
-            _fail_model("missing rubric point id must be non-empty", request_id)
-        point = rubric_points.get(point_id)
-        if not point or point_id in classified:
-            _fail_model("model referenced an unknown or duplicate missing rubric point", request_id)
-        if not isinstance(item.get("reason"), str) or not item["reason"].strip():
-            _fail_model("missing point reason must be non-empty", request_id)
+        point = _validate_missing_point(item, index, rubric_points, classified, request_id)
+        point_id = item["rubric_point_id"]
         classified.add(point_id)
         missing.append({"rubric_point_id": point_id, "label": point["description"], "reason": item["reason"]})
     if classified != set(rubric_points):
         _fail_model("model must classify every rubric point exactly once", request_id)
+    return matched, missing, rejected_evidence_ids
+
+
+def _validate_matched_point(item, index, rubric_points, classified, request_id):
+    if not isinstance(item, dict) or set(item) != {"rubric_point_id", "score", "evidence_ids"}:
+        _fail_model(f"matched_points[{index}] is invalid", request_id)
+    point_id = item.get("rubric_point_id")
+    if not isinstance(point_id, str) or not point_id.strip():
+        _fail_model("matched rubric point id must be non-empty", request_id)
+    point = rubric_points.get(point_id)
+    if not point or point_id in classified:
+        _fail_model("model referenced an unknown or duplicate rubric point", request_id)
+    _number_model(item.get("score"), "matched point score", request_id, 0, point["score"])
+    if not isinstance(item.get("evidence_ids"), list) or not item["evidence_ids"]:
+        _fail_model("matched rubric point must link evidence", request_id)
+    for evidence_id in item["evidence_ids"]:
+        if not isinstance(evidence_id, str) or not evidence_id.strip():
+            _fail_model("evidence id must be non-empty", request_id)
+    if len(set(item["evidence_ids"])) != len(item["evidence_ids"]):
+        _fail_model("matched rubric point contains duplicate evidence links", request_id)
+    return point
+
+
+def _strict_alias_not_found(point, answer_text):
+    if point["match_policy"] != "strict_alias":
+        return False
+    answer = normalize_evidence_text(answer_text)
+    return not any(normalize_evidence_text(alias) in answer for alias in point["aliases"])
+
+
+def _validate_missing_point(item, index, rubric_points, classified, request_id):
+    if not isinstance(item, dict) or set(item) != {"rubric_point_id", "reason"}:
+        _fail_model(f"missing_points[{index}] is invalid", request_id)
+    point_id = item.get("rubric_point_id")
+    if not isinstance(point_id, str) or not point_id.strip():
+        _fail_model("missing rubric point id must be non-empty", request_id)
+    point = rubric_points.get(point_id)
+    if not point or point_id in classified:
+        _fail_model("model referenced an unknown or duplicate missing rubric point", request_id)
+    if not isinstance(item.get("reason"), str) or not item["reason"].strip():
+        _fail_model("missing point reason must be non-empty", request_id)
+    return point
+
+
+def _normalize_model_evidence(raw, request, matched, rejected_evidence_ids):
+    request_id = request["request_id"]
 
     evidence_by_id = {}
     evidence = []
     accepted_points = {point["rubric_point_id"] for point in matched}
     for index, item in enumerate(_model_array(raw, "evidence", request_id, 200)):
-        expected_evidence = {"evidence_id", "rubric_point_id", "text_excerpt", "location", "confidence"}
-        if not isinstance(item, dict) or set(item) != expected_evidence:
-            _fail_evidence(f"evidence[{index}] is invalid", request_id)
+        _validate_evidence_identity(item, index, request_id)
         evidence_id = item["evidence_id"]
         rubric_point_id = item["rubric_point_id"]
-        if not isinstance(evidence_id, str) or not evidence_id.strip():
-            _fail_evidence("evidence id must be non-empty", request_id)
-        if not isinstance(rubric_point_id, str) or not rubric_point_id.strip():
-            _fail_evidence("evidence rubric point id must be non-empty", request_id)
         if evidence_id in rejected_evidence_ids:
             continue
         if evidence_id in evidence_by_id:
             _fail_evidence("model emitted duplicate evidence ids", request_id)
         if rubric_point_id not in accepted_points:
             continue
-        if item["location"] != "answer_text":
-            _fail_evidence("evidence must reference answer_text", request_id)
-        if not isinstance(item["text_excerpt"], str) or not item["text_excerpt"].strip():
-            _fail_evidence("evidence excerpt must be non-empty", request_id)
-        _number_evidence(item["confidence"], "evidence confidence", request_id, 0, 1)
-        excerpt = normalize_evidence_text(item["text_excerpt"])
-        if not excerpt or excerpt not in normalize_evidence_text(request["answer_text"]):
-            _fail_evidence("evidence excerpt does not occur in the answer", request_id)
+        _validate_evidence_excerpt(item, request)
         normalized = {
             "evidence_id": evidence_id,
             "rubric_point_id": rubric_point_id,
@@ -369,6 +434,33 @@ def normalize_model_output(raw, request, route, model_version, prompt_version, p
                 _fail_evidence("matched point evidence link is invalid", request_id)
             referenced_evidence_ids.add(evidence_id)
     evidence = [item for item in evidence if item["evidence_id"] in referenced_evidence_ids]
+    return evidence
+
+
+def _validate_evidence_identity(item, index, request_id):
+    expected = {"evidence_id", "rubric_point_id", "text_excerpt", "location", "confidence"}
+    if not isinstance(item, dict) or set(item) != expected:
+        _fail_evidence(f"evidence[{index}] is invalid", request_id)
+    if not isinstance(item["evidence_id"], str) or not item["evidence_id"].strip():
+        _fail_evidence("evidence id must be non-empty", request_id)
+    if not isinstance(item["rubric_point_id"], str) or not item["rubric_point_id"].strip():
+        _fail_evidence("evidence rubric point id must be non-empty", request_id)
+
+
+def _validate_evidence_excerpt(item, request):
+    request_id = request["request_id"]
+    if item["location"] != "answer_text":
+        _fail_evidence("evidence must reference answer_text", request_id)
+    if not isinstance(item["text_excerpt"], str) or not item["text_excerpt"].strip():
+        _fail_evidence("evidence excerpt must be non-empty", request_id)
+    _number_evidence(item["confidence"], "evidence confidence", request_id, 0, 1)
+    excerpt = normalize_evidence_text(item["text_excerpt"])
+    if not excerpt or excerpt not in normalize_evidence_text(request["answer_text"]):
+        _fail_evidence("evidence excerpt does not occur in the answer", request_id)
+
+
+def _model_risk_flags(raw, request, telemetry):
+    request_id = request["request_id"]
 
     risk_flags = []
     for flag in _model_array(raw, "risk_flags", request_id, 20):
@@ -384,9 +476,10 @@ def normalize_model_output(raw, request, route, model_version, prompt_version, p
         _append_unique(risk_flags, "prompt_injection_suspected")
     if telemetry.get("repair_attempted"):
         _append_unique(risk_flags, "schema_repaired")
+    return risk_flags
 
-    # 只对证据校验后保留的采分点重算建议总分，不采用模型自行报告的总分。
-    score = sum(point["score"] for point in matched)
+
+def _review_feedback(request, matched, missing):
     uses_chinese = any("\u3400" <= character <= "\u9fff" for character in request["question_text"])
     matched_labels = [point["label"] for point in matched]
     missing_labels = [point["label"] for point in missing]
@@ -397,32 +490,7 @@ def normalize_model_output(raw, request, route, model_version, prompt_version, p
         feedback = f"Recognized rubric points: {', '.join(matched_labels) or 'none'}. Review or complete: {', '.join(missing_labels) or 'none'}. The teacher makes the final decision."
         teacher_note = "Local model confidence is not calibrated. This shadow suggestion requires teacher review."
 
-    suggestion = {
-        "schema_version": SCHEMA_VERSION,
-        "request_id": request_id,
-        "status": "suggestion",
-        "delivery": route["delivery"],
-        "suggested_score": max(0, min(score, request["max_score"])),
-        "max_score": request["max_score"],
-        # 模型自报置信度尚未校准，不能把它转换成可自动放行的可靠度。
-        "confidence": 0,
-        "matched_points": matched,
-        "missing_points": missing,
-        "deductions": [],
-        "evidence": evidence,
-        "risk_flags": risk_flags,
-        "needs_human_review": True,
-        "student_feedback": feedback,
-        "teacher_note": teacher_note,
-        "model_version": model_version,
-        "prompt_version": prompt_version,
-        "rubric_version": request["rubric_version"],
-        "capability_profile": profile_id,
-        "mock": False,
-        "telemetry": telemetry,
-    }
-    validate_suggestion(suggestion, request)
-    return suggestion
+    return feedback, teacher_note
 
 
 def validate_suggestion(suggestion, request):

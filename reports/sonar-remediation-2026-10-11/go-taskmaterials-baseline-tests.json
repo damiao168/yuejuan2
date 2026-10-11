@@ -1,0 +1,21 @@
+{
+  "started_at": "2026-10-11T18:23:29.245479+08:00",
+  "finished_at": "2026-10-11T18:23:38.729458+08:00",
+  "command": [
+    "go",
+    "test",
+    "-json",
+    "-p",
+    "1",
+    "-count=1",
+    "-timeout=5m",
+    "-overlay",
+    "D:\\project\\yuejuan\\reports\\sonar-remediation-2026-10-11\\go-taskmaterials-baseline-overlay.json",
+    "-run",
+    "^TestGroupMemberMaterialRejectsOutsiderAndChangedRepresentation$",
+    "./internal/taskmaterials"
+  ],
+  "exit_code": 1,
+  "overlay_original_test": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\taskmaterials\\management_scope_test.go",
+  "note": "原测试夹具覆盖当前测试文件，生产代码使用当前本地工作区；用于确认夹具缺失不由职责拆分引起。"
+}

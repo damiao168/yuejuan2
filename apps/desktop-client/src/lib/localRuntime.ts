@@ -3,8 +3,7 @@ import type { CapabilityProbe, LocalCacheSecurityStatus, LocalLogEntry, RuntimeD
 
 const logKey = "edugrade.desktop.logs";
 const redactedValue = "[REDACTED]";
-const sensitiveAssignmentPattern = /["']?\b(authorization|access[_-]?token|refresh[_-]?token|id[_-]?token|password|secret|credential)\b["']?\s*[:=]\s*(?:"[^"]*"|'[^']*'|[^\s,;}]+)/gi;
-const bearerPattern = /\bBearer\s+[A-Za-z0-9._~+/=-]+/gi;
+const bearerPattern = /\bBearer\s+[a-z0-9._~+/=-]+/gi;
 let runtimeLogs: LocalLogEntry[] = [];
 
 export interface StoredDesktopCredentials {
@@ -122,9 +121,30 @@ export async function deleteStoredCredentials(): Promise<void> {
 }
 
 export function redactSensitiveText(value: string): string {
-  return value
-    .replace(bearerPattern, `Bearer ${redactedValue}`)
-    .replace(sensitiveAssignmentPattern, (_match, key: string) => `${key}=${redactedValue}`);
+  return redactSensitiveAssignments(value.replace(bearerPattern, `Bearer ${redactedValue}`));
+}
+
+function redactSensitiveAssignments(value: string): string {
+  // 每次调用新建正则，避免 lastIndex 串到下一条日志；引号值仍按双引号、单引号、裸值的顺序尝试。
+  // token 字段共用可选分隔符，捕获组仍保留完整键名，供脱敏后原样展示大小写。
+  const prefixPattern = /["']?\b(authorization|(?:access|refresh|id)[_-]?token|password|secret|credential)\b["']?\s*[:=]\s*/gi;
+  const valuePattern = /(?:"[^"]*"|'[^']*'|[^\s,;}]+)/y;
+  const parts: string[] = [];
+  let copiedThrough = 0;
+  for (let prefixMatch = prefixPattern.exec(value); prefixMatch !== null; prefixMatch = prefixPattern.exec(value)) {
+    // 值必须紧接前缀；缺值时保留原文，不能搜到远处的另一个值。
+    valuePattern.lastIndex = prefixPattern.lastIndex;
+    const valueMatch = valuePattern.exec(value);
+    if (!valueMatch) {
+      continue;
+    }
+    parts.push(value.slice(copiedThrough, prefixMatch.index), `${prefixMatch[1]}=${redactedValue}`);
+    copiedThrough = valuePattern.lastIndex;
+    // 已消费的引号内容可能含敏感字段，下一次只从整个值之后继续。
+    prefixPattern.lastIndex = copiedThrough;
+  }
+  parts.push(value.slice(copiedThrough));
+  return parts.join("");
 }
 
 export function redactLocalLogEntry(entry: LocalLogEntry): LocalLogEntry {
@@ -142,7 +162,7 @@ export function scanLocalCacheSecurity(): LocalCacheSecurityStatus {
   const sensitiveValuePattern = /"(access_token|refresh_token|id_token|password|secret|credential|authorization)"\s*:/i;
   for (let index = 0; index < window.localStorage.length; index += 1) {
     const key = window.localStorage.key(index);
-    if (!key || !key.startsWith("edugrade.desktop.")) {
+    if (!key?.startsWith("edugrade.desktop.")) {
       continue;
     }
     scannedKeys += 1;

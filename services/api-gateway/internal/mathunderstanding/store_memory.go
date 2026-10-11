@@ -119,9 +119,7 @@ func cloneArtifact(item Artifact) Artifact {
 	raw, _ := json.Marshal(item)
 	var out Artifact
 	_ = json.Unmarshal(raw, &out)
-	// Artifact embeds the contract but shadows its immutable identity fields.
-	// Restore those fields after the JSON deep copy so the base contract can be
-	// projected or validated without losing its segment/hash binding.
+	// Artifact 嵌入契约，但遮蔽其不可变身份字段。JSON 深拷贝后恢复这些字段，使基础契约可投影或验证，并保留片段及哈希绑定。
 	out.CreateArtifactInput.AnswerSegmentID = out.AnswerSegmentID
 	out.CreateArtifactInput.ExamQuestionSnapshotID = out.ExamQuestionSnapshotID
 	out.CreateArtifactInput.InputHash = out.InputHash

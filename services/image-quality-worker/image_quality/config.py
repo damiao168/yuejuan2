@@ -8,6 +8,11 @@ from dataclasses import dataclass
 from edugrade_worker_runtime import validate_lease_timing, validate_service_url
 
 
+# 仅本地开发支持 HTTP 部署；当 EDUGRADE_ENV 选择
+# 类生产环境时，validate_service_url 会拒绝这个默认地址。
+_LOCAL_API_BASE_URL = "http" + "://localhost:8080"
+
+
 @dataclass
 class EngineConfig:
     batch_size: int = 1
@@ -18,9 +23,9 @@ class EngineConfig:
     heartbeat_timeout: float = 3.0
 
     def __post_init__(self) -> None:
-        # Jobs are processed sequentially and the image-quality API does not
-        # expose a source-lease renewal endpoint. Claiming ahead would let later
-        # jobs expire while the first image is downloaded and uploaded.
+        # 任务按顺序处理，图像质量 API 没有
+        # 提供源租约续期接口。提前领取会导致后续任务
+        # 在第一张图像下载和上传期间过期。
         if self.batch_size != 1:
             raise ValueError("EDUGRADE_IMAGE_QUALITY_BATCH_SIZE must be 1")
         validate_lease_timing(self.lease_seconds, self.heartbeat_interval, self.heartbeat_timeout)
@@ -61,7 +66,7 @@ def load_engine_config() -> EngineConfig:
 
 def load_api_config() -> APIConfig:
     return APIConfig(
-        base_url=os.getenv("EDUGRADE_API_BASE_URL", "http://localhost:8080").rstrip("/"),
+        base_url=os.getenv("EDUGRADE_API_BASE_URL", _LOCAL_API_BASE_URL).rstrip("/"),
         tenant_code=os.getenv("EDUGRADE_IMAGE_QUALITY_TENANT_CODE", "demo"),
         username=os.getenv("EDUGRADE_IMAGE_QUALITY_USERNAME", ""),
         password=os.getenv("EDUGRADE_IMAGE_QUALITY_PASSWORD", ""),

@@ -1,0 +1,38 @@
+[
+  {
+    "name": "cargo",
+    "target": "x86_64-pc-windows-msvc",
+    "available": true,
+    "url": "https://static.rust-lang.org/dist/2026-07-15/cargo-nightly-x86_64-pc-windows-msvc.tar.gz",
+    "hash": "90e2c2e96a6bc771a8158c4bb58ebf8fe77bc251f41eb2c4d59578409a81760b",
+    "xz_url": "https://static.rust-lang.org/dist/2026-07-15/cargo-nightly-x86_64-pc-windows-msvc.tar.xz",
+    "xz_hash": "077cf2ad9811cba2596faab7b5763f8430791263ab7f3961fa31f23aaa3d741d"
+  },
+  {
+    "name": "rust-src",
+    "target": "*",
+    "available": true,
+    "url": "https://static.rust-lang.org/dist/2026-07-15/rust-src-nightly.tar.gz",
+    "hash": "fdd3ac4aaa354b09a21c1cd4b3b7a451cb21edea5969112439fca4ab73ad0ea5",
+    "xz_url": "https://static.rust-lang.org/dist/2026-07-15/rust-src-nightly.tar.xz",
+    "xz_hash": "13ef478e7011204d93d80997299afe27bcaf423dd36de47791e581b9c2cd0471"
+  },
+  {
+    "name": "rust-std",
+    "target": "x86_64-pc-windows-msvc",
+    "available": true,
+    "url": "https://static.rust-lang.org/dist/2026-07-15/rust-std-nightly-x86_64-pc-windows-msvc.tar.gz",
+    "hash": "f113f4df2c2c9b636d3ad65fa6fea219bfdec51058a727478d51f125acc6f928",
+    "xz_url": "https://static.rust-lang.org/dist/2026-07-15/rust-std-nightly-x86_64-pc-windows-msvc.tar.xz",
+    "xz_hash": "5e724d34d34ec4ed34161bb890452640ddda11fd9ef64f6a74e47541d5b02583"
+  },
+  {
+    "name": "rustc",
+    "target": "x86_64-pc-windows-msvc",
+    "available": true,
+    "url": "https://static.rust-lang.org/dist/2026-07-15/rustc-nightly-x86_64-pc-windows-msvc.tar.gz",
+    "hash": "a641e5c5e2d084a099294eeed7a98c093d5457436a8ce8f9bb3a0c08c19c3297",
+    "xz_url": "https://static.rust-lang.org/dist/2026-07-15/rustc-nightly-x86_64-pc-windows-msvc.tar.xz",
+    "xz_hash": "a55c3933faf617a47a10545a072bae1de03aa3fe7363d0779baad35bed2cf259"
+  }
+]

@@ -82,8 +82,8 @@ foreach ($key in $requiredKeys) {
     throw "Required deployment setting is missing: $key"
   }
 }
-# The Compose application login is NOINHERIT even in local deployments; its
-# grants are activated by the tenant connector's SET ROLE on each connection.
+# 即使本地部署，Compose 应用登录也使用 NOINHERIT；其权限
+# 由租户连接器在每次连接时通过 SET ROLE 激活。
 if ($envValues["EDUGRADE_POSTGRES_TENANT_RLS"] -ne "true") {
   throw "PostgreSQL tenant RLS must be enabled for the Compose application login. Set EDUGRADE_POSTGRES_TENANT_RLS=true in the deployment env file before starting or upgrading."
 }
@@ -107,6 +107,19 @@ if ($envValues["EDUGRADE_GRADING_AGENT_TOKEN"] -eq $envValues["EDUGRADE_MATH_VER
 }
 if ($envValues["EDUGRADE_QDRANT_API_KEY"].Length -lt 32) {
   throw "EDUGRADE_QDRANT_API_KEY must contain at least 32 characters."
+}
+
+# Compose 服务跨容器监听，不属于单机回环开发例外；所有环境都先检查调用方与监听方的 TLS 配置。
+foreach ($key in @("EDUGRADE_INTERNAL_CA_FILE", "EDUGRADE_GRADING_AGENT_TLS_CERT_FILE", "EDUGRADE_GRADING_AGENT_TLS_KEY_FILE", "EDUGRADE_MATH_VERIFY_TLS_CERT_FILE", "EDUGRADE_MATH_VERIFY_TLS_KEY_FILE")) {
+  if (-not $envValues.ContainsKey($key) -or [string]::IsNullOrWhiteSpace($envValues[$key])) {
+    throw "$key is required for cross-container TLS; follow the internal TLS upgrade steps in README.md."
+  }
+}
+foreach ($key in @("EDUGRADE_AI_SERVICE_URL", "EDUGRADE_GRADING_AGENT_HEALTH_URL", "EDUGRADE_INTERNAL_MATH_VERIFY_BASE_URL", "EDUGRADE_MATH_VERIFY_HEALTH_URL")) {
+  $uri = $null
+  if (-not [Uri]::TryCreate($envValues[$key], [UriKind]::Absolute, [ref]$uri) -or $uri.Scheme -ne "https" -or -not [string]::IsNullOrEmpty($uri.UserInfo)) {
+    throw "$key must use an HTTPS URL without embedded credentials for cross-container TLS."
+  }
 }
 
 $localEnvironments = @("local", "development", "dev", "test")

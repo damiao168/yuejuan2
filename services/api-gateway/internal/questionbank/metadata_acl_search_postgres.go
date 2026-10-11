@@ -79,7 +79,7 @@ func (s *PostgresStore) UpdateMetadataSchema(ctx context.Context, scope auth.Acc
 		return MetadataSchema{}, ErrInvalidInput
 	}
 	in.Fields, in.Taxonomies = fields, taxonomies
-	return pgMutation(ctx, s, scope, "question_bank.metadata_schema.update", bankID, in, "manage", func(tx *sql.Tx) (MetadataSchema, error) {
+	return pgMutation(ctx, s, scope, pgMutationCommand{op: "question_bank.metadata_schema.update", target: bankID, input: in, action: "manage"}, func(tx *sql.Tx) (MetadataSchema, error) {
 		b, err := s.bank(ctx, tx, scope, bankID, "manage", " FOR UPDATE OF b")
 		if err != nil {
 			return MetadataSchema{}, err
@@ -120,8 +120,15 @@ func validateACLInput(in UpdateACLInput) error {
 	if in.ExpectedRevision <= 0 || len(in.Bindings) > 500 || len(in.Groups) > 100 {
 		return ErrInvalidInput
 	}
-	users, groups := map[string]bool{}, map[string]bool{}
-	for _, b := range in.Bindings {
+	if err := validateACLBindings(in.Bindings); err != nil {
+		return err
+	}
+	return validateACLGroups(in.Groups)
+}
+
+func validateACLBindings(bindings []ACLBinding) error {
+	users := map[string]bool{}
+	for _, b := range bindings {
 		if !validID(b.UserID) || users[b.UserID] {
 			return ErrInvalidInput
 		}
@@ -130,21 +137,34 @@ func validateACLInput(in UpdateACLInput) error {
 		}
 		users[b.UserID] = true
 	}
-	for _, g := range in.Groups {
+	return nil
+}
+
+func validateACLGroups(input []ACLGroup) error {
+	groups := map[string]bool{}
+	for _, g := range input {
 		if g.ID != "" && !validID(g.ID) || strings.TrimSpace(g.Name) == "" || !validText(strings.TrimSpace(g.Name), 160) || groups[g.Name] || len(g.MemberIDs) > 500 {
 			return ErrInvalidInput
 		}
 		if _, ok := presetActions(g.Preset); !ok {
 			return ErrInvalidInput
 		}
-		members := map[string]bool{}
-		for _, id := range g.MemberIDs {
-			if !validID(id) || members[id] {
-				return ErrInvalidInput
-			}
-			members[id] = true
+		if err := validateACLGroupMembers(g.MemberIDs); err != nil {
+			return err
 		}
+		// 重复校验沿用原始名称；仅数据库写入时去空格，不改请求或收据指纹。
 		groups[g.Name] = true
+	}
+	return nil
+}
+
+func validateACLGroupMembers(ids []string) error {
+	members := map[string]bool{}
+	for _, id := range ids {
+		if !validID(id) || members[id] {
+			return ErrInvalidInput
+		}
+		members[id] = true
 	}
 	return nil
 }
@@ -156,7 +176,13 @@ func (s *PostgresStore) aclDocument(ctx context.Context, q queryer, scope auth.A
 		return out, err
 	}
 	out.Revision = b.Revision
-	rows, err := q.QueryContext(ctx, `SELECT user_id::text,to_jsonb(array_agg(action ORDER BY action)) FROM question_bank_acl WHERE tenant_id=$1 AND bank_id=$2 GROUP BY user_id ORDER BY user_id`, scope.TenantID, bankID)
+	return readACLRows(ctx, q, scope.TenantID, out)
+}
+
+func readACLRows(ctx context.Context, q queryer, tenantID string, out ACLDocument) (ACLDocument, error) {
+	bankID := out.BankID
+	var err error
+	rows, err := q.QueryContext(ctx, `SELECT user_id::text,to_jsonb(array_agg(action ORDER BY action)) FROM question_bank_acl WHERE tenant_id=$1 AND bank_id=$2 GROUP BY user_id ORDER BY user_id`, tenantID, bankID)
 	if err != nil {
 		return out, err
 	}
@@ -179,7 +205,7 @@ func (s *PostgresStore) aclDocument(ctx context.Context, q queryer, scope auth.A
 		return out, err
 	}
 	rows.Close()
-	rows, err = q.QueryContext(ctx, `SELECT g.id::text,g.name,to_jsonb(array_agg(DISTINCT a.action ORDER BY a.action)),COALESCE(to_jsonb(array_agg(DISTINCT m.user_id::text ORDER BY m.user_id::text) FILTER(WHERE m.user_id IS NOT NULL)),'[]'::jsonb) FROM question_bank_group g JOIN question_bank_group_acl a ON a.tenant_id=g.tenant_id AND a.group_id=g.id LEFT JOIN question_bank_group_member m ON m.tenant_id=g.tenant_id AND m.group_id=g.id WHERE g.tenant_id=$1 AND g.bank_id=$2 GROUP BY g.id,g.name ORDER BY g.name,g.id`, scope.TenantID, bankID)
+	rows, err = q.QueryContext(ctx, `SELECT g.id::text,g.name,to_jsonb(array_agg(DISTINCT a.action ORDER BY a.action)),COALESCE(to_jsonb(array_agg(DISTINCT m.user_id::text ORDER BY m.user_id::text) FILTER(WHERE m.user_id IS NOT NULL)),'[]'::jsonb) FROM question_bank_group g JOIN question_bank_group_acl a ON a.tenant_id=g.tenant_id AND a.group_id=g.id LEFT JOIN question_bank_group_member m ON m.tenant_id=g.tenant_id AND m.group_id=g.id WHERE g.tenant_id=$1 AND g.bank_id=$2 GROUP BY g.id,g.name ORDER BY g.name,g.id`, tenantID, bankID)
 	if err != nil {
 		return out, err
 	}
@@ -210,7 +236,9 @@ func (s *PostgresStore) UpdateACL(ctx context.Context, scope auth.AccessScope, b
 	if err := validateACLInput(in); err != nil {
 		return ACLDocument{}, err
 	}
-	return pgMutation(ctx, s, scope, "question_bank.acl.update", bankID, in, "manage", func(tx *sql.Tx) (ACLDocument, error) {
+	// 收据使用原始请求；授权替换和修订更新由 pgMutation 在同一事务提交。
+	return pgMutation(ctx, s, scope, pgMutationCommand{op: "question_bank.acl.update", target: bankID, input: in, action: "manage"}, func(tx *sql.Tx) (ACLDocument, error) {
+		// 先锁住题库再检查修订和状态，后续 helper 继续使用这个 tx。
 		b, err := s.bank(ctx, tx, scope, bankID, "manage", " FOR UPDATE OF b")
 		if err != nil {
 			return ACLDocument{}, err
@@ -221,65 +249,137 @@ func (s *PostgresStore) UpdateACL(ctx context.Context, scope auth.AccessScope, b
 		if b.Status != "active" {
 			return ACLDocument{}, ErrLocked
 		}
-		ids := []string{}
-		for _, binding := range in.Bindings {
-			ids = append(ids, binding.UserID)
-		}
-		for _, group := range in.Groups {
-			ids = append(ids, group.MemberIDs...)
-		}
-		if len(ids) > 0 {
-			var count int
-			if err = tx.QueryRowContext(ctx, `SELECT count(DISTINCT id) FROM app_user WHERE tenant_id=$1 AND id::text=ANY($2::text[]) AND status='active' AND deleted_at IS NULL`, scope.TenantID, ids).Scan(&count); err != nil || count != len(uniqueStrings(ids)) {
-				if err != nil {
-					return ACLDocument{}, err
-				}
-				return ACLDocument{}, ErrInvalidInput
-			}
-		}
-		if _, err = tx.ExecContext(ctx, `INSERT INTO question_bank_acl(tenant_id,bank_id,user_id,action) VALUES($1,$2,$3,'manage') ON CONFLICT DO NOTHING`, scope.TenantID, bankID, scope.ActorID); err != nil {
+		if err := validateACLActiveUsers(ctx, tx, scope, in); err != nil {
 			return ACLDocument{}, err
 		}
-		// 保留创建者和操作者的直接授权，其他直接授权及分组按本次请求整体重建。
-		if _, err = tx.ExecContext(ctx, `DELETE FROM question_bank_acl WHERE tenant_id=$1 AND bank_id=$2 AND user_id<>$3 AND user_id<>$4`, scope.TenantID, bankID, b.CreatedBy, scope.ActorID); err != nil {
+		// 在题库行锁内读取旧授权，只允许替换预设职责；历史组合权限不能因表单不含该行而被撤销。
+		existing, err := readACLRows(ctx, tx, scope.TenantID, ACLDocument{BankID: bankID, Revision: b.Revision, Bindings: []ACLBinding{}, Groups: []ACLGroup{}})
+		if err != nil {
 			return ACLDocument{}, err
 		}
-		if _, err = tx.ExecContext(ctx, `DELETE FROM question_bank_group WHERE tenant_id=$1 AND bank_id=$2`, scope.TenantID, bankID); err != nil {
+		retained, err := retainedCustomACL(existing, in)
+		if err != nil {
 			return ACLDocument{}, err
 		}
-		for _, binding := range in.Bindings {
-			actions, _ := presetActions(binding.Preset)
-			for _, action := range actions {
-				if _, err = tx.ExecContext(ctx, `INSERT INTO question_bank_acl(tenant_id,bank_id,user_id,action) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING`, scope.TenantID, bankID, binding.UserID, action); err != nil {
-					return ACLDocument{}, err
-				}
-			}
-		}
-		for _, group := range in.Groups {
-			id := group.ID
-			if id == "" {
-				id = uuid.NewString()
-			}
-			if _, err = tx.ExecContext(ctx, `INSERT INTO question_bank_group(id,tenant_id,bank_id,name,created_by) VALUES($1,$2,$3,$4,$5)`, id, scope.TenantID, bankID, strings.TrimSpace(group.Name), scope.ActorID); err != nil {
-				return ACLDocument{}, err
-			}
-			actions, _ := presetActions(group.Preset)
-			for _, action := range actions {
-				if _, err = tx.ExecContext(ctx, `INSERT INTO question_bank_group_acl(tenant_id,bank_id,group_id,action) VALUES($1,$2,$3,$4)`, scope.TenantID, bankID, id, action); err != nil {
-					return ACLDocument{}, err
-				}
-			}
-			for _, memberID := range group.MemberIDs {
-				if _, err = tx.ExecContext(ctx, `INSERT INTO question_bank_group_member(tenant_id,group_id,user_id) VALUES($1,$2,$3)`, scope.TenantID, id, memberID); err != nil {
-					return ACLDocument{}, err
-				}
-			}
+		if err := replacePostgresACL(ctx, tx, scope, bankID, b.CreatedBy, in, retained); err != nil {
+			return ACLDocument{}, err
 		}
 		if _, err = tx.ExecContext(ctx, `UPDATE question_bank SET revision=revision+1,updated_at=now() WHERE tenant_id=$1 AND id=$2`, scope.TenantID, bankID); err != nil {
 			return ACLDocument{}, err
 		}
 		return s.aclDocument(ctx, tx, scope, bankID)
 	})
+}
+
+func validateACLActiveUsers(ctx context.Context, q queryer, scope auth.AccessScope, in UpdateACLInput) error {
+	ids := []string{}
+	for _, binding := range in.Bindings {
+		ids = append(ids, binding.UserID)
+	}
+	for _, group := range in.Groups {
+		ids = append(ids, group.MemberIDs...)
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	var count int
+	if err := q.QueryRowContext(ctx, `SELECT count(DISTINCT id) FROM app_user WHERE tenant_id=$1 AND id::text=ANY($2::text[]) AND status='active' AND deleted_at IS NULL`, scope.TenantID, ids).Scan(&count); err != nil {
+		return err
+	}
+	if count != len(uniqueStrings(ids)) {
+		return ErrInvalidInput
+	}
+	return nil
+}
+
+// retainedCustomACL 只从服务端已存授权取得组合权限；请求仍只能提交预设职责，不能伪造或改写组合权限。
+func retainedCustomACL(existing ACLDocument, in UpdateACLInput) (ACLDocument, error) {
+	out := ACLDocument{Bindings: []ACLBinding{}, Groups: []ACLGroup{}}
+	users, groups, names := map[string]bool{}, map[string]bool{}, map[string]bool{}
+	for _, binding := range existing.Bindings {
+		if binding.Preset == "Custom" {
+			out.Bindings = append(out.Bindings, binding)
+			users[strings.ToLower(binding.UserID)] = true
+		}
+	}
+	for _, group := range existing.Groups {
+		if group.Preset == "Custom" {
+			out.Groups = append(out.Groups, group)
+			groups[strings.ToLower(group.ID)] = true
+			names[strings.TrimSpace(group.Name)] = true
+		}
+	}
+	for _, binding := range in.Bindings {
+		if users[strings.ToLower(binding.UserID)] {
+			return ACLDocument{}, ErrInvalidInput
+		}
+	}
+	for _, group := range in.Groups {
+		if groups[strings.ToLower(group.ID)] || names[strings.TrimSpace(group.Name)] {
+			return ACLDocument{}, ErrInvalidInput
+		}
+	}
+	return copyACL(out), nil
+}
+
+func replacePostgresACL(ctx context.Context, tx *sql.Tx, scope auth.AccessScope, bankID, createdBy string, in UpdateACLInput, retained ACLDocument) error {
+	if _, err := tx.ExecContext(ctx, `INSERT INTO question_bank_acl(tenant_id,bank_id,user_id,action) VALUES($1,$2,$3,'manage') ON CONFLICT DO NOTHING`, scope.TenantID, bankID, scope.ActorID); err != nil {
+		return err
+	}
+	users, groups := []string{}, []string{}
+	for _, binding := range retained.Bindings {
+		users = append(users, binding.UserID)
+	}
+	for _, group := range retained.Groups {
+		groups = append(groups, group.ID)
+	}
+	// 保留创建者、操作者及历史组合权限的原行；组的名称、动作、成员原样保留，不经新授权的活跃人员校验。
+	if _, err := tx.ExecContext(ctx, `DELETE FROM question_bank_acl WHERE tenant_id=$1 AND bank_id=$2 AND user_id<>$3 AND user_id<>$4 AND NOT(user_id::text=ANY($5::text[]))`, scope.TenantID, bankID, createdBy, scope.ActorID, users); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM question_bank_group WHERE tenant_id=$1 AND bank_id=$2 AND NOT(id::text=ANY($3::text[]))`, scope.TenantID, bankID, groups); err != nil {
+		return err
+	}
+	if err := insertPostgresACLBindings(ctx, tx, scope, bankID, in.Bindings); err != nil {
+		return err
+	}
+	return insertPostgresACLGroups(ctx, tx, scope, bankID, in.Groups)
+}
+
+func insertPostgresACLBindings(ctx context.Context, tx *sql.Tx, scope auth.AccessScope, bankID string, bindings []ACLBinding) error {
+	for _, binding := range bindings {
+		actions, _ := presetActions(binding.Preset)
+		for _, action := range actions {
+			if _, err := tx.ExecContext(ctx, `INSERT INTO question_bank_acl(tenant_id,bank_id,user_id,action) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING`, scope.TenantID, bankID, binding.UserID, action); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func insertPostgresACLGroups(ctx context.Context, tx *sql.Tx, scope auth.AccessScope, bankID string, groups []ACLGroup) error {
+	for _, group := range groups {
+		id := group.ID
+		if id == "" {
+			id = uuid.NewString()
+		}
+		if _, err := tx.ExecContext(ctx, `INSERT INTO question_bank_group(id,tenant_id,bank_id,name,created_by) VALUES($1,$2,$3,$4,$5)`, id, scope.TenantID, bankID, strings.TrimSpace(group.Name), scope.ActorID); err != nil {
+			return err
+		}
+		actions, _ := presetActions(group.Preset)
+		for _, action := range actions {
+			if _, err := tx.ExecContext(ctx, `INSERT INTO question_bank_group_acl(tenant_id,bank_id,group_id,action) VALUES($1,$2,$3,$4)`, scope.TenantID, bankID, id, action); err != nil {
+				return err
+			}
+		}
+		for _, memberID := range group.MemberIDs {
+			if _, err := tx.ExecContext(ctx, `INSERT INTO question_bank_group_member(tenant_id,group_id,user_id) VALUES($1,$2,$3)`, scope.TenantID, id, memberID); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func uniqueStrings(values []string) []string {
@@ -402,7 +502,7 @@ func (s *PostgresStore) RetireItem(ctx context.Context, scope auth.AccessScope, 
 	if in.ExpectedRevision <= 0 {
 		return Item{}, ErrInvalidInput
 	}
-	return pgMutation(ctx, s, scope, "question_bank.item.retire", itemID, in, "retire", func(tx *sql.Tx) (Item, error) {
+	return pgMutation(ctx, s, scope, pgMutationCommand{op: "question_bank.item.retire", target: itemID, input: in, action: "retire"}, func(tx *sql.Tx) (Item, error) {
 		i, err := s.item(ctx, tx, scope, itemID, "retire", " FOR UPDATE")
 		if err != nil {
 			return i, err

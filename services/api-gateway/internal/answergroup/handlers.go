@@ -7,15 +7,23 @@ import (
 	"net/http"
 
 	"edugrade-enterprise/services/api-gateway/internal/auth"
+	"edugrade-enterprise/services/api-gateway/internal/binaryresourcehttp"
 	"edugrade-enterprise/services/api-gateway/internal/goldpaper"
 	"edugrade-enterprise/services/api-gateway/internal/httpx"
 	"edugrade-enterprise/services/api-gateway/internal/logger"
+	"edugrade-enterprise/services/api-gateway/internal/segment"
 )
 
 type Handler struct {
 	store      Store
 	audit      auth.AuditRecorder
 	references goldpaper.ActiveApprovedReader
+	images     segment.CropImageReader
+}
+
+func (h *Handler) WithSegmentImage(reader segment.CropImageReader) *Handler {
+	h.images = reader
+	return h
 }
 
 func NewHandler(store Store, audit auth.AuditRecorder) *Handler {
@@ -32,9 +40,50 @@ func RegisterRoutes(mux *http.ServeMux, handler *Handler, requireRead, requireMa
 	mux.Handle("GET /api/v1/exams/{examId}/questions/{questionId}/answer-group-metrics", requireRead(handler.Metrics))
 	mux.Handle("GET /api/v1/answer-groups/{groupId}", requireRead(handler.Get))
 	mux.Handle("PUT /api/v1/answer-groups/{groupId}/samples/{segmentId}", requireManage(handler.ReviewSample))
+	mux.Handle("GET /api/v1/answer-groups/{groupId}/samples/{segmentId}/context", requireManage(handler.GetMemberContext))
+	mux.Handle("GET /api/v1/answer-groups/{groupId}/samples/{segmentId}/segment-image", requireManage(handler.GetMemberImage))
 	mux.Handle("PUT /api/v1/answer-groups/{groupId}/decision", requireManage(handler.PutDecision))
 	mux.Handle("POST /api/v1/answer-groups/{groupId}/confirm", requireManage(handler.Confirm))
 	mux.Handle("POST /api/v1/answer-groups/{groupId}/rollback", requireManage(handler.Rollback))
+}
+func (h *Handler) GetMemberContext(w http.ResponseWriter, r *http.Request) {
+	user, ok := currentUser(w, r)
+	if !ok {
+		return
+	}
+	source, ok := h.store.(MemberContextSource)
+	if !ok {
+		writeError(w, r, ErrNotFound)
+		return
+	}
+	value, err := source.GetMemberContext(r.Context(), user.TenantID, r.PathValue("groupId"), r.PathValue("segmentId"))
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"member_context": value})
+}
+func (h *Handler) GetMemberImage(w http.ResponseWriter, r *http.Request) {
+	user, ok := currentUser(w, r)
+	if !ok {
+		return
+	}
+	source, ok := h.store.(MemberContextSource)
+	if !ok || h.images == nil {
+		writeError(w, r, ErrNotFound)
+		return
+	}
+	value, err := source.GetMemberContext(r.Context(), user.TenantID, r.PathValue("groupId"), r.PathValue("segmentId"))
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	resource, err := h.images.ReadCropImage(r.Context(), user.TenantID, value.Member.SegmentID)
+	if err != nil {
+		segment.WriteImageError(w, r, err)
+		return
+	}
+	binaryresourcehttp.Serve(w, r, resource, h.audit)
 }
 
 func (h *Handler) Build(w http.ResponseWriter, r *http.Request) {

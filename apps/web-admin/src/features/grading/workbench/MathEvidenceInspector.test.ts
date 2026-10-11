@@ -1,6 +1,9 @@
-import { describe, expect, it } from "vitest";
+// @vitest-environment jsdom
+import { act, createElement } from "react";
+import { createRoot, type Root } from "react-dom/client";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { MathUnderstandingResponse } from "../../../api/mathUnderstanding";
-import { isFormulaEvidenceSubject } from "./MathEvidenceInspector";
+import { isFormulaEvidenceSubject, MathEvidenceInspector, type MathEvidenceInspectorProps } from "./MathEvidenceInspector";
 import { selectEffectiveMathArtifact } from "./mathEffectiveEvidence";
 
 describe("math evidence subject boundary", () => {
@@ -39,5 +42,67 @@ describe("math evidence correction projection", () => {
     } as unknown as MathUnderstandingResponse;
 
     expect(selectEffectiveMathArtifact(response)).toBe(response.artifact);
+  });
+});
+
+describe("math evidence inspector details", () => {
+  let host: HTMLDivElement;
+  let root: Root;
+
+  beforeEach(() => {
+    vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+    host = document.createElement("div");
+    document.body.append(host);
+    root = createRoot(host);
+  });
+
+  afterEach(async () => {
+    await act(async () => root.unmount());
+    host.remove();
+    vi.unstubAllGlobals();
+  });
+
+  function props(): MathEvidenceInspectorProps {
+    const artifact = { id: "artifact-1", answer_segment_id: "segment-1", version: 2,
+      blocks: [{ id: "block-1", status: "crossed_out", text: "x = 1" }, { id: "block-2", status: "active", text: "x = 2" }],
+      formulas: [{ id: "formula-1", canonical_latex: "x=1", confidence: .7 }],
+      solution_graph: { steps: [{ id: "step-1", block_ids: ["block-1", "block-2"], confidence: .7 }], edges: [] },
+      rubric_evidence: [{ id: "e1", status: "supported" }, { id: "e2", status: "unsupported" }, { id: "e3", status: "uncertain" }] };
+    return { segmentId: "segment-1", subjectCode: "physics", loading: false, onRefresh: vi.fn(), onCorrectionSaved: vi.fn(),
+      onDirtyChange: vi.fn(), onSelectStep: vi.fn(), data: { artifact, corrected: true, correction_revision: 3,
+        effective_artifact: { ...artifact, formulas: [{ id: "formula-1", canonical_latex: "x=2", confidence: .69 }] } } as unknown as MathUnderstandingResponse };
+  }
+
+  async function open(options: MathEvidenceInspectorProps) {
+    await act(async () => root.render(createElement(MathEvidenceInspector, options)));
+    await act(async () => host.querySelector<HTMLButtonElement>(".math-evidence-summary button")!.click());
+  }
+
+  it("keeps the confidence boundary, effective formula, evidence tones and step navigation", async () => {
+    const options = props();
+    await open(options);
+    expect(host.querySelector(".math-evidence-summary")?.textContent).toContain("1 项识别需要确认");
+    expect(host.querySelector(".math-evidence-summary button")?.textContent).toBe("收起详情");
+    expect(host.querySelector(".math-evidence-meta")?.textContent).toContain("物理识别版本 2 · 校正 #3");
+    expect(host.querySelector<HTMLInputElement>('[aria-label="校正公式 formula-1"]')?.value).toBe("x=2");
+    expect(Array.from(host.querySelectorAll(".math-rubric-evidence .ant-tag"), (tag) => tag.className)).toEqual([
+      expect.stringContaining("ant-tag-green"), expect.stringContaining("ant-tag-red"), expect.stringContaining("ant-tag-orange"),
+    ]);
+    await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="定位步骤 step-1"]')!.click());
+    expect(options.onSelectStep).toHaveBeenCalledExactlyOnceWith("step-1");
+    options.data!.effective_artifact!.formulas![0].confidence = .7;
+    await act(async () => root.render(createElement(MathEvidenceInspector, { ...options, data: { ...options.data! } })));
+    await act(async () => host.querySelector<HTMLButtonElement>(".math-evidence-summary button")!.click());
+    expect(host.querySelector(".math-evidence-summary button")?.textContent).toBe("查看详情");
+  });
+
+  it("keeps read-only structure controls disabled while evidence remains navigable", async () => {
+    await open({ ...props(), disabled: true });
+    expect(host.querySelector<HTMLInputElement>('[aria-label="校正公式 formula-1"]')?.disabled).toBe(true);
+    expect(host.querySelector<HTMLButtonElement>('[aria-label="定位步骤 step-1"]')?.disabled).toBe(false);
+    for (const button of host.querySelectorAll<HTMLButtonElement>(".math-step-row button:not([aria-label^='定位步骤']), .math-crossed-block button, .ant-space-compact button, .math-evidence-actions button")) {
+      expect(button.disabled).toBe(true);
+    }
+    expect(host.querySelector(".math-evidence-actions")?.textContent).toContain("校正保存为当前数学证据，不直接改分。");
   });
 });

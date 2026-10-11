@@ -12,9 +12,9 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/httpx"
 )
 
-// Handler exposes policy and audit lookup only. Admission itself is invoked
-// in-process through Gate; accepting an arbitrary client-supplied snapshot
-// here would allow a caller to fabricate OCR/evaluation evidence.
+const authenticationRequired = "authentication required"
+
+// Handler 只提供策略与审计查询。准入由进程内 Gate 调用；此处若接受客户端任意快照，会允许调用方伪造 OCR 或评测证据。
 type Handler struct{ service *Service }
 
 func NewHandler(service *Service) *Handler { return &Handler{service: service} }
@@ -27,7 +27,7 @@ func RegisterRoutes(mux *http.ServeMux, h *Handler, requireRead, requireManage f
 func (h *Handler) PutPolicy(w http.ResponseWriter, r *http.Request) {
 	user, ok := auth.UserFromContext(r.Context())
 	if !ok {
-		httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", "authentication required")
+		httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", authenticationRequired)
 		return
 	}
 	var input PutPolicyInput
@@ -44,7 +44,7 @@ func (h *Handler) PutPolicy(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetPolicy(w http.ResponseWriter, r *http.Request) {
 	user, ok := auth.UserFromContext(r.Context())
 	if !ok {
-		httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", "authentication required")
+		httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", authenticationRequired)
 		return
 	}
 	subject, subjectOK := assessmentSubject(r.URL.Query().Get("subject_code"))
@@ -65,7 +65,7 @@ func (h *Handler) GetPolicy(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetDecision(w http.ResponseWriter, r *http.Request) {
 	user, ok := auth.UserFromContext(r.Context())
 	if !ok {
-		httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", "authentication required")
+		httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", authenticationRequired)
 		return
 	}
 	item, err := h.service.GetDecision(r.Context(), user.TenantID, r.PathValue("runItemId"))

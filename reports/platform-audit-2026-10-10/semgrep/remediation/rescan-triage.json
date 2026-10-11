@@ -1,0 +1,509 @@
+{
+  "snapshot": "C:\\Users\\pc\\AppData\\Local\\Temp\\yuejuan-semgrep-remediation-qe1gj4t4",
+  "findings": [
+    {
+      "id": "RS-001",
+      "path": "ai-services/grading_agent/managed_model.py",
+      "line": 62,
+      "rule": "python.lang.security.audit.httpsconnection-detected.httpsconnection-detected",
+      "original_ids": [
+        "SG-012"
+      ],
+      "status": "existing_control",
+      "note": "managed_model.public_json_transport 先限制 HTTPS，拒绝任何非公网 DNS 结果，再固定已校验 IP；HTTPSConnection 保留原 hostname 进行 SNI、证书链和主机名验证，响应有 4MB 上限并关闭连接。未发现由此调用直接引入的 SSRF/TLS 绕过；未来 Python 升级需关注 _create_connection 私有接口兼容性。"
+    },
+    {
+      "id": "RS-002",
+      "path": "apps/web-admin/nginx.conf",
+      "line": 17,
+      "rule": "generic.nginx.security.header-redefinition.header-redefinition",
+      "original_ids": [
+        "SG-025",
+        "SG-026",
+        "SG-027",
+        "SG-028",
+        "SG-029",
+        "SG-030"
+      ],
+      "status": "existing_control",
+      "note": "apps/web-admin/nginx.conf:14-24 的 /health location 已显式重复所有 server 安全头；17 行 Content-Type 并未造成 CSP、X-Frame-Options 等丢失。19-23 行正是修复继承边界的防护代码。"
+    },
+    {
+      "id": "RS-003",
+      "path": "apps/web-admin/nginx.conf",
+      "line": 19,
+      "rule": "generic.nginx.security.header-redefinition.header-redefinition",
+      "original_ids": [
+        "SG-025",
+        "SG-026",
+        "SG-027",
+        "SG-028",
+        "SG-029",
+        "SG-030"
+      ],
+      "status": "existing_control",
+      "note": "apps/web-admin/nginx.conf:14-24 的 /health location 已显式重复所有 server 安全头；17 行 Content-Type 并未造成 CSP、X-Frame-Options 等丢失。19-23 行正是修复继承边界的防护代码。"
+    },
+    {
+      "id": "RS-004",
+      "path": "apps/web-admin/nginx.conf",
+      "line": 20,
+      "rule": "generic.nginx.security.header-redefinition.header-redefinition",
+      "original_ids": [
+        "SG-025",
+        "SG-026",
+        "SG-027",
+        "SG-028",
+        "SG-029",
+        "SG-030"
+      ],
+      "status": "existing_control",
+      "note": "apps/web-admin/nginx.conf:14-24 的 /health location 已显式重复所有 server 安全头；17 行 Content-Type 并未造成 CSP、X-Frame-Options 等丢失。19-23 行正是修复继承边界的防护代码。"
+    },
+    {
+      "id": "RS-005",
+      "path": "apps/web-admin/nginx.conf",
+      "line": 21,
+      "rule": "generic.nginx.security.header-redefinition.header-redefinition",
+      "original_ids": [
+        "SG-025",
+        "SG-026",
+        "SG-027",
+        "SG-028",
+        "SG-029",
+        "SG-030"
+      ],
+      "status": "existing_control",
+      "note": "apps/web-admin/nginx.conf:14-24 的 /health location 已显式重复所有 server 安全头；17 行 Content-Type 并未造成 CSP、X-Frame-Options 等丢失。19-23 行正是修复继承边界的防护代码。"
+    },
+    {
+      "id": "RS-006",
+      "path": "apps/web-admin/nginx.conf",
+      "line": 22,
+      "rule": "generic.nginx.security.header-redefinition.header-redefinition",
+      "original_ids": [
+        "SG-025",
+        "SG-026",
+        "SG-027",
+        "SG-028",
+        "SG-029",
+        "SG-030"
+      ],
+      "status": "existing_control",
+      "note": "apps/web-admin/nginx.conf:14-24 的 /health location 已显式重复所有 server 安全头；17 行 Content-Type 并未造成 CSP、X-Frame-Options 等丢失。19-23 行正是修复继承边界的防护代码。"
+    },
+    {
+      "id": "RS-007",
+      "path": "apps/web-admin/nginx.conf",
+      "line": 23,
+      "rule": "generic.nginx.security.header-redefinition.header-redefinition",
+      "original_ids": [
+        "SG-025",
+        "SG-026",
+        "SG-027",
+        "SG-028",
+        "SG-029",
+        "SG-030"
+      ],
+      "status": "existing_control",
+      "note": "apps/web-admin/nginx.conf:14-24 的 /health location 已显式重复所有 server 安全头；17 行 Content-Type 并未造成 CSP、X-Frame-Options 等丢失。19-23 行正是修复继承边界的防护代码。"
+    },
+    {
+      "id": "RS-008",
+      "path": "apps/web-admin/src/auth/mfaFlow.test.ts",
+      "line": 196,
+      "rule": "javascript.lang.security.audit.unknown-value-with-script-tag.unknown-value-with-script-tag",
+      "original_ids": [
+        "SG-031",
+        "SG-032",
+        "SG-033"
+      ],
+      "status": "existing_control",
+      "note": "mfaFlow.test.ts:194-199 向 mock response 注入固定 <script> 字符串，断言 confirm 返回 uncertain 且流程关闭；这里不是脚本模板插值或 DOM 执行。同一行的三条命中属于同一负向测试。"
+    },
+    {
+      "id": "RS-009",
+      "path": "apps/web-admin/src/auth/mfaFlow.test.ts",
+      "line": 196,
+      "rule": "javascript.lang.security.audit.unknown-value-with-script-tag.unknown-value-with-script-tag",
+      "original_ids": [
+        "SG-031",
+        "SG-032",
+        "SG-033"
+      ],
+      "status": "existing_control",
+      "note": "mfaFlow.test.ts:194-199 向 mock response 注入固定 <script> 字符串，断言 confirm 返回 uncertain 且流程关闭；这里不是脚本模板插值或 DOM 执行。同一行的三条命中属于同一负向测试。"
+    },
+    {
+      "id": "RS-010",
+      "path": "apps/web-admin/src/auth/mfaFlow.test.ts",
+      "line": 196,
+      "rule": "javascript.lang.security.audit.unknown-value-with-script-tag.unknown-value-with-script-tag",
+      "original_ids": [
+        "SG-031",
+        "SG-032",
+        "SG-033"
+      ],
+      "status": "existing_control",
+      "note": "mfaFlow.test.ts:194-199 向 mock response 注入固定 <script> 字符串，断言 confirm 返回 uncertain 且流程关闭；这里不是脚本模板插值或 DOM 执行。同一行的三条命中属于同一负向测试。"
+    },
+    {
+      "id": "RS-011",
+      "path": "docs/architecture/tools/build_diagrams.py",
+      "line": 6,
+      "rule": "python.lang.security.use-defused-xml.use-defused-xml",
+      "original_ids": [
+        "SG-034"
+      ],
+      "status": "fixed_boundary_residual",
+      "note": "标准库 ElementTree 只生成节点；磁盘回读已改用 defusedxml，显式拒绝 DTD。import 规则仍命中生成依赖，保留此残余误报，不删除生成代码。"
+    },
+    {
+      "id": "RS-012",
+      "path": "docs/architecture/tools/build_preview.py",
+      "line": 5,
+      "rule": "python.lang.security.use-defused-xml.use-defused-xml",
+      "original_ids": [],
+      "status": "supplemental_fixed",
+      "note": "这次全仓快照发现的同类解析入口；复扫后补充迁移到 defusedxml 并拒绝 DTD，正常及恶意 XML 通过临时文件回归。此条描述的是修复前快照，当前字节另见补充复扫。"
+    },
+    {
+      "id": "RS-013",
+      "path": "docs/architecture/tools/verify_typography.py",
+      "line": 6,
+      "rule": "python.lang.security.use-defused-xml.use-defused-xml",
+      "original_ids": [],
+      "status": "supplemental_fixed",
+      "note": "这次全仓快照发现的同类解析入口；复扫后补充迁移到 defusedxml 并拒绝 DTD，正常及恶意 XML 通过临时文件回归。此条描述的是修复前快照，当前字节另见补充复扫。"
+    },
+    {
+      "id": "RS-014",
+      "path": "docs/architecture/tools/verify_typography.py",
+      "line": 20,
+      "rule": "python.lang.security.use-defused-xml-parse.use-defused-xml-parse",
+      "original_ids": [],
+      "status": "supplemental_fixed",
+      "note": "这次全仓快照发现的同类解析入口；复扫后补充迁移到 defusedxml 并拒绝 DTD，正常及恶意 XML 通过临时文件回归。此条描述的是修复前快照，当前字节另见补充复扫。"
+    },
+    {
+      "id": "RS-015",
+      "path": "infra/docker-compose/nginx/story056-e2e.conf",
+      "line": 18,
+      "rule": "generic.nginx.security.header-redefinition.header-redefinition",
+      "original_ids": [
+        "SG-046"
+      ],
+      "status": "existing_control",
+      "note": "对应 story056/story060 E2E Nginx 的 server 块没有 add_header 安全头，/health 中只有 Content-Type，不存在规则所称覆盖上级安全头。此配置仅用于 E2E。"
+    },
+    {
+      "id": "RS-016",
+      "path": "infra/docker-compose/nginx/story060-e2e.conf",
+      "line": 18,
+      "rule": "generic.nginx.security.header-redefinition.header-redefinition",
+      "original_ids": [
+        "SG-049"
+      ],
+      "status": "existing_control",
+      "note": "对应 story056/story060 E2E Nginx 的 server 块没有 add_header 安全头，/health 中只有 Content-Type，不存在规则所称覆盖上级安全头。此配置仅用于 E2E。"
+    },
+    {
+      "id": "RS-017",
+      "path": "lab/scripts/run-graduation-audit.js",
+      "line": 14,
+      "rule": "javascript.lang.security.detect-child-process.detect-child-process",
+      "original_ids": [],
+      "status": "trusted_local_tool",
+      "note": "本地审计脚本只调用代码内固定 npm/node 命令和固定参数；Windows cmd 分支同样没有请求数据或可变业务字段拼接，ComSpec 来自运行者环境。拥有本地执行权限是工具前提，未见服务端命令注入入口。未运行会覆盖实验账本的审计脚本。"
+    },
+    {
+      "id": "RS-018",
+      "path": "scripts/check-lab-integration.mjs",
+      "line": 16,
+      "rule": "javascript.lang.security.detect-child-process.detect-child-process",
+      "original_ids": [],
+      "status": "trusted_local_tool",
+      "note": "本地门禁只运行固定 npm test/eval/gate 和固定 go test 包；命令参数不由API或报告字段提供，cwd 由仓库路径确定。Windows cmd 分支接受本地工具环境，未见外部请求到命令执行的路径。未运行会覆盖实验报告的完整门禁。"
+    },
+    {
+      "id": "RS-019",
+      "path": "scripts/test_fujian_math_batch29.py",
+      "line": 25,
+      "rule": "python.lang.security.audit.exec-detected.exec-detected",
+      "original_ids": [
+        "SG-052"
+      ],
+      "status": "existing_control",
+      "note": "测试从固定同目录脚本读取 AST，只编译白名单函数定义，用合成输入检查生成逻辑。exec 输入是仓库维护代码，不来自 API、上传文件或不可信模型输出；可改为可导入辅助模块减少动态执行，但未证实命令注入入口。"
+    },
+    {
+      "id": "RS-020",
+      "path": "services/api-gateway/internal/auth/cookies.go",
+      "line": 10,
+      "rule": "go.lang.security.audit.net.cookie-missing-secure.cookie-missing-secure",
+      "original_ids": [
+        "SG-053",
+        "SG-054",
+        "SG-055",
+        "SG-056"
+      ],
+      "status": "existing_control",
+      "note": "Cookie 已显式设置 Secure: h.cookieSecure、HttpOnly:true、SameSiteLax。配置默认按环境开启 Secure，productionSecurityProblems 在生产类似环境拒绝 SessionCookieSecure=false（config.go:497）；规则未解析动态布尔值，不应误判为缺少 Secure。"
+    },
+    {
+      "id": "RS-021",
+      "path": "services/api-gateway/internal/auth/cookies.go",
+      "line": 27,
+      "rule": "go.lang.security.audit.net.cookie-missing-secure.cookie-missing-secure",
+      "original_ids": [
+        "SG-053",
+        "SG-054",
+        "SG-055",
+        "SG-056"
+      ],
+      "status": "existing_control",
+      "note": "Cookie 已显式设置 Secure: h.cookieSecure、HttpOnly:true、SameSiteLax。配置默认按环境开启 Secure，productionSecurityProblems 在生产类似环境拒绝 SessionCookieSecure=false（config.go:497）；规则未解析动态布尔值，不应误判为缺少 Secure。"
+    },
+    {
+      "id": "RS-022",
+      "path": "services/api-gateway/internal/auth/cookies.go",
+      "line": 54,
+      "rule": "go.lang.security.audit.net.cookie-missing-secure.cookie-missing-secure",
+      "original_ids": [
+        "SG-053",
+        "SG-054",
+        "SG-055",
+        "SG-056"
+      ],
+      "status": "existing_control",
+      "note": "Cookie 已显式设置 Secure: h.cookieSecure、HttpOnly:true、SameSiteLax。配置默认按环境开启 Secure，productionSecurityProblems 在生产类似环境拒绝 SessionCookieSecure=false（config.go:497）；规则未解析动态布尔值，不应误判为缺少 Secure。"
+    },
+    {
+      "id": "RS-023",
+      "path": "services/api-gateway/internal/auth/cookies.go",
+      "line": 62,
+      "rule": "go.lang.security.audit.net.cookie-missing-secure.cookie-missing-secure",
+      "original_ids": [
+        "SG-053",
+        "SG-054",
+        "SG-055",
+        "SG-056"
+      ],
+      "status": "existing_control",
+      "note": "Cookie 已显式设置 Secure: h.cookieSecure、HttpOnly:true、SameSiteLax。配置默认按环境开启 Secure，productionSecurityProblems 在生产类似环境拒绝 SessionCookieSecure=false（config.go:497）；规则未解析动态布尔值，不应误判为缺少 Secure。"
+    },
+    {
+      "id": "RS-024",
+      "path": "services/api-gateway/internal/files/store_postgres.go",
+      "line": 221,
+      "rule": "go.lang.security.audit.database.string-formatted-query.string-formatted-query",
+      "original_ids": [
+        "SG-059"
+      ],
+      "status": "existing_control",
+      "note": "files.transition 只拼接程序生成的 $7、$8 等占位符与固定 assetColumns，tenant、id、revision、状态和错误详情通过 args... 绑定。来源状态来自代码常量；未将外部内容拼入 SQL 语法。"
+    },
+    {
+      "id": "RS-025",
+      "path": "services/api-gateway/internal/modelgovernance/managed_config_probe.go",
+      "line": 14,
+      "rule": "go.lang.security.audit.crypto.math_random.math-random-used",
+      "original_ids": [
+        "SG-069"
+      ],
+      "status": "existing_control",
+      "note": "math/rand 仅用于 retryManagedReadOnlyRequest 的毫秒级重试抖动（managed_config_probe.go:330），未用于令牌、密码、加密密钥或租约随机值。非密码学调度随机性允许使用该包。"
+    },
+    {
+      "id": "RS-026",
+      "path": "services/api-gateway/internal/score/store_postgres.go",
+      "line": 100,
+      "rule": "go.lang.security.audit.database.string-formatted-query.string-formatted-query",
+      "original_ids": [
+        "SG-070"
+      ],
+      "status": "existing_control",
+      "note": "score.ListExamGrades 拼接固定 WHERE 片段和由 len(args) 生成的占位符；Status、Query、Cursor、Limit 均单独绑定，tenant/exam 也在 WHERE 和 JOIN 中。未发现动态查询文本来自用户输入的 SQL 注入。"
+    },
+    {
+      "id": "RS-027",
+      "path": "services/ocr-worker/Dockerfile",
+      "line": 6,
+      "rule": "dockerfile.security.last-user-is-root.last-user-is-root",
+      "original_ids": [
+        "SG-096"
+      ],
+      "status": "existing_control",
+      "note": "OCR Dockerfile:6 的 USER root 只用于安装依赖；文件末尾已切换 USER nobody，之后 CMD python -m ocr_worker。Semgrep 同时报告此 Dockerfile 的部分解析错误，不能把解析到的最后 root 当作真实最终用户。"
+    }
+  ],
+  "counts": {
+    "existing_control": 21,
+    "fixed_boundary_residual": 1,
+    "supplemental_fixed": 3,
+    "trusted_local_tool": 2
+  },
+  "snapshot_source_files": 3236,
+  "engine_scanned_files": 2605,
+  "semgrepignore_skipped_from_cli": 586,
+  "original_hit_files_not_scanned_in_full": [
+    "ai-services/tests/test_http.py",
+    "ai-services/tests/test_math_v2_production.py",
+    "services/api-gateway/internal/auth/mfa_http_test.go",
+    "services/api-gateway/internal/middleware/middleware_test.go",
+    "services/api-gateway/internal/minioadapter/client_test.go",
+    "services/api-gateway/internal/server/e2e_business_command_test.go",
+    "services/api-gateway/internal/server/e2e_compose_bootstrap_test.go",
+    "services/api-gateway/internal/server/e2e_mfa_test.go",
+    "services/api-gateway/internal/server/e2e_postgres_test.go",
+    "services/api-gateway/internal/server/e2e_question_bank_import_test.go",
+    "services/api-gateway/internal/server/e2e_question_bank_test.go",
+    "services/math-verification-worker/tests/test_timeout.py",
+    "services/page-processing-worker/tests/test_main.py",
+    "tests/e2e/story060_grading_agent.py"
+  ],
+  "diagnostics": [
+    {
+      "type": "PartialParsing",
+      "path": ".github/workflows/ci.yml",
+      "lines": [
+        60
+      ]
+    },
+    {
+      "type": "PartialParsing",
+      "path": ".github/workflows/ci.yml",
+      "lines": [
+        186
+      ]
+    },
+    {
+      "type": "PartialParsing",
+      "path": "apps/student-portal/src/App.reauthentication.test.tsx",
+      "lines": [
+        10
+      ]
+    },
+    {
+      "type": "PartialParsing",
+      "path": "apps/web-admin/Dockerfile",
+      "lines": [
+        23
+      ]
+    },
+    {
+      "type": "PartialParsing",
+      "path": "apps/web-admin/src/api/reports.batch48.test.ts",
+      "lines": [
+        8
+      ]
+    },
+    {
+      "type": "PartialParsing",
+      "path": "apps/web-admin/src/components/ScoringExamples.ux.test.tsx",
+      "lines": [
+        21,
+        31
+      ]
+    },
+    {
+      "type": "PartialParsing",
+      "path": "apps/web-admin/src/features/answer-sheet-template/answerSheetTemplatePage.batch7.test.tsx",
+      "lines": [
+        118,
+        128,
+        229
+      ]
+    },
+    {
+      "type": "PartialParsing",
+      "path": "apps/web-admin/src/features/exams/management/ManagementExamArchiveDialog.test.tsx",
+      "lines": [
+        11
+      ]
+    },
+    {
+      "type": "PartialParsing",
+      "path": "apps/web-admin/src/features/question-bank/QuestionBankACL.ux.test.tsx",
+      "lines": [
+        18,
+        22,
+        25
+      ]
+    },
+    {
+      "type": "PartialParsing",
+      "path": "apps/web-admin/src/features/question-bank/QuestionBankPage.schemaRecovery.test.tsx",
+      "lines": [
+        27,
+        33,
+        36
+      ]
+    },
+    {
+      "type": "PartialParsing",
+      "path": "apps/web-admin/src/features/question-bank/questionBank.complexity.batch50.test.tsx",
+      "lines": [
+        29
+      ]
+    },
+    {
+      "type": "PartialParsing",
+      "path": "apps/web-admin/src/pages/ExamManagementPage.test.tsx",
+      "lines": [
+        11
+      ]
+    },
+    {
+      "type": "PartialParsing",
+      "path": "apps/web-admin/src/pages/PaperRubricPage.batch42.test.tsx",
+      "lines": [
+        20,
+        43
+      ]
+    },
+    {
+      "type": "PartialParsing",
+      "path": "apps/web-admin/src/pages/PaperRubricPage.test.tsx",
+      "lines": [
+        18
+      ]
+    },
+    {
+      "type": "PartialParsing",
+      "path": "apps/web-admin/src/pages/PlatformModelConfigPage.test.tsx",
+      "lines": [
+        29,
+        35
+      ]
+    },
+    {
+      "type": "PartialParsing",
+      "path": "services/api-gateway/tools/story056-postgres-e2e/Dockerfile",
+      "lines": [
+        24,
+        33
+      ]
+    },
+    {
+      "type": "PartialParsing",
+      "path": "services/api-gateway/tools/story056-real-worker-e2e/Dockerfile",
+      "lines": [
+        18
+      ]
+    },
+    {
+      "type": "PartialParsing",
+      "path": "services/ocr-worker/Dockerfile",
+      "lines": [
+        29
+      ]
+    }
+  ],
+  "diagnostic_counts": {
+    "PartialParsing": 18
+  },
+  "supplemental_evidence": "supplemental-xml-results.json",
+  "supplemental_scanner_findings_count": 3,
+  "supplemental_entry_count": 2
+}

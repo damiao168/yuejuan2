@@ -9,7 +9,7 @@ const modes = [
   { key: "manual", icon: <UserRound size={17} />, title: "人工阅卷", copy: "不依赖 AI 也可完成阅卷" }
 ];
 
-export function AISetupCard({ check, onNavigate }: { check: OnboardingCheck; onNavigate: (path: string) => void }) {
+export function AISetupCard({ check, onNavigate }: Readonly<{ check: OnboardingCheck; onNavigate: (path: string) => void }>) {
   const currentMode = typeof check.metadata?.mode === "string" ? check.metadata.mode : "manual";
   return (
     <OnboardingCheckCard check={check} action={<Button onClick={() => onNavigate(check.action_path || "/platform/model-config")}>查看 AI 设置 <ArrowRight size={15} /></Button>}>

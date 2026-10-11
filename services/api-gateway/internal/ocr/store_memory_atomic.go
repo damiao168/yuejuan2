@@ -13,9 +13,8 @@ type memorySnapshot struct {
 	idempotent map[string]string
 }
 
-// runAtomic holds the source store lock and restores all source facts on an
-// error or panic. The runtime coordinator nests Worker Runtime's equivalent
-// transaction so neither side can become visible alone.
+// runAtomic 持有来源存储锁，并在出错或 panic 时恢复全部来源事实。
+// 运行时协调器嵌套 Worker Runtime 的对应事务，使两侧不会单独变为可见。
 func (s *MemoryStore) runAtomic(fn func(*memoryTx) error) (err error) {
 	if fn == nil {
 		return ErrInvalidInput

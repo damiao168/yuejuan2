@@ -36,11 +36,22 @@ export const scoringModeLabels: Record<string, string> = {
 
 export const scoringRiskLabels: Record<string, string> = { R1: "低风险", R2: "中风险", R3: "高风险" };
 
+function scoringNote(lane: ScoringLane, mode: string): string {
+  if (lane === "ai") return "AI 仅生成建议，须由教师确认";
+  if (lane === "rule") return "规则判分；异常转人工";
+  if (mode === "SNAPSHOT_UNAVAILABLE") return "策略快照暂不可读，按人工处理";
+  if (mode === "DUAL_HUMAN") return "同校两名阅卷员互盲双评，分数不一致即仲裁";
+  return "人工评分或复核";
+}
+
 export function planQuestion(question: ScoringQuestionSummary, mode: string, riskTier: string): PlannedQuestion {
   const ai = aiQuestionTypes.has(question.question_type) && aiModes.has(mode);
   const rule = !ai && mode === "RULE_AUTO" && ["single_choice", "multiple_choice", "true_false", "fill_blank", "numeric"].includes(question.question_type);
-  const lane: ScoringLane = ai ? "ai" : rule ? "rule" : "human";
-  const note = ai ? "AI 仅生成建议，须由教师确认" : rule ? "规则判分；异常转人工" : mode === "SNAPSHOT_UNAVAILABLE" ? "策略快照暂不可读，按人工处理" : mode === "DUAL_HUMAN" ? "同校两名阅卷员互盲双评，分数不一致即仲裁" : "人工评分或复核";
+  // 分流只接受题型和冻结模式同时匹配；不能把不支持的组合当作自动评分授权。
+  let lane: ScoringLane = "human";
+  if (ai) lane = "ai";
+  else if (rule) lane = "rule";
+  const note = scoringNote(lane, mode);
   return { questionId: question.question_id, questionNo: question.question_no, questionType: question.question_type, count: question.total, mode, riskTier, lane, note };
 }
 

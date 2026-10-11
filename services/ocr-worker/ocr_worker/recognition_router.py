@@ -122,38 +122,42 @@ class RecognitionRouter:
                 reason_code="" if blocks else "empty_text_result",
             )
         if kind is RegionKind.FORMULA:
-            if subject_code not in self.formula_subjects:
-                return RoutedRecognitionResult(
-                    kind=kind,
-                    preserve_image_evidence=True,
-                    requires_human_review=True,
-                    reason_code="formula_not_enabled_for_subject",
-                )
-            if self.formula_engine is None:
-                return RoutedRecognitionResult(kind=kind, requires_human_review=True, reason_code="formula_engine_unavailable")
-            try:
-                result = self.formula_engine.recognize_formula(image_bytes)
-            except Exception:  # noqa: BLE001 - optional model runtimes expose heterogeneous errors.
-                return RoutedRecognitionResult(kind=kind, requires_human_review=True, reason_code="formula_engine_failed")
-            unsafe = result.status != "recognized" or not result.canonical_latex or result.confidence <= 0
-            return RoutedRecognitionResult(
-                kind=kind,
-                formula=result,
-                image_size=_image_size(image_bytes),
-                layout_version=getattr(self.formula_detector, "model_version", ""),
-                requires_human_review=unsafe,
-                reason_code="ambiguous_formula" if unsafe else "",
-            )
+            return self._recognize_formula(subject_code, kind, image_bytes)
         if kind is RegionKind.MIXED:
             return self._recognize_mixed(subject_code, image_bytes)
         if kind is RegionKind.DIAGRAM:
             return RoutedRecognitionResult(kind=kind, preserve_image_evidence=True, requires_human_review=True, reason_code="diagram_requires_review")
         return RoutedRecognitionResult(kind=RegionKind.UNKNOWN, preserve_image_evidence=True, requires_human_review=True, reason_code="unknown_region")
 
+    def _recognize_formula(self, subject_code: str, kind: RegionKind, image_bytes: bytes) -> RoutedRecognitionResult:
+        # 公式不可用时仍走原复核结果，不调用文字引擎替代公式证据。
+        if subject_code not in self.formula_subjects:
+            return RoutedRecognitionResult(
+                kind=kind,
+                preserve_image_evidence=True,
+                requires_human_review=True,
+                reason_code="formula_not_enabled_for_subject",
+            )
+        if self.formula_engine is None:
+            return RoutedRecognitionResult(kind=kind, requires_human_review=True, reason_code="formula_engine_unavailable")
+        try:
+            result = self.formula_engine.recognize_formula(image_bytes)
+        except Exception:  # noqa: BLE001 - 可选模型运行时可能抛出不同类型的错误。
+            return RoutedRecognitionResult(kind=kind, requires_human_review=True, reason_code="formula_engine_failed")
+        unsafe = result.status != "recognized" or not result.canonical_latex or result.confidence <= 0
+        return RoutedRecognitionResult(
+            kind=kind,
+            formula=result,
+            image_size=_image_size(image_bytes),
+            layout_version=getattr(self.formula_detector, "model_version", ""),
+            requires_human_review=unsafe,
+            reason_code="ambiguous_formula" if unsafe else "",
+        )
+
     def _recognize_mixed(self, subject_code: str, image_bytes: bytes) -> RoutedRecognitionResult:
         try:
             text_blocks = tuple(_recognize_text(self.text_engine, image_bytes))
-        except Exception:  # noqa: BLE001 - Paddle adapters expose heterogeneous errors.
+        except Exception:  # noqa: BLE001 - Paddle 适配器可能抛出不同类型的错误。
             text_blocks = ()
         if subject_code not in self.formula_subjects:
             return RoutedRecognitionResult(
@@ -182,7 +186,7 @@ class RecognitionRouter:
                 max_padding=self.formula_max_padding,
                 max_padding_height_ratio=self.formula_max_padding_height_ratio,
             )
-        except Exception:  # noqa: BLE001 - layout runtimes expose heterogeneous errors.
+        except Exception:  # noqa: BLE001 - 布局运行时可能抛出不同类型的错误。
             return RoutedRecognitionResult(
                 kind=RegionKind.MIXED,
                 text_blocks=text_blocks,
@@ -202,26 +206,35 @@ class RecognitionRouter:
                 reason_code="formula_region_not_detected",
             )
 
-        eligible = [
-            index
-            for index, region in enumerate(detected)
-            if region.detector_confidence >= self.formula_accept_detector_score and region.crop_complete
-        ]
-        recognized: dict[int, FormulaRecognitionResult] = {}
-        recognition_failed = False
-        if eligible and self.formula_engine is not None:
-            try:
-                batch = getattr(self.formula_engine, "recognize_formulas", None)
-                if callable(batch):
-                    predictions = batch([detected[index].crop for index in eligible], batch_size=self.formula_batch_size)
-                else:
-                    predictions = [self.formula_engine.recognize_formula(detected[index].crop) for index in eligible]
-                if len(predictions) != len(eligible):
-                    raise RuntimeError("formula engine returned an incomplete mixed-region batch")
-                recognized = dict(zip(eligible, predictions, strict=True))
-            except Exception:  # noqa: BLE001 - optional formula runtimes expose heterogeneous errors.
-                recognition_failed = True
+        recognized, recognition_failed = self._recognize_detected_formulas(detected)
 
+        formula_regions, unsafe = self._mixed_formula_regions(detected, recognized, recognition_failed)
+        reconciled_text = _reconcile_text_blocks(text_blocks, tuple(formula_regions))
+        reason_code = ""
+        if self.formula_engine is None:
+            reason_code = "formula_engine_unavailable"
+        elif recognition_failed:
+            reason_code = "formula_engine_failed"
+        elif unsafe:
+            reason_code = "ambiguous_formula"
+        return RoutedRecognitionResult(
+            kind=RegionKind.MIXED,
+            text_blocks=reconciled_text,
+            formula_regions=tuple(formula_regions),
+            image_size=image_size,
+            layout_version=getattr(self.formula_detector, "model_version", ""),
+            preserve_image_evidence=unsafe,
+            requires_human_review=unsafe or (not reconciled_text and not recognized),
+            reason_code=reason_code,
+        )
+
+    def _mixed_formula_regions(
+        self,
+        detected: list[FormulaRegion],
+        recognized: dict[int, FormulaRecognitionResult],
+        recognition_failed: bool,
+    ) -> tuple[list[FormulaRegionRecognition], bool]:
+        # 无候选或状态/正文不合格时标记复核，不沿用单公式的 confidence 门槛。
         formula_regions: list[FormulaRegionRecognition] = []
         unsafe = False
         for index, region in enumerate(detected):
@@ -246,24 +259,30 @@ class RecognitionRouter:
                     warnings=warnings,
                 )
             )
-        reconciled_text = _reconcile_text_blocks(text_blocks, tuple(formula_regions))
-        reason_code = ""
-        if self.formula_engine is None:
-            reason_code = "formula_engine_unavailable"
-        elif recognition_failed:
-            reason_code = "formula_engine_failed"
-        elif unsafe:
-            reason_code = "ambiguous_formula"
-        return RoutedRecognitionResult(
-            kind=RegionKind.MIXED,
-            text_blocks=reconciled_text,
-            formula_regions=tuple(formula_regions),
-            image_size=image_size,
-            layout_version=getattr(self.formula_detector, "model_version", ""),
-            preserve_image_evidence=unsafe,
-            requires_human_review=unsafe or (not reconciled_text and not recognized),
-            reason_code=reason_code,
-        )
+        return formula_regions, unsafe
+
+    def _recognize_detected_formulas(self, detected: list[FormulaRegion]) -> tuple[dict[int, FormulaRecognitionResult], bool]:
+        # 只有合格完整裁剪参与推理；未合格区域仍由调用方保留为待复核证据。
+        eligible = [
+            index
+            for index, region in enumerate(detected)
+            if region.detector_confidence >= self.formula_accept_detector_score and region.crop_complete
+        ]
+        recognized: dict[int, FormulaRecognitionResult] = {}
+        recognition_failed = False
+        if eligible and self.formula_engine is not None:
+            try:
+                batch = getattr(self.formula_engine, "recognize_formulas", None)
+                if callable(batch):
+                    predictions = batch([detected[index].crop for index in eligible], batch_size=self.formula_batch_size)
+                else:
+                    predictions = [self.formula_engine.recognize_formula(detected[index].crop) for index in eligible]
+                if len(predictions) != len(eligible):
+                    raise RuntimeError("formula engine returned an incomplete mixed-region batch")
+                recognized = dict(zip(eligible, predictions, strict=True))
+            except Exception:  # noqa: BLE001 - 可选公式运行时可能抛出不同类型的错误。
+                recognition_failed = True
+        return recognized, recognition_failed
 
 
 def _recognize_text(engine: OCREngine, image_bytes: bytes) -> list[OCRBlock]:
@@ -276,7 +295,7 @@ def _recognize_text(engine: OCREngine, image_bytes: bytes) -> list[OCRBlock]:
 def _image_size(image_bytes: bytes) -> tuple[int, int] | None:
     try:
         image = open_image(image_bytes)
-    except Exception:  # noqa: BLE001 - invalid image is reported by the routed result.
+    except Exception:  # noqa: BLE001 - 无效图像由路由结果报告。
         return None
     try:
         return image.width, image.height
@@ -416,20 +435,32 @@ class PaddleFormulaNetEngine:
 
         keys = list(misses)
         if keys:
-            predicted = self._predict_uncached([miss_images[key] for key in keys], batch_size=batch_size)
-            if len(predicted) != len(keys):
-                raise RuntimeError(f"formula batch returned {len(predicted)} results for {len(keys)} inputs")
-            for key, result in zip(keys, predicted, strict=True):
-                for index in misses[key]:
-                    results[index] = result
-                if self._cache_size and result.status == "recognized":
-                    self._cache[key] = result
-                    self._cache.move_to_end(key)
-                    while len(self._cache) > self._cache_size:
-                        self._cache.popitem(last=False)
+            self._fill_formula_results(keys, misses, miss_images, results, batch_size=batch_size)
         return [result if result is not None else FormulaRecognitionResult(
             "", "", 0, self.engine_name, self.model_version, "failed", ("missing_batch_result",),
         ) for result in results]
+
+    def _fill_formula_results(
+        self,
+        keys: list[str],
+        misses: dict[str, list[int]],
+        miss_images: dict[str, bytes],
+        results: list[FormulaRecognitionResult | None],
+        *,
+        batch_size: int,
+    ) -> None:
+        predicted = self._predict_uncached([miss_images[key] for key in keys], batch_size=batch_size)
+        # 先核对数量再回填和写新缓存；此前命中已有缓存时的 LRU 提升由调用方完成。
+        if len(predicted) != len(keys):
+            raise RuntimeError(f"formula batch returned {len(predicted)} results for {len(keys)} inputs")
+        for key, result in zip(keys, predicted, strict=True):
+            for index in misses[key]:
+                results[index] = result
+            if self._cache_size and result.status == "recognized":
+                self._cache[key] = result
+                self._cache.move_to_end(key)
+                while len(self._cache) > self._cache_size:
+                    self._cache.popitem(last=False)
 
     def _predict_uncached(self, images: list[bytes], *, batch_size: int) -> list[FormulaRecognitionResult]:
         pipeline = self._load()
@@ -442,8 +473,8 @@ class PaddleFormulaNetEngine:
             try:
                 raw = pipeline.predict(input=image_paths, batch_size=min(batch_size, len(image_paths)))
             except TypeError:
-                # Compatibility with older PaddleOCR adapters. This path keeps
-                # correctness but intentionally remains visible in benchmarks.
+                # 兼容旧版 PaddleOCR 适配器。此路径保留
+                # 正确性，但刻意让基准测试仍能反映其使用情况。
                 raw = [next(iter(pipeline.predict(input=path)), {}) for path in image_paths]
             predictions = _parse_formula_predictions(raw)
         finally:
@@ -468,9 +499,9 @@ class PaddleFormulaNetEngine:
             from paddleocr import FormulaRecognition
         except ImportError as exc:
             raise RuntimeError("PaddleOCR formula runtime is not installed") from exc
-        # Paddle's oneDNN executor currently cannot run every PIR attribute
-        # emitted by FormulaNet/Layout models on CPU. The plain executor is
-        # slower but deterministic and avoids a task-ending NotImplementedError.
+        # Paddle 的 oneDNN 执行器目前无法在 CPU 上执行
+        # FormulaNet/Layout 模型生成的所有 PIR 属性。普通执行器
+        # 较慢，但行为确定，可避免导致任务终止的 NotImplementedError。
         self._pipeline = FormulaRecognition(model_name=self.model_version, device=self.device, enable_mkldnn=False)
         return self._pipeline
 

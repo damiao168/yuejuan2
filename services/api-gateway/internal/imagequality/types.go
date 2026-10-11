@@ -153,8 +153,7 @@ type Store interface {
 	GetRun(ctx context.Context, tenantID string, runID string) (Run, error)
 }
 
-// TransactionalStore is implemented by the production PostgreSQL store. It
-// owns commands whose domain and Worker Runtime writes must commit together.
+// TransactionalStore 由生产 PostgreSQL 存储实现，负责领域写入和 Worker Runtime 写入须共同提交的命令。
 type TransactionalStore interface {
 	Store
 	CreateRunsWithTasks(ctx context.Context, tenantID, actorID string, input CreateRunsInput) ([]Run, error)

@@ -114,8 +114,7 @@ func (s *PostgresStore) DecideWaiver(ctx context.Context, tenantID, waiverID, ac
 		return Waiver{}, err
 	}
 	defer func() { _ = tx.Rollback() }()
-	// A decision can only be inserted once. The unique key is the immutable
-	// state transition, not a mutable status column on the request.
+	// 一个决定只能插入一次。唯一键表示不可变状态转换，而不是请求上的可变状态列。
 	var exists bool
 	if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM release_gate_waiver_request WHERE tenant_id = $1 AND id = $2::uuid)`, tenantID, waiverID).Scan(&exists); err != nil {
 		return Waiver{}, err

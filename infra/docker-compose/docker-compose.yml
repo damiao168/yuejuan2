@@ -14,9 +14,9 @@ services:
       POSTGRES_DB: ${EDUGRADE_POSTGRES_DB}
       POSTGRES_USER: ${EDUGRADE_POSTGRES_USER}
       POSTGRES_PASSWORD: ${EDUGRADE_POSTGRES_PASSWORD}
-    # Data-plane ports bind to loopback by default; production deployments
-    # should only expose nginx. Override EDUGRADE_INTERNAL_BIND_HOST for
-    # isolated development hosts that genuinely need LAN access.
+    # 数据服务端口默认绑定回环地址；生产部署
+    # 应只暴露 nginx。确实需要局域网访问的隔离开发主机
+    # 可覆盖 EDUGRADE_INTERNAL_BIND_HOST。
     ports:
       - "${EDUGRADE_INTERNAL_BIND_HOST:-127.0.0.1}:${EDUGRADE_POSTGRES_PORT:-5432}:5432"
     volumes:
@@ -273,7 +273,7 @@ services:
         BUILD_TIME: ${EDUGRADE_BUILD_TIME:-unknown}
         IMAGE_DIGEST: ${EDUGRADE_IMAGE_DIGEST:-unknown}
         RELEASE_ID: ${EDUGRADE_RELEASE_ID:-local}
-        SCHEMA_VERSION: ${EDUGRADE_SCHEMA_VERSION:-000180}
+        SCHEMA_VERSION: ${EDUGRADE_SCHEMA_VERSION:-000184}
         GOPROXY: ${EDUGRADE_GO_PROXY:-}
     image: ${EDUGRADE_API_GATEWAY_IMAGE:-edugrade/api-gateway:local}
     container_name: edugrade-api-gateway
@@ -456,9 +456,9 @@ services:
       EDUGRADE_GRADING_MODEL_READINESS_CACHE_SECONDS: ${EDUGRADE_GRADING_MODEL_READINESS_CACHE_SECONDS:-10}
       EDUGRADE_GRADING_MODEL_QUEUE_TIMEOUT_SECONDS: ${EDUGRADE_GRADING_MODEL_QUEUE_TIMEOUT_SECONDS:-5}
       EDUGRADE_GRADING_MODEL_MAX_RETRIES: ${EDUGRADE_GRADING_MODEL_MAX_RETRIES:-1}
-      EDUGRADE_GRADING_AGENT_TLS_CERT_FILE: ${EDUGRADE_GRADING_AGENT_TLS_CERT_FILE:-}
-      EDUGRADE_GRADING_AGENT_TLS_KEY_FILE: ${EDUGRADE_GRADING_AGENT_TLS_KEY_FILE:-}
-      EDUGRADE_GRADING_AGENT_HEALTH_URL: ${EDUGRADE_GRADING_AGENT_HEALTH_URL:-http://127.0.0.1:8100/health}
+      EDUGRADE_GRADING_AGENT_TLS_CERT_FILE: ${EDUGRADE_GRADING_AGENT_TLS_CERT_FILE:-/run/secrets/grading-agent-tls/server.crt}
+      EDUGRADE_GRADING_AGENT_TLS_KEY_FILE: ${EDUGRADE_GRADING_AGENT_TLS_KEY_FILE:-/run/secrets/grading-agent-tls/server.key}
+      EDUGRADE_GRADING_AGENT_HEALTH_URL: ${EDUGRADE_GRADING_AGENT_HEALTH_URL:-https://grading-agent:8100/health}
       SSL_CERT_FILE: ${EDUGRADE_INTERNAL_CA_FILE:-}
     volumes:
       - ${EDUGRADE_INTERNAL_CA_DIR:-./certs/internal-ca}:/run/secrets/internal-ca:ro
@@ -467,7 +467,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     healthcheck:
-      test: ["CMD-SHELL", "python -c \"import os,urllib.request; urllib.request.urlopen(os.environ.get('EDUGRADE_GRADING_AGENT_HEALTH_URL','http://127.0.0.1:8100/health'),timeout=3).read()\""]
+      test: ["CMD-SHELL", "python -c \"import os,urllib.request; urllib.request.urlopen(os.environ['EDUGRADE_GRADING_AGENT_HEALTH_URL'],timeout=3).read()\""]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -516,7 +516,7 @@ services:
       EDUGRADE_OCR_HEARTBEAT_TIMEOUT: ${EDUGRADE_OCR_HEARTBEAT_TIMEOUT:-3}
       EDUGRADE_OCR_RUNTIME_ENABLED: "true"
       EDUGRADE_MATH_RUNTIME_ENABLED: "false"
-      EDUGRADE_MATH_VERIFY_BASE_URL: ${EDUGRADE_INTERNAL_MATH_VERIFY_BASE_URL:-http://math-verification-worker:8092}
+      EDUGRADE_MATH_VERIFY_BASE_URL: ${EDUGRADE_INTERNAL_MATH_VERIFY_BASE_URL:-https://math-verification-worker:8092}
       EDUGRADE_MATH_VERIFY_TOKEN: ${EDUGRADE_MATH_VERIFY_TOKEN}
       EDUGRADE_FORMULA_MODEL_VERSION: ${EDUGRADE_FORMULA_MODEL_VERSION:-PP-FormulaNet_plus-M}
     mem_limit: ${EDUGRADE_OCR_WORKER_MEM_LIMIT:-4g}
@@ -558,7 +558,7 @@ services:
       EDUGRADE_OCR_HEARTBEAT_TIMEOUT: ${EDUGRADE_OCR_HEARTBEAT_TIMEOUT:-3}
       EDUGRADE_OCR_RUNTIME_ENABLED: "false"
       EDUGRADE_MATH_RUNTIME_ENABLED: ${EDUGRADE_MATH_RUNTIME_ENABLED:-true}
-      EDUGRADE_MATH_VERIFY_BASE_URL: ${EDUGRADE_INTERNAL_MATH_VERIFY_BASE_URL:-http://math-verification-worker:8092}
+      EDUGRADE_MATH_VERIFY_BASE_URL: ${EDUGRADE_INTERNAL_MATH_VERIFY_BASE_URL:-https://math-verification-worker:8092}
       EDUGRADE_MATH_VERIFY_TOKEN: ${EDUGRADE_MATH_VERIFY_TOKEN}
       EDUGRADE_FORMULA_MODEL_VERSION: ${EDUGRADE_FORMULA_MODEL_VERSION:-PP-FormulaNet_plus-M}
     mem_limit: ${EDUGRADE_MATH_RECOGNITION_WORKER_MEM_LIMIT:-4g}
@@ -698,9 +698,9 @@ services:
       EDUGRADE_MATH_VERIFY_TOKEN: ${EDUGRADE_MATH_VERIFY_TOKEN}
       EDUGRADE_MATH_VERIFY_PORT: 8092
       EDUGRADE_MATH_VERIFY_TIMEOUT_SECONDS: ${EDUGRADE_MATH_VERIFY_TIMEOUT_SECONDS:-3}
-      EDUGRADE_MATH_VERIFY_TLS_CERT_FILE: ${EDUGRADE_MATH_VERIFY_TLS_CERT_FILE:-}
-      EDUGRADE_MATH_VERIFY_TLS_KEY_FILE: ${EDUGRADE_MATH_VERIFY_TLS_KEY_FILE:-}
-      EDUGRADE_MATH_VERIFY_HEALTH_URL: ${EDUGRADE_MATH_VERIFY_HEALTH_URL:-http://127.0.0.1:8092/healthz}
+      EDUGRADE_MATH_VERIFY_TLS_CERT_FILE: ${EDUGRADE_MATH_VERIFY_TLS_CERT_FILE:-/run/secrets/math-verifier-tls/server.crt}
+      EDUGRADE_MATH_VERIFY_TLS_KEY_FILE: ${EDUGRADE_MATH_VERIFY_TLS_KEY_FILE:-/run/secrets/math-verifier-tls/server.key}
+      EDUGRADE_MATH_VERIFY_HEALTH_URL: ${EDUGRADE_MATH_VERIFY_HEALTH_URL:-https://math-verification-worker:8092/healthz}
       SSL_CERT_FILE: ${EDUGRADE_INTERNAL_CA_FILE:-}
     volumes:
       - ${EDUGRADE_INTERNAL_CA_DIR:-./certs/internal-ca}:/run/secrets/internal-ca:ro
@@ -708,7 +708,7 @@ services:
     expose: ["8092"]
     mem_limit: ${EDUGRADE_MATH_VERIFY_MEM_LIMIT:-1g}
     healthcheck:
-      test: ["CMD-SHELL", "python -c \"import os,urllib.request; urllib.request.urlopen(os.environ.get('EDUGRADE_MATH_VERIFY_HEALTH_URL','http://127.0.0.1:8092/healthz'),timeout=2).read()\""]
+      test: ["CMD-SHELL", "python -c \"import os,urllib.request; urllib.request.urlopen(os.environ['EDUGRADE_MATH_VERIFY_HEALTH_URL'],timeout=2).read()\""]
       interval: 15s
       timeout: 3s
       retries: 5

@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "registered": 506,
-  "max_registered_gaps": 252,
-  "max_legacy_public_read": 87,
-  "max_legacy_public_command": 121,
+  "max_registered_gaps": 248,
+  "max_legacy_public_read": 85,
+  "max_legacy_public_command": 119,
   "allowed_public_command_gaps": [
     "DELETE /api/v1/auth/sessions/{id}",
     "DELETE /api/v1/exams/{examId}/answer-sheet-template-binding",
@@ -57,7 +57,6 @@
     "POST /api/v1/exams/{examId}/finalize",
     "POST /api/v1/exams/{examId}/papers",
     "POST /api/v1/exams/{examId}/questions",
-    "POST /api/v1/exams/{examId}/readiness/confirm",
     "POST /api/v1/exams/{examId}/start-collection",
     "POST /api/v1/exams/{examId}/submissions",
     "POST /api/v1/exams/{examId}/validate-paper-config",
@@ -123,7 +122,6 @@
     "POST /api/v1/submissions/{id}/student-match/confirm",
     "POST /api/v1/submissions/{id}/student-match/unknown",
     "POST /api/v1/tenants",
-    "POST /api/v1/users",
     "PUT /api/v1/exams/{examId}/answer-sheet-template-binding",
     "PUT /api/v1/exams/{examId}/double-mark-policy",
     "PUT /api/v1/exams/{examId}/questions/{questionId}/seed-policy",

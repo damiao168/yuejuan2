@@ -1,0 +1,5 @@
+﻿key,severity,type,rule,file,line,message,effort,status
+eb390af3-af14-4c27-b33c-0b1442f95181,MAJOR,CODE_SMELL,python:S125,docs/architecture/tools/build_preview.py,17,Remove this commented out code.,5min,OPEN
+98688ff8-f75e-4bbb-897a-2eaf11ee1c8f,MAJOR,BUG,javascript:S905,docs/architecture/tools/check_preview_typography.js,2,Expected an assignment or function call and instead saw an expression.,10min,OPEN
+6eb1de9a-c6f8-4662-9a79-01e20787127a,CRITICAL,CODE_SMELL,go:S3776,services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go,198,Refactor this method to reduce its Cognitive Complexity from 21 to the 15 allowed.,11min,OPEN
+32ec19c6-7711-4694-b5dd-6577c7ecf0e9,CRITICAL,CODE_SMELL,go:S3776,services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go,659,Refactor this method to reduce its Cognitive Complexity from 19 to the 15 allowed.,9min,OPEN

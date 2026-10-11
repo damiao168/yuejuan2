@@ -69,6 +69,7 @@ func TestNewClientRejectsTLSBeforeVersion12(t *testing.T) {
 	server := httptest.NewUnstartedServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
 		t.Fatal("TLS 1.1 endpoint must be rejected before sending an HTTP request")
 	}))
+	// 故意只提供旧协议，验证生产客户端在发送 HTTP 前拒绝它；这不是客户端的 TLS 配置。
 	server.TLS = &tls.Config{MaxVersion: tls.VersionTLS11}
 	server.StartTLS()
 	defer server.Close()

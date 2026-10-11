@@ -40,7 +40,7 @@ export function WorkbenchOverlays({
   resolvingConflict,
   onClearDraftConflict,
   onApplyDraftConflict
-}: WorkbenchOverlaysProps) {
+}: Readonly<WorkbenchOverlaysProps>) {
   return (
     <>
       <GoldPaperManagerDrawer open={goldPaperManagerOpen} examId={initialExamId || undefined} onClose={onCloseGoldPaperManager} />

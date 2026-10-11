@@ -12,7 +12,7 @@
 
 ## 智能阅卷边界
 
-`grading-agent` 只监听 Compose 内网 `8100`，不映射宿主机端口，也不经过 Nginx 暴露。浏览器只能调用 API 网关。服务通过 `host.docker.internal` 访问宿主机 llama.cpp `8087`；`/health` 表示服务存活，`/ready` 表示模型运行时可用。
+`grading-agent` 只监听 Compose 内网 `8100`，使用 TLS，不映射宿主机端口，也不经过 Nginx 暴露。浏览器只能调用 API 网关。服务通过 `host.docker.internal` 访问宿主机 llama.cpp `8087`；`/health` 表示服务存活，`/ready` 表示模型运行时可用。
 
 当前模型仍为影子建议：教师必须复核，作文和论述题仅保存影子结果，不允许自动发布最终成绩。
 
@@ -25,11 +25,28 @@ Copy-Item .env.example .env
 
 至少替换：PostgreSQL、Redis、MinIO Root 与应用账号、Grafana 密码，`EDUGRADE_QDRANT_API_KEY`，以及长度不少于 32 字符且彼此不同的 `EDUGRADE_GRADING_AGENT_TOKEN`、`EDUGRADE_MATH_VERIFY_TOKEN`。同时通过下文的同步脚本写入本地模型 `EDUGRADE_GRADING_MODEL_API_KEY`。令牌只放在未提交的 `.env`，每个内部服务边界使用独立令牌。
 
+### 本地内部 TLS
+
+所有跨容器的 Grading Agent 和数学验证连接都使用 HTTPS，包括 `local`/`development`/`test`。容器仍监听 `0.0.0.0`；不要打开仅限同一主机网络命名空间内 IPv4 回环地址的明文开发例外。
+
+本地隔离开发可用已安装的 OpenSSL 生成两天有效的测试证书，在本目录执行：
+
+```powershell
+python .\scripts\generate-internal-test-certificates.py --environment local --output-dir .\certs --openssl D:\Anaconda3\Library\bin\openssl.exe
+```
+
+上述 OpenSSL 路径只是当前 Windows 开发机示例，其他主机使用自己的安装路径；Ubuntu CI 自动寻找已安装的 `openssl`。输出目录必须不存在，脚本拒绝覆盖现有证书。已有 `certs` 的部署应在另一个新目录生成，并在未提交的 `.env` 中同步三个 `*_DIR` 路径，不要删除或覆盖正在使用的密钥。
+
+只把 `internal-ca/ca.crt` 和各服务的 `server.crt` / `server.key` 挂载给对应服务；`private-ca` 包含签发私钥，绝不能挂载或作为 CI artifact。测试服务私钥在 POSIX 上是只读、可供不同非 root UID 读取，Windows 还需按本机 ACL 与 Docker 文件共享权限核实可读性。生产使用组织 PKI、受限密钥权限和轮换流程，不使用此脚本生成的测试 CA。
+
+`.env.example` 已配置容器内证书路径、HTTPS URL 与 CA。健康探针使用证书 SAN 中的 Docker DNS 名 `grading-agent` / `math-verification-worker`，并验证 CA 和主机名；不使用跳过校验选项。
+
 ### 从既有部署升级
 
 `.env` 不随仓库更新，升级后需要手工补齐以下新增项，否则 `preflight.ps1` 会直接拒绝启动。预检还会核对 `EDUGRADE_AI_PROMPT_VERSION` 与受治理提示词清单的版本，避免旧配置让评分服务反复重启：
 
 - `EDUGRADE_QDRANT_API_KEY`：**必填**。Qdrant 此前无鉴权，现在容器会读取该值；网关侧用同一个值发送 `api-key` 头，两端必须一致。
+- 既有 `.env` 的 `EDUGRADE_AI_SERVICE_URL`、`EDUGRADE_INTERNAL_MATH_VERIFY_BASE_URL` 和两个 `*_HEALTH_URL` 改为示例中的 HTTPS 地址；补齐内部 CA、两个服务的证书/私钥路径和对应主机目录。主 Compose 的这两条链路不再允许本地环境省略 TLS；先准备并验证非 root 进程能读取证书，再升级服务。预检不会改写已有 `.env`。
 - `EDUGRADE_REDIS_USERNAME` / `EDUGRADE_REDIS_PASSWORD`：API 使用独立 ACL 用户；容器关闭 Redis 默认用户，并拒绝空用户名或空密码启动。应用 ACL 禁止管理类和危险命令。
 - production-like 环境必须设置 `EDUGRADE_REDIS_TLS_ENABLED=true`。将 Redis 服务证书按 `server.crt` / `server.key` 与签发 CA 的 `ca.crt` 放入 `EDUGRADE_REDIS_CERTS_DIR`，另将 CA 的 `ca.crt` 放入 `EDUGRADE_REDIS_CA_DIR`；`EDUGRADE_REDIS_TLS_CA_FILE` 应指向容器内 `/run/secrets/redis-ca/ca.crt`。服务证书必须包含内部 DNS 名 `redis`（或同步调整 `EDUGRADE_REDIS_TLS_SERVER_NAME`）。
 - `EDUGRADE_POSTGRES_APP_USER` / `EDUGRADE_POSTGRES_APP_PASSWORD`：API 专用低权限登录账号；不能与迁移账号相同，密码至少 32 字符。
@@ -141,8 +158,8 @@ docker compose --env-file .env -f docker-compose.yml up -d --build grading-agent
 没有公开的 grading-agent 地址。需要诊断时使用：
 
 ```powershell
-docker compose --env-file .env -f docker-compose.yml exec grading-agent wget -q -O - http://127.0.0.1:8100/health
-docker compose --env-file .env -f docker-compose.yml exec grading-agent wget -q -O - http://127.0.0.1:8100/ready
+docker compose --env-file .env -f docker-compose.yml exec grading-agent python -c "import os,urllib.request; print(urllib.request.urlopen(os.environ['EDUGRADE_GRADING_AGENT_HEALTH_URL'],timeout=3).read().decode())"
+docker compose --env-file .env -f docker-compose.yml exec grading-agent python -c "import os,urllib.request; print(urllib.request.urlopen(os.environ['EDUGRADE_GRADING_AGENT_HEALTH_URL'].removesuffix('/health')+'/ready',timeout=5).read().decode())"
 ```
 
 ## 常用运维

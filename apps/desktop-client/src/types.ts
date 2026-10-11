@@ -130,6 +130,8 @@ export interface Rubric {
   status: string;
   max_score: number;
   points: RubricPoint[];
+  deductions?: Record<string, unknown>[];
+  examples?: Record<string, unknown>[];
 }
 
 export interface Question {
@@ -198,6 +200,8 @@ export interface OfflineTaskPackage {
   warnings: string[];
   downloadedAt: string;
   rubricVersion?: string;
+  // 旧加密草稿可能没有来源标记；界面不能把旧版可编辑题库快照称为任务冻结细则。
+  assessmentSource?: "task_context";
 }
 
 export interface OfflineGradeDraft {
@@ -221,6 +225,17 @@ export interface OfflineDraftRecord {
   syncMessage?: string;
   packageSnapshot: OfflineTaskPackage;
   draft: OfflineGradeDraft;
+  // 可选以兼容旧草稿；首次发送前写入加密正文，重启后仍用同一命令和输入核对回执。
+  submissionCommand?: OfflineGradeCommand;
+}
+
+export interface OfflineGradeCommand {
+  id: string;
+  taskId: string;
+  server: string;
+  tenantId: string;
+  actorId: string;
+  payload: import("./api/review").SubmitHumanGradePayload;
 }
 
 export interface SubmissionQualityIssue {
@@ -264,6 +279,9 @@ export interface SyncQueueItem {
   examId?: string;
   captureBatchId?: string;
   examName?: string;
+  /** 名称只辅助核对；上传归属始终沿用 examId/captureBatchId。 */
+  captureBatchName?: string;
+  captureBatchCreatedAt?: string;
   submissionId?: string;
   pageNo?: number;
   fileName?: string;
@@ -274,9 +292,9 @@ export interface SyncQueueItem {
   serverStatus?: string;
   requiresReselect?: boolean;
   qualityChecks?: ScanQualityCheck[];
-  /** Native SQLite/spool identity. It is never a filesystem path. */
+  /** 原生 SQLite 和暂存区中的标识，不是文件系统路径。 */
   localAssetId?: string;
-  /** Stable upload identity, derived from the asset hash and answer-page context. */
+  /** 由资产哈希和答题页上下文派生的稳定上传标识。 */
   idempotencyKey?: string;
   retryCount?: number;
   confirmedOffset?: number;

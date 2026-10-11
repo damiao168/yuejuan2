@@ -1,0 +1,2512 @@
+{
+  "reviewed_at": "2026-10-11T15:13:20.179243+08:00",
+  "engine": "CodeQL CLI 2.27.2, Rust security-and-quality 41 queries",
+  "codeql_version": "2.27.2",
+  "source_root": "D:\\tools\\audit-codeql-20261010\\source-20261011",
+  "sarif_sha256": "69b53cea47bc6506c0a889325414b1f35a1ded9f492c61ba4e640a91a1766062",
+  "manifest_sha256": "f939ec3a24e837f45fba766fc1d614ad75d63707d8303e2f090029787506a56f",
+  "raw_rust_results_total": 14,
+  "raw_security_results_reviewed": 14,
+  "raw_quality_results_reviewed": 0,
+  "raw_security_severity_counts": {
+    "critical": 14
+  },
+  "human_verdict_counts": {
+    "false_positive_context": 3,
+    "intentional_test_behavior": 11
+  },
+  "finding_reviews_pending": 0,
+  "confirmed_production_hardcoded_crypto_vulnerabilities_in_reviewed_results": 0,
+  "confirmed_production_exploits_in_reviewed_results": 0,
+  "scope": "逐条核验这14个首轮有效Rust SARIF告警的固定快照上下文，不是全Rust逐文件审读或完整加密设计认证。若复扫改变SARIF，须重新对齐hash/索引/行号/流路径后才能作为新结果核验。",
+  "source_validation": "所有主告警及列出的项目支持源码SHA256均匹配原扫描维护源码清单；Cargo.lock及锁定第三方依赖源码按旁置支持附件独立记录。",
+  "tests_executed_in_this_review": false,
+  "random_source_fault_injection_executed": false,
+  "business_sources_modified": false,
+  "support_attachments": [
+    {
+      "path": "rust-root-finding-review-part.json",
+      "sha256": "1c541e218a44e72943ead2b5f3ea6fbcafda3c78dd890a3836fb440f70cb237e"
+    },
+    {
+      "path": "rust-review-test-scope.json",
+      "sha256": "9c473a3275eca0c9e0c92796349a0571d4bc9784e99ea73729467bc358c2c95c"
+    }
+  ],
+  "source_extraction_limitations": "本数据库官方度量为13个Rust文件without error、3个with errors；有30条warning，CRLF多行SQL字面量位置告警和generate_context宏未成功展开仍需在主执行报告保留。候选上下文结论不消除这些语义覆盖限制，不保证随机nonce永不碰撞。",
+  "findings": [
+    {
+      "review_id": "CQ-RUST-001",
+      "sarif_result_index_zero_based": 0,
+      "rule_id": "rust/hard-coded-cryptographic-value",
+      "path": "apps/desktop-client/src-tauri/src/durable_store/paths.rs",
+      "line": 105,
+      "raw_physical_location": {
+        "artifactLocation": {
+          "uri": "apps/desktop-client/src-tauri/src/durable_store/paths.rs",
+          "uriBaseId": "%SRCROOT%",
+          "index": 0
+        },
+        "region": {
+          "startLine": 105,
+          "startColumn": 19,
+          "endColumn": 23
+        }
+      },
+      "raw_message": "This hard-coded value is used as [a key](1).\nThis hard-coded value is used as [a key](2).",
+      "raw_level": null,
+      "raw_rule_default_level": "warning",
+      "raw_problem_severity": "warning",
+      "effective_problem_level": "warning",
+      "effective_level_derivation": "result.level, then rule.defaultConfiguration.level, then rule properties.problem.severity; original fields retained",
+      "raw_security_severity": "9.8",
+      "raw_security_band": "critical",
+      "security_finding": true,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "false_positive_context",
+      "human_severity": "none_for_this_rule",
+      "reason": "paths.rs:105 的 true 是 durable_data_exists 返回的布尔存在标志，crypto.rs:168 只把它用作已有密文时拒绝生成新密钥的分支条件；该分支 return Err。实际返回密钥来自凭据管理器已保存的32字节值，或 OsRng 填满的新32字节数组。原始 codeFlow 的 bool guard -> master_key 返回值关联是保守流摘要，不存在 bool 转为 AES key 的实现。",
+      "recommendation": "保留随机填充与已有密文时缺失密钥的失败分支；不为消除这条告警改成固定密钥或 nonce。若需抑制告警，按本条随机填充/布尔控制流证据收窄规则模型或单项解释，保持其他生产硬编码密钥检查。",
+      "snapshot_sha256": "18d6cd3ad7c0df27444117953ed996e7532e1f07331cd4c56e57f92998c796a6",
+      "current_workspace_used_for_verdict": false,
+      "evidence": [
+        {
+          "path": "apps/desktop-client/src-tauri/src/durable_store/paths.rs",
+          "start_line": 98,
+          "end_line": 113,
+          "snapshot_sha256": "18d6cd3ad7c0df27444117953ed996e7532e1f07331cd4c56e57f92998c796a6",
+          "lines": [
+            "98: // 这里有意采取保守判断。只要 SQLite 存储或受控暂存资产",
+            "99: // 已经存在，密钥缺失就不能视为首次启动。",
+            "100: // 应要求恢复凭据管理器条目，",
+            "101: // 而不是创建无法解密现有证据的新密钥。",
+            "102: pub(crate) fn durable_data_exists(root: &Path) -> Result<bool, String> {",
+            "103:     let database = db_path(root);",
+            "104:     if database.exists() {",
+            "105:         return Ok(true);",
+            "106:     }",
+            "107:     let spool = spool_path(root);",
+            "108:     let mut entries = fs::read_dir(&spool).map_err(|error| error.to_string())?;",
+            "109:     Ok(entries",
+            "110:         .next()",
+            "111:         .transpose()",
+            "112:         .map_err(|error| error.to_string())?",
+            "113:         .is_some())"
+          ]
+        },
+        {
+          "path": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+          "start_line": 155,
+          "end_line": 181,
+          "snapshot_sha256": "8fdadd2b87d65a01f913540db8864a62eb37d2c6c71d93dbf26d177befd8cb35",
+          "lines": [
+            "155: #[cfg(windows)]",
+            "156: pub(crate) fn master_key(root: &Path) -> Result<[u8; 32], String> {",
+            "157:     // 每个 v2 账号作用域都有独立的凭据管理器密钥，使账号密文",
+            "158:     // 在加密层面彼此隔离，同时不会覆盖",
+            "159:     // 恢复隔离数据所需的旧版 v1 凭据。",
+            "160:     let account = durable_credential_account(root)?;",
+            "161:     match read_key_for_account(&account)? {",
+            "162:         Some(key) => Ok(key),",
+            "163:         None => {",
+            "164:             // 站点已有存储时，不能用新密钥替代丢失的凭据。",
+            "165:             // 否则队列中的扫描件会看似可恢复，",
+            "166:             // 直到后续解密失败才暴露问题，还可能让操作人员",
+            "167:             // 误删唯一的加密原件副本。",
+            "168:             if durable_data_exists(root)? {",
+            "169:                 return Err(\"durable master key is missing while encrypted local data exists; recovery requires the original Windows Credential Manager entry and the client will not create a replacement key\".into());",
+            "170:             }",
+            "171:             let mut key = [0_u8; 32];",
+            "172:             OsRng.fill_bytes(&mut key);",
+            "173:             write_key_for_account(&account, &key)?;",
+            "174:             Ok(key)",
+            "175:         }",
+            "176:     }",
+            "177: }",
+            "178: ",
+            "179: #[cfg(not(windows))]",
+            "180: pub(crate) fn master_key(_root: &Path) -> Result<[u8; 32], String> {",
+            "181:     Err(\"durable local storage requires Windows Credential Manager and will not fall back to plaintext storage\".into())"
+          ]
+        },
+        {
+          "path": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+          "start_line": 125,
+          "end_line": 152,
+          "snapshot_sha256": "8fdadd2b87d65a01f913540db8864a62eb37d2c6c71d93dbf26d177befd8cb35",
+          "lines": [
+            "125: pub(crate) fn encrypt_bytes(key: &[u8; 32], plaintext: &[u8]) -> Result<(Vec<u8>, String), String> {",
+            "126:     let cipher = Aes256Gcm::new_from_slice(key).map_err(|_| \"durable encryption key is invalid\")?;",
+            "127:     let mut nonce = [0_u8; 12];",
+            "128:     OsRng.fill_bytes(&mut nonce);",
+            "129:     let ciphertext = cipher",
+            "130:         .encrypt(Nonce::from_slice(&nonce), plaintext)",
+            "131:         .map_err(|_| \"durable payload encryption failed\")?;",
+            "132:     Ok((ciphertext, BASE64.encode(nonce)))",
+            "133: }",
+            "134: ",
+            "135: pub(crate) fn decrypt_bytes(",
+            "136:     key: &[u8; 32],",
+            "137:     nonce: &str,",
+            "138:     ciphertext: &[u8],",
+            "139: ) -> Result<Vec<u8>, String> {",
+            "140:     let nonce = BASE64",
+            "141:         .decode(nonce)",
+            "142:         .map_err(|_| \"durable payload nonce is invalid\")?;",
+            "143:     if nonce.len() != 12 {",
+            "144:         return Err(\"durable payload nonce has an invalid length\".into());",
+            "145:     }",
+            "146:     let cipher = Aes256Gcm::new_from_slice(key).map_err(|_| \"durable encryption key is invalid\")?;",
+            "147:     cipher",
+            "148:         .decrypt(Nonce::from_slice(&nonce), ciphertext)",
+            "149:         .map_err(|_| {",
+            "150:             \"durable payload cannot be decrypted; secure local key may be unavailable or corrupted\"",
+            "151:                 .into()",
+            "152:         })"
+          ]
+        }
+      ],
+      "raw_related_locations": [
+        {
+          "id": 1,
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+              "uriBaseId": "%SRCROOT%",
+              "index": 1
+            },
+            "region": {
+              "startLine": 126,
+              "startColumn": 44,
+              "endColumn": 47
+            }
+          },
+          "message": {
+            "text": "a key"
+          }
+        },
+        {
+          "id": 2,
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+              "uriBaseId": "%SRCROOT%",
+              "index": 1
+            },
+            "region": {
+              "startLine": 146,
+              "startColumn": 44,
+              "endColumn": 47
+            }
+          },
+          "message": {
+            "text": "a key"
+          }
+        },
+        {
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+              "uriBaseId": "%SRCROOT%",
+              "index": 1
+            },
+            "region": {
+              "startLine": 126,
+              "startColumn": 44,
+              "endColumn": 47
+            }
+          }
+        },
+        {
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+              "uriBaseId": "%SRCROOT%",
+              "index": 1
+            },
+            "region": {
+              "startLine": 146,
+              "startColumn": 44,
+              "endColumn": 47
+            }
+          }
+        }
+      ],
+      "support_review": "rust-root-finding-review-part.json",
+      "supporting_dependency_hashes": [
+        {
+          "path": "D:\\tools\\audit-codeql-20261010\\source-20261011\\apps\\desktop-client\\src-tauri\\src\\durable_store\\paths.rs",
+          "sha256": "18d6cd3ad7c0df27444117953ed996e7532e1f07331cd4c56e57f92998c796a6"
+        },
+        {
+          "path": "D:\\tools\\audit-codeql-20261010\\source-20261011\\apps\\desktop-client\\src-tauri\\src\\durable_store\\crypto.rs",
+          "sha256": "8fdadd2b87d65a01f913540db8864a62eb37d2c6c71d93dbf26d177befd8cb35"
+        },
+        {
+          "path": "D:\\tools\\audit-codeql-20261010\\source-20261011\\apps\\desktop-client\\src-tauri\\Cargo.lock",
+          "sha256": "b7b604e606c47c9d5cdc53283c0aea671925b4d95e4ee44e848117697f7b64f5"
+        },
+        {
+          "path": "D:\\rust\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\rand_core-0.6.4\\src\\os.rs",
+          "sha256": "47849479e19c43dd01259eb14be7b4daf8474d23567dc32a1547c10b108b7069"
+        },
+        {
+          "path": "D:\\rust\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\getrandom-0.2.17\\src\\lib.rs",
+          "sha256": "50dbe3913bc42b354bfedd773b54540d569215cc4615140f549fd6be7266f24d"
+        },
+        {
+          "path": "D:\\rust\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\getrandom-0.2.17\\src\\windows.rs",
+          "sha256": "695666d2bf31257e4a02cf970dee50a9a1f83c118b88b67d1a261cc5f7c1a66f"
+        }
+      ],
+      "locked_rand_core": [
+        {
+          "name": "rand_core",
+          "version": "0.6.4",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "checksum": "ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c",
+          "dependencies": [
+            "getrandom 0.2.17"
+          ]
+        }
+      ]
+    },
+    {
+      "review_id": "CQ-RUST-002",
+      "sarif_result_index_zero_based": 1,
+      "rule_id": "rust/hard-coded-cryptographic-value",
+      "path": "apps/desktop-client/src-tauri/src/durable_store/claim.rs",
+      "line": 443,
+      "raw_physical_location": {
+        "artifactLocation": {
+          "uri": "apps/desktop-client/src-tauri/src/durable_store/claim.rs",
+          "uriBaseId": "%SRCROOT%",
+          "index": 4
+        },
+        "region": {
+          "startLine": 443,
+          "startColumn": 27,
+          "endColumn": 37
+        }
+      },
+      "raw_message": "This hard-coded value is used as [a key](1).",
+      "raw_level": null,
+      "raw_rule_default_level": "warning",
+      "raw_problem_severity": "warning",
+      "effective_problem_level": "warning",
+      "effective_level_derivation": "result.level, then rule.defaultConfiguration.level, then rule properties.problem.severity; original fields retained",
+      "raw_security_severity": "9.8",
+      "raw_security_band": "critical",
+      "security_finding": true,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "intentional_test_behavior",
+      "human_severity": "none_for_this_rule",
+      "reason": "固定正确 key [7_u8;32] 用于新 UUID 临时 legacy SQLite 库里的合成 JSON 密文，整个测试模块被 cfg(test) 包围。 已读实际 #[cfg(test)] mod tests 的起止边界；正常非 test 构建排除整个模块。测试调用生产 crypto/storage helper 不会把测试常量变成生产入口。",
+      "recommendation": "保留正确/错误密钥和数据保留/隔离场景；可按 cfg(test) 源作用域过滤测试告警，不全局禁用生产硬编码密钥规则。",
+      "snapshot_sha256": "ef254596635799104d520b25d386f4cdb7421879dad79f952dd169cb90af2876",
+      "current_workspace_used_for_verdict": false,
+      "evidence": [
+        {
+          "path": "apps/desktop-client/src-tauri/src/durable_store/claim.rs",
+          "start_line": 313,
+          "end_line": 318,
+          "snapshot_sha256": "ef254596635799104d520b25d386f4cdb7421879dad79f952dd169cb90af2876",
+          "lines": [
+            "313: #[cfg(test)]",
+            "314: mod tests {",
+            "315:     use super::{",
+            "316:         db_path, ensure_target_is_empty, move_legacy_store_with_commit, verify_legacy_key,",
+            "317:     };",
+            "318:     use crate::durable_store::crypto::encrypt_json;"
+          ]
+        },
+        {
+          "path": "apps/desktop-client/src-tauri/src/durable_store/claim.rs",
+          "start_line": 434,
+          "end_line": 456,
+          "snapshot_sha256": "ef254596635799104d520b25d386f4cdb7421879dad79f952dd169cb90af2876",
+          "lines": [
+            "434:     #[test]",
+            "435:     fn claim_validates_legacy_credential_before_touching_files() {",
+            "436:         let data = std::env::temp_dir().join(format!(\"edugrade-legacy-key-{}\", Uuid::new_v4()));",
+            "437:         let legacy = data.join(\"durable-store-v1\");",
+            "438:         fs::create_dir_all(&legacy).expect(\"legacy root\");",
+            "439:         let conn = Connection::open(db_path(&legacy)).expect(\"legacy db\");",
+            "440:         conn.execute_batch(\"CREATE TABLE draft (payload_ciphertext TEXT, payload_nonce TEXT);\")",
+            "441:             .expect(\"legacy table\");",
+            "442:         let (ciphertext, nonce) =",
+            "443:             encrypt_json(&[7_u8; 32], &serde_json::json!({\"private\": true})).expect(\"encrypt\");",
+            "444:         conn.execute(",
+            "445:             \"INSERT INTO draft(payload_ciphertext,payload_nonce) VALUES (?1,?2)\",",
+            "446:             params![ciphertext, nonce],",
+            "447:         )",
+            "448:         .expect(\"sample\");",
+            "449:         drop(conn);",
+            "450:         assert!(verify_legacy_key(&legacy, &[7_u8; 32]).is_ok());",
+            "451:         assert!(verify_legacy_key(&legacy, &[8_u8; 32]).is_err());",
+            "452:         assert!(",
+            "453:             legacy.exists(),",
+            "454:             \"failed verification never moves legacy data\"",
+            "455:         );",
+            "456:         fs::remove_dir_all(data).expect(\"cleanup\");"
+          ]
+        }
+      ],
+      "raw_related_locations": [
+        {
+          "id": 1,
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+              "uriBaseId": "%SRCROOT%",
+              "index": 1
+            },
+            "region": {
+              "startLine": 126,
+              "startColumn": 44,
+              "endColumn": 47
+            }
+          },
+          "message": {
+            "text": "a key"
+          }
+        },
+        {
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+              "uriBaseId": "%SRCROOT%",
+              "index": 1
+            },
+            "region": {
+              "startLine": 126,
+              "startColumn": 44,
+              "endColumn": 47
+            }
+          }
+        }
+      ],
+      "cfg_test_module": {
+        "attribute_line": 313,
+        "module_line": 314,
+        "closing_line": 458
+      },
+      "test_enclosing_item": {
+        "name": "claim_validates_legacy_credential_before_touching_files",
+        "test_attribute_line": 434,
+        "function_start_line": 435,
+        "function_end_line": 457
+      },
+      "test_fixture_kind": "positive_fixture_key"
+    },
+    {
+      "review_id": "CQ-RUST-003",
+      "sarif_result_index_zero_based": 2,
+      "rule_id": "rust/hard-coded-cryptographic-value",
+      "path": "apps/desktop-client/src-tauri/src/durable_store/claim.rs",
+      "line": 450,
+      "raw_physical_location": {
+        "artifactLocation": {
+          "uri": "apps/desktop-client/src-tauri/src/durable_store/claim.rs",
+          "uriBaseId": "%SRCROOT%",
+          "index": 4
+        },
+        "region": {
+          "startLine": 450,
+          "startColumn": 45,
+          "endColumn": 55
+        }
+      },
+      "raw_message": "This hard-coded value is used as [a key](1).",
+      "raw_level": null,
+      "raw_rule_default_level": "warning",
+      "raw_problem_severity": "warning",
+      "effective_problem_level": "warning",
+      "effective_level_derivation": "result.level, then rule.defaultConfiguration.level, then rule properties.problem.severity; original fields retained",
+      "raw_security_severity": "9.8",
+      "raw_security_band": "critical",
+      "security_finding": true,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "intentional_test_behavior",
+      "human_severity": "none_for_this_rule",
+      "reason": "同一测试用正确固定 key [7_u8;32] 验证前面生成的合成 legacy 密文成功，整个调用在 cfg(test) 模块。 已读实际 #[cfg(test)] mod tests 的起止边界；正常非 test 构建排除整个模块。测试调用生产 crypto/storage helper 不会把测试常量变成生产入口。",
+      "recommendation": "保留正确/错误密钥和数据保留/隔离场景；可按 cfg(test) 源作用域过滤测试告警，不全局禁用生产硬编码密钥规则。",
+      "snapshot_sha256": "ef254596635799104d520b25d386f4cdb7421879dad79f952dd169cb90af2876",
+      "current_workspace_used_for_verdict": false,
+      "evidence": [
+        {
+          "path": "apps/desktop-client/src-tauri/src/durable_store/claim.rs",
+          "start_line": 313,
+          "end_line": 318,
+          "snapshot_sha256": "ef254596635799104d520b25d386f4cdb7421879dad79f952dd169cb90af2876",
+          "lines": [
+            "313: #[cfg(test)]",
+            "314: mod tests {",
+            "315:     use super::{",
+            "316:         db_path, ensure_target_is_empty, move_legacy_store_with_commit, verify_legacy_key,",
+            "317:     };",
+            "318:     use crate::durable_store::crypto::encrypt_json;"
+          ]
+        },
+        {
+          "path": "apps/desktop-client/src-tauri/src/durable_store/claim.rs",
+          "start_line": 434,
+          "end_line": 456,
+          "snapshot_sha256": "ef254596635799104d520b25d386f4cdb7421879dad79f952dd169cb90af2876",
+          "lines": [
+            "434:     #[test]",
+            "435:     fn claim_validates_legacy_credential_before_touching_files() {",
+            "436:         let data = std::env::temp_dir().join(format!(\"edugrade-legacy-key-{}\", Uuid::new_v4()));",
+            "437:         let legacy = data.join(\"durable-store-v1\");",
+            "438:         fs::create_dir_all(&legacy).expect(\"legacy root\");",
+            "439:         let conn = Connection::open(db_path(&legacy)).expect(\"legacy db\");",
+            "440:         conn.execute_batch(\"CREATE TABLE draft (payload_ciphertext TEXT, payload_nonce TEXT);\")",
+            "441:             .expect(\"legacy table\");",
+            "442:         let (ciphertext, nonce) =",
+            "443:             encrypt_json(&[7_u8; 32], &serde_json::json!({\"private\": true})).expect(\"encrypt\");",
+            "444:         conn.execute(",
+            "445:             \"INSERT INTO draft(payload_ciphertext,payload_nonce) VALUES (?1,?2)\",",
+            "446:             params![ciphertext, nonce],",
+            "447:         )",
+            "448:         .expect(\"sample\");",
+            "449:         drop(conn);",
+            "450:         assert!(verify_legacy_key(&legacy, &[7_u8; 32]).is_ok());",
+            "451:         assert!(verify_legacy_key(&legacy, &[8_u8; 32]).is_err());",
+            "452:         assert!(",
+            "453:             legacy.exists(),",
+            "454:             \"failed verification never moves legacy data\"",
+            "455:         );",
+            "456:         fs::remove_dir_all(data).expect(\"cleanup\");"
+          ]
+        }
+      ],
+      "raw_related_locations": [
+        {
+          "id": 1,
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+              "uriBaseId": "%SRCROOT%",
+              "index": 1
+            },
+            "region": {
+              "startLine": 146,
+              "startColumn": 44,
+              "endColumn": 47
+            }
+          },
+          "message": {
+            "text": "a key"
+          }
+        },
+        {
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+              "uriBaseId": "%SRCROOT%",
+              "index": 1
+            },
+            "region": {
+              "startLine": 146,
+              "startColumn": 44,
+              "endColumn": 47
+            }
+          }
+        }
+      ],
+      "cfg_test_module": {
+        "attribute_line": 313,
+        "module_line": 314,
+        "closing_line": 458
+      },
+      "test_enclosing_item": {
+        "name": "claim_validates_legacy_credential_before_touching_files",
+        "test_attribute_line": 434,
+        "function_start_line": 435,
+        "function_end_line": 457
+      },
+      "test_fixture_kind": "positive_fixture_key"
+    },
+    {
+      "review_id": "CQ-RUST-004",
+      "sarif_result_index_zero_based": 3,
+      "rule_id": "rust/hard-coded-cryptographic-value",
+      "path": "apps/desktop-client/src-tauri/src/durable_store/claim.rs",
+      "line": 451,
+      "raw_physical_location": {
+        "artifactLocation": {
+          "uri": "apps/desktop-client/src-tauri/src/durable_store/claim.rs",
+          "uriBaseId": "%SRCROOT%",
+          "index": 4
+        },
+        "region": {
+          "startLine": 451,
+          "startColumn": 45,
+          "endColumn": 55
+        }
+      },
+      "raw_message": "This hard-coded value is used as [a key](1).",
+      "raw_level": null,
+      "raw_rule_default_level": "warning",
+      "raw_problem_severity": "warning",
+      "effective_problem_level": "warning",
+      "effective_level_derivation": "result.level, then rule.defaultConfiguration.level, then rule properties.problem.severity; original fields retained",
+      "raw_security_severity": "9.8",
+      "raw_security_band": "critical",
+      "security_finding": true,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "intentional_test_behavior",
+      "human_severity": "none_for_this_rule",
+      "reason": "错误 key [8_u8;32] 是解密失败和文件保留断言的负例，不是生产加密密钥。 已读实际 #[cfg(test)] mod tests 的起止边界；正常非 test 构建排除整个模块。测试调用生产 crypto/storage helper 不会把测试常量变成生产入口。",
+      "recommendation": "保留正确/错误密钥和数据保留/隔离场景；可按 cfg(test) 源作用域过滤测试告警，不全局禁用生产硬编码密钥规则。",
+      "snapshot_sha256": "ef254596635799104d520b25d386f4cdb7421879dad79f952dd169cb90af2876",
+      "current_workspace_used_for_verdict": false,
+      "evidence": [
+        {
+          "path": "apps/desktop-client/src-tauri/src/durable_store/claim.rs",
+          "start_line": 313,
+          "end_line": 318,
+          "snapshot_sha256": "ef254596635799104d520b25d386f4cdb7421879dad79f952dd169cb90af2876",
+          "lines": [
+            "313: #[cfg(test)]",
+            "314: mod tests {",
+            "315:     use super::{",
+            "316:         db_path, ensure_target_is_empty, move_legacy_store_with_commit, verify_legacy_key,",
+            "317:     };",
+            "318:     use crate::durable_store::crypto::encrypt_json;"
+          ]
+        },
+        {
+          "path": "apps/desktop-client/src-tauri/src/durable_store/claim.rs",
+          "start_line": 434,
+          "end_line": 456,
+          "snapshot_sha256": "ef254596635799104d520b25d386f4cdb7421879dad79f952dd169cb90af2876",
+          "lines": [
+            "434:     #[test]",
+            "435:     fn claim_validates_legacy_credential_before_touching_files() {",
+            "436:         let data = std::env::temp_dir().join(format!(\"edugrade-legacy-key-{}\", Uuid::new_v4()));",
+            "437:         let legacy = data.join(\"durable-store-v1\");",
+            "438:         fs::create_dir_all(&legacy).expect(\"legacy root\");",
+            "439:         let conn = Connection::open(db_path(&legacy)).expect(\"legacy db\");",
+            "440:         conn.execute_batch(\"CREATE TABLE draft (payload_ciphertext TEXT, payload_nonce TEXT);\")",
+            "441:             .expect(\"legacy table\");",
+            "442:         let (ciphertext, nonce) =",
+            "443:             encrypt_json(&[7_u8; 32], &serde_json::json!({\"private\": true})).expect(\"encrypt\");",
+            "444:         conn.execute(",
+            "445:             \"INSERT INTO draft(payload_ciphertext,payload_nonce) VALUES (?1,?2)\",",
+            "446:             params![ciphertext, nonce],",
+            "447:         )",
+            "448:         .expect(\"sample\");",
+            "449:         drop(conn);",
+            "450:         assert!(verify_legacy_key(&legacy, &[7_u8; 32]).is_ok());",
+            "451:         assert!(verify_legacy_key(&legacy, &[8_u8; 32]).is_err());",
+            "452:         assert!(",
+            "453:             legacy.exists(),",
+            "454:             \"failed verification never moves legacy data\"",
+            "455:         );",
+            "456:         fs::remove_dir_all(data).expect(\"cleanup\");"
+          ]
+        }
+      ],
+      "raw_related_locations": [
+        {
+          "id": 1,
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+              "uriBaseId": "%SRCROOT%",
+              "index": 1
+            },
+            "region": {
+              "startLine": 146,
+              "startColumn": 44,
+              "endColumn": 47
+            }
+          },
+          "message": {
+            "text": "a key"
+          }
+        },
+        {
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+              "uriBaseId": "%SRCROOT%",
+              "index": 1
+            },
+            "region": {
+              "startLine": 146,
+              "startColumn": 44,
+              "endColumn": 47
+            }
+          }
+        }
+      ],
+      "cfg_test_module": {
+        "attribute_line": 313,
+        "module_line": 314,
+        "closing_line": 458
+      },
+      "test_enclosing_item": {
+        "name": "claim_validates_legacy_credential_before_touching_files",
+        "test_attribute_line": 434,
+        "function_start_line": 435,
+        "function_end_line": 457
+      },
+      "test_fixture_kind": "negative_wrong_key_fixture"
+    },
+    {
+      "review_id": "CQ-RUST-005",
+      "sarif_result_index_zero_based": 4,
+      "rule_id": "rust/hard-coded-cryptographic-value",
+      "path": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+      "line": 127,
+      "raw_physical_location": {
+        "artifactLocation": {
+          "uri": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+          "uriBaseId": "%SRCROOT%",
+          "index": 1
+        },
+        "region": {
+          "startLine": 127,
+          "startColumn": 21,
+          "endColumn": 31
+        }
+      },
+      "raw_message": "This hard-coded value is used as [a nonce](1).",
+      "raw_level": null,
+      "raw_rule_default_level": "warning",
+      "raw_problem_severity": "warning",
+      "effective_problem_level": "warning",
+      "effective_level_derivation": "result.level, then rule.defaultConfiguration.level, then rule properties.problem.severity; original fields retained",
+      "raw_security_severity": "9.8",
+      "raw_security_band": "critical",
+      "security_finding": true,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "false_positive_context",
+      "human_severity": "none_for_this_rule",
+      "reason": "crypto.rs:127 的全零12字节数组只用于分配 nonce 缓冲区。第128行立即 OsRng.fill_bytes(&mut nonce)，第130行后才送入 AES-GCM；锁定 rand_core 0.6.4 的 OsRng.fill_bytes 在随机源失败时 panic，不存在继续使用全零缓冲区的回退路径。未执行系统随机源故障注入或完整Rust测试。",
+      "recommendation": "保留随机填充与已有密文时缺失密钥的失败分支；不为消除这条告警改成固定密钥或 nonce。若需抑制告警，按本条随机填充/布尔控制流证据收窄规则模型或单项解释，保持其他生产硬编码密钥检查。",
+      "snapshot_sha256": "8fdadd2b87d65a01f913540db8864a62eb37d2c6c71d93dbf26d177befd8cb35",
+      "current_workspace_used_for_verdict": false,
+      "evidence": [
+        {
+          "path": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+          "start_line": 125,
+          "end_line": 152,
+          "snapshot_sha256": "8fdadd2b87d65a01f913540db8864a62eb37d2c6c71d93dbf26d177befd8cb35",
+          "lines": [
+            "125: pub(crate) fn encrypt_bytes(key: &[u8; 32], plaintext: &[u8]) -> Result<(Vec<u8>, String), String> {",
+            "126:     let cipher = Aes256Gcm::new_from_slice(key).map_err(|_| \"durable encryption key is invalid\")?;",
+            "127:     let mut nonce = [0_u8; 12];",
+            "128:     OsRng.fill_bytes(&mut nonce);",
+            "129:     let ciphertext = cipher",
+            "130:         .encrypt(Nonce::from_slice(&nonce), plaintext)",
+            "131:         .map_err(|_| \"durable payload encryption failed\")?;",
+            "132:     Ok((ciphertext, BASE64.encode(nonce)))",
+            "133: }",
+            "134: ",
+            "135: pub(crate) fn decrypt_bytes(",
+            "136:     key: &[u8; 32],",
+            "137:     nonce: &str,",
+            "138:     ciphertext: &[u8],",
+            "139: ) -> Result<Vec<u8>, String> {",
+            "140:     let nonce = BASE64",
+            "141:         .decode(nonce)",
+            "142:         .map_err(|_| \"durable payload nonce is invalid\")?;",
+            "143:     if nonce.len() != 12 {",
+            "144:         return Err(\"durable payload nonce has an invalid length\".into());",
+            "145:     }",
+            "146:     let cipher = Aes256Gcm::new_from_slice(key).map_err(|_| \"durable encryption key is invalid\")?;",
+            "147:     cipher",
+            "148:         .decrypt(Nonce::from_slice(&nonce), ciphertext)",
+            "149:         .map_err(|_| {",
+            "150:             \"durable payload cannot be decrypted; secure local key may be unavailable or corrupted\"",
+            "151:                 .into()",
+            "152:         })"
+          ]
+        },
+        {
+          "path": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+          "start_line": 1,
+          "end_line": 9,
+          "snapshot_sha256": "8fdadd2b87d65a01f913540db8864a62eb37d2c6c71d93dbf26d177befd8cb35",
+          "lines": [
+            "1: use aes_gcm::{",
+            "2:     aead::{rand_core::RngCore, Aead, OsRng},",
+            "3:     Aes256Gcm, KeyInit, Nonce,",
+            "4: };",
+            "5: use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};",
+            "6: use serde::{Deserialize, Serialize};",
+            "7: use sha2::{Digest, Sha256};",
+            "8: use std::path::Path;",
+            "9: use zeroize::Zeroize;"
+          ]
+        }
+      ],
+      "raw_related_locations": [
+        {
+          "id": 1,
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+              "uriBaseId": "%SRCROOT%",
+              "index": 1
+            },
+            "region": {
+              "startLine": 130,
+              "startColumn": 18,
+              "endColumn": 43
+            }
+          },
+          "message": {
+            "text": "a nonce"
+          }
+        },
+        {
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+              "uriBaseId": "%SRCROOT%",
+              "index": 1
+            },
+            "region": {
+              "startLine": 130,
+              "startColumn": 18,
+              "endColumn": 43
+            }
+          }
+        }
+      ],
+      "support_review": "rust-root-finding-review-part.json",
+      "supporting_dependency_hashes": [
+        {
+          "path": "D:\\tools\\audit-codeql-20261010\\source-20261011\\apps\\desktop-client\\src-tauri\\src\\durable_store\\paths.rs",
+          "sha256": "18d6cd3ad7c0df27444117953ed996e7532e1f07331cd4c56e57f92998c796a6"
+        },
+        {
+          "path": "D:\\tools\\audit-codeql-20261010\\source-20261011\\apps\\desktop-client\\src-tauri\\src\\durable_store\\crypto.rs",
+          "sha256": "8fdadd2b87d65a01f913540db8864a62eb37d2c6c71d93dbf26d177befd8cb35"
+        },
+        {
+          "path": "D:\\tools\\audit-codeql-20261010\\source-20261011\\apps\\desktop-client\\src-tauri\\Cargo.lock",
+          "sha256": "b7b604e606c47c9d5cdc53283c0aea671925b4d95e4ee44e848117697f7b64f5"
+        },
+        {
+          "path": "D:\\rust\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\rand_core-0.6.4\\src\\os.rs",
+          "sha256": "47849479e19c43dd01259eb14be7b4daf8474d23567dc32a1547c10b108b7069"
+        },
+        {
+          "path": "D:\\rust\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\getrandom-0.2.17\\src\\lib.rs",
+          "sha256": "50dbe3913bc42b354bfedd773b54540d569215cc4615140f549fd6be7266f24d"
+        },
+        {
+          "path": "D:\\rust\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\getrandom-0.2.17\\src\\windows.rs",
+          "sha256": "695666d2bf31257e4a02cf970dee50a9a1f83c118b88b67d1a261cc5f7c1a66f"
+        }
+      ],
+      "locked_rand_core": [
+        {
+          "name": "rand_core",
+          "version": "0.6.4",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "checksum": "ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c",
+          "dependencies": [
+            "getrandom 0.2.17"
+          ]
+        }
+      ]
+    },
+    {
+      "review_id": "CQ-RUST-006",
+      "sarif_result_index_zero_based": 5,
+      "rule_id": "rust/hard-coded-cryptographic-value",
+      "path": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+      "line": 171,
+      "raw_physical_location": {
+        "artifactLocation": {
+          "uri": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+          "uriBaseId": "%SRCROOT%",
+          "index": 1
+        },
+        "region": {
+          "startLine": 171,
+          "startColumn": 27,
+          "endColumn": 37
+        }
+      },
+      "raw_message": "This hard-coded value is used as [a key](1).\nThis hard-coded value is used as [a key](2).",
+      "raw_level": null,
+      "raw_rule_default_level": "warning",
+      "raw_problem_severity": "warning",
+      "effective_problem_level": "warning",
+      "effective_level_derivation": "result.level, then rule.defaultConfiguration.level, then rule properties.problem.severity; original fields retained",
+      "raw_security_severity": "9.8",
+      "raw_security_band": "critical",
+      "security_finding": true,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "false_positive_context",
+      "human_severity": "none_for_this_rule",
+      "reason": "crypto.rs:171 的全零32字节数组只用于分配新密钥缓冲区；第172行 OsRng.fill_bytes 后才写入 Windows Credential Manager 并返回。已有本地密文而密钥丢失时前一分支返回错误，不会新建替代密钥。凭据管理器读取成功的另一分支使用已保存值；随机源失败时 fill_bytes panic，不会返回初始化全零值。",
+      "recommendation": "保留随机填充与已有密文时缺失密钥的失败分支；不为消除这条告警改成固定密钥或 nonce。若需抑制告警，按本条随机填充/布尔控制流证据收窄规则模型或单项解释，保持其他生产硬编码密钥检查。",
+      "snapshot_sha256": "8fdadd2b87d65a01f913540db8864a62eb37d2c6c71d93dbf26d177befd8cb35",
+      "current_workspace_used_for_verdict": false,
+      "evidence": [
+        {
+          "path": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+          "start_line": 155,
+          "end_line": 181,
+          "snapshot_sha256": "8fdadd2b87d65a01f913540db8864a62eb37d2c6c71d93dbf26d177befd8cb35",
+          "lines": [
+            "155: #[cfg(windows)]",
+            "156: pub(crate) fn master_key(root: &Path) -> Result<[u8; 32], String> {",
+            "157:     // 每个 v2 账号作用域都有独立的凭据管理器密钥，使账号密文",
+            "158:     // 在加密层面彼此隔离，同时不会覆盖",
+            "159:     // 恢复隔离数据所需的旧版 v1 凭据。",
+            "160:     let account = durable_credential_account(root)?;",
+            "161:     match read_key_for_account(&account)? {",
+            "162:         Some(key) => Ok(key),",
+            "163:         None => {",
+            "164:             // 站点已有存储时，不能用新密钥替代丢失的凭据。",
+            "165:             // 否则队列中的扫描件会看似可恢复，",
+            "166:             // 直到后续解密失败才暴露问题，还可能让操作人员",
+            "167:             // 误删唯一的加密原件副本。",
+            "168:             if durable_data_exists(root)? {",
+            "169:                 return Err(\"durable master key is missing while encrypted local data exists; recovery requires the original Windows Credential Manager entry and the client will not create a replacement key\".into());",
+            "170:             }",
+            "171:             let mut key = [0_u8; 32];",
+            "172:             OsRng.fill_bytes(&mut key);",
+            "173:             write_key_for_account(&account, &key)?;",
+            "174:             Ok(key)",
+            "175:         }",
+            "176:     }",
+            "177: }",
+            "178: ",
+            "179: #[cfg(not(windows))]",
+            "180: pub(crate) fn master_key(_root: &Path) -> Result<[u8; 32], String> {",
+            "181:     Err(\"durable local storage requires Windows Credential Manager and will not fall back to plaintext storage\".into())"
+          ]
+        },
+        {
+          "path": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+          "start_line": 35,
+          "end_line": 67,
+          "snapshot_sha256": "8fdadd2b87d65a01f913540db8864a62eb37d2c6c71d93dbf26d177befd8cb35",
+          "lines": [
+            "35: #[cfg(windows)]",
+            "36: fn read_key_for_account(account: &str) -> Result<Option<[u8; 32]>, String> {",
+            "37:     let entry = keyring::Entry::new(DURABLE_CREDENTIAL_SERVICE, account)",
+            "38:         .map_err(|error| error.to_string())?;",
+            "39:     let mut stored = match entry.get_password() {",
+            "40:         Ok(stored) => stored,",
+            "41:         Err(keyring::Error::NoEntry) => return Ok(None),",
+            "42:         Err(error) => {",
+            "43:             return Err(format!(",
+            "44:                 \"cannot access Windows Credential Manager for the durable local key: {error}\"",
+            "45:             ))",
+            "46:         }",
+            "47:     };",
+            "48:     let decoded = BASE64.decode(&stored);",
+            "49:     stored.zeroize();",
+            "50:     let decoded = decoded.map_err(|_| \"durable master key is corrupt\")?;",
+            "51:     decoded",
+            "52:         .try_into()",
+            "53:         .map(Some)",
+            "54:         .map_err(|_| \"durable master key has an invalid length\".to_string())",
+            "55: }",
+            "56: ",
+            "57: #[cfg(windows)]",
+            "58: fn write_key_for_account(account: &str, key: &[u8; 32]) -> Result<(), String> {",
+            "59:     let entry = keyring::Entry::new(DURABLE_CREDENTIAL_SERVICE, account)",
+            "60:         .map_err(|error| error.to_string())?;",
+            "61:     let mut encoded = BASE64.encode(key);",
+            "62:     let result = entry",
+            "63:         .set_password(&encoded)",
+            "64:         .map_err(|error| error.to_string());",
+            "65:     encoded.zeroize();",
+            "66:     result",
+            "67: }"
+          ]
+        },
+        {
+          "path": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+          "start_line": 1,
+          "end_line": 9,
+          "snapshot_sha256": "8fdadd2b87d65a01f913540db8864a62eb37d2c6c71d93dbf26d177befd8cb35",
+          "lines": [
+            "1: use aes_gcm::{",
+            "2:     aead::{rand_core::RngCore, Aead, OsRng},",
+            "3:     Aes256Gcm, KeyInit, Nonce,",
+            "4: };",
+            "5: use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};",
+            "6: use serde::{Deserialize, Serialize};",
+            "7: use sha2::{Digest, Sha256};",
+            "8: use std::path::Path;",
+            "9: use zeroize::Zeroize;"
+          ]
+        }
+      ],
+      "raw_related_locations": [
+        {
+          "id": 1,
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+              "uriBaseId": "%SRCROOT%",
+              "index": 1
+            },
+            "region": {
+              "startLine": 126,
+              "startColumn": 44,
+              "endColumn": 47
+            }
+          },
+          "message": {
+            "text": "a key"
+          }
+        },
+        {
+          "id": 2,
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+              "uriBaseId": "%SRCROOT%",
+              "index": 1
+            },
+            "region": {
+              "startLine": 146,
+              "startColumn": 44,
+              "endColumn": 47
+            }
+          },
+          "message": {
+            "text": "a key"
+          }
+        },
+        {
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+              "uriBaseId": "%SRCROOT%",
+              "index": 1
+            },
+            "region": {
+              "startLine": 126,
+              "startColumn": 44,
+              "endColumn": 47
+            }
+          }
+        },
+        {
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+              "uriBaseId": "%SRCROOT%",
+              "index": 1
+            },
+            "region": {
+              "startLine": 146,
+              "startColumn": 44,
+              "endColumn": 47
+            }
+          }
+        }
+      ],
+      "support_review": "rust-root-finding-review-part.json",
+      "supporting_dependency_hashes": [
+        {
+          "path": "D:\\tools\\audit-codeql-20261010\\source-20261011\\apps\\desktop-client\\src-tauri\\src\\durable_store\\paths.rs",
+          "sha256": "18d6cd3ad7c0df27444117953ed996e7532e1f07331cd4c56e57f92998c796a6"
+        },
+        {
+          "path": "D:\\tools\\audit-codeql-20261010\\source-20261011\\apps\\desktop-client\\src-tauri\\src\\durable_store\\crypto.rs",
+          "sha256": "8fdadd2b87d65a01f913540db8864a62eb37d2c6c71d93dbf26d177befd8cb35"
+        },
+        {
+          "path": "D:\\tools\\audit-codeql-20261010\\source-20261011\\apps\\desktop-client\\src-tauri\\Cargo.lock",
+          "sha256": "b7b604e606c47c9d5cdc53283c0aea671925b4d95e4ee44e848117697f7b64f5"
+        },
+        {
+          "path": "D:\\rust\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\rand_core-0.6.4\\src\\os.rs",
+          "sha256": "47849479e19c43dd01259eb14be7b4daf8474d23567dc32a1547c10b108b7069"
+        },
+        {
+          "path": "D:\\rust\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\getrandom-0.2.17\\src\\lib.rs",
+          "sha256": "50dbe3913bc42b354bfedd773b54540d569215cc4615140f549fd6be7266f24d"
+        },
+        {
+          "path": "D:\\rust\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\getrandom-0.2.17\\src\\windows.rs",
+          "sha256": "695666d2bf31257e4a02cf970dee50a9a1f83c118b88b67d1a261cc5f7c1a66f"
+        }
+      ],
+      "locked_rand_core": [
+        {
+          "name": "rand_core",
+          "version": "0.6.4",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "checksum": "ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c",
+          "dependencies": [
+            "getrandom 0.2.17"
+          ]
+        }
+      ]
+    },
+    {
+      "review_id": "CQ-RUST-007",
+      "sarif_result_index_zero_based": 6,
+      "rule_id": "rust/hard-coded-cryptographic-value",
+      "path": "apps/desktop-client/src-tauri/src/durable_store/drafts.rs",
+      "line": 203,
+      "raw_physical_location": {
+        "artifactLocation": {
+          "uri": "apps/desktop-client/src-tauri/src/durable_store/drafts.rs",
+          "uriBaseId": "%SRCROOT%",
+          "index": 3
+        },
+        "region": {
+          "startLine": 203,
+          "startColumn": 27,
+          "endColumn": 35
+        }
+      },
+      "raw_message": "This hard-coded value is used as [a key](1).\nThis hard-coded value is used as [a key](2).",
+      "raw_level": null,
+      "raw_rule_default_level": "warning",
+      "raw_problem_severity": "warning",
+      "effective_problem_level": "warning",
+      "effective_level_derivation": "result.level, then rule.defaultConfiguration.level, then rule properties.problem.severity; original fields retained",
+      "raw_security_severity": "9.8",
+      "raw_security_band": "critical",
+      "security_finding": true,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "intentional_test_behavior",
+      "human_severity": "none_for_this_rule",
+      "reason": "KEY=[37;32] 是 cfg(test) 模块私有夹具常量，insert helper 只在本模块测试中加密内存 SQLite 的合成草稿。 已读实际 #[cfg(test)] mod tests 的起止边界；正常非 test 构建排除整个模块。测试调用生产 crypto/storage helper 不会把测试常量变成生产入口。",
+      "recommendation": "保留正确/错误密钥和数据保留/隔离场景；可按 cfg(test) 源作用域过滤测试告警，不全局禁用生产硬编码密钥规则。",
+      "snapshot_sha256": "8da95099ce829d112c8a09442c516c0c12f67144f2a18f703780a190371c3a3f",
+      "current_workspace_used_for_verdict": false,
+      "evidence": [
+        {
+          "path": "apps/desktop-client/src-tauri/src/durable_store/drafts.rs",
+          "start_line": 198,
+          "end_line": 222,
+          "snapshot_sha256": "8da95099ce829d112c8a09442c516c0c12f67144f2a18f703780a190371c3a3f",
+          "lines": [
+            "198: #[cfg(test)]",
+            "199: mod tests {",
+            "200:     use super::*;",
+            "201:     use serde_json::json;",
+            "202: ",
+            "203:     const KEY: [u8; 32] = [37; 32];",
+            "204:     const NOW: &str = \"2026-10-04T00:00:00Z\";",
+            "205: ",
+            "206:     fn fixture() -> Connection {",
+            "207:         let conn = Connection::open_in_memory().expect(\"open fixture\");",
+            "208:         initialize_schema(&conn).expect(\"initialize fixture\");",
+            "209:         conn",
+            "210:     }",
+            "211: ",
+            "212:     fn insert(conn: &Connection, id: &str, status: &str, command: bool, expires_at: &str) {",
+            "213:         let mut record = json!({\"taskId\": id, \"syncStatus\": \"syncing\", \"draft\": {\"score\": 0}});",
+            "214:         if command {",
+            "215:             record[\"submissionCommand\"] = json!({\"id\": \"frozen-command\", \"payload\": {\"score\": 0}});",
+            "216:         }",
+            "217:         let (ciphertext, nonce) = encrypt_json(&KEY, &record).expect(\"encrypt fixture\");",
+            "218:         conn.execute(",
+            "219:             \"INSERT INTO draft (task_id, anonymous_code, saved_at, expires_at, sync_status, payload_ciphertext, payload_nonce, updated_at)",
+            "220:              VALUES (?1, 'anonymous', ?2, ?3, ?4, ?5, ?6, ?2)\",",
+            "221:             params![id, NOW, expires_at, status, ciphertext, nonce],",
+            "222:         )"
+          ]
+        },
+        {
+          "path": "apps/desktop-client/src-tauri/src/durable_store/drafts.rs",
+          "start_line": 235,
+          "end_line": 248,
+          "snapshot_sha256": "8da95099ce829d112c8a09442c516c0c12f67144f2a18f703780a190371c3a3f",
+          "lines": [
+            "235:     #[test]",
+            "236:     fn expired_cleanup_preserves_every_unsynced_draft_and_cleans_confirmed_records() {",
+            "237:         let mut conn = fixture();",
+            "238:         insert(&conn, \"legacy-draft\", \"draft\", false, NOW);",
+            "239:         insert(&conn, \"ordinary-failed\", \"failed\", false, NOW);",
+            "240:         insert(&conn, \"confirmed\", \"synced\", true, NOW);",
+            "241:         insert(&conn, \"pending-failed\", \"failed\", true, NOW);",
+            "242:         insert(&conn, \"pending-syncing\", \"syncing\", true, NOW);",
+            "243:         insert(&conn, \"pending-conflict\", \"conflict\", true, NOW);",
+            "244:         insert(&conn, \"future\", \"draft\", false, \"2026-10-05T00:00:00Z\");",
+            "245: ",
+            "246:         assert_eq!(purge_expired_drafts(&mut conn, &KEY, NOW).unwrap(), 1);",
+            "247:         assert_eq!(",
+            "248:             ids(&conn),"
+          ]
+        },
+        {
+          "path": "apps/desktop-client/src-tauri/src/durable_store/drafts.rs",
+          "start_line": 265,
+          "end_line": 288,
+          "snapshot_sha256": "8da95099ce829d112c8a09442c516c0c12f67144f2a18f703780a190371c3a3f",
+          "lines": [
+            "265:     #[test]",
+            "266:     fn corrupt_expired_payload_rolls_back_other_deletions() {",
+            "267:         let mut conn = fixture();",
+            "268:         insert(&conn, \"a-ordinary\", \"draft\", false, NOW);",
+            "269:         insert(&conn, \"z-pending\", \"failed\", true, NOW);",
+            "270:         conn.execute(",
+            "271:             \"UPDATE draft SET payload_ciphertext = 'corrupt' WHERE task_id = 'z-pending'\",",
+            "272:             [],",
+            "273:         )",
+            "274:         .unwrap();",
+            "275: ",
+            "276:         assert!(purge_expired_drafts(&mut conn, &KEY, NOW).is_err());",
+            "277:         assert_eq!(ids(&conn), vec![\"a-ordinary\", \"z-pending\"]);",
+            "278:     }",
+            "279: ",
+            "280:     #[test]",
+            "281:     fn wrong_key_preserves_all_expired_records() {",
+            "282:         let mut conn = fixture();",
+            "283:         insert(&conn, \"ordinary\", \"draft\", false, NOW);",
+            "284:         insert(&conn, \"pending\", \"failed\", true, NOW);",
+            "285: ",
+            "286:         assert!(purge_expired_drafts(&mut conn, &[88; 32], NOW).is_err());",
+            "287:         assert_eq!(ids(&conn), vec![\"ordinary\", \"pending\"]);",
+            "288:     }"
+          ]
+        }
+      ],
+      "raw_related_locations": [
+        {
+          "id": 1,
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+              "uriBaseId": "%SRCROOT%",
+              "index": 1
+            },
+            "region": {
+              "startLine": 126,
+              "startColumn": 44,
+              "endColumn": 47
+            }
+          },
+          "message": {
+            "text": "a key"
+          }
+        },
+        {
+          "id": 2,
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+              "uriBaseId": "%SRCROOT%",
+              "index": 1
+            },
+            "region": {
+              "startLine": 146,
+              "startColumn": 44,
+              "endColumn": 47
+            }
+          },
+          "message": {
+            "text": "a key"
+          }
+        },
+        {
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+              "uriBaseId": "%SRCROOT%",
+              "index": 1
+            },
+            "region": {
+              "startLine": 126,
+              "startColumn": 44,
+              "endColumn": 47
+            }
+          }
+        },
+        {
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+              "uriBaseId": "%SRCROOT%",
+              "index": 1
+            },
+            "region": {
+              "startLine": 146,
+              "startColumn": 44,
+              "endColumn": 47
+            }
+          }
+        }
+      ],
+      "cfg_test_module": {
+        "attribute_line": 198,
+        "module_line": 199,
+        "closing_line": 289
+      },
+      "test_enclosing_item": {
+        "name": "tests::KEY and tests::insert",
+        "test_attribute_line": null,
+        "function_start_line": null,
+        "function_end_line": null
+      },
+      "test_fixture_kind": "shared_private_test_fixture_key"
+    },
+    {
+      "review_id": "CQ-RUST-008",
+      "sarif_result_index_zero_based": 7,
+      "rule_id": "rust/hard-coded-cryptographic-value",
+      "path": "apps/desktop-client/src-tauri/src/durable_store/drafts.rs",
+      "line": 286,
+      "raw_physical_location": {
+        "artifactLocation": {
+          "uri": "apps/desktop-client/src-tauri/src/durable_store/drafts.rs",
+          "uriBaseId": "%SRCROOT%",
+          "index": 3
+        },
+        "region": {
+          "startLine": 286,
+          "startColumn": 50,
+          "endColumn": 58
+        }
+      },
+      "raw_message": "This hard-coded value is used as [a key](1).",
+      "raw_level": null,
+      "raw_rule_default_level": "warning",
+      "raw_problem_severity": "warning",
+      "effective_problem_level": "warning",
+      "effective_level_derivation": "result.level, then rule.defaultConfiguration.level, then rule properties.problem.severity; original fields retained",
+      "raw_security_severity": "9.8",
+      "raw_security_band": "critical",
+      "security_finding": true,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "intentional_test_behavior",
+      "human_severity": "none_for_this_rule",
+      "reason": "错误 key [88;32] 有意触发清理失败，断言两条过期草稿都保留；调用只在 cfg(test) 测试中。 已读实际 #[cfg(test)] mod tests 的起止边界；正常非 test 构建排除整个模块。测试调用生产 crypto/storage helper 不会把测试常量变成生产入口。",
+      "recommendation": "保留正确/错误密钥和数据保留/隔离场景；可按 cfg(test) 源作用域过滤测试告警，不全局禁用生产硬编码密钥规则。",
+      "snapshot_sha256": "8da95099ce829d112c8a09442c516c0c12f67144f2a18f703780a190371c3a3f",
+      "current_workspace_used_for_verdict": false,
+      "evidence": [
+        {
+          "path": "apps/desktop-client/src-tauri/src/durable_store/drafts.rs",
+          "start_line": 198,
+          "end_line": 218,
+          "snapshot_sha256": "8da95099ce829d112c8a09442c516c0c12f67144f2a18f703780a190371c3a3f",
+          "lines": [
+            "198: #[cfg(test)]",
+            "199: mod tests {",
+            "200:     use super::*;",
+            "201:     use serde_json::json;",
+            "202: ",
+            "203:     const KEY: [u8; 32] = [37; 32];",
+            "204:     const NOW: &str = \"2026-10-04T00:00:00Z\";",
+            "205: ",
+            "206:     fn fixture() -> Connection {",
+            "207:         let conn = Connection::open_in_memory().expect(\"open fixture\");",
+            "208:         initialize_schema(&conn).expect(\"initialize fixture\");",
+            "209:         conn",
+            "210:     }",
+            "211: ",
+            "212:     fn insert(conn: &Connection, id: &str, status: &str, command: bool, expires_at: &str) {",
+            "213:         let mut record = json!({\"taskId\": id, \"syncStatus\": \"syncing\", \"draft\": {\"score\": 0}});",
+            "214:         if command {",
+            "215:             record[\"submissionCommand\"] = json!({\"id\": \"frozen-command\", \"payload\": {\"score\": 0}});",
+            "216:         }",
+            "217:         let (ciphertext, nonce) = encrypt_json(&KEY, &record).expect(\"encrypt fixture\");",
+            "218:         conn.execute("
+          ]
+        },
+        {
+          "path": "apps/desktop-client/src-tauri/src/durable_store/drafts.rs",
+          "start_line": 280,
+          "end_line": 288,
+          "snapshot_sha256": "8da95099ce829d112c8a09442c516c0c12f67144f2a18f703780a190371c3a3f",
+          "lines": [
+            "280:     #[test]",
+            "281:     fn wrong_key_preserves_all_expired_records() {",
+            "282:         let mut conn = fixture();",
+            "283:         insert(&conn, \"ordinary\", \"draft\", false, NOW);",
+            "284:         insert(&conn, \"pending\", \"failed\", true, NOW);",
+            "285: ",
+            "286:         assert!(purge_expired_drafts(&mut conn, &[88; 32], NOW).is_err());",
+            "287:         assert_eq!(ids(&conn), vec![\"ordinary\", \"pending\"]);",
+            "288:     }"
+          ]
+        }
+      ],
+      "raw_related_locations": [
+        {
+          "id": 1,
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+              "uriBaseId": "%SRCROOT%",
+              "index": 1
+            },
+            "region": {
+              "startLine": 146,
+              "startColumn": 44,
+              "endColumn": 47
+            }
+          },
+          "message": {
+            "text": "a key"
+          }
+        },
+        {
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+              "uriBaseId": "%SRCROOT%",
+              "index": 1
+            },
+            "region": {
+              "startLine": 146,
+              "startColumn": 44,
+              "endColumn": 47
+            }
+          }
+        }
+      ],
+      "cfg_test_module": {
+        "attribute_line": 198,
+        "module_line": 199,
+        "closing_line": 289
+      },
+      "test_enclosing_item": {
+        "name": "wrong_key_preserves_all_expired_records",
+        "test_attribute_line": 280,
+        "function_start_line": 281,
+        "function_end_line": 288
+      },
+      "test_fixture_kind": "negative_wrong_key_fixture"
+    },
+    {
+      "review_id": "CQ-RUST-009",
+      "sarif_result_index_zero_based": 8,
+      "rule_id": "rust/hard-coded-cryptographic-value",
+      "path": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+      "line": 111,
+      "raw_physical_location": {
+        "artifactLocation": {
+          "uri": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+          "uriBaseId": "%SRCROOT%",
+          "index": 5
+        },
+        "region": {
+          "startLine": 111,
+          "startColumn": 19,
+          "endColumn": 29
+        }
+      },
+      "raw_message": "This hard-coded value is used as [a key](1).\nThis hard-coded value is used as [a key](2).",
+      "raw_level": null,
+      "raw_rule_default_level": "warning",
+      "raw_problem_severity": "warning",
+      "effective_problem_level": "warning",
+      "effective_level_derivation": "result.level, then rule.defaultConfiguration.level, then rule properties.problem.severity; original fields retained",
+      "raw_security_severity": "9.8",
+      "raw_security_band": "critical",
+      "security_finding": true,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "intentional_test_behavior",
+      "human_severity": "none_for_this_rule",
+      "reason": "固定 key [7_u8;32] 只为合成草稿的 AES-GCM 回环测试提供可重现密钥；caller 是 cfg(test) 模块中的 test。 已读实际 #[cfg(test)] mod tests 的起止边界；正常非 test 构建排除整个模块。测试调用生产 crypto/storage helper 不会把测试常量变成生产入口。",
+      "recommendation": "保留正确/错误密钥和数据保留/隔离场景；可按 cfg(test) 源作用域过滤测试告警，不全局禁用生产硬编码密钥规则。",
+      "snapshot_sha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969",
+      "current_workspace_used_for_verdict": false,
+      "evidence": [
+        {
+          "path": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+          "start_line": 84,
+          "end_line": 85,
+          "snapshot_sha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969",
+          "lines": [
+            "84: #[cfg(test)]",
+            "85: mod tests {"
+          ]
+        },
+        {
+          "path": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+          "start_line": 109,
+          "end_line": 118,
+          "snapshot_sha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969",
+          "lines": [
+            "109:     #[test]",
+            "110:     fn encrypted_payload_requires_the_same_key_and_nonce() {",
+            "111:         let key = [7_u8; 32];",
+            "112:         let value = serde_json::json!({\"answer\": \"敏感草稿\", \"score\": 8});",
+            "113:         let (ciphertext, nonce) = encrypt_json(&key, &value).expect(\"encrypt\");",
+            "114:         assert!(!ciphertext.contains(\"敏感草稿\"));",
+            "115:         let decoded: Value = decrypt_json(&key, &ciphertext, &nonce).expect(\"decrypt\");",
+            "116:         assert_eq!(decoded, value);",
+            "117:         assert!(decrypt_json::<Value>(&[8_u8; 32], &ciphertext, &nonce).is_err());",
+            "118:     }"
+          ]
+        }
+      ],
+      "raw_related_locations": [
+        {
+          "id": 1,
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+              "uriBaseId": "%SRCROOT%",
+              "index": 1
+            },
+            "region": {
+              "startLine": 126,
+              "startColumn": 44,
+              "endColumn": 47
+            }
+          },
+          "message": {
+            "text": "a key"
+          }
+        },
+        {
+          "id": 2,
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+              "uriBaseId": "%SRCROOT%",
+              "index": 1
+            },
+            "region": {
+              "startLine": 146,
+              "startColumn": 44,
+              "endColumn": 47
+            }
+          },
+          "message": {
+            "text": "a key"
+          }
+        },
+        {
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+              "uriBaseId": "%SRCROOT%",
+              "index": 1
+            },
+            "region": {
+              "startLine": 126,
+              "startColumn": 44,
+              "endColumn": 47
+            }
+          }
+        },
+        {
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+              "uriBaseId": "%SRCROOT%",
+              "index": 1
+            },
+            "region": {
+              "startLine": 146,
+              "startColumn": 44,
+              "endColumn": 47
+            }
+          }
+        }
+      ],
+      "cfg_test_module": {
+        "attribute_line": 84,
+        "module_line": 85,
+        "closing_line": 541
+      },
+      "test_enclosing_item": {
+        "name": "encrypted_payload_requires_the_same_key_and_nonce",
+        "test_attribute_line": 109,
+        "function_start_line": 110,
+        "function_end_line": 118
+      },
+      "test_fixture_kind": "positive_fixture_key"
+    },
+    {
+      "review_id": "CQ-RUST-010",
+      "sarif_result_index_zero_based": 9,
+      "rule_id": "rust/hard-coded-cryptographic-value",
+      "path": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+      "line": 117,
+      "raw_physical_location": {
+        "artifactLocation": {
+          "uri": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+          "uriBaseId": "%SRCROOT%",
+          "index": 5
+        },
+        "region": {
+          "startLine": 117,
+          "startColumn": 40,
+          "endColumn": 50
+        }
+      },
+      "raw_message": "This hard-coded value is used as [a key](1).",
+      "raw_level": null,
+      "raw_rule_default_level": "warning",
+      "raw_problem_severity": "warning",
+      "effective_problem_level": "warning",
+      "effective_level_derivation": "result.level, then rule.defaultConfiguration.level, then rule properties.problem.severity; original fields retained",
+      "raw_security_severity": "9.8",
+      "raw_security_band": "critical",
+      "security_finding": true,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "intentional_test_behavior",
+      "human_severity": "none_for_this_rule",
+      "reason": "错误 key [8_u8;32] 有意验证同一合成密文用错误密钥解密失败；caller 是 cfg(test) 测试。 已读实际 #[cfg(test)] mod tests 的起止边界；正常非 test 构建排除整个模块。测试调用生产 crypto/storage helper 不会把测试常量变成生产入口。",
+      "recommendation": "保留正确/错误密钥和数据保留/隔离场景；可按 cfg(test) 源作用域过滤测试告警，不全局禁用生产硬编码密钥规则。",
+      "snapshot_sha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969",
+      "current_workspace_used_for_verdict": false,
+      "evidence": [
+        {
+          "path": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+          "start_line": 84,
+          "end_line": 85,
+          "snapshot_sha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969",
+          "lines": [
+            "84: #[cfg(test)]",
+            "85: mod tests {"
+          ]
+        },
+        {
+          "path": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+          "start_line": 109,
+          "end_line": 118,
+          "snapshot_sha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969",
+          "lines": [
+            "109:     #[test]",
+            "110:     fn encrypted_payload_requires_the_same_key_and_nonce() {",
+            "111:         let key = [7_u8; 32];",
+            "112:         let value = serde_json::json!({\"answer\": \"敏感草稿\", \"score\": 8});",
+            "113:         let (ciphertext, nonce) = encrypt_json(&key, &value).expect(\"encrypt\");",
+            "114:         assert!(!ciphertext.contains(\"敏感草稿\"));",
+            "115:         let decoded: Value = decrypt_json(&key, &ciphertext, &nonce).expect(\"decrypt\");",
+            "116:         assert_eq!(decoded, value);",
+            "117:         assert!(decrypt_json::<Value>(&[8_u8; 32], &ciphertext, &nonce).is_err());",
+            "118:     }"
+          ]
+        }
+      ],
+      "raw_related_locations": [
+        {
+          "id": 1,
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+              "uriBaseId": "%SRCROOT%",
+              "index": 1
+            },
+            "region": {
+              "startLine": 146,
+              "startColumn": 44,
+              "endColumn": 47
+            }
+          },
+          "message": {
+            "text": "a key"
+          }
+        },
+        {
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+              "uriBaseId": "%SRCROOT%",
+              "index": 1
+            },
+            "region": {
+              "startLine": 146,
+              "startColumn": 44,
+              "endColumn": 47
+            }
+          }
+        }
+      ],
+      "cfg_test_module": {
+        "attribute_line": 84,
+        "module_line": 85,
+        "closing_line": 541
+      },
+      "test_enclosing_item": {
+        "name": "encrypted_payload_requires_the_same_key_and_nonce",
+        "test_attribute_line": 109,
+        "function_start_line": 110,
+        "function_end_line": 118
+      },
+      "test_fixture_kind": "negative_wrong_key_fixture"
+    },
+    {
+      "review_id": "CQ-RUST-011",
+      "sarif_result_index_zero_based": 10,
+      "rule_id": "rust/hard-coded-cryptographic-value",
+      "path": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+      "line": 135,
+      "raw_physical_location": {
+        "artifactLocation": {
+          "uri": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+          "uriBaseId": "%SRCROOT%",
+          "index": 5
+        },
+        "region": {
+          "startLine": 135,
+          "startColumn": 19,
+          "endColumn": 30
+        }
+      },
+      "raw_message": "This hard-coded value is used as [a key](1).\nThis hard-coded value is used as [a key](2).",
+      "raw_level": null,
+      "raw_rule_default_level": "warning",
+      "raw_problem_severity": "warning",
+      "effective_problem_level": "warning",
+      "effective_level_derivation": "result.level, then rule.defaultConfiguration.level, then rule properties.problem.severity; original fields retained",
+      "raw_security_severity": "9.8",
+      "raw_security_band": "critical",
+      "security_finding": true,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "intentional_test_behavior",
+      "human_severity": "none_for_this_rule",
+      "reason": "固定 key [17_u8;32] 只用于 UUID 临时目录/内存 SQLite 的分块暂存、顺序与内容校验测试。 已读实际 #[cfg(test)] mod tests 的起止边界；正常非 test 构建排除整个模块。测试调用生产 crypto/storage helper 不会把测试常量变成生产入口。",
+      "recommendation": "保留正确/错误密钥和数据保留/隔离场景；可按 cfg(test) 源作用域过滤测试告警，不全局禁用生产硬编码密钥规则。",
+      "snapshot_sha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969",
+      "current_workspace_used_for_verdict": false,
+      "evidence": [
+        {
+          "path": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+          "start_line": 84,
+          "end_line": 85,
+          "snapshot_sha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969",
+          "lines": [
+            "84: #[cfg(test)]",
+            "85: mod tests {"
+          ]
+        },
+        {
+          "path": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+          "start_line": 128,
+          "end_line": 139,
+          "snapshot_sha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969",
+          "lines": [
+            "128:     #[test]",
+            "129:     fn chunked_spool_verifies_order_size_and_content_without_a_whole_file_row() {",
+            "130:         let root = std::env::temp_dir().join(format!(\"edugrade-spool-test-{}\", Uuid::new_v4()));",
+            "131:         let spool = spool_path(&root);",
+            "132:         fs::create_dir_all(&spool).expect(\"spool directory\");",
+            "133:         let conn = Connection::open_in_memory().expect(\"in-memory SQLite\");",
+            "134:         initialize_schema(&conn).expect(\"schema\");",
+            "135:         let key = [17_u8; 32];",
+            "136:         let asset_id = \"chunked-asset\";",
+            "137:         let plaintext = (0..(SPOOL_CHUNK_BYTES * 2 + 37))",
+            "138:             .map(|index| (index % 251) as u8)",
+            "139:             .collect::<Vec<_>>();"
+          ]
+        },
+        {
+          "path": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+          "start_line": 154,
+          "end_line": 158,
+          "snapshot_sha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969",
+          "lines": [
+            "154:         for (chunk_index, chunk) in plaintext.chunks(SPOOL_CHUNK_BYTES).enumerate() {",
+            "155:             let offset = chunk_index * SPOOL_CHUNK_BYTES;",
+            "156:             let (encrypted, nonce) = encrypt_bytes(&key, chunk).expect(\"encrypt chunk\");",
+            "157:             let path = spool.join(format!(\"{asset_id}-{offset}.chunk\"));",
+            "158:             write_new_private_file(&path, &encrypted).expect(\"write chunk\");"
+          ]
+        },
+        {
+          "path": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+          "start_line": 174,
+          "end_line": 199,
+          "snapshot_sha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969",
+          "lines": [
+            "174:         verify_chunked_asset(",
+            "175:             &conn,",
+            "176:             &root,",
+            "177:             &key,",
+            "178:             asset_id,",
+            "179:             plaintext.len() as i64,",
+            "180:             &expected_sha,",
+            "181:         )",
+            "182:         .expect(\"complete chunk sequence\");",
+            "183:         conn.execute(",
+            "184:             \"DELETE FROM local_asset_chunk WHERE local_asset_id=?1 AND chunk_offset=?2\",",
+            "185:             params![asset_id, SPOOL_CHUNK_BYTES as i64],",
+            "186:         )",
+            "187:         .expect(\"remove middle chunk metadata\");",
+            "188:         assert!(verify_chunked_asset(",
+            "189:             &conn,",
+            "190:             &root,",
+            "191:             &key,",
+            "192:             asset_id,",
+            "193:             plaintext.len() as i64,",
+            "194:             &expected_sha,",
+            "195:         )",
+            "196:         .is_err());",
+            "197: ",
+            "198:         fs::remove_dir_all(root).expect(\"remove test spool\");",
+            "199:     }"
+          ]
+        }
+      ],
+      "raw_related_locations": [
+        {
+          "id": 1,
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+              "uriBaseId": "%SRCROOT%",
+              "index": 1
+            },
+            "region": {
+              "startLine": 126,
+              "startColumn": 44,
+              "endColumn": 47
+            }
+          },
+          "message": {
+            "text": "a key"
+          }
+        },
+        {
+          "id": 2,
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+              "uriBaseId": "%SRCROOT%",
+              "index": 1
+            },
+            "region": {
+              "startLine": 146,
+              "startColumn": 44,
+              "endColumn": 47
+            }
+          },
+          "message": {
+            "text": "a key"
+          }
+        },
+        {
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+              "uriBaseId": "%SRCROOT%",
+              "index": 1
+            },
+            "region": {
+              "startLine": 126,
+              "startColumn": 44,
+              "endColumn": 47
+            }
+          }
+        },
+        {
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+              "uriBaseId": "%SRCROOT%",
+              "index": 1
+            },
+            "region": {
+              "startLine": 146,
+              "startColumn": 44,
+              "endColumn": 47
+            }
+          }
+        }
+      ],
+      "cfg_test_module": {
+        "attribute_line": 84,
+        "module_line": 85,
+        "closing_line": 541
+      },
+      "test_enclosing_item": {
+        "name": "chunked_spool_verifies_order_size_and_content_without_a_whole_file_row",
+        "test_attribute_line": 128,
+        "function_start_line": 129,
+        "function_end_line": 199
+      },
+      "test_fixture_kind": "positive_fixture_key"
+    },
+    {
+      "review_id": "CQ-RUST-012",
+      "sarif_result_index_zero_based": 11,
+      "rule_id": "rust/hard-coded-cryptographic-value",
+      "path": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+      "line": 261,
+      "raw_physical_location": {
+        "artifactLocation": {
+          "uri": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+          "uriBaseId": "%SRCROOT%",
+          "index": 5
+        },
+        "region": {
+          "startLine": 261,
+          "startColumn": 19,
+          "endColumn": 30
+        }
+      },
+      "raw_message": "This hard-coded value is used as [a key](1).\nThis hard-coded value is used as [a key](2).",
+      "raw_level": null,
+      "raw_rule_default_level": "warning",
+      "raw_problem_severity": "warning",
+      "effective_problem_level": "warning",
+      "effective_level_derivation": "result.level, then rule.defaultConfiguration.level, then rule properties.problem.severity; original fields retained",
+      "raw_security_severity": "9.8",
+      "raw_security_band": "critical",
+      "security_finding": true,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "intentional_test_behavior",
+      "human_severity": "none_for_this_rule",
+      "reason": "固定 key [29_u8;32] 只用于内存 SQLite 中500页合成暂存与第173页中断恢复场景。 已读实际 #[cfg(test)] mod tests 的起止边界；正常非 test 构建排除整个模块。测试调用生产 crypto/storage helper 不会把测试常量变成生产入口。",
+      "recommendation": "保留正确/错误密钥和数据保留/隔离场景；可按 cfg(test) 源作用域过滤测试告警，不全局禁用生产硬编码密钥规则。",
+      "snapshot_sha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969",
+      "current_workspace_used_for_verdict": false,
+      "evidence": [
+        {
+          "path": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+          "start_line": 84,
+          "end_line": 85,
+          "snapshot_sha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969",
+          "lines": [
+            "84: #[cfg(test)]",
+            "85: mod tests {"
+          ]
+        },
+        {
+          "path": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+          "start_line": 253,
+          "end_line": 265,
+          "snapshot_sha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969",
+          "lines": [
+            "253:     #[test]",
+            "254:     fn recovery_keeps_a_500_page_spool_and_the_interrupted_page_checkpoint() {",
+            "255:         // 这是站点存储的测试数据，不是扫描器测试。它模拟",
+            "256:         // 第 173 页已通过远端上传偏移确认接收后，",
+            "257:         // 桌面端继续处理批次前进程被终止的情况。",
+            "258:         // 重启时以加密队列作为持久化事实来源。",
+            "259:         let conn = Connection::open_in_memory().expect(\"in-memory SQLite\");",
+            "260:         initialize_schema(&conn).expect(\"schema\");",
+            "261:         let key = [29_u8; 32];",
+            "262:         let now = \"2026-08-13T00:00:00Z\";",
+            "263: ",
+            "264:         for page_no in 1_i64..=500 {",
+            "265:             let id = format!(\"page-{page_no}\");"
+          ]
+        },
+        {
+          "path": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+          "start_line": 299,
+          "end_line": 307,
+          "snapshot_sha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969",
+          "lines": [
+            "299:                 idempotency_key: Some(format!(\"stable-page-{page_no}\")),",
+            "300:                 retry_count: Some(0),",
+            "301:                 // 模拟终止前，远端已确认第 173 页到这个准确边界；",
+            "302:                 // 恢复后必须保留该边界。",
+            "303:                 confirmed_offset: (page_no == 173).then_some(1_730_000),",
+            "304:                 remote_upload_id: (page_no == 173).then_some(\"remote-page-173\".to_string()),",
+            "305:             };",
+            "306:             let (payload, nonce) =",
+            "307:                 encrypt_json(&key, &checkpoint).expect(\"encrypt queue checkpoint\");"
+          ]
+        },
+        {
+          "path": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+          "start_line": 341,
+          "end_line": 360,
+          "snapshot_sha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969",
+          "lines": [
+            "341:         recover_interrupted_uploads(&conn).expect(\"recover interrupted upload\");",
+            "342: ",
+            "343:         let queue_count: i64 = conn",
+            "344:             .query_row(",
+            "345:                 \"SELECT COUNT(*) FROM sync_event WHERE operation = 'scan_upload' AND state <> 'archived'\",",
+            "346:                 [],",
+            "347:                 |row| row.get(0),",
+            "348:             )",
+            "349:             .expect(\"queue count\");",
+            "350:         let pending_count: i64 = conn",
+            "351:             .query_row(",
+            "352:                 \"SELECT COUNT(*) FROM sync_event WHERE operation = 'scan_upload' AND state = 'pending'\",",
+            "353:                 [],",
+            "354:                 |row| row.get(0),",
+            "355:             )",
+            "356:             .expect(\"pending count\");",
+            "357:         assert_eq!(queue_count, 500, \"a restart must not drop queued pages\");",
+            "358:         assert_eq!(",
+            "359:             pending_count, 328,",
+            "360:             \"the interrupted page returns to pending with untouched later pages\""
+          ]
+        },
+        {
+          "path": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+          "start_line": 363,
+          "end_line": 394,
+          "snapshot_sha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969",
+          "lines": [
+            "363:         let (payload, nonce): (String, String) = conn",
+            "364:             .query_row(",
+            "365:                 \"SELECT payload_ciphertext, payload_nonce FROM sync_event WHERE entity_id = 'page-173'\",",
+            "366:                 [],",
+            "367:                 |row| Ok((row.get(0)?, row.get(1)?)),",
+            "368:             )",
+            "369:             .expect(\"checkpoint payload\");",
+            "370:         let restored: DurableQueueItem =",
+            "371:             decrypt_json(&key, &payload, &nonce).expect(\"restore checkpoint\");",
+            "372:         assert_eq!(",
+            "373:             restored.remote_upload_id.as_deref(),",
+            "374:             Some(\"remote-page-173\")",
+            "375:         );",
+            "376:         assert_eq!(restored.confirmed_offset, Some(1_730_000));",
+            "377:         let resumed_state: String = conn",
+            "378:             .query_row(",
+            "379:                 \"SELECT state FROM sync_event WHERE entity_id = 'page-173'\",",
+            "380:                 [],",
+            "381:                 |row| row.get(0),",
+            "382:             )",
+            "383:             .expect(\"recovered queue state\");",
+            "384:         let (remote_id, confirmed_offset): (String, i64) = conn",
+            "385:             .query_row(",
+            "386:                 \"SELECT remote_id, confirmed_offset FROM upload_session WHERE local_asset_id = 'page-173'\",",
+            "387:                 [],",
+            "388:                 |row| Ok((row.get(0)?, row.get(1)?)),",
+            "389:             )",
+            "390:             .expect(\"upload session checkpoint\");",
+            "391:         assert_eq!(resumed_state, \"pending\");",
+            "392:         assert_eq!(remote_id, \"remote-page-173\");",
+            "393:         assert_eq!(confirmed_offset, 1_730_000);",
+            "394:     }"
+          ]
+        }
+      ],
+      "raw_related_locations": [
+        {
+          "id": 1,
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+              "uriBaseId": "%SRCROOT%",
+              "index": 1
+            },
+            "region": {
+              "startLine": 126,
+              "startColumn": 44,
+              "endColumn": 47
+            }
+          },
+          "message": {
+            "text": "a key"
+          }
+        },
+        {
+          "id": 2,
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+              "uriBaseId": "%SRCROOT%",
+              "index": 1
+            },
+            "region": {
+              "startLine": 146,
+              "startColumn": 44,
+              "endColumn": 47
+            }
+          },
+          "message": {
+            "text": "a key"
+          }
+        },
+        {
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+              "uriBaseId": "%SRCROOT%",
+              "index": 1
+            },
+            "region": {
+              "startLine": 126,
+              "startColumn": 44,
+              "endColumn": 47
+            }
+          }
+        },
+        {
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+              "uriBaseId": "%SRCROOT%",
+              "index": 1
+            },
+            "region": {
+              "startLine": 146,
+              "startColumn": 44,
+              "endColumn": 47
+            }
+          }
+        }
+      ],
+      "cfg_test_module": {
+        "attribute_line": 84,
+        "module_line": 85,
+        "closing_line": 541
+      },
+      "test_enclosing_item": {
+        "name": "recovery_keeps_a_500_page_spool_and_the_interrupted_page_checkpoint",
+        "test_attribute_line": 253,
+        "function_start_line": 254,
+        "function_end_line": 394
+      },
+      "test_fixture_kind": "positive_fixture_key"
+    },
+    {
+      "review_id": "CQ-RUST-013",
+      "sarif_result_index_zero_based": 12,
+      "rule_id": "rust/hard-coded-cryptographic-value",
+      "path": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+      "line": 466,
+      "raw_physical_location": {
+        "artifactLocation": {
+          "uri": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+          "uriBaseId": "%SRCROOT%",
+          "index": 5
+        },
+        "region": {
+          "startLine": 466,
+          "startColumn": 19,
+          "endColumn": 30
+        }
+      },
+      "raw_message": "This hard-coded value is used as [a key](1).\nThis hard-coded value is used as [a key](2).",
+      "raw_level": null,
+      "raw_rule_default_level": "warning",
+      "raw_problem_severity": "warning",
+      "effective_problem_level": "warning",
+      "effective_level_derivation": "result.level, then rule.defaultConfiguration.level, then rule properties.problem.severity; original fields retained",
+      "raw_security_severity": "9.8",
+      "raw_security_band": "critical",
+      "security_finding": true,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "intentional_test_behavior",
+      "human_severity": "none_for_this_rule",
+      "reason": "固定 key [43_u8;32] 只用于 UUID 临时 A/B 账号与独立 SQLite 的隔离断言，不是生产账号密钥配置。 已读实际 #[cfg(test)] mod tests 的起止边界；正常非 test 构建排除整个模块。测试调用生产 crypto/storage helper 不会把测试常量变成生产入口。",
+      "recommendation": "保留正确/错误密钥和数据保留/隔离场景；可按 cfg(test) 源作用域过滤测试告警，不全局禁用生产硬编码密钥规则。",
+      "snapshot_sha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969",
+      "current_workspace_used_for_verdict": false,
+      "evidence": [
+        {
+          "path": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+          "start_line": 84,
+          "end_line": 85,
+          "snapshot_sha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969",
+          "lines": [
+            "84: #[cfg(test)]",
+            "85: mod tests {"
+          ]
+        },
+        {
+          "path": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+          "start_line": 427,
+          "end_line": 447,
+          "snapshot_sha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969",
+          "lines": [
+            "427:     #[test]",
+            "428:     fn account_b_cannot_read_account_a_asset_and_v1_remains_quarantined() {",
+            "429:         let data_dir =",
+            "430:             std::env::temp_dir().join(format!(\"edugrade-account-test-{}\", Uuid::new_v4()));",
+            "431:         let legacy = data_dir.join(\"durable-store-v1\");",
+            "432:         fs::create_dir_all(&legacy).expect(\"legacy directory\");",
+            "433:         let legacy_marker = legacy.join(\"offline.sqlite3\");",
+            "434:         fs::write(&legacy_marker, b\"legacy encrypted data\").expect(\"legacy marker\");",
+            "435:         assert!(legacy_store_exists(&data_dir).expect(\"detect legacy data\"));",
+            "436: ",
+            "437:         let tenant = Uuid::new_v4().to_string();",
+            "438:         let actor_a = Uuid::new_v4().to_string();",
+            "439:         let actor_b = Uuid::new_v4().to_string();",
+            "440:         let scope_a =",
+            "441:             scope_path_component(\"https://example.test/api\", &tenant, &actor_a).expect(\"A scope\");",
+            "442:         let scope_b =",
+            "443:             scope_path_component(\"https://example.test/api\", &tenant, &actor_b).expect(\"B scope\");",
+            "444:         assert_ne!(scope_a, scope_b);",
+            "445:         assert_ne!(",
+            "446:             scope_a,",
+            "447:             scope_path_component(\"https://example.test/other\", &tenant, &actor_a)"
+          ]
+        },
+        {
+          "path": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+          "start_line": 460,
+          "end_line": 494,
+          "snapshot_sha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969",
+          "lines": [
+            "460:         fs::create_dir_all(spool_path(&root_a)).expect(\"A spool\");",
+            "461:         fs::create_dir_all(spool_path(&root_b)).expect(\"B spool\");",
+            "462:         let conn_a = Connection::open(db_path(&root_a)).expect(\"A database\");",
+            "463:         let conn_b = Connection::open(db_path(&root_b)).expect(\"B database\");",
+            "464:         initialize_schema(&conn_a).expect(\"A schema\");",
+            "465:         initialize_schema(&conn_b).expect(\"B schema\");",
+            "466:         let key = [43_u8; 32];",
+            "467:         let asset_id = \"account-a-asset\";",
+            "468:         let record: DurableQueueItem = serde_json::from_value(serde_json::json!({",
+            "469:             \"id\": asset_id, \"title\": \"a.pdf\", \"kind\": \"scan_upload\", \"status\": \"pending\",",
+            "470:             \"progress\": 0, \"detail\": \"\", \"updatedAt\": \"2026-09-22T00:00:00Z\",",
+            "471:             \"fileName\": \"a.pdf\", \"localAssetId\": asset_id",
+            "472:         }))",
+            "473:         .expect(\"queue record\");",
+            "474:         let (payload, nonce) = encrypt_json(&key, &record).expect(\"encrypted queue\");",
+            "475:         conn_a.execute(",
+            "476:             \"INSERT INTO local_asset (id, sha256, size_bytes, mime, local_path, file_nonce, state, created_at, updated_at)",
+            "477:              VALUES (?1, 'sha', 3, 'application/pdf', '', 'nonce', 'queued', ?2, ?2)\",",
+            "478:             params![asset_id, \"2026-09-22T00:00:00Z\"],",
+            "479:         ).expect(\"A asset\");",
+            "480:         conn_a.execute(",
+            "481:             \"INSERT INTO sync_event (id, operation, entity_id, idempotency_key, state, retry_count, last_error, payload_ciphertext, payload_nonce, created_at, updated_at)",
+            "482:              VALUES (?1, 'scan_upload', ?1, 'key-a', 'pending', 0, NULL, ?2, ?3, ?4, ?4)\",",
+            "483:             params![asset_id, payload, nonce, \"2026-09-22T00:00:00Z\"],",
+            "484:         ).expect(\"A queue\");",
+            "485:         assert_eq!(",
+            "486:             read_durable_local_asset_at(&root_a, &key, asset_id)",
+            "487:                 .expect(\"A reads own asset\")",
+            "488:                 .filename,",
+            "489:             \"a.pdf\"",
+            "490:         );",
+            "491:         assert!(",
+            "492:             read_durable_local_asset_at(&root_b, &key, asset_id).is_err(),",
+            "493:             \"B cannot read A's asset ID\"",
+            "494:         );"
+          ]
+        },
+        {
+          "path": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+          "start_line": 525,
+          "end_line": 540,
+          "snapshot_sha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969",
+          "lines": [
+            "525:         assert_eq!(",
+            "526:             read_durable_local_asset_at(&root_a, &key, asset_id)",
+            "527:                 .expect(\"A recovers own asset\")",
+            "528:                 .filename,",
+            "529:             \"a.pdf\"",
+            "530:         );",
+            "531:         clear_scope().expect(\"clear A\");",
+            "532:         assert!(",
+            "533:             legacy_marker.exists(),",
+            "534:             \"the unscoped v1 data must remain untouched\"",
+            "535:         );",
+            "536:         assert!(!root_a.starts_with(&legacy) && !root_b.starts_with(&legacy));",
+            "537:         drop(conn_a);",
+            "538:         drop(conn_b);",
+            "539:         fs::remove_dir_all(data_dir).expect(\"remove account fixture\");",
+            "540:     }"
+          ]
+        }
+      ],
+      "raw_related_locations": [
+        {
+          "id": 1,
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+              "uriBaseId": "%SRCROOT%",
+              "index": 1
+            },
+            "region": {
+              "startLine": 126,
+              "startColumn": 44,
+              "endColumn": 47
+            }
+          },
+          "message": {
+            "text": "a key"
+          }
+        },
+        {
+          "id": 2,
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+              "uriBaseId": "%SRCROOT%",
+              "index": 1
+            },
+            "region": {
+              "startLine": 146,
+              "startColumn": 44,
+              "endColumn": 47
+            }
+          },
+          "message": {
+            "text": "a key"
+          }
+        },
+        {
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+              "uriBaseId": "%SRCROOT%",
+              "index": 1
+            },
+            "region": {
+              "startLine": 126,
+              "startColumn": 44,
+              "endColumn": 47
+            }
+          }
+        },
+        {
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+              "uriBaseId": "%SRCROOT%",
+              "index": 1
+            },
+            "region": {
+              "startLine": 146,
+              "startColumn": 44,
+              "endColumn": 47
+            }
+          }
+        }
+      ],
+      "cfg_test_module": {
+        "attribute_line": 84,
+        "module_line": 85,
+        "closing_line": 541
+      },
+      "test_enclosing_item": {
+        "name": "account_b_cannot_read_account_a_asset_and_v1_remains_quarantined",
+        "test_attribute_line": 427,
+        "function_start_line": 428,
+        "function_end_line": 540
+      },
+      "test_fixture_kind": "positive_fixture_key"
+    },
+    {
+      "review_id": "CQ-RUST-014",
+      "sarif_result_index_zero_based": 13,
+      "rule_id": "rust/hard-coded-cryptographic-value",
+      "path": "apps/desktop-client/src-tauri/src/durable_store/storage.rs",
+      "line": 308,
+      "raw_physical_location": {
+        "artifactLocation": {
+          "uri": "apps/desktop-client/src-tauri/src/durable_store/storage.rs",
+          "uriBaseId": "%SRCROOT%",
+          "index": 7
+        },
+        "region": {
+          "startLine": 308,
+          "startColumn": 22,
+          "endColumn": 33
+        }
+      },
+      "raw_message": "This hard-coded value is used as [a key](1).\nThis hard-coded value is used as [a key](2).",
+      "raw_level": null,
+      "raw_rule_default_level": "warning",
+      "raw_problem_severity": "warning",
+      "effective_problem_level": "warning",
+      "effective_level_derivation": "result.level, then rule.defaultConfiguration.level, then rule properties.problem.severity; original fields retained",
+      "raw_security_severity": "9.8",
+      "raw_security_band": "critical",
+      "security_finding": true,
+      "manual_review_status": "reviewed_alert_context",
+      "human_verdict": "intentional_test_behavior",
+      "human_severity": "none_for_this_rule",
+      "reason": "[61_u8;32] 是 cfg(test) 私有 fixture 返回的合成数据密钥，只由同测试模块调用。 已读实际 #[cfg(test)] mod tests 的起止边界；正常非 test 构建排除整个模块。测试调用生产 crypto/storage helper 不会把测试常量变成生产入口。",
+      "recommendation": "保留正确/错误密钥和数据保留/隔离场景；可按 cfg(test) 源作用域过滤测试告警，不全局禁用生产硬编码密钥规则。",
+      "snapshot_sha256": "2ab93840f2a3f14b5abb01a09f192d1f19f73bf9f9281f2dd34debbd41107ba8",
+      "current_workspace_used_for_verdict": false,
+      "evidence": [
+        {
+          "path": "apps/desktop-client/src-tauri/src/durable_store/storage.rs",
+          "start_line": 297,
+          "end_line": 309,
+          "snapshot_sha256": "2ab93840f2a3f14b5abb01a09f192d1f19f73bf9f9281f2dd34debbd41107ba8",
+          "lines": [
+            "297: #[cfg(test)]",
+            "298: mod tests {",
+            "299:     use super::*;",
+            "300:     use crate::durable_store::crypto::encrypt_json;",
+            "301: ",
+            "302:     fn fixture() -> (PathBuf, Connection, [u8; 32]) {",
+            "303:         let root =",
+            "304:             std::env::temp_dir().join(format!(\"edugrade-storage-test-{}\", uuid::Uuid::new_v4()));",
+            "305:         fs::create_dir_all(spool_path(&root)).unwrap();",
+            "306:         let conn = Connection::open_in_memory().unwrap();",
+            "307:         initialize_schema(&conn).unwrap();",
+            "308:         (root, conn, [61_u8; 32])",
+            "309:     }"
+          ]
+        },
+        {
+          "path": "apps/desktop-client/src-tauri/src/durable_store/storage.rs",
+          "start_line": 318,
+          "end_line": 327,
+          "snapshot_sha256": "2ab93840f2a3f14b5abb01a09f192d1f19f73bf9f9281f2dd34debbd41107ba8",
+          "lines": [
+            "318:         let id = uuid::Uuid::new_v4().to_string();",
+            "319:         let path = spool_path(root).join(&id);",
+            "320:         fs::create_dir(&path).unwrap();",
+            "321:         fs::write(path.join(\"0.chunk\"), [0_u8; 25]).unwrap();",
+            "322:         let date = (chrono::Utc::now() - chrono::Duration::days(age_days)).to_rfc3339();",
+            "323:         let value = serde_json::json!({ \"id\": id, \"title\": \"答卷.pdf\", \"kind\": \"scan_upload\", \"status\": state, \"progress\": 100, \"detail\": \"confirmed\", \"updatedAt\": date, \"fileName\": \"答卷.pdf\", \"fileAssetId\": if receipt { Some(\"remote-file\") } else { None }, \"remoteUploadId\": if receipt { Some(\"upload-1\") } else { None } });",
+            "324:         let (payload, nonce) = encrypt_json(key, &value).unwrap();",
+            "325:         conn.execute(\"INSERT INTO local_asset(id,sha256,size_bytes,mime,local_path,file_nonce,state,created_at,updated_at,confirmed_at) VALUES(?1,'sha',9,'application/pdf',?2,'chunked-aes-gcm-v1','retained',?3,?3,?4)\", params![id,path.to_string_lossy(),date,if receipt {Some(date.clone())} else {None}]).unwrap();",
+            "326:         conn.execute(\"INSERT INTO sync_event(id,operation,entity_id,idempotency_key,state,payload_ciphertext,payload_nonce,created_at,updated_at) VALUES(?1,'scan_upload',?1,?1,?2,?3,?4,?5,?5)\", params![id,state,payload,nonce,date]).unwrap();",
+            "327:         id"
+          ]
+        },
+        {
+          "path": "apps/desktop-client/src-tauri/src/durable_store/storage.rs",
+          "start_line": 330,
+          "end_line": 338,
+          "snapshot_sha256": "2ab93840f2a3f14b5abb01a09f192d1f19f73bf9f9281f2dd34debbd41107ba8",
+          "lines": [
+            "330:     #[test]",
+            "331:     fn cleanup_keeps_unconfirmed_and_recent_files_and_retains_confirmed_receipts() {",
+            "332:         let (root, conn, key) = fixture();",
+            "333:         let old = asset(&root, &conn, &key, \"archived\", 20, true);",
+            "334:         let pending = asset(&root, &conn, &key, \"archived\", 20, false);",
+            "335:         let recent = asset(&root, &conn, &key, \"archived\", 1, true);",
+            "336:         let unarchived = asset(&root, &conn, &key, \"succeeded\", 20, true);",
+            "337:         let candidates = candidates_at(&conn, &key, 7).unwrap();",
+            "338:         assert_eq!(candidates.len(), 1);"
+          ]
+        },
+        {
+          "path": "apps/desktop-client/src-tauri/src/durable_store/storage.rs",
+          "start_line": 376,
+          "end_line": 380,
+          "snapshot_sha256": "2ab93840f2a3f14b5abb01a09f192d1f19f73bf9f9281f2dd34debbd41107ba8",
+          "lines": [
+            "376:     #[test]",
+            "377:     fn usage_counts_actual_ciphertext_and_orphans_on_the_same_volume() {",
+            "378:         let (root, conn, key) = fixture();",
+            "379:         asset(&root, &conn, &key, \"archived\", 20, true);",
+            "380:         fs::write(spool_path(&root).join(\"incomplete.chunk\"), [0_u8; 13]).unwrap();"
+          ]
+        },
+        {
+          "path": "apps/desktop-client/src-tauri/src/durable_store/storage.rs",
+          "start_line": 392,
+          "end_line": 398,
+          "snapshot_sha256": "2ab93840f2a3f14b5abb01a09f192d1f19f73bf9f9281f2dd34debbd41107ba8",
+          "lines": [
+            "392:     #[test]",
+            "393:     fn cleanup_refuses_account_root_and_recovers_interrupted_purging() {",
+            "394:         let (root, conn, key) = fixture();",
+            "395:         let id = asset(&root, &conn, &key, \"archived\", 20, true);",
+            "396:         let original = spool_path(&root).join(&id);",
+            "397:         conn.execute(",
+            "398:             \"UPDATE local_asset SET local_path=?2 WHERE id=?1\","
+          ]
+        },
+        {
+          "path": "apps/desktop-client/src-tauri/src/durable_store/storage.rs",
+          "start_line": 418,
+          "end_line": 438,
+          "snapshot_sha256": "2ab93840f2a3f14b5abb01a09f192d1f19f73bf9f9281f2dd34debbd41107ba8",
+          "lines": [
+            "418:     #[test]",
+            "419:     fn reselect_restores_only_unstarted_archived_files_with_the_same_identity() {",
+            "420:         let (root, conn, key) = fixture();",
+            "421:         let unstarted = asset(&root, &conn, &key, \"archived\", 20, false);",
+            "422:         let confirmed = asset(&root, &conn, &key, \"archived\", 20, true);",
+            "423:         let item =",
+            "424:             super::super::queue::existing_queue_item_for_import(&conn, &key, &unstarted).unwrap();",
+            "425:         assert_eq!(item.id, unstarted);",
+            "426:         assert_eq!(item.status, \"pending\");",
+            "427:         assert!(",
+            "428:             super::super::queue::existing_queue_item_for_import(&conn, &key, &confirmed).is_err()",
+            "429:         );",
+            "430:         assert_eq!(",
+            "431:             conn.query_row(\"SELECT COUNT(*) FROM sync_event\", [], |row| row",
+            "432:                 .get::<_, i64>(0))",
+            "433:                 .unwrap(),",
+            "434:             2",
+            "435:         );",
+            "436:         fs::remove_dir_all(root).unwrap();",
+            "437:     }",
+            "438: }"
+          ]
+        }
+      ],
+      "raw_related_locations": [
+        {
+          "id": 1,
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+              "uriBaseId": "%SRCROOT%",
+              "index": 1
+            },
+            "region": {
+              "startLine": 126,
+              "startColumn": 44,
+              "endColumn": 47
+            }
+          },
+          "message": {
+            "text": "a key"
+          }
+        },
+        {
+          "id": 2,
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+              "uriBaseId": "%SRCROOT%",
+              "index": 1
+            },
+            "region": {
+              "startLine": 146,
+              "startColumn": 44,
+              "endColumn": 47
+            }
+          },
+          "message": {
+            "text": "a key"
+          }
+        },
+        {
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+              "uriBaseId": "%SRCROOT%",
+              "index": 1
+            },
+            "region": {
+              "startLine": 126,
+              "startColumn": 44,
+              "endColumn": 47
+            }
+          }
+        },
+        {
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+              "uriBaseId": "%SRCROOT%",
+              "index": 1
+            },
+            "region": {
+              "startLine": 146,
+              "startColumn": 44,
+              "endColumn": 47
+            }
+          }
+        }
+      ],
+      "cfg_test_module": {
+        "attribute_line": 297,
+        "module_line": 298,
+        "closing_line": 438
+      },
+      "test_enclosing_item": {
+        "name": "tests::fixture",
+        "test_attribute_line": null,
+        "function_start_line": 302,
+        "function_end_line": 309
+      },
+      "test_fixture_kind": "shared_private_test_fixture_key"
+    }
+  ]
+}

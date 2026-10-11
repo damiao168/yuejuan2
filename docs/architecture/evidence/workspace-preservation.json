@@ -1,0 +1,357 @@
+{
+  "checked_at_utc": "2026-10-11T03:47:57.290452+00:00",
+  "baseline_files": 3396,
+  "changed_original_files": [
+    ".dockerignore",
+    ".github/workflows/ci.yml",
+    "ai-services/README.md",
+    "ai-services/grading_agent/config.py",
+    "ai-services/grading_agent/server.py",
+    "ai-services/tests/test_config.py",
+    "ai-services/tests/test_server_tls.py",
+    "apps/desktop-client/src/App.batch33.test.tsx",
+    "apps/desktop-client/src/App.tsx",
+    "apps/desktop-client/src/components/OfflineWorkbench.test.tsx",
+    "apps/desktop-client/src/components/OfflineWorkbench.tsx",
+    "apps/desktop-client/src/features/scan-queue/useScanQueue.test.tsx",
+    "apps/desktop-client/src/features/scan-queue/useScanQueue.ts",
+    "apps/desktop-client/src/features/scan/ScanWorkspace.batch34.test.tsx",
+    "apps/desktop-client/src/features/scan/ScanWorkspace.tsx",
+    "apps/student-portal/src/App.tsx",
+    "apps/web-admin/src/components/features/assessment/AssessmentProfileEditor.productUx.test.tsx",
+    "apps/web-admin/src/components/features/assessment/AssessmentProfileEditor.tsx",
+    "apps/web-admin/src/features/answer-sheet-template/answerSheetTemplatePage.batch7.test.tsx",
+    "apps/web-admin/src/features/answer-sheet-template/view/TemplateWorkspaceView.tsx",
+    "apps/web-admin/src/features/calibration/CalibrationDrawer.test.tsx",
+    "apps/web-admin/src/features/calibration/CalibrationDrawer.tsx",
+    "apps/web-admin/src/features/grading/workbench/GradingWorkbench.batch8.test.tsx",
+    "apps/web-admin/src/features/grading/workbench/GradingWorkbench.tsx",
+    "apps/web-admin/src/features/grading/workbench/hooks/useGradingKeyboard.ts",
+    "apps/web-admin/src/features/school-assistant/SchoolAssistantDisplay.batch26.test.tsx",
+    "apps/web-admin/src/features/school-assistant/SchoolAssistantResult.tsx",
+    "apps/web-admin/src/features/score-management/hooks/useScoreWorkspaceData.test.tsx",
+    "apps/web-admin/src/features/score-management/hooks/useScoreWorkspaceData.ts",
+    "apps/web-admin/src/pages/CaptureBatchPage.batch16.test.tsx",
+    "apps/web-admin/src/pages/CaptureBatchPage.tsx",
+    "apps/web-admin/src/pages/ExamPreparationPage.tsx",
+    "apps/web-admin/src/pages/ExamReadinessFreeze.test.tsx",
+    "apps/web-admin/src/pages/LearningReportsPage.tsx",
+    "apps/web-admin/src/pages/LearningReportsPage.ux.test.tsx",
+    "apps/web-admin/src/pages/OrganizationSetupPage.test.tsx",
+    "apps/web-admin/src/pages/OrganizationSetupPage.tsx",
+    "apps/web-admin/src/pages/ScoreManagementPage.tsx",
+    "apps/web-admin/src/router/useUnsavedChangesGuard.test.tsx",
+    "apps/web-admin/src/router/useUnsavedChangesGuard.ts",
+    "apps/web-admin/src/styles/features/exam-preparation.css",
+    "infra/docker-compose/.env.example",
+    "infra/docker-compose/README.md",
+    "infra/docker-compose/docker-compose.story060-e2e.yml",
+    "infra/docker-compose/docker-compose.yml",
+    "infra/docker-compose/scripts/preflight.ps1",
+    "packages/sdk/src/index.ts",
+    "scripts/ci/check-go-coverage.mjs",
+    "scripts/ci/go-coverage.test.mjs",
+    "scripts/ci/lint-workflows.mjs",
+    "services/api-gateway/internal/releasegate/service.go",
+    "services/api-gateway/tools/story056-postgres-e2e/Dockerfile",
+    "services/math-verification-worker/Dockerfile",
+    "services/math-verification-worker/math_verification_worker/server.py",
+    "services/math-verification-worker/tests/test_server.py",
+    "services/ocr-worker/ocr_worker/config.py",
+    "services/ocr-worker/tests/test_config.py",
+    "tests/e2e/story060_grading_agent.py"
+  ],
+  "changed_file_hashes": [
+    {
+      "file": ".dockerignore",
+      "baseline_sha256": "82ea993ba5f0d9b7a3e26000c214bae5623bacb9d44bdd11cb3284f2073c8c05",
+      "current_sha256": "2dea364306b6589299e3697250a8bca096d008e6fbf1b45574918ecf868fa675"
+    },
+    {
+      "file": ".github/workflows/ci.yml",
+      "baseline_sha256": "8358883cfd9a97ad80742fbce7dce921eda593981bd40bf5e024e82ea736b3ef",
+      "current_sha256": "0080fdb3fd7ff33c24b3c48e51374687cde7a8b8694b7b7ce8bc32bf74e53e47"
+    },
+    {
+      "file": "ai-services/README.md",
+      "baseline_sha256": "2999e99b55e0b682c5213721506a350229e4c62dd5c37fb1f89eb091c1c34d67",
+      "current_sha256": "a48cd7ca1040b24abb9860431a9d89d67890b9e9d6f3f08fd67e3ba879eb10e6"
+    },
+    {
+      "file": "ai-services/grading_agent/config.py",
+      "baseline_sha256": "4827d926bdb1c09ff323311bfc54ec3da8c5ade1fe08f390f34f70b8fa92597e",
+      "current_sha256": "2ff9cbe6105aa62ab6098f53cc5d8cf0bde0d858e8bf7bc5992ec48648d3b460"
+    },
+    {
+      "file": "ai-services/grading_agent/server.py",
+      "baseline_sha256": "2394f6fff31c0cdd0af06a413a9abcba639dc385a9e4dc156097724eae3e79cd",
+      "current_sha256": "62c2b234657f1f29d444968d8ce815647f820b1b8c7b3eb7d6a6db6d617c637e"
+    },
+    {
+      "file": "ai-services/tests/test_config.py",
+      "baseline_sha256": "7dbcc1a49737890cbaedd4e12e311f9e65c5b4a1e8c94434ac074c16e25c7de0",
+      "current_sha256": "adab58404249d7ae9a86e09a2c42b7c02937cf0a2c9fb8faf72fb2eeacbf8529"
+    },
+    {
+      "file": "ai-services/tests/test_server_tls.py",
+      "baseline_sha256": "fead1bd4c8b4483a35d29c7c581802fc494158eea81906fb8a39966e1f4ee725",
+      "current_sha256": "8a1b347ce43f3c08af267595ea199cb52c674cec6f08b21947b384f57096e693"
+    },
+    {
+      "file": "apps/desktop-client/src/App.batch33.test.tsx",
+      "baseline_sha256": "94258c2c9f810bbd9334e8e8a5720be303bdc8bbd9ce5578c4b3084d53e77295",
+      "current_sha256": "e786167106fbe1d7bc3c1a5e0abbd6aa76e7b9bc49983b85a6aff51bc3c14ae6"
+    },
+    {
+      "file": "apps/desktop-client/src/App.tsx",
+      "baseline_sha256": "d572db163557bcb713dc57574df92f509183dcdedebeda04cfe2c79f60352bb3",
+      "current_sha256": "4bd2f97b580cae5714c187ce61616d00c0a293f1f80d135e079794b99d6f99fd"
+    },
+    {
+      "file": "apps/desktop-client/src/components/OfflineWorkbench.test.tsx",
+      "baseline_sha256": "8314268203ad94755db1f1c3f8603d0adda06784adaee0e2c2c8bd26ff1e4391",
+      "current_sha256": "da030c3b0d9ff1b03a49f6d2c2aaca007c0ec52d4a0f7fcf0f10e7c037cbed40"
+    },
+    {
+      "file": "apps/desktop-client/src/components/OfflineWorkbench.tsx",
+      "baseline_sha256": "46a9f90fa66920198c4c0bf4a7647bf12c9d87a8feaa6a18a6516349e2010b6d",
+      "current_sha256": "d4bc67fb9e21a876a18f3d92daa63bb23c7a0f00d7d40c062db9e44b0f345fe3"
+    },
+    {
+      "file": "apps/desktop-client/src/features/scan-queue/useScanQueue.test.tsx",
+      "baseline_sha256": "80c19e816f3adb0ad0b62da8fee1a8d5d1c763106ab7702d86eed60f013a5531",
+      "current_sha256": "86acb10cec7c0871198d9dc46f6e957f5a16ff2de531bad11760a8f633e8c0dc"
+    },
+    {
+      "file": "apps/desktop-client/src/features/scan-queue/useScanQueue.ts",
+      "baseline_sha256": "4ff6fedcd54b6a74c2e257a88bfbc42f7cb776e8eb85058497b0a714ea81c928",
+      "current_sha256": "8afb7c76c339e358ecd905e9bb77ac03200663a5df1b79d104162612ae988aaa"
+    },
+    {
+      "file": "apps/desktop-client/src/features/scan/ScanWorkspace.batch34.test.tsx",
+      "baseline_sha256": "ddce2487bdd3442f33be3dba5fce69dbcce10cbba453d0adce28b882998debc5",
+      "current_sha256": "bb1fdc11685249928b70722af13a31f7e88c56e50ab8ba0787472e060e1db45d"
+    },
+    {
+      "file": "apps/desktop-client/src/features/scan/ScanWorkspace.tsx",
+      "baseline_sha256": "a6f81bfdba2feff03d2fd94225ef329e0b14aedadf3a0014fba9af36bcd4ed84",
+      "current_sha256": "dee947aedcab5b332ea9dbfcdc1ab42f06018379f9bf186e21deddfc15725454"
+    },
+    {
+      "file": "apps/student-portal/src/App.tsx",
+      "baseline_sha256": "8f2776fbf8bb28d1ec43150684d440982a26fc27e2e4598a42a89518d30d3036",
+      "current_sha256": "0052d450540f9d921a9786359420ca9dcd0a2c5614a4f7a800f4af470e963295"
+    },
+    {
+      "file": "apps/web-admin/src/components/features/assessment/AssessmentProfileEditor.productUx.test.tsx",
+      "baseline_sha256": "2a886704128c1178f53333aadaf056dd55f3e4c153fe4939717b5731142bb8fd",
+      "current_sha256": "ab975ea8b94041ec7b99729f8fc60c81b2bd8fc6cab1c3cc2443119938da8b3e"
+    },
+    {
+      "file": "apps/web-admin/src/components/features/assessment/AssessmentProfileEditor.tsx",
+      "baseline_sha256": "e5444f950da23bce429c5badd5791d89667f07cb880231dae2cc7323e3e5dce5",
+      "current_sha256": "c5eac04b04ee834c65d8bac7b97c0a6c0035b51902a76bd4bb44d4f34af47f43"
+    },
+    {
+      "file": "apps/web-admin/src/features/answer-sheet-template/answerSheetTemplatePage.batch7.test.tsx",
+      "baseline_sha256": "e0e6d3fbe5a9ef7c98819e7b5733e1442dbe5e97b852b64c21fddc609b26dc8b",
+      "current_sha256": "ae2901dea2634b2858f787605c0f38cb61bb13d1d1a4a91cc7d2c1029eaccd53"
+    },
+    {
+      "file": "apps/web-admin/src/features/answer-sheet-template/view/TemplateWorkspaceView.tsx",
+      "baseline_sha256": "736f2278cae9b85e12aa2ef44d2ab0bd07d16c6ca3cd74a22bdea495fcc2bc63",
+      "current_sha256": "2641c4095524594035bbad53e22713899f4f02a06f3beefe03e1fd4722d7c609"
+    },
+    {
+      "file": "apps/web-admin/src/features/calibration/CalibrationDrawer.test.tsx",
+      "baseline_sha256": "c900961e71e29b919af3784710146a9e0d31bc52e24f924b1b868ff355165b36",
+      "current_sha256": "34fe31ae0c3bfc3b0d81e62b1cb7510aa6ff53e649f42c5d814dd1a4e20d9eed"
+    },
+    {
+      "file": "apps/web-admin/src/features/calibration/CalibrationDrawer.tsx",
+      "baseline_sha256": "d1b889a091de64930054d4ec4273d31362ba8430ae28a0cc73df7391977605c1",
+      "current_sha256": "7543d61c5d8c1ce1a593d4efa1170504fdebd14a77603652e1e8c993967fcf36"
+    },
+    {
+      "file": "apps/web-admin/src/features/grading/workbench/GradingWorkbench.batch8.test.tsx",
+      "baseline_sha256": "d542ebb6ad6d79e5dbcd84d576b3e3a39628556970a1fa2f72d19afc8cfe79dc",
+      "current_sha256": "d42f52b311713a8f34af849549a9514f5b7a37f7d7b52ee00b26e148bb1dddbc"
+    },
+    {
+      "file": "apps/web-admin/src/features/grading/workbench/GradingWorkbench.tsx",
+      "baseline_sha256": "5689c2b99fe046b1550c66410a78e23af0fdf76490b208e8b074edbd6df84861",
+      "current_sha256": "0f528b61752ad61683e8abe42015b33b3b0472adf36ae0516d2899d2f7a59ec0"
+    },
+    {
+      "file": "apps/web-admin/src/features/grading/workbench/hooks/useGradingKeyboard.ts",
+      "baseline_sha256": "7cb9f6a58be049d4a1da2e9aee10188a040b55a36dd6c0610dddab0e1fe206aa",
+      "current_sha256": "726de41eee9afda95881178fd0458c8d5a9f4d3bd5a53a6f0174085493e32f71"
+    },
+    {
+      "file": "apps/web-admin/src/features/school-assistant/SchoolAssistantDisplay.batch26.test.tsx",
+      "baseline_sha256": "06842c6e0b823a32bb9417eabcc58beb20cc25d7fe837c897e905216ed5acfb5",
+      "current_sha256": "6032d1ffb4440579349b4412ac48db30c788848922ab15a98b45f6367b57c1ce"
+    },
+    {
+      "file": "apps/web-admin/src/features/school-assistant/SchoolAssistantResult.tsx",
+      "baseline_sha256": "6289fcc63f50c8d1fd4ecf43edcc76e74a24f2c60e9f44025062759d4b1e59f1",
+      "current_sha256": "abfbb0076d793b18cb6bcea54dcd2b7b5623d1f2667ed64df2added7b767ca64"
+    },
+    {
+      "file": "apps/web-admin/src/features/score-management/hooks/useScoreWorkspaceData.test.tsx",
+      "baseline_sha256": "3a47d302b93dd6f978003de7e7a78a3137209c01a7283abb61fdba3b951b13d8",
+      "current_sha256": "a01ef4f2370a18d4855869f60f9da626e104e4597f58296d859a2b171c54020e"
+    },
+    {
+      "file": "apps/web-admin/src/features/score-management/hooks/useScoreWorkspaceData.ts",
+      "baseline_sha256": "d93dfabe65a413d36340b1df922f549dd6c0f901c12464cc760b536b3bcfd528",
+      "current_sha256": "d0e5412960cc5714f17da709a3f89a80ffab0462407695a2d011dcf3d8342839"
+    },
+    {
+      "file": "apps/web-admin/src/pages/CaptureBatchPage.batch16.test.tsx",
+      "baseline_sha256": "4f2991f7a5fd241a33f41ff08887bf35720d4c9321fcd5ea708372158100cfbd",
+      "current_sha256": "f4b00514f49caa6c04f8dc1b714042d2d68c2441266cc9de3891bd7d57c7e08a"
+    },
+    {
+      "file": "apps/web-admin/src/pages/CaptureBatchPage.tsx",
+      "baseline_sha256": "9303e3749e90e77e689d47c99ca016a45c761f99f52ad3660c18bdc7e965857e",
+      "current_sha256": "6b363cc5f0c4af79ae0246e31b69628a4e255c14b69d779e0b4b32e228c5e945"
+    },
+    {
+      "file": "apps/web-admin/src/pages/ExamPreparationPage.tsx",
+      "baseline_sha256": "1ac0204a42579f9aab77be96f79025b7fcf3a357727e44a28b71a0279727b18d",
+      "current_sha256": "83f2be44166ec66a78886f9fe6e2019d364ac996be51a5d1a80b9d9d5f727d37"
+    },
+    {
+      "file": "apps/web-admin/src/pages/ExamReadinessFreeze.test.tsx",
+      "baseline_sha256": "c3bd7e1110d5d44ab8bf0fd1d8e71a29812d157a292eaa4a60b8846412a99c09",
+      "current_sha256": "75e794f2c8200f510348f95e16ae6a5409cb44214fdec67b88fd6f1436ec3e8e"
+    },
+    {
+      "file": "apps/web-admin/src/pages/LearningReportsPage.tsx",
+      "baseline_sha256": "10068eea798060c973939bde474bc01c01246e33ba9a276273ddde2f7f26724d",
+      "current_sha256": "ccd3bcce776e8d913795fc175171b9908da49db5fb766e11de8681089f43a222"
+    },
+    {
+      "file": "apps/web-admin/src/pages/LearningReportsPage.ux.test.tsx",
+      "baseline_sha256": "3f562327253d169b862e5c687fc9ebb0c727988c81a1f7555dffc4943a62f85f",
+      "current_sha256": "fa47d504fa3d331f742d08840c68183ca82431ef0b7680beec9ef187dd170e02"
+    },
+    {
+      "file": "apps/web-admin/src/pages/OrganizationSetupPage.test.tsx",
+      "baseline_sha256": "b423180da31801db0c6c8679c6716c5f2f563a6c37b59746a557430107b80fbb",
+      "current_sha256": "60be8b440596587d411ba37ea0f4c42ae5cb5e661dcca057984fedf850b8fa96"
+    },
+    {
+      "file": "apps/web-admin/src/pages/OrganizationSetupPage.tsx",
+      "baseline_sha256": "33d12c136bfcf5b2699228ce80fff102bf007f2d47b27e62068b0ac554d3b99f",
+      "current_sha256": "5251998f31278a68f0b393bd95bcd29a5853d116bad8ab13b7b8612b73d11dc5"
+    },
+    {
+      "file": "apps/web-admin/src/pages/ScoreManagementPage.tsx",
+      "baseline_sha256": "0f55391ae3afd441cfc861082897b656997b92e60a0576399c06e69c0e6484ac",
+      "current_sha256": "f5bd3cf4f3d5d590a07561604245bfcbf4fb31919fd04b81deaf2bcc78c8f98f"
+    },
+    {
+      "file": "apps/web-admin/src/router/useUnsavedChangesGuard.test.tsx",
+      "baseline_sha256": "4b055723757b3a180987c984e11a9f8684bdbc2acebb0d0cec7cf5b79c71daa3",
+      "current_sha256": "ac1ab93dc87592720e42c61f97dcea456bbea522470f21ce7fe39cc2bea41764"
+    },
+    {
+      "file": "apps/web-admin/src/router/useUnsavedChangesGuard.ts",
+      "baseline_sha256": "d9efcd3f410e76b82b625094b431de3802e27f350b0f1646fbc128533498ac3b",
+      "current_sha256": "8e5e262c4709f06df254cc8ac5f0b5e2dcd790893c6840cd787a4f520dc79d85"
+    },
+    {
+      "file": "apps/web-admin/src/styles/features/exam-preparation.css",
+      "baseline_sha256": "fac8128e991347203e87809ce8a0226cabe99e73f34b32076f082ee745619c0a",
+      "current_sha256": "35636f6b1bd2873e750e36b00b55ec4bf87d7bbdea734a874b13d57902095a83"
+    },
+    {
+      "file": "infra/docker-compose/.env.example",
+      "baseline_sha256": "f4f9ffc786b2061d67d09080c01d53e75b456ce1eaf5137c2f9e7e7c87213c54",
+      "current_sha256": "2040d57834f2213a0be3a26176e6f30ba231d8dbaae3aa7dc339433c68eb1499"
+    },
+    {
+      "file": "infra/docker-compose/README.md",
+      "baseline_sha256": "8eb9578a609654fa389a2607310e5e1ee901ef56cc4f90a5ef7263ffa4b1cf37",
+      "current_sha256": "472ee1a21dd366125af644c64b63ef680d61316a06dab9a368313116ca748549"
+    },
+    {
+      "file": "infra/docker-compose/docker-compose.story060-e2e.yml",
+      "baseline_sha256": "e547e80d8c6e96781b65d95c3a717a393e563d7fc3501fe7c33b40f69ce05c72",
+      "current_sha256": "0909839aa2debd2f8df2fa28b3e73459e57a7639f12c56405ff205c8bf9fda40"
+    },
+    {
+      "file": "infra/docker-compose/docker-compose.yml",
+      "baseline_sha256": "18773e940caab52f25d572754034a426d4238425e605a31956e00b26a22451f3",
+      "current_sha256": "e3bf76a592b30e82e2d6534b943710e453db9f8fb2c8e0bf5f1b415e3cc43067"
+    },
+    {
+      "file": "infra/docker-compose/scripts/preflight.ps1",
+      "baseline_sha256": "0e96f038fa5a04f43b94ec117a450f7820d2641e9056addaa1c7b1731bdf8ec6",
+      "current_sha256": "78cc6e4ba5c5356c159bc12716b0b6f51ae7fa7b86725a00553e8f704de3557b"
+    },
+    {
+      "file": "packages/sdk/src/index.ts",
+      "baseline_sha256": "c30afe0d8729e22eb48e98586662c6d4490cf891119992ab96c17dbbe69bcd80",
+      "current_sha256": "d65c9f7c4ad0270bdacde70f3495869a7792f8ffd7d1464c348756eda13f5607"
+    },
+    {
+      "file": "scripts/ci/check-go-coverage.mjs",
+      "baseline_sha256": "9afaccaba6bfaa3c7834dfc523867ef54b0e966d5f27aa9b824b67b41cb0b67f",
+      "current_sha256": "df8909bbfdfc3b8049e003d982d63a3f71022c7de0b438bf93e8337674855a26"
+    },
+    {
+      "file": "scripts/ci/go-coverage.test.mjs",
+      "baseline_sha256": "a8b3ee0003e0d85d6f6314221fc68b0b91f558685c272d91cb297d1ab809c9de",
+      "current_sha256": "20b32f3f8f2721c8d7e35c6a60da1bffd854a809666e95e82dde316d5a4e1398"
+    },
+    {
+      "file": "scripts/ci/lint-workflows.mjs",
+      "baseline_sha256": "1b32472e519ec26781de6b25c2e157fdad1a5b81a8f6e5a41e9a310ce9d44aec",
+      "current_sha256": "7492a60a08a10b74e019652dfbff3156df833ad5d0368e02af4b2e55750b7a7b"
+    },
+    {
+      "file": "services/api-gateway/internal/releasegate/service.go",
+      "baseline_sha256": "71cedb7f514c86f18bf6831832debe2980a0efb5ae035b8b1cb4c05bd6ddd33d",
+      "current_sha256": "1a66121cfe3df61d7be016e0b85dc7a99a2c1991ec66531e77958127fd5ac05b"
+    },
+    {
+      "file": "services/api-gateway/tools/story056-postgres-e2e/Dockerfile",
+      "baseline_sha256": "32826aade9794a0a0f050f031d06af93ef371b3f50aa0cb515ce83a9656fff74",
+      "current_sha256": "20c9fbae828ab0c478929582e614253844e1f5ad5deb0a003af7962d99e8485e"
+    },
+    {
+      "file": "services/math-verification-worker/Dockerfile",
+      "baseline_sha256": "32cd813a931ae01433963052e0c00224ec028b0ec2e66adc54b5519f08eaa367",
+      "current_sha256": "ccc5dd806d314670d00671f82abdb409b1c5fadd892a973b36c356645f14ab4d"
+    },
+    {
+      "file": "services/math-verification-worker/math_verification_worker/server.py",
+      "baseline_sha256": "4fda507b4bb88ed41323febf606801808b4432e7b36b26754cd5f821186aae82",
+      "current_sha256": "d9d6a02c89cea615738f507e3462e185e4c9992537acdb6b93ce28427f9a4f1f"
+    },
+    {
+      "file": "services/math-verification-worker/tests/test_server.py",
+      "baseline_sha256": "f3365c0466ee6aafc93bcbcad044cdcadbb92f89beea3bc495be13d89b529ff3",
+      "current_sha256": "a81b66cdc60aab230e148ef153e5086980c09a045b26ad289bc104cf7c929538"
+    },
+    {
+      "file": "services/ocr-worker/ocr_worker/config.py",
+      "baseline_sha256": "249da52e184b9461a7ff8919a5d78a00f868047aace9909189c085e3d8453ae7",
+      "current_sha256": "d49444a1ead2f5f5c3d8277cd75c2a7823e5e6b7c200a91b5ef496292d0ecc59"
+    },
+    {
+      "file": "services/ocr-worker/tests/test_config.py",
+      "baseline_sha256": "cd9b8a4c4fb8adcefd5228b859a3c0cbfdc51053e591d37b40d419b44b1e3ceb",
+      "current_sha256": "93a1f82542e76efb159eb3bc1bce5ea3a5a8b89c18354b8a6de2db665c4267c0"
+    },
+    {
+      "file": "tests/e2e/story060_grading_agent.py",
+      "baseline_sha256": "e8810f3e0e6d1f35003c705b45a65526727469a2e21d2862e7e6e9ba850ae77c",
+      "current_sha256": "aa7978bb3fbb8e658314abd1bc595b6381edf739eb4731e0b30214cea9870f69"
+    }
+  ],
+  "commit_unchanged": true
+}

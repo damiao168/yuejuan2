@@ -11,8 +11,7 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/logger"
 )
 
-// Serve writes the same private-object response for direct and delegated
-// routes, after the caller has completed its own authorization checks.
+// Serve 在调用方完成自身授权检查后，为直接路由和委托路由写入相同的私有对象响应。
 func Serve(w http.ResponseWriter, r *http.Request, resource binaryresource.Resource, audit auth.AuditRecorder) {
 	if resource.ETag != "" {
 		w.Header().Set("ETag", resource.ETag)

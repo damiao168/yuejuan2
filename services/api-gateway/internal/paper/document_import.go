@@ -26,8 +26,8 @@ type DocumentImportService struct {
 	modelResolver func(context.Context, string) (*DocumentModelConfig, error)
 }
 
-// DocumentModelConfig travels only on the authenticated internal parser request.
-// It must never be persisted in a paper import or returned to the browser.
+// DocumentModelConfig 只随经过认证的内部解析请求传递。
+// 它绝不能持久化到试卷导入记录中，也不能返回浏览器。
 type DocumentModelConfig struct {
 	AdapterType  string `json:"adapter_type"`
 	ProviderKey  string `json:"provider_key,omitempty"`
@@ -46,8 +46,7 @@ type paperImportParse struct {
 	cancel context.CancelFunc
 }
 
-// The parser input is persisted before execution so it must have one stable
-// wire representation shared by the request builder and the task executor.
+// 解析输入在执行前持久化，因此请求构建器和任务执行器必须共享一种稳定的传输表示。
 type normalizedImportDocument = PaperImportParseDocument
 
 func NewDocumentImportService(store PaperImportRepository, fileStore files.Store, objects files.ObjectStorage, baseURL, token string, timeout time.Duration) *DocumentImportService {
@@ -97,8 +96,8 @@ func (s *DocumentImportService) ReplaceSources(ctx context.Context, tenantID, us
 
 func (s *DocumentImportService) processAcceptedSources(ctx context.Context, tenantID, userID string, job PaperImportJob) (PaperImportJob, error) {
 	if _, durable := s.store.(paperImportDispatchStore); durable {
-		// Creation and its dispatch intent have already committed atomically.
-		// Only the durable executor performs I/O; command replay never reschedules.
+		// 创建操作及其分发意图已原子提交。
+		// 只有持久化执行器执行 I/O；命令重放不会重新调度。
 		return job, nil
 	}
 	return s.processSources(ctx, tenantID, userID, job)
@@ -116,14 +115,7 @@ func (s *DocumentImportService) processSources(ctx context.Context, tenantID, us
 			continue
 		}
 		if !errors.Is(textErr, errDocumentOCRRequired) {
-			if _, durable := s.store.(paperImportDispatchStore); durable {
-				return PaperImportJob{}, textErr
-			}
-			failed, failErr := s.store.FailPaperImport(ctx, tenantID, job.ID, "source_text_unavailable", []string{textErr.Error()})
-			if failErr != nil {
-				return PaperImportJob{}, failErr
-			}
-			return failed, nil
+			return s.failUnavailableSource(ctx, tenantID, job.ID, textErr)
 		}
 		asset, getErr := s.sourceLoader.Metadata(ctx, tenantID, source.FileAssetID)
 		if getErr != nil {
@@ -142,16 +134,10 @@ func (s *DocumentImportService) processSources(ctx context.Context, tenantID, us
 	if len(ocrAssets) > 0 {
 		runtime, ok := s.store.(PaperImportRuntime)
 		if !ok {
-			failed, failErr := s.store.FailPaperImport(ctx, tenantID, job.ID, "paper_ocr_unavailable", []string{"扫描版 PDF 需要 OCR Worker，但当前存储未配置任务运行时"})
-			if failErr != nil {
-				return PaperImportJob{}, failErr
-			}
-			return failed, nil
+			return s.failUnavailableOCRRuntime(ctx, tenantID, job.ID)
 		}
 		if allVisualAssetsDirect {
-			for _, asset := range ocrAssets {
-				documents = append(documents, visualParseDocument(asset.SourceID, asset.FileAssetID, asset.DocumentIndex, asset.RoleHint))
-			}
+			documents = appendVisualParseDocuments(documents, ocrAssets)
 			if err := runtime.QueuePaperImportParse(ctx, tenantID, job, userID, PaperImportParseRequest{Documents: documents, Pages: directPages}); err != nil {
 				return PaperImportJob{}, err
 			}
@@ -179,6 +165,27 @@ func (s *DocumentImportService) processSources(ctx context.Context, tenantID, us
 	return s.completeParsedDocuments(ctx, tenantID, job, documents, nil)
 }
 
+func (s *DocumentImportService) failUnavailableOCRRuntime(ctx context.Context, tenantID, importID string) (PaperImportJob, error) {
+	// 缺少运行时先记录导入失败；若该记录也写入失败，调用方收到写入错误而非失败任务。
+	failed, failErr := s.store.FailPaperImport(ctx, tenantID, importID, "paper_ocr_unavailable", []string{"扫描版 PDF 需要 OCR Worker，但当前存储未配置任务运行时"})
+	if failErr != nil {
+		return PaperImportJob{}, failErr
+	}
+	return failed, nil
+}
+
+func (s *DocumentImportService) failUnavailableSource(ctx context.Context, tenantID, importID string, textErr error) (PaperImportJob, error) {
+	// 持久化存储把读取错误交回执行器；不在这里再写失败终态。
+	if _, durable := s.store.(paperImportDispatchStore); durable {
+		return PaperImportJob{}, textErr
+	}
+	failed, failErr := s.store.FailPaperImport(ctx, tenantID, importID, "source_text_unavailable", []string{textErr.Error()})
+	if failErr != nil {
+		return PaperImportJob{}, failErr
+	}
+	return failed, nil
+}
+
 func isDirectVisualMediaType(contentType string) bool {
 	mediaType := strings.ToLower(strings.TrimSpace(strings.Split(contentType, ";")[0]))
 	return mediaType == "image/png" || mediaType == "image/jpeg" || mediaType == "image/webp"
@@ -189,6 +196,14 @@ func visualParseDocument(sourceID, fileAssetID string, documentIndex int, roleHi
 		SourceID: sourceID, FileAssetID: fileAssetID, DocumentIndex: documentIndex,
 		RoleHint: roleHint, Content: directVisualDocumentPlaceholder, Blocks: []PaperImportOCRBlock{},
 	}
+}
+
+// 已读取的文本保留在前，直接识别的图片按原来源顺序追加；解析器仍收到每份来源的原角色和索引。
+func appendVisualParseDocuments(documents []normalizedImportDocument, assets []PaperImportOCRAsset) []normalizedImportDocument {
+	for _, asset := range assets {
+		documents = append(documents, visualParseDocument(asset.SourceID, asset.FileAssetID, asset.DocumentIndex, asset.RoleHint))
+	}
+	return documents
 }
 
 func (s *DocumentImportService) completeParsedDocuments(ctx context.Context, tenantID string, job PaperImportJob, documents []normalizedImportDocument, extraIssues []PaperImportIssue) (PaperImportJob, error) {
@@ -207,7 +222,7 @@ func (s *DocumentImportService) completeParsedDocuments(ctx context.Context, ten
 	}
 	parsed.Issues = append(parsed.Issues, extraIssues...)
 	parsed.Issues = appendNoExamContentIssue(parsed, documents)
-	return s.store.CompletePaperImportCandidates(ctx, tenantID, job.ID, parsed.Documents, parsed.QuestionCandidates, parsed.AnswerCandidates, parsed.SolutionCandidates, parsed.RubricCandidates, parsed.Issues)
+	return s.store.CompletePaperImportCandidates(ctx, tenantID, job.ID, parsed)
 }
 
 func (s *DocumentImportService) beginParse(ctx context.Context, tenantID, importID string) (context.Context, func()) {
@@ -338,7 +353,7 @@ func (s *DocumentImportService) ExecuteParse(ctx context.Context, tenantID, impo
 	}
 	parsed.Issues = append(parsed.Issues, input.ExtraIssues...)
 	parsed.Issues = appendNoExamContentIssue(parsed, input.Documents)
-	return s.store.CompletePaperImportCandidates(ctx, tenantID, job.ID, parsed.Documents, parsed.QuestionCandidates, parsed.AnswerCandidates, parsed.SolutionCandidates, parsed.RubricCandidates, parsed.Issues)
+	return s.store.CompletePaperImportCandidates(ctx, tenantID, job.ID, parsed)
 }
 
 func (s *DocumentImportService) computeParseRun(ctx context.Context, tenantID string, binding PaperImportRunBinding, onProgress func(map[string]any) error) (documentParseResponse, error) {
@@ -387,18 +402,24 @@ func incrementalPaperImportParseInput(binding PaperImportRunBinding) ([]normaliz
 	}
 	issues := make([]PaperImportIssue, 0, len(binding.Input.ExtraIssues))
 	for _, issue := range binding.Input.ExtraIssues {
-		if len(issue.SourceRefs) == 0 {
+		if hasSelectedPaperImportSource(issue, selected) {
 			issues = append(issues, issue)
-			continue
-		}
-		for _, ref := range issue.SourceRefs {
-			if selected[ref.SourceID] {
-				issues = append(issues, issue)
-				break
-			}
 		}
 	}
 	return documents, pages, issues
+}
+
+func hasSelectedPaperImportSource(issue PaperImportIssue, selected map[string]bool) bool {
+	// 无来源的整体提示仍保留；有来源时任一新增资料命中即可，但一条提示不能重复追加。
+	if len(issue.SourceRefs) == 0 {
+		return true
+	}
+	for _, ref := range issue.SourceRefs {
+		if selected[ref.SourceID] {
+			return true
+		}
+	}
+	return false
 }
 
 func sortPaperImportOCRBlocks(blocks []PaperImportOCRBlock) {
@@ -413,7 +434,7 @@ func sortPaperImportOCRBlocks(blocks []PaperImportOCRBlock) {
 	})
 }
 
-func possiblePageMissingIssues(sources []PaperImportSource, blocks []PaperImportOCRBlock) []PaperImportIssue {
+func positiveOCRPagesBySource(blocks []PaperImportOCRBlock) map[string]map[int]bool {
 	pagesBySource := map[string]map[int]bool{}
 	for _, block := range blocks {
 		if block.PageNo > 0 {
@@ -423,6 +444,11 @@ func possiblePageMissingIssues(sources []PaperImportSource, blocks []PaperImport
 			pagesBySource[block.SourceID][block.PageNo] = true
 		}
 	}
+	return pagesBySource
+}
+
+func possiblePageMissingIssues(sources []PaperImportSource, blocks []PaperImportOCRBlock) []PaperImportIssue {
+	pagesBySource := positiveOCRPagesBySource(blocks)
 	issues := []PaperImportIssue{}
 	for _, source := range sources {
 		pages := pagesBySource[source.ID]

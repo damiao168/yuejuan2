@@ -8,11 +8,11 @@ export function ModulePage({
   route,
   experience,
   onNavigate
-}: {
+}: Readonly<{
   route: AppRoute;
   experience: ProductExperience;
   onNavigate?: (path: string) => void;
-}) {
+}>) {
   const presentation = routePresentation(route, experience);
   const replacement = route.replacementPath
     ? routes.find((candidate) => candidate.path === route.replacementPath)

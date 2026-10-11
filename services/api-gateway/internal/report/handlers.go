@@ -10,6 +10,10 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/logger"
 )
 
+const (
+	reportGeneratedAuditAction = "report.generated"
+)
+
 type Handler struct {
 	store Store
 	audit auth.AuditRecorder
@@ -39,7 +43,7 @@ func (h *Handler) StudentReport(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, err)
 		return
 	}
-	h.auditAction(r, "report.generated", "student_report", studentID, "generate student learning report")
+	h.auditAction(r, reportGeneratedAuditAction, "student_report", studentID, "generate student learning report")
 	httpx.JSON(w, http.StatusOK, map[string]any{"report": report})
 }
 
@@ -50,7 +54,7 @@ func (h *Handler) Overview(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, err)
 		return
 	}
-	h.auditAction(r, "report.generated", "exam", r.PathValue("examId"), "generate exam report overview")
+	h.auditAction(r, reportGeneratedAuditAction, "exam", r.PathValue("examId"), "generate exam report overview")
 	httpx.JSON(w, http.StatusOK, map[string]any{"overview": report})
 }
 
@@ -61,7 +65,7 @@ func (h *Handler) Classes(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, err)
 		return
 	}
-	h.auditAction(r, "report.generated", "exam", r.PathValue("examId"), "generate class learning reports")
+	h.auditAction(r, reportGeneratedAuditAction, "exam", r.PathValue("examId"), "generate class learning reports")
 	httpx.JSON(w, http.StatusOK, map[string]any{"classes": reports})
 }
 
@@ -72,7 +76,7 @@ func (h *Handler) Questions(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, err)
 		return
 	}
-	h.auditAction(r, "report.generated", "exam", r.PathValue("examId"), "generate question analysis report")
+	h.auditAction(r, reportGeneratedAuditAction, "exam", r.PathValue("examId"), "generate question analysis report")
 	httpx.JSON(w, http.StatusOK, map[string]any{"questions": reports})
 }
 
@@ -83,7 +87,7 @@ func (h *Handler) GradingQuality(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, err)
 		return
 	}
-	h.auditAction(r, "report.generated", "exam", r.PathValue("examId"), "generate grading quality report")
+	h.auditAction(r, reportGeneratedAuditAction, "exam", r.PathValue("examId"), "generate grading quality report")
 	httpx.JSON(w, http.StatusOK, map[string]any{"grading_quality": report})
 }
 

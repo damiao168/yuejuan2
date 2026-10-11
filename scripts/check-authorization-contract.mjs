@@ -10,14 +10,15 @@ const requiredRoles = [
   "arbitrator", "auditor", "student", "page_processing_worker", "subjective_grading_worker",
 ];
 const scopes = new Set(["platform", "tenant", "school", "class", "exam_task", "self", "service"]);
+const compareNames = (left, right) => left.localeCompare(right);
 
 // 这里只检查角色矩阵结构和角色边界；数据库实际授予的权限由迁移集成测试另行核对。
 export function checkAuthorizationContract(matrix) {
   assert.ok(matrix && typeof matrix === "object" && !Array.isArray(matrix), "role matrix must be an object");
-  assert.deepEqual(Object.keys(matrix).sort(), [...requiredRoles].sort(), "role matrix must list every canonical role exactly once");
+  assert.deepEqual(Object.keys(matrix).sort(compareNames), [...requiredRoles].sort(compareNames), "role matrix must list every canonical role exactly once");
   for (const [code, role] of Object.entries(matrix)) {
     assert.ok(role && typeof role === "object" && !Array.isArray(role), `${code} must be an object`);
-    assert.deepEqual(Object.keys(role).sort(), ["scope", "human", "managed_user_assignable", "workspace", "permissions"].sort(), `${code} fields`);
+    assert.deepEqual(Object.keys(role).sort(compareNames), ["scope", "human", "managed_user_assignable", "workspace", "permissions"].sort(compareNames), `${code} fields`);
     assert.ok(scopes.has(role.scope), `${code} has invalid scope`);
     assert.equal(typeof role.human, "boolean", `${code} human must be boolean`);
     assert.equal(typeof role.managed_user_assignable, "boolean", `${code} managed_user_assignable must be boolean`);

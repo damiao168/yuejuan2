@@ -1,8 +1,19 @@
-/* Focused exam preparation: exam context, lifecycle, local task navigation, task. */
+/* 专注考试准备：考试上下文、生命周期、局部任务导航和当前任务。 */
 .exam-workspace-canvas {
   width: min(calc(100% - 48px), 1180px);
   margin: 0 auto;
   padding: 24px 0 64px;
+}
+
+/* 考试准备各步骤共用工作区宽度，切换时保持标题、导航和内容边缘对齐。 */
+.exam-workspace-canvas.is-preparation { width: calc(100% - 48px); }
+
+/* 桌面侧栏的标识行高为 52px；考试信息从同一顶部起排，手机仍保留原有页头间距。 */
+@media (min-width: 992px) {
+  .workspace.exam-workspace-shell { padding-top: 0; }
+  .exam-workspace-shell .exam-workspace-canvas { padding-top: 0; }
+  .workspace.exam-workspace-shell .exam-context-header { padding-bottom: 0; }
+  .workspace.exam-workspace-shell .exam-context-title { align-items: center; }
 }
 
 .exam-workspace-canvas .eg-workspace-layout { gap: 16px; }
@@ -24,19 +35,21 @@
 .exam-workspace-canvas .eg-workspace-stage > span { width: 22px; height: 22px; }
 
 .exam-preparation-nav {
-  display: grid;
-  align-content: start;
+  display: flex;
   gap: 4px;
-  padding: 4px 12px 4px 0;
-  border-right: 1px solid var(--border);
+  overflow-x: auto;
+  margin-bottom: 16px;
+  padding: 0 0 8px;
+  border-bottom: 1px solid var(--border);
 }
-.exam-preparation-nav > strong { padding: 4px 12px 10px; font-size: 13px; }
+.exam-preparation-nav > strong { display: none; }
 .exam-preparation-nav button {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   gap: 10px;
-  min-height: 40px;
-  padding: 7px 12px;
+  min-height: 36px;
+  padding: 6px 12px;
   color: var(--text-muted);
   background: transparent;
   border: 0;
@@ -48,9 +61,9 @@
 .exam-preparation-nav button.is-active { color: var(--primary); background: #eef5ff; font-weight: 600; }
 .exam-preparation-step-number { display: grid; flex: 0 0 22px; width: 22px; height: 22px; place-items: center; border: 1px solid var(--border); border-radius: 50%; font-size: 12px; }
 .exam-preparation-nav button.is-active .exam-preparation-step-number { border-color: var(--primary); color: #fff; background: var(--primary); }
-.exam-preparation-shell { display: grid; grid-template-columns: 184px minmax(0, 1fr); align-items: start; gap: 24px; }
+.exam-preparation-shell { display: block; }
 .exam-workspace-content { min-width: 0; }
-.exam-workspace-content.is-preparation { width: 100%; }
+.exam-workspace-content.is-preparation { width: 100%; max-width: none; }
 .exam-workspace-module { min-width: 0; }
 
 .exam-legacy-overview { display: grid; gap: 18px; padding: 24px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
@@ -93,15 +106,9 @@
 .exam-workspace-content .paper-import-upload-content strong { color: var(--text); font-size: 16px; }
 .exam-workspace-content .paper-import-review { border-radius: 10px; }
 
-@media (max-width: 1279px) {
-  .exam-preparation-shell { display: block; }
-  .exam-preparation-nav { display: flex; overflow-x: auto; margin-bottom: 18px; padding: 3px; border-right: 0; border-bottom: 1px solid var(--border); }
-  .exam-preparation-nav > strong { display: none; }
-  .exam-preparation-nav button { flex: 0 0 auto; min-height: 36px; padding: 6px 14px; border-radius: 6px 6px 0 0; }
-}
-
 @media (max-width: 720px) {
   .exam-workspace-canvas { width: min(calc(100% - 24px), 1180px); padding-top: 14px; }
+  .exam-workspace-canvas.is-preparation { width: calc(100% - 24px); }
   .exam-workspace-canvas .exam-context-title { display: grid; gap: 2px; }
   .exam-workspace-canvas .eg-workspace-stages { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .exam-workspace-canvas .eg-workspace-stage:nth-child(2) { border-right: 0; }
@@ -112,11 +119,10 @@
   .readiness-page .readiness-summary > .ant-progress { grid-column: 1 / -1; grid-row: 2; }
 }
 
-/* Exam setup is a single questionnaire-like working surface. */
+/* 考试设置采用类似问卷的单一操作界面。 */
 .exam-workspace-subject { display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 12px; font-weight: 500; }
 .exam-workspace-subject .ant-select { width: 176px; }
 .exam-context-status { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.exam-workspace-content.is-preparation { max-width: none; }
 .exam-setup-form-page { padding: 0 28px 32px; }
 .exam-setup-inline-issues { display: grid; gap: 5px; margin: 8px 0 0; padding: 0; list-style: none; }
 .exam-setup-inline-issues li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 8px 10px; border-left: 2px solid #d97706; color: #7c4a03; background: #fffaf0; font-size: 13px; line-height: 1.45; }
@@ -125,7 +131,6 @@
 .exam-setup-actions { display: flex; justify-content: flex-end; padding-top: 14px; }
 
 @media (max-width: 720px) {
-  .exam-preparation-shell { display: block; }
   .exam-workspace-canvas .exam-context-leading { align-items: flex-start; flex-direction: column; gap: 8px; }
   .exam-context-title { align-items: stretch !important; }
   .exam-workspace-subject { align-items: flex-start; flex-direction: column; gap: 4px; }

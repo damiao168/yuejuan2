@@ -4,7 +4,7 @@ import { installApiMocks } from "../fixtures/apiMocks";
 test("安全活动合并设备名称并精简侧栏品牌区", async ({ page }) => {
   await installApiMocks(page, { role: "school_admin", initiallyAuthenticated: true });
 
-  await page.goto("/#/admin/account/sessions", { waitUntil: "networkidle" });
+  await page.goto("/#/admin/account/sessions", { waitUntil: "domcontentloaded" });
 
   await expect(page.getByRole("heading", { name: "账户安全" })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole("heading", { name: "安全活动" })).toBeVisible();
@@ -34,7 +34,7 @@ for (const { role, experience } of [
 ] as const) {
   test(`${role} 的安全活动默认收起且可以展开和收起`, async ({ page }) => {
     await installApiMocks(page, { role, initiallyAuthenticated: true });
-    await page.goto(`/#/${experience}/account/sessions`, { waitUntil: "networkidle" });
+    await page.goto(`/#/${experience}/account/sessions`, { waitUntil: "domcontentloaded" });
 
     await expect(page.getByRole("heading", { name: "安全活动" })).toBeVisible({ timeout: 30_000 });
     const expandActivity = page.getByRole("button", { name: "展开安全活动" });

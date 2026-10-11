@@ -1,0 +1,4 @@
+{
+  "command": "go test -p 1 ./internal/mathunderstanding ./internal/modelgovernance ./internal/questionbank",
+  "exitCode": 0
+}

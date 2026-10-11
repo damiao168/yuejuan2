@@ -81,8 +81,11 @@ def test_render_validation_routes_only_visual_mismatch_to_l() -> None:
     rejected = FormulaValidator(renderer=lambda _latex: b"").validate(
         "x+1", crop, detector_score=.9, crop_complete=True,
     )
-    assert accepted.action is FormulaAction.ACCEPT and accepted.render_similarity is not None and accepted.render_similarity > .99
-    assert rejected.action is FormulaAction.RETRY_L and not rejected.render_valid
+    assert accepted.action is FormulaAction.ACCEPT
+    assert accepted.render_similarity is not None
+    assert accepted.render_similarity > 0.99
+    assert rejected.action is FormulaAction.RETRY_L
+    assert not rejected.render_valid
 
 
 def test_fraction_gate_rejects_an_entire_equation_misread_as_numerator() -> None:
@@ -106,8 +109,10 @@ def test_adaptive_crop_expands_clipped_formula_before_recognition() -> None:
     ImageDraw.Draw(image).line((30, 20, 70, 20), fill="black", width=2)
     _, bbox, edge_ink, recrops, complete = _adaptive_crop_formula(image, [30, 20, 40, 20], 0, max_padding=32)
     assert recrops > 0
-    assert bbox[0] < 30 and bbox[1] < 20
-    assert edge_ink <= .08 and complete
+    assert bbox[0] < 30
+    assert bbox[1] < 20
+    assert edge_ink <= 0.08
+    assert complete
 
 
 def test_adaptive_crop_never_turns_short_inline_formula_into_paragraph_crop() -> None:

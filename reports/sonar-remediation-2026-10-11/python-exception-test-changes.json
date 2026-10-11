@@ -1,0 +1,1052 @@
+{
+  "records": [
+    {
+      "key": "bae1ee3a-742a-4cf7-87f2-db70d8978f13",
+      "file": "ai-services/tests/test_application.py",
+      "test": "test_capability_profile_identity_must_match_the_governed_matrix",
+      "before": "with self.assertRaisesRegex(ValueError, \"capability profile\"):\n            GradingAgentApplication(\n                settings(capability_profile=\"unapproved-profile\"),\n                model=FakeModel(),\n            )",
+      "after": "test_settings = settings(capability_profile='unapproved-profile')\n        model = FakeModel()\n        with self.assertRaisesRegex(ValueError, 'capability profile'):\n            GradingAgentApplication(test_settings, model=model)",
+      "prepared_variables": [
+        "test_settings",
+        "model"
+      ],
+      "source_sha256_before": "dab4fb74bb3575190bd4000cdf5feead21866e1dbb0524e0da665cd561560d67",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "69b4bfc0b46e68081981cfbd76988a2bc632890d4688178b9e5f81c8e2cc77c9"
+    },
+    {
+      "key": "aa36137f-fa8a-4648-9ce6-cb98babe23c0",
+      "file": "ai-services/tests/test_application_v2.py",
+      "test": "test_idempotency_conflict_uses_safe_digest",
+      "before": "with self.assertRaises(AgentError) as caught:\n            app.grade(changed, changed[\"request_id\"], body_size=body_size(changed))",
+      "after": "request_size = body_size(changed)\n        with self.assertRaises(AgentError) as caught:\n            app.grade(changed, changed['request_id'], body_size=request_size)",
+      "prepared_variables": [
+        "request_size"
+      ],
+      "source_sha256_before": "6047889184957a6826585124f71ccb78792dd6adf06b0cfc969f8f6b8b46ffa8",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "2650d3a83b7da699e52c3a4599a9fd3b3460ceacce1a02d21a40da467bcc1b84"
+    },
+    {
+      "key": "8a563bc0-302d-48c2-bde9-a6e8f3dd8ce5",
+      "file": "ai-services/tests/test_application_v2.py",
+      "test": "test_invalid_fixture_output_fails_without_caching_a_suggestion",
+      "before": "with self.assertRaises(AgentError) as caught:\n            app.grade(request, request[\"request_id\"], body_size=body_size(request))",
+      "after": "request_size = body_size(request)\n        with self.assertRaises(AgentError) as caught:\n            app.grade(request, request['request_id'], body_size=request_size)",
+      "prepared_variables": [
+        "request_size"
+      ],
+      "source_sha256_before": "6047889184957a6826585124f71ccb78792dd6adf06b0cfc969f8f6b8b46ffa8",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "2650d3a83b7da699e52c3a4599a9fd3b3460ceacce1a02d21a40da467bcc1b84"
+    },
+    {
+      "key": "3ddc72dc-6179-4cea-a799-571bfbeb1e1b",
+      "file": "ai-services/tests/test_application_v2.py",
+      "test": "test_external_or_production_adapter_cannot_be_registered",
+      "before": "with self.assertRaisesRegex(TypeError, \"OfflineV2FixtureAdapter\"):\n            GradingAgentV2ApplicationSeam(UnapprovedAdapter())",
+      "after": "adapter = UnapprovedAdapter()\n        with self.assertRaisesRegex(TypeError, 'OfflineV2FixtureAdapter'):\n            GradingAgentV2ApplicationSeam(adapter)",
+      "prepared_variables": [
+        "adapter"
+      ],
+      "source_sha256_before": "6047889184957a6826585124f71ccb78792dd6adf06b0cfc969f8f6b8b46ffa8",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "2650d3a83b7da699e52c3a4599a9fd3b3460ceacce1a02d21a40da467bcc1b84"
+    },
+    {
+      "key": "0ca26f93-741a-4dcf-96fd-715b8493ceef",
+      "file": "ai-services/tests/test_contract.py",
+      "test": "test_point_classification_fails_before_malformed_evidence_is_checked",
+      "before": "with self.assertRaises(AgentError) as caught:\n            self._normalize(valid_request(), raw)",
+      "after": "request = valid_request()\n        with self.assertRaises(AgentError) as caught:\n            self._normalize(request, raw)",
+      "prepared_variables": [
+        "request"
+      ],
+      "source_sha256_before": "7bb63ac360d99ddf29fe7f694818b839a320d953c17444cd0e8b0d112952feb3",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "97358f96019cc600734921afdd71bbf48cd3718dcdc25b154b373d5b608df56a"
+    },
+    {
+      "key": "c6b943d3-9a14-4923-a91a-58c5fe99de39",
+      "file": "ai-services/tests/test_contract_v2.py",
+      "test": "test_remote_url_and_whole_page_fixtures_fail_closed",
+      "before": "with self.subTest(name=name), self.assertRaisesRegex(AgentError, message):\n                validate_request_v2(fixture(name))",
+      "after": "request = fixture(name)\n            with self.subTest(name=name), self.assertRaisesRegex(AgentError, message):\n                validate_request_v2(request)",
+      "prepared_variables": [
+        "request"
+      ],
+      "source_sha256_before": "2d16a255c269889545761209b92d3f5ee63e1e682196a61dd51a14811a4cff1b",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "a018f1d3341176c92ba4d32daa709067cf461e7c634e645419d6177fb13f79a5"
+    },
+    {
+      "key": "9b925942-30be-4742-a9e9-7c918481c51a",
+      "file": "ai-services/tests/test_contract_v2.py",
+      "test": "test_v2_remains_unreachable_from_the_v1_application",
+      "before": "with self.assertRaises(AgentError) as caught:\n            app.grade(fixture(\"valid-request.json\"), \"subjective-grade-image-0001\")",
+      "after": "request = fixture('valid-request.json')\n        with self.assertRaises(AgentError) as caught:\n            app.grade(request, 'subjective-grade-image-0001')",
+      "prepared_variables": [
+        "request"
+      ],
+      "source_sha256_before": "2d16a255c269889545761209b92d3f5ee63e1e682196a61dd51a14811a4cff1b",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "a018f1d3341176c92ba4d32daa709067cf461e7c634e645419d6177fb13f79a5"
+    },
+    {
+      "key": "eb7b33ed-bbd7-4e2b-90f5-aba97212dfaf",
+      "file": "ai-services/tests/test_dashscope_multimodal_contract.py",
+      "test": "test_cross_question_crop_binding_is_rejected",
+      "before": "with self.assertRaisesRegex(ValueError, \"not bound\"):\n            build_dashscope_multimodal_payload(\n                model=\"qwen3-vl-plus\",\n                system_message=\"Return JSON.\",\n                user_message=\"Inspect the synthetic crop and return JSON.\",\n                crop=approved_crop(),\n                expected_binding=\"b\" * 64,\n                max_completion_tokens=384,\n            )",
+      "after": "crop = approved_crop()\n        with self.assertRaisesRegex(ValueError, 'not bound'):\n            build_dashscope_multimodal_payload(model='qwen3-vl-plus', system_message='Return JSON.', user_message='Inspect the synthetic crop and return JSON.', crop=crop, expected_binding='b' * 64, max_completion_tokens=384)",
+      "prepared_variables": [
+        "crop"
+      ],
+      "source_sha256_before": "b95c66c047e22c3391f6a5784aaee9cffb2b4ce4ebd7071544638756a79d10c1",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "8dea478bd8d251669423f781574b4c70c3be8380400585ce16d1209821aca41c"
+    },
+    {
+      "key": "0027210c-fac6-451f-95be-524bcb7ea645",
+      "file": "ai-services/tests/test_dashscope_multimodal_contract.py",
+      "test": "test_whole_page_and_wrong_scope_are_rejected",
+      "before": "with self.assertRaisesRegex(ValueError, \"near-whole-page\"):\n            build_dashscope_multimodal_payload(\n                model=\"qwen3-vl-plus\",\n                system_message=\"Return JSON.\",\n                user_message=\"Inspect the synthetic crop and return JSON.\",\n                crop=approved_crop(normalized_bbox=(0.0, 0.0, 1.0, 1.0)),\n                expected_binding=CROP_BINDING,\n                max_completion_tokens=384,\n            )",
+      "after": "crop = approved_crop(normalized_bbox=(0.0, 0.0, 1.0, 1.0))\n        with self.assertRaisesRegex(ValueError, 'near-whole-page'):\n            build_dashscope_multimodal_payload(model='qwen3-vl-plus', system_message='Return JSON.', user_message='Inspect the synthetic crop and return JSON.', crop=crop, expected_binding=CROP_BINDING, max_completion_tokens=384)",
+      "prepared_variables": [
+        "crop"
+      ],
+      "source_sha256_before": "b95c66c047e22c3391f6a5784aaee9cffb2b4ce4ebd7071544638756a79d10c1",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "8dea478bd8d251669423f781574b4c70c3be8380400585ce16d1209821aca41c"
+    },
+    {
+      "key": "d13de5ed-b8d8-49d1-aebd-b8dd23a5a9bf",
+      "file": "ai-services/tests/test_dashscope_multimodal_contract.py",
+      "test": "test_whole_page_and_wrong_scope_are_rejected",
+      "before": "with self.assertRaisesRegex(ValueError, \"answer-segment crops\"):\n            build_dashscope_multimodal_payload(\n                model=\"qwen3-vl-plus\",\n                system_message=\"Return JSON.\",\n                user_message=\"Inspect the synthetic crop and return JSON.\",\n                crop=approved_crop(scope=\"submission_page\"),\n                expected_binding=CROP_BINDING,\n                max_completion_tokens=384,\n            )",
+      "after": "crop = approved_crop(scope='submission_page')\n        with self.assertRaisesRegex(ValueError, 'answer-segment crops'):\n            build_dashscope_multimodal_payload(model='qwen3-vl-plus', system_message='Return JSON.', user_message='Inspect the synthetic crop and return JSON.', crop=crop, expected_binding=CROP_BINDING, max_completion_tokens=384)",
+      "prepared_variables": [
+        "crop"
+      ],
+      "source_sha256_before": "b95c66c047e22c3391f6a5784aaee9cffb2b4ce4ebd7071544638756a79d10c1",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "8dea478bd8d251669423f781574b4c70c3be8380400585ce16d1209821aca41c"
+    },
+    {
+      "key": "19f03b9e-c242-40e4-99ef-de9de978d7cb",
+      "file": "ai-services/tests/test_dashscope_multimodal_contract.py",
+      "test": "test_attested_dimensions_must_match_decoded_png",
+      "before": "with self.assertRaisesRegex(ValueError, \"decoded PNG\"):\n            build_dashscope_multimodal_payload(\n                model=\"qwen3-vl-plus\",\n                system_message=\"Return JSON.\",\n                user_message=\"Inspect the synthetic crop and return JSON.\",\n                crop=approved_crop(width_pixels=2),\n                expected_binding=CROP_BINDING,\n                max_completion_tokens=384,\n            )",
+      "after": "crop = approved_crop(width_pixels=2)\n        with self.assertRaisesRegex(ValueError, 'decoded PNG'):\n            build_dashscope_multimodal_payload(model='qwen3-vl-plus', system_message='Return JSON.', user_message='Inspect the synthetic crop and return JSON.', crop=crop, expected_binding=CROP_BINDING, max_completion_tokens=384)",
+      "prepared_variables": [
+        "crop"
+      ],
+      "source_sha256_before": "b95c66c047e22c3391f6a5784aaee9cffb2b4ce4ebd7071544638756a79d10c1",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "8dea478bd8d251669423f781574b4c70c3be8380400585ce16d1209821aca41c"
+    },
+    {
+      "key": "71dea242-afe4-4609-bae3-2b750578041e",
+      "file": "ai-services/tests/test_dashscope_multimodal_contract.py",
+      "test": "test_oversized_crop_dimensions_are_rejected",
+      "before": "with self.assertRaisesRegex(ValueError, \"dimensions\"):\n            build_dashscope_multimodal_payload(\n                model=\"qwen3-vl-plus\",\n                system_message=\"Return JSON.\",\n                user_message=\"Inspect the synthetic crop and return JSON.\",\n                crop=approved_crop(width_pixels=4000, height_pixels=4000),\n                expected_binding=CROP_BINDING,\n                max_completion_tokens=384,\n            )",
+      "after": "crop = approved_crop(width_pixels=4000, height_pixels=4000)\n        with self.assertRaisesRegex(ValueError, 'dimensions'):\n            build_dashscope_multimodal_payload(model='qwen3-vl-plus', system_message='Return JSON.', user_message='Inspect the synthetic crop and return JSON.', crop=crop, expected_binding=CROP_BINDING, max_completion_tokens=384)",
+      "prepared_variables": [
+        "crop"
+      ],
+      "source_sha256_before": "b95c66c047e22c3391f6a5784aaee9cffb2b4ce4ebd7071544638756a79d10c1",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "8dea478bd8d251669423f781574b4c70c3be8380400585ce16d1209821aca41c"
+    },
+    {
+      "key": "4e353bc3-31c4-4ff7-88a3-4071346840f6",
+      "file": "ai-services/tests/test_dashscope_native_transport.py",
+      "test": "test_authentication_failure_is_sanitized_and_not_retried",
+      "before": "with self.assertRaises(AgentError) as caught:\n            seam.execute_text(fixture(\"request-text.json\"))",
+      "after": "request = fixture('request-text.json')\n        with self.assertRaises(AgentError) as caught:\n            seam.execute_text(request)",
+      "prepared_variables": [
+        "request"
+      ],
+      "source_sha256_before": "207862365fd2f98b98eed96d7c1b0dc9977a943fd842a74f020f40dd921ae806",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "4c0a6993521e01014376bf02ec83c0afa687c0841b2de9314caa6e18528d049e"
+    },
+    {
+      "key": "a375d476-e77b-4c6a-8695-8418b86535e8",
+      "file": "ai-services/tests/test_dashscope_native_transport.py",
+      "test": "test_timeout_is_bounded_and_mapped_after_one_retry",
+      "before": "with self.assertRaises(AgentError) as caught:\n            seam.execute_text(fixture(\"request-text.json\"))",
+      "after": "request = fixture('request-text.json')\n        with self.assertRaises(AgentError) as caught:\n            seam.execute_text(request)",
+      "prepared_variables": [
+        "request"
+      ],
+      "source_sha256_before": "207862365fd2f98b98eed96d7c1b0dc9977a943fd842a74f020f40dd921ae806",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "4c0a6993521e01014376bf02ec83c0afa687c0841b2de9314caa6e18528d049e"
+    },
+    {
+      "key": "91d93e8a-d3a4-4517-90f3-37a6465b0689",
+      "file": "ai-services/tests/test_dashscope_native_transport.py",
+      "test": "test_request_and_response_limits_fail_closed",
+      "before": "with self.assertRaises(AgentError) as response_error:\n            seam.execute_text(fixture(\"request-text.json\"))",
+      "after": "request = fixture('request-text.json')\n        with self.assertRaises(AgentError) as response_error:\n            seam.execute_text(request)",
+      "prepared_variables": [
+        "request"
+      ],
+      "source_sha256_before": "207862365fd2f98b98eed96d7c1b0dc9977a943fd842a74f020f40dd921ae806",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "4c0a6993521e01014376bf02ec83c0afa687c0841b2de9314caa6e18528d049e"
+    },
+    {
+      "key": "e1b3bd87-f920-4223-9a14-775ea22c9909",
+      "file": "ai-services/tests/test_dashscope_native_transport.py",
+      "test": "test_request_buffer_is_cleared_after_success_invalid_output_and_timeout",
+      "before": "with self.assertRaises(AgentError) as caught:\n                            seam.execute_text(fixture(\"request-text.json\"))",
+      "after": "request = fixture('request-text.json')\n                        with self.assertRaises(AgentError) as caught:\n                            seam.execute_text(request)",
+      "prepared_variables": [
+        "request"
+      ],
+      "source_sha256_before": "207862365fd2f98b98eed96d7c1b0dc9977a943fd842a74f020f40dd921ae806",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "4c0a6993521e01014376bf02ec83c0afa687c0841b2de9314caa6e18528d049e"
+    },
+    {
+      "key": "2b1a7633-b975-4433-8e9b-83dbeb5e7730",
+      "file": "ai-services/tests/test_dashscope_native_transport.py",
+      "test": "test_response_requires_json_content_type_and_strict_json",
+      "before": "with self.assertRaises(AgentError) as caught:\n                    seam.execute_text(fixture(\"request-text.json\"))",
+      "after": "request = fixture('request-text.json')\n                with self.assertRaises(AgentError) as caught:\n                    seam.execute_text(request)",
+      "prepared_variables": [
+        "request"
+      ],
+      "source_sha256_before": "207862365fd2f98b98eed96d7c1b0dc9977a943fd842a74f020f40dd921ae806",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "4c0a6993521e01014376bf02ec83c0afa687c0841b2de9314caa6e18528d049e"
+    },
+    {
+      "key": "15c117c9-b449-4c85-ad6d-26b476ebeca6",
+      "file": "ai-services/tests/test_dashscope_native_transport.py",
+      "test": "test_fixture_seam_still_rejects_network_transport",
+      "before": "with self.assertRaisesRegex(TypeError, \"FixtureDashScopeTransport\"):\n            DashScopeNativeTransportSeam(NetworkCapableTransport())",
+      "after": "transport = NetworkCapableTransport()\n        with self.assertRaisesRegex(TypeError, 'FixtureDashScopeTransport'):\n            DashScopeNativeTransportSeam(transport)",
+      "prepared_variables": [
+        "transport"
+      ],
+      "source_sha256_before": "207862365fd2f98b98eed96d7c1b0dc9977a943fd842a74f020f40dd921ae806",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "4c0a6993521e01014376bf02ec83c0afa687c0841b2de9314caa6e18528d049e"
+    },
+    {
+      "key": "e877d13c-b8f8-4125-964b-e37185ff7c0c",
+      "file": "ai-services/tests/test_managed_model.py",
+      "test": "test_invalid_managed_config_never_falls_back_to_local_model",
+      "before": "with self.subTest(changes=changes), self.assertRaises(AgentError):\n                paper_model(self.app, {\"managed_model\": {**config(), **changes}})",
+      "after": "managed_config = config()\n            with self.subTest(changes=changes), self.assertRaises(AgentError):\n                paper_model(self.app, {'managed_model': {**managed_config, **changes}})",
+      "prepared_variables": [
+        "managed_config"
+      ],
+      "source_sha256_before": "97a78c7d8eee259e25af5e3bcd29b47ed27387dea55a70394489d68138d60cbe",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "508b665829cd3159be5d2dd9ef7e814510f01a8b8c4e444d896735c81b5a7c6a"
+    },
+    {
+      "key": "c6e3865d-21f1-4441-8c51-fbebdc75e1d6",
+      "file": "ai-services/tests/test_math_rubric_draft.py",
+      "test": "test_model_cannot_attach_invented_solution_step",
+      "before": "with pytest.raises(AgentError) as raised:\n        MathRubricDraftGenerator(model).generate(\"job-3\", *candidates())",
+      "after": "generator = MathRubricDraftGenerator(model)\n    question_candidates = candidates()\n    with pytest.raises(AgentError) as raised:\n        generator.generate('job-3', *question_candidates)",
+      "prepared_variables": [
+        "generator",
+        "question_candidates"
+      ],
+      "source_sha256_before": "1c5c4f0686b1dceae32c68c3ffee3f9785e920a03e78eb8e0d6cd5f1975e77da",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "3ddfa080e8b8d4b5d55cb55dba9f3a61a5153986185d7585fd23b312348c233b"
+    },
+    {
+      "key": "6f2e4663-06cd-4e60-af03-3439fa40d9d9",
+      "file": "ai-services/tests/test_math_rubric_draft.py",
+      "test": "test_objective_question_does_not_generate_math_steps",
+      "before": "with pytest.raises(AgentError) as raised:\n        MathRubricDraftGenerator(model).generate(\"job-5\", question, answer, solution)",
+      "after": "generator = MathRubricDraftGenerator(model)\n    with pytest.raises(AgentError) as raised:\n        generator.generate('job-5', question, answer, solution)",
+      "prepared_variables": [
+        "generator"
+      ],
+      "source_sha256_before": "1c5c4f0686b1dceae32c68c3ffee3f9785e920a03e78eb8e0d6cd5f1975e77da",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "3ddfa080e8b8d4b5d55cb55dba9f3a61a5153986185d7585fd23b312348c233b"
+    },
+    {
+      "key": "c3ed6722-08b5-4620-bd3b-02519c93b414",
+      "file": "ai-services/tests/test_math_rubric_draft.py",
+      "test": "test_unknown_maximum_still_rejects_invalid_model_proposed_score",
+      "before": "with pytest.raises(AgentError, match=\"not grounded\"):\n        MathRubricDraftGenerator(model).generate(\"job-invalid\", *candidates(score))",
+      "after": "generator = MathRubricDraftGenerator(model)\n    question_candidates = candidates(score)\n    with pytest.raises(AgentError, match='not grounded'):\n        generator.generate('job-invalid', *question_candidates)",
+      "prepared_variables": [
+        "generator",
+        "question_candidates"
+      ],
+      "source_sha256_before": "1c5c4f0686b1dceae32c68c3ffee3f9785e920a03e78eb8e0d6cd5f1975e77da",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "3ddfa080e8b8d4b5d55cb55dba9f3a61a5153986185d7585fd23b312348c233b"
+    },
+    {
+      "key": "98f7a6a3-957b-489d-b2c8-d8c557750185",
+      "file": "ai-services/tests/test_math_rubric_draft.py",
+      "test": "test_input_provenance_error_precedes_invalid_score_without_calling_model",
+      "before": "with pytest.raises(AgentError, match=\"solution provenance is required\"):\n        MathRubricDraftGenerator(model).generate(\"job-order\", question, answer, solution)",
+      "after": "generator = MathRubricDraftGenerator(model)\n    with pytest.raises(AgentError, match='solution provenance is required'):\n        generator.generate('job-order', question, answer, solution)",
+      "prepared_variables": [
+        "generator"
+      ],
+      "source_sha256_before": "1c5c4f0686b1dceae32c68c3ffee3f9785e920a03e78eb8e0d6cd5f1975e77da",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "3ddfa080e8b8d4b5d55cb55dba9f3a61a5153986185d7585fd23b312348c233b"
+    },
+    {
+      "key": "622d8714-09d8-4477-b077-8a9fcbf92c65",
+      "file": "ai-services/tests/test_model.py",
+      "test": "test_all_providers_reject_schema_violations_with_identical_semantics",
+      "before": "with self.assertRaises(AgentError) as raised:\n                        adapter.request_structured(\n                            \"request-1\", [], self.structured_schema(), \"fixture\"\n                        )",
+      "after": "schema = self.structured_schema()\n                    with self.assertRaises(AgentError) as raised:\n                        adapter.request_structured('request-1', [], schema, 'fixture')",
+      "prepared_variables": [
+        "schema"
+      ],
+      "source_sha256_before": "b306b0efbd426fcb26911f2fe3c784acccc992e31d0c84ea292e5f39efb47817",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "eb8d4da4c6fa1ad5145ab666a70e10764a6a9cffae97824f4978991a4a6c3c02"
+    },
+    {
+      "key": "9d8f6083-6b79-40d0-bb77-37164b02e4ee",
+      "file": "ai-services/tests/test_model.py",
+      "test": "test_all_providers_keep_malformed_json_as_invalid_model_output",
+      "before": "with self.assertRaises(AgentError) as raised:\n                    adapter.request_structured(\n                        \"request-1\", [], self.structured_schema(), \"fixture\"\n                    )",
+      "after": "schema = self.structured_schema()\n                with self.assertRaises(AgentError) as raised:\n                    adapter.request_structured('request-1', [], schema, 'fixture')",
+      "prepared_variables": [
+        "schema"
+      ],
+      "source_sha256_before": "b306b0efbd426fcb26911f2fe3c784acccc992e31d0c84ea292e5f39efb47817",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "eb8d4da4c6fa1ad5145ab666a70e10764a6a9cffae97824f4978991a4a6c3c02"
+    },
+    {
+      "key": "18872106-e919-493b-b884-d7509d099bf6",
+      "file": "ai-services/tests/test_model.py",
+      "test": "test_grading_output_uses_local_schema_validation_for_every_provider",
+      "before": "with self.assertRaises(AgentError) as raised:\n                    adapter.request(valid_request())",
+      "after": "request = valid_request()\n                with self.assertRaises(AgentError) as raised:\n                    adapter.request(request)",
+      "prepared_variables": [
+        "request"
+      ],
+      "source_sha256_before": "b306b0efbd426fcb26911f2fe3c784acccc992e31d0c84ea292e5f39efb47817",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "eb8d4da4c6fa1ad5145ab666a70e10764a6a9cffae97824f4978991a4a6c3c02"
+    },
+    {
+      "key": "b0ed8e6f-f58e-4d9d-bf5a-c382c52ac30b",
+      "file": "ai-services/tests/test_model.py",
+      "test": "test_paper_parser_uses_provider_local_schema_validation",
+      "before": "with self.assertRaises(AgentError) as raised:\n            PaperParser(adapter).parse({\n                \"request_id\": \"paper-1\", \"subject\": \"数学\",\n                \"paper_text\": \"第一题，请计算函数结果。\" * 3,\n                \"answer_text\": \"第一题答案为2。\",\n            })",
+      "after": "parser = PaperParser(adapter)\n        with self.assertRaises(AgentError) as raised:\n            parser.parse({'request_id': 'paper-1', 'subject': '数学', 'paper_text': '第一题，请计算函数结果。' * 3, 'answer_text': '第一题答案为2。'})",
+      "prepared_variables": [
+        "parser"
+      ],
+      "source_sha256_before": "b306b0efbd426fcb26911f2fe3c784acccc992e31d0c84ea292e5f39efb47817",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "eb8d4da4c6fa1ad5145ab666a70e10764a6a9cffae97824f4978991a4a6c3c02"
+    },
+    {
+      "key": "9dc6ed3e-918f-4d94-a6b2-8ddf7963bb74",
+      "file": "ai-services/tests/test_model.py",
+      "test": "test_local_model_maps_request_rejection_without_claiming_unavailability",
+      "before": "with self.assertRaises(AgentError) as raised:\n            adapter.request(valid_request())",
+      "after": "request = valid_request()\n        with self.assertRaises(AgentError) as raised:\n            adapter.request(request)",
+      "prepared_variables": [
+        "request"
+      ],
+      "source_sha256_before": "b306b0efbd426fcb26911f2fe3c784acccc992e31d0c84ea292e5f39efb47817",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "eb8d4da4c6fa1ad5145ab666a70e10764a6a9cffae97824f4978991a4a6c3c02"
+    },
+    {
+      "key": "b42953ad-b50f-4b75-9e16-c766837b420f",
+      "file": "ai-services/tests/test_model.py",
+      "test": "test_local_model_maps_rate_limit_as_retryable",
+      "before": "with self.assertRaises(AgentError) as raised:\n            adapter.request(valid_request())",
+      "after": "request = valid_request()\n        with self.assertRaises(AgentError) as raised:\n            adapter.request(request)",
+      "prepared_variables": [
+        "request"
+      ],
+      "source_sha256_before": "b306b0efbd426fcb26911f2fe3c784acccc992e31d0c84ea292e5f39efb47817",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "eb8d4da4c6fa1ad5145ab666a70e10764a6a9cffae97824f4978991a4a6c3c02"
+    },
+    {
+      "key": "02c1af35-7bd4-4fbc-8ca0-78d1c1b9dd5d",
+      "file": "ai-services/tests/test_model.py",
+      "test": "test_prompt_registry_rejects_unversioned_content_change",
+      "before": "with self.assertRaisesRegex(ValueError, \"checksum mismatch\"):\n                PromptRegistry(target, settings().prompt_version)",
+      "after": "test_settings = settings()\n            with self.assertRaisesRegex(ValueError, 'checksum mismatch'):\n                PromptRegistry(target, test_settings.prompt_version)",
+      "prepared_variables": [
+        "test_settings"
+      ],
+      "source_sha256_before": "b306b0efbd426fcb26911f2fe3c784acccc992e31d0c84ea292e5f39efb47817",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "eb8d4da4c6fa1ad5145ab666a70e10764a6a9cffae97824f4978991a4a6c3c02"
+    },
+    {
+      "key": "03eb342a-ed19-4364-b3a4-d74d8ea40c4c",
+      "file": "ai-services/tests/test_paper_input.py",
+      "test": "test_duplicate_visual_page_is_rejected_before_document_metadata_changes",
+      "before": "with self.assertRaisesRegex(AgentError, \"identity or media type\"):\n            clean_visual_pages([visual_page(1), visual_page(1)], self.documents, \"job\")",
+      "after": "page = visual_page(1)\n        page_2 = visual_page(1)\n        with self.assertRaisesRegex(AgentError, 'identity or media type'):\n            clean_visual_pages([page, page_2], self.documents, 'job')",
+      "prepared_variables": [
+        "page",
+        "page_2"
+      ],
+      "source_sha256_before": "a106525a42181a7a12a944b7bce78cbdaaf634cf87dace6bd6dc58a1172866ee",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "43dbe5847a303d02be7ea80a7b8251b8e2b0fee6a311fc1204c744b8d48ec404"
+    },
+    {
+      "key": "1231af08-a031-4ccf-9f9b-33763fb72626",
+      "file": "ai-services/tests/test_paper_input.py",
+      "test": "test_total_decoded_byte_budget_is_independent_of_single_page_budget",
+      "before": "with self.assertRaisesRegex(AgentError, \"size or checksum\"):\n            clean_visual_pages([visual_page(1), visual_page(2)], self.documents, \"job\")",
+      "after": "page = visual_page(1)\n        page_2 = visual_page(2)\n        with self.assertRaisesRegex(AgentError, 'size or checksum'):\n            clean_visual_pages([page, page_2], self.documents, 'job')",
+      "prepared_variables": [
+        "page",
+        "page_2"
+      ],
+      "source_sha256_before": "a106525a42181a7a12a944b7bce78cbdaaf634cf87dace6bd6dc58a1172866ee",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "43dbe5847a303d02be7ea80a7b8251b8e2b0fee6a311fc1204c744b8d48ec404"
+    },
+    {
+      "key": "6f32f509-ff24-4802-b59b-191774afcbd8",
+      "file": "ai-services/tests/test_paper_parser.py",
+      "test": "test_visual_page_checksum_is_verified_before_model_call",
+      "before": "with pytest.raises(AgentError) as raised:\n        PaperParser(model).parse(request)",
+      "after": "parser = PaperParser(model)\n    with pytest.raises(AgentError) as raised:\n        parser.parse(request)",
+      "prepared_variables": [
+        "parser"
+      ],
+      "source_sha256_before": "2c59a442d9a494143bc813dca86fc20862d7f3d87d53e8efd34ba3b3ac0847a2",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "e84d6dc4b8bb3ee51773be63f9100cbf23e0445a98a78f9a95373c763f7357b0"
+    },
+    {
+      "key": "8f09eab0-31b2-4a22-9b9e-5cba67b50015",
+      "file": "ai-services/tests/test_paper_parser.py",
+      "test": "test_visual_ref_requires_an_actual_supplied_page_when_source_has_many_pages",
+      "before": "with pytest.raises(AgentError) as raised:\n        PaperParser(FakeStructuredModel(output(\"answer\", answers=[answer]))).parse(request)",
+      "after": "parser = PaperParser(FakeStructuredModel(output('answer', answers=[answer])))\n    with pytest.raises(AgentError) as raised:\n        parser.parse(request)",
+      "prepared_variables": [
+        "parser"
+      ],
+      "source_sha256_before": "2c59a442d9a494143bc813dca86fc20862d7f3d87d53e8efd34ba3b3ac0847a2",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "e84d6dc4b8bb3ee51773be63f9100cbf23e0445a98a78f9a95373c763f7357b0"
+    },
+    {
+      "key": "c1090bdd-7a2b-4a17-b3ae-640ee9557469",
+      "file": "ai-services/tests/test_paper_parser.py",
+      "test": "test_rejects_empty_document_collection",
+      "before": "with pytest.raises(AgentError): PaperParser(FakeStructuredModel(output(\"unknown\"))).parse({\"request_id\": \"job\", \"subject\": \"语文\", \"documents\": []})",
+      "after": "parser = PaperParser(FakeStructuredModel(output('unknown')))\n    with pytest.raises(AgentError):\n        parser.parse({'request_id': 'job', 'subject': '语文', 'documents': []})",
+      "prepared_variables": [
+        "parser"
+      ],
+      "source_sha256_before": "2c59a442d9a494143bc813dca86fc20862d7f3d87d53e8efd34ba3b3ac0847a2",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "e84d6dc4b8bb3ee51773be63f9100cbf23e0445a98a78f9a95373c763f7357b0"
+    },
+    {
+      "key": "444967d3-b6bc-49de-8bcc-efba681232b4",
+      "file": "ai-services/tests/test_paper_parser.py",
+      "test": "test_rejects_duplicate_source_identity_or_document_order",
+      "before": "with pytest.raises(AgentError) as raised:\n        PaperParser(FakeStructuredModel(output(\"unknown\"))).parse(request)",
+      "after": "parser = PaperParser(FakeStructuredModel(output('unknown')))\n    with pytest.raises(AgentError) as raised:\n        parser.parse(request)",
+      "prepared_variables": [
+        "parser"
+      ],
+      "source_sha256_before": "2c59a442d9a494143bc813dca86fc20862d7f3d87d53e8efd34ba3b3ac0847a2",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "e84d6dc4b8bb3ee51773be63f9100cbf23e0445a98a78f9a95373c763f7357b0"
+    },
+    {
+      "key": "fcab03f9-c6e2-44a7-8801-aa0a21b1f453",
+      "file": "ai-services/tests/test_paper_parser.py",
+      "test": "test_rejects_untrusted_provenance_from_model",
+      "before": "with pytest.raises(AgentError): PaperParser(FakeStructuredModel(output(\"answer\", answers=[answer]))).parse(payload())",
+      "after": "parser = PaperParser(FakeStructuredModel(output('answer', answers=[answer])))\n    request = payload()\n    with pytest.raises(AgentError):\n        parser.parse(request)",
+      "prepared_variables": [
+        "parser",
+        "request"
+      ],
+      "source_sha256_before": "2c59a442d9a494143bc813dca86fc20862d7f3d87d53e8efd34ba3b3ac0847a2",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "e84d6dc4b8bb3ee51773be63f9100cbf23e0445a98a78f9a95373c763f7357b0"
+    },
+    {
+      "key": "3079a323-4bc3-42e0-bec2-bd7172ab6447",
+      "file": "ai-services/tests/test_paper_parser.py",
+      "test": "test_rejects_source_ref_with_fabricated_file_or_document_index",
+      "before": "with pytest.raises(AgentError): PaperParser(FakeStructuredModel(output(\"answer\", answers=[answer]))).parse(payload())",
+      "after": "parser = PaperParser(FakeStructuredModel(output('answer', answers=[answer])))\n    request = payload()\n    with pytest.raises(AgentError):\n        parser.parse(request)",
+      "prepared_variables": [
+        "parser",
+        "request"
+      ],
+      "source_sha256_before": "2c59a442d9a494143bc813dca86fc20862d7f3d87d53e8efd34ba3b3ac0847a2",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "e84d6dc4b8bb3ee51773be63f9100cbf23e0445a98a78f9a95373c763f7357b0"
+    },
+    {
+      "key": "3880ad6c-7856-4f37-9245-ea2d39a2ec9e",
+      "file": "ai-services/tests/test_paper_parser.py",
+      "test": "test_rejects_duplicate_candidate_ids_across_candidate_kinds",
+      "before": "with pytest.raises(AgentError): PaperParser(FakeStructuredModel(output(\"mixed\", answers=[answer], solutions=[solution]))).parse(payload())",
+      "after": "parser = PaperParser(FakeStructuredModel(output('mixed', answers=[answer], solutions=[solution])))\n    request = payload()\n    with pytest.raises(AgentError):\n        parser.parse(request)",
+      "prepared_variables": [
+        "parser",
+        "request"
+      ],
+      "source_sha256_before": "2c59a442d9a494143bc813dca86fc20862d7f3d87d53e8efd34ba3b3ac0847a2",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "e84d6dc4b8bb3ee51773be63f9100cbf23e0445a98a78f9a95373c763f7357b0"
+    },
+    {
+      "key": "e1835497-b14a-44aa-b61b-e104de62bafa",
+      "file": "ai-services/tests/test_paper_parser.py",
+      "test": "test_rejects_ocr_ref_with_fabricated_confidence",
+      "before": "with pytest.raises(AgentError): PaperParser(FakeStructuredModel(output(\"answer\", answers=[answer]))).parse(request)",
+      "after": "parser = PaperParser(FakeStructuredModel(output('answer', answers=[answer])))\n    with pytest.raises(AgentError):\n        parser.parse(request)",
+      "prepared_variables": [
+        "parser"
+      ],
+      "source_sha256_before": "2c59a442d9a494143bc813dca86fc20862d7f3d87d53e8efd34ba3b3ac0847a2",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "e84d6dc4b8bb3ee51773be63f9100cbf23e0445a98a78f9a95373c763f7357b0"
+    },
+    {
+      "key": "605e1c0d-6766-4fd6-bded-7b837fad27d0",
+      "file": "ai-services/tests/test_paper_parser.py",
+      "test": "test_rejects_rubric_with_ungrounded_provenance",
+      "before": "with pytest.raises(AgentError):\n        PaperParser(FakeStructuredModel(output(\"rubric\", rubrics=[rubric]))).parse(payload(\"评分标准\"))",
+      "after": "parser = PaperParser(FakeStructuredModel(output('rubric', rubrics=[rubric])))\n    request = payload('评分标准')\n    with pytest.raises(AgentError):\n        parser.parse(request)",
+      "prepared_variables": [
+        "parser",
+        "request"
+      ],
+      "source_sha256_before": "2c59a442d9a494143bc813dca86fc20862d7f3d87d53e8efd34ba3b3ac0847a2",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "e84d6dc4b8bb3ee51773be63f9100cbf23e0445a98a78f9a95373c763f7357b0"
+    },
+    {
+      "key": "81d72a43-e029-4f48-8fa2-28b08146a96c",
+      "file": "ai-services/tests/test_paper_parser.py",
+      "test": "test_rejects_negative_rubric_point_score",
+      "before": "with pytest.raises(AgentError):\n        PaperParser(FakeStructuredModel(output(\"rubric\", rubrics=[rubric]))).parse(payload(\"评分标准\"))",
+      "after": "parser = PaperParser(FakeStructuredModel(output('rubric', rubrics=[rubric])))\n    request = payload('评分标准')\n    with pytest.raises(AgentError):\n        parser.parse(request)",
+      "prepared_variables": [
+        "parser",
+        "request"
+      ],
+      "source_sha256_before": "2c59a442d9a494143bc813dca86fc20862d7f3d87d53e8efd34ba3b3ac0847a2",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "e84d6dc4b8bb3ee51773be63f9100cbf23e0445a98a78f9a95373c763f7357b0"
+    },
+    {
+      "key": "8c9646eb-a35d-4348-86ba-14f7c6704a43",
+      "file": "ai-services/tests/test_paper_validation.py",
+      "test": "test_all_candidate_provenance_is_checked_before_rubric_scores_and_question_routes",
+      "before": "with pytest.raises(AgentError, match=\"candidate provenance was not grounded\"):\n        validate_paper_output(result, \"request-1\", \"mathematics\", [_document()])",
+      "after": "document = _document()\n    with pytest.raises(AgentError, match='candidate provenance was not grounded'):\n        validate_paper_output(result, 'request-1', 'mathematics', [document])",
+      "prepared_variables": [
+        "document"
+      ],
+      "source_sha256_before": "dc8fd979c5d460d9539a099a079cbb7b69847e74a474395dbcf65cce79148335",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "d4f73a02317d81d805fa2164bc591d6351be2e30fe316cda4be71cef4f1b42ba"
+    },
+    {
+      "key": "0a57e7f3-f344-4227-a6f7-6eea6f5e41b0",
+      "file": "ai-services/tests/test_paper_validation.py",
+      "test": "test_direct_text_provenance_requires_a_nonempty_bounded_integer_range",
+      "before": "with pytest.raises(AgentError, match=\"text provenance range was invalid\"):\n        validate_refs([{**_ref(), \"text_start\": start, \"text_end\": end}], {\"source-1\": document}, \"request-1\")",
+      "after": "reference = _ref()\n    with pytest.raises(AgentError, match='text provenance range was invalid'):\n        validate_refs([{**reference, 'text_start': start, 'text_end': end}], {'source-1': document}, 'request-1')",
+      "prepared_variables": [
+        "reference"
+      ],
+      "source_sha256_before": "dc8fd979c5d460d9539a099a079cbb7b69847e74a474395dbcf65cce79148335",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "d4f73a02317d81d805fa2164bc591d6351be2e30fe316cda4be71cef4f1b42ba"
+    },
+    {
+      "key": "d031f109-0c87-4686-b898-ec51ca56bbd5",
+      "file": "ai-services/tests/test_paper_visual.py",
+      "test": "test_ambiguous_or_invalid_page_fails_without_overwriting_that_reference",
+      "before": "with pytest.raises(AgentError, match=\"did not match a supplied page\"):\n        PaperVisualParser._normalize_visual_refs(_output(ref), [_document(pages)], \"request-1\")",
+      "after": "output = _output(ref)\n    document = _document(pages)\n    with pytest.raises(AgentError, match='did not match a supplied page'):\n        PaperVisualParser._normalize_visual_refs(output, [document], 'request-1')",
+      "prepared_variables": [
+        "output",
+        "document"
+      ],
+      "source_sha256_before": "5f21345f527e159e3173bd83ea85069b6a54d382acc0403e4d8102ba4492dd6b",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "9835d6a9b8c7579262eb74122721775975aeea810e44dc2fdbf2532856c56d56"
+    },
+    {
+      "key": "31a721c3-c16f-4d42-b5fb-367786602f89",
+      "file": "ai-services/tests/test_paper_visual.py",
+      "test": "test_unknown_source_failure_can_be_corrected_and_retried_after_prior_ref_was_normalized",
+      "before": "with pytest.raises(AgentError, match=\"unknown source\"):\n        PaperVisualParser._normalize_visual_refs(result, [_document([1])], \"request-1\")",
+      "after": "document = _document([1])\n    with pytest.raises(AgentError, match='unknown source'):\n        PaperVisualParser._normalize_visual_refs(result, [document], 'request-1')",
+      "prepared_variables": [
+        "document"
+      ],
+      "source_sha256_before": "5f21345f527e159e3173bd83ea85069b6a54d382acc0403e4d8102ba4492dd6b",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "9835d6a9b8c7579262eb74122721775975aeea810e44dc2fdbf2532856c56d56"
+    },
+    {
+      "key": "c4bb6fb5-9366-4a8b-b914-4b8ddd184580",
+      "file": "ai-services/tests/test_provider_adapter.py",
+      "test": "test_unknown_adapter_fails_closed",
+      "before": "with self.assertRaisesRegex(ValueError, \"not enabled\"):\n            registry.create(settings(adapter_type=\"unregistered_native\"))",
+      "after": "test_settings = settings(adapter_type='unregistered_native')\n        with self.assertRaisesRegex(ValueError, 'not enabled'):\n            registry.create(test_settings)",
+      "prepared_variables": [
+        "test_settings"
+      ],
+      "source_sha256_before": "6e964ee41f8cbdadd8177e09b94b572be4d0a86bfa8223ff0cfe3da8442c3fc4",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "c52022ebe7f3800961dd39b911380c5a6544a784eb581a13ab8590200cece5e2"
+    },
+    {
+      "key": "d9a326f1-4a06-41e9-a909-94d8fc9ec308",
+      "file": "ai-services/tests/test_provider_adapter.py",
+      "test": "test_incomplete_adapter_is_rejected",
+      "before": "with self.assertRaisesRegex(TypeError, \"does not implement\"):\n            registry.create(settings(adapter_type=\"fixture_native\"))",
+      "after": "test_settings = settings(adapter_type='fixture_native')\n        with self.assertRaisesRegex(TypeError, 'does not implement'):\n            registry.create(test_settings)",
+      "prepared_variables": [
+        "test_settings"
+      ],
+      "source_sha256_before": "6e964ee41f8cbdadd8177e09b94b572be4d0a86bfa8223ff0cfe3da8442c3fc4",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "c52022ebe7f3800961dd39b911380c5a6544a784eb581a13ab8590200cece5e2"
+    },
+    {
+      "key": "7aa38f1d-621e-4da1-ad1c-136a3bb5f411",
+      "file": "services/ocr-worker/tests/test_benchmark.py",
+      "test": "test_baseline_cannot_silently_measure_regions",
+      "before": "with pytest.raises(ValueError, match=\"full-page input\"):\n        benchmark.run(arguments(manifest, run_id=\"local-baseline-v1\"))",
+      "after": "benchmark_arguments = arguments(manifest, run_id='local-baseline-v1')\n    with pytest.raises(ValueError, match='full-page input'):\n        benchmark.run(benchmark_arguments)",
+      "prepared_variables": [
+        "benchmark_arguments"
+      ],
+      "source_sha256_before": "95789ef840b8a2cc7fb0301e12578942e31a4ab1e5ef8a97cc5ef046f08af7c8",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "7b54d3cd0be93ec96c7cce6012ba9f23b09649baa6c5635bcfc3480aec3a36eb"
+    },
+    {
+      "key": "da7cb6a2-c9c0-4aa2-8726-b8cb26ec7d97",
+      "file": "services/ocr-worker/tests/test_benchmark.py",
+      "test": "test_negative_sample_count_is_rejected",
+      "before": "with pytest.raises(ValueError, match=\"non-negative\"):\n        benchmark.run(arguments(manifest, count=-1))",
+      "after": "benchmark_arguments = arguments(manifest, count=-1)\n    with pytest.raises(ValueError, match='non-negative'):\n        benchmark.run(benchmark_arguments)",
+      "prepared_variables": [
+        "benchmark_arguments"
+      ],
+      "source_sha256_before": "95789ef840b8a2cc7fb0301e12578942e31a4ab1e5ef8a97cc5ef046f08af7c8",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "7b54d3cd0be93ec96c7cce6012ba9f23b09649baa6c5635bcfc3480aec3a36eb"
+    },
+    {
+      "key": "7ee3cb01-0334-4b4e-8c0a-aa7f3b135176",
+      "file": "services/ocr-worker/tests/test_formula_calibration.py",
+      "test": "test_invalid_batch_sweep_is_rejected",
+      "before": "with pytest.raises(ValueError, match=\"batch sizes\"):\n        calibrate_formula_runtime(\n            settings(),\n            [b\"one\"],\n            batch_sizes=batch_sizes,\n            repeats=1,\n            lifecycle_goal=\"compatibility\",\n            engine=FakeEngine(),\n            detector=FakeDetector(),\n        )",
+      "after": "test_settings = settings()\n    engine = FakeEngine()\n    detector = FakeDetector()\n    with pytest.raises(ValueError, match='batch sizes'):\n        calibrate_formula_runtime(test_settings, [b'one'], batch_sizes=batch_sizes, repeats=1, lifecycle_goal='compatibility', engine=engine, detector=detector)",
+      "prepared_variables": [
+        "test_settings",
+        "engine",
+        "detector"
+      ],
+      "source_sha256_before": "9968b99e93a1751fbb8eaad53c64d3027b918c5b559312e292104b875b461f70",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "ca0fd3f2a75e786bab0e6663b255b641c8d662f1d4cce74153fc7f65e8b86205"
+    },
+    {
+      "key": "acfe3237-440b-4e9b-98ba-70a3e17e87ad",
+      "file": "services/ocr-worker/tests/test_http_response.py",
+      "test": "test_body_over_limit_without_content_length_is_rejected",
+      "before": "with pytest.raises(ResponseTooLarge):\n        read_bounded(Response(b\"x\" * 11), 10)",
+      "after": "response = Response(b'x' * 11)\n    with pytest.raises(ResponseTooLarge):\n        read_bounded(response, 10)",
+      "prepared_variables": [
+        "response"
+      ],
+      "source_sha256_before": "3981aceb2933e7e5141e392352e1f9c7c62a286c5a0c42b534f7415c1b057c33",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "24deed0205abb887d253427c2ec0928965fc2cab2f2440a4332789887d10429a"
+    },
+    {
+      "key": "ee18b1bd-42cb-4cce-831e-3b1aa977e22a",
+      "file": "services/ocr-worker/tests/test_ocr_artifacts_batch39.py",
+      "test": "test_download_authentication_is_not_reported_as_retryable_ocr_failure",
+      "before": "with pytest.raises(AuthenticationError) as caught:\n        OCRRunner(api=api, engine=engine, config=WorkerConfig(worker_id=\"worker-a\")).process_once()",
+      "after": "runner = OCRRunner(api=api, engine=engine, config=WorkerConfig(worker_id='worker-a'))\n    with pytest.raises(AuthenticationError) as caught:\n        runner.process_once()",
+      "prepared_variables": [
+        "runner"
+      ],
+      "source_sha256_before": "e84085b4e1868bf3ab5c0e32d3e40d18887a699d6f3065c1dfc4729faa2b75de",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "9e5d9e20a59b4103551371e3c8ffafb40c4b94b6efd9f3c0912d9aee132a55fb"
+    },
+    {
+      "key": "a7c21932-714a-4b8d-8d6b-5bf28429cd02",
+      "file": "services/ocr-worker/tests/test_ocr_artifacts_batch39.py",
+      "test": "test_paper_stop_lease_failure_precedes_reporting_the_engine_error",
+      "before": "with pytest.raises(APIError) as caught:\n        OCRRunner(api=api, engine=engine, config=WorkerConfig(worker_id=\"worker-a\")).process_once()",
+      "after": "runner = OCRRunner(api=api, engine=engine, config=WorkerConfig(worker_id='worker-a'))\n    with pytest.raises(APIError) as caught:\n        runner.process_once()",
+      "prepared_variables": [
+        "runner"
+      ],
+      "source_sha256_before": "e84085b4e1868bf3ab5c0e32d3e40d18887a699d6f3065c1dfc4729faa2b75de",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "9e5d9e20a59b4103551371e3c8ffafb40c4b94b6efd9f3c0912d9aee132a55fb"
+    },
+    {
+      "key": "6dda071f-a640-4f9c-8de4-8c17c1807cb8",
+      "file": "services/ocr-worker/tests/test_ocr_artifacts_batch39.py",
+      "test": "test_text_artifact_keeps_geometry_order_and_exact_review_threshold",
+      "before": "with pytest.raises(ValueError, match=\"recognition produced no evidence\"):\n        _build_artifact(_math_task(), RoutedRecognitionResult(kind=RegionKind.TEXT), verifier)",
+      "after": "task = _math_task()\n    recognition = RoutedRecognitionResult(kind=RegionKind.TEXT)\n    with pytest.raises(ValueError, match='recognition produced no evidence'):\n        _build_artifact(task, recognition, verifier)",
+      "prepared_variables": [
+        "task",
+        "recognition"
+      ],
+      "source_sha256_before": "e84085b4e1868bf3ab5c0e32d3e40d18887a699d6f3065c1dfc4729faa2b75de",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "9e5d9e20a59b4103551371e3c8ffafb40c4b94b6efd9f3c0912d9aee132a55fb"
+    },
+    {
+      "key": "5e30bb29-4e89-45f8-8349-dfe8b930b6ed",
+      "file": "services/ocr-worker/tests/test_ocr_workflows_batch37.py",
+      "test": "test_manifest_validation_preserves_error_messages",
+      "before": "with self.subTest(payload=payload), self.assertRaisesRegex(ValueError, message):\n                benchmark._load_manifest(self.manifest(payload), None)",
+      "after": "manifest_path = self.manifest(payload)\n            with self.subTest(payload=payload), self.assertRaisesRegex(ValueError, message):\n                benchmark._load_manifest(manifest_path, None)",
+      "prepared_variables": [
+        "manifest_path"
+      ],
+      "source_sha256_before": "3a7a63d75096030fcbfd1ba0e15cca21669a96cbbf6f482f6d43ddb07ef8606a",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "d378eb22bb86659781744ac586ffc842d517b54bb4d1398d9b97c1c33c39be4d"
+    },
+    {
+      "key": "2e3e45cb-b6fb-4d11-8fee-bf0aea4049f1",
+      "file": "services/ocr-worker/tests/test_ocr_workflows_batch37.py",
+      "test": "test_negative_count_precedes_empty_bundle_error",
+      "before": "with self.assertRaisesRegex(ValueError, \"non-negative\"):\n            benchmark.run(benchmark_arguments(path, count=-1))",
+      "after": "arguments = benchmark_arguments(path, count=-1)\n        with self.assertRaisesRegex(ValueError, 'non-negative'):\n            benchmark.run(arguments)",
+      "prepared_variables": [
+        "arguments"
+      ],
+      "source_sha256_before": "3a7a63d75096030fcbfd1ba0e15cca21669a96cbbf6f482f6d43ddb07ef8606a",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "d378eb22bb86659781744ac586ffc842d517b54bb4d1398d9b97c1c33c39be4d"
+    },
+    {
+      "key": "8f119fbe-b0c8-4bec-8bbc-2c9afda128de",
+      "file": "services/ocr-worker/tests/test_ocr_workflows_batch37.py",
+      "test": "test_negative_count_precedes_empty_bundle_error",
+      "before": "with self.assertRaisesRegex(ValueError, \"empty\"):\n            benchmark.run(benchmark_arguments(path))",
+      "after": "arguments = benchmark_arguments(path)\n        with self.assertRaisesRegex(ValueError, 'empty'):\n            benchmark.run(arguments)",
+      "prepared_variables": [
+        "arguments"
+      ],
+      "source_sha256_before": "3a7a63d75096030fcbfd1ba0e15cca21669a96cbbf6f482f6d43ddb07ef8606a",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "d378eb22bb86659781744ac586ffc842d517b54bb4d1398d9b97c1c33c39be4d"
+    },
+    {
+      "key": "2678dc73-3a49-4bc1-85d9-a4dd69eafd85",
+      "file": "services/ocr-worker/tests/test_ocr_workflows_batch37.py",
+      "test": "test_calibration_no_usable_output_fails_before_hardware_probe",
+      "before": "with patch.object(calibration, \"formula_hardware_descriptor\") as hardware, self.assertRaisesRegex(RuntimeError, \"no formula batch\"):\n            calibration.calibrate_formula_runtime(settings, [b\"x\"], batch_sizes=[1], repeats=1,\n                                                  lifecycle_goal=\"compatibility\", engine=engine,\n                                                  detector=SimpleNamespace(initialize=Mock()), clock=iter(range(10)).__next__)",
+      "after": "detector = SimpleNamespace(initialize=Mock())\n        clock_values = iter(range(10))\n        with patch.object(calibration, 'formula_hardware_descriptor') as hardware, self.assertRaisesRegex(RuntimeError, 'no formula batch'):\n            calibration.calibrate_formula_runtime(settings, [b'x'], batch_sizes=[1], repeats=1, lifecycle_goal='compatibility', engine=engine, detector=detector, clock=clock_values.__next__)",
+      "prepared_variables": [
+        "detector",
+        "clock_values"
+      ],
+      "source_sha256_before": "3a7a63d75096030fcbfd1ba0e15cca21669a96cbbf6f482f6d43ddb07ef8606a",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "d378eb22bb86659781744ac586ffc842d517b54bb4d1398d9b97c1c33c39be4d"
+    },
+    {
+      "key": "8206e8bd-31f0-414f-8428-72a8fbe421a3",
+      "file": "services/ocr-worker/tests/test_recognition_router_batch32.py",
+      "test": "test_none_direct_formula_result_keeps_original_attribute_error",
+      "before": "with pytest.raises(AttributeError):\n        router.recognize(\"mathematics\", RegionKind.FORMULA, png())",
+      "after": "image_bytes = png()\n    with pytest.raises(AttributeError):\n        router.recognize('mathematics', RegionKind.FORMULA, image_bytes)",
+      "prepared_variables": [
+        "image_bytes"
+      ],
+      "source_sha256_before": "aabe4c6be3eea2f76d799a4bb1ab541ae1fa7ddfb25914204b382b7f4668b18c",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "0cc373f17a4540c1ed14f68e9672e29530e392ad3feebb0261e3722c75a88346"
+    },
+    {
+      "key": "3dcc75b0-f9dd-49a1-9150-ce210f7fceb0",
+      "file": "services/page-processing-worker/tests/test_decoder.py",
+      "test": "test_rejects_tiff_frame_and_total_pixel_limits_before_materializing_all_pages",
+      "before": "with pytest.raises(DecodeError, match=\"image_frame_limit_exceeded\"):\n        decode_document(source.getvalue(), \"image/tiff\", max_pages=2)",
+      "after": "source_bytes = source.getvalue()\n    with pytest.raises(DecodeError, match='image_frame_limit_exceeded'):\n        decode_document(source_bytes, 'image/tiff', max_pages=2)",
+      "prepared_variables": [
+        "source_bytes"
+      ],
+      "source_sha256_before": "80af9531f06e007ade1489e7b3baafbf5b338d91e8b1ced3f00ee82596fb4d5d",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "879e9de3eabae58187f86617b7dc19f49f3c4ef21f5aa3fc998c6c86bd6a0b48"
+    },
+    {
+      "key": "c70d64fd-9b90-449b-92d7-05af3618db46",
+      "file": "services/page-processing-worker/tests/test_decoder.py",
+      "test": "test_rejects_tiff_frame_and_total_pixel_limits_before_materializing_all_pages",
+      "before": "with pytest.raises(DecodeError, match=\"document_pixel_limit_exceeded\"):\n        decode_document(source.getvalue(), \"image/tiff\", max_total_pixels=20_000)",
+      "after": "source_bytes = source.getvalue()\n    with pytest.raises(DecodeError, match='document_pixel_limit_exceeded'):\n        decode_document(source_bytes, 'image/tiff', max_total_pixels=20000)",
+      "prepared_variables": [
+        "source_bytes"
+      ],
+      "source_sha256_before": "80af9531f06e007ade1489e7b3baafbf5b338d91e8b1ced3f00ee82596fb4d5d",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "879e9de3eabae58187f86617b7dc19f49f3c4ef21f5aa3fc998c6c86bd6a0b48"
+    },
+    {
+      "key": "d58aa776-7605-4294-b1cd-edffd791c32a",
+      "file": "services/page-processing-worker/tests/test_decoder.py",
+      "test": "test_reports_stable_error_for_truncated_tiff",
+      "before": "with pytest.raises(DecodeError, match=\"invalid_tiff\"):\n        decode_document(source.getvalue()[:64], \"image/tiff\")",
+      "after": "source_bytes = source.getvalue()\n    with pytest.raises(DecodeError, match='invalid_tiff'):\n        decode_document(source_bytes[:64], 'image/tiff')",
+      "prepared_variables": [
+        "source_bytes"
+      ],
+      "source_sha256_before": "80af9531f06e007ade1489e7b3baafbf5b338d91e8b1ced3f00ee82596fb4d5d",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "879e9de3eabae58187f86617b7dc19f49f3c4ef21f5aa3fc998c6c86bd6a0b48"
+    },
+    {
+      "key": "71910261-bbc0-4d93-9fac-6fe6ba02d228",
+      "file": "services/page-processing-worker/tests/test_decoder.py",
+      "test": "test_rejects_limits_and_invalid_input",
+      "before": "with pytest.raises(DecodeError, match=\"page_pixel_limit_exceeded\"):\n        decode_document(source.getvalue(), \"image/png\", max_page_pixels=100)",
+      "after": "source_bytes = source.getvalue()\n    with pytest.raises(DecodeError, match='page_pixel_limit_exceeded'):\n        decode_document(source_bytes, 'image/png', max_page_pixels=100)",
+      "prepared_variables": [
+        "source_bytes"
+      ],
+      "source_sha256_before": "80af9531f06e007ade1489e7b3baafbf5b338d91e8b1ced3f00ee82596fb4d5d",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "879e9de3eabae58187f86617b7dc19f49f3c4ef21f5aa3fc998c6c86bd6a0b48"
+    },
+    {
+      "key": "b7da0e07-56a5-4c54-8f99-1f42fbdb8950",
+      "file": "services/page-processing-worker/tests/test_decoder.py",
+      "test": "test_rejects_unsafe_render_configuration_and_pdf_size_before_rendering",
+      "before": "with pytest.raises(DecodeError, match=\"render_dpi_out_of_range\"):\n        decode_document(source.getvalue(), \"application/pdf\", render_dpi=10_000)",
+      "after": "source_bytes = source.getvalue()\n    with pytest.raises(DecodeError, match='render_dpi_out_of_range'):\n        decode_document(source_bytes, 'application/pdf', render_dpi=10000)",
+      "prepared_variables": [
+        "source_bytes"
+      ],
+      "source_sha256_before": "80af9531f06e007ade1489e7b3baafbf5b338d91e8b1ced3f00ee82596fb4d5d",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "879e9de3eabae58187f86617b7dc19f49f3c4ef21f5aa3fc998c6c86bd6a0b48"
+    },
+    {
+      "key": "374f9ec9-01e5-4d62-8d7d-d007d6d746b3",
+      "file": "services/page-processing-worker/tests/test_decoder.py",
+      "test": "test_rejects_unsafe_render_configuration_and_pdf_size_before_rendering",
+      "before": "with pytest.raises(DecodeError, match=\"page_pixel_limit_exceeded\"):\n        decode_document(source.getvalue(), \"application/pdf\", render_dpi=72, max_page_pixels=100)",
+      "after": "source_bytes = source.getvalue()\n    with pytest.raises(DecodeError, match='page_pixel_limit_exceeded'):\n        decode_document(source_bytes, 'application/pdf', render_dpi=72, max_page_pixels=100)",
+      "prepared_variables": [
+        "source_bytes"
+      ],
+      "source_sha256_before": "80af9531f06e007ade1489e7b3baafbf5b338d91e8b1ced3f00ee82596fb4d5d",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "879e9de3eabae58187f86617b7dc19f49f3c4ef21f5aa3fc998c6c86bd6a0b48"
+    },
+    {
+      "key": "c9353a84-ee61-445a-97fe-c682abd47df3",
+      "file": "services/page-processing-worker/tests/test_omr.py",
+      "test": "test_rejects_non_finite_regions_and_profile_thresholds",
+      "before": "with pytest.raises(OMRExtractionError, match=\"omr_option_region_invalid\"):\n        extract_marks(sheet(\"A\"), [{\"label\": \"A\", \"x\": float(\"nan\"), \"y\": 0, \"width\": 10, \"height\": 10}])",
+      "after": "image_bytes = sheet('A')\n    invalid_value = float('nan')\n    with pytest.raises(OMRExtractionError, match='omr_option_region_invalid'):\n        extract_marks(image_bytes, [{'label': 'A', 'x': invalid_value, 'y': 0, 'width': 10, 'height': 10}])",
+      "prepared_variables": [
+        "image_bytes",
+        "invalid_value"
+      ],
+      "source_sha256_before": "da447966d9ab39e1b0c70a73f6ee642ce4824a90d98dc733660f22cd59de4ab7",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "cdbb1cfc8ea3abe0219ff290cbd19c8140f85f6cd6de3da0ed56b8ea51b48344"
+    },
+    {
+      "key": "27250ee6-755f-4b30-80c9-06fba15e3e52",
+      "file": "services/page-processing-worker/tests/test_omr.py",
+      "test": "test_rejects_non_finite_regions_and_profile_thresholds",
+      "before": "with pytest.raises(OMRExtractionError, match=\"omr_profile_threshold_invalid\"):\n        extract_marks(sheet(\"A\"), REGIONS, profile=OMRProfile(marked_threshold=float(\"nan\")))",
+      "after": "image_bytes = sheet('A')\n    profile = OMRProfile(marked_threshold=float('nan'))\n    with pytest.raises(OMRExtractionError, match='omr_profile_threshold_invalid'):\n        extract_marks(image_bytes, REGIONS, profile=profile)",
+      "prepared_variables": [
+        "image_bytes",
+        "profile"
+      ],
+      "source_sha256_before": "da447966d9ab39e1b0c70a73f6ee642ce4824a90d98dc733660f22cd59de4ab7",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "cdbb1cfc8ea3abe0219ff290cbd19c8140f85f6cd6de3da0ed56b8ea51b48344"
+    },
+    {
+      "key": "d3107692-2937-4992-82c3-d0bbfe9a419c",
+      "file": "services/page-processing-worker/tests/test_omr.py",
+      "test": "test_rejects_non_finite_regions_and_profile_thresholds",
+      "before": "with pytest.raises(OMRExtractionError, match=\"omr_profile_threshold_invalid\"):\n        extract_marks(sheet(\"A\"), REGIONS, profile=OMRProfile(border_fraction=0.5))",
+      "after": "image_bytes = sheet('A')\n    profile = OMRProfile(border_fraction=0.5)\n    with pytest.raises(OMRExtractionError, match='omr_profile_threshold_invalid'):\n        extract_marks(image_bytes, REGIONS, profile=profile)",
+      "prepared_variables": [
+        "image_bytes",
+        "profile"
+      ],
+      "source_sha256_before": "da447966d9ab39e1b0c70a73f6ee642ce4824a90d98dc733660f22cd59de4ab7",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "cdbb1cfc8ea3abe0219ff290cbd19c8140f85f6cd6de3da0ed56b8ea51b48344"
+    },
+    {
+      "key": "228cf853-12fb-4d68-a3f2-6abd4a8851ae",
+      "file": "services/page-processing-worker/tests/test_omr.py",
+      "test": "test_rejects_non_finite_regions_and_profile_thresholds",
+      "before": "with pytest.raises(OMRExtractionError, match=\"omr_multiple_flag_invalid\"):\n        extract_marks(sheet(\"A\"), REGIONS, multiple=\"false\")",
+      "after": "image_bytes = sheet('A')\n    with pytest.raises(OMRExtractionError, match='omr_multiple_flag_invalid'):\n        extract_marks(image_bytes, REGIONS, multiple='false')",
+      "prepared_variables": [
+        "image_bytes"
+      ],
+      "source_sha256_before": "da447966d9ab39e1b0c70a73f6ee642ce4824a90d98dc733660f22cd59de4ab7",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "cdbb1cfc8ea3abe0219ff290cbd19c8140f85f6cd6de3da0ed56b8ea51b48344"
+    },
+    {
+      "key": "fc1e4434-9a72-4049-9c86-21e377ddc5e4",
+      "file": "services/page-processing-worker/tests/test_omr.py",
+      "test": "test_rejects_non_finite_regions_and_profile_thresholds",
+      "before": "with pytest.raises(OMRExtractionError, match=\"omr_option_region_invalid\"):\n        extract_marks(sheet(\"A\"), [{\"label\": \"A\", \"x\": True, \"y\": 0, \"width\": 10, \"height\": 10}])",
+      "after": "image_bytes = sheet('A')\n    with pytest.raises(OMRExtractionError, match='omr_option_region_invalid'):\n        extract_marks(image_bytes, [{'label': 'A', 'x': True, 'y': 0, 'width': 10, 'height': 10}])",
+      "prepared_variables": [
+        "image_bytes"
+      ],
+      "source_sha256_before": "da447966d9ab39e1b0c70a73f6ee642ce4824a90d98dc733660f22cd59de4ab7",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "cdbb1cfc8ea3abe0219ff290cbd19c8140f85f6cd6de3da0ed56b8ea51b48344"
+    },
+    {
+      "key": "5fd84a4b-0c1b-408a-bb9d-59461c4bd302",
+      "file": "services/page-processing-worker/tests/test_omr.py",
+      "test": "test_rejects_unsafe_reference_dimensions_before_resize",
+      "before": "with pytest.raises(OMRExtractionError, match=\"omr_reference_dimensions_invalid\"):\n        extract_marks(\n            sheet(\"A\"),\n            REGIONS,\n            profile=profile,\n            reference_image_bytes=sheet(),\n            reference_content_type=\"image/png\",\n            reference_page_width=100_000,\n            reference_page_height=100_000,\n            reference_question_region=reference_region,\n        )",
+      "after": "image_bytes = sheet('A')\n    image_bytes_2 = sheet()\n    with pytest.raises(OMRExtractionError, match='omr_reference_dimensions_invalid'):\n        extract_marks(image_bytes, REGIONS, profile=profile, reference_image_bytes=image_bytes_2, reference_content_type='image/png', reference_page_width=100000, reference_page_height=100000, reference_question_region=reference_region)",
+      "prepared_variables": [
+        "image_bytes",
+        "image_bytes_2"
+      ],
+      "source_sha256_before": "da447966d9ab39e1b0c70a73f6ee642ce4824a90d98dc733660f22cd59de4ab7",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "cdbb1cfc8ea3abe0219ff290cbd19c8140f85f6cd6de3da0ed56b8ea51b48344"
+    },
+    {
+      "key": "e41341c6-ab4e-486d-928e-646feb24af78",
+      "file": "services/page-processing-worker/tests/test_registration.py",
+      "test": "test_manual_registration_rejects_invalid_geometry",
+      "before": "with pytest.raises(RegistrationError, match=error):\n        register_page_manual(_png(page), \"image/png\", _png(page), \"image/png\", points, target)",
+      "after": "page_bytes = _png(page)\n    page_bytes_2 = _png(page)\n    with pytest.raises(RegistrationError, match=error):\n        register_page_manual(page_bytes, 'image/png', page_bytes_2, 'image/png', points, target)",
+      "prepared_variables": [
+        "page_bytes",
+        "page_bytes_2"
+      ],
+      "source_sha256_before": "974b3246c67589ad4ab2b0760aab49f294b4c58f3e9767f8fff2bd465bb1fdd1",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "d12c4d401cacf4d24e729fcd3a137f64d12de00cc8a8240528017e4df65fd7a1"
+    },
+    {
+      "key": "853a1754-a1ef-411c-927f-b2722d247ea8",
+      "file": "services/page-processing-worker/tests/test_runner_state_boundaries.py",
+      "test": "test_guard_rejects_unproven_or_conflicting_match_before_any_upload",
+      "before": "with pytest.raises(TemplateRoutingError, match=code) as caught:\n        runner._process_registration(task, RecordingHeartbeat(events))",
+      "after": "heartbeat = RecordingHeartbeat(events)\n    with pytest.raises(TemplateRoutingError, match=code) as caught:\n        runner._process_registration(task, heartbeat)",
+      "prepared_variables": [
+        "heartbeat"
+      ],
+      "source_sha256_before": "9c16039a9dcc501728f3a066e3558172abf08aa1390d4bf8efbc002356f7612d",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "1a69eb1daef356b9c57e1d1f1105306efbf8b95fa4832cf24c6c8e5ff613821a"
+    },
+    {
+      "key": "36af9ffd-dc4b-4e39-a8d0-24794846291f",
+      "file": "services/page-processing-worker/tests/test_runner_state_boundaries.py",
+      "test": "test_registration_lost_lease_before_crop_upload_keeps_result_uncompleted",
+      "before": "with pytest.raises(APIError, match=\"409\"):\n        runner._process_registration(_registration_task(), RecordingHeartbeat(events, fail_at=2))",
+      "after": "task = _registration_task()\n    heartbeat = RecordingHeartbeat(events, fail_at=2)\n    with pytest.raises(APIError, match='409'):\n        runner._process_registration(task, heartbeat)",
+      "prepared_variables": [
+        "task",
+        "heartbeat"
+      ],
+      "source_sha256_before": "9c16039a9dcc501728f3a066e3558172abf08aa1390d4bf8efbc002356f7612d",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "1a69eb1daef356b9c57e1d1f1105306efbf8b95fa4832cf24c6c8e5ff613821a"
+    },
+    {
+      "key": "3202e7c0-e1a3-4608-8cc2-e591b8cec42b",
+      "file": "services/page-processing-worker/tests/test_runner_state_boundaries.py",
+      "test": "test_capture_page_upload_failure_stops_completion_and_retry_keeps_page_order",
+      "before": "with pytest.raises(APIError, match=\"503\") as caught:\n        runner._process_capture(task, RecordingHeartbeat(events))",
+      "after": "heartbeat = RecordingHeartbeat(events)\n    with pytest.raises(APIError, match='503') as caught:\n        runner._process_capture(task, heartbeat)",
+      "prepared_variables": [
+        "heartbeat"
+      ],
+      "source_sha256_before": "9c16039a9dcc501728f3a066e3558172abf08aa1390d4bf8efbc002356f7612d",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "1a69eb1daef356b9c57e1d1f1105306efbf8b95fa4832cf24c6c8e5ff613821a"
+    },
+    {
+      "key": "fdb261bc-3af1-4c89-92c9-e37fac8deb8c",
+      "file": "services/page-processing-worker/tests/test_runner_state_boundaries.py",
+      "test": "test_template_candidate_validation_stops_downloads_and_matching",
+      "before": "with pytest.raises(RegistrationError, match=\"template_match_candidate_invalid\"):\n        runner._process_template_match(task, RecordingHeartbeat(events))",
+      "after": "heartbeat = RecordingHeartbeat(events)\n    with pytest.raises(RegistrationError, match='template_match_candidate_invalid'):\n        runner._process_template_match(task, heartbeat)",
+      "prepared_variables": [
+        "heartbeat"
+      ],
+      "source_sha256_before": "9c16039a9dcc501728f3a066e3558172abf08aa1390d4bf8efbc002356f7612d",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "1a69eb1daef356b9c57e1d1f1105306efbf8b95fa4832cf24c6c8e5ff613821a"
+    },
+    {
+      "key": "4284ddad-c1a7-4bc5-82d1-6d605c234a65",
+      "file": "services/page-processing-worker/tests/test_runner_state_boundaries.py",
+      "test": "test_difference_reference_is_verified_before_extracting_or_uploading",
+      "before": "with pytest.raises(OMRExtractionError, match=code):\n        runner._process_omr(task, RecordingHeartbeat(events))",
+      "after": "heartbeat = RecordingHeartbeat(events)\n    with pytest.raises(OMRExtractionError, match=code):\n        runner._process_omr(task, heartbeat)",
+      "prepared_variables": [
+        "heartbeat"
+      ],
+      "source_sha256_before": "9c16039a9dcc501728f3a066e3558172abf08aa1390d4bf8efbc002356f7612d",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "1a69eb1daef356b9c57e1d1f1105306efbf8b95fa4832cf24c6c8e5ff613821a"
+    },
+    {
+      "key": "70b580d1-4145-4fc0-9f37-bedf3ae9a214",
+      "file": "tests/ai-evaluation/test_evaluate.py",
+      "test": "test_rejects_non_synthetic_samples",
+      "before": "with self.assertRaisesRegex(ValueError, \"must be explicitly synthetic\"):\n            evaluate.validate_samples([{**sample(\"s1\", 5, 5), \"synthetic\": False}])",
+      "after": "synthetic_sample = sample('s1', 5, 5)\n        with self.assertRaisesRegex(ValueError, 'must be explicitly synthetic'):\n            evaluate.validate_samples([{**synthetic_sample, 'synthetic': False}])",
+      "prepared_variables": [
+        "synthetic_sample"
+      ],
+      "source_sha256_before": "2210d2f8b73d6e7fc527289e582fed570abd3e2024aa45f4372efa00ea89d57e",
+      "assertion_body_calls_after": 1,
+      "source_sha256_after": "a3791e5ada7dded865e101b8d8eedbf5cf51ef6c60eec0e265fd645efa7961f1"
+    }
+  ]
+}

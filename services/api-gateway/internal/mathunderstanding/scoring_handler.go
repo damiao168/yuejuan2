@@ -16,8 +16,7 @@ type FrozenRubricSource interface {
 	LoadFrozenRubric(ctx context.Context, tenantID, segmentID, snapshotID string) (FrozenRubric, error)
 }
 
-// ActiveMathCropSource closes the worker-lag window after a crop replacement.
-// Production stores implement this; hash data remains private to the preview.
+// ActiveMathCropSource 关闭裁剪图替换后工作器尚未更新的时间窗口。生产存储实现此接口；哈希数据仅在预览内部使用。
 type ActiveMathCropSource interface {
 	LoadActiveMathCropHash(ctx context.Context, tenantID, segmentID string) (string, error)
 }
@@ -38,7 +37,7 @@ func (h *Handler) WithActiveMathCrops(source ActiveMathCropSource) *Handler {
 }
 
 func (h *Handler) checkPreviewCrop(ctx context.Context, tenantID string, item Artifact) error {
-	if h.crops == nil { // Legacy in-memory fixtures do not carry physical crops.
+	if h.crops == nil { // 旧版内存夹具不携带实体裁剪图。
 		return nil
 	}
 	hash, err := h.crops.LoadActiveMathCropHash(ctx, tenantID, item.AnswerSegmentID)

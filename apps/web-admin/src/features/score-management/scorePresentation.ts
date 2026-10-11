@@ -1,5 +1,7 @@
 import type { QualityCheckResult, RosterReport } from "../../api/scores";
 import type { Submission } from "../../api/submissions";
+import { examStatusLabels } from "../../constants/examStatus";
+import type { ProductExperience } from "../../router/experience";
 import type { StatusTone } from "../../types";
 
 export interface ScoreSummary {
@@ -63,6 +65,79 @@ export function statusTone(status: string): StatusTone {
   if (status === "confirmed" || status === "pending_publish") return "processing";
   if (status === "pending_confirmation") return "warning";
   return "neutral";
+}
+
+export function rosterStatusTone(status: string): StatusTone {
+  if (status === "graded") return "success";
+  if (status === "absent") return "neutral";
+  return "danger";
+}
+
+export function rosterReconciliationStatus(unresolved: number): { tone: StatusTone; label: string } {
+  if (unresolved === 0) return { tone: "success", label: "对账完成" };
+  return { tone: "danger", label: `${unresolved} 项待处理` };
+}
+
+export function scoreWorkspacePresentation(mode: ProductExperience) {
+  if (mode === "teacher") {
+    return {
+      shellClass: "score-shell read-only", workspaceClass: "score-workspace read-only", title: "班级成绩",
+      description: "查看当前授权考试的班级成绩与阅卷完成情况。", summaryTitle: "当前状态",
+      emptyGrades: "该考试暂无成绩，请等待阅卷完成。"
+    };
+  }
+  return {
+    shellClass: "score-shell", workspaceClass: "score-workspace", title: "成绩发布",
+    description: "核对成绩与发布门禁后，分别管理基础成绩查询和学生门户版本。", summaryTitle: "基础成绩检查",
+    emptyGrades: "该考试暂无成绩。请先完成阅卷，再点击『汇总最终成绩』生成成绩。"
+  };
+}
+
+export type ScorePublicationState = Readonly<{
+  examId: string;
+  loadingExams: boolean;
+  loadingScores: boolean;
+  error: string | null;
+  examStatus?: string;
+  releaseVersion?: number;
+}>;
+
+// 重读期间不能把保留的旧快照显示成当前发布事实；基础成绩和门户版本分别判断。
+export function basePublicationLabel(state: ScorePublicationState): string {
+  if (!state.examId) return "请选择考试";
+  if (state.loadingExams || state.loadingScores) return "正在核对";
+  if (state.error) return "状态暂不可用";
+  if (state.examStatus === "published") return "已公开并锁定";
+  return "尚未公开";
+}
+
+export function portalPublicationLabel(state: ScorePublicationState): string {
+  if (!state.examId) return "请选择考试";
+  if (state.loadingScores) return "正在核对";
+  if (state.error) return "状态暂不可用";
+  if (state.releaseVersion !== undefined) return `当前版本 V${state.releaseVersion}`;
+  return "门户无当前版本";
+}
+
+export function summaryStatus(
+  mode: ProductExperience,
+  examStatus: string | undefined,
+  publishedOrLocked: boolean,
+  canPublish: boolean
+): { tone: StatusTone; label: string } {
+  // 教师只查看考试流程状态，不能把管理员的发布门禁状态当成可执行权限。
+  if (mode === "teacher") {
+    return { tone: "neutral", label: examStatus === undefined ? "未选择" : examStatusLabels[examStatus] ?? "未知状态" };
+  }
+  if (publishedOrLocked) return { tone: "success", label: "已锁定" };
+  if (canPublish) return { tone: "success", label: "可公开" };
+  return { tone: "danger", label: "待处理" };
+}
+
+export function qualityCheckStatus(quality: QualityCheckResult | null): { tone: StatusTone; label: string } | null {
+  if (!quality) return null;
+  if (quality.quality.passed) return { tone: "success", label: "检查通过" };
+  return { tone: "danger", label: `${quality.quality.issues.filter((issue) => issue.blocking).length} 项须处理` };
 }
 
 function issueCount(quality: QualityCheckResult | null, code: string) {

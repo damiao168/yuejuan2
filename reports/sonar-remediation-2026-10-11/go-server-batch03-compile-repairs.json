@@ -1,0 +1,18 @@
+[
+  {
+    "file": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "function": "e2eAssertActualClientCommandResources"
+  },
+  {
+    "file": "services/api-gateway/internal/server/e2e_subjective_command_test.go",
+    "function": "e2eCompleteAndRecoverSubjectiveCommand"
+  },
+  {
+    "file": "services/api-gateway/internal/server/e2e_worker_runtime_reliability_test.go",
+    "function": "e2eRaceStaleRuntimeOperations"
+  },
+  {
+    "file": "services/api-gateway/internal/server/review_route_test.go",
+    "function": "reviewAssertAssignedTaskVisibility"
+  }
+]

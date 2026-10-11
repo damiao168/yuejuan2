@@ -1,19 +1,19 @@
-# Isolated acceptance environment for the STORY-056 OMR page-processing worker
-# path. Do not merge this file into docker-compose.yml: it deliberately has no
-# fixed container names, fixed host ports, or production volumes. The optional
-# browser gateway binds an ephemeral loopback port for real Playwright checks.
-# The E2E runner
-# directly seeds a completed upstream capture/registration fixture in this
-# disposable database; this is not capture/registration pipeline acceptance.
-# Invoke it through scripts/run-story056-real-worker-e2e.ps1, which assigns a
-# unique Compose project name and removes only that project's resources.
+# STORY-056 OMR 页面处理工作进程路径的隔离验收环境。
+# 不要将此文件合入 docker-compose.yml：这里有意不使用
+# 固定容器名、固定主机端口或生产数据卷。可选的
+# 浏览器网关绑定临时回环端口，用于真实 Playwright 检查。
+# 端到端测试运行器会在此临时数据库中
+# 直接写入已完成上游采集和登记的测试数据；
+# 这不代表采集和登记流水线已通过验收。
+# 通过 scripts/run-story056-real-worker-e2e.ps1 调用，该脚本会分配
+# 唯一的 Compose 项目名，且只移除该项目的资源。
 services:
   postgres:
     image: postgres:16-alpine
     environment:
       POSTGRES_DB: edugrade
       POSTGRES_USER: edugrade
-      POSTGRES_PASSWORD: story056_e2e_postgres_only
+      POSTGRES_PASSWORD: ${EDUGRADE_STORY056_POSTGRES_PASSWORD:?run the supplied E2E PowerShell runner}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -36,7 +36,7 @@ services:
     command: ["server", "/data"]
     environment:
       MINIO_ROOT_USER: story056e2e
-      MINIO_ROOT_PASSWORD: story056_e2e_minio_only_secret
+      MINIO_ROOT_PASSWORD: ${EDUGRADE_STORY056_MINIO_SECRET:?run the supplied E2E PowerShell runner}
     volumes:
       - minio_data:/data
     healthcheck:
@@ -48,7 +48,7 @@ services:
   db-migrate:
     image: postgres:16-alpine
     environment:
-      EDUGRADE_POSTGRES_DSN: postgres://edugrade:story056_e2e_postgres_only@postgres:5432/edugrade?sslmode=disable
+      EDUGRADE_POSTGRES_DSN: postgres://edugrade:${EDUGRADE_STORY056_POSTGRES_PASSWORD:?run the supplied E2E PowerShell runner}@postgres:5432/edugrade?sslmode=disable
     volumes:
       - ../../services/api-gateway/migrations:/migrations:ro
     depends_on:
@@ -83,7 +83,7 @@ services:
     image: ${EDUGRADE_MINIO_MC_IMAGE:-quay.io/minio/mc:RELEASE.2025-04-16T18-13-26Z}
     environment:
       EDUGRADE_MINIO_APP_ACCESS_KEY: story056e2e
-      EDUGRADE_MINIO_APP_SECRET_KEY: story056_e2e_minio_only_secret
+      EDUGRADE_MINIO_APP_SECRET_KEY: ${EDUGRADE_STORY056_MINIO_SECRET:?run the supplied E2E PowerShell runner}
       EDUGRADE_FILE_BUCKET: story056-e2e-files
     depends_on:
       minio:
@@ -104,9 +104,9 @@ services:
     environment:
       EDUGRADE_ENV: test
       EDUGRADE_LOG_LEVEL: error
-      EDUGRADE_POSTGRES_DSN: postgres://edugrade:story056_e2e_postgres_only@postgres:5432/edugrade?sslmode=disable
+      EDUGRADE_POSTGRES_DSN: postgres://edugrade:${EDUGRADE_STORY056_POSTGRES_PASSWORD:?run the supplied E2E PowerShell runner}@postgres:5432/edugrade?sslmode=disable
       EDUGRADE_MINIO_APP_ACCESS_KEY: story056e2e
-      EDUGRADE_MINIO_APP_SECRET_KEY: story056_e2e_minio_only_secret
+      EDUGRADE_MINIO_APP_SECRET_KEY: ${EDUGRADE_STORY056_MINIO_SECRET:?run the supplied E2E PowerShell runner}
       EDUGRADE_BOOTSTRAP_TENANT_CODE: platform
       EDUGRADE_BOOTSTRAP_ROLE_CODE: platform_admin
       EDUGRADE_BOOTSTRAP_USERNAME: platform_admin
@@ -130,13 +130,13 @@ services:
       EDUGRADE_READINESS_TIMEOUT: 2s
       EDUGRADE_SHUTDOWN_TIMEOUT: 5s
       EDUGRADE_SESSION_COOKIE_SECURE: "false"
-      EDUGRADE_POSTGRES_DSN: postgres://edugrade:story056_e2e_postgres_only@postgres:5432/edugrade?sslmode=disable
+      EDUGRADE_POSTGRES_DSN: postgres://edugrade:${EDUGRADE_STORY056_POSTGRES_PASSWORD:?run the supplied E2E PowerShell runner}@postgres:5432/edugrade?sslmode=disable
       EDUGRADE_REDIS_ADDR: redis:6379
       EDUGRADE_REDIS_PASSWORD: ""
       EDUGRADE_REDIS_DB: "0"
       EDUGRADE_MINIO_ENDPOINT: minio:9000
       EDUGRADE_MINIO_APP_ACCESS_KEY: story056e2e
-      EDUGRADE_MINIO_APP_SECRET_KEY: story056_e2e_minio_only_secret
+      EDUGRADE_MINIO_APP_SECRET_KEY: ${EDUGRADE_STORY056_MINIO_SECRET:?run the supplied E2E PowerShell runner}
       EDUGRADE_MINIO_USE_SSL: "false"
       EDUGRADE_FILE_BUCKET: story056-e2e-files
       EDUGRADE_FILE_MAX_UPLOAD_BYTES: "10485760"
@@ -164,7 +164,7 @@ services:
       dockerfile: services/api-gateway/tools/story056-real-worker-e2e/Dockerfile
     environment:
       EDUGRADE_E2E_API_BASE_URL: http://api-gateway:8080
-      EDUGRADE_E2E_POSTGRES_DSN: postgres://edugrade:story056_e2e_postgres_only@postgres:5432/edugrade?sslmode=disable
+      EDUGRADE_E2E_POSTGRES_DSN: postgres://edugrade:${EDUGRADE_STORY056_POSTGRES_PASSWORD:?run the supplied E2E PowerShell runner}@postgres:5432/edugrade?sslmode=disable
       EDUGRADE_E2E_ADMIN_PASSWORD: ${EDUGRADE_E2E_ADMIN_PASSWORD:?run the supplied E2E PowerShell runner}
       EDUGRADE_E2E_WORKER_USERNAME: story056_e2e_worker
       EDUGRADE_E2E_WORKER_PASSWORD: ${EDUGRADE_E2E_WORKER_PASSWORD:?run the supplied E2E PowerShell runner}
@@ -181,7 +181,7 @@ services:
       context: ../..
       dockerfile: services/api-gateway/tools/story056-postgres-e2e/Dockerfile
     environment:
-      EDUGRADE_E2E_DATABASE_URL: postgres://edugrade:story056_e2e_postgres_only@postgres:5432/edugrade?sslmode=disable
+      EDUGRADE_E2E_DATABASE_URL: postgres://edugrade:${EDUGRADE_STORY056_POSTGRES_PASSWORD:?run the supplied E2E PowerShell runner}@postgres:5432/edugrade?sslmode=disable
     depends_on:
       db-migrate:
         condition: service_completed_successfully

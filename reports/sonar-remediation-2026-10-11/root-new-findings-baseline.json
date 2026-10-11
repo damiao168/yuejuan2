@@ -1,0 +1,53 @@
+{
+  "backup": "D:\\tools\\sonar-remediation-20261011\\root-new-findings-baseline",
+  "files": [
+    {
+      "file": "docs/architecture/tools/check_preview_typography.js",
+      "sha256": "5ee110807938228077950089870e41c4df5af3528ce9f86db9d431ec4a244cf7",
+      "bytes": 2936,
+      "manual_review_status": "pending unless separately documented"
+    },
+    {
+      "file": "docs/architecture/tools/frontend-api-scan.mjs",
+      "sha256": "f08007d500592a59efb3f4cb3ecc7d94bd067316155e8a55c1b9b8113a54a9c3",
+      "bytes": 15946,
+      "manual_review_status": "pending unless separately documented"
+    },
+    {
+      "file": "docs/architecture/tools/render_native.js",
+      "sha256": "85e0b8d9604713f3506c56758a3af02977ef66e35bc66ff7d3136e129eefac65",
+      "bytes": 6065,
+      "manual_review_status": "pending unless separately documented"
+    },
+    {
+      "file": "docs/architecture/tools/build_preview.py",
+      "sha256": "56d94138d0123f4ae3f7beba356fbde9703403ba955aa85638871ed6e9bdc9bd",
+      "bytes": 6207,
+      "manual_review_status": "pending unless separately documented"
+    },
+    {
+      "file": "scripts/check-story052-production-deployment.mjs",
+      "sha256": "20be91cc7b35b8df3a1284a678ed29231bf93359d5fbb66cddc868aa9e4161bb",
+      "bytes": 4107,
+      "manual_review_status": "pending unless separately documented"
+    },
+    {
+      "file": "scripts/ci/check-generated-contracts.mjs",
+      "sha256": "c92657ae2164be451b088d625fe6bf9c92a10e21f772fad4984931bc884cf4fc",
+      "bytes": 3209,
+      "manual_review_status": "pending unless separately documented"
+    },
+    {
+      "file": "scripts/lib/openapi-sdk.mjs",
+      "sha256": "5b0d95558e5074f0d4686995d7819851d949ec1e60d5a8ab8a4ddf99f77d620a",
+      "bytes": 14071,
+      "manual_review_status": "pending unless separately documented"
+    },
+    {
+      "file": "services/api-gateway/tools/story056-real-worker-e2e/Dockerfile",
+      "sha256": "fb6454601dc33c9f06effcf2fb932a67bb9a06a30dfbafb9261f2e8601bc9024",
+      "bytes": 955,
+      "manual_review_status": "pending unless separately documented"
+    }
+  ]
+}

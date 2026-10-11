@@ -68,6 +68,7 @@ type EvaluationCandidate struct {
 	RepeatComparisons      int               `json:"repeat_comparisons"`
 	StableRepeatSamples    int               `json:"stable_repeat_samples"`
 	P95LatencyMS           int64             `json:"p95_latency_ms"`
+	// 成本登记与调用账本统一为微美元；这是报告估算，不是供应商最终账单。
 	TotalCostMicros        int64             `json:"total_cost_micros"`
 	Metrics                EvaluationMetrics `json:"metrics"`
 	CreatedAt              time.Time         `json:"created_at"`

@@ -2,7 +2,7 @@ import { Button } from "antd";
 import { ArrowRight } from "lucide-react";
 import type { OnboardingCheck, OnboardingReadiness } from "../../api/onboarding";
 
-export function NextActionCard({ readiness, onNavigate }: { readiness: OnboardingReadiness; onNavigate: (path: string) => void }) {
+export function NextActionCard({ readiness, onNavigate }: Readonly<{ readiness: OnboardingReadiness; onNavigate: (path: string) => void }>) {
   const next = readiness.next_action;
   const check: OnboardingCheck | undefined = next ? readiness.checks.find((item) => item.action_code === next.code) : undefined;
   return (

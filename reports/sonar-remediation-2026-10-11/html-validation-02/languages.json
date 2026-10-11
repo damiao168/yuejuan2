@@ -1,0 +1,112 @@
+{
+  "languages": [
+    {
+      "key": "azureresourcemanager",
+      "name": "Azure Resource Manager"
+    },
+    {
+      "key": "cs",
+      "name": "C#"
+    },
+    {
+      "key": "css",
+      "name": "CSS"
+    },
+    {
+      "key": "cloudformation",
+      "name": "CloudFormation"
+    },
+    {
+      "key": "docker",
+      "name": "Docker"
+    },
+    {
+      "key": "flex",
+      "name": "Flex"
+    },
+    {
+      "key": "go",
+      "name": "Go"
+    },
+    {
+      "key": "web",
+      "name": "HTML"
+    },
+    {
+      "key": "ipynb",
+      "name": "IPython Notebooks"
+    },
+    {
+      "key": "json",
+      "name": "JSON"
+    },
+    {
+      "key": "jsp",
+      "name": "JSP"
+    },
+    {
+      "key": "java",
+      "name": "Java"
+    },
+    {
+      "key": "js",
+      "name": "JavaScript"
+    },
+    {
+      "key": "kotlin",
+      "name": "Kotlin"
+    },
+    {
+      "key": "kubernetes",
+      "name": "Kubernetes"
+    },
+    {
+      "key": "php",
+      "name": "PHP"
+    },
+    {
+      "key": "py",
+      "name": "Python"
+    },
+    {
+      "key": "ruby",
+      "name": "Ruby"
+    },
+    {
+      "key": "rust",
+      "name": "Rust"
+    },
+    {
+      "key": "scala",
+      "name": "Scala"
+    },
+    {
+      "key": "secrets",
+      "name": "Secrets"
+    },
+    {
+      "key": "terraform",
+      "name": "Terraform"
+    },
+    {
+      "key": "text",
+      "name": "Text"
+    },
+    {
+      "key": "ts",
+      "name": "TypeScript"
+    },
+    {
+      "key": "vbnet",
+      "name": "VB.NET"
+    },
+    {
+      "key": "xml",
+      "name": "XML"
+    },
+    {
+      "key": "yaml",
+      "name": "YAML"
+    }
+  ]
+}

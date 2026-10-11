@@ -1,6 +1,7 @@
 import json
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from grading_agent.dashscope_native_contract import (
     DASHSCOPE_MULTIMODAL_GENERATION_PATH,
@@ -84,8 +85,9 @@ class DashScopeNativeTransportTests(unittest.TestCase):
         )
         seam = DashScopeNativeTransportSeam(transport)
 
+        request = fixture('request-text.json')
         with self.assertRaises(AgentError) as caught:
-            seam.execute_text(fixture("request-text.json"))
+            seam.execute_text(request)
         self.assertEqual(caught.exception.code, "model_unavailable")
         self.assertFalse(caught.exception.retryable)
         self.assertEqual(len(transport.calls), 1)
@@ -95,8 +97,9 @@ class DashScopeNativeTransportTests(unittest.TestCase):
         transport = FixtureDashScopeTransport([TimeoutError(), TimeoutError()])
         seam = DashScopeNativeTransportSeam(transport, timeout_seconds=1)
 
+        request = fixture('request-text.json')
         with self.assertRaises(AgentError) as caught:
-            seam.execute_text(fixture("request-text.json"))
+            seam.execute_text(request)
         self.assertEqual(caught.exception.code, "model_timeout")
         self.assertEqual(len(transport.calls), 2)
         self.assertTrue(all(call["timeout_seconds"] == 1 for call in transport.calls))
@@ -120,8 +123,9 @@ class DashScopeNativeTransportTests(unittest.TestCase):
         )
         transport = FixtureDashScopeTransport([oversized_response])
         seam = DashScopeNativeTransportSeam(transport)
+        request = fixture('request-text.json')
         with self.assertRaises(AgentError) as response_error:
-            seam.execute_text(fixture("request-text.json"))
+            seam.execute_text(request)
         self.assertEqual(response_error.exception.code, "model_output_invalid")
 
     def test_payload_validation_rejects_identity_fields_and_remote_images(self):
@@ -139,6 +143,52 @@ class DashScopeNativeTransportTests(unittest.TestCase):
             seam.execute_multimodal(image)
         self.assertEqual(image_error.exception.code, "invalid_request")
         self.assertEqual(transport.calls, [])
+
+    def test_inline_prefix_cannot_hide_external_resource_schemes(self):
+        for scheme in ("http", "HTTPS", "File", "oSs"):
+            with self.subTest(scheme=scheme):
+                image = fixture("request-image.json")
+                image["input"]["messages"][1]["content"][0]["image"] = (
+                    "data:image/png;base64," + scheme + "://example.invalid/crop"
+                )
+                transport = FixtureDashScopeTransport([])
+                seam = DashScopeNativeTransportSeam(transport)
+                with self.assertRaisesRegex(AgentError, "one inline PNG"):
+                    seam.execute_multimodal(image)
+                self.assertEqual(transport.calls, [])
+
+    # 只观察 seam 交给替身的同一缓冲引用；清理不能表述为擦除了调用方的请求对象。
+    def test_request_buffer_is_cleared_after_success_invalid_output_and_timeout(self):
+        cases = (
+            (FixtureDashScopeResponse.from_json(200, fixture("response-text.json")), None),
+            (FixtureDashScopeResponse(200, "application/json", b'{"value":Infinity}'),
+             "model_output_invalid"),
+            (TimeoutError(), "model_timeout"),
+        )
+        for response, error_code in cases:
+            with self.subTest(error_code=error_code):
+                captured = []
+
+                def send(_transport, *, body, headers, **_kwargs):
+                    captured.append(body)
+                    self.assertEqual(headers["X-DashScope-SSE"], "disable")
+                    self.assertTrue(body)
+                    if isinstance(response, Exception):
+                        raise response
+                    return response
+
+                seam = DashScopeNativeTransportSeam(FixtureDashScopeTransport([]), max_retries=0)
+                with patch.object(FixtureDashScopeTransport, "send", send):
+                    if error_code is None:
+                        seam.execute_text(fixture("request-text.json"))
+                    else:
+                        request = fixture('request-text.json')
+                        with self.assertRaises(AgentError) as caught:
+                            seam.execute_text(request)
+                        self.assertEqual(caught.exception.code, error_code)
+                self.assertEqual(len(captured), 1)
+                self.assertIsInstance(captured[0], bytearray)
+                self.assertEqual(captured[0], bytearray())
 
     def test_response_requires_json_content_type_and_strict_json(self):
         cases = (
@@ -161,8 +211,9 @@ class DashScopeNativeTransportTests(unittest.TestCase):
         for response in cases:
             with self.subTest(response=response):
                 seam = DashScopeNativeTransportSeam(FixtureDashScopeTransport([response]))
+                request = fixture('request-text.json')
                 with self.assertRaises(AgentError) as caught:
-                    seam.execute_text(fixture("request-text.json"))
+                    seam.execute_text(request)
                 self.assertEqual(caught.exception.code, "model_output_invalid")
 
     def test_fixture_seam_still_rejects_network_transport(self):
@@ -170,8 +221,9 @@ class DashScopeNativeTransportTests(unittest.TestCase):
             def send(self, **_kwargs):
                 raise AssertionError("must remain unreachable")
 
-        with self.assertRaisesRegex(TypeError, "FixtureDashScopeTransport"):
-            DashScopeNativeTransportSeam(NetworkCapableTransport())
+        transport = NetworkCapableTransport()
+        with self.assertRaisesRegex(TypeError, 'FixtureDashScopeTransport'):
+            DashScopeNativeTransportSeam(transport)
         self.assertEqual(
             default_provider_adapter_registry().enabled_types(),
             ("dashscope_native", "local_llama_cpp"),

@@ -122,7 +122,7 @@ func extractPDFText(data []byte) (string, error) {
 	if !bytes.HasPrefix(data, []byte("%PDF-")) {
 		return "", errors.New("PDF 文件损坏")
 	}
-	// Encoded and scanned PDFs deliberately fail closed into OCR.
+	// 编码或扫描的 PDF 保守地转入 OCR 处理。
 	re := regexp.MustCompile(`\(([^()]*)\)\s*Tj`)
 	matches := re.FindAllSubmatch(data, -1)
 	var b strings.Builder

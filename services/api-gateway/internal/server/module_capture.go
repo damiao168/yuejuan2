@@ -10,6 +10,7 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/imagequality"
 	ocrpkg "edugrade-enterprise/services/api-gateway/internal/ocr"
 	"edugrade-enterprise/services/api-gateway/internal/orchestrator"
+	"edugrade-enterprise/services/api-gateway/internal/paper"
 	"edugrade-enterprise/services/api-gateway/internal/processing"
 	"edugrade-enterprise/services/api-gateway/internal/submission"
 	"edugrade-enterprise/services/api-gateway/internal/workerruntime"
@@ -49,6 +50,7 @@ type CaptureProcessingDependencies struct {
 	Objects     files.ObjectStorage
 	Submissions submission.Store
 	Processing  *processing.Service
+	Paper       paper.Store
 }
 
 func NewCaptureProcessingModule(cfg config.Config, stores CaptureProcessingStores, dependencies CaptureProcessingDependencies) *CaptureProcessingModule {
@@ -56,9 +58,8 @@ func NewCaptureProcessingModule(cfg config.Config, stores CaptureProcessingStore
 	return module
 }
 
-// NewTransactionalCaptureProcessingModule is the production composition root.
-// It fails startup unless the image-quality command can run through the atomic
-// coordinator, without depending on a concrete store implementation name.
+// NewTransactionalCaptureProcessingModule 是生产组装入口。
+// 只有图像质量命令能通过原子协调器运行时才允许启动，此判断不依赖具体存储实现名称。
 func NewTransactionalCaptureProcessingModule(cfg config.Config, stores CaptureProcessingStores, dependencies CaptureProcessingDependencies) (*CaptureProcessingModule, error) {
 	if err := validateCaptureProcessingDependencies(dependencies); err != nil {
 		return nil, err
@@ -95,8 +96,8 @@ func newCaptureProcessingModule(cfg config.Config, stores CaptureProcessingStore
 		OCRHandler:           ocrpkg.NewHandler(stores.OCR, stores.OCRQueue, dependencies.Submissions, dependencies.Auth, stores.WorkerRuntime),
 		ImageQualityHandler:  imageQualityHandler,
 		WorkerRuntimeHandler: workerruntime.NewHandler(stores.WorkerRuntime, dependencies.Auth, workerSourceLeaseRenewer{imageQuality: stores.ImageQuality}),
-		CaptureHandler:       capture.NewHandler(stores.Capture, dependencies.Files, dependencies.Exams, stores.WorkerRuntime, dependencies.Auth),
-		ProcessingHandler:    processing.NewHandler(processingService, dependencies.Auth),
+		CaptureHandler:       capture.NewHandler(stores.Capture, dependencies.Files, dependencies.Exams, stores.WorkerRuntime, dependencies.Auth).WithScanTemplates(dependencies.Paper),
+		ProcessingHandler:    processing.NewHandler(processingService, dependencies.Auth).WithFileDownload(files.NewDownloadService(dependencies.Files, dependencies.Objects)),
 	}
 	if lifecycleFiles, ok := dependencies.Files.(files.LifecycleStore); ok {
 		module.CaptureUploadHandler = captureupload.NewHandler(

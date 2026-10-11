@@ -1,0 +1,21 @@
+{"#select":{"columns":[
+   {"name":"f","kind":"Entity"}
+  ,{"kind":"String"}]
+ ,"tuples":[
+   [{"label":"D:/tools/audit-codeql-20261010/source-20261011/apps/desktop-client/src-tauri/build.rs"},"File successfully extracted."]
+  ,[{"label":"D:/tools/audit-codeql-20261010/source-20261011/apps/desktop-client/src-tauri/src/lib.rs"},"File successfully extracted."]
+  ,[{"label":"D:/tools/audit-codeql-20261010/source-20261011/apps/desktop-client/src-tauri/src/main.rs"},"File successfully extracted."]
+  ,[{"label":"D:/tools/audit-codeql-20261010/source-20261011/apps/desktop-client/src-tauri/src/durable_store/claim.rs"},"File successfully extracted."]
+  ,[{"label":"D:/tools/audit-codeql-20261010/source-20261011/apps/desktop-client/src-tauri/src/durable_store/connection.rs"},"File successfully extracted."]
+  ,[{"label":"D:/tools/audit-codeql-20261010/source-20261011/apps/desktop-client/src-tauri/src/durable_store/crypto.rs"},"File successfully extracted."]
+  ,[{"label":"D:/tools/audit-codeql-20261010/source-20261011/apps/desktop-client/src-tauri/src/durable_store/drafts.rs"},"File successfully extracted."]
+  ,[{"label":"D:/tools/audit-codeql-20261010/source-20261011/apps/desktop-client/src-tauri/src/durable_store/mod.rs"},"File successfully extracted."]
+  ,[{"label":"D:/tools/audit-codeql-20261010/source-20261011/apps/desktop-client/src-tauri/src/durable_store/offline_access.rs"},"File successfully extracted."]
+  ,[{"label":"D:/tools/audit-codeql-20261010/source-20261011/apps/desktop-client/src-tauri/src/durable_store/paths.rs"},"File successfully extracted."]
+  ,[{"label":"D:/tools/audit-codeql-20261010/source-20261011/apps/desktop-client/src-tauri/src/durable_store/queue.rs"},"File successfully extracted."]
+  ,[{"label":"D:/tools/audit-codeql-20261010/source-20261011/apps/desktop-client/src-tauri/src/durable_store/schema.rs"},"File successfully extracted."]
+  ,[{"label":"D:/tools/audit-codeql-20261010/source-20261011/apps/desktop-client/src-tauri/src/durable_store/spool.rs"},"File successfully extracted."]
+  ,[{"label":"D:/tools/audit-codeql-20261010/source-20261011/apps/desktop-client/src-tauri/src/durable_store/storage.rs"},"File successfully extracted."]
+  ,[{"label":"D:/tools/audit-codeql-20261010/source-20261011/apps/desktop-client/src-tauri/src/durable_store/types.rs"},"File successfully extracted."]
+  ,[{"label":"D:/tools/audit-codeql-20261010/source-20261011/apps/desktop-client/src-tauri/src/scanner.rs"},"File successfully extracted."]]
+ }}

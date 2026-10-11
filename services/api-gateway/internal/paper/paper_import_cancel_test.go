@@ -30,7 +30,7 @@ func TestCancelledPaperImportRejectsLateResults(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := store.CompletePaperImportCandidates(context.Background(), "tenant", job.ID, nil, []QuestionCandidate{{CandidateID: "late"}}, nil, nil, nil, nil); !errors.Is(err, ErrConflict) {
+	if _, err := store.CompletePaperImportCandidates(context.Background(), "tenant", job.ID, PaperImportParseResult{QuestionCandidates: []QuestionCandidate{{CandidateID: "late"}}}); !errors.Is(err, ErrConflict) {
 		t.Fatalf("late success must not overwrite cancellation, got %v", err)
 	}
 	if _, err := store.FailPaperImport(context.Background(), "tenant", job.ID, "ai_parse_failed", []string{"late failure"}); !errors.Is(err, ErrConflict) {
@@ -40,7 +40,7 @@ func TestCancelledPaperImportRejectsLateResults(t *testing.T) {
 
 func TestOnlyProcessingPaperImportCanBeCancelled(t *testing.T) {
 	store, job := candidateImport(t)
-	if _, err := store.CompletePaperImportCandidates(context.Background(), "tenant", job.ID, nil, []QuestionCandidate{{CandidateID: "q1"}}, nil, nil, nil, nil); err != nil {
+	if _, err := store.CompletePaperImportCandidates(context.Background(), "tenant", job.ID, PaperImportParseResult{QuestionCandidates: []QuestionCandidate{{CandidateID: "q1"}}}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := store.CancelPaperImport(context.Background(), "tenant", job.ID); !errors.Is(err, ErrConflict) {

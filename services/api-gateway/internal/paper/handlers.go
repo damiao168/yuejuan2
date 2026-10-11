@@ -14,6 +14,12 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/logger"
 )
 
+const (
+	paperImportIdempotencyHeader = "Idempotency-Key"
+	paperImportNotConfiguredMsg  = "考试资料解析服务未配置"
+	paperOCRUnavailableMsg       = "paper OCR runtime is unavailable"
+)
+
 type Handler struct {
 	papers          PaperRepository
 	imports         PaperImportRepository
@@ -41,7 +47,7 @@ func (h *Handler) WithDocumentModelResolver(resolve func(context.Context, string
 
 func (h *Handler) CreatePaperImport(w http.ResponseWriter, r *http.Request) {
 	if h.documentImport == nil {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "paper_import_unavailable", "试卷解析服务未配置")
+		httpx.Error(w, r, http.StatusServiceUnavailable, "paper_import_unavailable", paperImportNotConfiguredMsg)
 		return
 	}
 	user := mustUser(r)
@@ -49,7 +55,7 @@ func (h *Handler) CreatePaperImport(w http.ResponseWriter, r *http.Request) {
 	if !decodeJSON(w, r, &input) {
 		return
 	}
-	input.CommandID = strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	input.CommandID = strings.TrimSpace(r.Header.Get(paperImportIdempotencyHeader))
 	if len(normalizePaperImportSourceInputs(input)) == 0 || input.Subject == "" {
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_paper_import", "至少需要一份考试资料和学科")
 		return
@@ -65,7 +71,7 @@ func (h *Handler) CreatePaperImport(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) AddPaperImportSources(w http.ResponseWriter, r *http.Request) {
 	if h.documentImport == nil {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "paper_import_unavailable", "考试资料解析服务未配置")
+		httpx.Error(w, r, http.StatusServiceUnavailable, "paper_import_unavailable", paperImportNotConfiguredMsg)
 		return
 	}
 	user := mustUser(r)
@@ -73,7 +79,7 @@ func (h *Handler) AddPaperImportSources(w http.ResponseWriter, r *http.Request) 
 	if !decodeJSON(w, r, &input) {
 		return
 	}
-	input.CommandID = strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	input.CommandID = strings.TrimSpace(r.Header.Get(paperImportIdempotencyHeader))
 	if len(input.Sources) == 0 || input.ExpectedGeneration <= 0 {
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_paper_import_sources", "请选择要追加的考试资料")
 		return
@@ -89,7 +95,7 @@ func (h *Handler) AddPaperImportSources(w http.ResponseWriter, r *http.Request) 
 
 func (h *Handler) ReplacePaperImportSources(w http.ResponseWriter, r *http.Request) {
 	if h.documentImport == nil {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "paper_import_unavailable", "考试资料解析服务未配置")
+		httpx.Error(w, r, http.StatusServiceUnavailable, "paper_import_unavailable", paperImportNotConfiguredMsg)
 		return
 	}
 	user := mustUser(r)
@@ -97,7 +103,7 @@ func (h *Handler) ReplacePaperImportSources(w http.ResponseWriter, r *http.Reque
 	if !decodeJSON(w, r, &input) {
 		return
 	}
-	input.CommandID = strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	input.CommandID = strings.TrimSpace(r.Header.Get(paperImportIdempotencyHeader))
 	if input.ExpectedGeneration <= 0 {
 		httpx.Error(w, r, http.StatusBadRequest, "expected_generation_required", "expected_generation is required")
 		return
@@ -136,7 +142,7 @@ func (h *Handler) SavePaperImportReview(w http.ResponseWriter, r *http.Request) 
 
 func (h *Handler) SuggestMathRubricDraft(w http.ResponseWriter, r *http.Request) {
 	if h.documentImport == nil {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "paper_import_unavailable", "考试资料解析服务未配置")
+		httpx.Error(w, r, http.StatusServiceUnavailable, "paper_import_unavailable", paperImportNotConfiguredMsg)
 		return
 	}
 	user := mustUser(r)
@@ -189,6 +195,28 @@ func (h *Handler) ApplyPaperImport(w http.ResponseWriter, r *http.Request) {
 	}
 	h.auditAction(r, "paper.import_applied", "paper_import_job", out.ID, "apply reviewed questions answers solutions and rubrics")
 	httpx.JSON(w, 200, map[string]any{"import": out})
+}
+
+func (h *Handler) FillPaperImportContent(w http.ResponseWriter, r *http.Request) {
+	user := mustUser(r)
+	var input FillPaperImportContentInput
+	if !decodeJSON(w, r, &input) {
+		return
+	}
+	store, ok := h.imports.(PaperImportContentRepository)
+	if !ok {
+		httpx.Error(w, r, http.StatusServiceUnavailable, "paper_import_unavailable", "识别内容自动填入暂不可用")
+		return
+	}
+	out, err := store.FillPaperImportContent(r.Context(), user.TenantID, r.PathValue("id"), user.ID, input)
+	if err != nil {
+		writeStoreError(w, r, err)
+		return
+	}
+	if len(out.FilledQuestions) > 0 {
+		h.auditAction(r, "paper.import_content_filled", "paper_import_job", r.PathValue("id"), "fill empty question content without confirming grading rules")
+	}
+	httpx.JSON(w, http.StatusOK, out)
 }
 
 func (h *Handler) CancelPaperImport(w http.ResponseWriter, r *http.Request) {
@@ -245,7 +273,7 @@ func (h *Handler) RetryPaperImportParse(w http.ResponseWriter, r *http.Request) 
 func (h *Handler) CompletePaperImportDecode(w http.ResponseWriter, r *http.Request) {
 	runtime, ok := h.imports.(PaperImportRuntime)
 	if !ok {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "paper_ocr_unavailable", "paper OCR runtime is unavailable")
+		httpx.Error(w, r, http.StatusServiceUnavailable, "paper_ocr_unavailable", paperOCRUnavailableMsg)
 		return
 	}
 	user := mustUser(r)
@@ -263,7 +291,7 @@ func (h *Handler) CompletePaperImportDecode(w http.ResponseWriter, r *http.Reque
 func (h *Handler) CompletePaperImportOCR(w http.ResponseWriter, r *http.Request) {
 	runtime, ok := h.imports.(PaperImportRuntime)
 	if !ok || h.documentImport == nil {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "paper_ocr_unavailable", "paper OCR runtime is unavailable")
+		httpx.Error(w, r, http.StatusServiceUnavailable, "paper_ocr_unavailable", paperOCRUnavailableMsg)
 		return
 	}
 	user := mustUser(r)
@@ -307,7 +335,7 @@ func (h *Handler) CompletePaperImportFormula(w http.ResponseWriter, r *http.Requ
 func (h *Handler) FailPaperImportRuntime(w http.ResponseWriter, r *http.Request) {
 	runtime, ok := h.imports.(PaperImportRuntime)
 	if !ok {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "paper_ocr_unavailable", "paper OCR runtime is unavailable")
+		httpx.Error(w, r, http.StatusServiceUnavailable, "paper_ocr_unavailable", paperOCRUnavailableMsg)
 		return
 	}
 	user := mustUser(r)
@@ -337,12 +365,22 @@ func (h *Handler) CreatePaper(w http.ResponseWriter, r *http.Request) {
 	if !decodeJSON(w, r, &input) {
 		return
 	}
+	purpose, err := normalizePaperPurpose(input.Purpose)
+	if err != nil {
+		httpx.Error(w, r, http.StatusBadRequest, "invalid_paper_purpose", "paper purpose is not supported")
+		return
+	}
+	input.Purpose = purpose
 	if input.FileAssetID == "" && (input.File.OriginalName == "" || input.File.ContentType == "" || input.File.HashSHA256 == "" || input.File.StorageKey == "" || input.File.SizeBytes <= 0) {
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_paper_file", "file metadata is incomplete")
 		return
 	}
 	out, err := h.papers.CreatePaper(r.Context(), user.TenantID, examID, user.ID, input)
 	if err != nil {
+		if errors.Is(err, ErrExamFrozen) {
+			writeStoreError(w, r, err)
+			return
+		}
 		if errors.Is(err, ErrInvalidInput) {
 			httpx.Error(w, r, http.StatusBadRequest, "paper_file_scope_mismatch", "file asset does not belong to this exam")
 			return
@@ -360,12 +398,17 @@ func (h *Handler) CreatePaper(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ListPapers(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
+	purpose, err := normalizePaperPurpose(r.URL.Query().Get("purpose"))
+	if err != nil {
+		httpx.Error(w, r, http.StatusBadRequest, "invalid_paper_purpose", "paper purpose is not supported")
+		return
+	}
 	out, err := h.papers.ListPapers(r.Context(), user.TenantID, r.PathValue("examId"))
 	if err != nil {
 		httpx.Error(w, r, http.StatusInternalServerError, "paper_list_failed", "failed to list papers")
 		return
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"papers": out})
+	httpx.JSON(w, http.StatusOK, map[string]any{"papers": PapersForPurpose(out, purpose)})
 }
 
 func (h *Handler) CreateQuestion(w http.ResponseWriter, r *http.Request) {

@@ -1,5 +1,6 @@
 """Assemble stable quality-report and normalization-transform schemas."""
 
+from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
@@ -10,24 +11,35 @@ METRIC_SCHEMA_VERSION = "image-quality-metrics-v2"
 REPORT_SCHEMA_VERSION = "image-quality-report-v2"
 
 
+@dataclass(frozen=True)
+class QualityMeasurements:
+    metrics: dict[str, Any]
+    focus: dict[str, Any]
+    illumination: dict[str, Any]
+    occlusion: dict[str, Any]
+    degradation: dict[str, Any]
+    dimensions: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class QualityReportDecision:
+    hard_gates: list[dict[str, Any]]
+    quality_score: float
+    decision: str
+    enhancements: list[str]
+
+
 def build_quality_report(
     *,
     pixel_width: int,
     pixel_height: int,
     source_dpi: float | None,
     source_format: str,
-    metrics: dict[str, Any],
     geometry: dict[str, Any],
-    focus: dict[str, Any],
-    illumination: dict[str, Any],
-    occlusion: dict[str, Any],
-    degradation: dict[str, Any],
-    dimensions: dict[str, Any],
-    hard_gates: list[dict[str, Any]],
-    quality_score: float,
-    decision: str,
-    enhancements: list[str],
+    measurements: QualityMeasurements,
+    assessment: QualityReportDecision,
 ) -> dict[str, Any]:
+    # 这里只汇总测量与既有决策，不在报告组装时重新评分或修改证据。
     return {
         "metric_schema_version": METRIC_SCHEMA_VERSION,
         "report_schema_version": REPORT_SCHEMA_VERSION,
@@ -41,17 +53,18 @@ def build_quality_report(
         "source_format": source_format,
         "output_format": "image/png",
         "normalized_color_mode": "RGB",
-        "metrics": metrics,
+        "metrics": measurements.metrics,
         "geometry": geometry,
-        "focus": focus,
-        "illumination": illumination,
-        "occlusion_reflection": occlusion,
-        "noise_compression": degradation,
-        "dimensions": dimensions,
-        "hard_gates": hard_gates,
-        "quality_score": quality_score,
-        "decision": decision,
-        "enhancements_applied": enhancements,
+        "focus": measurements.focus,
+        "illumination": measurements.illumination,
+        "occlusion_reflection": measurements.occlusion,
+        "noise_compression": measurements.degradation,
+        "dimensions": measurements.dimensions,
+        "hard_gates": assessment.hard_gates,
+        "quality_score": assessment.quality_score,
+        "decision": assessment.decision,
+        "enhancements_applied": assessment.enhancements,
+        # 质量阶段还未做模板配准，不能把缺少 ROI 对齐证据写成已评估。
         "roi_completeness": {
             "status": "unavailable",
             "required_roi_visible_ratio": None,
@@ -66,7 +79,7 @@ def build_quality_report(
         "stages": {
             "fast_gate": {
                 "status": "failed"
-                if any(gate["status"] == "failed" for gate in hard_gates)
+                if any(gate["status"] == "failed" for gate in assessment.hard_gates)
                 else "passed",
                 "checks": [
                     "decode",
@@ -82,6 +95,7 @@ def build_quality_report(
             },
         },
     }
+
 
 def build_normalization_transform(
     *,

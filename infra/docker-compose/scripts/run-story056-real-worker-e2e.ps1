@@ -5,10 +5,10 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-# This runner is intentionally self-contained. It never references the normal
-# deployment Compose file, its fixed container names, or its volumes. It
-# exercises the OMR page-processing worker only; its disposable fixture
-# deliberately fabricates the already-completed capture/registration boundary.
+# 这个运行器保持独立，不引用常规部署的 Compose 文件、
+# 固定容器名或数据卷。
+# 它只测试 OMR 页面处理工作进程；临时测试数据
+# 有意模拟已经完成的采集和登记边界。
 $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $composePath = Join-Path (Split-Path -Parent $scriptRoot) "docker-compose.story056-e2e.yml"
 if (-not (Test-Path -LiteralPath $composePath)) {
@@ -48,9 +48,9 @@ function Get-DockerProjectResources {
   return @($resources)
 }
 
-# A supplied project name is safe only when it owns no Docker resources yet.
-# This prevents a reuse of a matching prefix from turning `down --volumes` into
-# a deletion of an earlier run's containers, networks, or data volumes.
+# 只有项目名尚未对应任何 Docker 资源时，传入的项目名才安全。
+# 这样可防止复用匹配的前缀，让 `down --volumes`
+# 误删先前运行的容器、网络或数据卷。
 $existingResources = @(Get-DockerProjectResources -Name $ProjectName)
 if ($existingResources.Count -gt 0) {
   throw "Refusing to reuse Docker Compose project '$ProjectName'; existing resources were found: $($existingResources -join ', ')"
@@ -60,6 +60,8 @@ Write-Host "Verified Docker Compose project $ProjectName has no pre-existing res
 $createdAdminPassword = [string]::IsNullOrWhiteSpace($env:EDUGRADE_E2E_ADMIN_PASSWORD)
 $createdWorkerPassword = [string]::IsNullOrWhiteSpace($env:EDUGRADE_E2E_WORKER_PASSWORD)
 $createdUnprivilegedPassword = [string]::IsNullOrWhiteSpace($env:EDUGRADE_E2E_UNPRIVILEGED_PASSWORD)
+$createdPostgresPassword = [string]::IsNullOrWhiteSpace($env:EDUGRADE_STORY056_POSTGRES_PASSWORD)
+$createdMinioSecret = [string]::IsNullOrWhiteSpace($env:EDUGRADE_STORY056_MINIO_SECRET)
 if ($createdAdminPassword) {
   $env:EDUGRADE_E2E_ADMIN_PASSWORD = "S056e2e!A9$([Guid]::NewGuid().ToString('N'))"
 }
@@ -68,6 +70,12 @@ if ($createdWorkerPassword) {
 }
 if ($createdUnprivilegedPassword) {
   $env:EDUGRADE_E2E_UNPRIVILEGED_PASSWORD = "S056e2e!U7$([Guid]::NewGuid().ToString('N'))"
+}
+if ($createdPostgresPassword) {
+  $env:EDUGRADE_STORY056_POSTGRES_PASSWORD = "S056db!P9$([Guid]::NewGuid().ToString('N'))"
+}
+if ($createdMinioSecret) {
+  $env:EDUGRADE_STORY056_MINIO_SECRET = "S056minio!M6$([Guid]::NewGuid().ToString('N'))"
 }
 
 function Invoke-E2ECompose {
@@ -110,17 +118,17 @@ $projectInvocationStarted = $false
 $bodyFailure = $null
 $cleanupFailure = $null
 try {
-  # Once this is true, the preflight above establishes that only this
-  # invocation can have created resources under the project label.
+  # 此值为真时，上面的预检表明只有本次调用
+  # 可能在该项目标签下创建资源。
   $projectInvocationStarted = $true
-  # Keep Compose flags in an array. Passing -d directly to a PowerShell
-  # function lets PowerShell consume it as the function's -Debug switch.
+  # Compose 参数保留在数组中。将 -d 直接传给 PowerShell 函数，
+  # 会被 PowerShell 当作该函数的 -Debug 开关。
   Invoke-E2ECompose -ComposeArgs @("up", "-d", "postgres", "redis", "minio")
   foreach ($service in @('postgres', 'redis', 'minio')) { Wait-E2EService $service }
 
-  # api-gateway owns these one-shot dependencies through depends_on. Running
-  # them separately would execute bootstrap-admin twice, and the second pass
-  # correctly rejects the already-created administrator.
+  # api-gateway 通过 depends_on 管理这些一次性依赖。
+  # 单独运行它们会执行两次 bootstrap-admin，
+  # 第二次会正确拒绝已经创建的管理员。
   Invoke-E2ECompose -ComposeArgs @("up", "-d", "--build", "api-gateway")
   Wait-E2EService api-gateway 300
 
@@ -134,8 +142,8 @@ catch {
   $bodyFailure = $_
 }
 finally {
-  # The project name is validated and confirmed empty before the first Compose
-  # command. Thus this can remove only resources created by this invocation.
+  # 首次执行 Compose 命令前，已校验项目名并确认没有已有资源；
+  # 因此这里只能移除本次调用创建的资源。
   if ($projectInvocationStarted) {
     try {
       & docker compose --project-name $ProjectName --profile e2e -f $composePath down --volumes --remove-orphans
@@ -154,6 +162,8 @@ finally {
   if ($createdAdminPassword) { Remove-Item Env:EDUGRADE_E2E_ADMIN_PASSWORD -ErrorAction SilentlyContinue }
   if ($createdWorkerPassword) { Remove-Item Env:EDUGRADE_E2E_WORKER_PASSWORD -ErrorAction SilentlyContinue }
   if ($createdUnprivilegedPassword) { Remove-Item Env:EDUGRADE_E2E_UNPRIVILEGED_PASSWORD -ErrorAction SilentlyContinue }
+  if ($createdPostgresPassword) { Remove-Item Env:EDUGRADE_STORY056_POSTGRES_PASSWORD -ErrorAction SilentlyContinue }
+  if ($createdMinioSecret) { Remove-Item Env:EDUGRADE_STORY056_MINIO_SECRET -ErrorAction SilentlyContinue }
 }
 
 if ($bodyFailure -and $cleanupFailure) {

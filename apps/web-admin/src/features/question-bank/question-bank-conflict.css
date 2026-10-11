@@ -1,0 +1,27 @@
+.question-bank-conflict-comparison > section {
+  border-top: 1px solid var(--border-color, #d9d9d9);
+  padding: 12px;
+}
+.question-bank-conflict-comparison > section[data-changed="true"] {
+  border-left: 3px solid #d48806;
+  background: #fffbe6;
+}
+.question-bank-conflict-comparison h4 {
+  margin: 0 0 8px;
+}
+.question-bank-conflict-comparison h4 small,
+.question-bank-conflict-comparison .form-grid > div > small {
+  display: block;
+  color: #595959;
+  margin-bottom: 4px;
+}
+.question-bank-conflict-comparison dl {
+  margin: 0;
+}
+.question-bank-conflict-comparison dd {
+  margin-left: 16px;
+  margin-bottom: 6px;
+}
+.question-bank-conflict-comparison .form-grid > div {
+  min-width: 0;
+}

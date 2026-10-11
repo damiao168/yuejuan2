@@ -1,6 +1,1405 @@
 {
   "openapi": "3.1.0",
   "operations": {
+    "GET /api/v1/regrade-items/{itemId}/review-context": {
+      "operationId": "getRegradeItemReviewContext",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "itemId",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/RegradeReviewContextResponse"
+      }
+    },
+    "GET /api/v1/regrade-items/{itemId}/review-segment-image": {
+      "operationId": "downloadRegradeItemReviewImage",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "itemId",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": null
+    },
+    "GET /api/v1/answer-groups/{groupId}/samples/{segmentId}/context": {
+      "operationId": "getAnswerGroupMemberContext",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "groupId",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "path",
+          "name": "segmentId",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/AnswerGroupMemberContextResponse"
+      }
+    },
+    "GET /api/v1/answer-groups/{groupId}/samples/{segmentId}/segment-image": {
+      "operationId": "downloadAnswerGroupMemberImage",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "groupId",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "path",
+          "name": "segmentId",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": null
+    },
+    "GET /api/v1/exams/{examId}/review-actors": {
+      "operationId": "listExamReviewActors",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "examId",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/WorkflowActorsResponse"
+      }
+    },
+    "GET /api/v1/exams/{examId}/processing/actors": {
+      "operationId": "listExamProcessingActors",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "examId",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/WorkflowActorsResponse"
+      }
+    },
+    "GET /api/v1/processing/exceptions/{id}/context": {
+      "operationId": "getProcessingExceptionContext",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/ProcessingExceptionContextResponse"
+      }
+    },
+    "GET /api/v1/processing/exceptions/{id}/page-image": {
+      "operationId": "downloadProcessingExceptionPageImage",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": null
+    },
+    "GET /api/v1/exams/{examId}/capture-targets": {
+      "operationId": "findExamCaptureTargets",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "examId",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "submission_id",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "student_id",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/CaptureObjectTargetsResponse"
+      }
+    },
+    "POST /api/v1/school-assistant/conversations/stream": {
+      "operationId": "streamSchoolConversation",
+      "parameters": [],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/SchoolConversationRequest"
+        }
+      },
+      "response": null
+    },
+    "GET /api/v1/school-assistant/capabilities": {
+      "operationId": "getSchoolAssistantCapabilities",
+      "parameters": [],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/SchoolAssistantCapabilities"
+      }
+    },
+    "POST /api/v1/school-assistant/queries/stream": {
+      "operationId": "streamSchoolAssistantQuery",
+      "parameters": [],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/SchoolAssistantQueryRequest"
+        }
+      },
+      "response": null
+    },
+    "GET /api/v1/paper-imports/{id}/structure-preview": {
+      "operationId": "previewPaperStructure",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/PaperStructurePreview"
+      }
+    },
+    "POST /api/v1/paper-imports/{id}/adopt-structure": {
+      "operationId": "adoptPaperStructure",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/AdoptPaperStructureRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/PaperStructurePreview"
+      }
+    },
+    "POST /api/v1/paper-imports/{id}/fill-content": {
+      "operationId": "fillPaperImportContent",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/FillPaperImportContentRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/PaperImportContentResult"
+      }
+    },
+    "GET /api/v1/exams/{examId}/scoring-readiness": {
+      "operationId": "getExamScoringReadiness",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "examId",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/ScoringReadinessResponse"
+      }
+    },
+    "GET /api/v1/exams/{examId}/scoring-summary": {
+      "operationId": "getExamScoringSummary",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "examId",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/ScoringSummaryResponse"
+      }
+    },
+    "PUT /api/v1/answer-segments/{id}/answer": {
+      "operationId": "recordSegmentAnswer",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/RecordSegmentAnswerInput"
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": [
+          "answer"
+        ],
+        "properties": {}
+      }
+    },
+    "POST /api/v1/answer-segments/{id}/rule-grade": {
+      "operationId": "createRuleGrade",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "type": "object",
+        "required": [
+          "grade"
+        ],
+        "properties": {}
+      }
+    },
+    "GET /api/v1/answer-segments/{id}/ai-grades": {
+      "operationId": "listSegmentAIGrades",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "type": "object",
+        "required": [
+          "grades"
+        ],
+        "properties": {}
+      }
+    },
+    "GET /api/v1/questions/{id}/scoring-rules": {
+      "operationId": "listScoringRules",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "type": "object",
+        "required": [
+          "scoring_rules"
+        ],
+        "properties": {}
+      }
+    },
+    "POST /api/v1/questions/{id}/scoring-rules": {
+      "operationId": "createScoringRule",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "type": "object",
+          "required": [
+            "rule_type",
+            "config"
+          ],
+          "properties": {},
+          "additionalProperties": false
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": [
+          "scoring_rule"
+        ],
+        "properties": {}
+      }
+    },
+    "PATCH /api/v1/scoring-rules/{id}": {
+      "operationId": "updateScoringRule",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "type": "object",
+          "required": [
+            "config",
+            "expected_revision"
+          ],
+          "properties": {},
+          "additionalProperties": false
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": [
+          "scoring_rule"
+        ],
+        "properties": {}
+      }
+    },
+    "POST /api/v1/scoring-rules/{id}/publish": {
+      "operationId": "publishScoringRule",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "type": "object",
+        "required": [
+          "scoring_rule"
+        ],
+        "properties": {}
+      }
+    },
+    "GET /api/v1/scoring-runs/{runId}": {
+      "operationId": "getScoringRun",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "runId",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/ScoringRunDetailResponse"
+      }
+    },
+    "GET /api/v1/scoring-runs/{runId}/ai-batches": {
+      "operationId": "listScoringRunAIBatches",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "runId",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "type": "object",
+        "required": [
+          "batches"
+        ],
+        "properties": {}
+      }
+    },
+    "GET /api/v1/subjective-grading-batches/{batchId}/failed-segments": {
+      "operationId": "getFailedSubjectiveBatchSegments",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "batchId",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "type": "object",
+        "required": [
+          "segment_ids"
+        ],
+        "properties": {}
+      }
+    },
+    "POST /api/v1/scoring-runs/{runId}/cancel": {
+      "operationId": "cancelScoringRun",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "runId",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/ScoringRunResponse"
+      }
+    },
+    "POST /api/v1/scoring-runs/{runId}/retry-failed": {
+      "operationId": "retryFailedScoringRun",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "runId",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/ScoringRunRetryResponse"
+      }
+    },
+    "GET /api/v1/omr-calibrations/{id}": {
+      "operationId": "getOMRCalibration",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/OMRCalibrationResponse"
+      }
+    },
+    "POST /api/v1/answer-sheet-templates/{id}/omr-calibrations": {
+      "operationId": "createOMRCalibration",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/CreateOMRCalibrationRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/OMRCalibrationResponse"
+      }
+    },
+    "GET /api/v1/platform/schools": {
+      "operationId": "listPlatformSchools",
+      "parameters": [
+        {
+          "in": "query",
+          "name": "q",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "status",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "active",
+              "disabled"
+            ]
+          }
+        },
+        {
+          "in": "query",
+          "name": "activity",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "today",
+              "7d",
+              "30d",
+              "inactive_30d",
+              "never"
+            ]
+          }
+        },
+        {
+          "in": "query",
+          "name": "model_health",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "healthy",
+              "warning",
+              "unconfigured"
+            ]
+          }
+        },
+        {
+          "in": "query",
+          "name": "usage_window",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "today",
+              "1d",
+              "7d",
+              "30d",
+              "90d"
+            ]
+          }
+        },
+        {
+          "in": "query",
+          "name": "sort",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "created_at",
+              "last_activity",
+              "token_usage",
+              "student_count"
+            ]
+          }
+        },
+        {
+          "in": "query",
+          "name": "order",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          }
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "in": "query",
+          "name": "cursor",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/PlatformSchoolListResponse"
+      }
+    },
+    "GET /api/v1/platform/schools/{tenant_id}": {
+      "operationId": "getPlatformSchool",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "tenant_id",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/PlatformSchoolResponse"
+      }
+    },
+    "GET /api/v1/platform/schools/{tenant_id}/members": {
+      "operationId": "listPlatformSchoolMembers",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "tenant_id",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "in": "query",
+          "name": "q",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "role",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "school_admin",
+              "tenant_admin",
+              "teacher",
+              "grader",
+              "arbitrator",
+              "auditor"
+            ]
+          }
+        },
+        {
+          "in": "query",
+          "name": "status",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "active",
+              "invited",
+              "disabled"
+            ]
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/PlatformSchoolMembersResponse"
+      }
+    },
+    "GET /api/v1/platform/schools/{tenant_id}/usage": {
+      "operationId": "getPlatformSchoolUsage",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "tenant_id",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "in": "query",
+          "name": "window",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "today",
+              "1d",
+              "7d",
+              "30d",
+              "90d"
+            ]
+          }
+        },
+        {
+          "in": "query",
+          "name": "start_date",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "format": "date"
+          }
+        },
+        {
+          "in": "query",
+          "name": "end_date",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/PlatformSchoolUsageResponse"
+      }
+    },
+    "GET /api/v1/platform/schools/{tenant_id}/model-health": {
+      "operationId": "getPlatformSchoolModelHealth",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "tenant_id",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/PlatformSchoolModelHealthResponse"
+      }
+    },
+    "GET /api/v1/platform/schools/{tenant_id}/activity": {
+      "operationId": "getPlatformSchoolActivity",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "tenant_id",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "schema": {
+            "type": "integer"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/PlatformSchoolActivityResponse"
+      }
+    },
+    "GET /api/v1/platform/panel-model-bindings": {
+      "operationId": "listPlatformPanelModelBindings",
+      "parameters": [
+        {
+          "in": "query",
+          "name": "tenant_id",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "in": "query",
+          "name": "education_stage",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "junior",
+              "senior"
+            ]
+          }
+        },
+        {
+          "in": "query",
+          "name": "subject_code",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "archetype_code",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/PanelModelRoleBindingList"
+      }
+    },
+    "PUT /api/v1/platform/panel-model-bindings": {
+      "operationId": "savePlatformPanelModelBinding",
+      "parameters": [],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/PanelModelRoleBindingInput"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/PanelModelRoleBindingResponse"
+      }
+    },
+    "GET /api/v1/ai-chat/model": {
+      "operationId": "getManagedChatModel",
+      "parameters": [],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/ManagedChatModelResponse"
+      }
+    },
+    "POST /api/v1/ai-chat/completions": {
+      "operationId": "createManagedChatCompletion",
+      "parameters": [],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/ManagedChatRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/ManagedChatCompletionResponse"
+      }
+    },
+    "POST /api/v1/ai-chat/completions/stream": {
+      "operationId": "streamManagedChatCompletion",
+      "parameters": [],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/ManagedChatRequest"
+        }
+      },
+      "response": null
+    },
+    "POST /api/v1/answer-segments/{id}/subjective-ai-grade": {
+      "operationId": "createSubjectiveAIGrade",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/SubjectiveAIGradeRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/SubjectiveAIGradeResponse"
+      }
+    },
+    "GET /api/v1/math-answer-segments/{segmentId}/rubric-score": {
+      "operationId": "getMathRubricScore",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "segmentId",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/MathRubricScoreResponse"
+      }
+    },
+    "GET /api/v1/internal/math-understanding/tasks/{taskId}/input": {
+      "operationId": "getMathUnderstandingRuntimeInput",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "taskId",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/MathUnderstandingRuntimeInputResponse"
+      }
+    },
+    "POST /api/v1/internal/math-understanding/tasks/{taskId}/complete": {
+      "operationId": "completeMathUnderstandingRuntimeTask",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "taskId",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/CompleteMathUnderstandingRuntimeRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/MathUnderstandingRuntimeResponse"
+      }
+    },
+    "GET /api/v1/internal/math-verification/tasks/{taskId}/input": {
+      "operationId": "getMathVerificationRuntimeInput",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "taskId",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/MathVerificationRuntimeInputResponse"
+      }
+    },
+    "POST /api/v1/internal/math-verification/tasks/{taskId}/complete": {
+      "operationId": "completeMathVerificationRuntimeTask",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "taskId",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/CompleteMathVerificationRuntimeRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/MathVerificationRuntimeResponse"
+      }
+    },
+    "POST /api/v1/internal/math-verification/tasks/{taskId}/fail": {
+      "operationId": "failMathVerificationRuntimeTask",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "taskId",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/FailMathVerificationRuntimeRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/MathVerificationFailureResponse"
+      }
+    },
+    "POST /api/v1/auth/login": {
+      "operationId": "login",
+      "parameters": [],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/AuthLoginRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/AuthLoginResponse"
+      }
+    },
+    "POST /api/v1/auth/wechat/challenges": {
+      "operationId": "startWechatLogin",
+      "parameters": [],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/WechatLoginStartRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/WechatLoginChallenge"
+      }
+    },
+    "GET /api/v1/auth/wechat/callback": {
+      "operationId": "completeWechatAuthorization",
+      "parameters": [
+        {
+          "in": "query",
+          "name": "code",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "state",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": null
+    },
+    "POST /api/v1/auth/wechat/session": {
+      "operationId": "pollWechatLogin",
+      "parameters": [],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/WechatLoginPollRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/WechatLoginStatus"
+      }
+    },
+    "POST /api/v1/auth/token": {
+      "operationId": "createAccessToken",
+      "parameters": [],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/AuthLoginRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/AuthTokenResponse"
+      }
+    },
+    "POST /api/v1/auth/lock": {
+      "operationId": "lockPublicComputerSession",
+      "parameters": [],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/SessionLockResponse"
+      }
+    },
+    "POST /api/v1/auth/reauthenticate": {
+      "operationId": "reauthenticateSession",
+      "parameters": [],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/ReauthenticateRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/ReauthenticateResponse"
+      }
+    },
+    "GET /api/v1/auth/mfa": {
+      "operationId": "getMFAStatus",
+      "parameters": [],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/MFAStatusResponse"
+      }
+    },
+    "POST /api/v1/auth/mfa/totp/enroll": {
+      "operationId": "enrollTOTP",
+      "parameters": [],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/TOTPEnrollmentRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/TOTPEnrollmentResponse"
+      }
+    },
+    "POST /api/v1/auth/mfa/totp/confirm": {
+      "operationId": "confirmTOTP",
+      "parameters": [],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/TOTPConfirmationRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/MFARecoveryCodesResponse"
+      }
+    },
+    "POST /api/v1/auth/step-up/start": {
+      "operationId": "startMFAChallenge",
+      "parameters": [],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/MFAChallengeStartRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/MFAChallengeStartResponse"
+      }
+    },
+    "POST /api/v1/auth/step-up/verify": {
+      "operationId": "verifyMFAChallenge",
+      "parameters": [],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/MFAChallengeVerifyRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/MFAChallengeVerifyResponse"
+      }
+    },
+    "POST /api/v1/auth/mfa/totp/disable": {
+      "operationId": "disableTOTP",
+      "parameters": [],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/MFACommandRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/MFADisableResponse"
+      }
+    },
+    "POST /api/v1/auth/mfa/recovery-codes/rotate": {
+      "operationId": "rotateMFARecoveryCodes",
+      "parameters": [],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/MFACommandRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/MFARecoveryCodesResponse"
+      }
+    },
+    "GET /api/v1/auth/security-events": {
+      "operationId": "listPersonalSecurityEvents",
+      "parameters": [],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/SecurityEventListResponse"
+      }
+    },
+    "POST /api/v1/auth/activation/verify": {
+      "operationId": "verifyAccountActivation",
+      "parameters": [],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/OneTimeTokenRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/ActivationPreviewResponse"
+      }
+    },
+    "POST /api/v1/auth/activation/complete": {
+      "operationId": "completeAccountActivation",
+      "parameters": [],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/CompleteOneTimePasswordRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/ActivationCompleteResponse"
+      }
+    },
+    "POST /api/v1/auth/recovery/verify": {
+      "operationId": "verifyCredentialRecovery",
+      "parameters": [],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/OneTimeTokenRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/RecoveryPreviewResponse"
+      }
+    },
+    "POST /api/v1/auth/recovery/complete": {
+      "operationId": "completeCredentialRecovery",
+      "parameters": [],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/CompleteOneTimePasswordRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/RecoveryCompleteResponse"
+      }
+    },
+    "POST /api/v1/users/{id}/credential-reset": {
+      "operationId": "createManagedUserCredentialRecovery",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/ManagedUserRecoveryResponse"
+      }
+    },
+    "POST /api/v1/users/{id}/activation": {
+      "operationId": "reissueManagedUserActivation",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/ManagedUserActivationDeliveryResponse"
+      }
+    },
     "PATCH /api/v1/users/{id}/status": {
       "operationId": "updateManagedUserStatus",
       "parameters": [
@@ -281,6 +1680,38 @@
           "schema": {
             "type": "string",
             "format": "uuid"
+          }
+        },
+        {
+          "in": "query",
+          "name": "question_id",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "q",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "unassigned",
+          "required": false,
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "in": "query",
+          "name": "subject",
+          "required": false,
+          "schema": {
+            "type": "string"
           }
         }
       ],
@@ -1964,6 +3395,21 @@
         "$ref": "#/components/schemas/ScoreReleaseResponse"
       }
     },
+    "POST /api/v1/score-releases/{id}/high-score-paper/revoke": {
+      "operationId": "revokeHighScorePaper",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": null
+    },
     "POST /api/v1/exams/{examId}/score-releases/rollback": {
       "operationId": "createScoreReleaseRollback",
       "parameters": [
@@ -2032,6 +3478,14 @@
           "schema": {
             "type": "string"
           }
+        },
+        {
+          "in": "query",
+          "name": "expected_release_id",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
         }
       ],
       "requestBody": null,
@@ -2058,6 +3512,14 @@
           "schema": {
             "type": "string"
           }
+        },
+        {
+          "in": "query",
+          "name": "expected_release_id",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
         }
       ],
       "requestBody": null,
@@ -2081,6 +3543,14 @@
           "in": "path",
           "name": "questionId",
           "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "expected_release_id",
+          "required": false,
           "schema": {
             "type": "string"
           }
@@ -3012,6 +4482,22 @@
           "schema": {
             "type": "string"
           }
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "in": "query",
+          "name": "cursor",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
         }
       ],
       "requestBody": null,
@@ -3028,6 +4514,38 @@
           "required": true,
           "schema": {
             "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "in": "query",
+          "name": "cursor",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "status",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "in_progress",
+              "diff_ready",
+              "arbitration_required",
+              "regrade_required",
+              "cancelled"
+            ]
           }
         }
       ],
@@ -3082,7 +4600,24 @@
     },
     "GET /api/v1/backmark-items/mine": {
       "operationId": "listMyBackmarkItems",
-      "parameters": [],
+      "parameters": [
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "in": "query",
+          "name": "cursor",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
       "requestBody": null,
       "response": {
         "$ref": "#/components/schemas/BackmarkGraderItemListResponse"
@@ -3600,6 +5135,29 @@
         "$ref": "#/components/schemas/PaperImportResponse"
       }
     },
+    "POST /api/v1/paper-imports/{id}/rubric-draft": {
+      "operationId": "suggestPaperImportMathRubricDraft",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/MathRubricDraftRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/MathRubricDraftResponse"
+      }
+    },
     "PUT /api/v1/paper-imports/{id}/review": {
       "operationId": "savePaperImportReview",
       "parameters": [
@@ -3859,6 +5417,58 @@
         "$ref": "#/components/schemas/ReviewCommandSubmitResult"
       }
     },
+    "POST /api/v1/arbitration-tasks": {
+      "operationId": "createArbitrationTask",
+      "parameters": [],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/ReviewCommandCreateArbitrationTaskInput"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/ArbitrationTaskResponse"
+      }
+    },
+    "GET /api/v1/arbitration-tasks/{id}": {
+      "operationId": "getArbitrationTask",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/ArbitrationTaskResponse"
+      }
+    },
+    "POST /api/v1/arbitration-tasks/{id}/assign": {
+      "operationId": "assignArbitrationTask",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/ReviewCommandAssignArbitrationInput"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/ArbitrationTaskResponse"
+      }
+    },
     "POST /api/v1/arbitration-tasks/{id}/submit": {
       "operationId": "submitArbitration",
       "parameters": [
@@ -4026,9 +5636,2803 @@
       ],
       "requestBody": null,
       "response": null
+    },
+    "GET /api/v1/question-banks": {
+      "operationId": "listQuestionBanks",
+      "parameters": [
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "in": "query",
+          "name": "offset",
+          "required": false,
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "in": "query",
+          "name": "q",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/QuestionBankPage"
+      }
+    },
+    "POST /api/v1/question-banks": {
+      "operationId": "createQuestionBank",
+      "parameters": [
+        {
+          "in": "header",
+          "name": "Idempotency-Key",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/CreateQuestionBankRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/QuestionBankResponse"
+      }
+    },
+    "GET /api/v1/question-banks/{bankId}": {
+      "operationId": "getQuestionBank",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "bankId",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/QuestionBankResponse"
+      }
+    },
+    "PATCH /api/v1/question-banks/{bankId}": {
+      "operationId": "updateQuestionBank",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "bankId",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "in": "header",
+          "name": "Idempotency-Key",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/UpdateQuestionBankRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/QuestionBankResponse"
+      }
+    },
+    "GET /api/v1/question-banks/{bankId}/items": {
+      "operationId": "listQuestionBankItems",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "bankId",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "in": "query",
+          "name": "offset",
+          "required": false,
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "in": "query",
+          "name": "q",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/QuestionBankItemPage"
+      }
+    },
+    "POST /api/v1/question-banks/{bankId}/items": {
+      "operationId": "createQuestionBankItem",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "bankId",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "in": "header",
+          "name": "Idempotency-Key",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/CreateQuestionBankItemRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/QuestionBankItemCreateResponse"
+      }
+    },
+    "GET /api/v1/question-bank/items/{itemId}": {
+      "operationId": "getQuestionBankItem",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "itemId",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/QuestionBankItemResponse"
+      }
+    },
+    "GET /api/v1/question-bank/items/{itemId}/versions": {
+      "operationId": "listQuestionBankVersions",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "itemId",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "in": "query",
+          "name": "offset",
+          "required": false,
+          "schema": {
+            "type": "integer"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/QuestionBankVersionPage"
+      }
+    },
+    "POST /api/v1/question-bank/items/{itemId}/versions": {
+      "operationId": "createQuestionBankVersion",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "itemId",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "in": "header",
+          "name": "Idempotency-Key",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/CreateQuestionBankVersionRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/QuestionBankVersionResponse"
+      }
+    },
+    "GET /api/v1/question-bank/versions/{versionId}": {
+      "operationId": "getQuestionBankVersion",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "versionId",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/QuestionBankVersionResponse"
+      }
+    },
+    "PATCH /api/v1/question-bank/versions/{versionId}": {
+      "operationId": "updateQuestionBankVersion",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "versionId",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "in": "header",
+          "name": "Idempotency-Key",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/UpdateQuestionBankVersionRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/QuestionBankVersionResponse"
+      }
+    },
+    "PUT /api/v1/question-bank/versions/{versionId}/scoring": {
+      "operationId": "updateQuestionBankScoring",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "versionId",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "in": "header",
+          "name": "Idempotency-Key",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/UpdateQuestionBankScoringRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/QuestionBankVersionResponse"
+      }
+    },
+    "GET /api/v1/question-bank/versions/{versionId}/reviews": {
+      "operationId": "listQuestionBankReviews",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "versionId",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/QuestionBankReviewsResponse"
+      }
+    },
+    "POST /api/v1/question-banks/{bankId}/reviewers": {
+      "operationId": "bindQuestionBankReviewers",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "bankId",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "in": "header",
+          "name": "Idempotency-Key",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/QuestionBankReviewerBindingRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/QuestionBankResponse"
+      }
+    },
+    "GET /api/v1/question-bank/rubric-templates": {
+      "operationId": "listQuestionBankRubricTemplates",
+      "parameters": [
+        {
+          "in": "query",
+          "name": "bank_id",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "in": "query",
+          "name": "offset",
+          "required": false,
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "in": "query",
+          "name": "q",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/QuestionBankItemPage"
+      }
+    },
+    "POST /api/v1/question-bank/rubric-templates": {
+      "operationId": "createQuestionBankRubricTemplate",
+      "parameters": [
+        {
+          "in": "header",
+          "name": "Idempotency-Key",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/CreateQuestionBankRubricTemplateRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/QuestionBankItemCreateResponse"
+      }
+    },
+    "POST /api/v1/exams/{examId}/questions/materialize-from-bank": {
+      "operationId": "materializeQuestionBankVersions",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "examId",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "in": "header",
+          "name": "Idempotency-Key",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/MaterializeQuestionBankRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/MaterializeQuestionBankResponse"
+      }
+    },
+    "POST /api/v1/question-bank/versions/{versionId}/submit-review": {
+      "operationId": "submitQuestionBankReview",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "versionId",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "in": "header",
+          "name": "Idempotency-Key",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/QuestionBankReviewRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/QuestionBankVersionResponse"
+      }
+    },
+    "POST /api/v1/question-bank/versions/{versionId}/approve": {
+      "operationId": "approveQuestionBankVersion",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "versionId",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "in": "header",
+          "name": "Idempotency-Key",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/QuestionBankReviewRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/QuestionBankVersionResponse"
+      }
+    },
+    "POST /api/v1/question-bank/versions/{versionId}/return-to-draft": {
+      "operationId": "returnQuestionBankVersionToDraft",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "versionId",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "in": "header",
+          "name": "Idempotency-Key",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/QuestionBankReviewRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/QuestionBankVersionResponse"
+      }
+    },
+    "POST /api/v1/question-bank/versions/{versionId}/publish": {
+      "operationId": "publishQuestionBankVersion",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "versionId",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "in": "header",
+          "name": "Idempotency-Key",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/QuestionBankReviewRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/QuestionBankVersionResponse"
+      }
+    },
+    "GET /api/v1/question-banks/{bankId}/metadata-schema": {
+      "operationId": "getQuestionBankMetadataSchema",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "bankId",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "in": "query",
+          "name": "version",
+          "required": false,
+          "schema": {
+            "type": "integer"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/QuestionBankMetadataSchemaResponse"
+      }
+    },
+    "PUT /api/v1/question-banks/{bankId}/metadata-schema": {
+      "operationId": "updateQuestionBankMetadataSchema",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "bankId",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "in": "header",
+          "name": "Idempotency-Key",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/UpdateQuestionBankMetadataSchemaRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/QuestionBankMetadataSchemaResponse"
+      }
+    },
+    "POST /api/v1/question-banks/{bankId}/metadata-schema/validate": {
+      "operationId": "validateQuestionBankMetadata",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "bankId",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/ValidateQuestionBankMetadataRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/QuestionBankMetadataValidationResult"
+      }
+    },
+    "GET /api/v1/question-banks/{bankId}/members": {
+      "operationId": "listQuestionBankMembers",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "bankId",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/QuestionBankMembersResponse"
+      }
+    },
+    "GET /api/v1/question-banks/{bankId}/acl": {
+      "operationId": "getQuestionBankACL",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "bankId",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/QuestionBankACLResponse"
+      }
+    },
+    "PUT /api/v1/question-banks/{bankId}/acl": {
+      "operationId": "updateQuestionBankACL",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "bankId",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "in": "header",
+          "name": "Idempotency-Key",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/UpdateQuestionBankACLRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/QuestionBankACLResponse"
+      }
+    },
+    "GET /api/v1/question-bank/items": {
+      "operationId": "searchQuestionBankItems",
+      "parameters": [
+        {
+          "in": "query",
+          "name": "q",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "bank_id",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "in": "query",
+          "name": "subject_code",
+          "required": false,
+          "schema": {
+            "$ref": "#/components/schemas/SubjectCode"
+          }
+        },
+        {
+          "in": "query",
+          "name": "knowledge_point",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "question_type",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "archetype",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "workflow_status",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "reviewing",
+              "approved",
+              "published"
+            ]
+          }
+        },
+        {
+          "in": "query",
+          "name": "difficulty_band",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "cognitive_level",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "copyright",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "intended_use",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "use_policy",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "practice_only",
+              "exam_allowed"
+            ]
+          }
+        },
+        {
+          "in": "query",
+          "name": "metadata_key",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "metadata_value",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "statistics_available",
+          "required": false,
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "in": "query",
+          "name": "mode",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "default",
+              "published",
+              "my_drafts",
+              "all"
+            ]
+          }
+        },
+        {
+          "in": "query",
+          "name": "sort",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "updated_desc",
+              "created_desc",
+              "item_code_asc"
+            ]
+          }
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "in": "query",
+          "name": "offset",
+          "required": false,
+          "schema": {
+            "type": "integer"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/QuestionBankSearchPage"
+      }
+    },
+    "POST /api/v1/question-bank/items/{itemId}/retire": {
+      "operationId": "retireQuestionBankItem",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "itemId",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "in": "header",
+          "name": "Idempotency-Key",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/RetireQuestionBankItemRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/QuestionBankItemResponse"
+      }
+    },
+    "POST /api/v1/question-bank/imports/preview": {
+      "operationId": "previewQuestionBankImports",
+      "parameters": [],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/QuestionBankImportPreviewRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/QuestionBankImportPreviewBatch"
+      }
+    },
+    "POST /api/v1/question-bank/imports/confirm": {
+      "operationId": "confirmQuestionBankImportBatch",
+      "parameters": [],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/QuestionBankBatchImportRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/QuestionBankBatchImportResult"
+      }
+    },
+    "POST /api/v1/question-bank/items/import-from-question/{questionId}": {
+      "operationId": "importQuestionBankItemFromExamQuestion",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "questionId",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "in": "header",
+          "name": "Idempotency-Key",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/QuestionBankImportRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/QuestionBankImportResult"
+      }
+    },
+    "GET /api/v1/onboarding/readiness": {
+      "operationId": "getOnboardingReadiness",
+      "parameters": [],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/OnboardingReadiness"
+      }
+    },
+    "GET /api/v1/exam-management": {
+      "operationId": "listManagementExams",
+      "parameters": [
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "in": "query",
+          "name": "cursor",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "school_id",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "grade_id",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "search",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "exam_type",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "status",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "archive",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "active",
+              "archived",
+              "all"
+            ]
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/ManagementExamPage"
+      }
+    },
+    "GET /api/v1/exam-management/{kind}/{id}": {
+      "operationId": "getManagementExam",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "kind",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "session",
+              "standalone"
+            ]
+          }
+        },
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/ManagementExamResponse"
+      }
+    },
+    "PATCH /api/v1/exam-management/{kind}/{id}": {
+      "operationId": "updateManagementExam",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "kind",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "session",
+              "standalone"
+            ]
+          }
+        },
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "header",
+          "name": "Idempotency-Key",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/ManagementUpdateRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/ManagementExamResponse"
+      }
+    },
+    "GET /api/v1/exam-management/{kind}/{id}/archive-check": {
+      "operationId": "checkManagementArchive",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "kind",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "session",
+              "standalone"
+            ]
+          }
+        },
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/ManagementArchiveCheckResponse"
+      }
+    },
+    "POST /api/v1/exam-management/{kind}/{id}/archive": {
+      "operationId": "archiveManagementExam",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "kind",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "session",
+              "standalone"
+            ]
+          }
+        },
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "header",
+          "name": "Idempotency-Key",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/ManagementArchiveRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/ManagementExamResponse"
+      }
+    },
+    "POST /api/v1/exam-management/{kind}/{id}/restore": {
+      "operationId": "restoreManagementExam",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "kind",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "session",
+              "standalone"
+            ]
+          }
+        },
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "header",
+          "name": "Idempotency-Key",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/ManagementArchiveRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/ManagementExamResponse"
+      }
+    },
+    "GET /api/v1/exam-management/commands/{commandID}": {
+      "operationId": "recoverManagementArchiveCommand",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "commandID",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/ManagementArchiveCommandResponse"
+      }
+    },
+    "GET /api/v1/users": {
+      "operationId": "listManagedOrganizationUsers",
+      "parameters": [
+        {
+          "in": "query",
+          "name": "q",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "role",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "in": "query",
+          "name": "cursor",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/ManagedOrganizationUserPage"
+      }
+    },
+    "POST /api/v1/users": {
+      "operationId": "createManagedOrganizationUser",
+      "parameters": [],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/CreateManagedOrganizationUserRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/CreateManagedOrganizationUserResponse"
+      }
+    },
+    "PATCH /api/v1/users/{id}/access": {
+      "operationId": "updateManagedUserAccess",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/UpdateManagedUserAccessRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/ManagedOrganizationUserResponse"
+      }
+    },
+    "GET /api/v1/score-releases/{id}/student-preview": {
+      "operationId": "getScoreReleaseStudentPreview",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "student_id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/StudentScorePreviewResponse"
+      }
+    },
+    "POST /api/v1/exams/{examId}/readiness/confirm": {
+      "operationId": "confirmExamReadiness",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "examId",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": false,
+        "schema": {
+          "$ref": "#/components/schemas/ConfirmExamReadinessRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/ExamReadinessConfirmationResponse"
+      }
+    },
+    "GET /api/v1/student/exams/{examId}/questions/{questionId}/page-image": {
+      "operationId": "getStudentPublishedPaperPageImage",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "examId",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "in": "path",
+          "name": "questionId",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "variant",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "high_score"
+            ]
+          }
+        },
+        {
+          "in": "query",
+          "name": "expected_release_id",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": null
+    },
+    "POST /api/v1/question-appeals/{id}/review-opinion": {
+      "operationId": "submitQuestionAppealReviewOpinion",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/QuestionAppealReviewOpinionRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/PublishedQuestionAppealResponse"
+      }
     }
   },
   "schemas": {
+    "TaskMaterialQuestion": {
+      "type": "object",
+      "required": [
+        "id",
+        "exam_id",
+        "question_no",
+        "question_type",
+        "score"
+      ],
+      "properties": {},
+      "additionalProperties": true
+    },
+    "RegradeReviewContext": {
+      "type": "object",
+      "required": [
+        "item",
+        "context"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "RegradeReviewContextResponse": {
+      "type": "object",
+      "required": [
+        "regrade_review_context"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "AnswerGroupMemberContext": {
+      "type": "object",
+      "required": [
+        "group_id",
+        "member",
+        "expected_revision",
+        "question",
+        "answer_text",
+        "segment_image_url"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "AnswerGroupMemberContextResponse": {
+      "type": "object",
+      "required": [
+        "member_context"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "WorkflowActor": {
+      "type": "object",
+      "required": [
+        "id",
+        "username",
+        "display_name"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "WorkflowActorsResponse": {
+      "type": "object",
+      "required": [
+        "actors"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "ProcessingExceptionContext": {
+      "type": "object",
+      "required": [
+        "exception",
+        "submission_id",
+        "candidate_no",
+        "page_no",
+        "image_url"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "ProcessingExceptionContextResponse": {
+      "type": "object",
+      "required": [
+        "exception_context"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "CaptureObjectTarget": {
+      "type": "object",
+      "required": [
+        "batch_id",
+        "submission_id",
+        "page_id",
+        "candidate_no"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "CaptureObjectTargetsResponse": {
+      "type": "object",
+      "required": [
+        "targets"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "SchoolAssistantIntent": {
+      "type": "string",
+      "enum": [
+        "exam_progress",
+        "publish_diagnosis"
+      ]
+    },
+    "SchoolAssistantResultStatus": {
+      "type": "string",
+      "enum": [
+        "completed",
+        "partial",
+        "needs_clarification",
+        "failed",
+        "cancelled"
+      ]
+    },
+    "SchoolAssistantContextHint": {
+      "type": "object",
+      "required": [],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "SchoolAssistantQueryRequest": {
+      "type": "object",
+      "required": [
+        "request_id",
+        "question",
+        "preset_intent",
+        "context_hint"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "SchoolAssistantCapability": {
+      "type": "object",
+      "required": [
+        "intent",
+        "label",
+        "available",
+        "required_permission"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "SchoolAssistantCapabilities": {
+      "type": "object",
+      "required": [
+        "mode",
+        "model_required",
+        "intents"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "SchoolConversationContext": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    },
+    "SchoolConversationRequest": {
+      "type": "object",
+      "required": [
+        "messages"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "SchoolConversationEvent": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "request_id",
+            "seq",
+            "model"
+          ],
+          "properties": {
+            "type": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "request_id",
+            "seq",
+            "call_id",
+            "tool_name",
+            "label"
+          ],
+          "properties": {
+            "type": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "request_id",
+            "seq",
+            "call_id",
+            "tool_name",
+            "label",
+            "status"
+          ],
+          "properties": {
+            "type": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "request_id",
+            "seq",
+            "channel",
+            "delta"
+          ],
+          "properties": {
+            "type": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "request_id",
+            "seq",
+            "sources",
+            "actions"
+          ],
+          "properties": {
+            "type": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "request_id",
+            "seq",
+            "completion"
+          ],
+          "properties": {
+            "type": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "request_id",
+            "seq",
+            "code",
+            "message"
+          ],
+          "properties": {
+            "type": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "SchoolAssistantScope": {
+      "type": "object",
+      "required": [
+        "class_ids",
+        "data_basis",
+        "scope_label"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "SchoolAssistantSource": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "status",
+        "label",
+        "read_at",
+        "consistency",
+        "scope_label"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "SchoolAssistantFact": {
+      "type": "object",
+      "required": [
+        "id",
+        "source_id",
+        "metric_key",
+        "label",
+        "available",
+        "value",
+        "unit",
+        "definition_id"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "SchoolAssistantIssue": {
+      "type": "object",
+      "required": [
+        "code",
+        "label",
+        "message",
+        "severity",
+        "source_id"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "SchoolAssistantBlock": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "summary",
+            "issues",
+            "notice",
+            "table"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "SchoolAssistantNavigationTarget": {
+      "type": "object",
+      "required": [
+        "kind",
+        "exam_id",
+        "section"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "SchoolAssistantAction": {
+      "type": "object",
+      "required": [
+        "id",
+        "label",
+        "target"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "SchoolAssistantResult": {
+      "type": "object",
+      "required": [
+        "request_id",
+        "intent",
+        "status",
+        "scope",
+        "facts",
+        "blocks",
+        "sources",
+        "actions",
+        "limitations"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "SchoolAssistantEvent": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "request_id",
+            "seq",
+            "scope"
+          ],
+          "properties": {
+            "type": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "request_id",
+            "seq",
+            "source_id",
+            "label"
+          ],
+          "properties": {
+            "type": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "request_id",
+            "seq",
+            "source"
+          ],
+          "properties": {
+            "type": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "request_id",
+            "seq",
+            "result"
+          ],
+          "properties": {
+            "type": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "request_id",
+            "seq",
+            "status"
+          ],
+          "properties": {
+            "type": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "request_id",
+            "seq",
+            "code",
+            "message"
+          ],
+          "properties": {
+            "type": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "PaperStructureChange": {
+      "type": "object",
+      "required": [
+        "question_no",
+        "action"
+      ],
+      "properties": {}
+    },
+    "PaperStructurePreview": {
+      "type": "object",
+      "required": [
+        "import_id",
+        "preview_hash",
+        "generation",
+        "current_count",
+        "recognized_count",
+        "expected_total",
+        "recognized_total",
+        "missing_scores",
+        "blocked_reasons",
+        "changes",
+        "paper_detected",
+        "confirmed"
+      ],
+      "properties": {}
+    },
+    "AdoptPaperStructureRequest": {
+      "type": "object",
+      "required": [
+        "expected_generation",
+        "preview_hash",
+        "complete_paper_confirmed"
+      ],
+      "properties": {}
+    },
+    "FillPaperImportContentRequest": {
+      "type": "object",
+      "required": [
+        "expected_generation"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "PaperImportContentResult": {
+      "type": "object",
+      "required": [
+        "filled_questions",
+        "missing_answers",
+        "skipped"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "RecordSegmentAnswerInput": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    },
+    "SegmentAnswer": {
+      "type": "object",
+      "required": [
+        "id",
+        "tenant_id",
+        "answer_segment_id",
+        "answer_text",
+        "answer_payload",
+        "source",
+        "recorded_by",
+        "created_at"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "ObjectiveGrade": {
+      "type": "object",
+      "required": [
+        "id",
+        "tenant_id",
+        "answer_segment_id",
+        "question_id",
+        "question_no",
+        "question_type",
+        "answer_version",
+        "grader_type",
+        "rule_version",
+        "suggested_score",
+        "max_score",
+        "confidence",
+        "matched_points",
+        "missing_points",
+        "evidence",
+        "risk_flags",
+        "needs_human_review",
+        "auto_pass",
+        "mock",
+        "raw_output",
+        "created_by",
+        "created_at"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "ObjectiveGradePoint": {
+      "type": "object",
+      "required": [
+        "code",
+        "label",
+        "score"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "ObjectiveGradeEvidence": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ScoringRule": {
+      "type": "object",
+      "required": [
+        "id",
+        "tenant_id",
+        "exam_id",
+        "question_id",
+        "version",
+        "rule_type",
+        "config",
+        "status",
+        "revision",
+        "content_hash",
+        "created_by",
+        "created_at",
+        "updated_at"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "PlatformSchoolAdministrator": {
+      "type": "object",
+      "required": [
+        "admin_count"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "PlatformSchoolMemberCounts": {
+      "type": "object",
+      "required": [
+        "accounts",
+        "active_accounts",
+        "administrators",
+        "teachers",
+        "graders",
+        "students",
+        "classes"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "PlatformSchoolUsageSummary": {
+      "type": "object",
+      "required": [
+        "input_tokens",
+        "output_tokens",
+        "cached_input_tokens",
+        "reasoning_tokens",
+        "total_tokens",
+        "requests",
+        "arbitration_requests",
+        "estimated_cost_microusd",
+        "window_days"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "PlatformSchoolModelHealth": {
+      "type": "object",
+      "required": [
+        "status"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "PlatformSchoolSummary": {
+      "type": "object",
+      "required": [
+        "tenant_id",
+        "school_id",
+        "name",
+        "code",
+        "status",
+        "created_at",
+        "administrator",
+        "members",
+        "usage",
+        "model_health",
+        "exam_count",
+        "attention_reasons"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "PlatformSchoolListResponse": {
+      "type": "object",
+      "required": [
+        "schools",
+        "summary",
+        "next_cursor",
+        "has_more"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "PlatformSchoolResponse": {
+      "type": "object",
+      "required": [
+        "school"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "PlatformSchoolMember": {
+      "type": "object",
+      "required": [
+        "id",
+        "username",
+        "display_name",
+        "status",
+        "roles",
+        "created_at"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "PlatformSchoolMembersResponse": {
+      "type": "object",
+      "required": [
+        "members",
+        "summary"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "PlatformSchoolUsageResponse": {
+      "type": "object",
+      "required": [
+        "summary",
+        "trend",
+        "by_feature",
+        "by_model",
+        "start_date",
+        "end_date"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "PlatformSchoolUsageBreakdown": {
+      "type": "object",
+      "required": [
+        "key",
+        "label",
+        "total_tokens",
+        "requests",
+        "share",
+        "estimated_cost_microusd"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "PlatformSchoolModelHealthResponse": {
+      "type": "object",
+      "required": [
+        "default_model",
+        "roles"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "PlatformSchoolActivityResponse": {
+      "type": "object",
+      "required": [
+        "activities",
+        "security"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "PanelModelRoleBindingInput": {
+      "type": "object",
+      "required": [
+        "tenant_id",
+        "education_stage",
+        "subject_code",
+        "archetype_code",
+        "agent_role",
+        "managed_model_api_config_id",
+        "prompt_version",
+        "strength_rank",
+        "status",
+        "expected_revision"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "PanelModelRoleBinding": {
+      "type": "object",
+      "required": [
+        "id",
+        "tenant_id",
+        "education_stage",
+        "subject_code",
+        "archetype_code",
+        "agent_role",
+        "managed_model_api_config_id",
+        "prompt_version",
+        "strength_rank",
+        "status",
+        "created_by",
+        "created_at",
+        "updated_at",
+        "revision"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "PanelModelRoleBindingList": {
+      "type": "object",
+      "required": [
+        "bindings"
+      ],
+      "properties": {}
+    },
+    "PanelModelRoleBindingResponse": {
+      "type": "object",
+      "required": [
+        "binding"
+      ],
+      "properties": {}
+    },
+    "ManagedChatAttachment": {
+      "type": "object",
+      "required": [
+        "name",
+        "media_type",
+        "content",
+        "size"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "ManagedChatMessage": {
+      "type": "object",
+      "required": [
+        "role",
+        "content"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "ManagedChatRequest": {
+      "type": "object",
+      "required": [
+        "messages"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "ManagedChatModelStatus": {
+      "type": "object",
+      "required": [
+        "available",
+        "message"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "ManagedChatModelResponse": {
+      "type": "object",
+      "required": [
+        "model"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "ManagedChatUsage": {
+      "type": "object",
+      "required": [
+        "input_tokens",
+        "cached_input_tokens",
+        "output_tokens",
+        "reasoning_tokens",
+        "total_tokens"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "ManagedChatCompletion": {
+      "type": "object",
+      "required": [
+        "message",
+        "model_name",
+        "display_name",
+        "provider_key",
+        "usage"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "ManagedChatCompletionResponse": {
+      "type": "object",
+      "required": [
+        "completion"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "OnboardingNextAction": {
+      "type": "object",
+      "required": [
+        "code",
+        "path"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "OnboardingCheck": {
+      "type": "object",
+      "required": [
+        "key",
+        "state",
+        "severity",
+        "title"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "OnboardingReadiness": {
+      "type": "object",
+      "required": [
+        "scope",
+        "ready_for_use",
+        "completed_count",
+        "total_required",
+        "checks"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "MFAStatusResponse": {
+      "type": "object",
+      "required": [
+        "available",
+        "enabled",
+        "recovery_codes_remaining"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "TOTPEnrollmentRequest": {
+      "type": "object",
+      "required": [
+        "password"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "TOTPEnrollmentResponse": {
+      "type": "object",
+      "required": [
+        "enrollment_id",
+        "secret",
+        "qr_code_data_url",
+        "expires_at"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "TOTPConfirmationRequest": {
+      "type": "object",
+      "required": [
+        "enrollment_id",
+        "code"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "MFARecoveryCodesResponse": {
+      "type": "object",
+      "required": [
+        "status",
+        "recovery_codes"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "MFAChallengeStartRequest": {
+      "type": "object",
+      "required": [
+        "operation",
+        "password"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "MFAChallengeStartResponse": {
+      "type": "object",
+      "required": [
+        "challenge_id",
+        "operation",
+        "methods",
+        "expires_at"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "MFAChallengeVerifyRequest": {
+      "type": "object",
+      "required": [
+        "challenge_id",
+        "method",
+        "code"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "MFAChallengeVerifyResponse": {
+      "type": "object",
+      "required": [
+        "status",
+        "operation",
+        "expires_at"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "MFACommandRequest": {
+      "type": "object",
+      "required": [
+        "challenge_id"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "MFADisableResponse": {
+      "type": "object",
+      "required": [
+        "status"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "OrganizationScope": {
+      "type": "object",
+      "required": [
+        "tenant_wide",
+        "school_ids",
+        "grade_ids",
+        "class_ids"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "AuthUser": {
+      "type": "object",
+      "required": [
+        "id",
+        "tenant_id",
+        "tenant_code",
+        "username",
+        "display_name",
+        "status",
+        "roles",
+        "permissions",
+        "data_scope"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "AuthLoginRequest": {
+      "type": "object",
+      "required": [
+        "password"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "AuthLoginResponse": {
+      "type": "object",
+      "required": [
+        "expires_at",
+        "user"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "WechatLoginStartRequest": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    },
+    "WechatLoginChallenge": {
+      "type": "object",
+      "required": [
+        "challenge_id",
+        "poll_token",
+        "qr_code_data_url",
+        "expires_at"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "WechatLoginPollRequest": {
+      "type": "object",
+      "required": [
+        "challenge_id",
+        "poll_token"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "WechatLoginStatus": {
+      "type": "object",
+      "required": [
+        "status",
+        "expires_at"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "AuthTokenResponse": {
+      "type": "object",
+      "required": [
+        "token_type",
+        "access_token",
+        "expires_at",
+        "user"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "ReauthenticateRequest": {
+      "type": "object",
+      "required": [
+        "password"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "SessionLockResponse": {
+      "type": "object",
+      "required": [
+        "status",
+        "locked_at"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "ReauthenticateResponse": {
+      "type": "object",
+      "required": [
+        "status",
+        "reauthenticated_at"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "OneTimeTokenRequest": {
+      "type": "object",
+      "required": [
+        "token"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "CompleteOneTimePasswordRequest": {
+      "type": "object",
+      "required": [
+        "token",
+        "password"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "ActivationPreview": {
+      "type": "object",
+      "required": [
+        "display_name",
+        "tenant_code",
+        "expires_at"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "RecoveryPreview": {
+      "type": "object",
+      "required": [
+        "display_name",
+        "tenant_code",
+        "expires_at"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "ActivationPreviewResponse": {
+      "type": "object",
+      "required": [
+        "activation"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "RecoveryPreviewResponse": {
+      "type": "object",
+      "required": [
+        "recovery"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "ActivationCompleteResponse": {
+      "type": "object",
+      "required": [
+        "status"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "RecoveryCompleteResponse": {
+      "type": "object",
+      "required": [
+        "status"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "ManagedUserRecovery": {
+      "type": "object",
+      "required": [
+        "token",
+        "path",
+        "expires_at",
+        "display_name"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "ManagedUserRecoveryResponse": {
+      "type": "object",
+      "required": [
+        "recovery"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "ManagedUserActivationDelivery": {
+      "type": "object",
+      "required": [
+        "token",
+        "path",
+        "expires_at",
+        "display_name"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "ManagedUserActivationDeliveryResponse": {
+      "type": "object",
+      "required": [
+        "activation"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "SecurityEvent": {
+      "type": "object",
+      "required": [
+        "id",
+        "event_type",
+        "risk_level",
+        "device_summary",
+        "occurred_at"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "SecurityEventListResponse": {
+      "type": "object",
+      "required": [
+        "events"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
     "CaptureUploadRecoveryResponse": {
       "type": "object",
       "required": [
@@ -4077,6 +8481,238 @@
       ],
       "properties": {}
     },
+    "FormulaCandidate": {
+      "type": "object",
+      "required": [
+        "latex",
+        "engine",
+        "version",
+        "confidence",
+        "syntax_valid"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "MathRubricEvidence": {
+      "type": "object",
+      "required": [
+        "id",
+        "rubric_criterion_key",
+        "evidence_type",
+        "source_artifact_ids",
+        "status",
+        "confidence"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "MathCriterionDecision": {
+      "type": "object",
+      "required": [
+        "rubric_point_id",
+        "status",
+        "max_score",
+        "awarded_score",
+        "evidence_ids",
+        "verification_ids",
+        "decision_source",
+        "requires_human_review",
+        "reason_code"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "MathCriterionCandidate": {
+      "type": "object",
+      "required": [
+        "rubric_point_id",
+        "status",
+        "evidence_ids"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "MathRubricLegacyPoint": {
+      "type": "object",
+      "required": [
+        "code",
+        "label",
+        "score"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "MathRubricScoreResponse": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "scope",
+        "artifact_id",
+        "artifact_version",
+        "correction_revision",
+        "verified_correction_revision",
+        "exam_question_snapshot_id",
+        "rubric_id",
+        "rubric_version",
+        "rubric_snapshot_hash",
+        "max_score",
+        "verified_score",
+        "unresolved_score",
+        "suggested_score",
+        "score_range",
+        "requires_human_review",
+        "criterion_decisions",
+        "rubric_evidence",
+        "matched_points",
+        "missing_points"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "MathVerification": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "status",
+        "reason_code",
+        "domain",
+        "engine",
+        "engine_version",
+        "ruleset_version",
+        "confidence"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "FailMathVerificationRuntimeRequest": {
+      "type": "object",
+      "required": [
+        "lease_token",
+        "retryable",
+        "error_code",
+        "error_detail",
+        "duration_ms"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "MathVerificationFailureResponse": {
+      "type": "object",
+      "required": [
+        "task"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "MathVerificationRuntimeInputResponse": {
+      "type": "object",
+      "required": [
+        "task",
+        "contract"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "CompleteMathVerificationRuntimeRequest": {
+      "type": "object",
+      "required": [
+        "lease_token",
+        "duration_ms",
+        "artifact_id",
+        "artifact_version",
+        "correction_revision",
+        "verifications"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "MathVerificationRuntimeResponse": {
+      "type": "object",
+      "required": [
+        "superseded"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "MathUnderstandingRuntimeInputResponse": {
+      "type": "object",
+      "required": [
+        "task",
+        "image_url"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "CompleteMathUnderstandingRuntimeRequest": {
+      "type": "object",
+      "required": [
+        "lease_token",
+        "duration_ms",
+        "artifact"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "MathUnderstandingRuntimeResponse": {
+      "type": "object",
+      "required": [
+        "artifact"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "MathFormulaArtifact": {
+      "type": "object",
+      "required": [
+        "id",
+        "block_id",
+        "bbox",
+        "recognition_engine",
+        "recognition_version",
+        "parser_version",
+        "parse_status",
+        "confidence"
+      ],
+      "properties": {},
+      "additionalProperties": true
+    },
+    "MathSolutionStep": {
+      "type": "object",
+      "required": [
+        "id",
+        "order_hint",
+        "block_ids",
+        "confidence"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "MathSolutionEdge": {
+      "type": "object",
+      "required": [
+        "from_step_id",
+        "to_step_id",
+        "kind"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "MathSolutionGraph": {
+      "type": "object",
+      "required": [
+        "id",
+        "answer_segment_id",
+        "builder_version",
+        "formula_model_version",
+        "overall_confidence",
+        "requires_human_review",
+        "steps",
+        "edges"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
     "MathUnderstandingArtifact": {
       "type": "object",
       "required": [
@@ -4095,6 +8731,24 @@
       ],
       "properties": {},
       "additionalProperties": true
+    },
+    "MathUnderstandingContract": {
+      "type": "object",
+      "required": [
+        "subject_code",
+        "answer_segment_id",
+        "exam_question_snapshot_id",
+        "input_hash",
+        "engine_version",
+        "blocks",
+        "formulas",
+        "relations",
+        "solution_graph",
+        "verifications",
+        "rubric_evidence"
+      ],
+      "properties": {},
+      "additionalProperties": false
     },
     "MathCorrectionOperation": {
       "type": "object",
@@ -4351,6 +9005,16 @@
       "properties": {},
       "additionalProperties": false
     },
+    "ExamWorkspaceSubjectExam": {
+      "type": "object",
+      "required": [
+        "exam_id",
+        "subject",
+        "total_score"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
     "ExamWorkspaceProjection": {
       "type": "object",
       "required": [
@@ -4450,6 +9114,27 @@
       "properties": {},
       "additionalProperties": false
     },
+    "ReviewTaskAggregate": {
+      "type": "object",
+      "required": [
+        "total_count",
+        "completed_count",
+        "remaining_count",
+        "status_counts",
+        "reviewers"
+      ],
+      "properties": {}
+    },
+    "ReviewerTaskAggregate": {
+      "type": "object",
+      "required": [
+        "reviewer_id",
+        "total_count",
+        "completed_count",
+        "remaining_count"
+      ],
+      "properties": {}
+    },
     "ReviewTaskPage": {
       "allOf": [
         {
@@ -4543,6 +9228,15 @@
       ],
       "properties": {},
       "additionalProperties": false
+    },
+    "ReviewAISuggestionHistoryItem": {
+      "type": "object",
+      "required": [
+        "id",
+        "answer_segment_id"
+      ],
+      "properties": {},
+      "additionalProperties": true
     },
     "ReviewTaskClaim": {
       "type": "object",
@@ -6573,6 +11267,57 @@
       "properties": {},
       "additionalProperties": false
     },
+    "StudentSessionSummary": {
+      "type": "object",
+      "required": [
+        "published_count",
+        "expected_count",
+        "subjects"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "StudentSessionSubject": {
+      "type": "object",
+      "required": [
+        "exam_id",
+        "subject",
+        "name",
+        "status",
+        "statistics_available"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "StudentPaperPage": {
+      "type": "object",
+      "required": [
+        "page_no",
+        "question_id"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "StudentPaperScoreMark": {
+      "type": "object",
+      "required": [
+        "question_id",
+        "question_no",
+        "score",
+        "max_score",
+        "page_no"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "StudentHighScorePaper": {
+      "type": "object",
+      "required": [
+        "available"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
     "StudentPublishedResult": {
       "type": "object",
       "required": [
@@ -8221,6 +12966,52 @@
       "properties": {},
       "additionalProperties": false
     },
+    "MathRubricDraftRequest": {
+      "type": "object",
+      "required": [
+        "candidate_id",
+        "expected_generation",
+        "expected_updated_at"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "MathRubricDraftPoint": {
+      "type": "object",
+      "required": [
+        "id",
+        "description",
+        "suggested_score",
+        "evidence_step_ids",
+        "source_refs",
+        "review_note"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "MathRubricDraftSuggestion": {
+      "type": "object",
+      "required": [
+        "candidate_id",
+        "question_no_normalized",
+        "max_score",
+        "points",
+        "origin",
+        "status",
+        "provenance",
+        "issues"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "MathRubricDraftResponse": {
+      "type": "object",
+      "required": [
+        "suggested_rubric_candidates"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
     "PaperImportDraftQuestion": {
       "type": "object",
       "required": [
@@ -8240,7 +13031,8 @@
       "type": "object",
       "required": [
         "expected_generation",
-        "questions"
+        "questions",
+        "expected_updated_at"
       ],
       "properties": {},
       "additionalProperties": false
@@ -8308,6 +13100,66 @@
       "properties": {},
       "additionalProperties": false
     },
+    "ScoringQuestionSummary": {
+      "type": "object",
+      "required": [
+        "question_id",
+        "question_no",
+        "question_type",
+        "total",
+        "queued",
+        "confirmed",
+        "review",
+        "failed"
+      ],
+      "properties": {}
+    },
+    "ScoringSummary": {
+      "type": "object",
+      "required": [
+        "questions"
+      ],
+      "properties": {}
+    },
+    "ScoringSummaryResponse": {
+      "type": "object",
+      "required": [
+        "scoring_summary"
+      ],
+      "properties": {}
+    },
+    "ScoringReadinessCheck": {
+      "type": "object",
+      "required": [
+        "code",
+        "label",
+        "passed",
+        "severity",
+        "message"
+      ],
+      "properties": {}
+    },
+    "ScoringReadiness": {
+      "type": "object",
+      "required": [
+        "ready",
+        "exam_status",
+        "total_questions",
+        "total_segments",
+        "ready_segments",
+        "automatic_candidates",
+        "manual_review_candidates",
+        "checks"
+      ],
+      "properties": {}
+    },
+    "ScoringReadinessResponse": {
+      "type": "object",
+      "required": [
+        "scoring_readiness"
+      ],
+      "properties": {}
+    },
     "ScoringRun": {
       "type": "object",
       "required": [
@@ -8342,6 +13194,138 @@
       ],
       "properties": {}
     },
+    "ScoringRunItem": {
+      "type": "object",
+      "required": [
+        "answer_segment_id",
+        "submission_id",
+        "submission_page_id",
+        "page_no",
+        "page_file_asset_id",
+        "question_id",
+        "question_no",
+        "question_type",
+        "assessment_snapshot_id",
+        "anonymous_code",
+        "normalized_bbox",
+        "state"
+      ],
+      "properties": {}
+    },
+    "OMRCalibrationSummary": {
+      "type": "object",
+      "required": [
+        "total_count",
+        "labeled_count",
+        "pending_count",
+        "match_count",
+        "mismatch_count",
+        "eligible_count",
+        "eligible_match_count",
+        "eligible_mismatch_count",
+        "option_coverage",
+        "question_coverage",
+        "stratum_coverage",
+        "ready_to_approve",
+        "blockers"
+      ],
+      "properties": {}
+    },
+    "OMRCalibrationSession": {
+      "type": "object",
+      "required": [
+        "id",
+        "tenant_id",
+        "template_id",
+        "template_content_hash",
+        "scope_type",
+        "question_ids",
+        "question_type",
+        "profile_version",
+        "profile_hash",
+        "reference_file_asset_id",
+        "reference_sha256",
+        "option_labels",
+        "sample_seed",
+        "sample_count",
+        "minimum_samples",
+        "minimum_samples_per_option",
+        "minimum_samples_per_stratum",
+        "minimum_confidence",
+        "status",
+        "created_by",
+        "created_at",
+        "updated_at",
+        "summary"
+      ],
+      "properties": {}
+    },
+    "OMRCalibrationCase": {
+      "type": "object",
+      "required": [
+        "id",
+        "calibration_id",
+        "omr_run_id",
+        "answer_segment_id",
+        "question_id",
+        "question_no",
+        "question_type",
+        "option_labels",
+        "sample_stratum",
+        "crop_sha256",
+        "observed_decision",
+        "observed_options",
+        "observed_confidence",
+        "measurements",
+        "created_at",
+        "segment_image_url"
+      ],
+      "properties": {}
+    },
+    "OMRCalibrationDetail": {
+      "type": "object",
+      "required": [
+        "session",
+        "cases"
+      ],
+      "properties": {}
+    },
+    "CreateOMRCalibrationRequest": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    },
+    "OMRCalibrationResponse": {
+      "type": "object",
+      "required": [
+        "calibration"
+      ],
+      "properties": {}
+    },
+    "ScoringRunDetailResponse": {
+      "type": "object",
+      "required": [
+        "scoring_run",
+        "items"
+      ],
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/ScoringRunItem"
+          }
+        }
+      }
+    },
+    "ScoringRunRetryResponse": {
+      "type": "object",
+      "required": [
+        "scoring_run",
+        "requeued",
+        "skipped"
+      ],
+      "properties": {}
+    },
     "ScoringCommandRecovery": {
       "type": "object",
       "required": [
@@ -8349,6 +13333,146 @@
         "status"
       ],
       "properties": {}
+    },
+    "SubjectiveAIModelPolicy": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    },
+    "SubjectiveAIGradeRequest": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    },
+    "SubjectiveGradePointResult": {
+      "type": "object",
+      "required": [
+        "code",
+        "label",
+        "score"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "SubjectiveGradeEvidence": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "SubjectiveAIGrade": {
+      "type": "object",
+      "required": [
+        "id",
+        "tenant_id",
+        "answer_segment_id",
+        "question_id",
+        "question_no",
+        "question_type",
+        "answer_version",
+        "grader_type",
+        "model_version",
+        "prompt_version",
+        "rubric_version",
+        "delivery_mode",
+        "capability_profile",
+        "adapter_request_id",
+        "adapter_name",
+        "provider_key",
+        "deployment_key",
+        "deployment_region",
+        "adapter_attempts",
+        "adapter_latency_ms",
+        "adapter_repair_attempted",
+        "suggested_score",
+        "max_score",
+        "confidence",
+        "matched_points",
+        "missing_points",
+        "evidence",
+        "risk_flags",
+        "needs_human_review",
+        "student_feedback",
+        "teacher_note",
+        "mock",
+        "status",
+        "raw_output",
+        "created_by",
+        "created_at"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "SubjectiveAIGradeResponse": {
+      "type": "object",
+      "required": [
+        "grade"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "MathEvidenceQuality": {
+      "type": "object",
+      "required": [
+        "recognition",
+        "formula",
+        "structure",
+        "verification",
+        "rubric_mapping",
+        "critical"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "MathSemanticCandidate": {
+      "type": "object",
+      "required": [
+        "rubric_point_id",
+        "status",
+        "evidence_ids",
+        "confidence",
+        "reason_code"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "MathGradingReviewResponse": {
+      "type": "object",
+      "required": [
+        "review_required",
+        "code",
+        "message",
+        "criterion_candidates"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "SubjectiveGradingRun": {
+      "type": "object",
+      "required": [
+        "id",
+        "tenant_id",
+        "answer_segment_id",
+        "answer_version",
+        "question_id",
+        "rubric_version",
+        "model_version",
+        "prompt_version",
+        "min_confidence",
+        "request_id",
+        "status",
+        "attempt_count",
+        "created_at",
+        "updated_at"
+      ],
+      "properties": {},
+      "additionalProperties": false
     },
     "SubjectiveGradingBatch": {
       "type": "object",
@@ -8554,6 +13678,30 @@
       ],
       "properties": {}
     },
+    "ReviewCommandCreateArbitrationTaskInput": {
+      "type": "object",
+      "required": [
+        "double_mark_session_id"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "ReviewCommandAssignArbitrationInput": {
+      "type": "object",
+      "required": [
+        "assigned_to",
+        "expected_revision"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "ArbitrationTaskResponse": {
+      "type": "object",
+      "required": [
+        "arbitration_task"
+      ],
+      "properties": {}
+    },
     "ReviewCommandSubmitArbitrationInput": {
       "type": "object",
       "required": [
@@ -8661,6 +13809,1205 @@
         "status"
       ],
       "properties": {}
+    },
+    "QuestionBankMetadata": {
+      "type": "object",
+      "required": [
+        "subject_code",
+        "education_stage",
+        "grade_scope",
+        "difficulty_band",
+        "cognitive_level",
+        "copyright",
+        "language"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "QuestionBankMetadataInput": {
+      "type": "object",
+      "required": [
+        "subject_code",
+        "education_stage",
+        "grade_scope"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "QuestionBank": {
+      "type": "object",
+      "required": [
+        "id",
+        "tenant_id",
+        "school_id",
+        "name",
+        "description",
+        "status",
+        "revision",
+        "created_by",
+        "created_at",
+        "updated_at",
+        "metadata_schema_version"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "QuestionBankItem": {
+      "type": "object",
+      "required": [
+        "id",
+        "tenant_id",
+        "bank_id",
+        "item_code",
+        "subject_code",
+        "grade_scope",
+        "current_published_version_id",
+        "status",
+        "created_by",
+        "created_at",
+        "kind",
+        "revision"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "QuestionBankVersion": {
+      "type": "object",
+      "required": [
+        "id",
+        "tenant_id",
+        "item_id",
+        "version_no",
+        "schema_version",
+        "revision",
+        "workflow_status",
+        "source_version_id",
+        "author_id",
+        "content_hash",
+        "hash_scope",
+        "question_type",
+        "assessment_archetype",
+        "stem",
+        "options",
+        "default_score",
+        "knowledge_points",
+        "metadata",
+        "created_at",
+        "updated_at",
+        "scoring",
+        "bundle_hash",
+        "answer_version_id",
+        "rubric_version_id",
+        "bundle_schema_version"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "CreateQuestionBankRequest": {
+      "type": "object",
+      "required": [
+        "school_id",
+        "name"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "UpdateQuestionBankRequest": {
+      "type": "object",
+      "required": [
+        "expected_revision",
+        "name",
+        "status"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "CreateQuestionBankItemRequest": {
+      "type": "object",
+      "required": [
+        "item_code",
+        "question_type",
+        "assessment_archetype",
+        "stem",
+        "default_score",
+        "metadata"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "CreateQuestionBankVersionRequest": {
+      "type": "object",
+      "required": [
+        "source_version_id"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "UpdateQuestionBankVersionRequest": {
+      "type": "object",
+      "required": [
+        "expected_revision",
+        "question_type",
+        "assessment_archetype",
+        "stem",
+        "default_score",
+        "metadata"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "QuestionBankResponse": {
+      "type": "object",
+      "required": [
+        "bank"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "QuestionBankItemResponse": {
+      "type": "object",
+      "required": [
+        "item"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "QuestionBankItemCreateResponse": {
+      "type": "object",
+      "required": [
+        "item",
+        "version"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "QuestionBankVersionResponse": {
+      "type": "object",
+      "required": [
+        "version"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "QuestionBankPage": {
+      "type": "object",
+      "required": [
+        "banks",
+        "total",
+        "limit",
+        "offset"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "QuestionBankItemPage": {
+      "type": "object",
+      "required": [
+        "items",
+        "total",
+        "limit",
+        "offset"
+      ],
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/QuestionBankItem"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "QuestionBankVersionPage": {
+      "type": "object",
+      "required": [
+        "versions",
+        "total",
+        "limit",
+        "offset"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "QuestionBankAsset": {
+      "type": "object",
+      "required": [
+        "file_asset_id",
+        "sha256",
+        "name",
+        "content_type"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "QuestionBankScoring": {
+      "type": "object",
+      "required": [
+        "answer",
+        "solution",
+        "rubric",
+        "template_version_id",
+        "assets",
+        "use_policy"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "AnswerKeyInput": {
+      "type": "object",
+      "required": [
+        "standard_answer",
+        "equivalent_answers",
+        "tolerance"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "QuestionBankSolution": {
+      "type": "object",
+      "required": [
+        "raw_text",
+        "steps",
+        "source_refs"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "RubricInput": {
+      "type": "object",
+      "required": [
+        "status",
+        "max_score",
+        "points",
+        "deductions",
+        "examples"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "QuestionBankReviewRequest": {
+      "type": "object",
+      "required": [
+        "expected_revision",
+        "bundle_hash",
+        "comment"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "UpdateQuestionBankScoringRequest": {
+      "type": "object",
+      "required": [
+        "expected_revision",
+        "scoring"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "QuestionBankReviewerBindingRequest": {
+      "type": "object",
+      "required": [
+        "expected_revision",
+        "user_id",
+        "read",
+        "review",
+        "publish"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "QuestionBankReview": {
+      "type": "object",
+      "required": [
+        "id",
+        "version_id",
+        "reviewer_id",
+        "decision",
+        "comment",
+        "content_revision",
+        "bundle_hash",
+        "created_at"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "QuestionBankReviewsResponse": {
+      "type": "object",
+      "required": [
+        "reviews"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "MaterializeQuestionBankRequest": {
+      "type": "object",
+      "required": [
+        "expected_revision",
+        "selections"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "MaterializeQuestionBankResponse": {
+      "type": "object",
+      "required": [
+        "exam_id",
+        "revision",
+        "questions",
+        "source_version_ids"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "CreateQuestionBankRubricTemplateRequest": {
+      "type": "object",
+      "required": [
+        "item_code",
+        "question_type",
+        "assessment_archetype",
+        "stem",
+        "default_score",
+        "metadata",
+        "bank_id"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "QuestionBankRubricPoint": {
+      "type": "object",
+      "required": [
+        "id",
+        "description",
+        "score",
+        "required"
+      ],
+      "properties": {
+        "required": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "MaterializedBankQuestion": {
+      "type": "object",
+      "required": [
+        "id",
+        "exam_id",
+        "question_no",
+        "question_type",
+        "score",
+        "sort_order",
+        "status",
+        "source_type",
+        "source_bank_item_id",
+        "source_bank_item_version_id",
+        "source_content_hash"
+      ],
+      "properties": {},
+      "additionalProperties": true
+    },
+    "QuestionBankMetadataOption": {
+      "type": "object",
+      "required": [
+        "value",
+        "label",
+        "active"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "QuestionBankTaxonomyTerm": {
+      "type": "object",
+      "required": [
+        "id",
+        "label",
+        "active"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "QuestionBankTaxonomyDefinition": {
+      "type": "object",
+      "required": [
+        "id",
+        "label",
+        "terms"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "QuestionBankMetadataFieldDefinition": {
+      "type": "object",
+      "required": [
+        "key",
+        "label",
+        "type",
+        "required"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "enum",
+            "string",
+            "number",
+            "boolean",
+            "taxonomy"
+          ]
+        },
+        "required": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "QuestionBankMetadataSchema": {
+      "type": "object",
+      "required": [
+        "bank_id",
+        "version",
+        "fields",
+        "taxonomies",
+        "created_by",
+        "created_at"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "QuestionBankMetadataSchemaResponse": {
+      "type": "object",
+      "required": [
+        "schema"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "UpdateQuestionBankMetadataSchemaRequest": {
+      "type": "object",
+      "required": [
+        "expected_revision",
+        "fields",
+        "taxonomies"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "ValidateQuestionBankMetadataRequest": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "values"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "QuestionBankMetadataValidationResult": {
+      "type": "object",
+      "required": [
+        "valid",
+        "field_errors"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "QuestionBankACLBinding": {
+      "type": "object",
+      "required": [
+        "user_id",
+        "preset",
+        "actions"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "QuestionBankACLGroup": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "preset",
+        "actions",
+        "member_user_ids"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "UpdateQuestionBankACLBinding": {
+      "type": "object",
+      "required": [
+        "user_id",
+        "preset"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "UpdateQuestionBankACLGroup": {
+      "type": "object",
+      "required": [
+        "name",
+        "preset",
+        "member_user_ids"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "QuestionBankACL": {
+      "type": "object",
+      "required": [
+        "bank_id",
+        "revision",
+        "bindings",
+        "groups"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "QuestionBankMember": {
+      "type": "object",
+      "required": [
+        "user_id",
+        "display_name",
+        "actions"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "QuestionBankMembersResponse": {
+      "type": "object",
+      "required": [
+        "members"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "QuestionBankACLResponse": {
+      "type": "object",
+      "required": [
+        "acl"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "UpdateQuestionBankACLRequest": {
+      "type": "object",
+      "required": [
+        "expected_revision",
+        "bindings",
+        "groups"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "RetireQuestionBankItemRequest": {
+      "type": "object",
+      "required": [
+        "expected_revision"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "QuestionBankSearchItem": {
+      "type": "object",
+      "required": [
+        "item",
+        "version",
+        "statistics_available"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "QuestionBankSearchPage": {
+      "type": "object",
+      "required": [
+        "items",
+        "total",
+        "limit",
+        "offset"
+      ],
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/QuestionBankSearchItem"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "QuestionBankImportMapping": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    },
+    "QuestionBankImportPreviewSelection": {
+      "type": "object",
+      "required": [
+        "question_id",
+        "target_bank_id",
+        "source_snapshot_id",
+        "mapping"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "QuestionBankImportPreviewRequest": {
+      "type": "object",
+      "required": [
+        "selections"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "QuestionBankImportIssue": {
+      "type": "object",
+      "required": [
+        "code",
+        "message",
+        "blocking"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "QuestionBankImportDuplicateHint": {
+      "type": "object",
+      "required": [
+        "kind",
+        "item_id",
+        "item_code",
+        "version_id",
+        "version_no",
+        "stem_summary",
+        "content_hash",
+        "bundle_hash"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "QuestionBankImportSource": {
+      "type": "object",
+      "required": [
+        "exam_id",
+        "question_id",
+        "question_no",
+        "readiness_snapshot_id",
+        "configuration_hash",
+        "snapshot_hash",
+        "assessment_snapshot_id",
+        "assessment_snapshot_hash",
+        "assessment_snapshot_version",
+        "profile_snapshot",
+        "archetype_snapshot",
+        "scoring_policy_snapshot"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "QuestionBankImportContent": {
+      "type": "object",
+      "required": [
+        "question_type",
+        "assessment_archetype",
+        "stem",
+        "options",
+        "default_score",
+        "knowledge_points",
+        "metadata"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "QuestionBankImportPreview": {
+      "type": "object",
+      "required": [
+        "question_id",
+        "available",
+        "content",
+        "scoring",
+        "content_hash",
+        "bundle_hash",
+        "source",
+        "issues",
+        "duplicate_hints",
+        "suggested_item_code"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "QuestionBankImportPreviewItem": {
+      "type": "object",
+      "required": [
+        "question_id",
+        "status",
+        "retryable"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "QuestionBankImportPreviewBatch": {
+      "type": "object",
+      "required": [
+        "items"
+      ],
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/QuestionBankImportPreviewItem"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "QuestionBankImportRequest": {
+      "type": "object",
+      "required": [
+        "target_bank_id",
+        "source_snapshot_id",
+        "assessment_snapshot_id",
+        "scoring_source",
+        "dedup_decision",
+        "expected_target_revision",
+        "mapping",
+        "command_id",
+        "expected_target_schema_version"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "QuestionBankImportProvenance": {
+      "type": "object",
+      "required": [
+        "id",
+        "target_bank_id",
+        "target_schema_version",
+        "source",
+        "scoring_source",
+        "dedup_decision",
+        "mapping",
+        "command_id",
+        "created_at"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "QuestionBankImportResult": {
+      "type": "object",
+      "required": [
+        "item",
+        "version",
+        "duplicate_hints",
+        "issues",
+        "provenance"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "QuestionBankBatchImportItem": {
+      "type": "object",
+      "required": [
+        "target_bank_id",
+        "source_snapshot_id",
+        "assessment_snapshot_id",
+        "scoring_source",
+        "dedup_decision",
+        "expected_target_revision",
+        "mapping",
+        "command_id",
+        "expected_target_schema_version",
+        "question_id"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "QuestionBankBatchImportRequest": {
+      "type": "object",
+      "required": [
+        "items"
+      ],
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/QuestionBankBatchImportItem"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "QuestionBankBatchImportResultItem": {
+      "type": "object",
+      "required": [
+        "question_id",
+        "command_id",
+        "status",
+        "retryable"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "QuestionBankBatchImportResult": {
+      "type": "object",
+      "required": [
+        "items"
+      ],
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/QuestionBankBatchImportResultItem"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "ManagementProgress": {
+      "type": "object",
+      "required": [
+        "status",
+        "label",
+        "total_count",
+        "ready_count",
+        "published_count",
+        "counts",
+        "facts_available"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "ManagementArchiveBlocker": {
+      "type": "object",
+      "required": [
+        "code",
+        "message"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "ManagementExam": {
+      "type": "object",
+      "required": [
+        "id",
+        "school_id",
+        "grade_id",
+        "name",
+        "exam_type",
+        "created_by",
+        "kind",
+        "revision",
+        "created_at",
+        "updated_at",
+        "class_ids",
+        "default_class_ids",
+        "inherited_subject_ids",
+        "archived_subject_ids",
+        "exams",
+        "progress",
+        "scope_complete",
+        "can_manage",
+        "can_edit",
+        "can_archive",
+        "can_restore",
+        "legacy_archived"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "ManagementExamResponse": {
+      "type": "object",
+      "required": [
+        "exam"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "ManagementExamPage": {
+      "type": "object",
+      "required": [
+        "exams",
+        "next_cursor",
+        "has_more"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "ManagementUpdateRequest": {
+      "type": "object",
+      "required": [
+        "expected_revision"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "ManagementArchiveRequest": {
+      "type": "object",
+      "required": [
+        "expected_revision",
+        "command_id"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "ManagementArchiveCheck": {
+      "type": "object",
+      "required": [
+        "allowed",
+        "blockers"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "ManagementArchiveCheckResponse": {
+      "type": "object",
+      "required": [
+        "check"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "ManagementArchiveCommandResult": {
+      "type": "object",
+      "required": [
+        "command_id",
+        "status"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "ManagementArchiveCommandResponse": {
+      "type": "object",
+      "required": [
+        "command"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "ManagedOrganizationUser": {
+      "type": "object",
+      "required": [
+        "id",
+        "username",
+        "display_name",
+        "status",
+        "roles",
+        "class_ids"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "ManagedOrganizationUserResponse": {
+      "type": "object",
+      "required": [
+        "user"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "ManagedOrganizationUserPage": {
+      "type": "object",
+      "required": [
+        "users",
+        "next_cursor",
+        "has_more"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "CreateManagedOrganizationUserRequest": {
+      "type": "object",
+      "required": [
+        "display_name"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "CreateManagedOrganizationUserResponse": {
+      "type": "object",
+      "required": [
+        "user"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "UpdateManagedUserAccessRequest": {
+      "type": "object",
+      "required": [
+        "role_codes",
+        "class_ids",
+        "expected_roles",
+        "expected_class_ids",
+        "reason"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "ReviewFrozenAnswerKey": {
+      "type": "object",
+      "required": [
+        "id",
+        "question_id",
+        "answer_version",
+        "standard_answer",
+        "equivalent_answers",
+        "tolerance"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "ReviewFrozenSolution": {
+      "type": "object",
+      "required": [
+        "id",
+        "question_id",
+        "solution_version",
+        "raw_text",
+        "steps",
+        "source_refs",
+        "verification_status"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "StudentScorePreviewReference": {
+      "type": "object",
+      "required": [
+        "scope",
+        "sample_size",
+        "statistics_available"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "StudentScorePreviewQuestionReference": {
+      "type": "object",
+      "required": [
+        "sample_size",
+        "mean_score_rate",
+        "full_score_rate",
+        "zero_score_rate"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "StudentScorePreviewResult": {
+      "type": "object",
+      "required": [
+        "exam_id",
+        "release_id",
+        "release_version",
+        "total_score",
+        "max_score",
+        "overall_total_score",
+        "overall_max_score",
+        "score_rate",
+        "appeal_window"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "StudentScorePreviewResponse": {
+      "type": "object",
+      "required": [
+        "result"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "CreatedManagedUserActivation": {
+      "type": "object",
+      "required": [
+        "token",
+        "path",
+        "expires_at"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "ConfirmExamReadinessRequest": {
+      "type": "object",
+      "required": [],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "ExamConfigurationReadinessCheck": {
+      "type": "object",
+      "required": [
+        "code",
+        "label",
+        "passed",
+        "severity",
+        "message",
+        "section"
+      ],
+      "properties": {}
+    },
+    "ExamConfigurationReadinessAdvisoryQuestion": {
+      "type": "object",
+      "required": [
+        "question_id",
+        "question_no",
+        "question_type",
+        "score"
+      ],
+      "properties": {}
+    },
+    "ExamConfigurationReadinessAdvisory": {
+      "type": "object",
+      "required": [
+        "code",
+        "label",
+        "severity",
+        "message",
+        "section",
+        "score",
+        "questions"
+      ],
+      "properties": {}
+    },
+    "ExamConfigurationReadiness": {
+      "type": "object",
+      "required": [
+        "ready",
+        "confirmed",
+        "configuration_hash",
+        "import_snapshot_available",
+        "checks",
+        "advisories"
+      ],
+      "properties": {}
+    },
+    "ExamReadinessConfirmationResponse": {
+      "type": "object",
+      "required": [
+        "readiness"
+      ],
+      "properties": {}
+    },
+    "ExamReadinessConfirmationConflict": {
+      "type": "object",
+      "required": [
+        "error"
+      ],
+      "properties": {}
+    },
+    "QuestionAppealReviewOpinion": {
+      "type": "object",
+      "required": [
+        "opinion",
+        "explanation",
+        "submitted_at"
+      ],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "QuestionAppealReviewOpinionRequest": {
+      "type": "object",
+      "required": [
+        "opinion",
+        "explanation",
+        "expected_revision"
+      ],
+      "properties": {},
+      "additionalProperties": false
     }
   }
 }

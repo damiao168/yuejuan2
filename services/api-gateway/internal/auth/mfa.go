@@ -56,10 +56,8 @@ type MFAProof struct {
 	Now                                                                      time.Time
 }
 
-// MFAStore mutations must serialize on the user/session/credential and commit
-// OTP or recovery-code consumption atomically with the challenge transition.
-// Successful enable, recovery-code use, rotation and disable also commit their
-// redacted audit, semantic outbox fact and independent-notification intent.
+// MFAStore 的修改必须按用户、会话和凭据串行化，并将 OTP 或恢复码消耗与挑战状态转换原子提交。
+// 成功启用、使用恢复码、轮换和禁用时，还须同时提交脱敏审计、语义发件箱事实和独立通知意图。
 type MFAStore interface {
 	FindTOTP(context.Context, string, string) (TOTPRecord, error)
 	SavePendingTOTP(context.Context, TOTPRecord, time.Time) error
@@ -118,8 +116,7 @@ func (c *mfaCipher) decrypt(record TOTPRecord) (string, error) {
 	return string(plaintext), nil
 }
 
-// Use the reviewed RFC 4226 implementation, returning the exact matched step
-// so concurrent requests cannot both consume a time-based code (RFC 6238 §5.2).
+// 使用经过审查的 RFC 4226 实现，并返回实际匹配的时间步，防止并发请求重复消耗同一个时间型验证码（RFC 6238 第 5.2 节）。
 func matchTOTPStep(code, secret string, now time.Time) (int64, error) {
 	if len(code) != 6 {
 		return -1, ErrMFAInvalid

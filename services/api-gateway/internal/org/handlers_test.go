@@ -118,52 +118,9 @@ func TestCSVImportReportsRowErrors(t *testing.T) {
 }
 
 func TestOrganizationDuplicateCodesReturnSpecificConflicts(t *testing.T) {
-	t.Run("school code", func(t *testing.T) {
-		authStore := authStoreWithPermissions(t, []string{"org:manage"})
-		router := testRouter(authStore, org.NewMemoryStore())
-		token := login(t, router)
-		payload := `{"name":"第一中学","code":"school-001"}`
-		for attempt, expectedStatus := range []int{http.StatusCreated, http.StatusConflict} {
-			req := httptest.NewRequest(http.MethodPost, "/api/v1/schools", bytes.NewBufferString(payload))
-			req.Header.Set("Authorization", "Bearer "+token)
-			rec := httptest.NewRecorder()
-			router.ServeHTTP(rec, req)
-			if rec.Code != expectedStatus {
-				t.Fatalf("attempt %d expected %d, got %d: %s", attempt+1, expectedStatus, rec.Code, rec.Body.String())
-			}
-			if expectedStatus == http.StatusConflict && !strings.Contains(rec.Body.String(), "school_code_conflict") {
-				t.Fatalf("duplicate school code should return explicit conflict code: %s", rec.Body.String())
-			}
-		}
-	})
+	t.Run("school code", assertOrganizationSchoolCodeConflict)
 
-	t.Run("class code", func(t *testing.T) {
-		authStore := authStoreWithPermissions(t, []string{"org:manage"})
-		orgStore := org.NewMemoryStore()
-		school, err := orgStore.CreateSchool(context.Background(), "tenant-org", org.School{Name: "第一中学", Code: "school-001"})
-		if err != nil {
-			t.Fatal(err)
-		}
-		grade, err := orgStore.CreateGrade(context.Background(), "tenant-org", org.Grade{SchoolID: school.ID, Name: "高一年级"})
-		if err != nil {
-			t.Fatal(err)
-		}
-		router := testRouter(authStore, orgStore)
-		token := login(t, router)
-		payload := `{"school_id":"` + school.ID + `","grade_id":"` + grade.ID + `","name":"高一（1）班","code":"G10-01"}`
-		for attempt, expectedStatus := range []int{http.StatusCreated, http.StatusConflict} {
-			req := httptest.NewRequest(http.MethodPost, "/api/v1/classes", bytes.NewBufferString(payload))
-			req.Header.Set("Authorization", "Bearer "+token)
-			rec := httptest.NewRecorder()
-			router.ServeHTTP(rec, req)
-			if rec.Code != expectedStatus {
-				t.Fatalf("attempt %d expected %d, got %d: %s", attempt+1, expectedStatus, rec.Code, rec.Body.String())
-			}
-			if expectedStatus == http.StatusConflict && !strings.Contains(rec.Body.String(), "class_code_conflict") {
-				t.Fatalf("duplicate class code should return explicit conflict code: %s", rec.Body.String())
-			}
-		}
-	})
+	t.Run("class code", assertOrganizationClassCodeConflict)
 }
 
 func TestCreateStudentReturnsConflictForDuplicateStudentNumber(t *testing.T) {
@@ -309,4 +266,53 @@ func login(t *testing.T, router http.Handler) string {
 		t.Fatalf("decode: %v", err)
 	}
 	return response.AccessToken
+}
+
+func assertOrganizationSchoolCodeConflict(t *testing.T) {
+	t.Helper()
+	authStore := authStoreWithPermissions(t, []string{"org:manage"})
+	router := testRouter(authStore, org.NewMemoryStore())
+	token := login(t, router)
+	payload := `{"name":"第一中学","code":"school-001"}`
+	for attempt, expectedStatus := range []int{http.StatusCreated, http.StatusConflict} {
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/schools", bytes.NewBufferString(payload))
+		req.Header.Set("Authorization", "Bearer "+token)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		if rec.Code != expectedStatus {
+			t.Fatalf("attempt %d expected %d, got %d: %s", attempt+1, expectedStatus, rec.Code, rec.Body.String())
+		}
+		if expectedStatus == http.StatusConflict && !strings.Contains(rec.Body.String(), "school_code_conflict") {
+			t.Fatalf("duplicate school code should return explicit conflict code: %s", rec.Body.String())
+		}
+	}
+}
+
+func assertOrganizationClassCodeConflict(t *testing.T) {
+	t.Helper()
+	authStore := authStoreWithPermissions(t, []string{"org:manage"})
+	orgStore := org.NewMemoryStore()
+	school, err := orgStore.CreateSchool(context.Background(), "tenant-org", org.School{Name: "第一中学", Code: "school-001"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	grade, err := orgStore.CreateGrade(context.Background(), "tenant-org", org.Grade{SchoolID: school.ID, Name: "高一年级"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	router := testRouter(authStore, orgStore)
+	token := login(t, router)
+	payload := `{"school_id":"` + school.ID + `","grade_id":"` + grade.ID + `","name":"高一（1）班","code":"G10-01"}`
+	for attempt, expectedStatus := range []int{http.StatusCreated, http.StatusConflict} {
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/classes", bytes.NewBufferString(payload))
+		req.Header.Set("Authorization", "Bearer "+token)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		if rec.Code != expectedStatus {
+			t.Fatalf("attempt %d expected %d, got %d: %s", attempt+1, expectedStatus, rec.Code, rec.Body.String())
+		}
+		if expectedStatus == http.StatusConflict && !strings.Contains(rec.Body.String(), "class_code_conflict") {
+			t.Fatalf("duplicate class code should return explicit conflict code: %s", rec.Body.String())
+		}
+	}
 }

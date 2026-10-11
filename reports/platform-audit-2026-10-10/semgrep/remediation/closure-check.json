@@ -1,0 +1,19 @@
+{
+  "original_findings": 105,
+  "counts": {
+    "fixed": 36,
+    "existing_control": 68,
+    "already_fixed": 1
+  },
+  "original_files": 37,
+  "all_current_bytes_match_latest_verified_scan": true,
+  "scope_rescan_findings_reviewed": 65,
+  "pending_finding_reviews": 0,
+  "supplemental_xml_scanner_findings_fixed": 3,
+  "supplemental_xml_parser_entries_fixed": 2,
+  "supplemental_xml_new_tests_passed": 19,
+  "supplemental_xml_rescan_findings": 0,
+  "report_sha256": "f60fe1715b68262d1f2021628569c15d02b52016d04be7b79720fdb747c0dfcc",
+  "docker_runtime_verified": false,
+  "committed_or_pushed": false
+}

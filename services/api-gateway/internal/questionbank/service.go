@@ -50,53 +50,68 @@ func normalizeContent(in Content) (Content, error) {
 	}
 	in.DefaultScore = math.Round(in.DefaultScore*100) / 100
 	in.Metadata.SubjectCode = string(subject)
-	in.Metadata.GradeScope = strings.TrimSpace(in.Metadata.GradeScope)
-	if in.Metadata.GradeScope == "" || !validText(in.Metadata.GradeScope, 80) {
-		return in, ErrInvalidInput
+	// 按原顺序规范化；失败时只返回已经处理的部分，后续默认值和拷贝不提前执行。
+	if err := normalizeContentMetadata(&in.Metadata); err != nil {
+		return in, err
 	}
-	if in.Metadata.DifficultyBand == "" {
-		in.Metadata.DifficultyBand = "unclassified"
+	if err := normalizeContentLists(&in); err != nil {
+		return in, err
 	}
-	if in.Metadata.CognitiveLevel == "" {
-		in.Metadata.CognitiveLevel = "unclassified"
+	in.CustomMetadata = copyMetadataValues(in.CustomMetadata)
+	return in, nil
+}
+
+func normalizeContentMetadata(in *Metadata) error {
+	in.GradeScope = strings.TrimSpace(in.GradeScope)
+	if in.GradeScope == "" || !validText(in.GradeScope, 80) {
+		return ErrInvalidInput
 	}
-	if in.Metadata.Copyright == "" {
-		in.Metadata.Copyright = "unknown"
+	if in.DifficultyBand == "" {
+		in.DifficultyBand = "unclassified"
 	}
-	if in.Metadata.Language == "" {
-		in.Metadata.Language = "zh-CN"
+	if in.CognitiveLevel == "" {
+		in.CognitiveLevel = "unclassified"
 	}
-	if in.Metadata.IntendedUse == "" {
-		in.Metadata.IntendedUse = "practice"
+	if in.Copyright == "" {
+		in.Copyright = "unknown"
 	}
-	if !oneOf(in.Metadata.DifficultyBand, "unclassified", "easy", "medium", "hard") || !oneOf(in.Metadata.CognitiveLevel, "unclassified", "remember", "understand", "apply", "analyze", "evaluate", "create") || !oneOf(in.Metadata.Copyright, "unknown", "owned", "licensed") || !oneOf(in.Metadata.Language, "zh-CN", "en") || !oneOf(in.Metadata.IntendedUse, "practice", "homework", "quiz", "exam", "mock_exam") {
-		return in, ErrInvalidInput
+	if in.Language == "" {
+		in.Language = "zh-CN"
 	}
-	if in.Metadata.SuggestedTimeMinutes != nil && (*in.Metadata.SuggestedTimeMinutes < 1 || *in.Metadata.SuggestedTimeMinutes > 1440) || in.Metadata.SourceYear != nil && (*in.Metadata.SourceYear < 1900 || *in.Metadata.SourceYear > 2200) {
-		return in, ErrInvalidInput
+	if in.IntendedUse == "" {
+		in.IntendedUse = "practice"
 	}
+	if !oneOf(in.DifficultyBand, "unclassified", "easy", "medium", "hard") || !oneOf(in.CognitiveLevel, "unclassified", "remember", "understand", "apply", "analyze", "evaluate", "create") || !oneOf(in.Copyright, "unknown", "owned", "licensed") || !oneOf(in.Language, "zh-CN", "en") || !oneOf(in.IntendedUse, "practice", "homework", "quiz", "exam", "mock_exam") {
+		return ErrInvalidInput
+	}
+	if in.SuggestedTimeMinutes != nil && (*in.SuggestedTimeMinutes < 1 || *in.SuggestedTimeMinutes > 1440) || in.SourceYear != nil && (*in.SourceYear < 1900 || *in.SourceYear > 2200) {
+		return ErrInvalidInput
+	}
+	return nil
+}
+
+func normalizeContentLists(in *Content) error {
 	if len(in.Options) > 32 || len(in.KnowledgePoints) > 64 {
-		return in, ErrInvalidInput
+		return ErrInvalidInput
 	}
-	// Copy arrays so neither callers nor Memory fixtures can change stored facts.
+	// 复制数组，避免调用方或内存夹具改变已存储事实。
 	in.Options = append([]string{}, in.Options...)
 	in.KnowledgePoints = append([]string{}, in.KnowledgePoints...)
 	for _, option := range in.Options {
 		if strings.TrimSpace(option) == "" || !validText(option, 10000) {
-			return in, ErrInvalidInput
+			return ErrInvalidInput
 		}
 	}
 	seen := map[string]bool{}
 	for i, point := range in.KnowledgePoints {
 		point = strings.TrimSpace(point)
 		if point == "" || !validText(point, 120) || seen[point] {
-			return in, ErrInvalidInput
+			return ErrInvalidInput
 		}
 		in.KnowledgePoints[i] = point
 		seen[point] = true
 	}
-	in.CustomMetadata = copyMetadataValues(in.CustomMetadata)
-	return in, nil
+	return nil
 }
 func oneOf(value string, values ...string) bool {
 	for _, candidate := range values {
@@ -107,7 +122,7 @@ func oneOf(value string, values ...string) bool {
 	return false
 }
 func contentHash(in Content) string {
-	// This is only a draft content hash, never the future published scoring bundle.
+	// 这只是草稿内容哈希，绝不是未来发布的评分资料包。
 	raw, _ := json.Marshal(struct {
 		SchemaVersion int     `json:"schema_version"`
 		ScoreUnits    int64   `json:"score_units"`

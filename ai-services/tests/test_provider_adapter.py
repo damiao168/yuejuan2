@@ -96,8 +96,9 @@ class ProviderAdapterRegistryTests(unittest.TestCase):
 
     def test_unknown_adapter_fails_closed(self):
         registry = ProviderAdapterRegistry()
-        with self.assertRaisesRegex(ValueError, "not enabled"):
-            registry.create(settings(adapter_type="unregistered_native"))
+        test_settings = settings(adapter_type='unregistered_native')
+        with self.assertRaisesRegex(ValueError, 'not enabled'):
+            registry.create(test_settings)
 
     def test_duplicate_adapter_registration_is_rejected(self):
         registry = ProviderAdapterRegistry()
@@ -108,8 +109,9 @@ class ProviderAdapterRegistryTests(unittest.TestCase):
     def test_incomplete_adapter_is_rejected(self):
         registry = ProviderAdapterRegistry()
         registry.register("fixture_native", lambda _settings: IncompleteAdapter())
-        with self.assertRaisesRegex(TypeError, "does not implement"):
-            registry.create(settings(adapter_type="fixture_native"))
+        test_settings = settings(adapter_type='fixture_native')
+        with self.assertRaisesRegex(TypeError, 'does not implement'):
+            registry.create(test_settings)
 
 
 if __name__ == "__main__":

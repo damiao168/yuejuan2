@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 
 /**
- * A compact operational page heading. It deliberately leaves buttons and
- * inputs to the host application instead of wrapping the component library's
- * controls.
+ * 紧凑的业务页头。
+ * 按钮和输入框由宿主应用提供，
+ * 不再封装组件库的控件。
  */
 export function PageHeader({
   title,
@@ -11,13 +11,13 @@ export function PageHeader({
   description,
   actions,
   className
-}: {
+}: Readonly<{
   title: ReactNode;
   eyebrow?: ReactNode;
   description?: ReactNode;
   actions?: ReactNode;
   className?: string;
-}) {
+}>) {
   return (
     <header className={`eg-page-header ${className ?? ""}`.trim()}>
       <div className="eg-page-header-copy">

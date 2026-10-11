@@ -1,13 +1,38 @@
 import json
 import os
 import time
+from urllib import error as urlerror
 from urllib import request as urlrequest
 
-
 API = os.environ.get("EDUGRADE_E2E_API_BASE_URL", "http://api-gateway:8080").rstrip("/")
-AGENT = os.environ.get("EDUGRADE_E2E_AGENT_BASE_URL", "http://grading-agent:8100").rstrip("/")
-PASSWORD = os.environ["EDUGRADE_E2E_ADMIN_PASSWORD"]
+AGENT = os.environ.get("EDUGRADE_E2E_AGENT_BASE_URL", "https://grading-agent:8100").rstrip("/")
 SEGMENT_ID = "00000000-0000-0000-0000-000000000614"
+MAX_JSON_RESPONSE_BYTES = 4 * 1024 * 1024
+
+
+class _RejectRedirects(urlrequest.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        # 登录密码和 Bearer 令牌仅发送到最初配置的地址；同源跳转也必须显式改配置。
+        fp.close()
+        raise urlerror.HTTPError(req.full_url, code, msg, headers, None)
+
+
+def _read_json_response(response):
+    declared_length = response.headers.get("Content-Length")
+    if declared_length is not None:
+        try:
+            declared_length = int(declared_length, 10)
+        except ValueError as exc:
+            raise ValueError("response Content-Length is invalid") from exc
+        if declared_length < 0:
+            raise ValueError("response Content-Length is invalid")
+        if declared_length > MAX_JSON_RESPONSE_BYTES:
+            raise ValueError("response JSON exceeds its size limit")
+    # 缺失或不准确的长度头不能绕过限额；多读一个字节仅用于判断是否超限。
+    raw = response.read(MAX_JSON_RESPONSE_BYTES + 1)
+    if len(raw) > MAX_JSON_RESPONSE_BYTES:
+        raise ValueError("response JSON exceeds its size limit")
+    return json.loads(raw.decode("utf-8"))
 
 
 def call_json(url, method="GET", payload=None, headers=None, timeout=30):
@@ -16,84 +41,91 @@ def call_json(url, method="GET", payload=None, headers=None, timeout=30):
     if body is not None:
         merged["Content-Type"] = "application/json"
     req = urlrequest.Request(url, data=body, headers=merged, method=method)
-    with urlrequest.urlopen(req, timeout=timeout) as response:
-        return response.status, json.loads(response.read().decode("utf-8"))
+    opener = urlrequest.build_opener(_RejectRedirects())
+    with opener.open(req, timeout=timeout) as response:
+        return response.status, _read_json_response(response)
 
 
-status, ready = call_json(f"{AGENT}/ready", timeout=10)
-assert status == 200 and ready["status"] == "ready", ready
+def main():
+    PASSWORD = os.environ["EDUGRADE_E2E_ADMIN_PASSWORD"]
+    status, ready = call_json(f"{AGENT}/ready", timeout=10)
+    assert status == 200 and ready["status"] == "ready", ready
 
-status, login = call_json(
-    f"{API}/api/v1/auth/token",
-    method="POST",
-    payload={"tenant_code": "platform", "username": "platform_admin", "password": PASSWORD, "client_type": "desktop", "device_name": "STORY-060 E2E"},
-)
-assert status == 200 and login.get("access_token"), login
-headers = {"Authorization": f"Bearer {login['access_token']}"}
+    status, login = call_json(
+        f"{API}/api/v1/auth/token",
+        method="POST",
+        payload={"tenant_code": "platform", "username": "platform_admin", "password": PASSWORD, "client_type": "desktop", "device_name": "STORY-060 E2E"},
+    )
+    assert status == 200 and login.get("access_token"), login
+    headers = {"Authorization": f"Bearer {login['access_token']}"}
 
-status, created = call_json(
-    f"{API}/api/v1/subjective-grading-batches",
-    method="POST",
-    payload={"idempotency_key": "story060-real-worker-batch", "segment_ids": [SEGMENT_ID]},
-    headers=headers,
-)
-assert status == 201, created
-batch_id = created["batch"]["id"]
-
-status, enqueued = call_json(
-    f"{API}/api/v1/subjective-grading-batches/{batch_id}/enqueue",
-    method="POST",
-    payload={},
-    headers=headers,
-)
-assert status == 200, enqueued
-assert enqueued["enqueue_result"] == {
-    "requested_count": 1,
-    "accepted_count": 1,
-    "task_count": 1,
-    "failed_count": 0,
-    "partial_success": False,
-    "failures": [],
-}, enqueued
-
-deadline = time.monotonic() + 180
-while time.monotonic() < deadline:
-    status, current = call_json(
-        f"{API}/api/v1/subjective-grading-batches/{batch_id}",
+    status, created = call_json(
+        f"{API}/api/v1/subjective-grading-batches",
+        method="POST",
+        payload={"idempotency_key": "story060-real-worker-batch", "segment_ids": [SEGMENT_ID]},
         headers=headers,
     )
-    assert status == 200, current
-    if current["batch"]["status"] == "completed":
-        break
-    assert current["batch"]["status"] != "failed", current
-    time.sleep(1)
-else:
-    raise AssertionError("subjective grading batch did not reach a terminal state")
+    assert status == 201, created
+    batch_id = created["batch"]["id"]
 
-status, grades = call_json(
-    f"{API}/api/v1/answer-segments/{SEGMENT_ID}/ai-grades",
-    headers=headers,
-)
-assert status == 200 and len(grades["grades"]) == 1, grades
-grade = grades["grades"][0]
-assert grade["grader_type"] == "llm_subjective"
-# 这里验证真实适配器链路的标记；默认上游仍是协议桩，不能据此认定模型评分质量。
-assert grade["mock"] is False
-assert grade["needs_human_review"] is True
-assert grade["confidence"] == 0
-assert grade["suggested_score"] == sum(point["score"] for point in grade["matched_points"])
-assert grade["evidence"]
-assert all(
-    item["answer_text"] == "因为他对家乡有责任感，也希望帮助村里的孩子继续读书。"
-    for item in grade["evidence"]
-)
-raw_output = grade.get("raw_output", {})
-assert raw_output["schema_version"] == "grading-agent-v1"
-assert raw_output["delivery"] == "teacher_suggestion"
-assert raw_output["capability_profile"] == "local-pilot-v1"
-assert raw_output["telemetry"]["adapter"] == "local_llama_cpp"
-assert 1 <= raw_output["telemetry"]["attempts"] <= 2
-assert "tenant_id" not in raw_output
-assert "student_id" not in raw_output
+    status, enqueued = call_json(
+        f"{API}/api/v1/subjective-grading-batches/{batch_id}/enqueue",
+        method="POST",
+        payload={},
+        headers=headers,
+    )
+    assert status == 200, enqueued
+    assert enqueued["enqueue_result"] == {
+        "requested_count": 1,
+        "accepted_count": 1,
+        "task_count": 1,
+        "failed_count": 0,
+        "partial_success": False,
+        "failures": [],
+    }, enqueued
 
-print("STORY-060 real batch worker and model-adapter verification passed")
+    deadline = time.monotonic() + 180
+    while time.monotonic() < deadline:
+        status, current = call_json(
+            f"{API}/api/v1/subjective-grading-batches/{batch_id}",
+            headers=headers,
+        )
+        assert status == 200, current
+        if current["batch"]["status"] == "completed":
+            break
+        assert current["batch"]["status"] != "failed", current
+        time.sleep(1)
+    else:
+        raise AssertionError("subjective grading batch did not reach a terminal state")
+
+    status, grades = call_json(
+        f"{API}/api/v1/answer-segments/{SEGMENT_ID}/ai-grades",
+        headers=headers,
+    )
+    assert status == 200 and len(grades["grades"]) == 1, grades
+    grade = grades["grades"][0]
+    assert grade["grader_type"] == "llm_subjective"
+    # 这里验证真实适配器链路的标记；默认上游仍是协议桩，不能据此认定模型评分质量。
+    assert grade["mock"] is False
+    assert grade["needs_human_review"] is True
+    assert grade["confidence"] == 0
+    assert grade["suggested_score"] == sum(point["score"] for point in grade["matched_points"])
+    assert grade["evidence"]
+    assert all(
+        item["answer_text"] == "因为他对家乡有责任感，也希望帮助村里的孩子继续读书。"
+        for item in grade["evidence"]
+    )
+    raw_output = grade.get("raw_output", {})
+    assert raw_output["schema_version"] == "grading-agent-v1"
+    assert raw_output["delivery"] == "teacher_suggestion"
+    assert raw_output["capability_profile"] == "local-pilot-v1"
+    assert raw_output["telemetry"]["adapter"] == "local_llama_cpp"
+    assert 1 <= raw_output["telemetry"]["attempts"] <= 2
+    assert "tenant_id" not in raw_output
+    assert "student_id" not in raw_output
+
+    print("STORY-060 real batch worker and model-adapter verification passed")
+
+
+if __name__ == "__main__":
+    main()

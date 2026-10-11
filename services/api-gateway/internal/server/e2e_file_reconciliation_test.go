@@ -34,9 +34,9 @@ WHERE t.code='demo' AND u.username='tenant_admin' LIMIT 1`).Scan(&tenantID, &use
 	defer cancel()
 
 	missingBody := []byte("missing-object-metadata")
-	missing := createReconciliationAsset(t, ctx, store, tenantID, userID, "missing.pdf", missingBody, files.LifecycleActive)
+	missing := createReconciliationAsset(t, ctx, store, reconciliationAssetSpec{TenantID: tenantID, UserID: userID, Name: "missing.pdf", Body: missingBody, Lifecycle: files.LifecycleActive})
 	recoverableBody := []byte("recoverable-pending-object")
-	recoverable := createReconciliationAsset(t, ctx, store, tenantID, userID, "recoverable.pdf", recoverableBody, files.LifecyclePendingUpload)
+	recoverable := createReconciliationAsset(t, ctx, store, reconciliationAssetSpec{TenantID: tenantID, UserID: userID, Name: "recoverable.pdf", Body: recoverableBody, Lifecycle: files.LifecyclePendingUpload})
 	if err := objects.Put(ctx, recoverable.StorageBucket, recoverable.StorageKey, bytes.NewReader(recoverableBody), int64(len(recoverableBody)), "application/pdf"); err != nil {
 		t.Fatalf("put recoverable object: %v", err)
 	}
@@ -79,8 +79,15 @@ WHERE t.code='demo' AND u.username='tenant_admin' LIMIT 1`).Scan(&tenantID, &use
 	}
 }
 
-func createReconciliationAsset(t *testing.T, ctx context.Context, store *files.PostgresStore, tenantID, userID, name string, body []byte, lifecycle string) files.FileAsset {
+// 资产夹具携带完整归属和生命周期，正文仍按原始字节计算内容哈希。
+type reconciliationAssetSpec struct {
+	TenantID, UserID, Name, Lifecycle string
+	Body                              []byte
+}
+
+func createReconciliationAsset(t *testing.T, ctx context.Context, store *files.PostgresStore, spec reconciliationAssetSpec) files.FileAsset {
 	t.Helper()
+	tenantID, userID, name, body, lifecycle := spec.TenantID, spec.UserID, spec.Name, spec.Body, spec.Lifecycle
 	digest := sha256.Sum256(body)
 	input := files.CreateAssetInput{
 		TenantID: tenantID, OwnerType: "generic", OriginalName: name, ContentType: "application/pdf",

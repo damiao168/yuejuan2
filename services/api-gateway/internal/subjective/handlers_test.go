@@ -291,44 +291,7 @@ func TestSubjectiveBatchCreationValidatesSegmentsAndIsIdempotent(t *testing.T) {
 	if err := json.Unmarshal(first.Body.Bytes(), &created); err != nil || created.Batch.ID == "" {
 		t.Fatalf("decode created batch: %v %s", err, first.Body.String())
 	}
-	enqueueReq := httptest.NewRequest(http.MethodPost, "/api/v1/subjective-grading-batches/"+created.Batch.ID+"/enqueue", nil)
-	enqueueReq.SetPathValue("batchId", created.Batch.ID)
-	enqueueReq = enqueueReq.WithContext(auth.WithUser(enqueueReq.Context(), auth.User{ID: userID, TenantID: tenantID, Permissions: []string{"grading:manage"}}))
-	enqueueRec := httptest.NewRecorder()
-	handler.EnqueueBatch(enqueueRec, enqueueReq)
-	if enqueueRec.Code != http.StatusOK || !strings.Contains(enqueueRec.Body.String(), `"queued_count":2`) {
-		t.Fatalf("enqueue expected two queued tasks, got %d %s", enqueueRec.Code, enqueueRec.Body.String())
-	}
-	requeued := httptest.NewRecorder()
-	handler.EnqueueBatch(requeued, enqueueReq)
-	if requeued.Code != http.StatusOK || !strings.Contains(requeued.Body.String(), `"queued_count":2`) {
-		t.Fatalf("repeated enqueue should be idempotent, got %d %s", requeued.Code, requeued.Body.String())
-	}
-	claimed, err := runtime.Claim(context.Background(), tenantID, workerruntime.ClaimInput{QueueName: "subjective-grading", WorkerService: "subjective-worker", WorkerInstanceID: "worker-b", Limit: 1, LeaseSeconds: 300})
-	if err != nil || len(claimed) != 1 {
-		t.Fatalf("claim one batch task: %v %#v", err, claimed)
-	}
-	run, err := store.GetRun(context.Background(), tenantID, claimed[0].SourceID)
-	if err != nil || run.Status != subjective.RunQueued {
-		t.Fatalf("batch run must remain queued until worker execution: %#v err=%v", run, err)
-	}
-	executeBody, _ := json.Marshal(map[string]string{"task_id": claimed[0].ID, "lease_token": claimed[0].LeaseToken})
-	executeReq := httptest.NewRequest(http.MethodPost, "/api/v1/internal/subjective-grading/runs/"+run.ID+"/execute", bytes.NewReader(executeBody))
-	executeReq.SetPathValue("runId", run.ID)
-	executeReq = executeReq.WithContext(auth.WithUser(executeReq.Context(), auth.User{ID: userID, TenantID: tenantID, Permissions: []string{"orchestrator:manage"}}))
-	executeRec := httptest.NewRecorder()
-	handler.ExecuteWorker(executeRec, executeReq)
-	if executeRec.Code != http.StatusOK {
-		t.Fatalf("execute batch task expected 200, got %d %s", executeRec.Code, executeRec.Body.String())
-	}
-	getBatchReq := httptest.NewRequest(http.MethodGet, "/api/v1/subjective-grading-batches/"+created.Batch.ID, nil)
-	getBatchReq.SetPathValue("batchId", created.Batch.ID)
-	getBatchReq = getBatchReq.WithContext(auth.WithUser(getBatchReq.Context(), auth.User{ID: userID, TenantID: tenantID, Permissions: []string{"grading:manage"}}))
-	getBatchRec := httptest.NewRecorder()
-	handler.GetBatch(getBatchRec, getBatchReq)
-	if getBatchRec.Code != http.StatusOK || !strings.Contains(getBatchRec.Body.String(), `"queued_count":1`) || !strings.Contains(getBatchRec.Body.String(), `"processing_count":1`) {
-		t.Fatalf("batch refresh should expose live worker progress, got %d %s", getBatchRec.Code, getBatchRec.Body.String())
-	}
+	assertSubjectiveBatchEnqueueAndLiveProgress(t, handler, store, runtime, created.Batch.ID)
 	second := request(`{"idempotency_key":"batch-retry-1","segment_ids":["segment-1","segment-2"]}`)
 	if second.Code != http.StatusCreated || !strings.Contains(second.Body.String(), `"subjective-batch-`) {
 		t.Fatalf("batch replay should return same durable batch, got %d %s", second.Code, second.Body.String())
@@ -641,4 +604,47 @@ func assertAuditAction(t *testing.T, store *auth.MemoryStore, action string) {
 		}
 	}
 	t.Fatalf("missing audit action %s in %#v", action, store.Audits())
+}
+
+// 入队重放、真实租约执行和实时统计依次验证；领取任务后领域运行须等执行才进入处理中。
+func assertSubjectiveBatchEnqueueAndLiveProgress(t *testing.T, handler *subjective.Handler, store *subjective.MemoryStore, runtime *workerruntime.MemoryStore, batchID string) {
+	t.Helper()
+	enqueueReq := httptest.NewRequest(http.MethodPost, "/api/v1/subjective-grading-batches/"+batchID+"/enqueue", nil)
+	enqueueReq.SetPathValue("batchId", batchID)
+	enqueueReq = enqueueReq.WithContext(auth.WithUser(enqueueReq.Context(), auth.User{ID: userID, TenantID: tenantID, Permissions: []string{"grading:manage"}}))
+	enqueueRec := httptest.NewRecorder()
+	handler.EnqueueBatch(enqueueRec, enqueueReq)
+	if enqueueRec.Code != http.StatusOK || !strings.Contains(enqueueRec.Body.String(), `"queued_count":2`) {
+		t.Fatalf("enqueue expected two queued tasks, got %d %s", enqueueRec.Code, enqueueRec.Body.String())
+	}
+	requeued := httptest.NewRecorder()
+	handler.EnqueueBatch(requeued, enqueueReq)
+	if requeued.Code != http.StatusOK || !strings.Contains(requeued.Body.String(), `"queued_count":2`) {
+		t.Fatalf("repeated enqueue should be idempotent, got %d %s", requeued.Code, requeued.Body.String())
+	}
+	claimed, err := runtime.Claim(context.Background(), tenantID, workerruntime.ClaimInput{QueueName: "subjective-grading", WorkerService: "subjective-worker", WorkerInstanceID: "worker-b", Limit: 1, LeaseSeconds: 300})
+	if err != nil || len(claimed) != 1 {
+		t.Fatalf("claim one batch task: %v %#v", err, claimed)
+	}
+	run, err := store.GetRun(context.Background(), tenantID, claimed[0].SourceID)
+	if err != nil || run.Status != subjective.RunQueued {
+		t.Fatalf("batch run must remain queued until worker execution: %#v err=%v", run, err)
+	}
+	executeBody, _ := json.Marshal(map[string]string{"task_id": claimed[0].ID, "lease_token": claimed[0].LeaseToken})
+	executeReq := httptest.NewRequest(http.MethodPost, "/api/v1/internal/subjective-grading/runs/"+run.ID+"/execute", bytes.NewReader(executeBody))
+	executeReq.SetPathValue("runId", run.ID)
+	executeReq = executeReq.WithContext(auth.WithUser(executeReq.Context(), auth.User{ID: userID, TenantID: tenantID, Permissions: []string{"orchestrator:manage"}}))
+	executeRec := httptest.NewRecorder()
+	handler.ExecuteWorker(executeRec, executeReq)
+	if executeRec.Code != http.StatusOK {
+		t.Fatalf("execute batch task expected 200, got %d %s", executeRec.Code, executeRec.Body.String())
+	}
+	getBatchReq := httptest.NewRequest(http.MethodGet, "/api/v1/subjective-grading-batches/"+batchID, nil)
+	getBatchReq.SetPathValue("batchId", batchID)
+	getBatchReq = getBatchReq.WithContext(auth.WithUser(getBatchReq.Context(), auth.User{ID: userID, TenantID: tenantID, Permissions: []string{"grading:manage"}}))
+	getBatchRec := httptest.NewRecorder()
+	handler.GetBatch(getBatchRec, getBatchReq)
+	if getBatchRec.Code != http.StatusOK || !strings.Contains(getBatchRec.Body.String(), `"queued_count":1`) || !strings.Contains(getBatchRec.Body.String(), `"processing_count":1`) {
+		t.Fatalf("batch refresh should expose live worker progress, got %d %s", getBatchRec.Code, getBatchRec.Body.String())
+	}
 }

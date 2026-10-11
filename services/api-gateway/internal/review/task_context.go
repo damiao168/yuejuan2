@@ -119,32 +119,40 @@ func taskContextFromWorkspace(workspace Workspace) TaskContext {
 	} else if workspace.Context.RawAnswer != "" {
 		out.AnswerArtifact.Source = "answer_segment_answer"
 	}
-	if len(workspace.Context.AISuggestion) > 0 {
-		prefillAllowed := allowsAIScorePrefill(snapshot)
-		metadata := cloneMap(workspace.Context.AISuggestion)
-		history := []map[string]any{}
-		if entries, ok := metadata["suggestion_history"].([]any); ok {
-			for _, entry := range entries {
-				if item, valid := entry.(map[string]any); valid {
-					copy := cloneMap(item)
-					if !prefillAllowed {
-						copy = removeScoreFields(copy)
-					}
-					history = append(history, copy)
-				}
+	out.AISecondOpinion = aiSecondOpinionFromSuggestion(workspace.Context.AISuggestion, allowsAIScorePrefill(snapshot))
+	return out
+}
+
+// aiSecondOpinionFromSuggestion 在副本上整理建议；R3 HUMAN_PRIMARY 的材料不能带可预填分数字段。
+func aiSecondOpinionFromSuggestion(suggestion map[string]any, prefillAllowed bool) *AISecondOpinion {
+	if len(suggestion) == 0 {
+		return nil
+	}
+	metadata := cloneMap(suggestion)
+	// 有建议而无有效历史时仍返回 []，保留原 JSON 形态。
+	history := []map[string]any{}
+	if entries, ok := metadata["suggestion_history"].([]any); ok {
+		for _, entry := range entries {
+			item, valid := entry.(map[string]any)
+			if !valid {
+				continue
 			}
-		}
-		delete(metadata, "suggestion_history")
-		if !prefillAllowed {
-			metadata = removeScoreFields(metadata)
-		}
-		out.AISecondOpinion = &AISecondOpinion{
-			Available: true, Presentation: "explicit_second_opinion",
-			ScorePrefillAllowed: prefillAllowed, Metadata: metadata,
-			History: history,
+			copy := cloneMap(item)
+			if !prefillAllowed {
+				copy = removeScoreFields(copy)
+			}
+			history = append(history, copy)
 		}
 	}
-	return out
+	delete(metadata, "suggestion_history")
+	if !prefillAllowed {
+		metadata = removeScoreFields(metadata)
+	}
+	return &AISecondOpinion{
+		Available: true, Presentation: "explicit_second_opinion",
+		ScorePrefillAllowed: prefillAllowed, Metadata: metadata,
+		History: history,
+	}
 }
 
 // R3 且以人工评分为主时，AI 只能提供辅助材料，不能提供可预填的分数字段。
@@ -168,9 +176,8 @@ func objectField(source map[string]any, key string) map[string]any {
 	return cloneMap(value)
 }
 
-// removeScoreFields is applied only to R3 HUMAN_PRIMARY AI material. It also
-// descends into evidence objects so a UI cannot accidentally discover a score
-// and turn it into a default value.
+// removeScoreFields 只用于 R3 HUMAN_PRIMARY 的 AI 材料。
+// 它也递归处理证据对象，避免 UI 意外发现分数并将其设为默认值。
 func removeScoreFields(source map[string]any) map[string]any {
 	clean := make(map[string]any, len(source))
 	for key, value := range source {

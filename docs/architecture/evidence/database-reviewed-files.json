@@ -1,0 +1,3031 @@
+{
+  "scope": "PostgreSQL迁移/Store及桌面SQLite；非全仓完成声明",
+  "automatic_enumeration_is_review": false,
+  "files": [
+    {
+      "file": "apps/desktop-client/src-tauri/src/durable_store/claim.rs",
+      "status": "pending",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "已核对选定DDL/SQL或调用边界，尚未完整审读文件",
+      "source_sha256": "ef254596635799104d520b25d386f4cdb7421879dad79f952dd169cb90af2876"
+    },
+    {
+      "file": "apps/desktop-client/src-tauri/src/durable_store/connection.rs",
+      "status": "existing_sufficient",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "8df7ce848ca5289b4fc5101a8d62d1d420f1698dde0634843d67e4e104c00eb8"
+    },
+    {
+      "file": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+      "status": "existing_sufficient",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "8fdadd2b87d65a01f913540db8864a62eb37d2c6c71d93dbf26d177befd8cb35"
+    },
+    {
+      "file": "apps/desktop-client/src-tauri/src/durable_store/drafts.rs",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "8da95099ce829d112c8a09442c516c0c12f67144f2a18f703780a190371c3a3f"
+    },
+    {
+      "file": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969"
+    },
+    {
+      "file": "apps/desktop-client/src-tauri/src/durable_store/offline_access.rs",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "7e0ea9fb193127299fb325fe91cef3fac1a088d946dbeab2a5d1951da8fc15e6"
+    },
+    {
+      "file": "apps/desktop-client/src-tauri/src/durable_store/paths.rs",
+      "status": "existing_sufficient",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "18d6cd3ad7c0df27444117953ed996e7532e1f07331cd4c56e57f92998c796a6"
+    },
+    {
+      "file": "apps/desktop-client/src-tauri/src/durable_store/queue.rs",
+      "status": "existing_sufficient",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "79b4d81762a36dafa7ce3e0b20fbc32fd58178c1c4d9b23047a9451efd9b2ae5"
+    },
+    {
+      "file": "apps/desktop-client/src-tauri/src/durable_store/schema.rs",
+      "status": "existing_sufficient",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "cbeeb7c9dd4103e1229f6e3e4f7b4575704360090bc0e185e9e461b6334a7a97"
+    },
+    {
+      "file": "apps/desktop-client/src-tauri/src/durable_store/spool.rs",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "c53aebcb8b3e09c5adc80316aa98b9635181a7b999ca52461c26e9bd7cd16399"
+    },
+    {
+      "file": "apps/desktop-client/src-tauri/src/durable_store/storage.rs",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "2ab93840f2a3f14b5abb01a09f192d1f19f73bf9f9281f2dd34debbd41107ba8"
+    },
+    {
+      "file": "apps/desktop-client/src-tauri/src/durable_store/types.rs",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "e7770d4642eae830c36be60a34bb0698b30c4baa6ac5d025a2306ed689ee19d0"
+    },
+    {
+      "file": "docs/engineering/commenting-standard.md",
+      "status": "existing_sufficient",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "582d56da32f8b6300ca5d8e51626815a2e30c936e657377060347734ed2696ea"
+    },
+    {
+      "file": "infra/docker-compose/docker-compose.yml",
+      "status": "pending",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "已核对选定DDL/SQL或调用边界，尚未完整审读文件",
+      "source_sha256": "18773e940caab52f25d572754034a426d4238425e605a31956e00b26a22451f3"
+    },
+    {
+      "file": "services/api-gateway/internal/aidisagreement/store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "337b1ee8f2d907cb0918e5ecd0a2d23d2f0e4456a3ff3125422964d8401ec6eb"
+    },
+    {
+      "file": "services/api-gateway/internal/aieligibility/store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "9cd00ad65d1a4d761e67a9251d659511bfa058ce4fa460dab7f197d6ff86c791"
+    },
+    {
+      "file": "services/api-gateway/internal/answergroup/store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "5a41caf067519d6c1bc59446e7f8adc9248016208227ff8b1fc2d0f97874b839"
+    },
+    {
+      "file": "services/api-gateway/internal/appeal/published_question_store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "dc641a8d651464ad14afd7de3347355d38c4f1ac4b99914a99a027f910ca2149"
+    },
+    {
+      "file": "services/api-gateway/internal/appeal/published_question_store_postgres_test.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "43d0c1fbd35080595a8653079888872b1f92ddecd44fbd82de1d203217312159"
+    },
+    {
+      "file": "services/api-gateway/internal/appeal/store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "a785e3f8c3482703876e325c346a5932fb8189497372ac45e76e31c3e69c062a"
+    },
+    {
+      "file": "services/api-gateway/internal/assessment/store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "3309c1c6296531d95bfa14a730ce5118fa101436e30b177bf8331fb4fe05c356"
+    },
+    {
+      "file": "services/api-gateway/internal/auth/authorization_contract_postgres_test.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "5c5dc0997544e825afb4ba935c5220ae0c96f792bd0d7769e0ae0851beeb7eb3"
+    },
+    {
+      "file": "services/api-gateway/internal/auth/mfa_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "c4a702a7cb48bbbe7688d7125ecae99327382a7af9571ebbfa9bd97c5e805206"
+    },
+    {
+      "file": "services/api-gateway/internal/auth/store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "e0f2e45e2af1861400d0c6662b9eb317ba636b0f378864b0e59655e941e6ceec"
+    },
+    {
+      "file": "services/api-gateway/internal/auth/store_postgres_batch49_test.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "a00c46f6b569241e2793839dae855849205e9e9d89e95b32e471d1214ec1c7e3"
+    },
+    {
+      "file": "services/api-gateway/internal/auth/store_postgres_batch50_test.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "19935de4099e4e9d4ff7474106887421d46c00f302a34ce02e394cb7a2fd5bc7"
+    },
+    {
+      "file": "services/api-gateway/internal/auth/wechat_store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "c3fcef1bfdb8b29949a2b47153bd8388011ad3dcbd532a9e4fb8e4988a24b0ee"
+    },
+    {
+      "file": "services/api-gateway/internal/backmark/store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "3c473cc3293d0eef9c8aef141a8d9154a492746ff3705aabe4017e1799434478"
+    },
+    {
+      "file": "services/api-gateway/internal/backmark/store_postgres_test.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "dcf141cb34cacea8acb68c9aea1dc87395cd9d84829bd97d0da085b5bc47be54"
+    },
+    {
+      "file": "services/api-gateway/internal/calibration/store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "8c0a4f258236375a2c035cd94a32b9d8cee2d12f443abf0194782f23da2c82ac"
+    },
+    {
+      "file": "services/api-gateway/internal/capture/batch_command_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "c3dc83beec27ed9263b784e77e4f24491b122fa0422a309e7f17db4079d24233"
+    },
+    {
+      "file": "services/api-gateway/internal/capture/correction_apply_store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "a20d5fb7ba5e4fbc22c9f955ca2977c29496859257f0438a99642b7eaac38909"
+    },
+    {
+      "file": "services/api-gateway/internal/capture/correction_store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "f8a4c64f5783ee6dece86060b0c2d5bd59cfd5f00a9e417ee0f9c84d65220ee7"
+    },
+    {
+      "file": "services/api-gateway/internal/capture/matching_store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "edccd47ad65142629affeeb8240a166b03d0354b53a243e03eb184725f5e0e80"
+    },
+    {
+      "file": "services/api-gateway/internal/capture/organization_store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "06b7f747ea12bf6ce6f4b130bdb1442538f2b33cae31b525c0c5f4f911f9b0ad"
+    },
+    {
+      "file": "services/api-gateway/internal/capture/registration_review_store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "4ccf7a85fbafc0fe230a51aa2a6d15447ea632e1c4ccd8b5b00b2c0c3cc6392f"
+    },
+    {
+      "file": "services/api-gateway/internal/capture/registration_store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "e049cd5647ae0d3c0deafaf193c43f6b9099338b168a5f97812e3d2af317041e"
+    },
+    {
+      "file": "services/api-gateway/internal/capture/store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "5176585ef7fa98aebad0b90bd2fac8ddf0b840961d97a7419038c30bfb033398"
+    },
+    {
+      "file": "services/api-gateway/internal/capture/template_match_store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "0e00cb1fa3393e90dc770d765280d09d99b50110e119d612e4268d5d2ec93e2a"
+    },
+    {
+      "file": "services/api-gateway/internal/captureupload/store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "85b55703fab66d3cfba6c9008418acaf69fc069cb4dfa519ac71521be39c892d"
+    },
+    {
+      "file": "services/api-gateway/internal/dashboard/organization_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "83ff0cf67f202a3ba59e1253c7d53cbe6892a0b9f1def89f075ac8d84ca1a587"
+    },
+    {
+      "file": "services/api-gateway/internal/db/postgres.go",
+      "status": "existing_sufficient",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "0ee84bb8b6f6e277276e1744d6134febfa4e99e9d3e3ef42c216cd203839fabc"
+    },
+    {
+      "file": "services/api-gateway/internal/db/postgres_test.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "a9ee1c4bbdde93fe62aeb3b6afe31a079dd26e1ea653f5a6fb99eb1aa5747dae"
+    },
+    {
+      "file": "services/api-gateway/internal/db/tenant_context.go",
+      "status": "existing_sufficient",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "eacdb801497dbe16b0bf9f4fc3d7acb35b04c5a2a88d0bdc0ca76ea01b32ea31"
+    },
+    {
+      "file": "services/api-gateway/internal/evidence/store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "5225c68fd2fcd6713bc71fa03bd364e030ea36bd5d082fc12cb2bac1b49fa409"
+    },
+    {
+      "file": "services/api-gateway/internal/exam/candidate_snapshot_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "a7c2a0fd954c3d15737c4ae48bc5514472ba72c8e91495ad04bf3e6bb78f7877"
+    },
+    {
+      "file": "services/api-gateway/internal/exam/management_archive_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "dfe65b28dcbac21062270a9a2498a65e8289832c13aff72e73be09dea553cb33"
+    },
+    {
+      "file": "services/api-gateway/internal/exam/management_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "fc7d6f8afc536f16666cdd550af1361b4ff52a0cfe29afa0c97e6aa0260aa098"
+    },
+    {
+      "file": "services/api-gateway/internal/exam/session_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "9f6a24ba1934dd1b495acfa22fd1050a2c80fa594eb74135a576cbbeba2fee7a"
+    },
+    {
+      "file": "services/api-gateway/internal/exam/session_postgres_batch49_test.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "57ab9a1ecab89a9c8c5b3b51886e83de4fe98e2943d6d8bc64057000225283a0"
+    },
+    {
+      "file": "services/api-gateway/internal/exam/store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "63f0b5b76b2dccad831cfb6e7841be90f554feae4c964fe4c292b9797da4445e"
+    },
+    {
+      "file": "services/api-gateway/internal/exam/store_postgres_batch49_test.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "54dc99a1ba08fc4fd778380028d062e212f97b0c0697368e01ddfc818b5a19b7"
+    },
+    {
+      "file": "services/api-gateway/internal/exam/store_postgres_test.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "b530ac17dba3fffe81820cec19fca05fb93ca232a62de3c9132c49beab35bd18"
+    },
+    {
+      "file": "services/api-gateway/internal/exam/template_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "a853839a10db293f45acef5bfcd12e23d9d0b40bd24a6f196d1e183cb95fea23"
+    },
+    {
+      "file": "services/api-gateway/internal/files/store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "c05e1e7f479bec4a8b80f7cfd4be574c2be4ab76ec7876dcf31f884b851c4211"
+    },
+    {
+      "file": "services/api-gateway/internal/goldpaper/store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "074510d98ec224d42bd23ba58726a3378389b14cc60fc1892d4dc8210753dd50"
+    },
+    {
+      "file": "services/api-gateway/internal/goldpaper/store_postgres_batch48_test.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "4a86b0faf5869174ba7ff9d3dc243db45f983f3acd27d518888940913163535c"
+    },
+    {
+      "file": "services/api-gateway/internal/graderdrift/store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "cdbee38690b2ae23d3fb1c20a2632cb1c5d83907f12ec3a61e9534a76ed3227e"
+    },
+    {
+      "file": "services/api-gateway/internal/grading/store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "6bebbcda06070016417dbd7a005d287a0a263c7c36833384b3f9ff1846218f02"
+    },
+    {
+      "file": "services/api-gateway/internal/gradingevaluation/store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "425e21f67f26b14ab4806f644b8027adfc77f97b2231d8a1ed2ce50048ac56f5"
+    },
+    {
+      "file": "services/api-gateway/internal/idempotency/store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "f0158a67da920f9832dc62dedda1886d272daf6c2bce85da00e1a43bf1840074"
+    },
+    {
+      "file": "services/api-gateway/internal/imagequality/coordinator_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "3212d299019d5d0d39e9f6f6b3d5a1bf5bda3458cc8d2895ed9c8c080de654f4"
+    },
+    {
+      "file": "services/api-gateway/internal/imagequality/store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "855b8bfe8dd5e1d20ca7b88f91e4ad1a4aa9576f31a7eb39cf48fb5bb88f4cca"
+    },
+    {
+      "file": "services/api-gateway/internal/mathunderstanding/correction_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "494d5d99797ce705345d439b102c08a85a82bb8ac1e2b9300e98c84bf4910276"
+    },
+    {
+      "file": "services/api-gateway/internal/mathunderstanding/pilot_store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "9a92d8ec26757326705055f73af69f7138a86093b87d46853ec7549eca6e6e96"
+    },
+    {
+      "file": "services/api-gateway/internal/mathunderstanding/store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "9272069d0de4c43d8f99877046056895e6be6788c7f93355c720579c28a75017"
+    },
+    {
+      "file": "services/api-gateway/internal/modelcalibration/store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "6987392937fed0065eab743a3838316332f31bdfcd630e9d4c02c9b244d614f1"
+    },
+    {
+      "file": "services/api-gateway/internal/modelgovernance/managed_config_store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "28b2d1d2cf219e0be7523db0707b1722c29984292057753ead6f652e3dbc1838"
+    },
+    {
+      "file": "services/api-gateway/internal/modelgovernance/role_binding_store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "c63fd84c71cdac8a5071210ba50cf72b9c7513786048fcee2c7a0574d56fa58f"
+    },
+    {
+      "file": "services/api-gateway/internal/modelgovernance/store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "adbd70ae393a7178e4fc47453f2c10271e9d33a6398180b29640f45962c7de66"
+    },
+    {
+      "file": "services/api-gateway/internal/ocr/runtime_coordinator_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "0af84c81ebda8283677991fc81eff95c9f80b2f7b2b3f8e88bc2cd1591396d33"
+    },
+    {
+      "file": "services/api-gateway/internal/ocr/store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "2e1dbbbbfeb7f3ddc010f0b55817623c403185ae5e3cc705972a980aab37b94d"
+    },
+    {
+      "file": "services/api-gateway/internal/orchestrator/store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "429587aa4c8ffc3d9c9508c74ca11f8e623e41239d727e419e16ec88a2a00ad4"
+    },
+    {
+      "file": "services/api-gateway/internal/org/enrollment_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "9669b3de958cf42cade2d2396eac1c510be18c350568aa521f7d62d35e97bd8e"
+    },
+    {
+      "file": "services/api-gateway/internal/org/store_postgres.go",
+      "status": "existing_sufficient",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "c0511a72dcdb066296ffcb49608215b8bf39b095283921edfb75a92a30f95444"
+    },
+    {
+      "file": "services/api-gateway/internal/org/store_postgres_test.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "b5260cfa550d4b757c9263fcd414685c4c07b97503ff148117e58ed179a341ca"
+    },
+    {
+      "file": "services/api-gateway/internal/outbox/store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "3e928c390b4d9c56b03175195da3f30a00513f75a154dea35b1dce91f244abf3"
+    },
+    {
+      "file": "services/api-gateway/internal/paper/configuration_validation_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "396e2f3336c4dc6e03041e8bc5f1f3c871b69ed59c81ca47ee824b2903e6f533"
+    },
+    {
+      "file": "services/api-gateway/internal/paper/paper_import_content_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "1224ec121679f505ec18c89a118b92c4cfa307b43b85a98c458082fe8490c2cf"
+    },
+    {
+      "file": "services/api-gateway/internal/paper/paper_import_exhaustion_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "8f9146987bcc4f8c6a82254443848734b5c322fee9360fbc60aa781e0caa0ce4"
+    },
+    {
+      "file": "services/api-gateway/internal/paper/paper_import_parse_commit_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "cfb19a34a5a740c4fe11b794a8b91652d4d73fddd34161b3b91ce97d5cde957f"
+    },
+    {
+      "file": "services/api-gateway/internal/paper/paper_import_parse_retry_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "e11fec4e3bd1a60e61035422947e632102dfe7eabe92ce04685e70c82c75d861"
+    },
+    {
+      "file": "services/api-gateway/internal/paper/paper_import_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "8c6b819ef0e219e4db6c7d7c2762469438b7557a8360bb75566c21f048e48079"
+    },
+    {
+      "file": "services/api-gateway/internal/paper/paper_import_postgres_batch10_test.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "27760b25e6cd105ce7d992e0bda3c42fb328c86ddb6891f4715a51be412b619d"
+    },
+    {
+      "file": "services/api-gateway/internal/paper/paper_import_run_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "6d0b28be3f90e5848f7ddf7d632886e8b4c7f724f42980cba4f0cd801049dae9"
+    },
+    {
+      "file": "services/api-gateway/internal/paper/paper_import_runtime_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "975dae30b8d89bb67d7e6b68fc20d34be3a5cabce3f719ad6668b5a44ade2aff"
+    },
+    {
+      "file": "services/api-gateway/internal/paper/paper_import_structure_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "c3be2f2ecf619832073c46fc9fcd2e9515d8a5196a78951130429041bd0453eb"
+    },
+    {
+      "file": "services/api-gateway/internal/paper/paper_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "965408cfce2db32f4ea19136b4b5affed03ef0728894dc6764127e570449547c"
+    },
+    {
+      "file": "services/api-gateway/internal/paper/question_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "d52ab730df662ad67cae4616be33f74e9cad7f0f83dc49918afe3254c31294ab"
+    },
+    {
+      "file": "services/api-gateway/internal/paper/rubric_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "c05d2b69c31376d13d024601f080093ed39096095ab829ffa44e637cf7e5f025"
+    },
+    {
+      "file": "services/api-gateway/internal/paper/store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "756d451899d73978bd25782251463e185c486db2da0f34e263ce52e5bb3ae859"
+    },
+    {
+      "file": "services/api-gateway/internal/paper/store_postgres_configuration.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "356f0d16166b374954eaed3d7172b018733aff3f8e1fc62d8ee14c11087e6ce2"
+    },
+    {
+      "file": "services/api-gateway/internal/paper/store_postgres_shared.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "6789505454b27fc5012115eeb7b0b26f4eb58bca003057b6738ff441960a80bc"
+    },
+    {
+      "file": "services/api-gateway/internal/paper/store_postgres_template_binding.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "8b187b8913f2d0f22f499ffd2bcd652bff21455c9c682ce2f5edac8d554ab88c"
+    },
+    {
+      "file": "services/api-gateway/internal/platformschools/store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "f04617a98af90eb9b09f01d7f8ffde27240815914b6376afdfc978b9ec9cbc33"
+    },
+    {
+      "file": "services/api-gateway/internal/processing/projection_store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "dbeaa9c2d15ccb79d8980d39bfb376e642c013295a4afd43caa430b0b4f133f2"
+    },
+    {
+      "file": "services/api-gateway/internal/processing/retry_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "760636ad0c7472893852e9c308dcd625682f428071fcc616af2b479bb8b712f4"
+    },
+    {
+      "file": "services/api-gateway/internal/processing/store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "97ada29c843c7987a5c532e44689b1fcec1b4142056301618a9228c3d2fe9a6d"
+    },
+    {
+      "file": "services/api-gateway/internal/qualitydashboard/postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "613fcf7a07f56ccf90763c6a9e256da93329588bf22110f3cc3ac4b20137828d"
+    },
+    {
+      "file": "services/api-gateway/internal/questionbank/import_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "8223b0314be11fcd5a94b57258763eb333bfadb69ad1fff41d15540e16c43ae4"
+    },
+    {
+      "file": "services/api-gateway/internal/questionbank/metadata_acl_search_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "4f9ff642d083043abde4fdc6ab38d89a975d27afabc825fa9cca0132a39343a3"
+    },
+    {
+      "file": "services/api-gateway/internal/questionbank/postgres_batch22_test.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "91279eab3e50870f653977fbdd3f4150a9e5b83cedddcc4030ac6a60753959b2"
+    },
+    {
+      "file": "services/api-gateway/internal/questionbank/publication_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "a366c9939cff59449ebb81b42dd8c8a74b670e92db1d128f0be48a394b7973e3"
+    },
+    {
+      "file": "services/api-gateway/internal/questionbank/store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "2502a52be6a60239e4f7129d495ff7d15039abe692ff2b5e2f4a63e629080b40"
+    },
+    {
+      "file": "services/api-gateway/internal/regrade/grader_context_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "cfb1e12f4d579f90d86d5e11a7ac362a68b940bdcc8551b1abd3ceca0b44d6a3"
+    },
+    {
+      "file": "services/api-gateway/internal/regrade/store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "f79f0016de4856dadb8d1241b1e8cf126e251f6f5b751b12e144717ea2a0a4dc"
+    },
+    {
+      "file": "services/api-gateway/internal/regrade/store_postgres_batch48_test.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "71b5f68761bbeccbffeb88efcb770470ce5a7c749c9a8d91b18525e7c9106ef2"
+    },
+    {
+      "file": "services/api-gateway/internal/releasegate/store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "5fef3d02dc31770287965560234780025d1860e1637e50c836d3b2d86fcad196"
+    },
+    {
+      "file": "services/api-gateway/internal/report/store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "5a1386300807f8b59556b3b2e73e89b3849f87e71e20097946f22a4f9eb50a71"
+    },
+    {
+      "file": "services/api-gateway/internal/review/draft_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "2fd9effba235e81dc49ef739b700f73ef56b433bad507fc2dc787b2511f9351a"
+    },
+    {
+      "file": "services/api-gateway/internal/review/store_postgres_arbitration.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "3fd1b5a3c4c31ea1bc87d2c3b54876df57176a28dd25f8f26f616ad5532ef897"
+    },
+    {
+      "file": "services/api-gateway/internal/review/store_postgres_batch34_test.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "67f20daa0a5598f4dd81a21219a40384b78fbdc2f1f9d03045ca6efa4bae7cc3"
+    },
+    {
+      "file": "services/api-gateway/internal/review/store_postgres_context.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "73640346a56ea7fe97172d62f4e0ba14d776f5d293e952a1891b925fff0fc632"
+    },
+    {
+      "file": "services/api-gateway/internal/review/store_postgres_double_mark.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "634b7e2685881ecfb0032c95df8c59f223122cddf90bc97a9dbd6438ebefc5ba"
+    },
+    {
+      "file": "services/api-gateway/internal/review/store_postgres_resolution.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "250ca6db05e410fa689dd1b7882f420dcd7b99069389e6ab29ed1f5b9a75787c"
+    },
+    {
+      "file": "services/api-gateway/internal/review/store_postgres_scanners.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "e61fcaa98507a883f2790819a8217448e50dea17d91a4773869279fc5d47f4c2"
+    },
+    {
+      "file": "services/api-gateway/internal/review/store_postgres_scoring_double_mark.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "8615b8d076785d43eaac731c78240d0c7d7fbfe2d235d4e7b0674102b159cf1e"
+    },
+    {
+      "file": "services/api-gateway/internal/review/store_postgres_task_internals.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "6202a20f811b7856a0b0b8d1c4e410fe91bdc91cd31d5df4874c3be2f211255d"
+    },
+    {
+      "file": "services/api-gateway/internal/review/store_postgres_tasks.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "111bad7d5e51a829148b5c2e4105e8007b2bda61ac28851932aa2fa08fe715d2"
+    },
+    {
+      "file": "services/api-gateway/internal/review/task_context_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "2e80803dcab5027258756a19d25628cd2d0e195f10493ee280b90ea98810c39c"
+    },
+    {
+      "file": "services/api-gateway/internal/review/workbench_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "225855f145c1d572218edc20afbf513659d86cab1d7cb83a013f28a397d614a3"
+    },
+    {
+      "file": "services/api-gateway/internal/reviewannotation/store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "fb244fc2d674e7e98f4bda2dbd714379619a2ba5817f179be1d2977690e1c8f2"
+    },
+    {
+      "file": "services/api-gateway/internal/reviewannotation/student_release_postgres_test.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "7fc96dd356275936729f968a40bc0805f6644a534d183b07d9d3f2881f19cae6"
+    },
+    {
+      "file": "services/api-gateway/internal/score/store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "822368ebcf902180406b529bec159b9001d6efeeeab0c3fffe574e87bd4cd748"
+    },
+    {
+      "file": "services/api-gateway/internal/scorerelease/anonymous_paper_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "360cd0d4726303ec15995238987e31439aafe5d0879fcef38455c74b4d41214f"
+    },
+    {
+      "file": "services/api-gateway/internal/scorerelease/store_postgres.go",
+      "status": "pending",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "已核对选定DDL/SQL或调用边界，尚未完整审读文件",
+      "source_sha256": "18e863156b073c8f26810c152294aef2bbbbdc3ebe9e5c133228b00a65914322"
+    },
+    {
+      "file": "services/api-gateway/internal/scorerelease/store_postgres_batch48_test.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "9e04135bfdbd3f64c11b3aaa7e2e9db0d48f1ec7aeda24f8b7f7694086ddea52"
+    },
+    {
+      "file": "services/api-gateway/internal/scorerelease/store_postgres_batch50_test.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "d22ee4c071ff97dd3d451878848a4b8b9b9008eb95f93a1bab5384307ac87c42"
+    },
+    {
+      "file": "services/api-gateway/internal/scorerelease/store_postgres_dashboard_test.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "e191e1809d86fcc5700954942698486e04338a697344d753591c151d00eca9fa"
+    },
+    {
+      "file": "services/api-gateway/internal/scorerelease/student_detail_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "a80997d9783e7552e9314c696cd006bcdfc3dd54ef1088cc6a0f2d084b7ca1d7"
+    },
+    {
+      "file": "services/api-gateway/internal/scorerelease/student_session_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "b28ee836b9f27a9985e2fbb691ff096b5b67ba175a127d32a1743097ce2a7564"
+    },
+    {
+      "file": "services/api-gateway/internal/seedquality/store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "3c2befc637e2736ba06d30fa13e46ffc73cbcc20c9a4466adb699375c57ca179"
+    },
+    {
+      "file": "services/api-gateway/internal/segment/store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "fe33c3364be8a549cc7eb358820893b734817e3799afc22f823cfeee74228228"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_postgres_test.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "8714cb21ec147a9aee97c922c80e03ad020af15f2302d6f684c7781d094503a0"
+    },
+    {
+      "file": "services/api-gateway/internal/server/managed_config_postgres_test.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "be7c2d7d11de8820c98d962c3ec06d31f67a4e877a95f601c38318e2f388fdf4"
+    },
+    {
+      "file": "services/api-gateway/internal/studentportal/store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "fdf1346517bab5019ac5c72bb3cbe36d5960b0bea413af4eef8be0d037c9844b"
+    },
+    {
+      "file": "services/api-gateway/internal/subjective/panel_policy_store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "6f7f2913fefc0a3f285c161c090b8c04f06975eeb6295e7d9bdf10b1ae30b5a1"
+    },
+    {
+      "file": "services/api-gateway/internal/subjective/panel_store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "73e84cdaf5993bc291dfe5d2fb110c172551c7815734bd86d879f2515453e5d2"
+    },
+    {
+      "file": "services/api-gateway/internal/subjective/store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "a47acba07c6701aefe1165f9210a5323871ed6d0c5eaabe34138d2297df0ad05"
+    },
+    {
+      "file": "services/api-gateway/internal/subjective/store_postgres_batch.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "d192ea6919e73fea273601b3ec9f702284573695e940f7e35d51db7e4b02659c"
+    },
+    {
+      "file": "services/api-gateway/internal/submission/store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "bad823d661bd1328c74bc74ce667ea8d1f9a9b9fecfc247f2f98da8c6dfc78a6"
+    },
+    {
+      "file": "services/api-gateway/internal/workerruntime/store_postgres.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "b260e8af94233c4dfdee875cfff15452cf85aa5fd0b0d9ed4f91a386ea85e5dc"
+    },
+    {
+      "file": "services/api-gateway/internal/workerruntime/store_postgres_batch48_test.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "e4692362d4313905708510a91001f316281471ab2658e175af97809fa61f1ad3"
+    },
+    {
+      "file": "services/api-gateway/internal/workerruntime/store_postgres_test.go",
+      "status": "pending",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "afb162dd221ce96bfadb362bb19483739120d52ef01075ee7259af1e67223c38"
+    },
+    {
+      "file": "services/api-gateway/migrations/000001_auth_rbac.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "97bf43089dc5003689e6e20beb836f96ade3992add4e13a5e962d8ff57eca054"
+    },
+    {
+      "file": "services/api-gateway/migrations/000002_organization.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "d923356a3a68948cddad43aec0e166201a40709faf97ebe6a95a92edd2f150cc"
+    },
+    {
+      "file": "services/api-gateway/migrations/000003_exam_management.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "2494852c2eb53c6e43bbab9c0e647d362ecac996be12f3b4793555fe17f166d2"
+    },
+    {
+      "file": "services/api-gateway/migrations/000004_paper_question.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "7f81460425598d57189eb0bf1fb7a0431ce84707af75a53d98ae807444eef8bc"
+    },
+    {
+      "file": "services/api-gateway/migrations/000005_file_upload.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "290f3204db73477611b25ac77d77a429d1eeb5ea86da3dd116635659005e87f4"
+    },
+    {
+      "file": "services/api-gateway/migrations/000006_submission_collection.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "41e142797995c00af2238354d11e33cef897318b64d33af4cf3881c7874835de"
+    },
+    {
+      "file": "services/api-gateway/migrations/000007_ocr_task.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "488c8065156b131d174bf9ec95b398d696e7b0114572adeb31ce96df062c13fb"
+    },
+    {
+      "file": "services/api-gateway/migrations/000008_answer_segment.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "70814e4e35633db18b5248749993ed5d38ad02cd86c975328cfdaba1d4c02dc5"
+    },
+    {
+      "file": "services/api-gateway/migrations/000009_orchestrator.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "a9a9e7aac532f0182f2c11ee2af41dd6ba11dec3015ece0ceaf1f5d1c1137d92"
+    },
+    {
+      "file": "services/api-gateway/migrations/000010_rule_grading.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "6d34c7ed72394c7accad66b580c0de2fe7072a6bca709ad21b865c88dc1acb75"
+    },
+    {
+      "file": "services/api-gateway/migrations/000011_subjective_ai_grading.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "a2c70cb26929a8061979c2304c1ceeb291b9cb0baaa625c7a10e35dfc5caa36b"
+    },
+    {
+      "file": "services/api-gateway/migrations/000012_evidence_check.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "84e08aae0cda9c777b725ce2d0ed5472f8d06dc6eb0aec4952d19a543e04d06c"
+    },
+    {
+      "file": "services/api-gateway/migrations/000013_human_review_workflow.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "896337b8ff6b242220f263e82a8e584f0ca62199aa86327c4e137ec726857a7d"
+    },
+    {
+      "file": "services/api-gateway/migrations/000014_double_mark_arbitration.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "6d161358f98afec5c5702561878033ed2872002720fb591eb9481c7cebce6535"
+    },
+    {
+      "file": "services/api-gateway/migrations/000015_final_grades_publishing.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "660abb14c3580ca17383080d190ede8c1265431909e4eaf2b71f1cf751d5c7d6"
+    },
+    {
+      "file": "services/api-gateway/migrations/000016_appeal_workflow.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "ca8edff4772d3a07d6f59ebe79b9e45d6d08a2c9bf74b603d7ec3a248d6f4103"
+    },
+    {
+      "file": "services/api-gateway/migrations/000017_report_analytics.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "38e2bf8c0cbb804882098e933f824d51772feafc6ee5e36ff4d777a3414b656a"
+    },
+    {
+      "file": "services/api-gateway/migrations/000018_audit_log_export.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "8a0cdb7ac93b8dfee600b10bde377524f75a30157ca9b7b1f4b9b5bee1e313ea"
+    },
+    {
+      "file": "services/api-gateway/migrations/000019_story044_rbac_hardening.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "11d5238b2b2a541dce6cd60843d9878877f940f28528752390413b7da2051917"
+    },
+    {
+      "file": "services/api-gateway/migrations/000020_story047_tenant_constraints.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "580d29749a8f77615a400749cc0b5800779a1c08cbd7e4f7098ecd67d8e405df"
+    },
+    {
+      "file": "services/api-gateway/migrations/000021_story049_ocr_worker_metadata.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "1b2429537b144d8ba6cdaf87a2d6c96656633de5e563a2c156f764f4084aa4c7"
+    },
+    {
+      "file": "services/api-gateway/migrations/000022_story050_image_quality_run.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "a8817c879e5f3b5fc2e7e88982bc3d88ad22090e49c853e210be3b255a1d2bfe"
+    },
+    {
+      "file": "services/api-gateway/migrations/000023_story051_agent_worker_runtime.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "8dfc376182497e0ceece39267af2b38ce324fa790857efff638baed4f4d94894"
+    },
+    {
+      "file": "services/api-gateway/migrations/000024_completed_scope_integrity_hardening.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "9665df027cffd4fbf6f46b8e2c5c94141d02eb54b03337eb22a57984ab5f3739"
+    },
+    {
+      "file": "services/api-gateway/migrations/000025_story053_product_shell_rbac.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "4261f41143bf59733de2dd871cab056bedecfea19766621d5389be2773a4c9c7"
+    },
+    {
+      "file": "services/api-gateway/migrations/000026_story054_exam_readiness.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "a1d6789368a2978ae665b2159e7451d30cea385292a7266faa7d1bc4744e9e68"
+    },
+    {
+      "file": "services/api-gateway/migrations/000027_story055_capture_processing.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "fbe5f8e1612b54402dbdb36b89560be98aeeda60368557289c96ad36a93dcc8d"
+    },
+    {
+      "file": "services/api-gateway/migrations/000028_story055_page_processing_role.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "517632b59261cf01caf9db6e65809ccb8d6c3bb9ae1c42443a48d82cf2241aed"
+    },
+    {
+      "file": "services/api-gateway/migrations/000029_story055_page_processing_task_types.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "d6661f39d723a751ac9e7c4a716710015d36139406238da4ca288b293f15ff07"
+    },
+    {
+      "file": "services/api-gateway/migrations/000030_story055_capture_quality_source_asset.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "3174ae0debf44082a1a18294e9e0484665a144b7d104d4a8230a4385fbb492b0"
+    },
+    {
+      "file": "services/api-gateway/migrations/000031_story055_candidate_page_matching.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "34ba7c7c66b3d2114b1cb11e1c79e4b4616d5a544ae5c5cd3e42f8fe724722d5"
+    },
+    {
+      "file": "services/api-gateway/migrations/000032_story055_registration_review.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "b29bec4df4e3e77996a49bffc17e4d480ba66b97b261bf642c566db91f3913f3"
+    },
+    {
+      "file": "services/api-gateway/migrations/000033_story055_capture_complete_operation.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "a4d526471373fce1ae7334aed9e15ac981a0eb2ddeb3fe6aff15ed424af70038"
+    },
+    {
+      "file": "services/api-gateway/migrations/000034_story055_manual_registration_correction.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "516a21d0917d4579a67c10b0a932b8ebb4dee4042dd8184fa91d3d39aa8c48ac"
+    },
+    {
+      "file": "services/api-gateway/migrations/000035_story055_manual_correction_apply.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "84c45f3f8cf296602a3b91dc9d6e5c4aa769aab7fb0e0de98566862d371f3713"
+    },
+    {
+      "file": "services/api-gateway/migrations/000036_story056_grading_workbench.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "14c1f6e21f966afb23a4168fcc981888586899f1741db484c88188f280648d15"
+    },
+    {
+      "file": "services/api-gateway/migrations/000037_story056_review_grade_link.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "52581c2244cd1a12ce0bb83addec80c764903213c8c7d1cf83061628239e5b54"
+    },
+    {
+      "file": "services/api-gateway/migrations/000038_story056_scoring_recovery.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "df543a3a1dac8a7aeea0537b0a77a458f6d48a5a3fbdb490993998bf0ceeb0fc"
+    },
+    {
+      "file": "services/api-gateway/migrations/000039_story056_template_omr_gate.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "bb4609a3ad2de855d546511a273264cc9ef0fc8dfcf3c6bd0c1df26d7461df4c"
+    },
+    {
+      "file": "services/api-gateway/migrations/000040_story056_template_difference_reference.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "fe69426a2a69abf3f2a4cf7ec97f1967d3f8ee8f8216da57dc3e4f3dd7fd1bbd"
+    },
+    {
+      "file": "services/api-gateway/migrations/000041_story056_omr_calibration_approval.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "72e4e9a13650504770772de5876ce5a204a2e987bd1162f9ddab11e769e596f8"
+    },
+    {
+      "file": "services/api-gateway/migrations/000042_story056_human_confirmed_count.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "97c0c70220a778eb1f5d797cbdf590c2aef2ab9aba2c885c1fa3dfbf33e63830"
+    },
+    {
+      "file": "services/api-gateway/migrations/000043_teacher_appeal_workflow.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "f4d1b604c68de42bf9d54b2899b6a6c56308d04df184d843748d318c7727cadd"
+    },
+    {
+      "file": "services/api-gateway/migrations/000044_grading_agent_integration.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "557b1bfc5d7dd241764beaac268f123e1a7a976799c99d923c3109b7ded3ae76"
+    },
+    {
+      "file": "services/api-gateway/migrations/000045_reconcile_published_exam_status.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "df6aef8268fb31c7507ff9393563e8c16dc873e3884c1b1bc4ae3a9e3ef373fe"
+    },
+    {
+      "file": "services/api-gateway/migrations/000046_reconcile_completed_ocr_runtime_tasks.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "3c8e7fef5d1bf8b4d63a5bd2146963d7c0e28aa8f7e81d3e11bffcaed1965695"
+    },
+    {
+      "file": "services/api-gateway/migrations/000047_remove_teacher_grader_system_read.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "46e8252b238e833834a95886d6ae55a140fe9137de548fedc14d7e7e99aa7d79"
+    },
+    {
+      "file": "services/api-gateway/migrations/000048_ocr_runtime_atomicity.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "5b024322defaa4e6c6f68a5104bea2b2361eece24c9934fd6db850dc50b96feb"
+    },
+    {
+      "file": "services/api-gateway/migrations/000049_remove_teacher_review_management.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "92cd37e0224df7d58d595f560faad50743e5957ef3b45ff5979da1ee0a1d8816"
+    },
+    {
+      "file": "services/api-gateway/migrations/000050_scoring_run_grade_candidate_indexes.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "d23e4f8102d40120d077319f76ed10098f5d1ffaf9970fa21422d0f5c950a57f"
+    },
+    {
+      "file": "services/api-gateway/migrations/000051_human_grade_ai_link.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "a7499dba86e2612fca7dfa4c435ab5eada7d4624743930f168dd307e210d8aa2"
+    },
+    {
+      "file": "services/api-gateway/migrations/000052_story060_exam_roster_attendance.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "2afd9884ba73aede58ad088d56214cd716be5a72b9d8b99835982e480b479495"
+    },
+    {
+      "file": "services/api-gateway/migrations/000053_story060_roster_query_indexes.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "e11aa07585176cafc0ee37f0436492bcbd5fc3373e9b3ac8fb5a80095f27138d"
+    },
+    {
+      "file": "services/api-gateway/migrations/000054_story060_student_sheet_identity.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "b08a837fc6d28f83aff0962cbb8129a43ede1246aa06600512c8de0fbe6bd79c"
+    },
+    {
+      "file": "services/api-gateway/migrations/000055_story060_sheet_reprint_lifecycle.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "6d17bdce7af161450027e42cf07e7c0a9c335c3c5d142e198febe1a7fd328a64"
+    },
+    {
+      "file": "services/api-gateway/migrations/000056_story060_template_omr_calibration.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "8224ba2e4eaaae323a9e0f430bea8faba49cf105b9f68ebe86f0099519f03462"
+    },
+    {
+      "file": "services/api-gateway/migrations/000057_story061_model_governance_foundation.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "2a74a333908f2a2dae42cebdb19dbe6b015d27d3843c4fa307eba00f19419d29"
+    },
+    {
+      "file": "services/api-gateway/migrations/000058_story061_governance_tenant_constraints.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "5f500123d653babc41a8e5930f9a3b5a12bdf7dc64b3e65cc43c86e6c0b4ed9a"
+    },
+    {
+      "file": "services/api-gateway/migrations/000059_story061_model_governance_rbac.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "f2b67174222b815af979270f6a07f7a565032e0f6b0e63fa160544f4778f502a"
+    },
+    {
+      "file": "services/api-gateway/migrations/000060_story061_sandbox_approval.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "d7303d9bcd5e1248e7dc184255139c3aea5f74f541a342a8645836de1164307c"
+    },
+    {
+      "file": "services/api-gateway/migrations/000061_story061_offline_model_evaluation.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "8ee04ae858a277fb3a46fff6f29706f86d031aca3f91b44327d0d5c4ddc184a2"
+    },
+    {
+      "file": "services/api-gateway/migrations/000062_story061_model_promotion.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "c39ed5b5695903d2efd3ebcac6fcc746d63d3df90fc0fadac2e7891ebc2850eb"
+    },
+    {
+      "file": "services/api-gateway/migrations/000063_story063_subjective_grading_runs.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "2fa20b84e2752d35d2298c264a4fc083ecd3a0224b0d965b7215f7048928df9e"
+    },
+    {
+      "file": "services/api-gateway/migrations/000064_story063_subjective_grading_batches.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "302da4cebaa00318b1415c94057988c011d3626c18c5e6f7656417cf7b911772"
+    },
+    {
+      "file": "services/api-gateway/migrations/000065_device_sessions.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "3201c1bdbf1aae4512c281dd4127b269ccaa1ba46e82f98f46a13cdc2286a0c7"
+    },
+    {
+      "file": "services/api-gateway/migrations/000066_access_scope_exam_revision.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "41e923a53c39c08d92429f2f26022d9c32c0844ea0e7b0d3c1e430582e53fcc9"
+    },
+    {
+      "file": "services/api-gateway/migrations/000067_file_asset_lifecycle.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "6dc8c512ebd06d62fa70e7e625d2966f54746685e636dc113cceb7494466dd41"
+    },
+    {
+      "file": "services/api-gateway/migrations/000068_strong_audit_outbox.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "cc86dd63ac2953c7123061c776f6371d772c35131d1e7d19c1490b1ce6c6c7cd"
+    },
+    {
+      "file": "services/api-gateway/migrations/000069_request_idempotency.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "c2f698208a8af40559609fa385d898745650bc5992310bb320712abd75ad85b0"
+    },
+    {
+      "file": "services/api-gateway/migrations/000070_outbox_delivery.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "3e1081f51a3d998d5c2d3b1c6ffd1fb4bdd762c1cae0d330e8fed1a45562f924"
+    },
+    {
+      "file": "services/api-gateway/migrations/000071_file_reconciliation.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "2aba49e12b9fac094720f2c97907bdc7d325d5b63eb923cac2f7d001001318dc"
+    },
+    {
+      "file": "services/api-gateway/migrations/000072_critical_entity_revisions.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "22c5ecbe8087019e651c5d14abf798922a4e083210a65c173b0eda10f9a222bd"
+    },
+    {
+      "file": "services/api-gateway/migrations/000073_list_pagination_indexes.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "2ae74dc97359fc1cd5302093f3430c399ff22798ca2641da19f9565d6dae1db3"
+    },
+    {
+      "file": "services/api-gateway/migrations/000074_transactional_strong_audit.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "30873d35afc9fc19264ec6e0270cc004376c0d29e86141088869ac564eaacfa4"
+    },
+    {
+      "file": "services/api-gateway/migrations/000075_subjective_grading_worker_role.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "41adf808cf14ecb182aee83d0137c665aece4c7e653be269f4d3a8e0d068c0e9"
+    },
+    {
+      "file": "services/api-gateway/migrations/000076_storyA01_assessment_domain.sql",
+      "status": "protected",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "已核对选定DDL/SQL或调用边界，尚未完整审读文件",
+      "source_sha256": "d7eb5c6f9fbcfeec96d7b692ffe9900b3d67ef680c1bab12b1951ea871d2ace7"
+    },
+    {
+      "file": "services/api-gateway/migrations/000077_storyA06_review_annotations.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "789fe456438edee72aa3f6fef93f652d8dda9e9077213658989ea34a3036f881"
+    },
+    {
+      "file": "services/api-gateway/migrations/000078_storyA08_gold_papers.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "d2075679338b1d5ba8c1fe317e68bc53e5bbd6d8f940d4e92d4d240f4ecd32fe"
+    },
+    {
+      "file": "services/api-gateway/migrations/000079_storyA09_grader_calibration.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "e2b57c44ae719116cdb6d8433b2b69826a828ba43aafd45e2dd901d2ede2eb9c"
+    },
+    {
+      "file": "services/api-gateway/migrations/000080_storyA07_answer_groups.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "ef0c6a3bbe603247415d2fa88cb1999c506aaad199be5a0985b62ec88ec63723"
+    },
+    {
+      "file": "services/api-gateway/migrations/000081_storyA10_seed_quality.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "e9488cde1d5c8d6b9466364b1c8fc2db3f4504c251c14605666554c5795059bb"
+    },
+    {
+      "file": "services/api-gateway/migrations/000082_storyA11_grader_drift.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "a51e5cf7c7bdd3a1dd2ba91bb66666d39c6333982025c045fdbdfb4d0ad400d7"
+    },
+    {
+      "file": "services/api-gateway/migrations/000083_storyA12_backmark.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "e7eba05730e6dc46fa22da1edb32aa67e028e5c83df2731981c4d935ac1d7556"
+    },
+    {
+      "file": "services/api-gateway/migrations/000084_storyA14_ai_eligibility.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "9f0c66aeeebdca8f8eb527e38308efec43a66937c3cb840621bc03149f557c16"
+    },
+    {
+      "file": "services/api-gateway/migrations/000085_storyA16_grading_evaluation.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "f335bdb7d878fbcec317b9e1c9c36ff9ef646a997d9ee06e5fc7cc493b4b113d"
+    },
+    {
+      "file": "services/api-gateway/migrations/000086_storyA15_model_calibration.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "095874a8943046ecc1010ba3efd238b083eeb8f6d74b8676ead64cf164f6c7fa"
+    },
+    {
+      "file": "services/api-gateway/migrations/000087_storyA17_ai_human_disagreement.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "21b74b5c7389a7a3ba473ea845ac8080c88c87092961162564172a36eedd3bd2"
+    },
+    {
+      "file": "services/api-gateway/migrations/000088_storyA18_score_releases.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "f01656a79060f9a7d18e22228057361d0e83462a4c01724cee010f406414e864"
+    },
+    {
+      "file": "services/api-gateway/migrations/000089_storyA19_regrade_workflow.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "9d23319219ba2664f4eeabc6617c492a982a7c00b4ae10517b154f4be95f0ef4"
+    },
+    {
+      "file": "services/api-gateway/migrations/000090_storyA20_release_gate.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "bbb8911ca0632edce1df1194f505135efe1be649f1eb8181991a07020dda2474"
+    },
+    {
+      "file": "services/api-gateway/migrations/000091_storyA21_student_portal.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "1198bb44fb2eecab8763751ac7ce658b4ab9b3b806518ce62914721aa0613736"
+    },
+    {
+      "file": "services/api-gateway/migrations/000092_storyA22_question_appeal.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "f12928039162d02db8532528980884e058ebb5d0d27cdaefd0a68efe56d7a638"
+    },
+    {
+      "file": "services/api-gateway/migrations/000093_storyA24_offline_scan_spool.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "9728122b0bda8b175460dd4fd3f31a9e3750c37a6fc8d490be693fd1a7747fc1"
+    },
+    {
+      "file": "services/api-gateway/migrations/000094_storyA25_scanner_profiles.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "3ed89cba6fe09a8d35c628287a293b8069332789e1a6673b2d6d7f2f1ce89900"
+    },
+    {
+      "file": "services/api-gateway/migrations/000095_storyA26_processing_state.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "266b8c4595e36e6e9ad9a1b7c1664eedc8544fbbb0e25e3b6cb1f3e8c1526e0e"
+    },
+    {
+      "file": "services/api-gateway/migrations/000096_storyA19_regrade_candidate_evidence.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "f11bd642398f15f7f171673112eacbf2bab0c658644b950f647fe4dc89562804"
+    },
+    {
+      "file": "services/api-gateway/migrations/000097_story_math00_understanding_contract.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "426a89e91572dc8fbf0b1fdac54fcfc5b2b8adee017b00b71f4d5b2e25cfd4ca"
+    },
+    {
+      "file": "services/api-gateway/migrations/000098_story_math07_corrections.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "fd4b5b656e1e0e2c2a330ff4f25081bfb1a7b52c4fcbd78c70f6babe46a4842a"
+    },
+    {
+      "file": "services/api-gateway/migrations/000099_story_math08_pilot_gate.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "ddc8ac8f70699ff967dc522ab5a78695db7a1a9d2aeb91887ef8fa623d083cbe"
+    },
+    {
+      "file": "services/api-gateway/migrations/000100_story_math_runtime_pipeline.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "f343be1faa128542d9db72a927727e74ced96614d54fc1ac07bb6d80221dfebc"
+    },
+    {
+      "file": "services/api-gateway/migrations/000101_question_appeal_single_submission.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "ef724a27e804744194430e38c5a2c85c7df7127d2f14c7ab6de5d2c9b753475a"
+    },
+    {
+      "file": "services/api-gateway/migrations/000102_paper_document_import.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "e6e5134a52b64c018ad959648f53edd37d08ca3cd0a4197c8b2391753b9db308"
+    },
+    {
+      "file": "services/api-gateway/migrations/000103_school_admin_review_work.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "40ee6dfc01140e89d5595d1f15b145c1b59dd0d357310f0d3814579a9118e3c6"
+    },
+    {
+      "file": "services/api-gateway/migrations/000104_exam_sessions.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "f51e87245aa5c503d389a4ac2755a3d58bb4c8d271a2ddfe4a9eef1b8161d0ff"
+    },
+    {
+      "file": "services/api-gateway/migrations/000105_grade_education_stage.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "3fb5d2b44aa90b5dd17ce594e1bf8368dfe23ca1191ba7836f7d15efbaf2e98e"
+    },
+    {
+      "file": "services/api-gateway/migrations/000106_exam_templates.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "f8f5f26992b093d85807f5e755f54accf269d4f9c8a223a089598e5871a9cf6d"
+    },
+    {
+      "file": "services/api-gateway/migrations/000107_exam_candidate_snapshot.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "7071351fba58caefdc6485915ccc9efec4480ced1faf1c792b9027955dc51de9"
+    },
+    {
+      "file": "services/api-gateway/migrations/000108_school_enrollment_model.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "aa4af3ed3f40af6614682a1c21450e9290c20c0dcb1faef4f4c06c580f0aecbe"
+    },
+    {
+      "file": "services/api-gateway/migrations/000109_grading_error_attribution.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "738f04055ec6652c1e52b7cb7aca4f25d59622d8815367cfe7761e2c92fba958"
+    },
+    {
+      "file": "services/api-gateway/migrations/000110_paper_import_sources_candidates.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "52527aa3c33cf7248166e2b2358ff25caa1b42b4addff42630b4a93d48992188"
+    },
+    {
+      "file": "services/api-gateway/migrations/000111_authorization_model_hardening.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "51671cf7cede4b8c8c4c109bac14b43e4d140d2b8dedf18777d2b8495b3be7e4"
+    },
+    {
+      "file": "services/api-gateway/migrations/000112_backfill_school_admin_rbac.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "531dca5987c0daacccdb5791fd60b3d26eb996d04365dcba179917ed55188cf6"
+    },
+    {
+      "file": "services/api-gateway/migrations/000113_local_authorization_repair.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "dfad1faa4ce941ed2052727093a35390d18cbee53685824d9f33b3c4d9b033df"
+    },
+    {
+      "file": "services/api-gateway/migrations/000114_authorization_repair_followup.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "e39c63db18d4a7374fe612a9878937a51346a864098fde43d7143e0991389805"
+    },
+    {
+      "file": "services/api-gateway/migrations/000115_school_activity_projection.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "e862484031e00dbf1bf81f4f5b02567354a7f1d4af4c14b3722345928172c405"
+    },
+    {
+      "file": "services/api-gateway/migrations/000116_paper_import_rubric_candidates.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "cd89fa46e2e148c21c9649d566b7fb78caec0eeecda199b833cbb5f8076994b3"
+    },
+    {
+      "file": "services/api-gateway/migrations/000117_student_learning_portal.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "5b20862f54ac96468a5df58725fca137da4392b30d3a22545c597cfbf82001a8"
+    },
+    {
+      "file": "services/api-gateway/migrations/000118_managed_model_api_config.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "53df81e6f55de05cfd9ea5eb4d180ae8b98dc9fd5e48ece23a21d6c07f3ff245"
+    },
+    {
+      "file": "services/api-gateway/migrations/000119_paper_import_cancellation.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "d51f7de772c7b1f8a3da1c8012c0ef208883d83e709119cf28e70720f22243ea"
+    },
+    {
+      "file": "services/api-gateway/migrations/000120_paper_import_parse_runtime.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "176040946b72f00287ca5107a74f34703773f3f4d6c7743f9066e6dbf0ba4533"
+    },
+    {
+      "file": "services/api-gateway/migrations/000121_exam_session_command_id.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "4f631eeb9938fcdd2da241d828be76e205182db869696c6ee808e53d7e979eed"
+    },
+    {
+      "file": "services/api-gateway/migrations/000122_processing_projection_refresh.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "165581d11be512ef26eb914b8018dfbd86af82ab8efe09e807b243979f70d39b"
+    },
+    {
+      "file": "services/api-gateway/migrations/000123_reliability_command_runs.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "07a3932a540c8cc475e26298d515d69e8850e501fe55f778cc0c310e496c0105"
+    },
+    {
+      "file": "services/api-gateway/migrations/000124_import_input_integrity.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "0f0aef63b69cad1e6eb824cfb4b52c2f5dde3ec217c9def2630c16c849463f85"
+    },
+    {
+      "file": "services/api-gateway/migrations/000125_projection_lifecycle_identity.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "0e641d0bd94bb38083996e58eb87148c02ca818fe6b9a4e7117f4078e3ff7918"
+    },
+    {
+      "file": "services/api-gateway/migrations/000126_capture_batch_command.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "6a790d135015d6ec63d60e1ad83521ee400cf3d6d037f27e65cf743eec9f8211"
+    },
+    {
+      "file": "services/api-gateway/migrations/000127_scoring_run_command.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "f3be83138b57ed04254fa5e376395646cbac12ac24d36e05f3169b537ee877ff"
+    },
+    {
+      "file": "services/api-gateway/migrations/000128_subjective_batch_commands.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "de41566cee88e7b5e89b3bdbcb20bbcc0abe62166d7e67d10f9b146422d7e0b3"
+    },
+    {
+      "file": "services/api-gateway/migrations/000129_business_command_receipts.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "48c6892f07db51aca6e9d2c8a5d0e2f55b9f67de2ea425d873cc81c7e7cbdb36"
+    },
+    {
+      "file": "services/api-gateway/migrations/000130_review_round_identity.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "4d9c595d709cdf6cc6447e8ce2cf3559c8d0210792a8b9775dbbef60f9936e68"
+    },
+    {
+      "file": "services/api-gateway/migrations/000131_exam_answer_sheet_template_binding.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "64e400b9c389911c3a6aec2828f770be8cf86f82aab5083e3a93df6346a6b062"
+    },
+    {
+      "file": "services/api-gateway/migrations/000132_managed_model_api_health.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "a3776caec94614254641d16a5b9875f7b0ec291d58e2db59dc05c681b04e97c1"
+    },
+    {
+      "file": "services/api-gateway/migrations/000133_managed_model_api_probe_modes.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "cb74e796a34357f5d44b144c8da8fb89fb976ee7943855ac85828ecd25536053"
+    },
+    {
+      "file": "services/api-gateway/migrations/000135_paper_formula_recognition.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "b8646f0c1dbfd584539c8e1c4d48fbe14d41e941ab5a96e331bf55b28b29b1c3"
+    },
+    {
+      "file": "services/api-gateway/migrations/000136_managed_model_api_capability_diagnostics.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "87235ac914010d4cd67e1fa13f1d27d0d6bbe71be44d8c201e64573286b305c5"
+    },
+    {
+      "file": "services/api-gateway/migrations/000137_worker_task_progress.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "94f591600bc78e0f8868d5e62bec8b8942df30ff0ff5027c018f845c45f80e10"
+    },
+    {
+      "file": "services/api-gateway/migrations/000138_business_command_payload.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "2908010135a82ba79f7b3e0b9ddd3c84fa01e5103d3a9cc4ec8d8c725215aced"
+    },
+    {
+      "file": "services/api-gateway/migrations/000139_high_risk_tenant_rls.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "cae3cab03f52bd173466341c81bf7cc3e2ec5be2f5eb0804a1001ed6fe5ea9d9"
+    },
+    {
+      "file": "services/api-gateway/migrations/000140_question_bank_core.sql",
+      "status": "protected",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "已核对选定DDL/SQL或调用边界，尚未完整审读文件",
+      "source_sha256": "e2ee94ec86980dad4429d501cef18ab2e1bc0f2600e2c6bdc06404fdd7d25f15"
+    },
+    {
+      "file": "services/api-gateway/migrations/000141_question_bank_publication.sql",
+      "status": "protected",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "已核对选定DDL/SQL或调用边界，尚未完整审读文件",
+      "source_sha256": "43f9a3c8f8523aa0f764a7d1059fb4f17244ecfab38339b6d83fa02ce4fff251"
+    },
+    {
+      "file": "services/api-gateway/migrations/000142_question_bank_metadata_acl_search.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "9cdd27981b9bae04b1ba176fd17f73feeb687d2b3d647784c391c28cc7fb2d91"
+    },
+    {
+      "file": "services/api-gateway/migrations/000143_auth_identity_security_epoch.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "5eba28ace1084ce2fca0f424f09028fcb92c7c609a022d02864d86da16e5c7d3"
+    },
+    {
+      "file": "services/api-gateway/migrations/000144_question_bank_snapshot_import.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "aa88e1b2be79feb7e7d7a926ff7b90c473b4de168477d18ee17a8676148d9784"
+    },
+    {
+      "file": "services/api-gateway/migrations/000145_story_math09a_mixed_perception.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "bc541eefbd5fef258806e44119a67fd7951324220ed83e933e6e20b3a933183a"
+    },
+    {
+      "file": "services/api-gateway/migrations/000146_story_math11_symbolic_verification_stage.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "ed8ef706c09e3b7f1eb98d17c01c9ba153711e6e1b249aae287c36ba2103cbfc"
+    },
+    {
+      "file": "services/api-gateway/migrations/000147_auth_dynamic_risk_shadow.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "6c5b0f482cff01e14c947264b8174d6b86eec4c807aa67801dd42447528bc26b"
+    },
+    {
+      "file": "services/api-gateway/migrations/000148_story_math13_grading_bindings.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "4b5a38ddd913740f2e9e40b3bd83bd3edfa9c7e6b60057d7ae2f77308c42f703"
+    },
+    {
+      "file": "services/api-gateway/migrations/000149_auth_totp_scoped_challenges.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "3e892ce1a98c8315c6eb0512b1ae5fb122eee68f654049786be0c340b0322c81"
+    },
+    {
+      "file": "services/api-gateway/migrations/000150_auth_mfa_security_notification_intents.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "33b553c9b1b8236ba108bad110f1335c427b8f5d9dad4e1938315e495550e992"
+    },
+    {
+      "file": "services/api-gateway/migrations/000151_capture_upload_completion_lease.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "ac14f1545dbcc5117cc8093ee50d4193044bc7828674139d5120a5049bcd3db8"
+    },
+    {
+      "file": "services/api-gateway/migrations/000152_paper_import_visual_pages.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "c47acf3a1b13d0816d25612abdcac64b2205ad56a1bcf25349308232220f5fbb"
+    },
+    {
+      "file": "services/api-gateway/migrations/000153_paper_import_model_usage.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "7d5e200394e36e7975f8d907385e47ac2d26db8a019053fc7db9644f61f60e71"
+    },
+    {
+      "file": "services/api-gateway/migrations/000154_auth_wechat_login.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "af04da6d639739ecd17348d94f7d6138c47ad83fa2154252310033a8134a1d5a"
+    },
+    {
+      "file": "services/api-gateway/migrations/000155_subjective_multi_agent_panel.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "82db290ede117015fe4dbd7d5d3c6a7ec1328f2713c9eb4ba2425e66ac82a146"
+    },
+    {
+      "file": "services/api-gateway/migrations/000156_model_role_binding.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "d23221d600d3366c969a5eadd14aed7b9fc1e9cb62251a618ef1edd19eaf4c99"
+    },
+    {
+      "file": "services/api-gateway/migrations/000157_subjective_panel_evaluation.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "e547212648a55c78519be8fc96c242d33ff1d17a28df1a1b11116989fb737d54"
+    },
+    {
+      "file": "services/api-gateway/migrations/000158_subjective_panel_policy.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "9beaa74c23a0a854cc5e61a0cdce6b6ca87444371348bd13a4df9867f3830950"
+    },
+    {
+      "file": "services/api-gateway/migrations/000159_managed_model_api_multi_model.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "3561985738fbcc6eccbdf9d3f2c1cfc932eabc37f015400a91237e3922a0db1e"
+    },
+    {
+      "file": "services/api-gateway/migrations/000160_subjective_panel_model_set_provenance.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "a56fcb843b712bdf74ae56d8d25f472898a13fd19b4bc9f5cb958520fa7708de"
+    },
+    {
+      "file": "services/api-gateway/migrations/000161_platform_panel_model_binding_actor.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "255c0cd01fda8a2e62cde00d2e2d3af44d06046f6ddb8736cc026105b7360a82"
+    },
+    {
+      "file": "services/api-gateway/migrations/000162_subjective_panel_legacy_hardening.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "4354c1b8cc988ad5c28d923e76c34e7b522d26213b709fd75add2d556078e308"
+    },
+    {
+      "file": "services/api-gateway/migrations/000163_answer_group_v2_candidate_quarantine.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "0bbf50be8d43b8b6dbc0049f6bcbe49bbf7068c04909ca43ba66a0bc13e9a4dc"
+    },
+    {
+      "file": "services/api-gateway/migrations/000164_score_release_anonymous_page.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "3c182825c8013738d9f6ea2ffd306742ca1acb193695d7bc0da0fdf796b7c76b"
+    },
+    {
+      "file": "services/api-gateway/migrations/000165_platform_school_operations.sql",
+      "status": "protected",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "已核对选定DDL/SQL或调用边界，尚未完整审读文件",
+      "source_sha256": "22e6dd63b500585ad37fb8deb7ddb616d2ab0a7fa68044fb80eb7d0cfd1a3646"
+    },
+    {
+      "file": "services/api-gateway/migrations/000166_managed_model_probe_transient_status.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "20e7493fe84e863cbe5d1f76ceb1f0269357c910b7fceba0e2cb8b55b4a905eb"
+    },
+    {
+      "file": "services/api-gateway/migrations/000167_model_management_rbac_alignment.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "3486609f9a9e2eb92cd0fcef951826818182470b54deff078d2929458aa076cb"
+    },
+    {
+      "file": "services/api-gateway/migrations/000168_managed_model_soft_delete_audit.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "254516489eb4e6959430bba19e84ba6d7c20d88d9b89eeab3a534bef0b41b124"
+    },
+    {
+      "file": "services/api-gateway/migrations/000169_model_governance_managed_config_bridge.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "afded2047e756e84b71046564dfa54ef063aa9b8533bfcf45e368773c21c3d3e"
+    },
+    {
+      "file": "services/api-gateway/migrations/000170_model_evaluation_managed_config.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "fc24477b5cdec5124ae12c1cf339c736213a7d8e0d04ddf79e5302fe6aa1dbde"
+    },
+    {
+      "file": "services/api-gateway/migrations/000171_model_approval_managed_config.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "ad8cc1d9472d1d82b9191b1860a73f371bfa6fdc0f215ab71c457a478decd26e"
+    },
+    {
+      "file": "services/api-gateway/migrations/000172_model_policy_managed_config.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "665e9fa09640d1dcc951db7b081ec49820f5c4e73bd1bb18f87870d3d126eb41"
+    },
+    {
+      "file": "services/api-gateway/migrations/000173_model_sandbox_managed_config.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "8b9a7186dabd0ddf16adf851bd4e6df51503c529f3d314487523d6c8013994d6"
+    },
+    {
+      "file": "services/api-gateway/migrations/000174_managed_model_permissions.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "b7f8dd4f52eeda673665cf013f03625c862f41de25cf56326e6dfd5552c89f2e"
+    },
+    {
+      "file": "services/api-gateway/migrations/000175_model_call_fact_managed_identity.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "a71ffcd0bf58569763a0ed961204ecc98b4a8555815e403714362b7254bee07c"
+    },
+    {
+      "file": "services/api-gateway/migrations/000176_managed_model_api_multiple_credentials.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "95d60fcb66bb69118a749c9df78822e5913beb56315d05f583e42787cdc4a18e"
+    },
+    {
+      "file": "services/api-gateway/migrations/000177_scoring_ai_batch_link.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "387dd4b3603102fa8b3011cec952bb4a16240517dd7fa6ca95004356d3e184db"
+    },
+    {
+      "file": "services/api-gateway/migrations/000178_scoring_double_mark_cancel.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "e441e5569e4f821f9433adc0e8ac5d469ee2e0666f7f4d1c86fdaeed9c3c5a9d"
+    },
+    {
+      "file": "services/api-gateway/migrations/000179_question_import_options.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "d8b613d486f4066efdcdecd50dc4d0da80c89ffb6fbeee3f16b3ae5fc777e932"
+    },
+    {
+      "file": "services/api-gateway/migrations/000180_exam_candidate_roster_freeze.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "7fba96f861bf4fdd6b720bc5b7c6ea78597ece7f294b9376795b8cd8e3189ddc"
+    },
+    {
+      "file": "services/api-gateway/migrations/000181_paper_material_structure.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "7a1026cdfa2ad5a9952ab11fe73f7388d29df9081a8b6a67b31c88ec710c83b7"
+    },
+    {
+      "file": "services/api-gateway/migrations/000182_answer_sheet_source_purpose.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "79562a07babfb1ddceb2edd4428d48f30a2fcc730613a97500e3d90e82201691"
+    },
+    {
+      "file": "services/api-gateway/migrations/000183_exam_management_archive.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "96b3a218b7a0043d279b5ca016ff3538ac6a584976aa491daed2a11902137b36"
+    },
+    {
+      "file": "services/api-gateway/migrations/000184_model_role_binding_revision.sql",
+      "status": "protected",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "modified": false,
+      "reason": "已完整审读可见源码及规则，未改运行输入；数据库执行待验证",
+      "source_sha256": "2fba5dba633c4dd6e181dc2a7f0da97d5939ea579a959929ee0a24fe9469a103"
+    },
+    {
+      "file": "services/api-gateway/migrations/baseline/000020_fingerprint.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "35a820c7daa0f944c0ba218b45a59bd8e2ec44f8e53157d0356e3296711eb25a"
+    },
+    {
+      "file": "services/api-gateway/migrations/tests/000169_bridge_assert.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "c8138d15160d17a01c58bf7c252431e780a55c3d729ac77b47b9bf4b952aa8bb"
+    },
+    {
+      "file": "services/api-gateway/migrations/tests/000169_bridge_fixture.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "3971263f09b4488113482defad0f23611e4f1a6bf6588862a86191475cf352bc"
+    },
+    {
+      "file": "services/api-gateway/migrations/tests/000170_171_managed_flow_assert.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "5518cfdd6c3d03bbb282ac65ce5deeda2b28108ada804afebf4c1b3baefbade2"
+    },
+    {
+      "file": "services/api-gateway/migrations/tests/000172_policy_assert.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "21edae10a6bddadf5f1ad6c8b4dc1a4df18df0b0436de6fe3eb013e88c253524"
+    },
+    {
+      "file": "services/api-gateway/migrations/tests/000172_policy_fixture.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "a3974a7c4b83c9b7bcfc9a7159ea95dc7f4b77cb14df14082c669433905aa37e"
+    },
+    {
+      "file": "services/api-gateway/migrations/tests/000173_sandbox_assert.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "91e80f4621f975de1dfba567d031774a28020b6af32afbd3516ce8ceebc854c7"
+    },
+    {
+      "file": "services/api-gateway/migrations/tests/000173_sandbox_fixture.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "c69f4e1321c3f0c527d46e9c475e37c83f1b1c3d7272903b1ee8266c190bc467"
+    },
+    {
+      "file": "services/api-gateway/migrations/tests/000175_call_fact_assert.sql",
+      "status": "protected",
+      "read_status": "not_manually_reviewed",
+      "analysis_status": "pending",
+      "modified": false,
+      "reason": "SQL自动清点/文件盘点；未计入人工审读完成",
+      "source_sha256": "75860edbd8b84bdb809fd1bf7cf32babd94da606dd1d2ba84cd6ede1d3da1467"
+    }
+  ],
+  "review_basis": "人工审读记录仅对应source_sha256；重新枚举或源码变化不能自动续认完成"
+}

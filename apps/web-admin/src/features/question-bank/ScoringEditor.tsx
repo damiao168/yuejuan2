@@ -20,6 +20,7 @@ import type {
 import { questionBankApi } from "../../api/questionBank";
 import { getUserErrorMessage } from "../../api/client";
 import { uploadFile } from "../../api/files";
+import { createScoringExample, StructuredAnswerEditor, StructuredListEditor } from "../../components/StructuredTeacherFields";
 
 const initial: QuestionBankScoring = {
 	answer: null,
@@ -50,6 +51,11 @@ type Values = {
 	use_policy: QuestionBankScoring["use_policy"];
 };
 const json = (v: unknown) => JSON.stringify(v, null, 2);
+function answerText(value: unknown) {
+	if (value == null) return "";
+	if (typeof value === "string") return value;
+	return json(value);
+}
 // 答案可能是文本、布尔值或数组；合法 JSON 保留原结构，解析失败则按普通文本提交，避免改写教师输入。
 function answerValue(v: string): unknown {
 	try {
@@ -60,7 +66,7 @@ function answerValue(v: string): unknown {
 }
 function arrayValue(v: string): unknown[] {
 	const a: unknown = JSON.parse(v || "[]");
-	if (!Array.isArray(a)) throw Error("请填写有效的列表");
+	if (!Array.isArray(a)) throw new Error("请填写有效的列表");
 	return a;
 }
 
@@ -71,19 +77,22 @@ export function ScoringEditor({
 	onDirty,
 	canManageFiles,
 	actorId,
-}: {
+	onDraftSnapshot,
+}: Readonly<{
 	version: QuestionBankVersion;
 	disabled: boolean;
 	onSaved: (v: QuestionBankVersion) => void;
 	onDirty: (v: boolean) => void;
 	canManageFiles: boolean;
 	actorId: string;
-}) {
+	onDraftSnapshot?: (draft: unknown) => void;
+}>) {
 	const { message } = App.useApp();
 	const [form] = Form.useForm<Values>();
 	const loaded = useRef("");
 	const revision = useRef(0);
 	const pending = useRef<{ fingerprint: string; key: string } | null>(null);
+	const savingRef = useRef(false);
 	const [saving, setSaving] = useState(false);
 	const [assets, setAssets] = useState<QuestionBankScoring["assets"]>(
 		version.scoring.assets,
@@ -119,12 +128,7 @@ export function ScoringEditor({
 		const s = version.scoring ?? initial;
 		setAssets(s.assets);
 		form.setFieldsValue({
-			answer:
-				s.answer?.standard_answer == null
-					? ""
-					: typeof s.answer.standard_answer === "string"
-						? s.answer.standard_answer
-						: json(s.answer.standard_answer),
+			answer: answerText(s.answer?.standard_answer),
 			equivalent: json(s.answer?.equivalent_answers ?? []),
 			absolute: s.answer?.tolerance.absolute,
 			relative: s.answer?.tolerance.relative,
@@ -142,12 +146,18 @@ export function ScoringEditor({
 			use_policy: s.use_policy,
 		});
 	}, [version, form]);
+	useEffect(() => { onDraftSnapshot?.({ fields: form.getFieldsValue(true), assets }); }, [assets, form, onDraftSnapshot]);
 	async function save(values: Values) {
+		if (disabled || savingRef.current) return;
+		savingRef.current = true;
 		setSaving(true);
 		try {
-			const tolerance: { absolute?: number; relative?: number } = {};
+			const steps = arrayValue(values.steps) as NonNullable<QuestionBankScoring["solution"]>["steps"];
+			const tolerance: { absolute?: number; relative?: number } = { ...version.scoring.answer?.tolerance };
 			if (values.absolute != null) tolerance.absolute = values.absolute;
+			else delete tolerance.absolute;
 			if (values.relative != null) tolerance.relative = values.relative;
+			else delete tolerance.relative;
 			const rubric: RubricInput | null = values.rubricEnabled
 				? {
 						status: "approved",
@@ -168,18 +178,17 @@ export function ScoringEditor({
 			const scoring: QuestionBankScoring = {
 				answer: values.answer.trim()
 					? {
-							standard_answer: answerValue(values.answer),
+							standard_answer: values.answer === answerText(version.scoring.answer?.standard_answer) ? version.scoring.answer?.standard_answer : answerValue(values.answer),
 							equivalent_answers: arrayValue(values.equivalent),
 							tolerance,
 						}
 					: null,
-				solution: values.solution.trim()
+				// 分步解析可单独存在；没有总述时也必须保存教师填写的步骤。
+				solution: values.solution.trim() || steps.length > 0
 					? {
 							raw_text: values.solution,
-							steps: arrayValue(values.steps) as NonNullable<
-								QuestionBankScoring["solution"]
-							>["steps"],
-							source_refs: [],
+							steps,
+							source_refs: version.scoring.solution?.source_refs ?? [],
 						}
 					: null,
 				rubric,
@@ -208,6 +217,7 @@ export function ScoringEditor({
 				),
 			);
 		} finally {
+			savingRef.current = false;
 			setSaving(false);
 		}
 	}
@@ -216,7 +226,7 @@ export function ScoringEditor({
 			form={form}
 			layout="vertical"
 			onFinish={save}
-			onValuesChange={() => onDirty(true)}
+			onValuesChange={() => { onDirty(true); onDraftSnapshot?.({ fields: form.getFieldsValue(true), assets }); }}
 			disabled={disabled || saving}
 			className="question-bank-scoring"
 		>
@@ -224,18 +234,18 @@ export function ScoringEditor({
 			<Form.Item
 				name="answer"
 				label="标准答案"
-				extra={'选择题填 A；多选题填 ["A","B"]；判断题填 true 或 false。'}
+				extra="按题型选择或逐项填写；系统会保留结构化答案。"
 			>
-				<Input.TextArea autoSize={{ minRows: 2, maxRows: 6 }} />
+				<StructuredAnswerEditor questionType={version.question_type} options={version.options} disabled={disabled || saving} />
 			</Form.Item>
 			<Form.Item name="equivalent" label="等价答案列表">
-				<Input.TextArea autoSize={{ minRows: 1, maxRows: 4 }} />
+				<StructuredListEditor itemLabel="等价答案" disabled={disabled || saving} />
 			</Form.Item>
 			<Space wrap>
-				<Form.Item name="absolute" label="绝对容差">
+			<Form.Item name="absolute" label="允许绝对误差" extra="例如答案为10，填写0.1可接受9.9至10.1。">
 					<InputNumber min={0} />
 				</Form.Item>
-				<Form.Item name="relative" label="相对容差">
+			<Form.Item name="relative" label="允许相对误差（比例）" extra="0.01表示允许1%的误差。">
 					<InputNumber min={0} />
 				</Form.Item>
 			</Space>
@@ -243,7 +253,7 @@ export function ScoringEditor({
 				<Input.TextArea autoSize={{ minRows: 3, maxRows: 10 }} />
 			</Form.Item>
 			<Form.Item name="steps" label="分步解析列表">
-				<Input.TextArea autoSize={{ minRows: 1, maxRows: 6 }} />
+				<StructuredListEditor itemLabel="解析步骤" newItem={{step_no:1,content:""}} disabled={disabled || saving} />
 			</Form.Item>
 			<h3>评分标准</h3>
 			<Form.Item
@@ -320,7 +330,7 @@ export function ScoringEditor({
 											name={[name, "evidence"]}
 											label="证据要求列表"
 										>
-											<Input.TextArea autoSize={{ minRows: 1, maxRows: 6 }} />
+											<StructuredListEditor itemLabel="核对要求" newItem={{type:"concept",target:""}} disabled={disabled || saving} />
 										</Form.Item>
 										<Button onClick={() => remove(name)}>移除评分点</Button>
 									</div>
@@ -342,10 +352,10 @@ export function ScoringEditor({
 						)}
 					</Form.List>
 					<Form.Item name="deductions" label="扣分规则列表">
-						<Input.TextArea />
+						<StructuredListEditor itemLabel="扣分规则" newItem={{description:"",score:-1}} disabled={disabled || saving} />
 					</Form.Item>
 					<Form.Item name="examples" label="评分示例列表">
-						<Input.TextArea />
+						<StructuredListEditor itemLabel="评分示例" newItem={createScoringExample()} disabled={disabled || saving} />
 					</Form.Item>
 				</>
 			) : null}

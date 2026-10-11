@@ -1,0 +1,15 @@
+{
+  "same_test_counts": true,
+  "same_complete_business_proofs": true,
+  "proof_count": 46,
+  "test_counts": {
+    "pass": 58
+  },
+  "baseline_overlay_only": true,
+  "workspace_sha256": "2f62dba38f567106e5701c0ede4812b83a026f170a8658cf8248a3cd3e9db04f",
+  "evidence": [
+    "root-go-02-baseline-result.json",
+    "root-go-02-current-result.json"
+  ],
+  "sonar_confirmation": "pending"
+}

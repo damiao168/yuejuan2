@@ -1,5 +1,4 @@
-// Package graderdrift turns hidden Seed observations into bounded, manager-only
-// reviewer quality evidence. It never receives or returns Gold answer content.
+// Package graderdrift 将隐藏 Seed 观察转为范围受限、仅管理员可见的复核者质量证据；它不接收或返回 Gold 答案内容。
 package graderdrift
 
 import (
@@ -48,8 +47,7 @@ const (
 	IncidentResolved     IncidentStatus = "resolved"
 )
 
-// QualityWindow is aggregate-only: no Gold IDs, reference answers, submitted
-// answer contents, or student information are retained here.
+// QualityWindow 只保留聚合信息，不保留 Gold ID、参考答案、已提交答案内容或学生信息。
 type QualityWindow struct {
 	ID                        string       `json:"id"`
 	ExamID                    string       `json:"exam_id"`

@@ -56,53 +56,8 @@ func TestScoringRunBatchIdentityAndRetryCandidates(t *testing.T) {
 	if _, err := store.FailedBatchSegments(ctx, "other-tenant", batch.ID); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("cross-tenant retry candidates must be hidden: %v", err)
 	}
-	for _, tc := range []struct {
-		segment string
-		status  string
-	}{
-		{"failed", RunFailed}, {"succeeded", RunSucceeded}, {"conflict", RunConflict},
-	} {
-		run, err := store.GetOrCreateRun(ctx, tenant, "actor-1", CreateRunInput{
-			BatchID: batch.ID, AnswerSegmentID: tc.segment, RequestID: "request-" + tc.segment,
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if _, err := store.UpdateRun(ctx, tenant, run.ID, UpdateRunInput{Status: tc.status}); err != nil {
-			t.Fatal(err)
-		}
-	}
-	failed, err := store.FailedBatchSegments(ctx, tenant, batch.ID)
-	if err != nil || !reflect.DeepEqual(failed, []string{"failed", "conflict"}) {
-		t.Fatalf("retry must contain only failed and conflicted segments: %v, %v", failed, err)
-	}
-	if _, err := store.FailedBatchSegments(ctx, tenant, other.ID); err != nil {
-		t.Fatalf("empty retry candidates should be valid: %v", err)
-	}
-	legacy, err := store.CreateBatch(ctx, tenant, "actor-1", CreateBatchInput{
-		IdempotencyKey: "legacy-batch", SegmentIDs: []string{"legacy"},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := store.FailedBatchSegments(ctx, tenant, legacy.ID); !errors.Is(err, ErrInvalidInput) {
-		t.Fatalf("legacy batch has no scoring-run retry context: %v", err)
-	}
-	if _, err := store.FailedBatchSegments(ctx, tenant, "missing"); !errors.Is(err, ErrNotFound) {
-		t.Fatalf("unknown batch should be missing: %v", err)
-	}
-	if _, err := store.UpdateBatch(ctx, tenant, batch.ID, UpdateBatchInput{Status: "cancelled"}); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := store.FailedBatchSegments(ctx, tenant, batch.ID); !errors.Is(err, ErrInvalidInput) {
-		t.Fatalf("cancelled batch must not be retried: %v", err)
-	}
-	if _, err := store.UpdateBatch(ctx, tenant, batch.ID, UpdateBatchInput{Status: "processing"}); !errors.Is(err, ErrBatchCancelled) {
-		t.Fatalf("cancelled batch must stay terminal: %v", err)
-	}
-	if _, err := store.RefreshBatch(ctx, tenant, batch.ID); err != nil {
-		t.Fatalf("cancelled batch should remain readable: %v", err)
-	}
+	assertScoringRunRetryCandidateBoundaries(t, ctx, store, tenant, batch, other)
+	assertCancelledScoringBatchStaysTerminal(t, ctx, store, tenant, batch)
 }
 
 func TestCreateBatchRejectsScoringRunChangeOnReplay(t *testing.T) {
@@ -201,5 +156,61 @@ func TestScoringRunBatchReadEndpoints(t *testing.T) {
 	missing := request("/batches/missing/failed-segments", "batchId", "missing", handler.GetFailedBatchSegments)
 	if missing.Code != http.StatusNotFound {
 		t.Fatalf("missing batch should be 404: %d %s", missing.Code, missing.Body.String())
+	}
+}
+
+// 重试候选仅来自同一评分运行的失败/冲突项，历史无绑定批次仍拒绝重试。
+func assertScoringRunRetryCandidateBoundaries(t *testing.T, ctx context.Context, store *MemoryStore, tenant string, batch, other GradingBatch) {
+	t.Helper()
+	for _, tc := range []struct {
+		segment string
+		status  string
+	}{
+		{"failed", RunFailed}, {"succeeded", RunSucceeded}, {"conflict", RunConflict},
+	} {
+		run, err := store.GetOrCreateRun(ctx, tenant, "actor-1", CreateRunInput{
+			BatchID: batch.ID, AnswerSegmentID: tc.segment, RequestID: "request-" + tc.segment,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := store.UpdateRun(ctx, tenant, run.ID, UpdateRunInput{Status: tc.status}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	failed, err := store.FailedBatchSegments(ctx, tenant, batch.ID)
+	if err != nil || !reflect.DeepEqual(failed, []string{"failed", "conflict"}) {
+		t.Fatalf("retry must contain only failed and conflicted segments: %v, %v", failed, err)
+	}
+	if _, err := store.FailedBatchSegments(ctx, tenant, other.ID); err != nil {
+		t.Fatalf("empty retry candidates should be valid: %v", err)
+	}
+	legacy, err := store.CreateBatch(ctx, tenant, "actor-1", CreateBatchInput{
+		IdempotencyKey: "legacy-batch", SegmentIDs: []string{"legacy"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.FailedBatchSegments(ctx, tenant, legacy.ID); !errors.Is(err, ErrInvalidInput) {
+		t.Fatalf("legacy batch has no scoring-run retry context: %v", err)
+	}
+	if _, err := store.FailedBatchSegments(ctx, tenant, "missing"); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("unknown batch should be missing: %v", err)
+	}
+}
+
+func assertCancelledScoringBatchStaysTerminal(t *testing.T, ctx context.Context, store *MemoryStore, tenant string, batch GradingBatch) {
+	t.Helper()
+	if _, err := store.UpdateBatch(ctx, tenant, batch.ID, UpdateBatchInput{Status: "cancelled"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.FailedBatchSegments(ctx, tenant, batch.ID); !errors.Is(err, ErrInvalidInput) {
+		t.Fatalf("cancelled batch must not be retried: %v", err)
+	}
+	if _, err := store.UpdateBatch(ctx, tenant, batch.ID, UpdateBatchInput{Status: "processing"}); !errors.Is(err, ErrBatchCancelled) {
+		t.Fatalf("cancelled batch must stay terminal: %v", err)
+	}
+	if _, err := store.RefreshBatch(ctx, tenant, batch.ID); err != nil {
+		t.Fatalf("cancelled batch should remain readable: %v", err)
 	}
 }

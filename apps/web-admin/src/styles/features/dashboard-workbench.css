@@ -1,4 +1,4 @@
-/* School workbench: action-first hierarchy, real workflow stages, no KPI card grid. */
+/* 学校工作台：优先呈现操作，展示真实流程阶段，不使用 KPI 卡片网格。 */
 .school-dashboard .dashboard-brief {
   display: flex;
   align-items: center;

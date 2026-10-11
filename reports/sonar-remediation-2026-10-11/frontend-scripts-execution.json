@@ -1,0 +1,71 @@
+[
+  {
+    "command": [
+      "node",
+      "--test",
+      "scripts/ci/schema-version.test.mjs",
+      "scripts/ci/architecture-audit-tools.test.mjs"
+    ],
+    "started_at": "2026-10-11T09:10:37.221262+00:00",
+    "completed_at": "2026-10-11T09:10:37.973037+00:00",
+    "duration_seconds": 0.75,
+    "exit_code": 0,
+    "log": "frontend-scripts-0.log",
+    "log_sha256": "4d094761bd974a30f1e5dc5649394c38cd9fb4afb1f6ac778de3f5f6440f8eef"
+  },
+  {
+    "command": [
+      "npm.cmd",
+      "--workspace",
+      "apps/web-admin",
+      "run",
+      "test:production-contracts"
+    ],
+    "started_at": "2026-10-11T09:10:37.988587+00:00",
+    "completed_at": "2026-10-11T09:10:39.872105+00:00",
+    "duration_seconds": 1.875,
+    "exit_code": 3221225773,
+    "log": "frontend-scripts-1.log",
+    "log_sha256": "770fad38dba28b66cbdaa326527cd5a4a3378b482f66f23b5ed79b446186b844"
+  },
+  {
+    "command": [
+      "npm.cmd",
+      "run",
+      "check:story049"
+    ],
+    "started_at": "2026-10-11T09:10:39.909852+00:00",
+    "completed_at": "2026-10-11T09:10:41.819069+00:00",
+    "duration_seconds": 1.9059999999881256,
+    "exit_code": 0,
+    "log": "frontend-scripts-2.log",
+    "log_sha256": "b8e420a412eea0ad0b7f4223c7b42b5de1f148732ced31efb091e55052c2f889"
+  },
+  {
+    "command": [
+      "npm.cmd",
+      "run",
+      "check:story052"
+    ],
+    "started_at": "2026-10-11T09:10:41.840741+00:00",
+    "completed_at": "2026-10-11T09:10:44.065294+00:00",
+    "duration_seconds": 2.2339999999967404,
+    "exit_code": 0,
+    "log": "frontend-scripts-3.log",
+    "log_sha256": "2f637d6a9d54f34de268a74c5855706a21950deba04a6f8596d702bf1f4b2b27"
+  },
+  {
+    "command": [
+      "npm.cmd",
+      "--prefix",
+      "lab",
+      "test"
+    ],
+    "started_at": "2026-10-11T09:10:44.084661+00:00",
+    "completed_at": "2026-10-11T09:11:16.703642+00:00",
+    "duration_seconds": 32.625,
+    "exit_code": 0,
+    "log": "frontend-scripts-4.log",
+    "log_sha256": "4857a68b94011ffa5ad3b6dcb65d9272af0b0d93400f12198ca1a2346be9ad90"
+  }
+]

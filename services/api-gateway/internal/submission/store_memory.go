@@ -65,22 +65,28 @@ func (s *MemoryStore) ListByExam(_ context.Context, tenantID string, examID stri
 		}
 		return out[i].CreatedAt.After(out[j].CreatedAt)
 	})
-	if filter.CursorID != "" {
-		start := 0
-		for start < len(out) {
-			item := out[start]
-			if item.CreatedAt.Before(filter.CursorCreatedAt) ||
-				(item.CreatedAt.Equal(filter.CursorCreatedAt) && item.ID < filter.CursorID) {
-				break
-			}
-			start++
-		}
-		out = out[start:]
-	}
+	out = submissionsFollowingCursor(out, filter)
 	if filter.Limit > 0 && len(out) > filter.Limit {
 		out = out[:filter.Limit]
 	}
 	return out, nil
+}
+
+func submissionsFollowingCursor(items []Submission, filter ListFilter) []Submission {
+	if filter.CursorID == "" {
+		return items
+	}
+	// 列表已按时间和 ID 降序排列；只有 ID 非空才启用游标，严格排除游标项。
+	start := 0
+	for start < len(items) {
+		item := items[start]
+		if item.CreatedAt.Before(filter.CursorCreatedAt) ||
+			(item.CreatedAt.Equal(filter.CursorCreatedAt) && item.ID < filter.CursorID) {
+			break
+		}
+		start++
+	}
+	return items[start:]
 }
 
 func (s *MemoryStore) ListByExams(ctx context.Context, tenantID string, examIDs []string) (map[string][]Submission, error) {
@@ -202,8 +208,7 @@ func (s *MemoryStore) ListAnswerRegions(_ context.Context, tenantID string, subm
 	if item, ok := s.submissions[submissionID]; !ok || item.TenantID != tenantID {
 		return nil, ErrNotFound
 	}
-	// The in-memory submission fixture does not persist answer_segment rows;
-	// returning an empty set intentionally selects the legacy full-page path.
+	// 内存提交夹具不持久化 answer_segment 行；返回空集合会选择旧版整页路径。
 	return []AnswerRegion{}, nil
 }
 
@@ -286,8 +291,7 @@ func (s *MemoryStore) RunQualityCheck(_ context.Context, tenantID string, submis
 	item.QualityIssues = issues
 	item.ActualPageCount = len(pages)
 	s.submissions[submissionID] = item
-	// Collection integrity is only the first gate. The aggregate may pass only
-	// after every page has passed image quality or received a valid override.
+	// 采集完整性只是第一道门禁。只有每页都通过图像质量检查或获得有效覆盖批准后，聚合结果才可通过。
 	s.aggregateQualityLocked(tenantID, submissionID)
 	return QualityResult{Valid: len(issues) == 0, Issues: issues}, nil
 }

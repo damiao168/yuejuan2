@@ -1,0 +1,16 @@
+{
+  "command": [
+    "cmd.exe",
+    "/d",
+    "/c",
+    "D:/tools/sonarqube-yuejuan/20261010/sonar-scanner-8.1.0.6389/bin/sonar-scanner.bat",
+    "-Dproject.settings=D:\\project\\yuejuan\\reports\\sonar-remediation-2026-10-11\\full-checkpoint-02\\effective-scan.properties",
+    "-Dsonar.projectBaseDir=D:\\tools\\sonar-remediation-20261011\\full-checkpoint-02\\workspace",
+    "-Dsonar.scanner.metadataFilePath=D:\\project\\yuejuan\\reports\\sonar-remediation-2026-10-11\\full-checkpoint-02\\report-task.txt"
+  ],
+  "network": "127.0.0.1 only for Sonar project; existing cached tool/runtime",
+  "source": "Frozen full local workspace including all original issue files and new maintained source files",
+  "short_lived_token": "environment only; revoked in finally",
+  "java_heap_mib": 2048,
+  "node_heap_mib": 1536
+}

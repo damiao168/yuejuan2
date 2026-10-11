@@ -14,7 +14,7 @@ import (
 func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	token := sessionToken(r, h.cookieName)
 	if token == "" {
-		httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", "authentication required")
+		httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", authRequiredMessage)
 		return
 	}
 	user, _ := UserFromContext(r.Context())
@@ -37,7 +37,7 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) ChangePassword(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set(authCacheControlHeader, authNoStore)
 	user, ok := UserFromContext(r.Context())
 	if !ok || IsServiceUser(user) {
 		httpx.Error(w, r, http.StatusForbidden, "password_change_forbidden", "password change is only available to signed-in users")
@@ -91,7 +91,7 @@ func (h *Handler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Reauthenticate(w http.ResponseWriter, r *http.Request) {
 	startedAt := time.Now().UTC()
-	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set(authCacheControlHeader, authNoStore)
 	user, ok := UserFromContext(r.Context())
 	if !ok || IsServiceUser(user) {
 		httpx.Error(w, r, http.StatusForbidden, "reauthentication_forbidden", "reauthentication is only available to signed-in users")
@@ -123,37 +123,23 @@ func (h *Handler) Reauthenticate(w http.ResponseWriter, r *http.Request) {
 	}
 	passwordHash, err := h.store.FindPasswordHash(r.Context(), user.TenantID, user.ID)
 	if err != nil && !errors.Is(err, ErrInvalidCredentials) {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "auth_service_unavailable", "authentication service temporarily unavailable")
+		httpx.Error(w, r, http.StatusServiceUnavailable, "auth_service_unavailable", authServiceUnavailable)
 		return
 	}
 	passwordValid := err == nil && CheckPassword(passwordHash, input.Password)
 	if !passwordValid {
-		limit, blocked := h.loginGuard.RegisterFailure(r.Context(), attempt, time.Now().UTC())
-		RecordAudit(r.Context(), h.store, AuditEvent{
-			TenantID: user.TenantID, ActorID: user.ID, Action: "auth.reauthentication_failed",
-			TargetType: "user", TargetID: user.ID, Reason: "invalid current credential",
-			IPAddress: clientIP, UserAgent: r.UserAgent(), RequestID: logger.RequestID(r.Context()),
-		})
-		if !h.loginLimiterAvailable(w, r) {
-			return
-		}
-		if blocked {
-			w.Header().Set("Retry-After", strconv.Itoa(max(1, int(limit.RetryAfter.Seconds()))))
-			httpx.Error(w, r, http.StatusTooManyRequests, "login_rate_limited", "too many failed authentication attempts; retry later")
-			return
-		}
-		httpx.Error(w, r, http.StatusUnauthorized, "reauthentication_failed", "verification information is incorrect")
+		h.reauthenticationFailure(w, r, user, attempt, clientIP)
 		return
 	}
 	token := sessionToken(r, h.cookieName)
 	now := time.Now().UTC()
 	updated, err := h.store.MarkSessionReauthenticated(r.Context(), user.TenantID, user.ID, HashToken(token), startedAt, now)
 	if err != nil {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "auth_service_unavailable", "authentication service temporarily unavailable")
+		httpx.Error(w, r, http.StatusServiceUnavailable, "auth_service_unavailable", authServiceUnavailable)
 		return
 	}
 	if !updated {
-		httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", "authentication required")
+		httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", authRequiredMessage)
 		return
 	}
 	h.loginGuard.RegisterSuccess(r.Context(), attempt)
@@ -168,8 +154,26 @@ func (h *Handler) Reauthenticate(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, map[string]any{"status": "reauthenticated", "reauthenticated_at": now.Format(time.RFC3339)})
 }
 
+func (h *Handler) reauthenticationFailure(w http.ResponseWriter, r *http.Request, user User, attempt LoginAttempt, clientIP string) {
+	limit, blocked := h.loginGuard.RegisterFailure(r.Context(), attempt, time.Now().UTC())
+	RecordAudit(r.Context(), h.store, AuditEvent{
+		TenantID: user.TenantID, ActorID: user.ID, Action: "auth.reauthentication_failed",
+		TargetType: "user", TargetID: user.ID, Reason: "invalid current credential",
+		IPAddress: clientIP, UserAgent: r.UserAgent(), RequestID: logger.RequestID(r.Context()),
+	})
+	if !h.loginLimiterAvailable(w, r) {
+		return
+	}
+	if blocked {
+		w.Header().Set("Retry-After", strconv.Itoa(max(1, int(limit.RetryAfter.Seconds()))))
+		httpx.Error(w, r, http.StatusTooManyRequests, "login_rate_limited", "too many failed authentication attempts; retry later")
+		return
+	}
+	httpx.Error(w, r, http.StatusUnauthorized, "reauthentication_failed", "verification information is incorrect")
+}
+
 func (h *Handler) LockSession(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set(authCacheControlHeader, authNoStore)
 	user, ok := UserFromContext(r.Context())
 	if !ok || user.CurrentSessionType != SessionTypePublicDevice {
 		httpx.Error(w, r, http.StatusForbidden, "session_lock_forbidden", "session lock is only available in public computer mode")
@@ -179,11 +183,11 @@ func (h *Handler) LockSession(w http.ResponseWriter, r *http.Request) {
 	now := time.Now().UTC()
 	locked, err := h.store.LockSession(r.Context(), user.TenantID, user.ID, HashToken(token), now)
 	if err != nil {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "auth_service_unavailable", "authentication service temporarily unavailable")
+		httpx.Error(w, r, http.StatusServiceUnavailable, "auth_service_unavailable", authServiceUnavailable)
 		return
 	}
 	if !locked {
-		httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", "authentication required")
+		httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", authRequiredMessage)
 		return
 	}
 	RecordAudit(r.Context(), h.store, AuditEvent{
@@ -201,7 +205,7 @@ func (h *Handler) ListSessions(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "private, no-store")
 	user, ok := UserFromContext(r.Context())
 	if !ok {
-		httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", "authentication required")
+		httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", authRequiredMessage)
 		return
 	}
 	token := sessionToken(r, h.cookieName)
@@ -216,7 +220,7 @@ func (h *Handler) ListSessions(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) RevokeSession(w http.ResponseWriter, r *http.Request) {
 	user, ok := UserFromContext(r.Context())
 	if !ok {
-		httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", "authentication required")
+		httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", authRequiredMessage)
 		return
 	}
 	sessionID := strings.TrimSpace(r.PathValue("id"))
@@ -252,7 +256,7 @@ func (h *Handler) RevokeSession(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) LogoutAll(w http.ResponseWriter, r *http.Request) {
 	user, ok := UserFromContext(r.Context())
 	if !ok {
-		httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", "authentication required")
+		httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", authRequiredMessage)
 		return
 	}
 	revoked, err := h.store.RevokeAllSessions(r.Context(), user.TenantID, user.ID, "user_logout_all")
@@ -272,7 +276,7 @@ func (h *Handler) LogoutAll(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) AdminRevokeUserSessions(w http.ResponseWriter, r *http.Request) {
 	actor, ok := UserFromContext(r.Context())
 	if !ok {
-		httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", "authentication required")
+		httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", authRequiredMessage)
 		return
 	}
 	targetUserID := strings.TrimSpace(r.PathValue("id"))

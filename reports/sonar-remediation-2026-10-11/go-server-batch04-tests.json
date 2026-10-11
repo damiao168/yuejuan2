@@ -1,0 +1,1784 @@
+{
+  "started_at": "2026-10-11T19:13:01.221957+08:00",
+  "completed_at": "2026-10-11T19:13:22.088339+08:00",
+  "duration_seconds": 20.85899999999674,
+  "command": [
+    "D:/tools/go/bin/go.exe",
+    "test",
+    "-json",
+    "-p",
+    "1",
+    "-count=1",
+    "-timeout=5m",
+    "./internal/server"
+  ],
+  "exit_code": 0,
+  "GOMAXPROCS": 1,
+  "cleared_environment_names": [],
+  "test_result_counts": {
+    "pass": 188,
+    "skip": 62
+  },
+  "all_test_results": [
+    {
+      "Time": "2026-10-11T19:13:15.9993982+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestAppealRoutesCreateReviewAdjustCloseAndStatistics",
+      "Elapsed": 0.08
+    },
+    {
+      "Time": "2026-10-11T19:13:16.152118+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestAppealTeacherOnlyWorksAssignedAppealsAndCannotFinalize",
+      "Elapsed": 0.15
+    },
+    {
+      "Time": "2026-10-11T19:13:16.2028577+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestAppealRoutesRequirePermission",
+      "Elapsed": 0.05
+    },
+    {
+      "Time": "2026-10-11T19:13:16.2028577+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestHighScorePaperShareRedactsAndRevokesWithPostgresTestDatabase",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.2028577+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestTeacherAccountSecurityE2EWithPostgres",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.2028577+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestBusinessCommandReservationCrashHelper",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.2028577+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestComposeApplicationBootstrapAndLoginWithPostgres",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.356847+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestCoreWorkflowE2EWithSyntheticMemoryStores",
+      "Elapsed": 0.15
+    },
+    {
+      "Time": "2026-10-11T19:13:16.356847+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestDashboardSummaryE2EWithPostgresTestDatabase",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.356847+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestExamArchiveCommandsE2EWithPostgresTestDatabase",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.356847+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestWholeExamManagementE2EWithPostgresTestDatabase",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.356847+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestFileReconciliationWithPostgresTestDatabase",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.356847+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestRequestIdempotencyWithPostgresTestDatabase",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.356847+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestOutboxLeaseRecoveryWithPostgresTestDatabase",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3574303+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestPostgresMathEffectiveEvidenceProjection",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3574303+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestPostgresMathGradingBindingsRoundTripAndRejectWrongVersion",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3574303+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestPostgresMathRubricScoreUsesOnlyFrozenExamRubric",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3574303+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestPostgresMathVerificationRuntimeAtomicActivation",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3574303+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestTOTPManagementE2EWithPostgres",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3574303+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestPaperImportApplyGateE2EWithPostgresTestDatabase",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3574303+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestCoreWorkflowE2EWithPostgresTestDatabase",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3579622+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestE2EPostgresUXHistoricalACLAndActualMemberResponsibilities",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3579622+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestE2EPostgresQuestionBankFrozenImport",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3579622+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestE2EPostgresQuestionBankMetadataACLSearch",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3579622+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestE2EPostgresQuestionBankPublication",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3584981+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestE2EPostgresQuestionBank",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3584981+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestReleaseGateBlocksSubmissionWithoutCompleteQuestionCoverageE2EWithPostgresTestDatabase",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3584981+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestReliabilityCommandRecoveryWithPostgresTestDatabase",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3590249+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestReliabilityMigrationFrom000122PostgresTestDatabase",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3590249+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestReviewAssignmentLookupE2EWithPostgresTestDatabase",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3590249+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestReviewRepairsRecoveryWithPostgresTestDatabase",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3590249+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestReviewRepairsReleaseAndStudentReadWithPostgresTestDatabase",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3590249+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestReleaseFeedbackUsesFinalArbitrationAndFreezesIt",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3590249+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestCancelledScoringRunCannotReassignOrSubmitReview",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3590249+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestRuleConfirmationWaitsForConcurrentCancellation",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3590249+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestScoringAIBatchCancellationBlocksNewTasks",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3590249+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestFailedScoringAIBatchSegmentsRequireOpenTeacherTask",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3595771+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestScoringCommandRecoveryWithPostgresTestDatabase",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3595771+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestScoringDoubleMarkLifecycleWithPostgresTestDatabase",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3595771+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestStory056TemplateDifferenceCalibrationApprovalAndRevocationE2E",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3595771+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestStory056ApprovedCalibrationIsInheritedByTemplateCloneE2E",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3595771+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestStory056TemplateCloneIsRejectedAfterReadinessConfirmationE2E",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3595771+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestReadinessConfirmationSerializesConcurrentConfigurationWriteE2E",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3595771+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestStory056OMRAutoGradeConfirmationFailureFallsBackToReviewE2E",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3595771+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestStory056ManualOnlyOMRProfileRequiresReviewE2E",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3601154+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestStory056RejectsMismatchedOMRProfileBeforeCompletingTaskE2E",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3601154+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestStory056TemplateDifferenceReferenceSnapshotE2E",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3601154+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestStory056OMRSameVersionChangedMeasurementsIsConflictE2E",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3601154+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestStory056ExpiredOMRLeaseLeavesScoringFactsUntouchedE2E",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3601154+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestStory056ObjectiveScoringRecoveryE2EWithPostgresTestDatabase",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3601154+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestStory060CaptureRecoveryE2EWithPostgresTestDatabase",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3601154+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestStory060ProvisioningWithPostgresIsScopedAndIdempotent",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3606413+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestStory060RosterReconciliationAndAbsenceE2EWithPostgresTestDatabase",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3606413+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestExamRosterFreezeBlocksUpdateAndDirectMutationE2EWithPostgresTestDatabase",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3606413+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestStory060FiveHundredStudentRosterScaleE2EWithPostgresTestDatabase",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3606413+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestStory060MultiPageInsertionMissingPageAndPrintPackageE2EWithPostgresTestDatabase",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3606413+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestStory060StudentSheetIdentityE2EWithPostgresTestDatabase",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3606413+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestStory061ActiveCropResolverE2EWithPostgresTestDatabase",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3612704+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestStory061GovernanceFoundationE2EWithPostgresTestDatabase",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3612704+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestSubjectiveCommandRecoveryWithPostgresTestDatabase",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3612704+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestPostgresSubjectivePanelAndEvaluationRoundTrip",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3612704+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestSubjectiveUsageLedgerPostgresTestDatabase",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3612704+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestExamTemplateBindingE2EWithPostgresTestDatabase",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.3612704+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestWorkerRuntimeReliabilityWithPostgresTestDatabase",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.4112995+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestVerifyEvidenceRouteRecordsJobAndAudit",
+      "Elapsed": 0.05
+    },
+    {
+      "Time": "2026-10-11T19:13:16.4634866+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestVerifyEvidenceRouteRequiresEvidenceManage",
+      "Elapsed": 0.05
+    },
+    {
+      "Time": "2026-10-11T19:13:16.5655754+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestInteractionMaterialRoutesRequireManagementAndSameSchoolScope/other-school-manager/api/v1/regrade-items/other-item/review-context",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.5655754+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestInteractionMaterialRoutesRequireManagementAndSameSchoolScope/blind-grader/api/v1/regrade-items/other-item/review-context",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.5655754+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestInteractionMaterialRoutesRequireManagementAndSameSchoolScope/other-school-manager/api/v1/regrade-items/other-item/review-segment-image",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.5655754+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestInteractionMaterialRoutesRequireManagementAndSameSchoolScope/blind-grader/api/v1/regrade-items/other-item/review-segment-image",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.5655754+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestInteractionMaterialRoutesRequireManagementAndSameSchoolScope/other-school-manager/api/v1/answer-groups/other-group/samples/segment/context",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.5655754+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestInteractionMaterialRoutesRequireManagementAndSameSchoolScope/blind-grader/api/v1/answer-groups/other-group/samples/segment/context",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.5662243+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestInteractionMaterialRoutesRequireManagementAndSameSchoolScope/blind-grader/api/v1/answer-groups/other-group/samples/segment/segment-image",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.5662243+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestInteractionMaterialRoutesRequireManagementAndSameSchoolScope/other-school-manager/api/v1/answer-groups/other-group/samples/segment/segment-image",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.5662243+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestInteractionMaterialRoutesRequireManagementAndSameSchoolScope/other-school-manager/api/v1/exams/other-exam/review-actors",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.5662243+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestInteractionMaterialRoutesRequireManagementAndSameSchoolScope/blind-grader/api/v1/exams/other-exam/review-actors",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.5662243+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestInteractionMaterialRoutesRequireManagementAndSameSchoolScope/other-school-manager/api/v1/exams/other-exam/processing/actors",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.5662243+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestInteractionMaterialRoutesRequireManagementAndSameSchoolScope/blind-grader/api/v1/exams/other-exam/processing/actors",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.5662243+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestInteractionMaterialRoutesRequireManagementAndSameSchoolScope/other-school-manager/api/v1/processing/exceptions/other-exception/context",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.5662243+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestInteractionMaterialRoutesRequireManagementAndSameSchoolScope/blind-grader/api/v1/processing/exceptions/other-exception/context",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.5662243+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestInteractionMaterialRoutesRequireManagementAndSameSchoolScope/blind-grader/api/v1/processing/exceptions/other-exception/page-image",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.5662243+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestInteractionMaterialRoutesRequireManagementAndSameSchoolScope/other-school-manager/api/v1/processing/exceptions/other-exception/page-image",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.5667851+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestInteractionMaterialRoutesRequireManagementAndSameSchoolScope/other-school-manager/api/v1/exams/other-exam/capture-targets?submission_id=submission",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.5667851+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestInteractionMaterialRoutesRequireManagementAndSameSchoolScope/blind-grader/api/v1/exams/other-exam/capture-targets?submission_id=submission",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.5667851+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestInteractionMaterialRoutesRequireManagementAndSameSchoolScope",
+      "Elapsed": 0.1
+    },
+    {
+      "Time": "2026-10-11T19:13:16.5667851+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestPostgresManagedConfigProbeTimestamps",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.5667851+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestE2ESplitSQLStatementsKeepsDollarQuotedBlocksTogether",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.5667851+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestE2ESplitSQLStatementsIgnoresSemicolonsInLineComments",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.5848782+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestStory050ImageQualityMigrationContainsRequiredSchema",
+      "Elapsed": 0.02
+    },
+    {
+      "Time": "2026-10-11T19:13:16.5944524+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestExamTemplateRoutingMigrationContainsBindingAndEvidence",
+      "Elapsed": 0.01
+    },
+    {
+      "Time": "2026-10-11T19:13:16.5944524+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestPostgresMigrationUpgradeFrom000154",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.5944524+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestPublishedQuestionAppealExamSummaryReaderUsesOnlyAuthorizedExamScope",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.5944524+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestTransactionalApplicationCompositionRejectsMissingCoordinatorCapability",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.5944524+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestTransactionalCaptureCompositionRejectsTypedNilCapability",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.594962+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestTransactionalApplicationRejectsTypedNilBeforeConstruction",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.594962+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestProductionStoreGraphRejectsMissingStores",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.594962+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestOnboardingBusinessUserIgnoresPlatformAndServiceAccounts",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.5967787+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestPlatformSchoolRoutesRequirePlatformRoleAndTenantManage/unauthenticated",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.6491599+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestPlatformSchoolRoutesRequirePlatformRoleAndTenantManage/platform_administrator",
+      "Elapsed": 0.05
+    },
+    {
+      "Time": "2026-10-11T19:13:16.7010479+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestPlatformSchoolRoutesRequirePlatformRoleAndTenantManage/platform_without_permission",
+      "Elapsed": 0.05
+    },
+    {
+      "Time": "2026-10-11T19:13:16.7516795+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestPlatformSchoolRoutesRequirePlatformRoleAndTenantManage/platform_role_outside_platform_tenant",
+      "Elapsed": 0.05
+    },
+    {
+      "Time": "2026-10-11T19:13:16.8040159+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestPlatformSchoolRoutesRequirePlatformRoleAndTenantManage/tenant_administrator_with_permission",
+      "Elapsed": 0.05
+    },
+    {
+      "Time": "2026-10-11T19:13:16.8556559+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestPlatformSchoolRoutesRequirePlatformRoleAndTenantManage/school_administrator_with_permission",
+      "Elapsed": 0.05
+    },
+    {
+      "Time": "2026-10-11T19:13:16.8556559+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestPlatformSchoolRoutesRequirePlatformRoleAndTenantManage",
+      "Elapsed": 0.26
+    },
+    {
+      "Time": "2026-10-11T19:13:16.8556559+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestBatch47OnboardingOrganizationFallbackPreservesScope/allowed_cross_school_structure",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.8556559+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestBatch47OnboardingOrganizationFallbackPreservesScope/class_outside_scope",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.8556559+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestBatch47OnboardingOrganizationFallbackPreservesScope/empty_whitelist",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.8556559+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestBatch47OnboardingOrganizationFallbackPreservesScope/tenant_wide",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.8556559+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestBatch47OnboardingOrganizationFallbackPreservesScope/inactive_allowed_rows_and_active_outside_rows",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.8556559+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestBatch47OnboardingOrganizationFallbackPreservesScope",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.8556559+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestBatch47OnboardingOrganizationFallbackRetainsPartialSummaryAndFirstError/schools",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.8556559+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestBatch47OnboardingOrganizationFallbackRetainsPartialSummaryAndFirstError/grades",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.8561704+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestBatch47OnboardingOrganizationFallbackRetainsPartialSummaryAndFirstError/classes",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.8561704+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestBatch47OnboardingOrganizationFallbackRetainsPartialSummaryAndFirstError/students",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.8561704+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestBatch47OnboardingOrganizationFallbackRetainsPartialSummaryAndFirstError",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.8561704+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestBatch47OnboardingOrganizationReadsClassesWithoutActiveGrade",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.8561704+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestBatch47OnboardingOrganizationPrefersReadinessIncludingItsError/success",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.8561704+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestBatch47OnboardingOrganizationPrefersReadinessIncludingItsError/error",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.8561704+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestBatch47OnboardingOrganizationPrefersReadinessIncludingItsError",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.8561704+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestBatch47ProductionStoreGraphPreservesOptionalQueueAndFirstMissingField",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:16.9095021+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestRoutineReceiptReplayChecksCurrentPermissions",
+      "Elapsed": 0.05
+    },
+    {
+      "Time": "2026-10-11T19:13:16.961279+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestCriticalReceiptReplayChecksRecentAuthAndPermissions",
+      "Elapsed": 0.05
+    },
+    {
+      "Time": "2026-10-11T19:13:17.0161979+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestCriticalRoutesRejectStaleAuthentication/POST_/api/v1/tenants",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:17.0161979+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestCriticalRoutesRejectStaleAuthentication/PATCH_/api/v1/tenants/tenant-2",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:17.0161979+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestCriticalRoutesRejectStaleAuthentication/DELETE_/api/v1/users/user-2/sessions",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:17.0161979+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestCriticalRoutesRejectStaleAuthentication/POST_/api/v1/users/user-2/credential-reset",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:17.0161979+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestCriticalRoutesRejectStaleAuthentication/POST_/api/v1/exams/exam-1/publish",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:17.0161979+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestCriticalRoutesRejectStaleAuthentication/POST_/api/v1/score-releases/release-1/publish",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:17.0167142+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestCriticalRoutesRejectStaleAuthentication/POST_/api/v1/exams/exam-1/score-releases/rollback",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:17.0167142+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestCriticalRoutesRejectStaleAuthentication",
+      "Elapsed": 0.05
+    },
+    {
+      "Time": "2026-10-11T19:13:17.0679256+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestRoutineAdministrativeRoutesDoNotRequireRecentAuth/POST_/api/v1/users",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:17.0696354+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestRoutineAdministrativeRoutesDoNotRequireRecentAuth/POST_/api/v1/users/user-2/activation",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:17.0712905+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestRoutineAdministrativeRoutesDoNotRequireRecentAuth/PATCH_/api/v1/users/user-2/status",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:17.0723812+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestRoutineAdministrativeRoutesDoNotRequireRecentAuth/POST_/api/v1/audit-logs/export",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:17.0734666+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestRoutineAdministrativeRoutesDoNotRequireRecentAuth/POST_/api/v1/exams/exam-1/finalize",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:17.074555+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestRoutineAdministrativeRoutesDoNotRequireRecentAuth/POST_/api/v1/exams/exam-1/confirm-grades",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:17.0756399+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestRoutineAdministrativeRoutesDoNotRequireRecentAuth/GET_/api/v1/exams/exam-1/grades/export",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:17.0767168+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestRoutineAdministrativeRoutesDoNotRequireRecentAuth/POST_/api/v1/exams/exam-1/score-releases",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:17.0778012+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestRoutineAdministrativeRoutesDoNotRequireRecentAuth/GET_/api/v1/score-releases/release-1",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:17.0789567+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestRoutineAdministrativeRoutesDoNotRequireRecentAuth/GET_/api/v1/score-releases/release-1/diff",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:17.0800713+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestRoutineAdministrativeRoutesDoNotRequireRecentAuth/POST_/api/v1/exams/exam-1/reports/export",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:17.081159+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestRoutineAdministrativeRoutesDoNotRequireRecentAuth/GET_/api/v1/report-commands/command-1",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:17.0822292+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestRoutineAdministrativeRoutesDoNotRequireRecentAuth/POST_/api/v1/regrade-jobs/job-1/score-release",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:17.0833087+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestRoutineAdministrativeRoutesDoNotRequireRecentAuth/POST_/api/v1/exams/exam-1/release-gate/policies",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:17.0843873+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestRoutineAdministrativeRoutesDoNotRequireRecentAuth/POST_/api/v1/exams/exam-1/release-gate/preview",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:17.0860163+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestRoutineAdministrativeRoutesDoNotRequireRecentAuth/POST_/api/v1/exams/exam-1/release-gate/waivers",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:17.0871004+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestRoutineAdministrativeRoutesDoNotRequireRecentAuth/POST_/api/v1/release-gate-waivers/waiver-1/decision",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:17.0881864+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestRoutineAdministrativeRoutesDoNotRequireRecentAuth/POST_/api/v1/model-providers",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:17.0892994+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestRoutineAdministrativeRoutesDoNotRequireRecentAuth/PATCH_/api/v1/model-providers/provider-1/status",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:17.0903687+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestRoutineAdministrativeRoutesDoNotRequireRecentAuth/POST_/api/v1/model-deployments",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:17.0914281+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestRoutineAdministrativeRoutesDoNotRequireRecentAuth/PUT_/api/v1/model-policy",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:17.0914281+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestRoutineAdministrativeRoutesDoNotRequireRecentAuth/POST_/api/v1/model-secrets/probe",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:17.0924869+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestRoutineAdministrativeRoutesDoNotRequireRecentAuth/POST_/api/v1/model-sandbox-approvals",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:17.0930153+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestRoutineAdministrativeRoutesDoNotRequireRecentAuth/POST_/api/v1/model-sandbox-approvals/approval-1/revoke",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:17.094187+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestRoutineAdministrativeRoutesDoNotRequireRecentAuth/PUT_/api/v1/ai-eligibility/policy",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:17.094187+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestRoutineAdministrativeRoutesDoNotRequireRecentAuth",
+      "Elapsed": 0.08
+    },
+    {
+      "Time": "2026-10-11T19:13:17.1483405+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestPlatformModelConfigDoesNotRepeatPasswordChallenge/POST_/api/v1/platform/model-api-configs",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:17.1490605+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestPlatformModelConfigDoesNotRepeatPasswordChallenge/PATCH_/api/v1/platform/model-api-configs/config-1",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:17.1502056+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestPlatformModelConfigDoesNotRepeatPasswordChallenge/DELETE_/api/v1/platform/model-api-configs/config-1",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:17.1502056+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestPlatformModelConfigDoesNotRepeatPasswordChallenge",
+      "Elapsed": 0.06
+    },
+    {
+      "Time": "2026-10-11T19:13:17.2034619+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestPlatformModelRoutesUseSeparatePermissions/read_configs",
+      "Elapsed": 0.05
+    },
+    {
+      "Time": "2026-10-11T19:13:17.2561169+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestPlatformModelRoutesUseSeparatePermissions/read_panel",
+      "Elapsed": 0.05
+    },
+    {
+      "Time": "2026-10-11T19:13:17.3068465+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestPlatformModelRoutesUseSeparatePermissions/read_cannot_write_config",
+      "Elapsed": 0.05
+    },
+    {
+      "Time": "2026-10-11T19:13:17.3592657+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestPlatformModelRoutesUseSeparatePermissions/read_cannot_write_panel",
+      "Elapsed": 0.05
+    },
+    {
+      "Time": "2026-10-11T19:13:17.4106481+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestPlatformModelRoutesUseSeparatePermissions/managed_API_can_write_config",
+      "Elapsed": 0.05
+    },
+    {
+      "Time": "2026-10-11T19:13:17.4627206+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestPlatformModelRoutesUseSeparatePermissions/managed_API_cannot_write_panel",
+      "Elapsed": 0.05
+    },
+    {
+      "Time": "2026-10-11T19:13:17.5146503+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestPlatformModelRoutesUseSeparatePermissions/panel_can_write_panel",
+      "Elapsed": 0.05
+    },
+    {
+      "Time": "2026-10-11T19:13:17.5670803+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestPlatformModelRoutesUseSeparatePermissions/panel_cannot_write_config",
+      "Elapsed": 0.05
+    },
+    {
+      "Time": "2026-10-11T19:13:17.5673876+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestPlatformModelRoutesUseSeparatePermissions",
+      "Elapsed": 0.42
+    },
+    {
+      "Time": "2026-10-11T19:13:17.644693+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestReportRoutesGenerateStudentClassQuestionQualityAndExport",
+      "Elapsed": 0.08
+    },
+    {
+      "Time": "2026-10-11T19:13:17.6963587+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestReportRoutesRequirePermission",
+      "Elapsed": 0.05
+    },
+    {
+      "Time": "2026-10-11T19:13:17.7741343+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestReviewTaskRoutesCreateAssignSubmitAndAudit",
+      "Elapsed": 0.08
+    },
+    {
+      "Time": "2026-10-11T19:13:17.8507582+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestReviewSubmitRejectsInconsistentRubric",
+      "Elapsed": 0.08
+    },
+    {
+      "Time": "2026-10-11T19:13:17.9046291+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestReviewTaskRoutesRequirePermission",
+      "Elapsed": 0.05
+    },
+    {
+      "Time": "2026-10-11T19:13:17.9594614+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestQualityManagementRoutesDoNotExposeGoldOrSeedEvidenceToGraders",
+      "Elapsed": 0.05
+    },
+    {
+      "Time": "2026-10-11T19:13:18.1199652+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestReviewWorkPermissionIsScopedToAssignedTasks",
+      "Elapsed": 0.16
+    },
+    {
+      "Time": "2026-10-11T19:13:18.2199562+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestReviewWorkerCanReturnOnlyOwnActiveClaim",
+      "Elapsed": 0.1
+    },
+    {
+      "Time": "2026-10-11T19:13:18.2954288+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestReviewTaskClaimNextNeverImplicitlyAssignsPendingTask",
+      "Elapsed": 0.08
+    },
+    {
+      "Time": "2026-10-11T19:13:18.373966+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestReviewWorkbenchClaimDraftRefreshSubmitAndNext",
+      "Elapsed": 0.08
+    },
+    {
+      "Time": "2026-10-11T19:13:18.477604+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestReviewTaskReleaseKeepsAssignmentAndAllowsResume",
+      "Elapsed": 0.1
+    },
+    {
+      "Time": "2026-10-11T19:13:18.5285905+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestReviewTaskListFiltersByExam",
+      "Elapsed": 0.05
+    },
+    {
+      "Time": "2026-10-11T19:13:18.5815499+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestReviewTaskBatchAssignRoute",
+      "Elapsed": 0.05
+    },
+    {
+      "Time": "2026-10-11T19:13:18.6358111+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestReviewTaskAssignmentRequiresActiveGrader",
+      "Elapsed": 0.05
+    },
+    {
+      "Time": "2026-10-11T19:13:18.8396512+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestReviewOriginalImageRequiresAdministratorRole/deny_privileged_teacher",
+      "Elapsed": 0.03
+    },
+    {
+      "Time": "2026-10-11T19:13:18.8644628+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestReviewOriginalImageRequiresAdministratorRole/deny_privileged_grader",
+      "Elapsed": 0.03
+    },
+    {
+      "Time": "2026-10-11T19:13:18.8907801+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestReviewOriginalImageRequiresAdministratorRole/allow_platform_admin",
+      "Elapsed": 0.03
+    },
+    {
+      "Time": "2026-10-11T19:13:18.9177028+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestReviewOriginalImageRequiresAdministratorRole/allow_tenant_admin",
+      "Elapsed": 0.03
+    },
+    {
+      "Time": "2026-10-11T19:13:18.9443943+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestReviewOriginalImageRequiresAdministratorRole/allow_school_admin",
+      "Elapsed": 0.03
+    },
+    {
+      "Time": "2026-10-11T19:13:18.9443943+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestReviewOriginalImageRequiresAdministratorRole",
+      "Elapsed": 0.31
+    },
+    {
+      "Time": "2026-10-11T19:13:19.0504941+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestDoubleMarkSessionRequiresActiveSameTenantGraders/manager_role",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:19.0504941+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestDoubleMarkSessionRequiresActiveSameTenantGraders/arbitrator_role",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:19.0504941+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestDoubleMarkSessionRequiresActiveSameTenantGraders/inactive_grader",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:19.0504941+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestDoubleMarkSessionRequiresActiveSameTenantGraders/cross_tenant_grader",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:19.0504941+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestDoubleMarkSessionRequiresActiveSameTenantGraders",
+      "Elapsed": 0.11
+    },
+    {
+      "Time": "2026-10-11T19:13:19.1795999+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestArbitrationTaskCreateRequiresActiveSameTenantArbitrator/manager_role",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:19.1795999+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestArbitrationTaskCreateRequiresActiveSameTenantArbitrator/grader_role",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:19.1795999+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestArbitrationTaskCreateRequiresActiveSameTenantArbitrator/inactive_arbitrator",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:19.1795999+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestArbitrationTaskCreateRequiresActiveSameTenantArbitrator/cross_tenant_arbitrator",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:19.1795999+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestArbitrationTaskCreateRequiresActiveSameTenantArbitrator",
+      "Elapsed": 0.13
+    },
+    {
+      "Time": "2026-10-11T19:13:19.564595+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestArbitrationWorkPermissionIsScopedToAssignedTasks/reject_assignment_to_grader_role",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:19.564595+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestArbitrationWorkPermissionIsScopedToAssignedTasks/reject_assignment_to_inactive_arbitrator",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:19.564595+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestArbitrationWorkPermissionIsScopedToAssignedTasks/reject_assignment_to_cross_tenant_arbitrator",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:19.564595+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestArbitrationWorkPermissionIsScopedToAssignedTasks/reject_assignment_to_manager_role",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:19.5651317+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestArbitrationWorkPermissionIsScopedToAssignedTasks",
+      "Elapsed": 0.39
+    },
+    {
+      "Time": "2026-10-11T19:13:19.739039+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestDoubleMarkAndArbitrationRoutes",
+      "Elapsed": 0.17
+    },
+    {
+      "Time": "2026-10-11T19:13:19.739039+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestGovernanceSchoolScopeRequiresPlatformModelPermission",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:19.739039+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestLegacyRegistrationWritesAreGone",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T19:13:19.817317+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestSchoolAssistantRoutesReadBusinessFactsWithoutPublicationWritesOrChatReceipts",
+      "Elapsed": 0.08
+    },
+    {
+      "Time": "2026-10-11T19:13:19.8824574+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestSchoolAssistantRoutesDenyRolePermissionAndBodyResourceBeforeStreaming/other_role",
+      "Elapsed": 0.07
+    },
+    {
+      "Time": "2026-10-11T19:13:19.942057+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestSchoolAssistantRoutesDenyRolePermissionAndBodyResourceBeforeStreaming/missing_business_permission",
+      "Elapsed": 0.06
+    },
+    {
+      "Time": "2026-10-11T19:13:20.0071685+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestSchoolAssistantRoutesDenyRolePermissionAndBodyResourceBeforeStreaming/other_school_in_body",
+      "Elapsed": 0.06
+    },
+    {
+      "Time": "2026-10-11T19:13:20.1040835+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestSchoolAssistantRoutesDenyRolePermissionAndBodyResourceBeforeStreaming/unknown_exam_in_body",
+      "Elapsed": 0.1
+    },
+    {
+      "Time": "2026-10-11T19:13:20.1587452+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestSchoolAssistantRoutesDenyRolePermissionAndBodyResourceBeforeStreaming/class-only_cannot_read_full_exam",
+      "Elapsed": 0.05
+    },
+    {
+      "Time": "2026-10-11T19:13:20.1592836+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestSchoolAssistantRoutesDenyRolePermissionAndBodyResourceBeforeStreaming",
+      "Elapsed": 0.34
+    },
+    {
+      "Time": "2026-10-11T19:13:20.2112946+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestSchoolAssistantCapabilitiesUseCurrentBusinessPermissions",
+      "Elapsed": 0.05
+    },
+    {
+      "Time": "2026-10-11T19:13:20.2628377+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestScoreRoutesFinalizeConfirmPublishStudentLookupAndExport",
+      "Elapsed": 0.05
+    },
+    {
+      "Time": "2026-10-11T19:13:20.3153552+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestScoreRoutesRequirePermission",
+      "Elapsed": 0.05
+    },
+    {
+      "Time": "2026-10-11T19:13:20.4193056+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestStudentGradeRouteEnforcesStudentScope",
+      "Elapsed": 0.1
+    },
+    {
+      "Time": "2026-10-11T19:13:20.4732685+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestRosterRoutesRequireAdministrativeRole",
+      "Elapsed": 0.05
+    },
+    {
+      "Time": "2026-10-11T19:13:20.5259522+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestRosterRoutesRejectMalformedIdentifiers",
+      "Elapsed": 0.05
+    },
+    {
+      "Time": "2026-10-11T19:13:20.5509242+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestHealth",
+      "Elapsed": 0.03
+    },
+    {
+      "Time": "2026-10-11T19:13:20.606279+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestModelGovernanceRoutesEnforceSeparateReadAndManagePermissions",
+      "Elapsed": 0.05
+    },
+    {
+      "Time": "2026-10-11T19:13:20.6589301+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestModelEvaluationManagePermissionAllowsMutationRoute",
+      "Elapsed": 0.05
+    },
+    {
+      "Time": "2026-10-11T19:13:20.6860279+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestRequestTraceHeadersAndAccessLog",
+      "Elapsed": 0.03
+    },
+    {
+      "Time": "2026-10-11T19:13:20.7384536+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestSystemInfo",
+      "Elapsed": 0.05
+    },
+    {
+      "Time": "2026-10-11T19:13:20.7904621+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestReadyHealthy",
+      "Elapsed": 0.05
+    },
+    {
+      "Time": "2026-10-11T19:13:20.8417003+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestReadyUnhealthy",
+      "Elapsed": 0.05
+    },
+    {
+      "Time": "2026-10-11T19:13:20.8677504+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestPublicHealthProbesAreAnonymousAndReadinessIsRedacted",
+      "Elapsed": 0.03
+    },
+    {
+      "Time": "2026-10-11T19:13:20.9198444+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestSystemStatusIncludesDependencyAndObservabilityState",
+      "Elapsed": 0.05
+    },
+    {
+      "Time": "2026-10-11T19:13:20.9763888+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestSystemStatusReportsIdleOCRWorkerAsOnline",
+      "Elapsed": 0.06
+    },
+    {
+      "Time": "2026-10-11T19:13:21.0305668+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestSystemStatusRequiresAuthenticationAndSystemRead",
+      "Elapsed": 0.05
+    },
+    {
+      "Time": "2026-10-11T19:13:21.0827189+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestOCRAvailabilityUsesScopedPermissionsAndResponse/review:work",
+      "Elapsed": 0.05
+    },
+    {
+      "Time": "2026-10-11T19:13:21.136794+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestOCRAvailabilityUsesScopedPermissionsAndResponse/review:manage",
+      "Elapsed": 0.05
+    },
+    {
+      "Time": "2026-10-11T19:13:21.1886342+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestOCRAvailabilityUsesScopedPermissionsAndResponse/submission:manage",
+      "Elapsed": 0.05
+    },
+    {
+      "Time": "2026-10-11T19:13:21.2427346+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestOCRAvailabilityUsesScopedPermissionsAndResponse/capture:manage",
+      "Elapsed": 0.05
+    },
+    {
+      "Time": "2026-10-11T19:13:21.2948211+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestOCRAvailabilityUsesScopedPermissionsAndResponse/ocr:manage",
+      "Elapsed": 0.05
+    },
+    {
+      "Time": "2026-10-11T19:13:21.345997+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestOCRAvailabilityUsesScopedPermissionsAndResponse/grading:manage",
+      "Elapsed": 0.05
+    },
+    {
+      "Time": "2026-10-11T19:13:21.3990367+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestOCRAvailabilityUsesScopedPermissionsAndResponse/system:read",
+      "Elapsed": 0.05
+    },
+    {
+      "Time": "2026-10-11T19:13:21.3990367+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestOCRAvailabilityUsesScopedPermissionsAndResponse",
+      "Elapsed": 0.37
+    },
+    {
+      "Time": "2026-10-11T19:13:21.4527507+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestOCRAvailabilityRequiresAuthenticationAndConsumerPermission",
+      "Elapsed": 0.05
+    },
+    {
+      "Time": "2026-10-11T19:13:21.5065946+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestOCRConsumerStillCannotReadFullSystemStatus",
+      "Elapsed": 0.05
+    },
+    {
+      "Time": "2026-10-11T19:13:21.6106372+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestWorkerRuntimeSeparatesReadAndExecutePermissions",
+      "Elapsed": 0.1
+    },
+    {
+      "Time": "2026-10-11T19:13:21.6387371+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestCORSAllowlistAndBodyLimit",
+      "Elapsed": 0.03
+    },
+    {
+      "Time": "2026-10-11T19:13:21.6668817+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestNotFoundUsesUnifiedError",
+      "Elapsed": 0.03
+    },
+    {
+      "Time": "2026-10-11T19:13:21.7195244+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestStudentPreviewRouteChecksPermissionAndReleaseSchoolBoundary/authorized_administrator",
+      "Elapsed": 0.03
+    },
+    {
+      "Time": "2026-10-11T19:13:21.7463615+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestStudentPreviewRouteChecksPermissionAndReleaseSchoolBoundary/other_school",
+      "Elapsed": 0.03
+    },
+    {
+      "Time": "2026-10-11T19:13:21.7743884+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestStudentPreviewRouteChecksPermissionAndReleaseSchoolBoundary/missing_permission",
+      "Elapsed": 0.03
+    },
+    {
+      "Time": "2026-10-11T19:13:21.8016855+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestStudentPreviewRouteChecksPermissionAndReleaseSchoolBoundary/student_cannot_preview_drafts",
+      "Elapsed": 0.03
+    },
+    {
+      "Time": "2026-10-11T19:13:21.8287615+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestStudentPreviewRouteChecksPermissionAndReleaseSchoolBoundary/student_absent_from_snapshot",
+      "Elapsed": 0.03
+    },
+    {
+      "Time": "2026-10-11T19:13:21.8287615+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Test": "TestStudentPreviewRouteChecksPermissionAndReleaseSchoolBoundary",
+      "Elapsed": 0.16
+    },
+    {
+      "Time": "2026-10-11T19:13:21.8368176+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+      "Elapsed": 7.696
+    }
+  ],
+  "source_sha_file": "go-server-batch04-source-sha.json",
+  "source_changed_during_test": [],
+  "event_log": "go-server-batch04-events.jsonl",
+  "note": "环境缺失的 PostgreSQL/模型条件 skip 不计为集成通过；原始输出保留原因。"
+}

@@ -50,6 +50,13 @@ func TestEngineGradesSupportedQuestionTypes(t *testing.T) {
 			answerText: "A,C",
 			wantScore:  10.0 / 3.0 * 2.0,
 		},
+		{name: "recognized compact multiple choice", kind: "multiple_choice", standard: "BC", answerText: "C,B", wantScore: 10},
+		{name: "compact student multiple choice", kind: "multiple_choice", standard: []any{"B", "C"}, answerText: "BC", wantScore: 10},
+		{name: "compact choice does not allow missing options", kind: "multiple_choice", standard: "BC", answerText: "B", wantScore: 0},
+		{name: "recognized latex fraction", kind: "fill_blank", standard: `$\frac{10}{11}$`, answerText: "10/11", wantScore: 5},
+		{name: "recognized latex interval", kind: "fill_blank", standard: `$(0,1)$`, answerText: "(0,1)", wantScore: 5},
+		{name: "interval endpoints remain different", kind: "fill_blank", standard: `$(0,1)$`, answerText: "[0,1]", wantScore: 0},
+		{name: "decimal equivalence requires configuration", kind: "fill_blank", standard: `$\frac{1}{2}$`, answerText: "0.5", wantScore: 0},
 		{
 			name:       "fill blank equivalent normalized",
 			kind:       "fill_blank",
@@ -85,21 +92,7 @@ func TestEngineGradesSupportedQuestionTypes(t *testing.T) {
 			if err != nil {
 				t.Fatalf("grade: %v", err)
 			}
-			if math.Abs(grade.SuggestedScore-tt.wantScore) > 0.0001 {
-				t.Fatalf("score got %.4f want %.4f in %#v", grade.SuggestedScore, tt.wantScore, grade)
-			}
-			if grade.SuggestedScore > grade.MaxScore {
-				t.Fatalf("score must not exceed max: %#v", grade)
-			}
-			if grade.NeedsHumanReview != tt.wantReview {
-				t.Fatalf("review got %v want %v in %#v", grade.NeedsHumanReview, tt.wantReview, grade)
-			}
-			if tt.wantRisk != "" && !contains(grade.RiskFlags, tt.wantRisk) {
-				t.Fatalf("missing risk %s in %#v", tt.wantRisk, grade.RiskFlags)
-			}
-			if grade.GraderType != grading.GraderType || grade.RuleVersion != grading.RuleVersion || grade.Mock {
-				t.Fatalf("grade source must be truthful rule-based non-mock: %#v", grade)
-			}
+			assertSupportedRuleGrade(t, grade, tt.wantScore, tt.wantReview, tt.wantRisk)
 		})
 	}
 }
@@ -198,4 +191,23 @@ func contains(values []string, want string) bool {
 		}
 	}
 	return false
+}
+
+func assertSupportedRuleGrade(t *testing.T, grade grading.Grade, wantScore float64, wantReview bool, wantRisk string) {
+	t.Helper()
+	if math.Abs(grade.SuggestedScore-wantScore) > 0.0001 {
+		t.Fatalf("score got %.4f want %.4f in %#v", grade.SuggestedScore, wantScore, grade)
+	}
+	if grade.SuggestedScore > grade.MaxScore {
+		t.Fatalf("score must not exceed max: %#v", grade)
+	}
+	if grade.NeedsHumanReview != wantReview {
+		t.Fatalf("review got %v want %v in %#v", grade.NeedsHumanReview, wantReview, grade)
+	}
+	if wantRisk != "" && !contains(grade.RiskFlags, wantRisk) {
+		t.Fatalf("missing risk %s in %#v", wantRisk, grade.RiskFlags)
+	}
+	if grade.GraderType != grading.GraderType || grade.RuleVersion != grading.RuleVersion || grade.Mock {
+		t.Fatalf("grade source must be truthful rule-based non-mock: %#v", grade)
+	}
 }

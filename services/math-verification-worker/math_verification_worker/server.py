@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ipaddress
 import json
 import multiprocessing
 import os
@@ -8,7 +9,7 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from queue import Empty
 
-from .parser import UnsupportedExpression, parse_restricted_latex
+from .parser import parse_restricted_latex
 from .verifier import (
     VerificationError,
     normalize,
@@ -44,7 +45,7 @@ def _execute(operation: str, payload: dict[str, object]) -> dict[str, object]:
 def _process_entry(queue: multiprocessing.Queue, operation: str, payload: dict[str, object]) -> None:
     try:
         queue.put(("ok", _execute(operation, payload)))
-    except Exception as exc:  # noqa: BLE001 - subprocess converts all symbolic failures to bounded data.
+    except Exception as exc:  # noqa: BLE001 - 子进程把所有符号计算失败转换为有界数据。
         queue.put(("error", exc.__class__.__name__, str(exc)))
 
 
@@ -117,9 +118,9 @@ class Handler(BaseHTTPRequestHandler):
                 return
             result = run_bounded(operation, payload, float(os.environ.get("EDUGRADE_MATH_VERIFY_TIMEOUT_SECONDS", "3")))
             self._json(200, result)
-        except (KeyError, TypeError, ValueError, UnsupportedExpression, VerificationError) as exc:
+        except (KeyError, TypeError, ValueError) as exc:
             self._json(422, {"status": "uncertain", "reason_code": "unsupported_expression", "message": str(exc)})
-        except Exception:  # noqa: BLE001 - symbolic failures must fail closed.
+        except Exception:  # noqa: BLE001 - 符号计算失败时必须拒绝放行。
             self._json(200, {"status": "uncertain", "relation": "unknown", "reason_code": "verification_failed"})
 
     def log_message(self, _format: str, *_args: object) -> None:
@@ -134,19 +135,55 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(raw)
 
 
+def _allow_insecure_loopback_http() -> bool:
+    raw = os.environ.get("EDUGRADE_MATH_VERIFY_ALLOW_INSECURE_LOOPBACK_HTTP", "false").strip().lower()
+    if raw not in {"true", "false"}:
+        raise ValueError("EDUGRADE_MATH_VERIFY_ALLOW_INSECURE_LOOPBACK_HTTP must be true or false")
+    return raw == "true"
+
+
+def _validate_listener_policy(environment: str, host: str, allow_http: bool, has_certificate: bool) -> None:
+    # 不接受字符串或整数的真值；只有明确的布尔授权才能进入开发明文例外。
+    if type(allow_http) is not bool:
+        raise ValueError("math verifier insecure HTTP opt-in must be a boolean")
+    # IPv4Address 也接受整数；只接收字符串，避免直接调用绕过字面地址限制。
+    if not isinstance(host, str):
+        raise ValueError("EDUGRADE_MATH_VERIFY_HOST must be a string")
+    if not host:
+        raise ValueError("EDUGRADE_MATH_VERIFY_HOST must not be empty")
+    if has_certificate:
+        return
+    if environment not in {"local", "development", "dev", "test"}:
+        raise ValueError("math verifier TLS certificate and key are required in production-like environments")
+    if allow_http is not True:
+        raise ValueError("math verifier cleartext HTTP requires explicit insecure loopback opt-in")
+    # AF_INET 监听器只允许字面 IPv4 回环例外，避免 DNS 解析或通配地址扩展明文暴露范围。
+    try:
+        address = ipaddress.IPv4Address(host)
+    except ipaddress.AddressValueError as exc:
+        raise ValueError("math verifier cleartext HTTP requires a literal IPv4 loopback host") from exc
+    if not address.is_loopback:
+        raise ValueError("math verifier cleartext HTTP requires a literal IPv4 loopback host")
+
+
 def main() -> None:
     port = int(os.environ.get("EDUGRADE_MATH_VERIFY_PORT", "8092"))
+    host = os.environ.get("EDUGRADE_MATH_VERIFY_HOST", "0.0.0.0").strip()
     cert_file = os.environ.get("EDUGRADE_MATH_VERIFY_TLS_CERT_FILE", "").strip()
     key_file = os.environ.get("EDUGRADE_MATH_VERIFY_TLS_KEY_FILE", "").strip()
     if bool(cert_file) != bool(key_file):
         raise ValueError("math verifier TLS certificate and key must be configured together")
-    environment = os.environ.get("EDUGRADE_ENV", "development").strip().lower()
-    if environment not in {"", "local", "development", "dev", "test"} and not cert_file:
-        raise ValueError("math verifier TLS certificate and key are required in production-like environments")
-    server = ThreadingHTTPServer(("0.0.0.0", port), Handler)
-    if cert_file:
-        context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-        context.minimum_version = ssl.TLSVersion.TLSv1_2
-        context.load_cert_chain(cert_file, key_file)
-        server.socket = context.wrap_socket(server.socket, server_side=True)
-    server.serve_forever()
+    environment = os.environ.get("EDUGRADE_ENV", "production").strip().lower()
+    # 缺省和未知环境都需要 TLS；所有明文例外检查必须在占用监听端口前完成。
+    _validate_listener_policy(environment, host, _allow_insecure_loopback_http(), bool(cert_file))
+    server = ThreadingHTTPServer((host, port), Handler)
+    try:
+        if cert_file:
+            context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+            context.minimum_version = ssl.TLSVersion.TLSv1_2
+            context.load_cert_chain(cert_file, key_file)
+            server.socket = context.wrap_socket(server.socket, server_side=True)
+        server.serve_forever()
+    finally:
+        # TLS 初始化失败仍需释放监听端口，避免下一次启动被旧套接字阻塞。
+        server.server_close()

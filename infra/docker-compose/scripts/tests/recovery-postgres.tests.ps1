@@ -44,7 +44,7 @@ INSERT INTO file_asset (id,tenant_id,storage_bucket,storage_key,size_bytes,hash_
 INSERT INTO question_bank_item_asset SELECT tenant_id,id FROM file_asset WHERE storage_key='a';
 '@
   Invoke-TestSQL $target.Uri.AbsoluteUri $schema | Out-Null
-  # Exercise the actual migration's immutable asset guard, without running unrelated migrations.
+  # 测试实际迁移中的资产不可变保护，不运行无关迁移。
   $migration = Get-Content -LiteralPath (Join-Path $PSScriptRoot '../../../../services/api-gateway/migrations/000141_question_bank_publication.sql') -Raw
   $guard = [regex]::Match($migration, '(?s)CREATE FUNCTION question_bank_file_guard\(\).*?CREATE TRIGGER question_bank_file_guard[^;]*;').Value
   if (-not $guard) { throw 'Cannot locate the production question-bank asset guard in its migration.' }

@@ -3,12 +3,9 @@ import {
   Alert,
   App,
   Button,
-  Descriptions,
   Drawer,
   Input,
   InputNumber,
-  List,
-  Progress,
   Select,
   Space,
   Tooltip,
@@ -16,7 +13,6 @@ import {
   type UploadProps
 } from "antd";
 import {
-  Eye,
   FileUp,
   RefreshCw,
   Search,
@@ -33,29 +29,22 @@ import {
   listOcrTasks,
   replaceSubmissionPage,
   runQualityCheck,
-  type OcrTask,
   type Submission,
   type SubmissionPage
 } from "../api/submissions";
-import { EmptyState, ErrorState, LoadingState } from "../components/PageState";
 import { OcrWorkerAlert } from "../components/OcrWorkerAlert";
 import { ProcessingOperationsPanel } from "../components/ProcessingOperationsPanel";
-import { ResponsiveTable } from "../components/ResponsiveTable";
-import { DataTableShell, FilterBar, PageHeader } from "@edugrade/ui";
+import { FilterBar, PageHeader } from "@edugrade/ui";
 import { hashQueryParam } from "../router/query";
 import { ExclusiveCommandGate, LatestRequestGate, runCaptureCommand } from "../features/capture/captureWorkflow";
 import { captureSubmissionColumns, capturePageColumns, captureOcrTaskColumns } from "../features/capture/submissionColumns";
 import { SubmissionCaptureSummary } from "../features/capture/SubmissionCaptureSummary";
 import {
   qualityFilterOptions,
-  submissionStatusLabels,
-  qualityStatusLabels,
   formatError,
-  formatTime,
   compactFileName,
   sourceTypeFor,
   processingState,
-  ocrLabel,
   derivedIssues,
   matchesQualityFilter,
   type Filters
@@ -66,32 +55,31 @@ import {
   loadNextCapturePage,
   type SubmissionView
 } from "../features/capture/captureQueries";
+import {
+  CaptureRecords,
+  SubmissionOcrDetails,
+  SubmissionPageDetails,
+  UploadQueuePanel,
+  type OcrDrawerState,
+  type PreviewState,
+  type UploadQueueItem,
+} from "./SubmissionCaptureViews";
 
 type UploadRequest = Parameters<NonNullable<UploadProps["customRequest"]>>[0];
-interface UploadQueueItem {
-  id: string;
-  fileName: string;
-  status: "processing" | "success" | "error";
-  phase: string;
-  percent: number;
-  error?: string;
-}
-
-interface PreviewState {
-  url: string;
-  contentType: string;
-  filename?: string;
-}
 
 export function SubmissionCapturePage({
   canManage,
+  canManageProcessing = canManage,
   canReadStudentNames,
-  initialExamId = ""
-}: {
+  initialExamId = "",
+  onNavigate
+}: Readonly<{
   canManage: boolean;
+  canManageProcessing?: boolean;
   canReadStudentNames: boolean;
   initialExamId?: string;
-}) {
+  onNavigate?: (path: string) => void;
+}>) {
   const { message } = App.useApp();
   const canWrite = canManage;
   const [filters, setFilters] = useState<Filters>(() => {
@@ -116,7 +104,8 @@ export function SubmissionCapturePage({
   const [pageDrawer, setPageDrawer] = useState<SubmissionView | null>(null);
   const [preview, setPreview] = useState<PreviewState | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
-  const [ocrDrawer, setOcrDrawer] = useState<{ row: SubmissionView; tasks: OcrTask[]; loading: boolean; loadingMore?: boolean; error?: string } | null>(null);
+  const [ocrDrawer, setOcrDrawer] = useState<OcrDrawerState | null>(null);
+  // 请求序号和命令互斥属于页面实例，展示分支切换不能重置这些状态。
   const captureRequestRef = useRef(new LatestRequestGate());
   const previewRequestRef = useRef(new LatestRequestGate());
   const commandGateRef = useRef(new ExclusiveCommandGate());
@@ -437,7 +426,7 @@ export function SubmissionCapturePage({
       const row = { ...current.row, ocrTasks: tasks, ocrNextCursor: result.next_cursor, ocrHasMore: result.has_more };
       setRows((rows) => rows.map((item) => item.submission.id === row.submission.id ? row : item));
       setOcrDrawer((latest) => {
-        if (!latest || latest.row.submission.id !== current.row.submission.id) return latest;
+        if (latest?.row.submission.id !== current.row.submission.id) return latest;
         return { ...latest, row, tasks, loadingMore: false };
       });
     } catch (currentError) {
@@ -475,7 +464,7 @@ export function SubmissionCapturePage({
 
       <OcrWorkerAlert enabled={canManage} />
 
-      {selectedExamId ? <ProcessingOperationsPanel examId={selectedExamId} canManage={canManage} /> : null}
+      {selectedExamId && canManageProcessing ? <ProcessingOperationsPanel key={selectedExamId} examId={selectedExamId} canManage={canManageProcessing} onNavigate={onNavigate} /> : null}
 
       {studentLookupError ? (
         <Alert type="info" showIcon message="学生姓名未完全加载" description="部分学生姓名暂时无法加载，不影响答题卡导入，稍后刷新重试即可。" />
@@ -507,71 +496,16 @@ export function SubmissionCapturePage({
         </div>
       </FilterBar>
 
-      {uploadQueue.length > 0 ? (
-        <section className="workspace-section upload-progress-panel">
-          <div className="section-head">
-            <div>
-              <h2>上传队列</h2>
-              <p>{uploadQueue.filter((item) => item.status === "error").length} 个失败</p>
-            </div>
-            <Progress className="batch-progress" percent={uploadPercent} size="small" />
-          </div>
-          <List
-            className="upload-queue-list"
-            dataSource={uploadQueue.slice(0, 8)}
-            renderItem={(item) => (
-              <List.Item className="upload-queue-item">
-                <div>
-                  <strong>{item.fileName}</strong>
-                  <span>{item.error || item.phase}</span>
-                </div>
-                <Progress percent={item.percent} size="small" status={item.status === "error" ? "exception" : item.status === "success" ? "success" : "active"} />
-              </List.Item>
-            )}
-          />
-        </section>
-      ) : null}
+      <UploadQueuePanel queue={uploadQueue} percent={uploadPercent} />
 
       <SubmissionCaptureSummary summary={summary} />
 
-      {loading ? (
-        <section className="workspace-section">
-          <LoadingState label="正在读取考试列表" />
-        </section>
-      ) : error ? (
-        <ErrorState message={error} onRetry={() => void loadExams()} />
-      ) : !selectedExam ? (
-        <section className="workspace-section">
-          <EmptyState title="暂无考试" description="暂无可采集的考试。请先在『考试管理』创建考试并完成开考准备。" />
-        </section>
-      ) : captureLoading ? (
-        <section className="workspace-section">
-          <LoadingState label="正在读取答题卡记录" />
-        </section>
-      ) : captureError ? (
-        <ErrorState message={captureError} onRetry={() => void loadCaptureData(selectedExam.id)} />
-      ) : (
-        <DataTableShell
-          title="答题卡处理"
-          description={`${filteredRows.length} / ${rows.length} 条记录，已完成 ${summary.completed} 份${summary.failed > 0 ? `；${summary.failed} 份处理失败，可直接重试` : ""}`}
-        >
-          <ResponsiveTable<SubmissionView>
-            className="dense-data-table"
-            rowKey={(row) => row.submission.id}
-            dataSource={filteredRows}
-            columns={columns}
-            pagination={{ pageSize: 10, showSizeChanger: false }}
-            size="small"
-            rowClassName={(row) => (row.detailError ? "row-with-warning" : "")}
-            locale={{ emptyText: <EmptyState title="暂无答题卡" description="当前考试还没有答题卡。点击右上角『上传答题卡』导入扫描件。" /> }}
-          />
-          {hasMoreSubmissions ? (
-            <Button block loading={loadingMore} onClick={() => void loadMoreSubmissions()}>
-              加载更多答题卡
-            </Button>
-          ) : null}
-        </DataTableShell>
-      )}
+      <CaptureRecords
+        state={{ loading, error, exam: selectedExam, captureLoading, captureError }}
+        table={{ rows, filteredRows, summary, columns, hasMoreSubmissions, loadingMore, loadMore: loadMoreSubmissions }}
+        reloadExams={loadExams}
+        reloadCapture={loadCaptureData}
+      />
 
       <Drawer title="答题卡页面" open={Boolean(pageDrawer)} width={860} onClose={() => {
         previewRequestRef.current.invalidate();
@@ -580,115 +514,12 @@ export function SubmissionCapturePage({
         setPreview(null);
       }}>
         {pageDrawer ? (
-          <div className="detail-stack">
-            <Descriptions bordered size="small" column={2}>
-              <Descriptions.Item label="答题卡编号">{pageDrawer.submission.candidate_no || "暂未生成"}</Descriptions.Item>
-              <Descriptions.Item label="学生姓名">{studentName(pageDrawer.submission)}</Descriptions.Item>
-              <Descriptions.Item label="采集状态">{submissionStatusLabels[pageDrawer.submission.status] ?? "未知状态"}</Descriptions.Item>
-              <Descriptions.Item label="质量状态">{qualityStatusLabels[pageDrawer.submission.quality_status] ?? pageDrawer.submission.quality_status}</Descriptions.Item>
-            </Descriptions>
-            <ResponsiveTable<SubmissionPage>
-              className="dense-data-table"
-              rowKey="id"
-              dataSource={pageDrawer.pages}
-              columns={pageColumns}
-              pagination={false}
-              size="small"
-              locale={{ emptyText: <EmptyState title="暂无页面" description="该答题卡还没有关联页面文件。" /> }}
-            />
-            {preview ? (
-              <div className="page-preview">
-                <div className="section-head">
-                  <div>
-                    <h2>{preview.filename ?? "页面预览"}</h2>
-                    <p title={preview.contentType}>
-                      {preview.contentType === "application/pdf"
-                        ? "PDF 文档"
-                        : preview.contentType.startsWith("image/")
-                          ? "扫描图片"
-                          : "其他文件"}
-                    </p>
-                  </div>
-                  <Button icon={<Eye size={16} />} onClick={() => window.open(preview.url, "_blank", "noopener,noreferrer")}>
-                    新窗口打开
-                  </Button>
-                </div>
-                {preview.contentType.startsWith("image/") ? (
-                  <img src={preview.url} alt={preview.filename ?? "答题卡页面"} />
-                ) : preview.contentType === "application/pdf" ? (
-                  <iframe title={preview.filename ?? "答题卡 PDF"} src={preview.url} />
-                ) : (
-                  <Alert type="info" showIcon message="该文件类型不支持内嵌预览" description="可使用新窗口打开或浏览器下载查看。" />
-                )}
-              </div>
-            ) : null}
-          </div>
+          <SubmissionPageDetails row={pageDrawer} preview={preview} studentName={studentName} columns={pageColumns} />
         ) : null}
       </Drawer>
 
       <Drawer title="文字识别详情" open={Boolean(ocrDrawer)} width={920} onClose={() => setOcrDrawer(null)}>
-        {ocrDrawer?.loading ? (
-          <LoadingState label="正在读取识别详情" />
-        ) : ocrDrawer?.error ? (
-          <ErrorState message={ocrDrawer.error} />
-        ) : ocrDrawer ? (
-          <div className="detail-stack">
-            <Descriptions bordered size="small" column={2}>
-              <Descriptions.Item label="答题卡编号">{ocrDrawer.row.submission.candidate_no || "暂未生成"}</Descriptions.Item>
-              <Descriptions.Item label="识别状态">{ocrLabel(ocrDrawer.row.ocrTasks)}</Descriptions.Item>
-            </Descriptions>
-            <ResponsiveTable<OcrTask>
-              className="dense-data-table"
-              rowKey="id"
-              dataSource={ocrDrawer.tasks}
-              columns={ocrTaskColumns}
-              pagination={false}
-              size="small"
-              locale={{ emptyText: <EmptyState title="暂无识别任务" description="该答题卡还没有文字识别任务。" /> }}
-            />
-            {ocrDrawer.row.ocrHasMore ? (
-              <div className="load-more-row">
-                <Button loading={ocrDrawer.loadingMore} onClick={() => void loadMoreOcrTasks()}>加载更早的识别任务</Button>
-              </div>
-            ) : null}
-            {ocrDrawer.tasks.flatMap((task) => task.results ?? []).length > 0 ? (
-              <div className="ocr-result-list">
-                {ocrDrawer.tasks.map((task, index) => (
-                  <section className="ocr-result-block" key={task.id}>
-                    <div className="section-head">
-                      <div>
-                        <h2 title={task.id}>识别任务 {index + 1}</h2>
-                        <p>创建于 {formatTime(task.created_at)} · {task.results?.length ?? 0} 条识别结果</p>
-                      </div>
-                    </div>
-                    <ResponsiveTable
-                      className="dense-data-table"
-                      rowKey="id"
-                      dataSource={task.results ?? []}
-                      pagination={false}
-                      size="small"
-                      columns={[
-                        {
-                          title: "页面",
-                          dataIndex: "submission_page_id",
-                          width: 100,
-                          render: (value: string) => {
-                            const pageNo = ocrDrawer.row.pages.find((page) => page.id === value)?.page_no;
-                            return <span title={value}>{pageNo ? `第 ${pageNo} 页` : "-"}</span>;
-                          }
-                        },
-                        { title: "文本", dataIndex: "text" },
-                        { title: "置信度", dataIndex: "confidence", width: 100, render: (value: number) => `${Math.round(value * 100)}%` }
-                      ]}
-                    />
-                  </section>
-                ))}
-              </div>
-            ) : (
-              <EmptyState title="暂无识别结果" description="识别任务已创建，系统处理完成后结果将显示在这里。" />
-            )}
-          </div>
-        ) : null}
+        <SubmissionOcrDetails drawer={ocrDrawer} columns={ocrTaskColumns} loadMore={loadMoreOcrTasks} />
       </Drawer>
     </div>
   );

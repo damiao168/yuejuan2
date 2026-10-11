@@ -1,6 +1,7 @@
 package server
 
 import (
+	"database/sql"
 	"fmt"
 	"net/http"
 	"os"
@@ -265,6 +266,13 @@ FROM inserted_submissions
 		t.Fatalf("seed 497 roster submissions: %v", err)
 	}
 
+	e2eAssertStory060RosterReadBudget(t, db, router, adminToken, tenantID, examID)
+	e2eResolveStory060ScaleAbsences(t, db, router, adminToken, story060ScaleRosterScope{TenantID: tenantID, ClassID: classID, ExamID: examID, Suffix: suffix})
+}
+
+// 同一批 500 名考生分别走存储和 HTTP 路径，原 5 秒预算从各自调用前开始计时。
+func e2eAssertStory060RosterReadBudget(t *testing.T, db *sql.DB, router http.Handler, adminToken, tenantID, examID string) {
+	t.Helper()
 	const rosterReadBudget = 5 * time.Second
 	storeStarted := time.Now()
 	directRoster, err := score.NewPostgresStore(db).ListRoster(t.Context(), tenantID, examID)
@@ -294,6 +302,16 @@ FROM inserted_submissions
 	quality := e2eGetJSON(t, router, "/api/v1/exams/"+examID+"/grades/quality?stage=publish", adminToken, http.StatusOK)
 	e2eAssertStory060QualityIssue(t, quality, "missing_submission_unresolved", 3)
 
+}
+
+type story060ScaleRosterScope struct {
+	TenantID, ClassID, ExamID, Suffix string
+}
+
+// 原来缺失的三份答卷必须逐人明确缺考，之后才允许质量通过及发布。
+func e2eResolveStory060ScaleAbsences(t *testing.T, db *sql.DB, router http.Handler, adminToken string, scope story060ScaleRosterScope) {
+	t.Helper()
+	tenantID, classID, examID, suffix := scope.TenantID, scope.ClassID, scope.ExamID, scope.Suffix
 	rows, err := db.Query(`
 SELECT id::text FROM student
 WHERE tenant_id=$1::uuid AND class_id=$2::uuid AND student_no LIKE $3
@@ -318,12 +336,12 @@ ORDER BY student_no DESC LIMIT 3
 		e2ePostJSON(t, router, http.MethodPut, "/api/v1/exams/"+examID+"/roster/"+studentID+"/attendance", adminToken,
 			`{"status":"absent","reason":"verified absent in 500-student acceptance"}`, http.StatusOK)
 	}
-	roster = e2eGetJSON(t, router, "/api/v1/exams/"+examID+"/roster", adminToken, http.StatusOK)["roster"].(map[string]any)
-	summary = roster["summary"].(map[string]any)
+	roster := e2eGetJSON(t, router, "/api/v1/exams/"+examID+"/roster", adminToken, http.StatusOK)["roster"].(map[string]any)
+	summary := roster["summary"].(map[string]any)
 	if e2eFloat(t, summary, "absent") != 3 || e2eFloat(t, summary, "unresolved") != 0 {
 		t.Fatalf("explicit absence should reconcile the three missing students: %#v", summary)
 	}
-	quality = e2eGetJSON(t, router, "/api/v1/exams/"+examID+"/grades/quality?stage=publish", adminToken, http.StatusOK)
+	quality := e2eGetJSON(t, router, "/api/v1/exams/"+examID+"/grades/quality?stage=publish", adminToken, http.StatusOK)
 	if quality["can_publish"] != true {
 		t.Fatalf("500-student roster should pass after three explicit absences: %#v", quality)
 	}

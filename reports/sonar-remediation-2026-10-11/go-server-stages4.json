@@ -1,0 +1,24 @@
+{
+  "files": [
+    {
+      "file": "services/api-gateway/internal/server/e2e_math_rubric_score_test.go",
+      "sha256": "4308db2d7af2aae6a78345b253acc64c765edbcc87fe7b7ee54d2c71ec573561",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_math_rubric_score_test.go"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_math_effective_evidence_test.go",
+      "sha256": "91bb75ec5a88bd9db73a7ef8a1128218482988d7e1d6e328459b3020f24e7435",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_math_effective_evidence_test.go"
+    }
+  ],
+  "issue_functions": [
+    {
+      "file": "services/api-gateway/internal/server/e2e_math_rubric_score_test.go",
+      "function": "TestPostgresMathRubricScoreUsesOnlyFrozenExamRubric"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_math_effective_evidence_test.go",
+      "function": "TestPostgresMathEffectiveEvidenceProjection"
+    }
+  ]
+}

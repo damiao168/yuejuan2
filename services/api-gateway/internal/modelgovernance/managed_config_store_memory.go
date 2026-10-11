@@ -127,6 +127,22 @@ func (s *MemoryStore) DeleteManagedAPIConfig(_ context.Context, tenantID, actorI
 	if item.IsDefault {
 		return ErrManagedDefaultMutation
 	}
+	if err := s.managedConfigDeletionDependencyLocked(tenantID, id); err != nil {
+		return err
+	}
+	if policy, ok := s.policies[tenantID]; ok && contains(policy.AllowedModelConfigIDs, id) {
+		return ErrConflict
+	}
+	now := time.Now().UTC()
+	item.DeletedAt, item.DeletedBy = &now, actorID
+	item.Status, item.IsDefault, item.UpdatedAt = "disabled", false, now
+	s.managedConfigs[id] = item
+	delete(s.managedSecrets, id)
+	return nil
+}
+
+// 调用方必须持有写锁；依赖校验和软删除不能被新增绑定或审批穿插。
+func (s *MemoryStore) managedConfigDeletionDependencyLocked(tenantID, id string) error {
 	for _, binding := range s.roleBindings {
 		if binding.TenantID == tenantID && binding.ManagedModelAPIConfigID == id && binding.Status == "active" {
 			return ErrManagedConfigInUse
@@ -142,18 +158,6 @@ func (s *MemoryStore) DeleteManagedAPIConfig(_ context.Context, tenantID, actorI
 			return ErrConflict
 		}
 	}
-	if policy, ok := s.policies[tenantID]; ok {
-		for _, allowed := range policy.AllowedModelConfigIDs {
-			if allowed == id {
-				return ErrConflict
-			}
-		}
-	}
-	now := time.Now().UTC()
-	item.DeletedAt, item.DeletedBy = &now, actorID
-	item.Status, item.IsDefault, item.UpdatedAt = "disabled", false, now
-	s.managedConfigs[id] = item
-	delete(s.managedSecrets, id)
 	return nil
 }
 
@@ -212,20 +216,24 @@ func applyManagedProbe(item *ManagedAPIConfig, result ManagedAPIProbeResult, tes
 	}
 	if item.LastProbeMode == "capability" && !result.Reused && !transientFailure &&
 		(result.GeneratedRequest || result.CapabilityCheck.OK || result.CapabilityCheck.Code != "") {
-		item.LastCapabilityStatus = "failed"
-		if result.CapabilityCheck.OK {
-			item.LastCapabilityStatus = "success"
-		}
-		item.LastCapabilityMessage = strings.TrimSpace(result.CapabilityCheck.Message)
-		if item.LastCapabilityMessage == "" {
-			item.LastCapabilityMessage = strings.TrimSpace(result.Message)
-		}
-		item.LastCapabilityTestedAt = &testedAt
-		item.LastCapabilityVersion = ManagedCapabilityProbeVersion
-		item.LastCapabilityUsage = result.Usage
-		item.LastCapabilityDiagnostic = result.Diagnostic
-		item.LastCapabilityDiagnostic.ContentPreview = ""
+		applyManagedCapabilityProbe(item, result, &testedAt)
 	}
+}
+
+func applyManagedCapabilityProbe(item *ManagedAPIConfig, result ManagedAPIProbeResult, testedAt *time.Time) {
+	item.LastCapabilityStatus = "failed"
+	if result.CapabilityCheck.OK {
+		item.LastCapabilityStatus = "success"
+	}
+	item.LastCapabilityMessage = strings.TrimSpace(result.CapabilityCheck.Message)
+	if item.LastCapabilityMessage == "" {
+		item.LastCapabilityMessage = strings.TrimSpace(result.Message)
+	}
+	item.LastCapabilityTestedAt = testedAt
+	item.LastCapabilityVersion = ManagedCapabilityProbeVersion
+	item.LastCapabilityUsage = result.Usage
+	item.LastCapabilityDiagnostic = result.Diagnostic
+	item.LastCapabilityDiagnostic.ContentPreview = ""
 }
 
 func transientManagedProbeFailure(result ManagedAPIProbeResult) bool {

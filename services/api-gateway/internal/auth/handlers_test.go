@@ -844,16 +844,7 @@ func TestPublicComputerSessionCanReauthenticateWithoutLosingWorkspace(t *testing
 	if meRec.Code != http.StatusOK || !strings.Contains(meRec.Body.String(), `"current_session_type":"public_device"`) {
 		t.Fatalf("reauthentication must preserve the public session: %d %s", meRec.Code, meRec.Body.String())
 	}
-	audits := store.Audits()
-	foundLocked, foundFailure, foundSuccess := false, false, false
-	for _, event := range audits {
-		foundLocked = foundLocked || event.Action == "auth.session_locked"
-		foundFailure = foundFailure || event.Action == "auth.reauthentication_failed"
-		foundSuccess = foundSuccess || event.Action == "auth.session_reauthenticated"
-	}
-	if !foundLocked || !foundFailure || !foundSuccess {
-		t.Fatalf("reauthentication attempts must be audited: %#v", audits)
-	}
+	assertPublicSessionReauthenticationAudits(t, store)
 }
 
 func TestStandardBrowserSessionCannotUsePublicComputerLock(t *testing.T) {
@@ -1426,4 +1417,19 @@ func addAuditUser(t *testing.T, store *auth.MemoryStore) {
 		},
 		PasswordHash: hash,
 	})
+}
+
+// 先验证同一会话恢复可用，再核对锁定、失败和成功三类安全审计事实。
+func assertPublicSessionReauthenticationAudits(t *testing.T, store *auth.MemoryStore) {
+	t.Helper()
+	audits := store.Audits()
+	foundLocked, foundFailure, foundSuccess := false, false, false
+	for _, event := range audits {
+		foundLocked = foundLocked || event.Action == "auth.session_locked"
+		foundFailure = foundFailure || event.Action == "auth.reauthentication_failed"
+		foundSuccess = foundSuccess || event.Action == "auth.session_reauthenticated"
+	}
+	if !foundLocked || !foundFailure || !foundSuccess {
+		t.Fatalf("reauthentication attempts must be audited: %#v", audits)
+	}
 }

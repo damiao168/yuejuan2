@@ -23,8 +23,8 @@ export function mathEvidenceBinding(response: MathUnderstandingResponse) {
   return `${response.artifact.id}:${response.artifact.version}:${response.artifact.correction_revision ?? 0}:${response.correction_revision ?? 0}`;
 }
 
-// Both reads are authoritative server projections. A raced pair cannot become
-// a current suggestion, even if the total happens to be the same.
+// 两次读取都是服务端的权威投影。发生竞争时，
+// 即使总分碰巧相同，也不能将这对结果视为当前建议。
 export function mathScoreMatchesUnderstanding(score: MathRubricScoreResponse, response: MathUnderstandingResponse) {
   return score.schema_version === "math-rubric-score-v1" && score.scope === "teacher_suggestion_only"
     && score.artifact_id === response.artifact.id && score.artifact_version === response.artifact.version

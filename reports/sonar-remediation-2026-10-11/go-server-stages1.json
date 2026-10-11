@@ -1,0 +1,24 @@
+{
+  "files": [
+    {
+      "file": "services/api-gateway/internal/server/appeal_route_test.go",
+      "sha256": "3209cc82ce4b0c5a426b0e3a53a418d0aac0ccfc1620a5d7c6e34792e8b1b40a",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\appeal_route_test.go"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_business_command_test.go",
+      "sha256": "1af3f87eddd6c86a657dc2021dc54b47c6aa6a55c75af84df879cae1ca9c53e6",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_business_command_test.go"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_story056_test.go",
+      "sha256": "d097d48d78aeb17df6b24e7cfb52558105662840203a544c6152f0427c76fcf1",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_story056_test.go"
+    }
+  ],
+  "issue_functions": [
+    "e2eCompleteStory056HumanReviews",
+    "e2eArbitrationAndExportCommands",
+    "TestAppealTeacherOnlyWorksAssignedAppealsAndCannotFinalize"
+  ]
+}

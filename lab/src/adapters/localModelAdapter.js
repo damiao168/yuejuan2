@@ -112,7 +112,7 @@ function parseResponseContent(response) {
   }
 }
 
-export function normalizeLocalModelOutput(raw, input, modelVersion) {
+function validateLocalOutputFields(raw) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     throw new LocalModelError("local model output must be an object", "INVALID_OUTPUT");
   }
@@ -139,31 +139,34 @@ export function normalizeLocalModelOutput(raw, input, modelVersion) {
       !Number.isFinite(raw.confidence) || raw.confidence < 0 || raw.confidence > 1) {
     throw new LocalModelError("local model score or confidence was outside the allowed range", "SCHEMA_INVALID");
   }
-  const rubricPoints = new Map(input.rubric.points.map((point) => [point.id, point]));
-  const classified = new Set();
+}
+
+function validateLocalMatchedPoint(point, rubricPoints, classified) {
+  if (!point || typeof point !== "object" || Array.isArray(point) ||
+      !hasExactFields(point, ["rubric_point_id", "score", "evidence_ids"])) {
+    throw new LocalModelError("local model matched point must be an object", "SCHEMA_INVALID");
+  }
+  const rubricPoint = rubricPoints.get(point.rubric_point_id);
+  if (!rubricPoint) throw new LocalModelError("local model referenced an unknown rubric point", "UNKNOWN_RUBRIC_POINT");
+  if (classified.has(point.rubric_point_id)) throw new LocalModelError("local model classified a rubric point more than once", "DUPLICATE_RUBRIC_POINT");
+  if (!Number.isFinite(point.score) || point.score < 0 || point.score > rubricPoint.score) {
+    throw new LocalModelError("local model point score exceeded its rubric allowance", "POINT_SCORE_OUT_OF_RANGE");
+  }
+  if (!Array.isArray(point.evidence_ids) || point.evidence_ids.length === 0) {
+    throw new LocalModelError("matched rubric point lacked evidence links", "EVIDENCE_LINK_MISSING");
+  }
+  if (point.evidence_ids.some((id) => typeof id !== "string" || id.trim().length === 0) ||
+      new Set(point.evidence_ids).size !== point.evidence_ids.length) {
+    throw new LocalModelError("matched rubric point contained invalid evidence links", "EVIDENCE_LINK_INVALID");
+  }
+  classified.add(point.rubric_point_id);
+  return rubricPoint;
+}
+
+function collectLocalMatchedPoints(raw, rubricPoints, classified, normalizedAnswer, missingPoints, rejectedEvidenceIds) {
   const matchedPoints = [];
-  const missingPoints = [];
-  const rejectedEvidenceIds = new Set();
-  const normalizedAnswer = normalizeText(input.answer_text);
   for (const point of raw.matched_points) {
-    if (!point || typeof point !== "object" || Array.isArray(point) ||
-        !hasExactFields(point, ["rubric_point_id", "score", "evidence_ids"])) {
-      throw new LocalModelError("local model matched point must be an object", "SCHEMA_INVALID");
-    }
-    const rubricPoint = rubricPoints.get(point.rubric_point_id);
-    if (!rubricPoint) throw new LocalModelError("local model referenced an unknown rubric point", "UNKNOWN_RUBRIC_POINT");
-    if (classified.has(point.rubric_point_id)) throw new LocalModelError("local model classified a rubric point more than once", "DUPLICATE_RUBRIC_POINT");
-    if (!Number.isFinite(point.score) || point.score < 0 || point.score > rubricPoint.score) {
-      throw new LocalModelError("local model point score exceeded its rubric allowance", "POINT_SCORE_OUT_OF_RANGE");
-    }
-    if (!Array.isArray(point.evidence_ids) || point.evidence_ids.length === 0) {
-      throw new LocalModelError("matched rubric point lacked evidence links", "EVIDENCE_LINK_MISSING");
-    }
-    if (point.evidence_ids.some((id) => typeof id !== "string" || id.trim().length === 0) ||
-        new Set(point.evidence_ids).size !== point.evidence_ids.length) {
-      throw new LocalModelError("matched rubric point contained invalid evidence links", "EVIDENCE_LINK_INVALID");
-    }
-    classified.add(point.rubric_point_id);
+    const rubricPoint = validateLocalMatchedPoint(point, rubricPoints, classified);
     // 严格别名未命中时将模型命中降为缺失，并移除关联证据后再计算建议分。
     if (rubricPoint.match_policy === "strict_alias") {
       const strictMatch = (rubricPoint.aliases ?? []).some((alias) => {
@@ -178,7 +181,10 @@ export function normalizeLocalModelOutput(raw, input, modelVersion) {
     }
     matchedPoints.push({ ...point });
   }
+  return matchedPoints;
+}
 
+function collectLocalMissingPoints(raw, rubricPoints, classified, missingPoints) {
   for (const point of raw.missing_points) {
     if (!point || typeof point !== "object" || Array.isArray(point) ||
         !hasExactFields(point, ["rubric_point_id", "reason"]) ||
@@ -190,10 +196,10 @@ export function normalizeLocalModelOutput(raw, input, modelVersion) {
     classified.add(point.rubric_point_id);
     missingPoints.push({ ...point });
   }
-  if (classified.size !== rubricPoints.size) {
-    throw new LocalModelError("local model did not classify every rubric point", "INCOMPLETE_RUBRIC_CLASSIFICATION");
-  }
+}
 
+function collectLocalEvidence(raw, rejectedEvidenceIds, matchedPoints) {
+  // 先检查全部证据形状，再移除被严格别名降级的证据，不能靠过滤隐藏畸形输出。
   if (raw.evidence.some((item) => !item || typeof item !== "object" || Array.isArray(item) ||
       !hasExactFields(item, ["evidence_id", "rubric_point_id", "text_excerpt", "location", "confidence"]))) {
     throw new LocalModelError("local model evidence must contain objects", "SCHEMA_INVALID");
@@ -212,6 +218,23 @@ export function normalizeLocalModelOutput(raw, input, modelVersion) {
       }
     }
   }
+  return evidence;
+}
+
+export function normalizeLocalModelOutput(raw, input, modelVersion) {
+  validateLocalOutputFields(raw);
+  const rubricPoints = new Map(input.rubric.points.map((point) => [point.id, point]));
+  // 命中与缺失共用归类集合；严格别名降级后也不能再次归类同一量规点。
+  const classified = new Set();
+  const missingPoints = [];
+  const rejectedEvidenceIds = new Set();
+  const normalizedAnswer = normalizeText(input.answer_text);
+  const matchedPoints = collectLocalMatchedPoints(raw, rubricPoints, classified, normalizedAnswer, missingPoints, rejectedEvidenceIds);
+  collectLocalMissingPoints(raw, rubricPoints, classified, missingPoints);
+  if (classified.size !== rubricPoints.size) {
+    throw new LocalModelError("local model did not classify every rubric point", "INCOMPLETE_RUBRIC_CLASSIFICATION");
+  }
+  const evidence = collectLocalEvidence(raw, rejectedEvidenceIds, matchedPoints);
 
   // 建议分由保留的采分点重算；模型自报分数与未校准置信度不能直接作为试点评分依据。
   const score = matchedPoints.reduce((total, point) => total + point.score, 0);

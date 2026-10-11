@@ -1,0 +1,148 @@
+{
+  "records": [
+    {
+      "key": "9d4ec278-4c2a-4935-b85d-bfbcfd590531",
+      "file": "lab/evals/math-recognition/test_math_batch28.py",
+      "before": "assert spec and spec.loader",
+      "after": "assert spec\n    assert spec.loader",
+      "source_sha256_before": "5ffbac77aa04048b16ef8f6b71bd1a28de13a9e0d9f778842f97ef7208c24a25",
+      "source_sha256_after": "639b6643db8a133694d397506b0f6542521e9dce2d7aa5ecabbf79586b15b1e7"
+    },
+    {
+      "key": "f75d5635-98ba-429a-b7b2-5ca76d1d8047",
+      "file": "lab/evals/math-recognition/test_math_bench.py",
+      "before": "assert SPEC and SPEC.loader",
+      "after": "assert SPEC\nassert SPEC.loader",
+      "source_sha256_before": "abad457df58233ff230060f461aff98bfd9a1c05bc597ba6a494279f84ff369a",
+      "source_sha256_after": "889962a4876d5f8b8f29f14c1e002098a2acc131b31bf7486e847f9a1324f3ee"
+    },
+    {
+      "key": "d53cb18f-23e0-4030-947e-e629e16683f0",
+      "file": "lab/evals/math-recognition/test_math_bench.py",
+      "before": "assert GEN_SPEC and GEN_SPEC.loader",
+      "after": "assert GEN_SPEC\nassert GEN_SPEC.loader",
+      "source_sha256_before": "889962a4876d5f8b8f29f14c1e002098a2acc131b31bf7486e847f9a1324f3ee",
+      "source_sha256_after": "6cab081a3656c0ccb4969a073d704263e2db26325faa12273a37f5a9c15ddc68"
+    },
+    {
+      "key": "c9c5205b-9e0f-4200-b6f0-752b366375db",
+      "file": "services/ocr-worker/tests/test_api_batch51.py",
+      "before": "assert progress[\"stage\"] == \"text_ocr\" and progress[\"completed\"] == 1 and progress[\"total\"] == 2",
+      "after": "assert progress['stage'] == 'text_ocr'\n    assert progress['completed'] == 1\n    assert progress['total'] == 2",
+      "source_sha256_before": "1e81ff5d819e0764535cbeb33a57cb4deffbaf45ae1d2384e2364a3253b0a9f4",
+      "source_sha256_after": "100ef141f25083fd742365a0626890d8a77acb1093e01ec1959785faea858b22"
+    },
+    {
+      "key": "b2122d58-ecc8-410d-84ae-526db7bd7da2",
+      "file": "services/ocr-worker/tests/test_api_batch51.py",
+      "before": "assert isinstance(duration_ms, int) and duration_ms >= 0",
+      "after": "assert isinstance(duration_ms, int)\n            assert duration_ms >= 0",
+      "source_sha256_before": "100ef141f25083fd742365a0626890d8a77acb1093e01ec1959785faea858b22",
+      "source_sha256_after": "e6cbddace127ab56c0ee89048a7f6c5593967f08b448de9c2af6e219d217c99d"
+    },
+    {
+      "key": "e16602ef-ea1c-4905-856e-a745435300d7",
+      "file": "services/ocr-worker/tests/test_paper_formula.py",
+      "before": "assert accepted.action is FormulaAction.ACCEPT and accepted.render_similarity is not None and accepted.render_similarity > .99",
+      "after": "assert accepted.action is FormulaAction.ACCEPT\n    assert accepted.render_similarity is not None\n    assert accepted.render_similarity > 0.99",
+      "source_sha256_before": "4de4a8dbd6c813dd93a2a7886bba1d80f9e8229c5447cce3dca393b077818dfc",
+      "source_sha256_after": "dec6e8e3f73899a7307ec3eef514d095f19f50739dfff814f2096438d9bbf0d6"
+    },
+    {
+      "key": "3545dc10-2e9f-4b8a-8a3e-32e52d0bae94",
+      "file": "services/ocr-worker/tests/test_paper_formula.py",
+      "before": "assert rejected.action is FormulaAction.RETRY_L and not rejected.render_valid",
+      "after": "assert rejected.action is FormulaAction.RETRY_L\n    assert not rejected.render_valid",
+      "source_sha256_before": "dec6e8e3f73899a7307ec3eef514d095f19f50739dfff814f2096438d9bbf0d6",
+      "source_sha256_after": "ca6caaf2c553aaecb40a6ed37251694767e86ff42992179bd6e33e347f680342"
+    },
+    {
+      "key": "c6ef87a7-7587-43c5-bad9-c1454b8fef16",
+      "file": "services/ocr-worker/tests/test_paper_formula.py",
+      "before": "assert bbox[0] < 30 and bbox[1] < 20",
+      "after": "assert bbox[0] < 30\n    assert bbox[1] < 20",
+      "source_sha256_before": "ca6caaf2c553aaecb40a6ed37251694767e86ff42992179bd6e33e347f680342",
+      "source_sha256_after": "6d6c39889288b8f719cc49085a09bcdc1ae9a713f01bc0621768fa988a7ecb05"
+    },
+    {
+      "key": "dac69cf5-471f-4ec5-9426-ed015f8d5e08",
+      "file": "services/ocr-worker/tests/test_paper_formula.py",
+      "before": "assert edge_ink <= .08 and complete",
+      "after": "assert edge_ink <= 0.08\n    assert complete",
+      "source_sha256_before": "6d6c39889288b8f719cc49085a09bcdc1ae9a713f01bc0621768fa988a7ecb05",
+      "source_sha256_after": "90cc57fdb547f38258d8dbc8d5fb80aa4683a66444e15b3bc6948c9acabb7c91"
+    },
+    {
+      "key": "2d246583-69f8-41c3-9d37-8e35beec8a19",
+      "file": "services/ocr-worker/tests/test_paper_formula_batch35.py",
+      "before": "assert not harness.primary.initialized and not harness.fallback.initialized",
+      "after": "assert not harness.primary.initialized\n    assert not harness.fallback.initialized",
+      "source_sha256_before": "999c92010aede93fe83170b22deac825a1c04719431a788e50b0c374b954d668",
+      "source_sha256_after": "c593ae6b83cb7d7c9af7cb16b714659edb15c12cc9a94ea4cfd9f8e069efd074"
+    },
+    {
+      "key": "f1c530b4-979e-4837-8ae2-1255dbd90a93",
+      "file": "services/ocr-worker/tests/test_paper_formula_batch35.py",
+      "before": "assert len(harness.failed) == 1 and harness.completed == []",
+      "after": "assert len(harness.failed) == 1\n    assert harness.completed == []",
+      "source_sha256_before": "c593ae6b83cb7d7c9af7cb16b714659edb15c12cc9a94ea4cfd9f8e069efd074",
+      "source_sha256_after": "bf5eb2c281c350ef2112d95e47e691bdde4447ee77103487533760be213bd562"
+    },
+    {
+      "key": "9fc931c3-4640-46ef-89e7-02cc68b6197c",
+      "file": "services/ocr-worker/tests/test_paper_formula_batch35.py",
+      "before": "assert isinstance(failure[6], int) and failure[6] >= 0",
+      "after": "assert isinstance(failure[6], int)\n    assert failure[6] >= 0",
+      "source_sha256_before": "bf5eb2c281c350ef2112d95e47e691bdde4447ee77103487533760be213bd562",
+      "source_sha256_after": "e0472f58af8b7d4a4a5c29b965cb0576c1156aacfe3fd1a9344792157fe661c9"
+    },
+    {
+      "key": "0a244aae-9d85-4a49-b88c-b458ab5bf5c2",
+      "file": "services/ocr-worker/tests/test_recognition_router.py",
+      "before": "assert diagram.preserve_image_evidence and diagram.requires_human_review",
+      "after": "assert diagram.preserve_image_evidence\n    assert diagram.requires_human_review",
+      "source_sha256_before": "7a4b36fc9a092527e9f571cf4d85d74df75bf25490092eba89d375fff537f6c2",
+      "source_sha256_after": "d77c2f6553f7d6b7460013cf65d3a2158a4da7dc231a040791dfcf082cc027bd"
+    },
+    {
+      "key": "a20aa3d6-82b9-4646-8e08-73de318d9ecf",
+      "file": "services/ocr-worker/tests/test_recognition_router.py",
+      "before": "assert result.preserve_image_evidence and result.requires_human_review",
+      "after": "assert result.preserve_image_evidence\n        assert result.requires_human_review",
+      "source_sha256_before": "d77c2f6553f7d6b7460013cf65d3a2158a4da7dc231a040791dfcf082cc027bd",
+      "source_sha256_after": "5255abcade49f8ebceb91e67eddfa0c5e6cebb45005ef523202893c1ecb82365"
+    },
+    {
+      "key": "16e17e90-7ed5-400a-abde-7cc90ebace78",
+      "file": "services/ocr-worker/tests/test_recognition_router.py",
+      "before": "assert result.requires_human_review and result.preserve_image_evidence",
+      "after": "assert result.requires_human_review\n    assert result.preserve_image_evidence",
+      "source_sha256_before": "5255abcade49f8ebceb91e67eddfa0c5e6cebb45005ef523202893c1ecb82365",
+      "source_sha256_after": "2d45bfd71bd9b6c268936f12969c3c2dec0615cdc43fa8470a2136ce537091fb"
+    },
+    {
+      "key": "8fbf6228-8d28-4700-bf35-8339c561dc1f",
+      "file": "services/ocr-worker/tests/test_recognition_router.py",
+      "before": "assert len(first) == 3 and len(second) == 1",
+      "after": "assert len(first) == 3\n    assert len(second) == 1",
+      "source_sha256_before": "2d45bfd71bd9b6c268936f12969c3c2dec0615cdc43fa8470a2136ce537091fb",
+      "source_sha256_after": "d526dce1a8c767af2e89e029e396b41fa482e2bf596b14a5086fa45bed1a788d"
+    },
+    {
+      "key": "cbc2033f-625d-455b-ad66-84cb2107185e",
+      "file": "services/ocr-worker/tests/test_recognition_router_batch32.py",
+      "before": "assert result.preserve_image_evidence and result.requires_human_review",
+      "after": "assert result.preserve_image_evidence\n    assert result.requires_human_review",
+      "source_sha256_before": "0cc373f17a4540c1ed14f68e9672e29530e392ad3feebb0261e3722c75a88346",
+      "source_sha256_after": "5ed1ea10656f179095a7b0af7d1f965e9e89f1c4dc34ad095fc50c06e6d9f329"
+    },
+    {
+      "key": "85c7db03-6a6a-4f5c-884b-0e52874c7ffc",
+      "file": "services/ocr-worker/tests/test_symbolic_runner.py",
+      "before": "assert previous == equation(2) and following == equation(3)",
+      "after": "assert previous == equation(2)\n        assert following == equation(3)",
+      "source_sha256_before": "aa00876e3e937a583c930b9af9b34238ecf8f2b9d1d9ad7d06d8c77735dc8d87",
+      "source_sha256_after": "2632fc92444093f1bf49f6100f9971cc04e847609d854d1078b2dc54131dbdb1"
+    }
+  ]
+}

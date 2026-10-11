@@ -17,7 +17,7 @@ export function baseRubric(overrides = {}) {
 
 export function baseInput(overrides = {}) {
   const rubric = overrides.rubric ?? baseRubric();
-  return {
+  const input = {
     request_id: "req-test",
     question_id: "q-test",
     answer_segment_id: "a-test",
@@ -32,9 +32,11 @@ export function baseInput(overrides = {}) {
     model_policy: { adapter: "mock", final_score_allowed: false },
     prompt_version: "prompt-base-v1",
     rubric_version: rubric.rubric_version,
-    ...overrides,
-    rubric
+    ...overrides
   };
+  // null/undefined 的 rubric 回退到默认量规；恢复选定量规，同时保留原有字段顺序及其他显式覆盖。
+  input.rubric = rubric;
+  return input;
 }
 
 export function baseOutput(overrides = {}) {

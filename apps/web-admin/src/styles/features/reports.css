@@ -2,7 +2,10 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  container: reports / inline-size;
 }
+.reports-view-nav { overflow-x: auto; padding: 2px 0; }
+.reports-view-nav .ant-segmented { min-width: max-content; }
 
 .reports-kpi-strip,
 .reports-panel {
@@ -41,7 +44,7 @@
 
 .reports-kpi-strip {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   overflow: hidden;
 }
 
@@ -75,6 +78,11 @@
   gap: 12px;
   align-items: start;
 }
+/* 区块显式声明所属视图，避免插入图表后依赖子元素顺序的映射显示错内容。 */
+.reports-grid[data-view="overview"] > :not(.reports-view-overview),
+.reports-grid[data-view="questions"] > :not(.reports-view-questions),
+.reports-grid[data-view="classes"] > :not(.reports-view-classes),
+.reports-grid[data-view="quality"] > :not(.reports-view-quality) { display: none; }
 
 .reports-panel {
   min-width: 0;
@@ -187,5 +195,14 @@
   color: var(--text-muted);
   font-size: var(--eg-font-caption);
   text-align: right;
+}
+@container reports (max-width: 900px) {
+  .reports-grid { grid-template-columns: minmax(0, 1fr); }
+  .reports-kpi-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@container reports (max-width: 560px) {
+  .reports-kpi-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .reports-topbar { flex-direction: column; }
+  .reports-exam-select { width: min(100%, 420px); }
 }
 

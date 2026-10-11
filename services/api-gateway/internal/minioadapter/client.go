@@ -12,8 +12,7 @@ import (
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
-// NewClient centralizes MinIO TLS verification so readiness and business I/O
-// cannot silently drift to different trust settings.
+// NewClient 集中管理 MinIO TLS 验证，防止就绪检查和业务 I/O 静默使用不同信任设置。
 func NewClient(cfg config.MinIOConfig) (*minio.Client, error) {
 	options := &minio.Options{
 		Creds:  credentials.NewStaticV4(cfg.AccessKey, cfg.SecretKey, ""),

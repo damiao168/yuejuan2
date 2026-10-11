@@ -18,6 +18,19 @@ def _issues(
     geometry: dict[str, Any],
     hard_gates: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
+    # 保持报告的原有问题顺序；硬门槛失败在采集质量问题中优先于复核提醒。
+    return [
+        *_capture_issues(metrics, geometry, hard_gates),
+        *_geometry_issues(metrics, geometry),
+        *_image_signal_issues(metrics),
+    ]
+
+
+def _capture_issues(
+    metrics: dict[str, float | int],
+    geometry: dict[str, Any],
+    hard_gates: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
     issues: list[dict[str, Any]] = []
     failed_gate_codes = {
         str(gate["code"]) for gate in hard_gates if gate["status"] == "failed"
@@ -104,6 +117,13 @@ def _issues(
                 "manual_review",
             )
         )
+    return issues
+
+
+def _geometry_issues(
+    metrics: dict[str, float | int], geometry: dict[str, Any]
+) -> list[dict[str, Any]]:
+    issues: list[dict[str, Any]] = []
     if (
         geometry["perspective_confidence"] >= 0.4
         and metrics["perspective_risk_score"] > PERSPECTIVE_SUSPECTED_SCORE
@@ -143,6 +163,11 @@ def _issues(
                 "manual_review",
             )
         )
+    return issues
+
+
+def _image_signal_issues(metrics: dict[str, float | int]) -> list[dict[str, Any]]:
+    issues: list[dict[str, Any]] = []
     if metrics["exposure_quality_score"] < 0.45:
         issues.append(
             _issue(

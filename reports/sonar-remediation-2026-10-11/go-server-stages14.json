@@ -1,0 +1,16 @@
+{
+  "files": [
+    {
+      "file": "services/api-gateway/internal/server/e2e_subjective_command_test.go",
+      "sha256": "76e2acc530946ec0e589192465f4119452e7cfe5d4acba9c844bf03cc1a80f4d",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_subjective_command_test.go"
+    }
+  ],
+  "issue_functions": [
+    {
+      "file": "services/api-gateway/internal/server/e2e_subjective_command_test.go",
+      "function": "TestSubjectiveCommandRecoveryWithPostgresTestDatabase"
+    }
+  ],
+  "checkpoint_relation": "after checkpoint02; requires subsequent scan"
+}

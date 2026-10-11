@@ -1,0 +1,315 @@
+{
+  "language": "go",
+  "findings": [
+    {
+      "resultIndex": 0,
+      "ruleId": "go/unsafe-quoting",
+      "path": "services/api-gateway/internal/modelgovernance/managed_config_probe_http_test.go",
+      "status": "false_positive",
+      "reason": "test.content 的 json.Marshal 返回完整且已转义的 JSON 字符串 token，模板在 content 冒号后直接拼入 token，没有额外包引号。finishReason 来自本例三个固定字段 stop/length，其他源码路径不是本条 source。此处有意测试非法/截断的内层模型回答；外层响应仍正确 JSON 编码。",
+      "changedFiles": [],
+      "currentSha256": "9b70a95056ad98ba69e35f536fb2dd1c12231eb57844440410ee87932ce113c9",
+      "currentContextReviewed": true
+    },
+    {
+      "resultIndex": 1,
+      "ruleId": "go/unsafe-quoting",
+      "path": "services/api-gateway/internal/paper/handlers_test.go",
+      "status": "false_positive",
+      "reason": "告警数据是 float64 score 经 json.Marshal 产生的数值 JSON token，直接拼在 score/max_score 键的冒号后，变量两侧没有再包字符串引号。数字不能包含可突破引号的双引号；不是将带用户字符的 JSON 字符串再嵌进引号。测试 helper 忽略非有限数的 Marshal 错误会使该特殊夹具 JSON 无效，但不会形成本条所报的引号逃逸。",
+      "changedFiles": [],
+      "currentSha256": "2f5c8775029058b7a6e86b1b6a219fa80a29d0ee8ec9f6d7b7a0873ff15aca92",
+      "currentContextReviewed": true
+    },
+    {
+      "resultIndex": 2,
+      "ruleId": "go/unsafe-quoting",
+      "path": "services/api-gateway/internal/paper/handlers_test.go",
+      "status": "false_positive",
+      "reason": "告警数据是 float64 score 经 json.Marshal 产生的数值 JSON token，直接拼在 score/max_score 键的冒号后，变量两侧没有再包字符串引号。数字不能包含可突破引号的双引号；不是将带用户字符的 JSON 字符串再嵌进引号。测试 helper 忽略非有限数的 Marshal 错误会使该特殊夹具 JSON 无效，但不会形成本条所报的引号逃逸。",
+      "changedFiles": [],
+      "currentSha256": "2f5c8775029058b7a6e86b1b6a219fa80a29d0ee8ec9f6d7b7a0873ff15aca92",
+      "currentContextReviewed": true
+    },
+    {
+      "resultIndex": 3,
+      "ruleId": "go/unsafe-quoting",
+      "path": "services/api-gateway/internal/paper/handlers_test.go",
+      "status": "false_positive",
+      "reason": "告警数据是 float64 score 经 json.Marshal 产生的数值 JSON token，直接拼在 score/max_score 键的冒号后，变量两侧没有再包字符串引号。数字不能包含可突破引号的双引号；不是将带用户字符的 JSON 字符串再嵌进引号。测试 helper 忽略非有限数的 Marshal 错误会使该特殊夹具 JSON 无效，但不会形成本条所报的引号逃逸。",
+      "changedFiles": [],
+      "currentSha256": "2f5c8775029058b7a6e86b1b6a219fa80a29d0ee8ec9f6d7b7a0873ff15aca92",
+      "currentContextReviewed": true
+    },
+    {
+      "resultIndex": 4,
+      "ruleId": "go/unsafe-quoting",
+      "path": "services/api-gateway/internal/paper/handlers_test.go",
+      "status": "false_positive",
+      "reason": "告警数据是 float64 score 经 json.Marshal 产生的数值 JSON token，直接拼在 score/max_score 键的冒号后，变量两侧没有再包字符串引号。数字不能包含可突破引号的双引号；不是将带用户字符的 JSON 字符串再嵌进引号。测试 helper 忽略非有限数的 Marshal 错误会使该特殊夹具 JSON 无效，但不会形成本条所报的引号逃逸。",
+      "changedFiles": [],
+      "currentSha256": "2f5c8775029058b7a6e86b1b6a219fa80a29d0ee8ec9f6d7b7a0873ff15aca92",
+      "currentContextReviewed": true
+    },
+    {
+      "resultIndex": 5,
+      "ruleId": "go/unsafe-quoting",
+      "path": "services/api-gateway/internal/server/e2e_question_bank_import_test.go",
+      "status": "false_positive",
+      "reason": "qbJSON 检查 json.Marshal 错误后返回完整 JSON token。该告警参数 v.DefaultScore 在类型中为 float64，模板把结果直接放在 total_score 冒号后，不是放进双引号字符串。因此不是引号逃逸；同一模板其他 fixture ID 拼接未包含在本条数据流判断内，不能以本条误报推断整个模板适用于任意外部输入。",
+      "changedFiles": [],
+      "currentSha256": "dd90a2dd55eede5c0ad9f1c955e5897aab85d6afa6f07f26af7fe62f570bb6ba",
+      "currentContextReviewed": true
+    },
+    {
+      "resultIndex": 6,
+      "ruleId": "go/allocation-size-overflow",
+      "path": "services/api-gateway/internal/mathunderstanding/handlers.go",
+      "status": "fixed",
+      "reason": "已有验证记录与合并后验证记录均限制为4096条，新增符号验证仍限制为1..2048条。容量相加前先按保留的syntax数量用减法检查预算，旧符号验证在重复修订时被替换。超预算契约在深拷贝之前拒绝；验证覆盖数量上限、语法疑点保留、整批替换及输入不被改写。",
+      "changedFiles": [
+        "services/api-gateway/internal/mathunderstanding/handlers.go",
+        "services/api-gateway/internal/mathunderstanding/types.go",
+        "services/api-gateway/internal/mathunderstanding/verification_budget_test.go"
+      ],
+      "currentSha256": "41f3889aa7b1db7e1b35245447dfecdb2fb69b40db8069558858300f8db542e2",
+      "currentContextReviewed": true
+    },
+    {
+      "resultIndex": 7,
+      "ruleId": "go/insecure-tls",
+      "path": "services/api-gateway/internal/minioadapter/client_test.go",
+      "status": "intentional",
+      "reason": "TestNewClientRejectsTLSBeforeVersion12 有意构造最大 TLS1.1 的 httptest 服务，断言真实 NewClient 客户端在发送 HTTP 前拒绝该服务；生产 MinIO NewClient 的 cfg.UseSSL 分支设置 TLSClientConfig.MinVersion = TLS1.2。不是业务客户端允许 TLS1.1，也不是只按 _test.go 文件名排除。",
+      "changedFiles": [
+        "services/api-gateway/internal/minioadapter/client_test.go"
+      ],
+      "currentSha256": "9e333c376e444762ff5e182af2571590c488054640dc8f77c7013b614fcb0282",
+      "currentContextReviewed": true
+    },
+    {
+      "resultIndex": 8,
+      "ruleId": "go/weak-sensitive-data-hashing",
+      "path": "services/api-gateway/internal/auth/login_limiter_redis.go",
+      "status": "false_positive",
+      "reason": "SHA256 输入是账号/来源/配对限流桶的键，而非密码。LoginAttempt 只有租户、标识、IP 和服务端解析的 AccountID；Redis 的哈希只是稳定索引。不能把这个用法视作低熵密码存储，也不能把无密钥 SHA256 当作不可猜测的匿名化。",
+      "changedFiles": [],
+      "currentSha256": "dedb2b542e57db315a36b0d4705ba31d40e55d28b77bb0cf937265ae161a88ae",
+      "currentContextReviewed": true
+    },
+    {
+      "resultIndex": 9,
+      "ruleId": "go/weak-sensitive-data-hashing",
+      "path": "services/api-gateway/internal/auth/token.go",
+      "status": "false_positive",
+      "reason": "HashToken 存储高熵随机令牌的摘要：NewToken 使用 crypto/rand 生成 32 字节，MFA 恢复码另为 16 字节随机数。激活/恢复流程明确将 input.Token 与 input.Password 分开。密码由 HashPassword 的带随机盐 Argon2id 处理，不能将 token 的快速摘要归为弱密码哈希；本条不评估全部认证流程。",
+      "changedFiles": [
+        "services/api-gateway/internal/auth/token.go"
+      ],
+      "currentSha256": "d6204fdbd6daea40f4e38739bdf790607769b6250c817afc8142f2c00db06a68",
+      "currentContextReviewed": true
+    },
+    {
+      "resultIndex": 10,
+      "ruleId": "go/uncontrolled-allocation-size",
+      "path": "services/api-gateway/internal/mathunderstanding/pilot_store.go",
+      "status": "false_positive",
+      "reason": "ListPilotGates 在 make 前把 limit<=0 或 limit>500 改为100；有效分配容量最多500。本告警忽略了同函数中的上限归一化。",
+      "changedFiles": [],
+      "currentSha256": "5e8b9d7abbc76e201f5faf8791dc3d6755de888cfc5fa746f6c1d040b4e7d867",
+      "currentContextReviewed": true
+    },
+    {
+      "resultIndex": 11,
+      "ruleId": "go/uncontrolled-allocation-size",
+      "path": "services/api-gateway/internal/processing/store_postgres.go",
+      "status": "false_positive",
+      "reason": "ListExceptions 在 SQL 和 make 前把 Limit<=0 或 Limit>100 改为25，容量最多100，查询多取一行仍最多101。实际输入不是无界分配。",
+      "changedFiles": [],
+      "currentSha256": "97ada29c843c7987a5c532e44689b1fcec1b4142056301618a9228c3d2fe9a6d",
+      "currentContextReviewed": true
+    },
+    {
+      "resultIndex": 12,
+      "ruleId": "go/uncontrolled-allocation-size",
+      "path": "services/api-gateway/internal/workerruntime/store_memory.go",
+      "status": "false_positive",
+      "reason": "MemoryStore.claim 先调用 normalizeClaimInput，Limit<=0 或>100 被改为1；归一化返回值覆盖 input，之后才分配容量。因此这条告警中的 input.Limit 已有上限。",
+      "changedFiles": [],
+      "currentSha256": "b833cebeb06b700a2596fb778530cdc16de58ab372c1f0764f8ab7044543df91",
+      "currentContextReviewed": true
+    },
+    {
+      "resultIndex": 13,
+      "ruleId": "go/uncontrolled-allocation-size",
+      "path": "services/api-gateway/internal/workerruntime/store_postgres.go",
+      "status": "false_positive",
+      "reason": "PostgresStore.claim 同样先覆盖 input 为 normalizeClaimInput 的返回值，Limit 处于1..100；SQL LIMIT 与 make 的容量都使用该值。跨租户模式没有绕开这一步。本条只核验分配边界，不证明全部跨租户权限正确。",
+      "changedFiles": [],
+      "currentSha256": "b260e8af94233c4dfdee875cfff15452cf85aa5fd0b0d9ed4f91a386ea85e5dc",
+      "currentContextReviewed": true
+    },
+    {
+      "resultIndex": 14,
+      "ruleId": "go/request-forgery",
+      "path": "services/api-gateway/internal/modelgovernance/managed_config_probe.go",
+      "status": "fixed",
+      "reason": "已将探测地址判断移至独立模块，拒绝IANA特殊用途网段、共享地址、文档/基准地址和IPv6转换前缀；IPv4映射地址先Unmap后核验，IPv6只允许2000::/3并排除其中特殊段。保留HTTPS、全DNS回答检查、数字IP拨号、禁重定向及默认TLS验证；混合特殊地址在任何拨号前拒绝。未连接部署网络，不将代码修复等同于验证实际路由或防火墙。",
+      "changedFiles": [
+        "services/api-gateway/internal/modelgovernance/managed_config_probe.go",
+        "services/api-gateway/internal/modelgovernance/managed_config_probe_network.go",
+        "services/api-gateway/internal/modelgovernance/managed_config_probe_network_test.go"
+      ],
+      "currentSha256": "adad77306802937f01e9d8808c9735259e05beb69b3fb70ca0e80ba6aeb88420",
+      "currentContextReviewed": true
+    },
+    {
+      "resultIndex": 15,
+      "ruleId": "go/log-injection",
+      "path": "services/api-gateway/internal/schoolassistant/service.go",
+      "status": "false_positive",
+      "reason": "传入日志的是独立 slog 属性 request_id；进入 preparedQuery 前 validateRequest 会 TrimSpace 并用 uuid.Parse 拒绝无效请求标识。攻击者的任意换行文字不能沿本告警路径进入此日志字段。不能从此推断所有其他日志字段也已审查。",
+      "changedFiles": [],
+      "currentSha256": "b418da1dc91932e30d6ab957f4d331cd1c61defe3868e6a154ea74e0359f6d5b",
+      "currentContextReviewed": true
+    },
+    {
+      "resultIndex": 16,
+      "ruleId": "go/index-out-of-bounds",
+      "path": "services/api-gateway/internal/capture/print_package_pdf.go",
+      "status": "false_positive",
+      "reason": "drawQRCode 故意让 columnIndex 到 len(row) 的哨兵位，以冲刷最后一段黑色模块。唯一 row[columnIndex] 读取位于 `columnIndex < len(row) && row[columnIndex]` 右侧，Go && 短路保证哨兵位不会执行读取；range 提供实际行，列索引从0递增。后续只用列差计算绘图矩形，无第二次 bitmap 索引；外层空 bitmap 也已提前返回。不需依赖 qrcode.Bitmap 保证方阵才能排除这条越界，空行同样不读取。",
+      "changedFiles": [
+        "services/api-gateway/internal/capture/print_package_pdf.go"
+      ],
+      "currentSha256": "d989ee3525d57fccdb2f9fa4b97c3fe54873501e38f9376d9cf764b6ff23a8b8",
+      "currentContextReviewed": true
+    },
+    {
+      "resultIndex": 17,
+      "ruleId": "go/useless-assignment-to-field",
+      "path": "services/api-gateway/internal/modelgovernance/store_memory.go",
+      "status": "fixed",
+      "reason": "移除首次UpdatePolicy中未被读取的current.TenantID赋值；最终policy.TenantID和租户映射键保持不变。",
+      "changedFiles": [
+        "services/api-gateway/internal/modelgovernance/store_memory.go"
+      ],
+      "currentSha256": "57ed3cbda05d86ccfa67ffc0bb9419bd9c98e256e3dd41fe709d05820f3058ef",
+      "currentContextReviewed": true
+    },
+    {
+      "resultIndex": 18,
+      "ruleId": "go/useless-assignment-to-field",
+      "path": "services/api-gateway/internal/modelgovernance/store_memory.go",
+      "status": "fixed",
+      "reason": "移除首次UpdatePolicy中未被读取的current.PolicyKey赋值；最终policy.PolicyKey仍设为default。",
+      "changedFiles": [
+        "services/api-gateway/internal/modelgovernance/store_memory.go"
+      ],
+      "currentSha256": "57ed3cbda05d86ccfa67ffc0bb9419bd9c98e256e3dd41fe709d05820f3058ef",
+      "currentContextReviewed": true
+    },
+    {
+      "resultIndex": 19,
+      "ruleId": "go/useless-assignment-to-field",
+      "path": "services/api-gateway/internal/modelgovernance/store_memory.go",
+      "status": "fixed",
+      "reason": "移除首次UpdatePolicy中未被读取的current.Status赋值；最终policy.Status、版本检查与保存流程保持不变。",
+      "changedFiles": [
+        "services/api-gateway/internal/modelgovernance/store_memory.go"
+      ],
+      "currentSha256": "57ed3cbda05d86ccfa67ffc0bb9419bd9c98e256e3dd41fe709d05820f3058ef",
+      "currentContextReviewed": true
+    },
+    {
+      "resultIndex": 20,
+      "ruleId": "go/useless-assignment-to-local",
+      "path": "services/api-gateway/internal/questionbank/metadata_acl_search_test.go",
+      "status": "fixed",
+      "reason": "撤权UpdateACL的未使用对象返回值改接到_，保留旧doc.Revision实参、错误检查和撤权后查询断言。",
+      "changedFiles": [
+        "services/api-gateway/internal/questionbank/metadata_acl_search_test.go"
+      ],
+      "currentSha256": "c178be804f715135d98163c436bd628c2a7259998fac8737461f9267607db04f",
+      "currentContextReviewed": true
+    },
+    {
+      "resultIndex": 21,
+      "ruleId": "go/useless-assignment-to-local",
+      "path": "services/api-gateway/internal/server/e2e_question_bank_acl_ux_test.go",
+      "status": "fixed",
+      "reason": "末次UpdateACL的未使用对象返回值改接到_，保留旧updated.Revision实参及直接授权/组权限数据库断言。",
+      "changedFiles": [
+        "services/api-gateway/internal/server/e2e_question_bank_acl_ux_test.go"
+      ],
+      "currentSha256": "a8525c7dce00f699091b6117e2612c51a4ec72edba3a25efc395fb66497c1729",
+      "currentContextReviewed": true
+    },
+    {
+      "resultIndex": 22,
+      "ruleId": "go/useless-assignment-to-local",
+      "path": "services/api-gateway/internal/server/e2e_question_bank_metadata_acl_search_test.go",
+      "status": "fixed",
+      "reason": "再授权UpdateACL的未使用对象返回值改接到_，保留旧acl.Revision实参、再授权动作与后续权限/审计检查。",
+      "changedFiles": [
+        "services/api-gateway/internal/server/e2e_question_bank_metadata_acl_search_test.go"
+      ],
+      "currentSha256": "5f07c7dbe1bb2ff64bda6eec72efa5eb62e4bbf2c00fbcf977cfe0175a08d23e",
+      "currentContextReviewed": true
+    }
+  ],
+  "changedFiles": [
+    "services/api-gateway/internal/auth/token.go",
+    "services/api-gateway/internal/capture/print_package_pdf.go",
+    "services/api-gateway/internal/mathunderstanding/handlers.go",
+    "services/api-gateway/internal/mathunderstanding/types.go",
+    "services/api-gateway/internal/mathunderstanding/verification_budget_test.go",
+    "services/api-gateway/internal/minioadapter/client_test.go",
+    "services/api-gateway/internal/modelgovernance/managed_config_probe.go",
+    "services/api-gateway/internal/modelgovernance/managed_config_probe_network.go",
+    "services/api-gateway/internal/modelgovernance/managed_config_probe_network_test.go",
+    "services/api-gateway/internal/modelgovernance/store_memory.go",
+    "services/api-gateway/internal/questionbank/metadata_acl_search_test.go",
+    "services/api-gateway/internal/server/e2e_question_bank_acl_ux_test.go",
+    "services/api-gateway/internal/server/e2e_question_bank_metadata_acl_search_test.go",
+    "services/api-gateway/internal/server/e2e_scoring_command_test.go"
+  ],
+  "tests": [
+    {
+      "command": "go test -p 1 ./internal/mathunderstanding ./internal/modelgovernance ./internal/questionbank",
+      "status": "passed",
+      "exitCode": 0,
+      "log": "go-tests.log"
+    },
+    {
+      "command": "go test -p 1 ./internal/server -run 'TestE2EPostgres(UXHistoricalACLAndActualMemberResponsibilities|QuestionBankMetadataACLSearch)$' -v",
+      "status": "compiled_cases_skipped",
+      "exitCode": 0,
+      "passed": 0,
+      "skipped": 2,
+      "reason": "未配置专用隔离PostgreSQL测试库；测试按已有约定跳过，未调用生产数据库。",
+      "log": "go-server-tests-attempt2.log"
+    }
+  ],
+  "additionalFindings": [
+    {
+      "path": "services/api-gateway/internal/server/e2e_scoring_command_test.go",
+      "problem": "已有并行工作区中的PostgreSQL评分恢复测试helper引用调用方局部db，导致server测试包无法编译。",
+      "fix": "给helper显式传入相同*sql.DB，保留PostgreSQL幂等回执存储和既有测试语义。",
+      "status": "fixed",
+      "changedFiles": [
+        "services/api-gateway/internal/server/e2e_scoring_command_test.go"
+      ],
+      "firstFailureLog": "go-server-tests.log"
+    }
+  ],
+  "limitations": [
+    "当前未重扫CodeQL；原23条SARIF证据保留。",
+    "端点地址静态校验不能证明部署环境中公网地址的实际路由、网关映射和出站防火墙已经核对；应在上线环境核实，未作已验证声明。",
+    "全文件未审读部分仍是pending；本轮逐条上下文核验不能作为全仓审读完成。"
+  ],
+  "references": [
+    "https://www.iana.org/assignments/iana-ipv4-special-registry/",
+    "https://www.iana.org/assignments/iana-ipv6-special-registry/"
+  ]
+}

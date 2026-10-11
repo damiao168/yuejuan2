@@ -14,6 +14,9 @@
 *.yml text eol=lf
 *.yaml text eol=lf
 *.ps1 text eol=crlf
+# 这两个文件固定使用 LF，避免 Rust 分析器把 CR 算入注释高亮的结束列。
+apps/desktop-client/src-tauri/src/durable_store/queue.rs text eol=lf
+apps/desktop-client/src-tauri/src/durable_store/spool.rs text eol=lf
 *.png binary
 *.jpg binary
 *.jpeg binary

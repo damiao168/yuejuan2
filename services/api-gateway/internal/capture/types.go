@@ -601,8 +601,7 @@ type Store interface {
 	GetRegistrationCorrectionContext(ctx context.Context, tenantID, runID string) (RegistrationCorrectionContext, error)
 }
 
-// TransactionalTemplateMatchStore is implemented by the production store so
-// the routing decision and worker lease reach a terminal state atomically.
+// TransactionalTemplateMatchStore 由生产存储实现，使路由决策和工作器租约原子进入终态。
 type TransactionalTemplateMatchStore interface {
 	SubmitTemplateMatchResultCommand(context.Context, string, string, TemplateMatchResultInput) (TemplateMatchRun, []RegistrationRun, error)
 	SubmitTemplateMatchFailureCommand(context.Context, string, string, TemplateMatchFailureInput) (TemplateMatchRun, string, error)

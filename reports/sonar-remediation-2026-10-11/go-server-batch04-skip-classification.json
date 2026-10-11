@@ -1,0 +1,568 @@
+{
+  "source_events": "go-server-batch04-events.jsonl",
+  "counts": {
+    "postgres_environment_condition": 61,
+    "auxiliary_entry_condition": 1
+  },
+  "tests": [
+    {
+      "test": "TestHighScorePaperShareRedactsAndRevokesWithPostgresTestDatabase",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestHighScorePaperShareRedactsAndRevokesWithPostgresTestDatabase\n",
+        "    e2e_anonymous_paper_test.go:22: EDUGRADE_E2E_DATABASE_URL is not set\n",
+        "--- SKIP: TestHighScorePaperShareRedactsAndRevokesWithPostgresTestDatabase (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestTeacherAccountSecurityE2EWithPostgres",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestTeacherAccountSecurityE2EWithPostgres\n",
+        "    e2e_auth_security_test.go:24: EDUGRADE_E2E_DATABASE_URL is not set; skipping isolated PostgreSQL account security E2E\n",
+        "--- SKIP: TestTeacherAccountSecurityE2EWithPostgres (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestBusinessCommandReservationCrashHelper",
+      "category": "auxiliary_entry_condition",
+      "original_output": [
+        "=== RUN   TestBusinessCommandReservationCrashHelper\n",
+        "    e2e_business_command_test.go:50: child-process crash helper\n",
+        "--- SKIP: TestBusinessCommandReservationCrashHelper (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestComposeApplicationBootstrapAndLoginWithPostgres",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestComposeApplicationBootstrapAndLoginWithPostgres\n",
+        "    e2e_compose_bootstrap_test.go:25: EDUGRADE_E2E_DATABASE_URL is required\n",
+        "--- SKIP: TestComposeApplicationBootstrapAndLoginWithPostgres (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestDashboardSummaryE2EWithPostgresTestDatabase",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestDashboardSummaryE2EWithPostgresTestDatabase\n",
+        "    e2e_dashboard_test.go:15: EDUGRADE_E2E_DATABASE_URL is not set; skipping PostgreSQL dashboard workflow\n",
+        "--- SKIP: TestDashboardSummaryE2EWithPostgresTestDatabase (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestExamArchiveCommandsE2EWithPostgresTestDatabase",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestExamArchiveCommandsE2EWithPostgresTestDatabase\n",
+        "    e2e_exam_archive_commands_test.go:25: EDUGRADE_E2E_DATABASE_URL is required for archive command PostgreSQL acceptance\n",
+        "--- SKIP: TestExamArchiveCommandsE2EWithPostgresTestDatabase (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestWholeExamManagementE2EWithPostgresTestDatabase",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestWholeExamManagementE2EWithPostgresTestDatabase\n",
+        "    e2e_exam_management_test.go:22: EDUGRADE_E2E_DATABASE_URL is required for whole-exam PostgreSQL acceptance\n",
+        "--- SKIP: TestWholeExamManagementE2EWithPostgresTestDatabase (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestFileReconciliationWithPostgresTestDatabase",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestFileReconciliationWithPostgresTestDatabase\n",
+        "    e2e_file_reconciliation_test.go:20: EDUGRADE_E2E_DATABASE_URL is not set; skipping PostgreSQL file reconciliation workflow\n",
+        "--- SKIP: TestFileReconciliationWithPostgresTestDatabase (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestRequestIdempotencyWithPostgresTestDatabase",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestRequestIdempotencyWithPostgresTestDatabase\n",
+        "    e2e_idempotency_test.go:19: EDUGRADE_E2E_DATABASE_URL is not set; skipping PostgreSQL idempotency workflow\n",
+        "--- SKIP: TestRequestIdempotencyWithPostgresTestDatabase (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestOutboxLeaseRecoveryWithPostgresTestDatabase",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestOutboxLeaseRecoveryWithPostgresTestDatabase\n",
+        "    e2e_idempotency_test.go:125: EDUGRADE_E2E_DATABASE_URL is not set; skipping PostgreSQL outbox workflow\n",
+        "--- SKIP: TestOutboxLeaseRecoveryWithPostgresTestDatabase (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestPostgresMathEffectiveEvidenceProjection",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestPostgresMathEffectiveEvidenceProjection\n",
+        "    e2e_math_effective_evidence_test.go:21: EDUGRADE_E2E_DATABASE_URL is required for real PostgreSQL evidence\n",
+        "--- SKIP: TestPostgresMathEffectiveEvidenceProjection (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestPostgresMathGradingBindingsRoundTripAndRejectWrongVersion",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestPostgresMathGradingBindingsRoundTripAndRejectWrongVersion\n",
+        "    e2e_math_grading_binding_test.go:23: EDUGRADE_E2E_DATABASE_URL is required\n",
+        "--- SKIP: TestPostgresMathGradingBindingsRoundTripAndRejectWrongVersion (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestPostgresMathRubricScoreUsesOnlyFrozenExamRubric",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestPostgresMathRubricScoreUsesOnlyFrozenExamRubric\n",
+        "    e2e_math_rubric_score_test.go:31: EDUGRADE_E2E_DATABASE_URL is required\n",
+        "--- SKIP: TestPostgresMathRubricScoreUsesOnlyFrozenExamRubric (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestPostgresMathVerificationRuntimeAtomicActivation",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestPostgresMathVerificationRuntimeAtomicActivation\n",
+        "    e2e_math_verification_runtime_test.go:25: EDUGRADE_E2E_DATABASE_URL is required for real PostgreSQL evidence\n",
+        "--- SKIP: TestPostgresMathVerificationRuntimeAtomicActivation (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestTOTPManagementE2EWithPostgres",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestTOTPManagementE2EWithPostgres\n",
+        "    e2e_mfa_test.go:28: EDUGRADE_E2E_DATABASE_URL is not set\n",
+        "--- SKIP: TestTOTPManagementE2EWithPostgres (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestPaperImportApplyGateE2EWithPostgresTestDatabase",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestPaperImportApplyGateE2EWithPostgresTestDatabase\n",
+        "    e2e_paper_import_reconciliation_test.go:26: EDUGRADE_E2E_DATABASE_URL is not set; skipping paper import PostgreSQL apply gate test\n",
+        "--- SKIP: TestPaperImportApplyGateE2EWithPostgresTestDatabase (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestCoreWorkflowE2EWithPostgresTestDatabase",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestCoreWorkflowE2EWithPostgresTestDatabase\n",
+        "    e2e_postgres_test.go:37: EDUGRADE_E2E_DATABASE_URL is not set; skipping PostgreSQL E2E test database workflow\n",
+        "--- SKIP: TestCoreWorkflowE2EWithPostgresTestDatabase (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestE2EPostgresUXHistoricalACLAndActualMemberResponsibilities",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestE2EPostgresUXHistoricalACLAndActualMemberResponsibilities\n",
+        "    e2e_question_bank_acl_ux_test.go:20: requires isolated PostgreSQL\n",
+        "--- SKIP: TestE2EPostgresUXHistoricalACLAndActualMemberResponsibilities (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestE2EPostgresQuestionBankFrozenImport",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestE2EPostgresQuestionBankFrozenImport\n",
+        "    e2e_question_bank_import_test.go:23: EDUGRADE_E2E_DATABASE_URL is required for real PostgreSQL evidence\n",
+        "--- SKIP: TestE2EPostgresQuestionBankFrozenImport (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestE2EPostgresQuestionBankMetadataACLSearch",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestE2EPostgresQuestionBankMetadataACLSearch\n",
+        "    e2e_question_bank_metadata_acl_search_test.go:19: requires isolated PostgreSQL\n",
+        "--- SKIP: TestE2EPostgresQuestionBankMetadataACLSearch (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestE2EPostgresQuestionBankPublication",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestE2EPostgresQuestionBankPublication\n",
+        "    e2e_question_bank_publication_test.go:22: requires isolated PostgreSQL\n",
+        "--- SKIP: TestE2EPostgresQuestionBankPublication (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestE2EPostgresQuestionBank",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestE2EPostgresQuestionBank\n",
+        "    e2e_question_bank_test.go:26: EDUGRADE_E2E_DATABASE_URL is required for real PostgreSQL evidence\n",
+        "--- SKIP: TestE2EPostgresQuestionBank (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestReleaseGateBlocksSubmissionWithoutCompleteQuestionCoverageE2EWithPostgresTestDatabase",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestReleaseGateBlocksSubmissionWithoutCompleteQuestionCoverageE2EWithPostgresTestDatabase\n",
+        "    e2e_question_coverage_test.go:16: EDUGRADE_E2E_DATABASE_URL is not set; skipping question coverage PostgreSQL acceptance workflow\n",
+        "--- SKIP: TestReleaseGateBlocksSubmissionWithoutCompleteQuestionCoverageE2EWithPostgresTestDatabase (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestReliabilityCommandRecoveryWithPostgresTestDatabase",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestReliabilityCommandRecoveryWithPostgresTestDatabase\n",
+        "    e2e_reliability_command_test.go:45: EDUGRADE_E2E_DATABASE_URL is not set outside the PostgreSQL CI job\n",
+        "--- SKIP: TestReliabilityCommandRecoveryWithPostgresTestDatabase (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestReliabilityMigrationFrom000122PostgresTestDatabase",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestReliabilityMigrationFrom000122PostgresTestDatabase\n",
+        "    e2e_reliability_command_test.go:1423: EDUGRADE_E2E_DATABASE_URL is not set outside the PostgreSQL CI job\n",
+        "--- SKIP: TestReliabilityMigrationFrom000122PostgresTestDatabase (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestReviewAssignmentLookupE2EWithPostgresTestDatabase",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestReviewAssignmentLookupE2EWithPostgresTestDatabase\n",
+        "    e2e_review_assignment_test.go:15: EDUGRADE_E2E_DATABASE_URL is not set; skipping exact review assignment PostgreSQL test\n",
+        "--- SKIP: TestReviewAssignmentLookupE2EWithPostgresTestDatabase (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestReviewRepairsRecoveryWithPostgresTestDatabase",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestReviewRepairsRecoveryWithPostgresTestDatabase\n",
+        "    e2e_review_recovery_test.go:40: EDUGRADE_E2E_DATABASE_URL is not set\n",
+        "--- SKIP: TestReviewRepairsRecoveryWithPostgresTestDatabase (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestReviewRepairsReleaseAndStudentReadWithPostgresTestDatabase",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestReviewRepairsReleaseAndStudentReadWithPostgresTestDatabase\n",
+        "    e2e_review_repairs_test.go:127: EDUGRADE_E2E_DATABASE_URL is not set\n",
+        "--- SKIP: TestReviewRepairsReleaseAndStudentReadWithPostgresTestDatabase (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestReleaseFeedbackUsesFinalArbitrationAndFreezesIt",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestReleaseFeedbackUsesFinalArbitrationAndFreezesIt\n",
+        "    e2e_review_repairs_test.go:329: EDUGRADE_E2E_DATABASE_URL is not set\n",
+        "--- SKIP: TestReleaseFeedbackUsesFinalArbitrationAndFreezesIt (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestCancelledScoringRunCannotReassignOrSubmitReview",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestCancelledScoringRunCannotReassignOrSubmitReview\n",
+        "    e2e_review_repairs_test.go:451: EDUGRADE_E2E_DATABASE_URL is not set\n",
+        "--- SKIP: TestCancelledScoringRunCannotReassignOrSubmitReview (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestRuleConfirmationWaitsForConcurrentCancellation",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestRuleConfirmationWaitsForConcurrentCancellation\n",
+        "    e2e_review_repairs_test.go:490: EDUGRADE_E2E_DATABASE_URL is not set\n",
+        "--- SKIP: TestRuleConfirmationWaitsForConcurrentCancellation (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestScoringAIBatchCancellationBlocksNewTasks",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestScoringAIBatchCancellationBlocksNewTasks\n",
+        "    e2e_review_repairs_test.go:540: EDUGRADE_E2E_DATABASE_URL is not set\n",
+        "--- SKIP: TestScoringAIBatchCancellationBlocksNewTasks (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestFailedScoringAIBatchSegmentsRequireOpenTeacherTask",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestFailedScoringAIBatchSegmentsRequireOpenTeacherTask\n",
+        "    e2e_review_repairs_test.go:620: EDUGRADE_E2E_DATABASE_URL is not set\n",
+        "--- SKIP: TestFailedScoringAIBatchSegmentsRequireOpenTeacherTask (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestScoringCommandRecoveryWithPostgresTestDatabase",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestScoringCommandRecoveryWithPostgresTestDatabase\n",
+        "    e2e_scoring_command_test.go:22: dedicated PostgreSQL required\n",
+        "--- SKIP: TestScoringCommandRecoveryWithPostgresTestDatabase (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestScoringDoubleMarkLifecycleWithPostgresTestDatabase",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestScoringDoubleMarkLifecycleWithPostgresTestDatabase\n",
+        "    e2e_scoring_double_mark_test.go:19: dedicated PostgreSQL required\n",
+        "--- SKIP: TestScoringDoubleMarkLifecycleWithPostgresTestDatabase (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestStory056TemplateDifferenceCalibrationApprovalAndRevocationE2E",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestStory056TemplateDifferenceCalibrationApprovalAndRevocationE2E\n",
+        "    e2e_story056_calibration_test.go:24: EDUGRADE_E2E_DATABASE_URL is not set; skipping STORY-056 calibration PostgreSQL test\n",
+        "--- SKIP: TestStory056TemplateDifferenceCalibrationApprovalAndRevocationE2E (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestStory056ApprovedCalibrationIsInheritedByTemplateCloneE2E",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestStory056ApprovedCalibrationIsInheritedByTemplateCloneE2E\n",
+        "    e2e_story056_calibration_test.go:170: EDUGRADE_E2E_DATABASE_URL is not set; skipping STORY-056 calibration clone PostgreSQL test\n",
+        "--- SKIP: TestStory056ApprovedCalibrationIsInheritedByTemplateCloneE2E (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestStory056TemplateCloneIsRejectedAfterReadinessConfirmationE2E",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestStory056TemplateCloneIsRejectedAfterReadinessConfirmationE2E\n",
+        "    e2e_story056_calibration_test.go:239: EDUGRADE_E2E_DATABASE_URL is not set; skipping STORY-056 frozen clone PostgreSQL test\n",
+        "--- SKIP: TestStory056TemplateCloneIsRejectedAfterReadinessConfirmationE2E (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestReadinessConfirmationSerializesConcurrentConfigurationWriteE2E",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestReadinessConfirmationSerializesConcurrentConfigurationWriteE2E\n",
+        "    e2e_story056_calibration_test.go:265: EDUGRADE_E2E_DATABASE_URL is not set; skipping transactional readiness PostgreSQL test\n",
+        "--- SKIP: TestReadinessConfirmationSerializesConcurrentConfigurationWriteE2E (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestStory056OMRAutoGradeConfirmationFailureFallsBackToReviewE2E",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestStory056OMRAutoGradeConfirmationFailureFallsBackToReviewE2E\n",
+        "    e2e_story056_lease_test.go:21: EDUGRADE_E2E_DATABASE_URL is not set; skipping OMR confirmation fallback PostgreSQL test\n",
+        "--- SKIP: TestStory056OMRAutoGradeConfirmationFailureFallsBackToReviewE2E (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestStory056ManualOnlyOMRProfileRequiresReviewE2E",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestStory056ManualOnlyOMRProfileRequiresReviewE2E\n",
+        "    e2e_story056_lease_test.go:94: EDUGRADE_E2E_DATABASE_URL is not set; skipping STORY-056 manual-only OMR gate test\n",
+        "--- SKIP: TestStory056ManualOnlyOMRProfileRequiresReviewE2E (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestStory056RejectsMismatchedOMRProfileBeforeCompletingTaskE2E",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestStory056RejectsMismatchedOMRProfileBeforeCompletingTaskE2E\n",
+        "    e2e_story056_lease_test.go:140: EDUGRADE_E2E_DATABASE_URL is not set; skipping STORY-056 OMR profile mismatch test\n",
+        "--- SKIP: TestStory056RejectsMismatchedOMRProfileBeforeCompletingTaskE2E (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestStory056TemplateDifferenceReferenceSnapshotE2E",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestStory056TemplateDifferenceReferenceSnapshotE2E\n",
+        "    e2e_story056_lease_test.go:198: EDUGRADE_E2E_DATABASE_URL is not set; skipping STORY-056 template-difference reference test\n",
+        "--- SKIP: TestStory056TemplateDifferenceReferenceSnapshotE2E (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestStory056OMRSameVersionChangedMeasurementsIsConflictE2E",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestStory056OMRSameVersionChangedMeasurementsIsConflictE2E\n",
+        "    e2e_story056_lease_test.go:330: EDUGRADE_E2E_DATABASE_URL is not set; skipping OMR semantic replay PostgreSQL test\n",
+        "--- SKIP: TestStory056OMRSameVersionChangedMeasurementsIsConflictE2E (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestStory056ExpiredOMRLeaseLeavesScoringFactsUntouchedE2E",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestStory056ExpiredOMRLeaseLeavesScoringFactsUntouchedE2E\n",
+        "    e2e_story056_lease_test.go:468: EDUGRADE_E2E_DATABASE_URL is not set; skipping OMR stale-lease PostgreSQL acceptance test\n",
+        "--- SKIP: TestStory056ExpiredOMRLeaseLeavesScoringFactsUntouchedE2E (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestStory056ObjectiveScoringRecoveryE2EWithPostgresTestDatabase",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestStory056ObjectiveScoringRecoveryE2EWithPostgresTestDatabase\n",
+        "    e2e_story056_test.go:48: EDUGRADE_E2E_DATABASE_URL is not set; skipping STORY-056 PostgreSQL acceptance workflow\n",
+        "--- SKIP: TestStory056ObjectiveScoringRecoveryE2EWithPostgresTestDatabase (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestStory060CaptureRecoveryE2EWithPostgresTestDatabase",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestStory060CaptureRecoveryE2EWithPostgresTestDatabase\n",
+        "    e2e_story060_capture_recovery_test.go:24: EDUGRADE_E2E_DATABASE_URL is not set; skipping STORY-060 capture recovery workflow\n",
+        "--- SKIP: TestStory060CaptureRecoveryE2EWithPostgresTestDatabase (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestStory060ProvisioningWithPostgresIsScopedAndIdempotent",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestStory060ProvisioningWithPostgresIsScopedAndIdempotent\n",
+        "    e2e_story060_provision_test.go:16: EDUGRADE_E2E_DATABASE_URL is not set; skipping STORY-060 provisioning PostgreSQL regression test\n",
+        "--- SKIP: TestStory060ProvisioningWithPostgresIsScopedAndIdempotent (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestStory060RosterReconciliationAndAbsenceE2EWithPostgresTestDatabase",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestStory060RosterReconciliationAndAbsenceE2EWithPostgresTestDatabase\n",
+        "    e2e_story060_roster_test.go:18: EDUGRADE_E2E_DATABASE_URL is not set; skipping STORY-060 roster PostgreSQL acceptance workflow\n",
+        "--- SKIP: TestStory060RosterReconciliationAndAbsenceE2EWithPostgresTestDatabase (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestExamRosterFreezeBlocksUpdateAndDirectMutationE2EWithPostgresTestDatabase",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestExamRosterFreezeBlocksUpdateAndDirectMutationE2EWithPostgresTestDatabase\n",
+        "    e2e_story060_roster_test.go:133: EDUGRADE_E2E_DATABASE_URL is not set; skipping exam roster freeze PostgreSQL acceptance workflow\n",
+        "--- SKIP: TestExamRosterFreezeBlocksUpdateAndDirectMutationE2EWithPostgresTestDatabase (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestStory060FiveHundredStudentRosterScaleE2EWithPostgresTestDatabase",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestStory060FiveHundredStudentRosterScaleE2EWithPostgresTestDatabase\n",
+        "    e2e_story060_roster_test.go:178: EDUGRADE_E2E_DATABASE_URL is not set; skipping STORY-060 roster scale acceptance workflow\n",
+        "--- SKIP: TestStory060FiveHundredStudentRosterScaleE2EWithPostgresTestDatabase (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestStory060MultiPageInsertionMissingPageAndPrintPackageE2EWithPostgresTestDatabase",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestStory060MultiPageInsertionMissingPageAndPrintPackageE2EWithPostgresTestDatabase\n",
+        "    e2e_story060_sheet_identity_test.go:21: EDUGRADE_E2E_DATABASE_URL is not set; skipping STORY-060 multi-page PostgreSQL acceptance workflow\n",
+        "--- SKIP: TestStory060MultiPageInsertionMissingPageAndPrintPackageE2EWithPostgresTestDatabase (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestStory060StudentSheetIdentityE2EWithPostgresTestDatabase",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestStory060StudentSheetIdentityE2EWithPostgresTestDatabase\n",
+        "    e2e_story060_sheet_identity_test.go:460: EDUGRADE_E2E_DATABASE_URL is not set; skipping STORY-060 sheet identity PostgreSQL acceptance workflow\n",
+        "--- SKIP: TestStory060StudentSheetIdentityE2EWithPostgresTestDatabase (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestStory061ActiveCropResolverE2EWithPostgresTestDatabase",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestStory061ActiveCropResolverE2EWithPostgresTestDatabase\n",
+        "    e2e_story061_active_crop_resolver_test.go:24: EDUGRADE_E2E_DATABASE_URL is not set; skipping STORY-061 active crop resolver PostgreSQL workflow\n",
+        "--- SKIP: TestStory061ActiveCropResolverE2EWithPostgresTestDatabase (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestStory061GovernanceFoundationE2EWithPostgresTestDatabase",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestStory061GovernanceFoundationE2EWithPostgresTestDatabase\n",
+        "    e2e_story061_governance_test.go:20: EDUGRADE_E2E_DATABASE_URL is not set; skipping STORY-061 PostgreSQL E2E\n",
+        "--- SKIP: TestStory061GovernanceFoundationE2EWithPostgresTestDatabase (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestSubjectiveCommandRecoveryWithPostgresTestDatabase",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestSubjectiveCommandRecoveryWithPostgresTestDatabase\n",
+        "    e2e_subjective_command_test.go:18: dedicated PostgreSQL required\n",
+        "--- SKIP: TestSubjectiveCommandRecoveryWithPostgresTestDatabase (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestPostgresSubjectivePanelAndEvaluationRoundTrip",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestPostgresSubjectivePanelAndEvaluationRoundTrip\n",
+        "    e2e_subjective_panel_test.go:24: EDUGRADE_E2E_DATABASE_URL is required\n",
+        "--- SKIP: TestPostgresSubjectivePanelAndEvaluationRoundTrip (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestSubjectiveUsageLedgerPostgresTestDatabase",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestSubjectiveUsageLedgerPostgresTestDatabase\n",
+        "    e2e_subjective_usage_ledger_test.go:16: EDUGRADE_E2E_DATABASE_URL is required for PostgreSQL usage ledger regression\n",
+        "--- SKIP: TestSubjectiveUsageLedgerPostgresTestDatabase (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestExamTemplateBindingE2EWithPostgresTestDatabase",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestExamTemplateBindingE2EWithPostgresTestDatabase\n",
+        "    e2e_template_routing_test.go:18: EDUGRADE_E2E_DATABASE_URL is not set; skipping PostgreSQL template binding workflow\n",
+        "--- SKIP: TestExamTemplateBindingE2EWithPostgresTestDatabase (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestWorkerRuntimeReliabilityWithPostgresTestDatabase",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestWorkerRuntimeReliabilityWithPostgresTestDatabase\n",
+        "    e2e_worker_runtime_reliability_test.go:22: EDUGRADE_E2E_DATABASE_URL is not set; skipping Worker Runtime PostgreSQL reliability tests\n",
+        "--- SKIP: TestWorkerRuntimeReliabilityWithPostgresTestDatabase (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestPostgresManagedConfigProbeTimestamps",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestPostgresManagedConfigProbeTimestamps\n",
+        "    managed_config_postgres_test.go:18: EDUGRADE_E2E_DATABASE_URL is required\n",
+        "--- SKIP: TestPostgresManagedConfigProbeTimestamps (0.00s)\n"
+      ]
+    },
+    {
+      "test": "TestPostgresMigrationUpgradeFrom000154",
+      "category": "postgres_environment_condition",
+      "original_output": [
+        "=== RUN   TestPostgresMigrationUpgradeFrom000154\n",
+        "    migration_upgrade_test.go:24: EDUGRADE_E2E_DATABASE_URL is required for PostgreSQL migration upgrade test\n",
+        "--- SKIP: TestPostgresMigrationUpgradeFrom000154 (0.00s)\n"
+      ]
+    }
+  ],
+  "original_logs_unchanged": true
+}

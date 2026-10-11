@@ -1,11 +1,11 @@
 import { GradingWorkbench, type GradingWorkbenchProps } from "../features/grading/workbench/GradingWorkbench";
 
 /**
- * Route-level composition shell for the grading workspace.
+ * 阅卷工作区在路由层的组合外壳。
  *
- * The operational state, task queue, preview controls and scoring panels live
- * with the grading feature so this route remains a stable permission boundary.
+ * 操作状态、任务队列、预览控件和评分面板都放在阅卷功能中，
+ * 使该路由保持稳定的权限边界。
  */
-export function GradingWorkbenchPage(props: GradingWorkbenchProps) {
+export function GradingWorkbenchPage(props: Readonly<GradingWorkbenchProps>) {
   return <GradingWorkbench {...props} />;
 }

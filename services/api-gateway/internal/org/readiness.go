@@ -76,6 +76,18 @@ func (s *MemoryStore) OnboardingReadiness(_ context.Context, tenantID string, sc
 			break
 		}
 	}
+	summary.HasTeachingStructure = s.hasActiveTeachingStructureLocked(tenantID, allowsSchool)
+	for _, student := range s.students {
+		if student.TenantID == tenantID && student.Status == "active" && allowsSchool(student.SchoolID) {
+			summary.HasStudents = true
+			break
+		}
+	}
+	return summary, nil
+}
+
+// 调用方保持原读锁；年级与班级分别按同一租户和学校范围判断，不在 helper 内重新加锁。
+func (s *MemoryStore) hasActiveTeachingStructureLocked(tenantID string, allowsSchool func(string) bool) bool {
 	hasGrade := false
 	for _, grade := range s.grades {
 		if grade.TenantID == tenantID && grade.Status == "active" && allowsSchool(grade.SchoolID) {
@@ -90,14 +102,7 @@ func (s *MemoryStore) OnboardingReadiness(_ context.Context, tenantID string, sc
 			break
 		}
 	}
-	summary.HasTeachingStructure = hasGrade && hasClass
-	for _, student := range s.students {
-		if student.TenantID == tenantID && student.Status == "active" && allowsSchool(student.SchoolID) {
-			summary.HasStudents = true
-			break
-		}
-	}
-	return summary, nil
+	return hasGrade && hasClass
 }
 
 const onboardingPlatformTenantID = "00000000-0000-0000-0000-000000000001"

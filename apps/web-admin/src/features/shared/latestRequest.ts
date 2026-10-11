@@ -4,8 +4,8 @@ export interface RequestTicket {
 }
 
 /**
- * Coordinates async projections that are scoped to a selected resource. A
- * response may update React state only while its ticket is current.
+ * 协调限定到当前所选资源的异步投影。
+ * 响应只有在其请求凭据仍有效时才能更新 React 状态。
  */
 export class LatestRequestController {
   private revision = 0;

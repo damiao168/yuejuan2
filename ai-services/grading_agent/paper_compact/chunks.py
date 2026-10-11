@@ -133,8 +133,7 @@ def _direct_text_chunks(document):
 
 
 
-def _split_block_groups(blocks):
-    # 优先以题号和章节形成逻辑组；超预算的单组仍需拆分，不能无限放大模型上下文。
+def _logical_block_groups(blocks):
     logical_groups = []
     current = []
     has_question = False
@@ -150,11 +149,15 @@ def _split_block_groups(blocks):
         has_question = has_question or starts_question
     if current:
         logical_groups.append(current)
+    return logical_groups
 
+
+def _split_block_groups(blocks):
+    # 优先以题号和章节形成逻辑组；超预算的单组仍需拆分，不能无限放大模型上下文。
     chunks = []
     current = []
     current_chars = 0
-    for group in logical_groups:
+    for group in _logical_block_groups(blocks):
         group_chars = sum(len(str(item[1].get("text", ""))) for item in group)
         if current and (
             len(current) + len(group) > MAX_BLOCKS_PER_CHUNK
@@ -166,17 +169,7 @@ def _split_block_groups(blocks):
         while (
             len(group) > MAX_BLOCKS_PER_CHUNK or group_chars > MAX_TEXT_CHARS_PER_CHUNK
         ):
-            take = []
-            take_chars = 0
-            for item in group:
-                size = len(str(item[1].get("text", "")))
-                if take and (
-                    len(take) >= MAX_BLOCKS_PER_CHUNK
-                    or take_chars + size > MAX_TEXT_CHARS_PER_CHUNK
-                ):
-                    break
-                take.append(item)
-                take_chars += size
+            take = _bounded_block_prefix(group)
             chunks.append(take)
             group = group[len(take) :]
             group_chars = sum(len(str(item[1].get("text", ""))) for item in group)
@@ -185,3 +178,19 @@ def _split_block_groups(blocks):
     if current:
         chunks.append(current)
     return chunks
+
+
+def _bounded_block_prefix(group):
+    take = []
+    take_chars = 0
+    # 单块超字符预算时仍保留该块，避免空前缀使拆分无法前进。
+    for item in group:
+        size = len(str(item[1].get("text", "")))
+        if take and (
+            len(take) >= MAX_BLOCKS_PER_CHUNK
+            or take_chars + size > MAX_TEXT_CHARS_PER_CHUNK
+        ):
+            break
+        take.append(item)
+        take_chars += size
+    return take

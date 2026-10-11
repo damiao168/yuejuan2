@@ -52,6 +52,9 @@ export function useRegionEditor({
     height: Math.abs(interaction.y - interaction.startY)
   } : undefined;
 
+  // 保存或锁定后取消尚未结束的拖动，松开指针不能再补写旧区域。
+  useEffect(() => { if (readonly) setInteraction(undefined); }, [readonly]);
+
   const point = (event: ReactPointerEvent) => {
     // 用当前显示矩形换算 0～1 页面比例，缩放预览不会改变最终保存坐标。
     const bounds = canvasRef.current?.getBoundingClientRect();
@@ -59,8 +62,9 @@ export function useRegionEditor({
     return { x: clamp((event.clientX - bounds.left) / bounds.width),
       y: clamp((event.clientY - bounds.top) / bounds.height) };
   };
-  const updateRegion = (regionId: string, patch: Partial<LayoutRegion>) =>
-    dispatchLayout({ type: "updateRegion", regionId, patch });
+  const updateRegion = (regionId: string, patch: Partial<LayoutRegion>) => {
+    if (!readonly) dispatchLayout({ type: "updateRegion", regionId, patch });
+  };
   const onCanvasPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (readonly || !selectedQuestionId || !currentPage) return;
     const position = point(event);
@@ -77,7 +81,7 @@ export function useRegionEditor({
     setInteraction({ kind, regionId: region.id, startX: position.x, startY: position.y, original: { ...region } });
   };
   const onCanvasPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (!interaction || !currentPage) return;
+    if (readonly || !interaction || !currentPage) return;
     const position = point(event);
     if (interaction.kind === "draw") {
       setInteraction({ ...interaction, x: position.x, y: position.y });
@@ -93,7 +97,7 @@ export function useRegionEditor({
           height: clamp(interaction.original.height + dy, 0.01, 1 - interaction.original.y) });
   };
   const onCanvasPointerUp = () => {
-    if (interaction?.kind === "draw" && currentPage && selectedQuestionId) {
+    if (!readonly && interaction?.kind === "draw" && currentPage && selectedQuestionId) {
       const x = Math.min(interaction.startX, interaction.x);
       const y = Math.min(interaction.startY, interaction.y);
       const width = Math.abs(interaction.x - interaction.startX);
@@ -131,24 +135,27 @@ export function useRegionEditor({
     setSelectedRegionId(region.id);
   };
   const removeRegion = (regionId: string) => {
+    if (readonly) return;
     dispatchLayout({ type: "removeRegion", regionId });
     setSelectedRegionId("");
   };
   const updateOption = (optionId: string, patch: Partial<OptionRegion>) => {
+    if (readonly) return;
     if (selectedRegionId) dispatchLayout({ type: "updateOption", regionId: selectedRegionId, optionId, patch });
   };
   const addOptionRegion = () => {
-    if (!selectedRegionId || !selectedRegion) return;
+    if (readonly || !selectedRegionId || !selectedRegion) return;
     const existing = selectedRegion.option_regions ?? [];
     if (existing.length >= 12) { message.warning("每题最多配置 12 个选项区域"); return; }
     const index = existing.length;
     const option: OptionRegion = {
-      id: crypto.randomUUID(), label: String.fromCharCode(65 + index),
+      id: crypto.randomUUID(), label: String.fromCodePoint(65 + index),
       x: Math.min(.84, .04 + index * .16), y: .25, width: .12, height: .5
     };
     dispatchLayout({ type: "addOption", regionId: selectedRegionId, option });
   };
   const removeOptionRegion = (optionId: string) => {
+    if (readonly) return;
     if (selectedRegionId) dispatchLayout({ type: "removeOption", regionId: selectedRegionId, optionId });
   };
 

@@ -53,9 +53,7 @@ type FormulaArtifact struct {
 	SelectedCandidate  int                `json:"selected_candidate"`
 }
 
-// FormulaCandidate preserves the governed recognition alternatives that were
-// considered for one ROI. CanonicalLatex remains the selected immutable
-// evidence value; candidates make recognition disputes auditable.
+// FormulaCandidate 保留单个 ROI 识别时考虑过的受治理备选结果。CanonicalLatex 仍是选定的不可变证据值；候选项使识别争议可审计。
 type FormulaCandidate struct {
 	Latex       string   `json:"latex"`
 	Engine      string   `json:"engine"`
@@ -79,8 +77,7 @@ type FormulaRelation struct {
 	Confidence   float64 `json:"confidence"`
 }
 
-// FormulaAST is intentionally restricted. It is an evidence representation,
-// not an executable language and never carries arbitrary code.
+// FormulaAST 刻意限制表达范围；它是证据表示，不是可执行语言，也不携带任意代码。
 type FormulaAST struct {
 	Kind     string       `json:"kind"`
 	Value    string       `json:"value,omitempty"`
@@ -187,10 +184,8 @@ type Artifact struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-// EffectiveArtifact keeps the immutable recognition artifact separate from the
-// latest teacher-authored projection. Downstream consumers should use
-// EffectiveContract for mathematical evidence and BaseArtifact for identity,
-// provenance, and version binding.
+// EffectiveArtifact 将不可变识别产物与最新教师编写的投影分开。
+// 下游使用 EffectiveContract 获取数学证据，使用 BaseArtifact 获取身份、来源及版本绑定。
 type EffectiveArtifact struct {
 	BaseArtifact       Artifact
 	EffectiveContract  CreateArtifactInput
@@ -219,47 +214,17 @@ func ValidateCreateArtifact(input CreateArtifactInput) error {
 	if len(input.Blocks) == 0 || len(input.Blocks) > 512 || len(input.Formulas) > 512 || len(input.Relations) > 2048 {
 		return ErrInvalidInput
 	}
-	blockIDs := map[string]bool{}
-	formulaIDs := map[string]bool{}
-	for _, block := range input.Blocks {
-		if block.ID == "" || blockIDs[block.ID] || !validBlockKinds[block.Kind] || !validBlockStatuses[block.Status] || !validBox(block.BoundingBox) || block.RecognitionEngine == "" || block.RecognitionVersion == "" || block.SourceImageHash == "" || !validConfidence(block.RecognitionConfidence) || !validConfidence(block.StructureConfidence) {
-			return fmt.Errorf("%w: invalid answer block", ErrInvalidInput)
-		}
-		blockIDs[block.ID] = true
+	// 先校验并收集被引用的对象，再检查引用；顺序也决定返回的首个错误。
+	blockIDs, err := validateArtifactBlocks(input.Blocks)
+	if err != nil {
+		return err
 	}
-	for _, formula := range input.Formulas {
-		if formula.ID == "" || formulaIDs[formula.ID] || !blockIDs[formula.BlockID] || !validBox(formula.BoundingBox) || formula.RecognitionEngine == "" || formula.RecognitionVersion == "" || formula.ParserVersion == "" || !validParseStatuses[formula.ParseStatus] || !validConfidence(formula.Confidence) {
-			return fmt.Errorf("%w: invalid formula artifact", ErrInvalidInput)
-		}
-		if formula.AST != nil && !validAST(*formula.AST, 0, new(int)) {
-			return fmt.Errorf("%w: invalid formula AST", ErrInvalidInput)
-		}
-		if len(formula.Candidates) > 16 || (len(formula.Candidates) > 0 && (formula.SelectedCandidate < 0 || formula.SelectedCandidate >= len(formula.Candidates))) {
-			return fmt.Errorf("%w: invalid formula candidate selection", ErrInvalidInput)
-		}
-		for _, candidate := range formula.Candidates {
-			if candidate.Latex == "" || candidate.Engine == "" || candidate.Version == "" || !validConfidence(candidate.Confidence) || (candidate.RenderScore != nil && !validConfidence(*candidate.RenderScore)) {
-				return fmt.Errorf("%w: invalid formula candidate", ErrInvalidInput)
-			}
-		}
-		symbols := map[string]bool{}
-		for _, symbol := range formula.Symbols {
-			if symbol.ID == "" || symbols[symbol.ID] || symbol.Value == "" || !validBox(symbol.BoundingBox) || !validConfidence(symbol.Confidence) {
-				return fmt.Errorf("%w: invalid formula symbol", ErrInvalidInput)
-			}
-			symbols[symbol.ID] = true
-		}
-		for _, relation := range formula.Relations {
-			if !symbols[relation.FromSymbolID] || !symbols[relation.ToSymbolID] || relation.FromSymbolID == relation.ToSymbolID || !validFormulaRelationKinds[relation.Kind] || !validConfidence(relation.Confidence) {
-				return fmt.Errorf("%w: invalid formula relation", ErrInvalidInput)
-			}
-		}
-		formulaIDs[formula.ID] = true
+	formulaIDs, err := validateArtifactFormulas(input.Formulas, blockIDs)
+	if err != nil {
+		return err
 	}
-	for _, relation := range input.Relations {
-		if relation.ID == "" || relation.FromID == relation.ToID || !validRelationKinds[relation.Kind] || !validConfidence(relation.Confidence) || !knownArtifact(relation.FromID, blockIDs, formulaIDs) || !knownArtifact(relation.ToID, blockIDs, formulaIDs) {
-			return fmt.Errorf("%w: invalid spatial relation", ErrInvalidInput)
-		}
+	if err := validateSpatialRelations(input.Relations, blockIDs, formulaIDs); err != nil {
+		return err
 	}
 	if input.SolutionGraph.AnswerSegmentID != input.AnswerSegmentID {
 		return fmt.Errorf("%w: graph segment mismatch", ErrInvalidInput)
@@ -271,28 +236,122 @@ func ValidateCreateArtifact(input CreateArtifactInput) error {
 	for _, step := range input.SolutionGraph.Steps {
 		stepIDs[step.ID] = true
 	}
+	verificationIDs, err := validateArtifactVerifications(input.Verifications, stepIDs, formulaIDs)
+	if err != nil {
+		return err
+	}
+	return validateArtifactEvidence(input.RubricEvidence, blockIDs, formulaIDs, stepIDs, verificationIDs)
+}
+
+func validateArtifactBlocks(blocks []MathAnswerBlock) (map[string]bool, error) {
+	blockIDs := map[string]bool{}
+	for _, block := range blocks {
+		if block.ID == "" || blockIDs[block.ID] || !validBlockKinds[block.Kind] || !validBlockStatuses[block.Status] || !validBox(block.BoundingBox) || block.RecognitionEngine == "" || block.RecognitionVersion == "" || block.SourceImageHash == "" || !validConfidence(block.RecognitionConfidence) || !validConfidence(block.StructureConfidence) {
+			return nil, fmt.Errorf("%w: invalid answer block", ErrInvalidInput)
+		}
+		blockIDs[block.ID] = true
+	}
+	return blockIDs, nil
+}
+
+func validateArtifactFormulas(formulas []FormulaArtifact, blockIDs map[string]bool) (map[string]bool, error) {
+	formulaIDs := map[string]bool{}
+	for _, formula := range formulas {
+		if formula.ID == "" || formulaIDs[formula.ID] || !blockIDs[formula.BlockID] {
+			return nil, fmt.Errorf("%w: invalid formula artifact", ErrInvalidInput)
+		}
+		if err := validateFormulaArtifact(formula); err != nil {
+			return nil, err
+		}
+		formulaIDs[formula.ID] = true
+	}
+	return formulaIDs, nil
+}
+
+func validateFormulaArtifact(formula FormulaArtifact) error {
+	if !validBox(formula.BoundingBox) || formula.RecognitionEngine == "" || formula.RecognitionVersion == "" || formula.ParserVersion == "" || !validParseStatuses[formula.ParseStatus] || !validConfidence(formula.Confidence) {
+		return fmt.Errorf("%w: invalid formula artifact", ErrInvalidInput)
+	}
+	if formula.AST != nil && !validAST(*formula.AST, 0, new(int)) {
+		return fmt.Errorf("%w: invalid formula AST", ErrInvalidInput)
+	}
+	if len(formula.Candidates) > 16 || (len(formula.Candidates) > 0 && (formula.SelectedCandidate < 0 || formula.SelectedCandidate >= len(formula.Candidates))) {
+		return fmt.Errorf("%w: invalid formula candidate selection", ErrInvalidInput)
+	}
+	for _, candidate := range formula.Candidates {
+		if candidate.Latex == "" || candidate.Engine == "" || candidate.Version == "" || !validConfidence(candidate.Confidence) || (candidate.RenderScore != nil && !validConfidence(*candidate.RenderScore)) {
+			return fmt.Errorf("%w: invalid formula candidate", ErrInvalidInput)
+		}
+	}
+	return validateFormulaSymbols(formula)
+}
+
+func validateFormulaSymbols(formula FormulaArtifact) error {
+	// 符号 ID 只在所属公式内解析，不能借用其他公式中的同名符号。
+	symbols := map[string]bool{}
+	for _, symbol := range formula.Symbols {
+		if symbol.ID == "" || symbols[symbol.ID] || symbol.Value == "" || !validBox(symbol.BoundingBox) || !validConfidence(symbol.Confidence) {
+			return fmt.Errorf("%w: invalid formula symbol", ErrInvalidInput)
+		}
+		symbols[symbol.ID] = true
+	}
+	for _, relation := range formula.Relations {
+		if !symbols[relation.FromSymbolID] || !symbols[relation.ToSymbolID] || relation.FromSymbolID == relation.ToSymbolID || !validFormulaRelationKinds[relation.Kind] || !validConfidence(relation.Confidence) {
+			return fmt.Errorf("%w: invalid formula relation", ErrInvalidInput)
+		}
+	}
+	return nil
+}
+
+func validateSpatialRelations(relations []SpatialRelation, blockIDs, formulaIDs map[string]bool) error {
+	for _, relation := range relations {
+		if relation.ID == "" || relation.FromID == relation.ToID || !validRelationKinds[relation.Kind] || !validConfidence(relation.Confidence) || !knownArtifact(relation.FromID, blockIDs, formulaIDs) || !knownArtifact(relation.ToID, blockIDs, formulaIDs) {
+			return fmt.Errorf("%w: invalid spatial relation", ErrInvalidInput)
+		}
+	}
+	return nil
+}
+
+// 验证记录独立于请求字节预算；识别阶段和后续符号验证合计最多保留 4096 条。
+const maxArtifactVerificationCount = 4096
+
+func validateArtifactVerifications(verifications []MathVerification, stepIDs, formulaIDs map[string]bool) (map[string]bool, error) {
+	if len(verifications) > maxArtifactVerificationCount {
+		return nil, fmt.Errorf("%w: too many verifications", ErrInvalidInput)
+	}
 	verificationIDs := map[string]bool{}
-	for _, check := range input.Verifications {
+	for _, check := range verifications {
 		if check.ID == "" || verificationIDs[check.ID] || check.Domain == "" || check.Engine == "" || check.EngineVersion == "" || check.RulesetVersion == "" || !validVerificationKinds[check.Kind] || !validVerificationStatuses[check.Status] || !validConfidence(check.Confidence) || (check.StepID != "" && !stepIDs[check.StepID]) || (check.FormulaID != "" && !formulaIDs[check.FormulaID]) {
-			return fmt.Errorf("%w: invalid verification", ErrInvalidInput)
+			return nil, fmt.Errorf("%w: invalid verification", ErrInvalidInput)
 		}
 		verificationIDs[check.ID] = true
 	}
+	return verificationIDs, nil
+}
+
+func validateArtifactEvidence(evidences []RubricEvidence, blockIDs, formulaIDs, stepIDs, verificationIDs map[string]bool) error {
 	evidenceIDs := map[string]bool{}
-	for _, evidence := range input.RubricEvidence {
+	for _, evidence := range evidences {
 		if evidence.ID == "" || evidenceIDs[evidence.ID] || evidence.RubricCriterionKey == "" || evidence.EvidenceType == "" || (len(evidence.SourceArtifactIDs) == 0 && set("supported", "contradicted", "unsupported")[evidence.Status]) || !validEvidenceStatuses[evidence.Status] || !validConfidence(evidence.Confidence) {
 			return fmt.Errorf("%w: invalid rubric evidence", ErrInvalidInput)
 		}
 		evidenceIDs[evidence.ID] = true
-		for _, id := range evidence.VerificationIDs {
-			if !verificationIDs[id] {
-				return fmt.Errorf("%w: unknown evidence verification", ErrInvalidInput)
-			}
+		if err := validateEvidenceReferences(evidence, blockIDs, formulaIDs, stepIDs, verificationIDs); err != nil {
+			return err
 		}
-		for _, id := range evidence.SourceArtifactIDs {
-			if !knownArtifact(id, blockIDs, formulaIDs) && !stepIDs[id] {
-				return fmt.Errorf("%w: unknown evidence source", ErrInvalidInput)
-			}
+	}
+	return nil
+}
+
+func validateEvidenceReferences(evidence RubricEvidence, blockIDs, formulaIDs, stepIDs, verificationIDs map[string]bool) error {
+	for _, id := range evidence.VerificationIDs {
+		if !verificationIDs[id] {
+			return fmt.Errorf("%w: unknown evidence verification", ErrInvalidInput)
+		}
+	}
+	for _, id := range evidence.SourceArtifactIDs {
+		if !knownArtifact(id, blockIDs, formulaIDs) && !stepIDs[id] {
+			return fmt.Errorf("%w: unknown evidence source", ErrInvalidInput)
 		}
 	}
 	return nil
@@ -303,22 +362,9 @@ func validateGraph(graph SolutionGraph, blocks, formulas map[string]bool) error 
 	if graph.ID == "" || graph.AnswerSegmentID == "" || graph.BuilderVersion == "" || graph.FormulaModelVersion == "" || !validConfidence(graph.OverallConfidence) || len(graph.Steps) == 0 || len(graph.Steps) > 512 || len(graph.Edges) > 2048 {
 		return ErrInvalidInput
 	}
-	steps := map[string]bool{}
-	for _, step := range graph.Steps {
-		if step.ID == "" || steps[step.ID] || !validConfidence(step.Confidence) || !validConfidence(step.RecognitionConfidence) || !validConfidence(step.StructureConfidence) || len(step.BlockIDs) == 0 || (step.BoundingBox != nil && !validBox(*step.BoundingBox)) || (step.Kind != "" && !validStepKinds[step.Kind]) {
-			return fmt.Errorf("%w: invalid solution step", ErrInvalidInput)
-		}
-		for _, id := range step.BlockIDs {
-			if !blocks[id] {
-				return fmt.Errorf("%w: unknown block", ErrInvalidInput)
-			}
-		}
-		for _, id := range step.FormulaIDs {
-			if !formulas[id] {
-				return fmt.Errorf("%w: unknown formula", ErrInvalidInput)
-			}
-		}
-		steps[step.ID] = true
+	steps, err := validateSolutionSteps(graph.Steps, blocks, formulas)
+	if err != nil {
+		return err
 	}
 	adj := map[string][]string{}
 	for _, edge := range graph.Edges {
@@ -327,6 +373,39 @@ func validateGraph(graph SolutionGraph, blocks, formulas map[string]bool) error 
 		}
 		adj[edge.FromStepID] = append(adj[edge.FromStepID], edge.ToStepID)
 	}
+	return validateSolutionAcyclic(steps, adj)
+}
+
+func validateSolutionSteps(items []SolutionStep, blocks, formulas map[string]bool) (map[string]bool, error) {
+	steps := map[string]bool{}
+	for _, step := range items {
+		if step.ID == "" || steps[step.ID] || !validConfidence(step.Confidence) || !validConfidence(step.RecognitionConfidence) || !validConfidence(step.StructureConfidence) || len(step.BlockIDs) == 0 || (step.BoundingBox != nil && !validBox(*step.BoundingBox)) || (step.Kind != "" && !validStepKinds[step.Kind]) {
+			return nil, fmt.Errorf("%w: invalid solution step", ErrInvalidInput)
+		}
+		if err := validateStepReferences(step, blocks, formulas); err != nil {
+			return nil, err
+		}
+		steps[step.ID] = true
+	}
+	return steps, nil
+}
+
+func validateStepReferences(step SolutionStep, blocks, formulas map[string]bool) error {
+	for _, id := range step.BlockIDs {
+		if !blocks[id] {
+			return fmt.Errorf("%w: unknown block", ErrInvalidInput)
+		}
+	}
+	for _, id := range step.FormulaIDs {
+		if !formulas[id] {
+			return fmt.Errorf("%w: unknown formula", ErrInvalidInput)
+		}
+	}
+	return nil
+}
+
+func validateSolutionAcyclic(steps map[string]bool, adj map[string][]string) error {
+	// 正在访问的节点再次出现才是环；已经完成的节点可以被多个分支共同引用。
 	state := map[string]uint8{}
 	var visit func(string) bool
 	visit = func(id string) bool {

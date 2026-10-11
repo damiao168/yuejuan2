@@ -22,8 +22,7 @@ func NewHandler(service *Service, audit auth.AuditRecorder) *Handler {
 	return &Handler{service: service, audit: audit}
 }
 
-// These are manager quality routes. They deliberately return only aggregate
-// metrics and incident evidence, never an individual Seed/Gold answer.
+// 这些是管理员质量路由，只返回聚合指标和事件证据，不返回单条 Seed 或 Gold 答案。
 func RegisterRoutes(mux *http.ServeMux, h *Handler, requireRead, requireManage func(http.HandlerFunc) http.Handler) {
 	mux.Handle("GET /api/v1/exams/{examId}/questions/{questionId}/grader-quality-windows", requireRead(h.ListWindows))
 	mux.Handle("POST /api/v1/exams/{examId}/questions/{questionId}/grader-drift/recompute", requireManage(h.Recompute))

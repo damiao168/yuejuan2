@@ -18,10 +18,13 @@ class Settings:
     lease_seconds: int = 300
     heartbeat_interval: float = 10.0
     heartbeat_timeout: float = 3.0
-    # The API Gateway permits 750s for governed AI work and 780s for the
-    # enclosing HTTP response. The outer worker must wait longer than both.
+    # API 网关允许受治理的 AI 任务耗时 750 秒，外层
+    # HTTP 响应耗时 780 秒。外层工作进程必须等待得更久。
     execute_timeout: float = 810.0
-    health_file: str = "/tmp/edugrade-subjective-grading-worker.ready"
+    # 容器以 0700 权限创建此目录，并将其归属于
+    # 工作进程用户。使用其他路径的调用方必须显式提供私有
+    # 目录；共享 /tmp 中的标记可能被伪造。
+    health_file: str = "/app/state/edugrade-subjective-grading-worker.ready"
     health_max_age: float = 120.0
 
 
@@ -37,7 +40,10 @@ def load_settings() -> Settings:
         heartbeat_interval=float(os.environ.get("EDUGRADE_SUBJECTIVE_WORKER_HEARTBEAT_INTERVAL", "10")),
         heartbeat_timeout=float(os.environ.get("EDUGRADE_SUBJECTIVE_WORKER_HEARTBEAT_TIMEOUT", "3")),
         execute_timeout=float(os.environ.get("EDUGRADE_SUBJECTIVE_WORKER_EXECUTE_TIMEOUT", "810")),
-        health_file=os.environ.get("EDUGRADE_SUBJECTIVE_WORKER_HEALTH_FILE", "/tmp/edugrade-subjective-grading-worker.ready"),
+        health_file=os.environ.get(
+            "EDUGRADE_SUBJECTIVE_WORKER_HEALTH_FILE",
+            "/app/state/edugrade-subjective-grading-worker.ready",
+        ),
         health_max_age=float(os.environ.get("EDUGRADE_SUBJECTIVE_WORKER_HEALTH_MAX_AGE", "120")),
     )
     validate_settings(settings)

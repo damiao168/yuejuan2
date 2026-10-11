@@ -20,8 +20,7 @@ func NewMemoryStore() *MemoryStore {
 	return &MemoryStore{next: 1, sources: map[string]Source{}, items: map[string]GoldPaper{}}
 }
 
-// SetSource seeds facts owned by submission/assessment/grading in integrated
-// memory servers and tests. Production always derives these facts in SQL.
+// SetSource 在集成内存服务和测试中植入 submission、assessment、grading 所有的事实；生产始终通过 SQL 派生这些事实。
 func (s *MemoryStore) SetSource(tenantID string, source Source) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

@@ -1,0 +1,107 @@
+﻿language,sarif_result_index_zero_based,rule_id,title,level,security_severity,security_score,precision,path,line,manual_review_status,human_verdict
+python,0,py/polynomial-redos,Polynomial regular expression used on uncontrolled data,warning,high,7.5,high,ai-services/grading_agent/paper_compact/anchors.py,619,reviewed_alert_context,confirmed_cpu_amplification_conditional
+python,1,py/attribute-shadows-method,Superclass attribute shadows subclass method,error,not_security,,high,services/subjective-grading-worker/subjective_grading_worker/runner.py,67,reviewed_alert_context,intentional_behavior
+python,2,py/attribute-shadows-method,Superclass attribute shadows subclass method,error,not_security,,high,services/ocr-worker/ocr_worker/runner.py,363,reviewed_alert_context,intentional_behavior
+python,3,py/attribute-shadows-method,Superclass attribute shadows subclass method,error,not_security,,high,services/page-processing-worker/page_processing/runner.py,512,reviewed_alert_context,intentional_behavior
+python,4,py/empty-except,Empty except,note,not_security,,high,services/ocr-worker/ocr_worker/deployment_profile.py,169,reviewed_alert_context,low_maintenance
+python,5,py/empty-except,Empty except,note,not_security,,high,services/ocr-worker/ocr_worker/deployment_profile.py,179,reviewed_alert_context,low_maintenance
+python,6,py/empty-except,Empty except,note,not_security,,high,services/ocr-worker/ocr_worker/deployment_profile.py,186,reviewed_alert_context,low_maintenance
+python,7,py/empty-except,Empty except,note,not_security,,high,services/ocr-worker/ocr_worker/deployment_profile.py,200,reviewed_alert_context,low_maintenance
+python,8,py/empty-except,Empty except,note,not_security,,high,services/ocr-worker/ocr_worker/deployment_profile.py,207,reviewed_alert_context,low_maintenance
+python,9,py/implicit-string-concatenation-in-list,Implicit string concatenation in a list,warning,not_security,,high,docs/architecture/tools/build_module_catalog.py,59,reviewed_alert_context,false_positive_context
+python,10,py/implicit-string-concatenation-in-list,Implicit string concatenation in a list,warning,not_security,,high,docs/architecture/tools/build_module_catalog.py,62,reviewed_alert_context,false_positive_context
+python,11,py/implicit-string-concatenation-in-list,Implicit string concatenation in a list,warning,not_security,,high,docs/architecture/tools/build_module_catalog.py,64,reviewed_alert_context,false_positive_context
+python,12,py/implicit-string-concatenation-in-list,Implicit string concatenation in a list,warning,not_security,,high,docs/architecture/tools/build_module_catalog.py,81,reviewed_alert_context,false_positive_context
+python,13,py/unnecessary-lambda,Unnecessary lambda,note,not_security,,high,services/page-processing-worker/tests/test_main.py,59,reviewed_alert_context,low_maintenance
+python,14,py/unnecessary-lambda,Unnecessary lambda,note,not_security,,high,services/page-processing-worker/tests/test_main.py,79,reviewed_alert_context,low_maintenance
+python,15,py/procedure-return-value-used,Use of the return value of a procedure,warning,not_security,,high,docs/architecture/tools/snapshot_workspace.py,48,reviewed_alert_context,intentional_behavior
+python,16,py/import-and-import-from,Module is imported with 'import' and 'import from',note,not_security,,very-high,services/page-processing-worker/tests/test_runner_state_boundaries.py,8,reviewed_alert_context,intentional_behavior
+python,17,py/unused-import,Unused import,note,not_security,,very-high,docs/architecture/tools/build_database_specs.py,3,reviewed_alert_context,low_maintenance
+python,18,py/ineffectual-statement,Statement has no effect,note,not_security,,high,services/ocr-worker/ocr_worker/engine.py,25,reviewed_alert_context,false_positive_context
+python,19,py/ineffectual-statement,Statement has no effect,note,not_security,,high,services/ocr-worker/ocr_worker/engine.py,28,reviewed_alert_context,false_positive_context
+python,20,py/ineffectual-statement,Statement has no effect,note,not_security,,high,services/ocr-worker/ocr_worker/math_layout.py,18,reviewed_alert_context,false_positive_context
+python,21,py/ineffectual-statement,Statement has no effect,note,not_security,,high,services/ocr-worker/ocr_worker/math_layout.py,20,reviewed_alert_context,false_positive_context
+python,22,py/ineffectual-statement,Statement has no effect,note,not_security,,high,services/ocr-worker/ocr_worker/math_layout.py,22,reviewed_alert_context,false_positive_context
+python,23,py/ineffectual-statement,Statement has no effect,note,not_security,,high,ai-services/grading_agent/provider_adapter.py,13,reviewed_alert_context,false_positive_context
+python,24,py/ineffectual-statement,Statement has no effect,note,not_security,,high,ai-services/grading_agent/provider_adapter.py,16,reviewed_alert_context,false_positive_context
+python,25,py/ineffectual-statement,Statement has no effect,note,not_security,,high,ai-services/grading_agent/provider_adapter.py,19,reviewed_alert_context,false_positive_context
+python,26,py/ineffectual-statement,Statement has no effect,note,not_security,,high,ai-services/grading_agent/provider_adapter.py,22,reviewed_alert_context,false_positive_context
+python,27,py/ineffectual-statement,Statement has no effect,note,not_security,,high,services/ocr-worker/ocr_worker/recognition_router.py,76,reviewed_alert_context,false_positive_context
+python,28,py/ineffectual-statement,Statement has no effect,note,not_security,,high,services/ocr-worker/ocr_worker/recognition_router.py,78,reviewed_alert_context,false_positive_context
+python,29,py/ineffectual-statement,Statement has no effect,note,not_security,,high,services/ocr-worker/ocr_worker/recognition_router.py,80,reviewed_alert_context,false_positive_context
+python,30,py/ineffectual-statement,Statement has no effect,note,not_security,,high,services/page-processing-worker/page_processing/runner.py,38,reviewed_alert_context,false_positive_context
+python,31,py/ineffectual-statement,Statement has no effect,note,not_security,,high,services/page-processing-worker/page_processing/runner.py,41,reviewed_alert_context,false_positive_context
+python,32,py/ineffectual-statement,Statement has no effect,note,not_security,,high,services/page-processing-worker/page_processing/runner.py,44,reviewed_alert_context,false_positive_context
+python,33,py/ineffectual-statement,Statement has no effect,note,not_security,,high,services/image-quality-worker/image_quality/runner.py,16,reviewed_alert_context,false_positive_context
+python,34,py/ineffectual-statement,Statement has no effect,note,not_security,,high,services/image-quality-worker/image_quality/runner.py,19,reviewed_alert_context,false_positive_context
+python,35,py/ineffectual-statement,Statement has no effect,note,not_security,,high,services/image-quality-worker/image_quality/runner.py,22,reviewed_alert_context,false_positive_context
+python,36,py/ineffectual-statement,Statement has no effect,note,not_security,,high,services/image-quality-worker/image_quality/runner.py,25,reviewed_alert_context,false_positive_context
+python,37,py/ineffectual-statement,Statement has no effect,note,not_security,,high,services/image-quality-worker/image_quality/runner.py,28,reviewed_alert_context,false_positive_context
+python,38,py/ineffectual-statement,Statement has no effect,note,not_security,,high,services/image-quality-worker/image_quality/runner.py,31,reviewed_alert_context,false_positive_context
+python,39,py/ineffectual-statement,Statement has no effect,note,not_security,,high,services/image-quality-worker/image_quality/runner.py,34,reviewed_alert_context,false_positive_context
+python,40,py/unused-global-variable,Unused global variable,note,not_security,,high,services/ocr-worker/ocr_worker/math_layout.py,244,reviewed_alert_context,false_positive_context
+python,41,py/unused-global-variable,Unused global variable,note,not_security,,high,services/ocr-worker/ocr_worker/math_layout.py,245,reviewed_alert_context,intentional_behavior
+python,42,py/unused-global-variable,Unused global variable,note,not_security,,high,services/ocr-worker/ocr_worker/math_layout.py,246,reviewed_alert_context,false_positive_context
+python,43,py/unused-global-variable,Unused global variable,note,not_security,,high,services/ocr-worker/ocr_worker/math_layout.py,247,reviewed_alert_context,intentional_behavior
+python,44,py/unused-global-variable,Unused global variable,note,not_security,,high,ai-services/grading_agent/paper_compact/schema.py,19,reviewed_alert_context,false_positive_context
+python,45,py/unused-global-variable,Unused global variable,note,not_security,,high,ai-services/grading_agent/paper_compact/schema.py,20,reviewed_alert_context,false_positive_context
+python,46,py/unused-global-variable,Unused global variable,note,not_security,,high,ai-services/grading_agent/paper_compact/schema.py,24,reviewed_alert_context,false_positive_context
+python,47,py/unused-global-variable,Unused global variable,note,not_security,,high,ai-services/grading_agent/paper_compact/schema.py,27,reviewed_alert_context,false_positive_context
+python,48,py/unused-global-variable,Unused global variable,note,not_security,,high,ai-services/grading_agent/paper_compact/schema.py,28,reviewed_alert_context,false_positive_context
+python,49,py/unused-global-variable,Unused global variable,note,not_security,,high,ai-services/grading_agent/paper_compact/schema.py,29,reviewed_alert_context,false_positive_context
+python,50,py/unused-global-variable,Unused global variable,note,not_security,,high,ai-services/grading_agent/paper_compact/schema.py,30,reviewed_alert_context,false_positive_context
+python,51,py/unused-global-variable,Unused global variable,note,not_security,,high,ai-services/grading_agent/paper_compact/schema.py,33,reviewed_alert_context,false_positive_context
+python,52,py/unused-global-variable,Unused global variable,note,not_security,,high,ai-services/grading_agent/paper_compact/schema.py,36,reviewed_alert_context,false_positive_context
+python,53,py/unused-global-variable,Unused global variable,note,not_security,,high,docs/architecture/tools/verify_database_catalog.py,62,reviewed_alert_context,false_positive_context
+python,54,py/unused-global-variable,Unused global variable,note,not_security,,high,docs/architecture/tools/verify_database_catalog.py,92,reviewed_alert_context,false_positive_context
+javascript,0,js/file-system-race,Potential file system race condition,warning,high,7.7,medium,scripts/ci/check-generated-contracts.mjs,16,reviewed_alert_context,conditional_local_hardening
+javascript,1,js/file-system-race,Potential file system race condition,warning,high,7.7,medium,scripts/lib/openapi-sdk.mjs,252,reviewed_alert_context,conditional_local_hardening
+javascript,2,js/file-system-race,Potential file system race condition,warning,high,7.7,medium,scripts/lib/openapi-sdk.mjs,257,reviewed_alert_context,conditional_local_hardening
+javascript,3,js/file-system-race,Potential file system race condition,warning,high,7.7,medium,scripts/update-api-route-coverage.mjs,120,reviewed_alert_context,conditional_local_hardening
+javascript,4,js/unused-local-variable,"Unused variable, import, function or class",note,not_security,,very-high,apps/web-admin/scripts/check-production-routes.mjs,27,reviewed_alert_context,low_maintenance
+javascript,5,js/unused-local-variable,"Unused variable, import, function or class",note,not_security,,very-high,apps/web-admin/scripts/check-production-routes.mjs,168,reviewed_alert_context,low_maintenance
+javascript,6,js/duplicate-property,Duplicate property,warning,not_security,,very-high,lab/tests/helpers.js,29,reviewed_alert_context,intentional_behavior
+javascript,7,js/useless-expression,Expression has no effect,warning,not_security,,very-high,docs/architecture/tools/capture_preview_qa.js,2,reviewed_alert_context,intentional_behavior
+javascript,8,js/useless-expression,Expression has no effect,warning,not_security,,very-high,docs/architecture/tools/render_native.js,2,reviewed_alert_context,intentional_behavior
+javascript,9,js/superfluous-trailing-arguments,Superfluous trailing arguments,warning,not_security,,very-high,apps/web-admin/src/features/grading/workbench/hooks/useGradingKeyboard.test.tsx,14,reviewed_alert_context,false_positive_context
+javascript,10,js/superfluous-trailing-arguments,Superfluous trailing arguments,warning,not_security,,very-high,apps/web-admin/src/features/grading/workbench/hooks/useGradingKeyboard.test.tsx,59,reviewed_alert_context,false_positive_context
+javascript,11,js/trivial-conditional,Useless conditional,warning,not_security,,very-high,apps/web-admin/src/pages/PanelModelBindingsSection.tsx,161,reviewed_alert_context,low_maintenance
+javascript,12,js/trivial-conditional,Useless conditional,warning,not_security,,very-high,apps/web-admin/src/pages/PanelModelBindingsSection.tsx,161,reviewed_alert_context,low_maintenance
+javascript,13,js/trivial-conditional,Useless conditional,warning,not_security,,very-high,apps/web-admin/src/pages/PanelModelBindingsSection.tsx,161,reviewed_alert_context,low_maintenance
+go,0,go/unsafe-quoting,Potentially unsafe quoting,warning,critical,9.3,high,services/api-gateway/internal/modelgovernance/managed_config_probe_http_test.go,395,reviewed_alert_context,false_positive_context
+go,1,go/unsafe-quoting,Potentially unsafe quoting,warning,critical,9.3,high,services/api-gateway/internal/paper/handlers_test.go,519,reviewed_alert_context,false_positive_context
+go,2,go/unsafe-quoting,Potentially unsafe quoting,warning,critical,9.3,high,services/api-gateway/internal/paper/handlers_test.go,523,reviewed_alert_context,false_positive_context
+go,3,go/unsafe-quoting,Potentially unsafe quoting,warning,critical,9.3,high,services/api-gateway/internal/paper/handlers_test.go,527,reviewed_alert_context,false_positive_context
+go,4,go/unsafe-quoting,Potentially unsafe quoting,warning,critical,9.3,high,services/api-gateway/internal/paper/handlers_test.go,527,reviewed_alert_context,false_positive_context
+go,5,go/unsafe-quoting,Potentially unsafe quoting,warning,critical,9.3,high,services/api-gateway/internal/server/e2e_question_bank_import_test.go,214,reviewed_alert_context,false_positive_context
+go,6,go/allocation-size-overflow,Size computation for allocation may overflow,warning,high,8.1,high,services/api-gateway/internal/mathunderstanding/handlers.go,356,reviewed_alert_context,low_hardening
+go,7,go/insecure-tls,Insecure TLS configuration,warning,high,7.5,very-high,services/api-gateway/internal/minioadapter/client_test.go,72,reviewed_alert_context,intentional_test_behavior
+go,8,go/weak-sensitive-data-hashing,Use of a broken or weak cryptographic hashing algorithm on sensitive data,warning,high,7.5,high,services/api-gateway/internal/auth/login_limiter_redis.go,160,reviewed_alert_context,false_positive_context
+go,9,go/weak-sensitive-data-hashing,Use of a broken or weak cryptographic hashing algorithm on sensitive data,warning,high,7.5,high,services/api-gateway/internal/auth/token.go,21,reviewed_alert_context,false_positive_context
+go,10,go/uncontrolled-allocation-size,Slice memory allocation with excessive size value,error,high,7.5,high,services/api-gateway/internal/mathunderstanding/pilot_store.go,53,reviewed_alert_context,false_positive_context
+go,11,go/uncontrolled-allocation-size,Slice memory allocation with excessive size value,error,high,7.5,high,services/api-gateway/internal/processing/store_postgres.go,215,reviewed_alert_context,false_positive_context
+go,12,go/uncontrolled-allocation-size,Slice memory allocation with excessive size value,error,high,7.5,high,services/api-gateway/internal/workerruntime/store_memory.go,113,reviewed_alert_context,false_positive_context
+go,13,go/uncontrolled-allocation-size,Slice memory allocation with excessive size value,error,high,7.5,high,services/api-gateway/internal/workerruntime/store_postgres.go,237,reviewed_alert_context,false_positive_context
+go,14,go/request-forgery,Uncontrolled data used in network request,error,critical,9.1,high,services/api-gateway/internal/modelgovernance/managed_config_probe.go,404,reviewed_alert_context,conditional_deployment_review
+go,15,go/log-injection,Log entries created from user input,error,medium,6.1,medium,services/api-gateway/internal/schoolassistant/service.go,160,reviewed_alert_context,false_positive_context
+go,16,go/index-out-of-bounds,Off-by-one comparison against length,error,not_security,,high,services/api-gateway/internal/capture/print_package_pdf.go,141,reviewed_alert_context,false_positive_context
+go,17,go/useless-assignment-to-field,Useless assignment to field,warning,not_security,,very-high,services/api-gateway/internal/modelgovernance/store_memory.go,303,reviewed_alert_context,low_maintenance
+go,18,go/useless-assignment-to-field,Useless assignment to field,warning,not_security,,very-high,services/api-gateway/internal/modelgovernance/store_memory.go,304,reviewed_alert_context,low_maintenance
+go,19,go/useless-assignment-to-field,Useless assignment to field,warning,not_security,,very-high,services/api-gateway/internal/modelgovernance/store_memory.go,305,reviewed_alert_context,low_maintenance
+go,20,go/useless-assignment-to-local,Useless assignment to local variable,warning,not_security,,very-high,services/api-gateway/internal/questionbank/metadata_acl_search_test.go,117,reviewed_alert_context,low_maintenance
+go,21,go/useless-assignment-to-local,Useless assignment to local variable,warning,not_security,,very-high,services/api-gateway/internal/server/e2e_question_bank_acl_ux_test.go,190,reviewed_alert_context,low_maintenance
+go,22,go/useless-assignment-to-local,Useless assignment to local variable,warning,not_security,,very-high,services/api-gateway/internal/server/e2e_question_bank_metadata_acl_search_test.go,154,reviewed_alert_context,low_maintenance
+rust,0,rust/hard-coded-cryptographic-value,Hard-coded cryptographic value,warning,critical,9.8,high,apps/desktop-client/src-tauri/src/durable_store/paths.rs,105,reviewed_alert_context,false_positive_context
+rust,1,rust/hard-coded-cryptographic-value,Hard-coded cryptographic value,warning,critical,9.8,high,apps/desktop-client/src-tauri/src/durable_store/claim.rs,443,reviewed_alert_context,intentional_test_behavior
+rust,2,rust/hard-coded-cryptographic-value,Hard-coded cryptographic value,warning,critical,9.8,high,apps/desktop-client/src-tauri/src/durable_store/claim.rs,450,reviewed_alert_context,intentional_test_behavior
+rust,3,rust/hard-coded-cryptographic-value,Hard-coded cryptographic value,warning,critical,9.8,high,apps/desktop-client/src-tauri/src/durable_store/claim.rs,451,reviewed_alert_context,intentional_test_behavior
+rust,4,rust/hard-coded-cryptographic-value,Hard-coded cryptographic value,warning,critical,9.8,high,apps/desktop-client/src-tauri/src/durable_store/crypto.rs,127,reviewed_alert_context,false_positive_context
+rust,5,rust/hard-coded-cryptographic-value,Hard-coded cryptographic value,warning,critical,9.8,high,apps/desktop-client/src-tauri/src/durable_store/crypto.rs,171,reviewed_alert_context,false_positive_context
+rust,6,rust/hard-coded-cryptographic-value,Hard-coded cryptographic value,warning,critical,9.8,high,apps/desktop-client/src-tauri/src/durable_store/drafts.rs,203,reviewed_alert_context,intentional_test_behavior
+rust,7,rust/hard-coded-cryptographic-value,Hard-coded cryptographic value,warning,critical,9.8,high,apps/desktop-client/src-tauri/src/durable_store/drafts.rs,286,reviewed_alert_context,intentional_test_behavior
+rust,8,rust/hard-coded-cryptographic-value,Hard-coded cryptographic value,warning,critical,9.8,high,apps/desktop-client/src-tauri/src/durable_store/mod.rs,111,reviewed_alert_context,intentional_test_behavior
+rust,9,rust/hard-coded-cryptographic-value,Hard-coded cryptographic value,warning,critical,9.8,high,apps/desktop-client/src-tauri/src/durable_store/mod.rs,117,reviewed_alert_context,intentional_test_behavior
+rust,10,rust/hard-coded-cryptographic-value,Hard-coded cryptographic value,warning,critical,9.8,high,apps/desktop-client/src-tauri/src/durable_store/mod.rs,135,reviewed_alert_context,intentional_test_behavior
+rust,11,rust/hard-coded-cryptographic-value,Hard-coded cryptographic value,warning,critical,9.8,high,apps/desktop-client/src-tauri/src/durable_store/mod.rs,261,reviewed_alert_context,intentional_test_behavior
+rust,12,rust/hard-coded-cryptographic-value,Hard-coded cryptographic value,warning,critical,9.8,high,apps/desktop-client/src-tauri/src/durable_store/mod.rs,466,reviewed_alert_context,intentional_test_behavior
+rust,13,rust/hard-coded-cryptographic-value,Hard-coded cryptographic value,warning,critical,9.8,high,apps/desktop-client/src-tauri/src/durable_store/storage.rs,308,reviewed_alert_context,intentional_test_behavior

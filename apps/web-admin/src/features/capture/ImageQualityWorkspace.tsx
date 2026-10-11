@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { App, Button, Empty, Progress, Segmented, Select, Skeleton, Space, Switch } from "antd";
+import { Alert, App, Button, Empty, Progress, Segmented, Select, Skeleton, Space, Switch } from "antd";
 import { Image as ImageIcon, RefreshCw, ScanSearch, ShieldAlert } from "lucide-react";
 import {
   listPageQualityRuns,
@@ -20,11 +20,13 @@ import {
   qualityPageCounts,
   qualityScore,
   qualityStatusOf,
+  type QualityDimensionRow,
   type QualityPageFilter,
 } from "./imageQualityModel";
 
 interface ImageQualityWorkspaceProps {
   pages: CapturePage[];
+  initialPageId?: string;
   canManage: boolean;
   onOverride: (page: CapturePage) => void;
   onRefresh: () => Promise<void>;
@@ -80,27 +82,37 @@ const gateLabels: Record<string, string> = {
   critical_roi_occlusion: "关键答题区无遮挡",
 };
 
-export function ImageQualityWorkspace({ pages, canManage, onOverride, onRefresh }: ImageQualityWorkspaceProps) {
+export function ImageQualityWorkspace({ pages, initialPageId = "", canManage, onOverride, onRefresh }: Readonly<ImageQualityWorkspaceProps>) {
   const { message } = App.useApp();
   const eligiblePages = useMemo(() => pages.filter((page) => page.submission_page_id && page.status !== "deleted"), [pages]);
   const [filter, setFilter] = useState<QualityPageFilter>("all");
   const filteredPages = useMemo(() => filterQualityPages(eligiblePages, filter), [eligiblePages, filter]);
   const counts = useMemo(() => qualityPageCounts(eligiblePages), [eligiblePages]);
-  const [selectedPageId, setSelectedPageId] = useState("");
+  const [selectedPageId, setSelectedPageId] = useState(initialPageId);
+  useEffect(() => { if (initialPageId && pages.some(page => page.id === initialPageId)) setSelectedPageId(initialPageId); }, [initialPageId]);
   const selectedPage = eligiblePages.find((page) => page.id === selectedPageId) ?? filteredPages[0];
   const [runs, setRuns] = useState<ImageQualityRun[]>([]);
+  const [runsPageId, setRunsPageId] = useState("");
   const [selectedRunId, setSelectedRunId] = useState("");
-  const selectedRun = runs.find((run) => run.id === selectedRunId) ?? runs[0];
+  const currentRuns = runsPageId === selectedPage?.id ? runs : [];
+  const selectedRun = currentRuns.find((run) => run.id === selectedRunId) ?? currentRuns[0];
   const [runsLoading, setRunsLoading] = useState(false);
   const [runsError, setRunsError] = useState("");
   const [actioning, setActioning] = useState(false);
   const [previewMode, setPreviewMode] = useState<"source" | "normalized">("source");
-  const [previewUrl, setPreviewUrl] = useState("");
+  const [preview, setPreview] = useState<{ key: string; url: string }>();
+  const [sourceEvidence, setSourceEvidence] = useState("");
+  const [previewError, setPreviewError] = useState("");
+  const [previewRetry, setPreviewRetry] = useState(0);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [showFocusMap, setShowFocusMap] = useState(true);
   // 质检历史与图片预览各自计代次，切页后的迟到响应不能覆盖新选择。
   const runRequest = useRef(0);
   const previewRequest = useRef(0);
+  const assetId = previewMode === "normalized" ? selectedRun?.normalized_file_asset_id : selectedPage?.decoded_file_asset_id;
+  const previewKey = `${selectedPage?.id ?? ""}:${previewMode}:${assetId ?? ""}`;
+  const sourceKey = `${selectedPage?.id ?? ""}:source:${selectedPage?.decoded_file_asset_id ?? ""}`;
+  const currentPreview = preview?.key === previewKey ? preview : undefined;
 
   useEffect(() => {
     if (filteredPages.length === 0) {
@@ -114,6 +126,8 @@ export function ImageQualityWorkspace({ pages, canManage, onOverride, onRefresh 
 
   const loadRuns = useCallback(async (page?: CapturePage) => {
     const requestId = ++runRequest.current;
+    setRuns([]);
+    setRunsPageId(page?.id ?? "");
     if (!page?.submission_page_id) {
       setRuns([]);
       setRunsLoading(false);
@@ -141,12 +155,11 @@ export function ImageQualityWorkspace({ pages, canManage, onOverride, onRefresh 
 
   useEffect(() => {
     const requestId = ++previewRequest.current;
-    const assetId = previewMode === "normalized" ? selectedRun?.normalized_file_asset_id : selectedPage?.decoded_file_asset_id;
+    // 新页、新文件或新预览模式都先移除旧图；失败时不能把旧证据标成当前页。
+    setPreview(undefined);
+    setPreviewError("");
+    if (previewMode === "source") setSourceEvidence("");
     if (!assetId) {
-      setPreviewUrl((current) => {
-        if (current) URL.revokeObjectURL(current);
-        return "";
-      });
       setPreviewLoading(false);
       return;
     }
@@ -155,25 +168,28 @@ export function ImageQualityWorkspace({ pages, canManage, onOverride, onRefresh 
       .then((result) => {
         if (requestId !== previewRequest.current) return;
         const url = URL.createObjectURL(result.blob);
-        setPreviewUrl((current) => {
-          if (current) URL.revokeObjectURL(current);
-          return url;
-        });
+        setPreview({ key: previewKey, url });
       })
       .catch((error) => {
-        if (requestId === previewRequest.current) message.error(getUserErrorMessage(error, "页面预览加载失败"));
+        if (requestId === previewRequest.current) {
+          setPreviewError(getUserErrorMessage(error, "页面预览加载失败"));
+          if (previewMode === "source") setSourceEvidence("");
+        }
       })
       .finally(() => {
         if (requestId === previewRequest.current) setPreviewLoading(false);
       });
-  }, [message, previewMode, selectedPage?.decoded_file_asset_id, selectedRun?.normalized_file_asset_id]);
+    // 请求失效与 URL 回收分开；成功更新 URL 不能废弃本次请求的 finally。
+    return () => {
+      previewRequest.current += 1;
+    };
+  }, [assetId, previewKey, previewMode, previewRetry]);
 
   useEffect(
     () => () => {
-      previewRequest.current += 1;
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      if (preview?.url) URL.revokeObjectURL(preview.url);
     },
-    [previewUrl],
+    [preview],
   );
 
   const dimensions = useMemo(() => buildQualityDimensionRows(selectedRun), [selectedRun]);
@@ -237,29 +253,14 @@ export function ImageQualityWorkspace({ pages, canManage, onOverride, onRefresh 
         <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="当前筛选条件下没有页面" />
       ) : (
         <div className="image-quality-layout">
-          <div className="image-quality-page-list" aria-label="批次页面质检状态">
-            <div className="quality-section-label">页面</div>
-            {filteredPages.map((page) => {
-              const status = qualityStatusOf(page);
-              return (
-                <button
-                  type="button"
-                  key={page.id}
-                  className={page.id === selectedPage?.id ? "image-quality-page-row active" : "image-quality-page-row"}
-                  onClick={() => {
-                    setSelectedPageId(page.id);
-                    setPreviewMode("source");
-                  }}
-                >
-                  <span>
-                    <strong>第 {page.assigned_page_no ?? page.sequence_no} 页</strong>
-                    <small>扫描序号 {page.sequence_no}</small>
-                  </span>
-                  <StatusTag tone={qualityTone(status)}>{pageStatusLabels[status] ?? "检测中"}</StatusTag>
-                </button>
-              );
-            })}
-          </div>
+          <QualityPageList
+            pages={filteredPages}
+            selectedPageId={selectedPage?.id}
+            onSelect={(pageId) => {
+              setSelectedPageId(pageId);
+              setPreviewMode("source");
+            }}
+          />
 
           <div className="image-quality-canvas-column">
             <div className="image-quality-toolbar">
@@ -277,24 +278,23 @@ export function ImageQualityWorkspace({ pages, canManage, onOverride, onRefresh 
               </Space>
             </div>
             <div className="image-quality-canvas">
-              {previewLoading ? <Skeleton.Image active /> : previewUrl ? (
-                <div className="image-quality-document-frame">
-                  <img src={previewUrl} alt={`第 ${selectedPage?.assigned_page_no ?? selectedPage?.sequence_no} 页答题卡`} />
-                  {showFocusMap && previewMode === "source" ? (
-                    <div className="focus-map-overlay" aria-label="局部清晰度热区">
-                      {focusPatches.map((patch) => (
-                        <span
-                          key={`${patch.row}-${patch.column}`}
-                          className={`focus-map-patch ${patch.status}`}
-                          title={`清晰度 ${Math.round(patch.focus_score * 100)}`}
-                          style={{ left: `${patch.x * 100}%`, top: `${patch.y * 100}%`, width: `${patch.width * 100}%`, height: `${patch.height * 100}%` }}
-                        />
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-              ) : <Empty image={<ImageIcon size={34} />} description="暂无可预览图像" />}
+              <QualityPreview
+                loading={previewLoading}
+                url={currentPreview?.url ?? ""}
+                page={selectedPage}
+                onLoad={() => {
+                  if (currentPreview && previewMode === "source") setSourceEvidence(sourceKey);
+                }}
+                onError={() => {
+                  setPreview(undefined);
+                  setPreviewError("当前页面图像无法显示，请重新加载后核对。");
+                  if (previewMode === "source") setSourceEvidence("");
+                }}
+                focusPatches={focusPatches}
+                showFocusMap={showFocusMap && previewMode === "source"}
+              />
             </div>
+            {previewError ? <Alert type="error" showIcon message={previewError} action={<Button onClick={() => setPreviewRetry((value) => value + 1)}>重新加载当前页</Button>} /> : null}
             {focusPatches.length ? (
               <div className="focus-map-legend"><span className="good" />清晰 <span className="warning" />风险 <span className="bad" />模糊</div>
             ) : null}
@@ -306,7 +306,7 @@ export function ImageQualityWorkspace({ pages, canManage, onOverride, onRefresh 
                 <span>检测结论</span>
                 <h3>{decisionLabels[decision] ?? decision}</h3>
               </div>
-              <Progress type="circle" size={72} percent={score} format={(value) => `${value ?? 0}`} strokeColor={score >= 78 ? "#1677ff" : score >= 50 ? "#d48806" : "#cf1322"} />
+              <Progress type="circle" size={72} percent={score} format={(value) => `${value ?? 0}`} strokeColor={scoreStrokeColor(score)} />
             </div>
 
             <Space wrap className="quality-actions">
@@ -314,53 +314,25 @@ export function ImageQualityWorkspace({ pages, canManage, onOverride, onRefresh 
                 重检本份答卷
               </Button>
               {selectedPage && ["review", "failed"].includes(qualityStatusOf(selectedPage)) ? (
-                <Button type="primary" icon={<ShieldAlert size={15} />} disabled={!canManage} onClick={() => onOverride(selectedPage)}>人工放行</Button>
+                <Button type="primary" icon={<ShieldAlert size={15} />} disabled={!canManage || !selectedPage.decoded_file_asset_id || sourceEvidence !== sourceKey} onClick={() => {
+                  // 放行沿用已实际显示的当前原图，标准化图和下载成功本身不能代替人工核对。
+                  if (sourceEvidence === sourceKey) onOverride(selectedPage);
+                }}>人工放行</Button>
               ) : null}
             </Space>
 
-            {runsLoading ? <Skeleton active paragraph={{ rows: 8 }} /> : runsError ? (
-              <div className="quality-inline-error"><span>{runsError}</span><Button size="small" onClick={() => void loadRuns(selectedPage)}>重试</Button></div>
-            ) : selectedRun ? (
-              <>
-                <div className="quality-run-select">
-                  <span>检测记录</span>
-                  <Select
-                    size="small"
-                    value={selectedRun.id}
-                    onChange={setSelectedRunId}
-                    options={runs.map((run, index) => ({ value: run.id, label: `${index === 0 ? "当前 · " : "历史 · "}${formatTime(run.completed_at ?? run.created_at)}` }))}
-                  />
-                </div>
-                <div className="quality-dimensions">
-                  <div className="quality-section-label">七项指标</div>
-                  {dimensions.length ? dimensions.map((dimension) => (
-                    <div className="quality-dimension-row" key={dimension.key}>
-                      <span>{dimension.label}</span>
-                      <Progress percent={dimension.score} showInfo={false} size="small" status={dimension.status === "failed" ? "exception" : "normal"} />
-                      <strong>{Math.round(dimension.score)}</strong>
-                    </div>
-                  )) : <div className="quality-legacy-note">旧版检测记录未包含七项明细，请重新检测。</div>}
-                </div>
-                <IssueList issues={selectedRun.quality_issues} />
-                <div className="quality-gates">
-                  <div className="quality-section-label">Hard Gate</div>
-                  {gates.map((raw, index) => {
-                    const gate = isRecord(raw) ? raw : {};
-                    const code = typeof gate.code === "string" ? gate.code : `gate-${index}`;
-                    const status = typeof gate.status === "string" ? gate.status : "not_evaluated";
-                    return <div key={code}><span>{gateLabels[code] ?? code}</span><StatusTag tone={gateTone(status)}>{gateStatusLabel(status)}</StatusTag></div>;
-                  })}
-                </div>
-                <div className="quality-technical-meta">
-                  <span>算法 {selectedRun.profile_name}/{selectedRun.profile_version}</span>
-                  <span>耗时 {selectedRun.duration_ms ?? 0} ms</span>
-                  {badFocusPatchRatio !== undefined ? <span>局部坏块 {formatPercent(badFocusPatchRatio)}</span> : null}
-                  {effectiveShortEdge !== undefined ? <span>有效短边 {Math.round(effectiveShortEdge)} px</span> : null}
-                </div>
-              </>
-            ) : (
-              <Empty image={<ScanSearch size={32} />} description="该页面尚无真实质检记录" />
-            )}
+            <QualityRunInspector
+              loading={runsLoading}
+              error={runsError}
+              run={selectedRun}
+              runs={currentRuns}
+              dimensions={dimensions}
+              gates={gates}
+              badFocusPatchRatio={badFocusPatchRatio}
+              effectiveShortEdge={effectiveShortEdge}
+              onSelect={setSelectedRunId}
+              onRetry={() => void loadRuns(selectedPage)}
+            />
           </div>
         </div>
       )}
@@ -368,7 +340,131 @@ export function ImageQualityWorkspace({ pages, canManage, onOverride, onRefresh 
   );
 }
 
-function IssueList({ issues }: { issues: ImageQualityIssue[] }) {
+function QualityPageList({ pages, selectedPageId, onSelect }: Readonly<{
+  pages: CapturePage[];
+  selectedPageId?: string;
+  onSelect: (pageId: string) => void;
+}>) {
+  return (
+    <div className="image-quality-page-list" aria-label="批次页面质检状态">
+      <div className="quality-section-label">页面</div>
+      {pages.map((page) => {
+        const status = qualityStatusOf(page);
+        return (
+          <button
+            type="button"
+            key={page.id}
+            className={page.id === selectedPageId ? "image-quality-page-row active" : "image-quality-page-row"}
+            onClick={() => onSelect(page.id)}
+          >
+            <span>
+              <strong>第 {page.assigned_page_no ?? page.sequence_no} 页</strong>
+              <small>扫描序号 {page.sequence_no}</small>
+            </span>
+            <StatusTag tone={qualityTone(status)}>{pageStatusLabels[status] ?? "检测中"}</StatusTag>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function QualityPreview({ loading, url, page, focusPatches, showFocusMap, onLoad, onError }: Readonly<{
+  loading: boolean;
+  url: string;
+  page?: CapturePage;
+  focusPatches: FocusPatch[];
+  showFocusMap: boolean;
+  onLoad: () => void;
+  onError: () => void;
+}>) {
+  if (loading) return <Skeleton.Image active />;
+  if (!url) return <Empty image={<ImageIcon size={34} />} description="暂无可预览图像" />;
+  return (
+    <div className="image-quality-document-frame">
+      <img key={url} src={url} alt={`第 ${page?.assigned_page_no ?? page?.sequence_no} 页答题卡`} onLoad={onLoad} onError={onError} />
+      {showFocusMap ? (
+        <div className="focus-map-overlay" aria-label="局部清晰度热区">
+          {focusPatches.map((patch) => (
+            <span
+              key={`${patch.row}-${patch.column}`}
+              className={`focus-map-patch ${patch.status}`}
+              title={`清晰度 ${Math.round(patch.focus_score * 100)}`}
+              style={{ left: `${patch.x * 100}%`, top: `${patch.y * 100}%`, width: `${patch.width * 100}%`, height: `${patch.height * 100}%` }}
+            />
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+interface QualityRunInspectorProps {
+  loading: boolean;
+  error: string;
+  run?: ImageQualityRun;
+  runs: ImageQualityRun[];
+  dimensions: QualityDimensionRow[];
+  gates: unknown[];
+  badFocusPatchRatio?: number;
+  effectiveShortEdge?: number;
+  onSelect: (runId: string) => void;
+  onRetry: () => void;
+}
+
+function QualityRunInspector({ loading, error, run, onRetry, ...details }: Readonly<QualityRunInspectorProps>) {
+  // 切页时旧记录可能仍在 state 中；记录区先显示加载或错误，再展示检测明细。
+  if (loading) return <Skeleton active paragraph={{ rows: 8 }} />;
+  if (error) return <div className="quality-inline-error"><span>{error}</span><Button size="small" onClick={onRetry}>重试</Button></div>;
+  if (!run) return <Empty image={<ScanSearch size={32} />} description="该页面尚无真实质检记录" />;
+  return <QualityRunDetails run={run} {...details} />;
+}
+
+function QualityRunDetails({ run, runs, dimensions, gates, badFocusPatchRatio, effectiveShortEdge, onSelect }: Readonly<
+  Omit<QualityRunInspectorProps, "loading" | "error" | "onRetry"> & { run: ImageQualityRun }
+>) {
+  return (
+    <>
+      <div className="quality-run-select">
+        <span>检测记录</span>
+        <Select
+          size="small"
+          value={run.id}
+          onChange={onSelect}
+          options={runs.map((item, index) => ({ value: item.id, label: `${index === 0 ? "当前 · " : "历史 · "}${formatTime(item.completed_at ?? item.created_at)}` }))}
+        />
+      </div>
+      <div className="quality-dimensions">
+        <div className="quality-section-label">七项指标</div>
+        {dimensions.length ? dimensions.map((dimension) => (
+          <div className="quality-dimension-row" key={dimension.key}>
+            <span>{dimension.label}</span>
+            <Progress percent={dimension.score} showInfo={false} size="small" status={dimension.status === "failed" ? "exception" : "normal"} />
+            <strong>{Math.round(dimension.score)}</strong>
+          </div>
+        )) : <div className="quality-legacy-note">旧版检测记录未包含七项明细，请重新检测。</div>}
+      </div>
+      <IssueList issues={run.quality_issues} />
+      <div className="quality-gates">
+        <div className="quality-section-label">Hard Gate</div>
+        {gates.map((raw, index) => {
+          const gate = isRecord(raw) ? raw : {};
+          const code = typeof gate.code === "string" ? gate.code : `gate-${index}`;
+          const status = typeof gate.status === "string" ? gate.status : "not_evaluated";
+          return <div key={code}><span>{gateLabels[code] ?? code}</span><StatusTag tone={gateTone(status)}>{gateStatusLabel(status)}</StatusTag></div>;
+        })}
+      </div>
+      <div className="quality-technical-meta">
+        <span>算法 {run.profile_name}/{run.profile_version}</span>
+        <span>耗时 {run.duration_ms ?? 0} ms</span>
+        {badFocusPatchRatio !== undefined ? <span>局部坏块 {formatPercent(badFocusPatchRatio)}</span> : null}
+        {effectiveShortEdge !== undefined ? <span>有效短边 {Math.round(effectiveShortEdge)} px</span> : null}
+      </div>
+    </>
+  );
+}
+
+function IssueList({ issues }: Readonly<{ issues: ImageQualityIssue[] }>) {
   if (!issues.length) return <div className="quality-pass-note"><span>未触发质量问题</span><small>页面可继续进入后续处理门禁</small></div>;
   return (
     <div className="quality-issue-list">
@@ -411,8 +507,18 @@ function optionalMetric(run: ImageQualityRun, key: string): number | undefined {
 
 function formatObserved(issue: ImageQualityIssue): string {
   if (issue.observed === undefined) return "已触发质量门禁";
-  const observed = typeof issue.observed === "number" ? Math.round(issue.observed * 1000) / 1000 : String(issue.observed);
+  let observed: string | number;
+  if (typeof issue.observed === "number") observed = Math.round(issue.observed * 1000) / 1000;
+  else if (typeof issue.observed === "string") observed = issue.observed;
+  // 观测值来自 JSON 响应；布尔值和 null 保留字面值，数组与对象展示其内容。
+  else observed = JSON.stringify(issue.observed);
   return `${issue.metric ?? "观测值"}：${observed}`;
+}
+
+function scoreStrokeColor(score: number): string {
+  if (score >= 78) return "#1677ff";
+  if (score >= 50) return "#d48806";
+  return "#cf1322";
 }
 
 function formatPercent(value: number): string {

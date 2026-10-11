@@ -1,9 +1,11 @@
 package server
 
 import (
+	"context"
 	"database/sql"
 	"edugrade-enterprise/services/api-gateway/internal/appeal"
 	"edugrade-enterprise/services/api-gateway/internal/auth"
+	"edugrade-enterprise/services/api-gateway/internal/exam"
 	"edugrade-enterprise/services/api-gateway/internal/files"
 	"edugrade-enterprise/services/api-gateway/internal/regrade"
 	"edugrade-enterprise/services/api-gateway/internal/regraderelease"
@@ -26,6 +28,8 @@ type ReleaseStores struct {
 }
 
 type ReleaseModule struct {
+	ScoreReleaseService            *scorerelease.Service
+	ReleaseGateService             *releasegate.Service
 	ScoreHandler                   *score.Handler
 	ScoreReleaseHandler            *scorerelease.Handler
 	ReleaseGateHandler             *releasegate.Handler
@@ -38,6 +42,7 @@ type ReleaseModule struct {
 
 type ReleaseDependencies struct {
 	Auth                  auth.AuditRecorder
+	Exams                 exam.Store
 	Regrade               *regrade.Service
 	StudentQuestionImage  segment.CropImageReader
 	StudentPaperPageImage segment.PageImageReader
@@ -58,7 +63,9 @@ func NewReleaseModule(stores ReleaseStores, dependencies ReleaseDependencies) *R
 	releaseGateService := releasegate.NewService(stores.ReleaseGate, scoreReleaseService).
 		WithRegradeBlockerReader(regradeBlocker{service: dependencies.Regrade})
 	return &ReleaseModule{
-		ScoreHandler: score.NewHandler(stores.Score, dependencies.Auth),
+		ScoreReleaseService: scoreReleaseService,
+		ReleaseGateService:  releaseGateService,
+		ScoreHandler:        score.NewHandler(stores.Score, dependencies.Auth),
 		ScoreReleaseHandler: scorerelease.NewHandler(scoreReleaseService, dependencies.Auth).
 			WithPublicationPublisher(releaseGatePublisher{
 				coordinator: releasegate.NewPublicationCoordinator(releaseGateService, scoreReleaseService),
@@ -74,7 +81,25 @@ func NewReleaseModule(stores ReleaseStores, dependencies ReleaseDependencies) *R
 		AppealHandler: appeal.NewHandler(stores.Appeal, dependencies.Auth),
 		PublishedQuestionAppealHandler: appeal.NewPublishedQuestionAppealHandler(
 			appeal.NewPublishedQuestionAppealService(stores.PublishedQuestionAppeal), dependencies.Auth,
-		).WithSegmentImage(dependencies.StudentQuestionImage),
+		).WithSegmentImage(dependencies.StudentQuestionImage).
+			WithExamSummaryReader(publishedQuestionAppealExamReader{store: dependencies.Exams}),
 		ReportHandler: report.NewHandler(stores.Report, dependencies.Auth),
 	}
+}
+
+type publishedQuestionAppealExamReader struct{ store exam.Store }
+
+func (reader publishedQuestionAppealExamReader) ReadQuestionAppealExamSummary(ctx context.Context, tenantID, examID string) (appeal.QuestionAppealExamSummary, error) {
+	if reader.store == nil {
+		return appeal.QuestionAppealExamSummary{}, exam.ErrNotFound
+	}
+	// 调用前已验证申请权限；用同租户单个考试边界读取，不能扩成全租户目录或为教师授予 exam:manage。
+	item, err := reader.store.GetExam(ctx, auth.AccessScope{TenantID: tenantID, ExamIDs: []string{examID}}, examID)
+	if err != nil || item.ID != examID || item.TenantID != tenantID {
+		if err == nil {
+			err = exam.ErrNotFound
+		}
+		return appeal.QuestionAppealExamSummary{}, err
+	}
+	return appeal.QuestionAppealExamSummary{Name: item.Name, Subject: item.Subject}, nil
 }

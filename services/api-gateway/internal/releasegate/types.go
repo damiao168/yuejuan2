@@ -1,8 +1,6 @@
-// Package releasegate owns the policy and evidence layer around A18 score
-// releases.  It deliberately does not create or mutate a score release: A18
-// remains the single public-score boundary.  This package records which
-// versioned quality policy was applied, any allowed warning acknowledgement,
-// and the immutable result of each pre-publish recomputation.
+// Package releasegate 管理 A18 成绩发布周围的策略与证据层。
+// 它不创建或修改成绩发布，A18 仍是公开成绩的唯一边界。
+// 本包记录应用的版本化质量策略、允许的警告确认，以及每次发布前重算的不可变结果。
 package releasegate
 
 import (
@@ -33,9 +31,8 @@ const (
 	DefaultPolicyVersion = "A20.core.v1"
 )
 
-// Policy is deliberately narrow.  The base blockers are calculated by A18;
-// this versioned policy may require acknowledgement for explicitly named
-// warnings, but can never downgrade a blocker.
+// Policy 的范围有限。基础阻断项由 A18 计算；
+// 此版本化策略可要求确认明确列出的警告，但绝不能降低阻断项级别。
 type Policy struct {
 	ID                            string    `json:"id"`
 	TenantID                      string    `json:"tenant_id"`
@@ -48,9 +45,8 @@ type Policy struct {
 	CreatedAt                     time.Time `json:"created_at"`
 }
 
-// Evaluation is the effective gate after policy. BaseGate is retained in
-// full, including every blocker. PendingWarningCodes are a policy decision
-// layer and never cause a source blocker to become waivable.
+// Evaluation 是应用策略后的有效门禁。BaseGate 完整保留，包括全部阻断项。
+// PendingWarningCodes 属于策略决策层，绝不能使来源阻断项变得可豁免。
 type Evaluation struct {
 	Policy              Policy            `json:"policy"`
 	BaseGate            scorerelease.Gate `json:"base_gate"`
@@ -60,9 +56,8 @@ type Evaluation struct {
 	GeneratedAt         time.Time         `json:"generated_at"`
 }
 
-// Evidence is append-only forensic evidence. A preview gives an
-// administrator a stable object against which to request a warning waiver;
-// a publish evidence row is always recomputed immediately before publication.
+// Evidence 是只追加的取证证据。预览为管理员提供稳定对象，用于申请警告豁免；
+// 发布证据行始终在发布前立即重新计算。
 type Evidence struct {
 	ID         string     `json:"id"`
 	TenantID   string     `json:"tenant_id"`
@@ -75,9 +70,8 @@ type Evidence struct {
 	CreatedAt  time.Time  `json:"created_at"`
 }
 
-// Waiver is only a request against a warning in a specific immutable preview
-// evidence row. The approval is a separate append-only decision in storage;
-// callers only see the current decision projection.
+// Waiver 只是针对某一不可变预览证据行中警告的申请。
+// 批准在存储中另记为只追加的决定，调用方只看到当前决定投影。
 type Waiver struct {
 	ID             string     `json:"id"`
 	TenantID       string     `json:"tenant_id"`
@@ -111,14 +105,14 @@ type DecideWaiverInput struct {
 	Reason  string `json:"reason"`
 }
 
-// BaseGateReader is A18's canonical safety checklist. Implementations must
-// calculate from source facts, not accept a browser-supplied gate.
+// BaseGateReader 是 A18 的标准安全检查清单。
+// 实现必须根据来源事实计算，不能接受浏览器提供的门禁。
 type BaseGateReader interface {
 	Gate(context.Context, string, string) (scorerelease.Gate, error)
 }
 
-// RegradeBlockerReader exposes only the release-relevant state of A19.
-// Pending correction plans must not be bypassed by publishing another version.
+// RegradeBlockerReader 只公开 A19 与发布相关的状态。
+// 不能通过发布另一个版本绕过待处理修正计划。
 type RegradeBlockerReader interface {
 	BlockingRegradeCount(context.Context, string, string) (int, error)
 }

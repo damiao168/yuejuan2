@@ -72,16 +72,27 @@ describe("upload sync controller", () => {
     };
   }
 
-  it("pauses while offline and resumes when the browser reports online", async () => {
+  it("pauses offline and waits for teacher confirmation after the browser reports online", async () => {
     await mount(false);
     await act(async () => { await current.uploadQueueItem("item-a"); });
     expect(mocks.resumeCaptureUpload).not.toHaveBeenCalled();
     expect(queueRef.current[0].status).toBe("pending");
     await act(async () => {
       window.dispatchEvent(new Event("online"));
-      await vi.waitFor(() => expect(mocks.resumeCaptureUpload).toHaveBeenCalledTimes(1));
     });
+    expect(mocks.resumeCaptureUpload).not.toHaveBeenCalled();
+    await act(async () => { await current.uploadQueueItems("pending"); });
+    expect(mocks.resumeCaptureUpload).toHaveBeenCalledOnce();
     expect(queueRef.current[0].status).toBe("succeeded");
+  });
+
+  it("uploads only the explicitly selected exam and batch", async () => {
+    queueRef.current.push(item({ id: "other-exam", examId: "exam-b", captureBatchId: "batch-b" }));
+    fileBufferRef.current.set("other-exam", new File(["other"], "other.pdf"));
+    await mount(true);
+    await act(async () => { await current.uploadQueueItems("pending", { examId: "exam-a", captureBatchId: "batch-a" }); });
+    expect(mocks.resumeCaptureUpload).toHaveBeenCalledOnce();
+    expect(queueRef.current.find((entry) => entry.id === "other-exam")?.status).toBe("pending");
   });
 
   it("rejects an item without an idempotency key before contacting the server", async () => {

@@ -1,0 +1,16 @@
+{
+  "files": [
+    {
+      "file": "services/api-gateway/internal/server/e2e_auth_security_test.go",
+      "sha256": "ef6754d5ba3b285b1e923632a75d502363feb68b5aaba25139779dd99134fd6f",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_auth_security_test.go"
+    }
+  ],
+  "issue_functions": [
+    {
+      "file": "services/api-gateway/internal/server/e2e_auth_security_test.go",
+      "function": "TestTeacherAccountSecurityE2EWithPostgres"
+    }
+  ],
+  "checkpoint_relation": "after checkpoint02; requires subsequent scan"
+}

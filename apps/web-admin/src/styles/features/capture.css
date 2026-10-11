@@ -1,5 +1,5 @@
-/* Image quality stays inside the capture batch workspace: page queue, evidence
-   canvas and an explainable inspector share one operational surface. */
+/* 图像质量操作保留在采集批次工作区中：页面队列、证据画布
+   和可解释的检查面板共用同一个操作界面。 */
 .image-quality-workspace { container-type: inline-size; min-height: 680px; overflow: hidden; border: 1px solid #dfe5ee; border-radius: 10px; background: #fff; animation: image-quality-enter 180ms ease-out; }
 .image-quality-summary { display: flex; align-items: center; gap: 0; min-height: 72px; padding: 0 18px; border-bottom: 1px solid #e5e9f0; background: #fbfcfe; }
 .image-quality-summary > div { display: grid; min-width: 88px; padding: 0 18px; border-right: 1px solid #e5e9f0; }

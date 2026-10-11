@@ -1,0 +1,33 @@
+{
+  "files": [
+    {
+      "file": "services/api-gateway/internal/server/migration_upgrade_test.go",
+      "sha256": "256090547f893d3209853c1744ea1787b47ade409ffb4598a3873aced023a63e",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\migration_upgrade_test.go"
+    },
+    {
+      "file": "services/api-gateway/internal/server/managed_config_postgres_test.go",
+      "sha256": "439a70fc2023c7e33e23c5fc6c5cdc25d16c6787dd8ec34137002edf46fe721d",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\managed_config_postgres_test.go"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_mfa_test.go",
+      "sha256": "d5732c6616ed34bcdfd17e6fe4028e1fca479560f2f1806df2fc79c23080d266",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_mfa_test.go"
+    }
+  ],
+  "issue_functions": [
+    {
+      "file": "services/api-gateway/internal/server/migration_upgrade_test.go",
+      "function": "TestPostgresMigrationUpgradeFrom000154"
+    },
+    {
+      "file": "services/api-gateway/internal/server/managed_config_postgres_test.go",
+      "function": "TestPostgresManagedConfigProbeTimestamps"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_mfa_test.go",
+      "function": "e2eAssertMFATenantIsolation"
+    }
+  ]
+}

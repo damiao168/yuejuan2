@@ -73,7 +73,7 @@ const manifest = {
     evidence_scope: source.evidence_scope
   },
   total_records: samples.length,
-  unique_question_rubric_groups: new Set(samples.map(questionGroupKey)).size,
+  unique_question_rubric_groups: new Set(samples.map((sample) => questionGroupKey(sample))).size,
   split_seed: split.seed,
   split_ratios: split.ratios,
   split_group_counts: split.split_group_counts,

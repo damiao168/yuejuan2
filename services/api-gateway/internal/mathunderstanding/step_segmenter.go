@@ -31,11 +31,35 @@ func SegmentSolutionSteps(blocks []MathAnswerBlock, formulaByBlock map[string][]
 		return leftY < rightY
 	})
 
+	groups := groupStepBlocks(active)
+	sort.SliceStable(groups, func(i, j int) bool {
+		leftY := groups[i].box.Y + groups[i].box.Height/2
+		rightY := groups[j].box.Y + groups[j].box.Height/2
+		if math.Abs(leftY-rightY) <= .01 {
+			return groups[i].box.X < groups[j].box.X
+		}
+		return leftY < rightY
+	})
+
+	steps := make([]SolutionStep, 0, len(groups))
+	stepByBlock := make(map[string]string, len(active))
+	for _, group := range groups {
+		step := projectSolutionStep(group, formulaByBlock, len(steps)+1)
+		steps = append(steps, step)
+		for _, blockID := range step.BlockIDs {
+			stepByBlock[blockID] = step.ID
+		}
+	}
+	return steps, stepByBlock
+}
+
+func groupStepBlocks(active []MathAnswerBlock) []stepBlockGroup {
 	groups := make([]stepBlockGroup, 0, len(active))
 	for _, block := range active {
 		bestIndex, bestScore := -1, 0.0
 		for index := range groups {
 			score := sameLineScore(groups[index].box, block.BoundingBox)
+			// 相同匹配分保留先遇到的组，避免稳定阅读顺序因平分而改变。
 			if score >= .55 && score > bestScore {
 				bestIndex, bestScore = index, score
 			}
@@ -50,63 +74,48 @@ func SegmentSolutionSteps(blocks []MathAnswerBlock, formulaByBlock map[string][]
 		group.attachmentScore += bestScore
 		group.attachments++
 	}
+	return groups
+}
 
-	sort.SliceStable(groups, func(i, j int) bool {
-		leftY := groups[i].box.Y + groups[i].box.Height/2
-		rightY := groups[j].box.Y + groups[j].box.Height/2
-		if math.Abs(leftY-rightY) <= .01 {
-			return groups[i].box.X < groups[j].box.X
-		}
-		return leftY < rightY
+func projectSolutionStep(group stepBlockGroup, formulaByBlock map[string][]string, order int) SolutionStep {
+	sort.SliceStable(group.blocks, func(i, j int) bool {
+		return group.blocks[i].BoundingBox.X < group.blocks[j].BoundingBox.X
 	})
-
-	steps := make([]SolutionStep, 0, len(groups))
-	stepByBlock := make(map[string]string, len(active))
-	for _, group := range groups {
-		sort.SliceStable(group.blocks, func(i, j int) bool {
-			return group.blocks[i].BoundingBox.X < group.blocks[j].BoundingBox.X
-		})
-		blockIDs := make([]string, 0, len(group.blocks))
-		formulaIDs := []string{}
-		parts := []string{}
-		recognitionConfidence, structureConfidence := 1.0, 1.0
-		for _, block := range group.blocks {
-			blockIDs = append(blockIDs, block.ID)
-			formulaIDs = append(formulaIDs, formulaByBlock[block.ID]...)
-			part := strings.TrimSpace(block.Normalized)
-			if part == "" {
-				part = strings.TrimSpace(block.Text)
-			}
-			if part != "" {
-				parts = append(parts, part)
-			}
-			recognitionConfidence = math.Min(recognitionConfidence, block.RecognitionConfidence)
-			structureConfidence = math.Min(structureConfidence, block.StructureConfidence)
+	blockIDs := make([]string, 0, len(group.blocks))
+	formulaIDs := []string{}
+	parts := []string{}
+	recognitionConfidence, structureConfidence := 1.0, 1.0
+	for _, block := range group.blocks {
+		blockIDs = append(blockIDs, block.ID)
+		formulaIDs = append(formulaIDs, formulaByBlock[block.ID]...)
+		part := strings.TrimSpace(block.Normalized)
+		if part == "" {
+			part = strings.TrimSpace(block.Text)
 		}
-		if group.attachments > 0 {
-			structureConfidence = math.Min(structureConfidence, group.attachmentScore/float64(group.attachments))
+		if part != "" {
+			parts = append(parts, part)
 		}
-		normalized := strings.Join(parts, " ")
-		stepID := "step-" + blockIDs[0]
-		box := group.box
-		step := SolutionStep{
-			ID:                    stepID,
-			OrderHint:             len(steps) + 1,
-			BlockIDs:              blockIDs,
-			FormulaIDs:            formulaIDs,
-			NormalizedText:        normalized,
-			BoundingBox:           &box,
-			Kind:                  classifyStepKind(normalized, len(formulaIDs) > 0),
-			RecognitionConfidence: clamp(recognitionConfidence),
-			StructureConfidence:   clamp(structureConfidence),
-			Confidence:            clamp(math.Min(recognitionConfidence, structureConfidence)),
-		}
-		steps = append(steps, step)
-		for _, blockID := range blockIDs {
-			stepByBlock[blockID] = stepID
-		}
+		recognitionConfidence = math.Min(recognitionConfidence, block.RecognitionConfidence)
+		structureConfidence = math.Min(structureConfidence, block.StructureConfidence)
 	}
-	return steps, stepByBlock
+	if group.attachments > 0 {
+		structureConfidence = math.Min(structureConfidence, group.attachmentScore/float64(group.attachments))
+	}
+	normalized := strings.Join(parts, " ")
+	stepID := "step-" + blockIDs[0]
+	box := group.box
+	return SolutionStep{
+		ID:                    stepID,
+		OrderHint:             order,
+		BlockIDs:              blockIDs,
+		FormulaIDs:            formulaIDs,
+		NormalizedText:        normalized,
+		BoundingBox:           &box,
+		Kind:                  classifyStepKind(normalized, len(formulaIDs) > 0),
+		RecognitionConfidence: clamp(recognitionConfidence),
+		StructureConfidence:   clamp(structureConfidence),
+		Confidence:            clamp(math.Min(recognitionConfidence, structureConfidence)),
+	}
 }
 
 func sameLineScore(left, right BoundingBox) float64 {

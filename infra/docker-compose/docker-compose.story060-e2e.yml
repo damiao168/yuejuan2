@@ -1,13 +1,13 @@
-# Isolated STORY-060 acceptance environment. It has no fixed container names,
-# host database ports, or shared production volumes. Run it under a unique
-# Compose project and remove only that verified project after acceptance.
+# STORY-060 隔离验收环境，不使用固定容器名、
+# 主机数据库端口或共享生产数据卷。使用唯一的
+# Compose 项目运行，验收后只移除已核实的该项目。
 services:
   postgres:
     image: postgres:16-alpine
     environment:
       POSTGRES_DB: edugrade
       POSTGRES_USER: edugrade
-      POSTGRES_PASSWORD: story060_e2e_postgres_only
+      POSTGRES_PASSWORD: ${EDUGRADE_STORY060_POSTGRES_PASSWORD:?set by the STORY-060 runner}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -26,12 +26,12 @@ services:
       retries: 60
 
   minio:
-    # Same upstream image digest; the historical MinIO image includes mc.
+    # 使用相同的上游镜像摘要；这个历史 MinIO 镜像包含 mc。
     image: ${EDUGRADE_MINIO_IMAGE:-ghcr.io/l33tlamer/minio-backup@sha256:a1ea29fa28355559ef137d71fc570e508a214ec84ff8083e39bc5428980b015e}
     command: ["server", "/data"]
     environment:
       MINIO_ROOT_USER: story060e2e
-      MINIO_ROOT_PASSWORD: story060_e2e_minio_only_secret
+      MINIO_ROOT_PASSWORD: ${EDUGRADE_STORY060_MINIO_SECRET:?set by the STORY-060 runner}
     volumes:
       - minio_data:/data
     healthcheck:
@@ -43,7 +43,7 @@ services:
   db-migrate:
     image: postgres:16-alpine
     environment:
-      EDUGRADE_POSTGRES_DSN: postgres://edugrade:story060_e2e_postgres_only@postgres:5432/edugrade?sslmode=disable
+      EDUGRADE_POSTGRES_DSN: postgres://edugrade:${EDUGRADE_STORY060_POSTGRES_PASSWORD:?set by the STORY-060 runner}@postgres:5432/edugrade?sslmode=disable
     volumes:
       - ../../services/api-gateway/migrations:/migrations:ro
     depends_on:
@@ -76,13 +76,15 @@ services:
 
   minio-init:
     image: ${EDUGRADE_MINIO_MC_IMAGE:-ghcr.io/l33tlamer/minio-backup@sha256:a1ea29fa28355559ef137d71fc570e508a214ec84ff8083e39bc5428980b015e}
+    environment:
+      EDUGRADE_STORY060_MINIO_SECRET: ${EDUGRADE_STORY060_MINIO_SECRET:?set by the STORY-060 runner}
     depends_on:
       minio:
         condition: service_healthy
     entrypoint: ["/bin/sh", "-ec"]
     command:
       - |
-        mc alias set e2e http://minio:9000 story060e2e story060_e2e_minio_only_secret
+        mc alias set e2e http://minio:9000 story060e2e "$${EDUGRADE_STORY060_MINIO_SECRET}"
         mc mb --ignore-existing e2e/story060-e2e-files
         mc anonymous set none e2e/story060-e2e-files
     restart: "no"
@@ -95,7 +97,7 @@ services:
     environment:
       EDUGRADE_ENV: test
       EDUGRADE_LOG_LEVEL: error
-      EDUGRADE_POSTGRES_DSN: postgres://edugrade:story060_e2e_postgres_only@postgres:5432/edugrade?sslmode=disable
+      EDUGRADE_POSTGRES_DSN: postgres://edugrade:${EDUGRADE_STORY060_POSTGRES_PASSWORD:?set by the STORY-060 runner}@postgres:5432/edugrade?sslmode=disable
       EDUGRADE_BOOTSTRAP_TENANT_CODE: platform
       EDUGRADE_BOOTSTRAP_ROLE_CODE: platform_admin
       EDUGRADE_BOOTSTRAP_USERNAME: platform_admin
@@ -114,7 +116,7 @@ services:
     environment:
       EDUGRADE_ENV: test
       EDUGRADE_LOG_LEVEL: error
-      EDUGRADE_POSTGRES_DSN: postgres://edugrade:story060_e2e_postgres_only@postgres:5432/edugrade?sslmode=disable
+      EDUGRADE_POSTGRES_DSN: postgres://edugrade:${EDUGRADE_STORY060_POSTGRES_PASSWORD:?set by the STORY-060 runner}@postgres:5432/edugrade?sslmode=disable
       EDUGRADE_E2E_SCHOOL_ADMIN_PASSWORD: ${EDUGRADE_E2E_SCHOOL_ADMIN_PASSWORD:?set by the STORY-060 runner}
       EDUGRADE_E2E_SUBJECTIVE_WORKER_PASSWORD: ${EDUGRADE_E2E_SUBJECTIVE_WORKER_PASSWORD:?set by the STORY-060 runner}
     depends_on:
@@ -125,7 +127,7 @@ services:
   seed:
     image: postgres:16-alpine
     environment:
-      EDUGRADE_POSTGRES_DSN: postgres://edugrade:story060_e2e_postgres_only@postgres:5432/edugrade?sslmode=disable
+      EDUGRADE_POSTGRES_DSN: postgres://edugrade:${EDUGRADE_STORY060_POSTGRES_PASSWORD:?set by the STORY-060 runner}@postgres:5432/edugrade?sslmode=disable
     volumes:
       - ../../tests/e2e/fixtures/story060-grading-agent.sql:/fixture.sql:ro
     entrypoint: ["/bin/sh", "-ec"]
@@ -154,6 +156,10 @@ services:
       context: ../..
       dockerfile: ai-services/Dockerfile
     environment:
+      EDUGRADE_ENV: test
+      EDUGRADE_GRADING_AGENT_TLS_CERT_FILE: /run/secrets/grading-agent-tls/server.crt
+      EDUGRADE_GRADING_AGENT_TLS_KEY_FILE: /run/secrets/grading-agent-tls/server.key
+      SSL_CERT_FILE: /run/secrets/internal-ca/ca.crt
       EDUGRADE_GRADING_AGENT_TOKEN: ${EDUGRADE_E2E_GRADING_TOKEN:?set by the STORY-060 runner}
       EDUGRADE_GRADING_MODEL_BASE_URL: ${EDUGRADE_E2E_MODEL_BASE_URL:-http://model-stub:8087/v1}
       EDUGRADE_GRADING_MODEL_API_KEY: ${EDUGRADE_E2E_MODEL_API_KEY:?set by the STORY-060 runner}
@@ -170,11 +176,14 @@ services:
       EDUGRADE_GRADING_MODEL_READY_TIMEOUT_SECONDS: "3"
       EDUGRADE_GRADING_MODEL_QUEUE_TIMEOUT_SECONDS: "5"
       EDUGRADE_GRADING_MODEL_MAX_RETRIES: "1"
+    volumes:
+      - ${EDUGRADE_E2E_TLS_DIR:?generate disposable TLS certificates first}/internal-ca:/run/secrets/internal-ca:ro
+      - ${EDUGRADE_E2E_TLS_DIR:?generate disposable TLS certificates first}/grading-agent:/run/secrets/grading-agent-tls:ro
     depends_on:
       model-stub:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:8100/health | grep -q healthy"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('https://grading-agent:8100/health', timeout=2).read()"]
       interval: 2s
       timeout: 2s
       retries: 60
@@ -196,13 +205,13 @@ services:
       EDUGRADE_HTTP_WRITE_TIMEOUT: 300s
       EDUGRADE_HTTP_IDLE_TIMEOUT: 60s
       EDUGRADE_SESSION_COOKIE_SECURE: "false"
-      EDUGRADE_POSTGRES_DSN: postgres://edugrade:story060_e2e_postgres_only@postgres:5432/edugrade?sslmode=disable
+      EDUGRADE_POSTGRES_DSN: postgres://edugrade:${EDUGRADE_STORY060_POSTGRES_PASSWORD:?set by the STORY-060 runner}@postgres:5432/edugrade?sslmode=disable
       EDUGRADE_REDIS_ADDR: redis:6379
       EDUGRADE_REDIS_PASSWORD: ""
       EDUGRADE_REDIS_DB: "0"
       EDUGRADE_MINIO_ENDPOINT: minio:9000
       EDUGRADE_MINIO_APP_ACCESS_KEY: story060e2e
-      EDUGRADE_MINIO_APP_SECRET_KEY: story060_e2e_minio_only_secret
+      EDUGRADE_MINIO_APP_SECRET_KEY: ${EDUGRADE_STORY060_MINIO_SECRET:?set by the STORY-060 runner}
       EDUGRADE_MINIO_USE_SSL: "false"
       EDUGRADE_FILE_BUCKET: story060-e2e-files
       EDUGRADE_FILE_MAX_UPLOAD_BYTES: "10485760"
@@ -210,7 +219,8 @@ services:
       EDUGRADE_BARCODE_ACTIVE_KEY_ID: e2e-v1
       EDUGRADE_BARCODE_HMAC_KEYS: e2e-v1:story060-e2e-barcode-key-at-least-32-chars
       EDUGRADE_QDRANT_URL: ""
-      EDUGRADE_AI_SERVICE_URL: http://grading-agent:8100
+      EDUGRADE_AI_SERVICE_URL: https://grading-agent:8100
+      SSL_CERT_FILE: /run/secrets/internal-ca/ca.crt
       EDUGRADE_GRADING_AGENT_TOKEN: ${EDUGRADE_E2E_GRADING_TOKEN:?set by the STORY-060 runner}
       EDUGRADE_AI_SERVICE_TIMEOUT: 250s
       EDUGRADE_AI_SERVICE_MAX_RETRIES: "1"
@@ -222,6 +232,8 @@ services:
       EDUGRADE_AI_ADAPTER_TYPE: local_llama_cpp
       EDUGRADE_AI_DEPLOYMENT_REGION: on_premise
       EDUGRADE_AI_CAPABILITY_PROFILE: local-pilot-v1
+    volumes:
+      - ${EDUGRADE_E2E_TLS_DIR:?generate disposable TLS certificates first}/internal-ca:/run/secrets/internal-ca:ro
     depends_on:
       redis:
         condition: service_healthy
@@ -263,8 +275,11 @@ services:
       dockerfile: tests/e2e/Dockerfile.story060
     environment:
       EDUGRADE_E2E_API_BASE_URL: http://api-gateway:8080
-      EDUGRADE_E2E_AGENT_BASE_URL: http://grading-agent:8100
+      EDUGRADE_E2E_AGENT_BASE_URL: https://grading-agent:8100
+      SSL_CERT_FILE: /run/secrets/internal-ca/ca.crt
       EDUGRADE_E2E_ADMIN_PASSWORD: ${EDUGRADE_E2E_ADMIN_PASSWORD:?set by the STORY-060 runner}
+    volumes:
+      - ${EDUGRADE_E2E_TLS_DIR:?generate disposable TLS certificates first}/internal-ca:/run/secrets/internal-ca:ro
     depends_on:
       api-gateway:
         condition: service_healthy
@@ -273,7 +288,7 @@ services:
   db-verify:
     image: postgres:16-alpine
     environment:
-      EDUGRADE_POSTGRES_DSN: postgres://edugrade:story060_e2e_postgres_only@postgres:5432/edugrade?sslmode=disable
+      EDUGRADE_POSTGRES_DSN: postgres://edugrade:${EDUGRADE_STORY060_POSTGRES_PASSWORD:?set by the STORY-060 runner}@postgres:5432/edugrade?sslmode=disable
     volumes:
       - ../../tests/e2e/fixtures/story060-grading-agent-verify.sql:/verify.sql:ro
       - ../../services/api-gateway/migrations:/migrations:ro

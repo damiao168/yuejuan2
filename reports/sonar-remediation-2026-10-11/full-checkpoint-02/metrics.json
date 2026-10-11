@@ -1,0 +1,125 @@
+{
+  "component": {
+    "key": "yuejuan-local-workspace-20261010",
+    "name": "yuejuan current local workspace 2026-10-10",
+    "qualifier": "TRK",
+    "measures": [
+      {
+        "metric": "complexity",
+        "value": "58320"
+      },
+      {
+        "metric": "duplicated_lines_density",
+        "value": "1.4",
+        "bestValue": false
+      },
+      {
+        "metric": "duplicated_lines",
+        "value": "3577",
+        "bestValue": false
+      },
+      {
+        "metric": "functions",
+        "value": "15868"
+      },
+      {
+        "metric": "classes",
+        "value": "2024"
+      },
+      {
+        "metric": "sqale_index",
+        "value": "3125",
+        "bestValue": false
+      },
+      {
+        "metric": "sqale_rating",
+        "value": "1.0",
+        "bestValue": true
+      },
+      {
+        "metric": "bugs",
+        "value": "4",
+        "bestValue": false
+      },
+      {
+        "metric": "lines_to_cover",
+        "value": "83200"
+      },
+      {
+        "metric": "duplicated_files",
+        "value": "102",
+        "bestValue": false
+      },
+      {
+        "metric": "ncloc",
+        "value": "227901"
+      },
+      {
+        "metric": "lines",
+        "value": "251410"
+      },
+      {
+        "metric": "coverage",
+        "value": "0.0",
+        "bestValue": false
+      },
+      {
+        "metric": "reliability_rating",
+        "value": "3.0",
+        "bestValue": false
+      },
+      {
+        "metric": "code_smells",
+        "value": "174",
+        "bestValue": false
+      },
+      {
+        "metric": "ncloc_language_distribution",
+        "value": "css=10503;docker=255;go=126009;js=7433;py=19810;rust=4426;ts=58119;web=1346"
+      },
+      {
+        "metric": "security_rating",
+        "value": "3.0",
+        "bestValue": false
+      },
+      {
+        "metric": "security_hotspots",
+        "value": "0",
+        "bestValue": true
+      },
+      {
+        "metric": "security_review_rating",
+        "value": "1.0",
+        "bestValue": true
+      },
+      {
+        "metric": "alert_status",
+        "value": "ERROR"
+      },
+      {
+        "metric": "uncovered_lines",
+        "value": "83200",
+        "bestValue": false
+      },
+      {
+        "metric": "cognitive_complexity",
+        "value": "36152",
+        "bestValue": false
+      },
+      {
+        "metric": "duplicated_blocks",
+        "value": "319",
+        "bestValue": false
+      },
+      {
+        "metric": "files",
+        "value": "1349"
+      },
+      {
+        "metric": "vulnerabilities",
+        "value": "9",
+        "bestValue": false
+      }
+    ]
+  }
+}

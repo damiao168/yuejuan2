@@ -1,0 +1,25 @@
+{
+  "checked_at": "2026-10-11T15:45:31+08:00",
+  "official_pack": "codeql/rust-queries 0.1.44 bundled with verified CLI2.27.2",
+  "query_sources": [
+    {
+      "path": "D:\\tools\\audit-codeql-20261010\\codeql\\qlpacks\\codeql\\rust-queries\\0.1.44\\queries\\summary\\NumberOfFilesExtractedWithErrors.ql",
+      "sha256": "7300f0244b58b7968d17c182c96d1fb0ef1e61ac5bc043824a750f62b7ce6235"
+    },
+    {
+      "path": "D:\\tools\\audit-codeql-20261010\\codeql\\qlpacks\\codeql\\rust-queries\\0.1.44\\queries\\summary\\NumberOfSuccessfullyExtractedFiles.ql",
+      "sha256": "1b1e3e1e0d44f68aa1edd69a2f7f9ed9797a782cb7895241d6cb3387558bb462"
+    },
+    {
+      "path": "D:\\tools\\audit-codeql-20261010\\codeql\\qlpacks\\codeql\\rust-queries\\0.1.44\\queries\\diagnostics\\ExtractionErrors.ql",
+      "sha256": "ec4c0e3c20aff0ebe17233f9da9423177bec772460688e7af2b56f381210af1a"
+    }
+  ],
+  "interpretation": {
+    "files_with_errors_metric": "Counts extracted project files with at least one extraction error OR warning. This includes warning-only files.",
+    "files_without_error_metric": "Counts extracted project files without extraction errors OR warnings.",
+    "ExtractionErrors_diagnostic": "Only matches actual ExtractionError entries; does not match ExtractionWarning entries.",
+    "comparison": "Therefore 3 with-errors files and zero ExtractionErrors rows in attempt3 are compatible with the 30 warnings across three files. Actual final context metrics must be read separately."
+  },
+  "no_inference": "No metric here proves every syntax node, macro, type or dataflow is complete."
+}

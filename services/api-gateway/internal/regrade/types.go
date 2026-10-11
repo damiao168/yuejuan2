@@ -1,7 +1,5 @@
-// Package regrade owns the controlled question-level correction workflow.
-// It keeps the source-release facts, proposed scores and reviewer decisions
-// separate.  A completed job is only an input to a *new* score release; this
-// package intentionally cannot write human_grade, final_grade or a release.
+// Package regrade 管理受控的题目级修正流程，分开保存来源发布事实、建议分数和复核决定。
+// 完成的作业只作为一次新成绩发布的输入；本包不能写入 human_grade、final_grade 或发布记录。
 package regrade
 
 import (
@@ -63,8 +61,7 @@ type ScoreBand struct {
 	Max *float64 `json:"max,omitempty"`
 }
 
-// Selector is deliberately limited to stable source-release values. It makes
-// an affected population replayable and avoids accepting raw client SQL.
+// Selector 只接受稳定的来源发布值，使受影响群体可重放，并避免接受客户端原始 SQL。
 type Selector struct {
 	SubmissionIDs []string   `json:"submission_ids,omitempty"`
 	ScoreBand     *ScoreBand `json:"score_band,omitempty"`
@@ -149,10 +146,8 @@ type Item struct {
 	UpdatedAt                 time.Time         `json:"updated_at"`
 }
 
-// WorkItem is the reviewer-safe queue shape. It deliberately excludes the
-// old released score, final-grade identifier and submission identifier so a
-// human recheck is not anchored by the source outcome or able to traverse a
-// student's submission through another workflow.
+// WorkItem 是面向复核人员的安全队列结构。它省略旧发布分数、最终成绩标识和提交标识，
+// 避免人工重查被来源结果引导，或通过其他流程遍历学生提交。
 type WorkItem struct {
 	ID           string    `json:"id"`
 	JobID        string    `json:"job_id"`
@@ -163,9 +158,8 @@ type WorkItem struct {
 	CreatedAt    time.Time `json:"created_at"`
 }
 
-// GraderContext is the independent work surface for a regrade item. It is
-// built from the job's selected assessment snapshot, not from the historic
-// score release or a previous human-grade record.
+// GraderContext 是重评条目的独立工作上下文。
+// 它根据作业选择的评估快照构建，不取自历史成绩发布或之前的人工评分记录。
 type GraderContext struct {
 	Item             WorkItem       `json:"item"`
 	ExpectedRevision int64          `json:"expected_revision"`
@@ -174,13 +168,26 @@ type GraderContext struct {
 	Answer           GraderAnswer   `json:"answer"`
 }
 
+// ReviewContext 仅在管理复核入口使用；原分与候选意见不能并入独立重评的 GraderContext。
+type ReviewContext struct {
+	Item    Item          `json:"item"`
+	Context GraderContext `json:"context"`
+}
+type ReviewContextSource interface {
+	GetReviewContext(context.Context, string, string) (ReviewContext, error)
+	GetReviewSegmentID(context.Context, string, string) (string, error)
+}
+
 type GraderQuestion struct {
-	ID              string   `json:"id"`
-	QuestionNo      string   `json:"question_no"`
-	QuestionType    string   `json:"question_type"`
-	Score           float64  `json:"score"`
-	Stem            string   `json:"stem,omitempty"`
-	KnowledgePoints []string `json:"knowledge_points,omitempty"`
+	Options         []string                `json:"options,omitempty"`
+	AnswerKey       *paper.AnswerKey        `json:"answer_key,omitempty"`
+	Solution        *paper.QuestionSolution `json:"solution,omitempty"`
+	ID              string                  `json:"id"`
+	QuestionNo      string                  `json:"question_no"`
+	QuestionType    string                  `json:"question_type"`
+	Score           float64                 `json:"score"`
+	Stem            string                  `json:"stem,omitempty"`
+	KnowledgePoints []string                `json:"knowledge_points,omitempty"`
 }
 
 type GraderAnswer struct {
@@ -190,9 +197,8 @@ type GraderAnswer struct {
 	SegmentImageURL string `json:"segment_image_url"`
 }
 
-// ContextSource keeps the answer evidence bridge narrow. Implementations may
-// return only an already-claimed, reviewer-assigned item's content; no source
-// score, historic grade or release fact crosses this boundary.
+// ContextSource 限制答案证据桥接范围。实现只可返回已领取且已分配给复核人员的条目内容；
+// 来源分数、历史成绩或发布事实不能越过此边界。
 type ContextSource interface {
 	GetGraderContext(context.Context, string, string, string) (GraderContext, error)
 	GetSegmentID(context.Context, string, string, string) (string, error)
@@ -220,10 +226,8 @@ type SevereChange struct {
 	Delta        float64 `json:"delta"`
 }
 
-// ReleasePlan is a deliberate hand-off, not a public score mutation. A18 can
-// build a later immutable score release from it; A20 can block publication
-// while a job is not ready. Existing published score_release rows remain
-// untouched throughout the A19 workflow.
+// ReleasePlan 是显式交接，不是公开成绩变更。A18 可据此构建后续不可变成绩发布；
+// 作业未就绪时 A20 可阻断发布。整个 A19 流程都不改动已有的已发布 score_release 行。
 type ReleasePlan struct {
 	JobID           string          `json:"job_id"`
 	ExamID          string          `json:"exam_id"`

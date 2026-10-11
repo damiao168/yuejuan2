@@ -1,0 +1,57 @@
+.school-assistant-page { min-height: calc(100svh - 48px); background: var(--surface, #fff); }
+.school-assistant-modes { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 28px; border-bottom: 1px solid var(--border, #e5e7eb); }
+.school-assistant-modes > strong { font-size: 17px; font-weight: 650; }
+.school-assistant-general .school-chat-shell { height: calc(100svh - 121px); min-height: 520px; }
+.school-assistant-panel { width: min(100%, 880px); margin: 0 auto; padding: 28px; color: var(--text, #273141); }
+.school-assistant-panel.is-compact { padding: 22px; }
+.school-assistant-title { margin-bottom: 24px; }
+.school-assistant-title h1 { margin: 0 0 8px; font-size: 23px; font-weight: 650; }
+.school-assistant-title p, .school-assistant-muted, .school-assistant-task p, .school-assistant-source p { color: var(--text-muted, #697586); font-size: 13px; line-height: 1.6; }
+.school-assistant-range { display: flex; flex-wrap: wrap; align-items: baseline; gap: 7px 12px; padding: 12px 0 16px; border-bottom: 1px solid var(--border, #e5e7eb); margin-bottom: 20px; }
+.school-assistant-range > span { color: var(--text-muted, #697586); font-size: 12px; }
+.school-assistant-range > strong { font-size: 15px; }
+.school-assistant-range small { color: var(--text-muted, #697586); }
+.school-assistant-exam-selector, .school-assistant-task { margin-bottom: 20px; }
+/* 任务选项改用原生分组后，清除默认边框与间距，沿用现有任务区布局。 */
+.school-assistant-task { min-width: 0; margin-left: 0; margin-right: 0; padding: 0; border: 0; }
+.school-assistant-exam-selector > label, .school-assistant-task > legend, .school-assistant-composer > label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+.school-assistant-task > legend { float: none; width: auto; padding: 0; border: 0; }
+.school-assistant-exam-selector > .ant-select { width: 100%; }
+.school-assistant-exam-selector > .ant-alert { margin-top: 10px; }
+.school-assistant-task > p { margin: 8px 0 0; }
+.school-assistant-composer { margin-top: 18px; }
+.school-assistant-composer > div:last-child { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; }
+.school-assistant-composer > div > span { color: var(--text-muted, #697586); font-size: 12px; }
+.school-assistant-answer { margin-top: 28px; }
+.school-assistant-progress { display: flex; align-items: center; gap: 10px; color: var(--text-muted, #697586); font-size: 13px; }
+.school-assistant-empty { padding: 30px 0 16px; color: var(--text-muted, #697586); }
+.school-assistant-empty > strong { font-weight: 500; }
+.school-assistant-empty p { font-size: 13px; margin-top: 8px; }
+.school-assistant-result { animation: school-assistant-result-enter 150ms ease-out; }
+.school-assistant-result-scope { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 16px; color: var(--text-muted, #697586); font-size: 13px; }
+.school-assistant-block { margin: 18px 0; }
+.school-assistant-block h3 { font-size: 15px; font-weight: 600; margin: 0 0 8px; }
+.school-assistant-block > p { margin: 0; line-height: 1.7; white-space: pre-wrap; }
+.school-assistant-issues { margin: 0; padding: 0; list-style: none; }
+.school-assistant-issues > li { padding: 13px 0; border-bottom: 1px solid var(--border, #e5e7eb); }
+.school-assistant-issues > li > div { display: flex; justify-content: space-between; gap: 14px; }
+.school-assistant-issues strong { font-size: 14px; font-weight: 600; }
+.school-assistant-issues p { margin: 6px 0 0; color: var(--text-muted, #697586); line-height: 1.6; }
+.school-assistant-issues .ant-btn { padding-inline: 0; margin-top: 5px; }
+.school-assistant-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 24px; padding: 20px 0; margin: 0; border-bottom: 1px solid var(--border, #e5e7eb); }
+.school-assistant-facts dt { color: var(--text-muted, #697586); font-size: 12px; }
+.school-assistant-facts dd { font-size: 20px; margin: 4px 0 0; font-variant-numeric: tabular-nums; }
+.school-assistant-facts p, .school-assistant-limitations { color: var(--text-muted, #697586); font-size: 12px; line-height: 1.7; }
+.school-assistant-limitations { padding-left: 18px; }
+.school-assistant-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.school-assistant-sources { margin: 12px 0; }
+.school-assistant-sources.ant-collapse > .ant-collapse-item > .ant-collapse-header { padding-inline: 0; }
+.school-assistant-source-heading { display: inline-flex; gap: 7px; align-items: center; }
+.school-assistant-source { padding: 10px 0; border-bottom: 1px solid var(--border, #e5e7eb); }
+.school-assistant-source > div { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.school-assistant-source strong { font-size: 13px; }
+.school-assistant-source p { margin: 4px 0; overflow-wrap: anywhere; }
+.school-assistant-exam-entry.ant-btn { flex-shrink: 0; font-size: 12px; }
+@keyframes school-assistant-result-enter { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width: 600px) { .school-assistant-panel { padding: 20px 16px; } .school-assistant-modes { padding: 14px 16px; flex-wrap: wrap; } .school-assistant-composer > div:last-child { align-items: flex-end; } .school-assistant-composer > div > span { max-width: 52%; } }
+@media (prefers-reduced-motion: reduce) { .school-assistant-result { animation: none; } }

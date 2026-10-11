@@ -1,0 +1,6 @@
+projectKey=yuejuan-remediation-html-20261011
+serverUrl=http://127.0.0.1:19000
+serverVersion=26.9.0.129388
+dashboardUrl=http://127.0.0.1:19000/dashboard?id=yuejuan-remediation-html-20261011
+ceTaskId=57359d6b-3753-4dec-b7f2-d649b6d8e0c3
+ceTaskUrl=http://127.0.0.1:19000/api/ce/task?id=57359d6b-3753-4dec-b7f2-d649b6d8e0c3

@@ -8,8 +8,7 @@ import (
 	"time"
 )
 
-// MemoryStore is intentionally useful for handler/unit tests. Source facts are
-// injected with SeedSource and are copied into a batch at creation time.
+// MemoryStore 用于处理器和单元测试；来源事实经 SeedSource 注入，并在创建批次时复制到批次中。
 type MemoryStore struct {
 	mu       sync.Mutex
 	now      func() time.Time
@@ -142,6 +141,8 @@ func (s *MemoryStore) GetHistogram(_ context.Context, _ string, batchID string) 
 	return histogram(s.itemsForBatchLocked(batchID)), nil
 }
 
+// ListBatches 在同一锁内复制批次，再按时间和 ID 降序分页。
+// 内存夹具的 Batch 没有租户字段，这里只执行 exam/question 条件。
 func (s *MemoryStore) ListBatches(_ context.Context, _ string, examID, questionID string, page PageOptions) ([]Batch, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -154,19 +155,25 @@ func (s *MemoryStore) ListBatches(_ context.Context, _ string, examID, questionI
 	sort.Slice(out, func(i, j int) bool {
 		return out[i].CreatedAt.After(out[j].CreatedAt) || (out[i].CreatedAt.Equal(out[j].CreatedAt) && out[i].ID > out[j].ID)
 	})
-	if !page.CursorCreatedAt.IsZero() {
-		filtered := out[:0]
-		for _, batch := range out {
-			if batch.CreatedAt.Before(page.CursorCreatedAt) || (batch.CreatedAt.Equal(page.CursorCreatedAt) && batch.ID < page.CursorID) {
-				filtered = append(filtered, batch)
-			}
-		}
-		out = filtered
-	}
+	out = batchesFollowingCursor(out, page)
 	if len(out) > page.Limit {
 		out = out[:page.Limit]
 	}
 	return out, nil
+}
+
+func batchesFollowingCursor(batches []Batch, page PageOptions) []Batch {
+	if page.CursorCreatedAt.IsZero() {
+		return batches
+	}
+	// 切片已按时间和 ID 降序排列；只保留严格位于游标之后的本地副本。
+	filtered := batches[:0]
+	for _, batch := range batches {
+		if batch.CreatedAt.Before(page.CursorCreatedAt) || (batch.CreatedAt.Equal(page.CursorCreatedAt) && batch.ID < page.CursorID) {
+			filtered = append(filtered, batch)
+		}
+	}
+	return filtered
 }
 
 func (s *MemoryStore) ListAssigned(_ context.Context, _ string, graderID string, page PageOptions) ([]Item, error) {
@@ -319,36 +326,54 @@ func (s *MemoryStore) id(prefix string) string {
 }
 
 func matchesSource(source SourceTask, selector Selector) bool {
-	if len(selector.TaskIDs) > 0 {
-		found := false
-		for _, id := range selector.TaskIDs {
-			if id == source.ReviewTaskID {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return false
-		}
+	if !selectorIncludesSourceTask(source.ReviewTaskID, selector.TaskIDs) {
+		return false
 	}
 	if selector.GraderID != "" && selector.GraderID != source.OriginalReviewer {
 		return false
 	}
-	if selector.TimeRange != nil {
-		if selector.TimeRange.From != nil && source.GradedAt.Before(*selector.TimeRange.From) {
-			return false
-		}
-		if selector.TimeRange.To != nil && source.GradedAt.After(*selector.TimeRange.To) {
-			return false
+	if !sourceWithinTimeRange(source.GradedAt, selector.TimeRange) {
+		return false
+	}
+	return sourceWithinScoreBand(source.OriginalScore, selector.ScoreBand)
+}
+
+func selectorIncludesSourceTask(taskID string, ids []string) bool {
+	if len(ids) == 0 {
+		return true
+	}
+	for _, id := range ids {
+		if id == taskID {
+			return true
 		}
 	}
-	if selector.ScoreBand != nil {
-		if selector.ScoreBand.Min != nil && source.OriginalScore < *selector.ScoreBand.Min {
-			return false
-		}
-		if selector.ScoreBand.Max != nil && source.OriginalScore > *selector.ScoreBand.Max {
-			return false
-		}
+	return false
+}
+
+func sourceWithinTimeRange(gradedAt time.Time, bounds *TimeRange) bool {
+	if bounds == nil {
+		return true
+	}
+	// 时间端点包含在集合内；空端点只取消对应方向的限制。
+	if bounds.From != nil && gradedAt.Before(*bounds.From) {
+		return false
+	}
+	if bounds.To != nil && gradedAt.After(*bounds.To) {
+		return false
+	}
+	return true
+}
+
+func sourceWithinScoreBand(score float64, band *ScoreBand) bool {
+	if band == nil {
+		return true
+	}
+	// 分数端点同样包含在集合内；不在 matcher 中改写上层传入的 selector。
+	if band.Min != nil && score < *band.Min {
+		return false
+	}
+	if band.Max != nil && score > *band.Max {
+		return false
 	}
 	return true
 }

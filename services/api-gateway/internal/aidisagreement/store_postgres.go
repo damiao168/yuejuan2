@@ -16,10 +16,8 @@ type PostgresStore struct{ db *sql.DB }
 
 func NewPostgresStore(db *sql.DB) *PostgresStore { return &PostgresStore{db: db} }
 
-// LoadActualComparison derives all score and evidence summary fields from
-// persisted, tenant-scoped facts. It accepts only successful non-mock
-// subjective AI output that was server-linked to a single-round human grade.
-// A caller can therefore not manufacture a disagreement with supplied JSON.
+// LoadActualComparison 从租户范围内的持久化事实派生全部分数和证据摘要。
+// 仅接受成功、非模拟且由服务端关联到单轮人工评分的主观题 AI 输出，调用方不能用提交的 JSON 伪造分歧。
 func (s *PostgresStore) LoadActualComparison(ctx context.Context, tenantID string, input CaptureInput) (ActualComparison, error) {
 	if s.db == nil {
 		return ActualComparison{}, ErrInvalidInput
@@ -168,8 +166,7 @@ func (s *PostgresStore) Route(ctx context.Context, tenantID, id, actorID string,
 	if item.Status != StatusNeedsReview && item.Status != StatusClassified {
 		return Disagreement{}, ErrInvalidState
 	}
-	// The target task must be a human-only disagreement review for exactly the
-	// same exam/question/submission/segment. This prevents cross-answer routing.
+	// 目标任务必须是同一考试、题目、提交和答题片段的纯人工分歧复核，防止路由到其他答案。
 	var target string
 	err = tx.QueryRowContext(ctx, `
 SELECT id::text FROM review_task

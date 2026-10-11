@@ -196,20 +196,7 @@ func (s *MemoryStore) qualityLocked(examID string, data dataset) GradingQualityR
 	if out.TotalSegments == 0 {
 		out.TotalSegments = len(data.Grades)
 	}
-	for _, grade := range data.Grades {
-		if grade.AIScore != nil {
-			out.AIGradeCount++
-		}
-		if grade.Source == "rule_auto" {
-			out.AIAcceptedCount++
-		}
-		if grade.AIScore != nil && grade.HumanScore != nil {
-			out.HumanComparableCount++
-			if round2(*grade.AIScore) != round2(*grade.HumanScore) {
-				out.HumanModifiedCount++
-			}
-		}
-	}
+	countGradeQuality(&out, data.Grades)
 	out.AIAdoptionRate = metric(out.AIAcceptedCount, out.AIGradeCount, "no_ai_grades")
 	out.HumanModificationRate = metric(out.HumanModifiedCount, out.HumanComparableCount, "no_ai_human_comparison")
 	out.DoubleMarkSessionCount = len(s.doubleMarkDiffs)
@@ -230,6 +217,24 @@ func (s *MemoryStore) qualityLocked(examID string, data dataset) GradingQualityR
 	}
 	out.OCRFailureRate = metric(out.OCRFailedCount, out.OCRTaskCount, "no_ocr_tasks")
 	return out
+}
+
+func countGradeQuality(out *GradingQualityReport, grades []gradeRecord) {
+	// 沿用内存报表种子的计数口径：来源计数与 AI 分数是否存在独立，比较先保留两位小数。
+	for _, grade := range grades {
+		if grade.AIScore != nil {
+			out.AIGradeCount++
+		}
+		if grade.Source == "rule_auto" {
+			out.AIAcceptedCount++
+		}
+		if grade.AIScore != nil && grade.HumanScore != nil {
+			out.HumanComparableCount++
+			if round2(*grade.AIScore) != round2(*grade.HumanScore) {
+				out.HumanModifiedCount++
+			}
+		}
+	}
 }
 
 func metric(numerator int, denominator int, emptyReason string) Metric {

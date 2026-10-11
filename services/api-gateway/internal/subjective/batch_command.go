@@ -85,7 +85,7 @@ func (s *PostgresStore) SaveEnqueuePlan(ctx context.Context, tenantID, actorID s
 	if !errors.Is(err, sql.ErrNoRows) {
 		return plan, err
 	}
-	// Preserve pre-migration runs instead of deriving new IDs from today's policy.
+	// 保留迁移前的运行，不按当前策略生成新 ID。
 	for i := range plan.Runs {
 		input := &plan.Runs[i]
 		var count int

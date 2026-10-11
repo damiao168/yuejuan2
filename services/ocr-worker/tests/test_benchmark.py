@@ -48,15 +48,17 @@ def test_short_bundle_still_warms_up_five_times_and_keeps_answers_private(tmp_pa
 def test_baseline_cannot_silently_measure_regions(tmp_path):
     manifest = tmp_path / "manifest.json"
     manifest.write_text(json.dumps([{"path": "page.png", "regions": [{"bbox": [1, 2, 3, 4]}]}]))
-    with pytest.raises(ValueError, match="full-page input"):
-        benchmark.run(arguments(manifest, run_id="local-baseline-v1"))
+    benchmark_arguments = arguments(manifest, run_id='local-baseline-v1')
+    with pytest.raises(ValueError, match='full-page input'):
+        benchmark.run(benchmark_arguments)
 
 
 def test_negative_sample_count_is_rejected(tmp_path):
     manifest = tmp_path / "manifest.json"
     manifest.write_text("[]")
-    with pytest.raises(ValueError, match="non-negative"):
-        benchmark.run(arguments(manifest, count=-1))
+    benchmark_arguments = arguments(manifest, count=-1)
+    with pytest.raises(ValueError, match='non-negative'):
+        benchmark.run(benchmark_arguments)
 
 
 def test_legacy_baseline_does_not_override_runtime_defaults():

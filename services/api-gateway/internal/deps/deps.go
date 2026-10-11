@@ -259,9 +259,7 @@ type StatusProvider interface {
 	Status() string
 }
 
-// ReadinessProvider marks optional capabilities which may be unavailable
-// without taking the API process out of the load balancer. Core storage and
-// coordination checkers intentionally do not implement it and remain required.
+// ReadinessProvider 标记可能不可用但不影响 API 进程留在负载均衡器中的可选能力；核心存储及协调检查器不实现它，仍为必需能力。
 type ReadinessProvider interface {
 	RequiredForReadiness() bool
 }

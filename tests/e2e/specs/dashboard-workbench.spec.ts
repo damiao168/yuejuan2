@@ -17,7 +17,7 @@ test("学校工作台按成员、考试、阅卷与成绩组织真实业务工�
 
 test("桌面壳层取消空置顶栏，并固定品牌、菜单和账户区域", async ({ page }) => {
   await installApiMocks(page, { initiallyAuthenticated: true });
-  await page.goto("/#/admin/dashboard", { waitUntil: "networkidle" });
+  await page.goto("/#/admin/dashboard", { waitUntil: "domcontentloaded" });
 
   await expect(page.locator(".topbar")).toHaveCount(0);
   await expect(page.locator(".brand-copy")).toContainText("EduGrade");
@@ -45,7 +45,7 @@ test("桌面壳层取消空置顶栏，并固定品牌、菜单和账户区域",
 test("移动端只保留导航触发条，账户位于抽屉底部", async ({ page }) => {
   await page.setViewportSize({ width: 760, height: 800 });
   await installApiMocks(page, { initiallyAuthenticated: true });
-  await page.goto("/#/admin/dashboard", { waitUntil: "networkidle" });
+  await page.goto("/#/admin/dashboard", { waitUntil: "domcontentloaded" });
 
   await expect(page.locator(".topbar")).toHaveCount(0);
   const shellbar = page.locator(".mobile-shellbar");
@@ -64,7 +64,7 @@ test("首页主动作完成单页新建考试并进入考试准备", async ({ pa
 
   await page.getByRole("button", { name: "新建考试" }).click();
   await expect(page).toHaveURL(/#\/admin\/exams\/new/);
-  await expect(page.getByRole("heading", { name: "新建考试" })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("region", { name: "创建方式" })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole("heading", { name: "1. 考试名称与基本信息" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "2. 添加考试学科" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "3. 考试班级范围" })).toBeVisible();
@@ -90,9 +90,10 @@ test("首页主动作完成单页新建考试并进入考试准备", async ({ pa
 });
 
 test("没有待办时使用紧凑空状态", async ({ page }) => {
-  await installApiMocks(page, { dashboardMode: "empty" });
+  await installApiMocks(page, { dashboardMode: "empty", onboardingReady: true });
   await loginAsSchoolAdmin(page);
 
+  await expect(page).toHaveURL(/#\/admin\/dashboard/);
   await expect(page.getByText("当前没有需要处理的事项")).toBeVisible();
   await expect(page.getByText("暂无进行中考试")).toBeVisible();
   await expect(page.getByText("进行中 0 场", { exact: false })).toBeVisible();

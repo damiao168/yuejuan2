@@ -18,7 +18,7 @@ import {
   type ScoreRelease
 } from "../../../api/scoreReleases";
 import type { SubmissionGrade } from "../../../api/scores";
-import { listManagedUsers, type ManagedUser } from "../../../api/users";
+import { listReviewActors, type WorkflowActor } from "../../../api/workflowActors";
 import { closedWorkflowModal, workflowModalReducer } from "./workflowModal";
 
 type RunAction = (key: string, action: () => Promise<void>, successText: string) => Promise<void>;
@@ -31,6 +31,12 @@ function formatScore(value?: number | null) {
   if (value === undefined || value === null || !Number.isFinite(value)) return "-";
   return Number(value.toFixed(1)).toString();
 }
+
+const regradeReviewSuccessText = {
+  accept: "已接受重评候选",
+  reject: "已驳回重评候选",
+  exception: "已标记重评异常"
+} as const;
 
 export function useRegradeWorkflow({
   canManage,
@@ -54,13 +60,14 @@ export function useRegradeWorkflow({
   const [regradeReasonText, setRegradeReasonText] = useState("");
   const [regradeStrategy, setRegradeStrategy] = useState("human_recheck");
   const [regradeAssigneeID, setRegradeAssigneeID] = useState("");
-  const [regradeGraders, setRegradeGraders] = useState<ManagedUser[]>([]);
+  const [regradeGraders, setRegradeGraders] = useState<WorkflowActor[]>([]);
   const [regradeGradersError, setRegradeGradersError] = useState("");
   const [loadingRegradeGraders, setLoadingRegradeGraders] = useState(false);
   const [regradePreview, setRegradePreview] = useState<RegradePreview | null>(null);
   const [regradeReview, setRegradeReview] = useState<RegradeSummary | null>(null);
   const [regradeReviewOpen, setRegradeReviewOpen] = useState(false);
   const [regradeReviewScores, setRegradeReviewScores] = useState<Record<string, number | null>>({});
+  const [reviewedEvidence, setReviewedEvidence] = useState<Record<string, number>>({});
   const [previewingRegrade, setPreviewingRegrade] = useState(false);
 
   const regradeQuestionOptions = useMemo(() => {
@@ -86,8 +93,7 @@ export function useRegradeWorkflow({
     if (!canManage) return;
     setLoadingRegradeGraders(true);
     try {
-      const result = await listManagedUsers({ limit: 200 });
-      const available = result.users.filter((user) => user.status === "active" && user.roles.includes("grader"));
+      const available = await listReviewActors(selectedExamId);
       setRegradeGraders(available);
       setRegradeGradersError(available.length ? "" : "当前没有可分配的有效阅卷员账号");
       setRegradeAssigneeID((current) => available.some((user) => user.id === current) ? current : available[0]?.id || "");
@@ -98,7 +104,7 @@ export function useRegradeWorkflow({
     } finally {
       setLoadingRegradeGraders(false);
     }
-  }, [canManage]);
+  }, [canManage, selectedExamId]);
 
   useEffect(() => {
     if (regradeModal.status === "open") void loadRegradeGraders();
@@ -129,7 +135,7 @@ export function useRegradeWorkflow({
       return;
     }
     // 预览只适用于同一题目和来源发布版本，切换目标后必须重新确认影响范围。
-    if (!regradePreview || regradePreview.question_id !== regradeQuestionId || regradePreview.source_release_id !== publishedRelease.id) {
+    if (regradePreview?.question_id !== regradeQuestionId || regradePreview.source_release_id !== publishedRelease.id) {
       message.error("请先预览本次复评的影响范围");
       return;
     }
@@ -184,6 +190,7 @@ export function useRegradeWorkflow({
     try {
       const response = await getRegradeJob(job.id);
       setRegradeReview(response.regrade);
+      setReviewedEvidence({});
       setRegradeReviewScores(Object.fromEntries(response.regrade.items.map((item) => [item.id, item.candidate_score ?? null])));
       setRegradeReviewOpen(true);
     } catch (error) {
@@ -194,6 +201,7 @@ export function useRegradeWorkflow({
   };
 
   const decideRegradeItem = (item: RegradeSummary["items"][number], decision: "accept" | "reject" | "exception") => {
+    if (reviewedEvidence[item.id] !== item.revision) { message.error("请先核对本条候选的答卷与冻结标准"); return; }
     const score = regradeReviewScores[item.id];
     if (decision === "accept" && (score === null || score === undefined)) {
       message.error("接受候选前请填写最终得分");
@@ -213,7 +221,7 @@ export function useRegradeWorkflow({
           setRegradeReviewScores(Object.fromEntries(refreshed.regrade.items.map((value) => [value.id, value.candidate_score ?? null])));
         }
       },
-      decision === "accept" ? "已接受重评候选" : decision === "reject" ? "已驳回重评候选" : "已标记重评异常"
+      regradeReviewSuccessText[decision]
     );
   };
 
@@ -239,6 +247,8 @@ export function useRegradeWorkflow({
     regradeReviewOpen,
     closeRegradeReview: () => setRegradeReviewOpen(false),
     regradeReviewScores,
+    reviewedEvidence,
+    markEvidenceReviewed: (id: string, revision: number) => setReviewedEvidence(current => ({ ...current, [id]: revision })),
     setRegradeReviewScores,
     previewingRegrade,
     regradeQuestionOptions,

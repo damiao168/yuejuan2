@@ -70,6 +70,13 @@ func (h *Handler) CreateExamSession(w http.ResponseWriter, r *http.Request) {
 	if input.CommandID != "" {
 		w.Header().Set(httpx.CommandIDHeader, input.CommandID)
 	}
+	// 资料模式只建立考试信息；即使浏览器留有旧模板草稿，也不能生成预设占位题。
+	if input.CreationMode == "materials" || input.CreationMode == "quick" {
+		input.TemplateID = ""
+		for i := range input.Subjects {
+			input.Subjects[i].Sections = nil
+		}
+	}
 	if err := validateCreateSession(input); err != nil {
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_exam_session", err.Error())
 		return
@@ -221,27 +228,12 @@ func (h *Handler) RefreshCandidates(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Archive(w http.ResponseWriter, r *http.Request) {
-	scope, ok := mustAccessScope(w, r)
+	_, ok := mustAccessScope(w, r)
 	if !ok {
 		return
 	}
-	var input struct {
-		ExpectedRevision int64 `json:"expected_revision"`
-	}
-	if !decodeJSON(w, r, &input) {
-		return
-	}
-	if input.ExpectedRevision <= 0 {
-		httpx.Error(w, r, http.StatusBadRequest, "expected_revision_required", "expected_revision is required")
-		return
-	}
-	out, err := h.store.UpdateStatus(r.Context(), scope, r.PathValue("id"), "archived", input.ExpectedRevision)
-	if err != nil {
-		writeStoreError(w, r, err)
-		return
-	}
-	h.auditAction(r, "exam.archived", "exam", out.ID, "archive exam")
-	httpx.JSON(w, http.StatusOK, map[string]any{"exam": out})
+	// 保留旧路由用于明确提示旧客户端；不得代理为单科状态写入而绕过整场检查。
+	writeStoreError(w, r, ErrManagementArchiveRequired)
 }
 
 func validateCreate(input CreateInput) error {
@@ -261,6 +253,9 @@ func validateCreate(input CreateInput) error {
 }
 
 func validateCreateSession(input CreateSessionInput) error {
+	if input.CreationMode != "" && input.CreationMode != "materials" && input.CreationMode != "quick" && input.CreationMode != "template" {
+		return errors.New("考试创建方式无效")
+	}
 	if input.SchoolID == "" || input.GradeID == "" || input.Name == "" || input.ExamType == "" {
 		return errors.New("学校、年级、考试名称和类型不能为空")
 	}
@@ -276,23 +271,31 @@ func validateCreateSession(input CreateSessionInput) error {
 	seen := map[string]bool{}
 	validQuestionTypes := map[string]bool{"single_choice": true, "multiple_choice": true, "true_false": true, "fill_blank": true, "numeric": true, "formula": true, "short_answer": true, "calculation": true, "essay": true, "discussion": true, "coding": true}
 	for _, subject := range input.Subjects {
-		if subject.Subject == "" || seen[subject.Subject] || subject.TotalScore <= 0 || subject.DurationMinutes <= 0 {
-			return errors.New("科目、满分或考试时长无效，且科目不能重复")
+		if err := validateSessionSubject(subject, seen, validQuestionTypes); err != nil {
+			return err
 		}
-		seen[subject.Subject] = true
-		if subject.CandidateRule != "" && subject.CandidateRule != "all_selected_classes" && subject.CandidateRule != "subject_selected_classes" {
-			return errors.New("参考范围规则无效")
+	}
+	return nil
+}
+
+func validateSessionSubject(subject SessionSubjectInput, seen, validQuestionTypes map[string]bool) error {
+	if subject.Subject == "" || seen[subject.Subject] || subject.TotalScore <= 0 || subject.DurationMinutes <= 0 {
+		return errors.New("科目、满分或考试时长无效，且科目不能重复")
+	}
+	seen[subject.Subject] = true
+	if subject.CandidateRule != "" && subject.CandidateRule != "all_selected_classes" && subject.CandidateRule != "subject_selected_classes" {
+		return errors.New("参考范围规则无效")
+	}
+	// 按原分区顺序报告首错；只有给出了分区时才要求其合计与科目满分相符。
+	total := 0.0
+	for _, section := range subject.Sections {
+		if section.Title == "" || !validQuestionTypes[section.QuestionType] || section.QuestionCount <= 0 || section.ScorePerQuestion <= 0 {
+			return errors.New("试卷分区的名称、题型、题数或分值无效")
 		}
-		total := 0.0
-		for _, section := range subject.Sections {
-			if section.Title == "" || !validQuestionTypes[section.QuestionType] || section.QuestionCount <= 0 || section.ScorePerQuestion <= 0 {
-				return errors.New("试卷分区的名称、题型、题数或分值无效")
-			}
-			total += float64(section.QuestionCount) * section.ScorePerQuestion
-		}
-		if len(subject.Sections) > 0 && (total-subject.TotalScore > 0.001 || subject.TotalScore-total > 0.001) {
-			return errors.New("各分区题目分值之和必须等于科目满分")
-		}
+		total += float64(section.QuestionCount) * section.ScorePerQuestion
+	}
+	if len(subject.Sections) > 0 && (total-subject.TotalScore > 0.001 || subject.TotalScore-total > 0.001) {
+		return errors.New("各分区题目分值之和必须等于科目满分")
 	}
 	return nil
 }
@@ -312,6 +315,8 @@ func validateUpdate(input UpdateInput) error {
 
 func writeStoreError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
+	case errors.Is(err, ErrManagementArchiveRequired):
+		httpx.Error(w, r, http.StatusConflict, "exam_management_archive_required", "请在考试管理中使用“归档考试”，先检查整场考试的全部学科和未完成事项")
 	case errors.Is(err, ErrNotFound):
 		httpx.Error(w, r, http.StatusNotFound, "exam_not_found", "exam not found")
 	case errors.Is(err, ErrInvalidTransition):

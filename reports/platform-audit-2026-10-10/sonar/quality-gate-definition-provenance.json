@@ -1,0 +1,10 @@
+{
+  "recorded_at": "2026-10-11T13:15:30.828890+08:00",
+  "endpoints": [
+    "/api/qualitygates/get_by_project",
+    "/api/qualitygates/show"
+  ],
+  "local_url": "http://127.0.0.1:19000",
+  "project": "yuejuan-local-workspace-20261010",
+  "read_only": true
+}

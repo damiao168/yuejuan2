@@ -1,0 +1,297 @@
+{
+  "reviewed_at": "2026-10-11T18:14:12.815728+08:00",
+  "records": [
+    {
+      "key": "a5cf89b8-f3ae-4680-8f63-01958c369345",
+      "rule": "python:S125",
+      "file": "ai-services/grading_agent/paper_compact/anchors.py",
+      "source_sha256": "36db7a4c18e24dc71efeac97fc4e24f15b1beae43d355898a8569134009f12bb",
+      "transition": "falsepositive",
+      "reason": "说明考试题目分值与题干游戏得分的业务区分，紧接分值正则；没有被注释的可执行代码。",
+      "manual_review_scope": "reported code and surrounding behavior; entire equality assertion inventory for S3415; entire JS function inputs and local preview server inspected; not blanket full-file review",
+      "evidence_note": "只复核本机源码及工具入口；不改变规则、阈值、排除路径或测试断言。"
+    },
+    {
+      "key": "a5251f36-bdc6-4beb-a7cf-019745e959b8",
+      "rule": "python:S125",
+      "file": "ai-services/grading_agent/paper_compact/anchors.py",
+      "source_sha256": "36db7a4c18e24dc71efeac97fc4e24f15b1beae43d355898a8569134009f12bb",
+      "transition": "falsepositive",
+      "reason": "说明解题步骤编号与递增题号的边界，紧接新题判定；属于自然语言规则说明。",
+      "manual_review_scope": "reported code and surrounding behavior; entire equality assertion inventory for S3415; entire JS function inputs and local preview server inspected; not blanket full-file review",
+      "evidence_note": "只复核本机源码及工具入口；不改变规则、阈值、排除路径或测试断言。"
+    },
+    {
+      "key": "b523973f-f539-44bf-87b0-4747ebd41917",
+      "rule": "python:S125",
+      "file": "ai-services/grading_agent/paper_compact/layout.py",
+      "source_sha256": "27f26e4177784b8849943b9dd84439be5bab766c92363983324052bb7d77791c",
+      "transition": "falsepositive",
+      "reason": "解释公式裁剪边距使顶边失真，竖直中心排序更接近基线的原因。",
+      "manual_review_scope": "reported code and surrounding behavior; entire equality assertion inventory for S3415; entire JS function inputs and local preview server inspected; not blanket full-file review",
+      "evidence_note": "只复核本机源码及工具入口；不改变规则、阈值、排除路径或测试断言。"
+    },
+    {
+      "key": "c5cc5438-00f5-45c5-a3da-0633b87d17fc",
+      "rule": "python:S125",
+      "file": "ai-services/grading_agent/paper_validation.py",
+      "source_sha256": "c348d45ea41b46aef2fe900c667eebb859ab1905cda53e79bf4c4dbb490c20d3",
+      "transition": "falsepositive",
+      "reason": "解释缺少明确考试分值时清除模型建议分值的保守条件，紧接允许的文本标记正则。",
+      "manual_review_scope": "reported code and surrounding behavior; entire equality assertion inventory for S3415; entire JS function inputs and local preview server inspected; not blanket full-file review",
+      "evidence_note": "只复核本机源码及工具入口；不改变规则、阈值、排除路径或测试断言。"
+    },
+    {
+      "key": "48bf073b-9633-452f-bfc0-13ca6afaefea",
+      "rule": "python:S125",
+      "file": "ai-services/grading_agent/paper_visual.py",
+      "source_sha256": "79db5147de6c10be006a2ecb6ebff05c5bf378a0b63b9ad483627b62427275da",
+      "transition": "falsepositive",
+      "reason": "解释旧保存样本回放兼容、紧凑契约展开与供应商流量边界，紧接本地表示转换。",
+      "manual_review_scope": "reported code and surrounding behavior; entire equality assertion inventory for S3415; entire JS function inputs and local preview server inspected; not blanket full-file review",
+      "evidence_note": "只复核本机源码及工具入口；不改变规则、阈值、排除路径或测试断言。"
+    },
+    {
+      "key": "47e8a60e-b39d-4658-8498-58cee45877da",
+      "rule": "python:S2245",
+      "file": "scripts/generate-fujian-2024-math-simulation.py",
+      "source_sha256": "1eaf5a87ea828f9e6069cbec7445b62889497720528ba74506becc01970790bd",
+      "transition": "falsepositive",
+      "reason": "种子驱动的仿真字体颜色、角度、选择题笔画和扫描噪声，不用于密码、令牌、权限、真实考生身份或密钥。改为密码学随机源将破坏可复现的仿真与已有种子契约。",
+      "manual_review_scope": "reported code and surrounding behavior; entire equality assertion inventory for S3415; entire JS function inputs and local preview server inspected; not blanket full-file review",
+      "evidence_note": "只复核本机源码及工具入口；不改变规则、阈值、排除路径或测试断言。"
+    },
+    {
+      "key": "714b91a4-a04d-48cf-b395-8ea5b285612e",
+      "rule": "python:S2245",
+      "file": "scripts/generate-fujian-2024-math-simulation.py",
+      "source_sha256": "1eaf5a87ea828f9e6069cbec7445b62889497720528ba74506becc01970790bd",
+      "transition": "falsepositive",
+      "reason": "种子驱动的仿真字体颜色、角度、选择题笔画和扫描噪声，不用于密码、令牌、权限、真实考生身份或密钥。改为密码学随机源将破坏可复现的仿真与已有种子契约。",
+      "manual_review_scope": "reported code and surrounding behavior; entire equality assertion inventory for S3415; entire JS function inputs and local preview server inspected; not blanket full-file review",
+      "evidence_note": "只复核本机源码及工具入口；不改变规则、阈值、排除路径或测试断言。"
+    },
+    {
+      "key": "93ebff75-53e8-459e-bc8b-e76b2a9dcda5",
+      "rule": "python:S2245",
+      "file": "scripts/generate-fujian-2024-math-simulation.py",
+      "source_sha256": "1eaf5a87ea828f9e6069cbec7445b62889497720528ba74506becc01970790bd",
+      "transition": "falsepositive",
+      "reason": "种子驱动的仿真字体颜色、角度、选择题笔画和扫描噪声，不用于密码、令牌、权限、真实考生身份或密钥。改为密码学随机源将破坏可复现的仿真与已有种子契约。",
+      "manual_review_scope": "reported code and surrounding behavior; entire equality assertion inventory for S3415; entire JS function inputs and local preview server inspected; not blanket full-file review",
+      "evidence_note": "只复核本机源码及工具入口；不改变规则、阈值、排除路径或测试断言。"
+    },
+    {
+      "key": "da5b8565-5fa8-4f5c-9615-f19c729b4513",
+      "rule": "python:S2245",
+      "file": "scripts/generate-fujian-2024-math-simulation.py",
+      "source_sha256": "1eaf5a87ea828f9e6069cbec7445b62889497720528ba74506becc01970790bd",
+      "transition": "falsepositive",
+      "reason": "种子驱动的仿真字体颜色、角度、选择题笔画和扫描噪声，不用于密码、令牌、权限、真实考生身份或密钥。改为密码学随机源将破坏可复现的仿真与已有种子契约。",
+      "manual_review_scope": "reported code and surrounding behavior; entire equality assertion inventory for S3415; entire JS function inputs and local preview server inspected; not blanket full-file review",
+      "evidence_note": "只复核本机源码及工具入口；不改变规则、阈值、排除路径或测试断言。"
+    },
+    {
+      "key": "98f898f4-db4f-4c79-80d0-7879c792590d",
+      "rule": "python:S2245",
+      "file": "scripts/generate-fujian-2024-math-simulation.py",
+      "source_sha256": "1eaf5a87ea828f9e6069cbec7445b62889497720528ba74506becc01970790bd",
+      "transition": "falsepositive",
+      "reason": "种子驱动的仿真字体颜色、角度、选择题笔画和扫描噪声，不用于密码、令牌、权限、真实考生身份或密钥。改为密码学随机源将破坏可复现的仿真与已有种子契约。",
+      "manual_review_scope": "reported code and surrounding behavior; entire equality assertion inventory for S3415; entire JS function inputs and local preview server inspected; not blanket full-file review",
+      "evidence_note": "只复核本机源码及工具入口；不改变规则、阈值、排除路径或测试断言。"
+    },
+    {
+      "key": "14fc6509-b17c-4aca-9639-d962135439c3",
+      "rule": "python:S2245",
+      "file": "scripts/generate-fujian-2024-math-simulation.py",
+      "source_sha256": "1eaf5a87ea828f9e6069cbec7445b62889497720528ba74506becc01970790bd",
+      "transition": "falsepositive",
+      "reason": "种子驱动的仿真字体颜色、角度、选择题笔画和扫描噪声，不用于密码、令牌、权限、真实考生身份或密钥。改为密码学随机源将破坏可复现的仿真与已有种子契约。",
+      "manual_review_scope": "reported code and surrounding behavior; entire equality assertion inventory for S3415; entire JS function inputs and local preview server inspected; not blanket full-file review",
+      "evidence_note": "只复核本机源码及工具入口；不改变规则、阈值、排除路径或测试断言。"
+    },
+    {
+      "key": "50e8770b-7ffa-48fd-b9bf-1ccd9fccf672",
+      "rule": "python:S125",
+      "file": "services/image-quality-worker/image_quality/geometry.py",
+      "source_sha256": "03e0ba6c7c21e4646bbfdb4da281114b893bf4bf774cebb694adf9fa0711e129",
+      "transition": "falsepositive",
+      "reason": "解释平板扫描无可见外轮廓时降低置信度的原因，没有虚构边框可靠性。",
+      "manual_review_scope": "reported code and surrounding behavior; entire equality assertion inventory for S3415; entire JS function inputs and local preview server inspected; not blanket full-file review",
+      "evidence_note": "只复核本机源码及工具入口；不改变规则、阈值、排除路径或测试断言。"
+    },
+    {
+      "key": "e5ef3e47-9d26-44f2-aa67-b07f348fcbba",
+      "rule": "python:S125",
+      "file": "services/ocr-worker/ocr_worker/formula_validation.py",
+      "source_sha256": "51ffd42ae6dc7fbb99a3077075ca0f38b38f651fa97a8b1143300fd39815641e",
+      "transition": "falsepositive",
+      "reason": "解释数学宏白名单及未知宏拒绝的安全边界，紧接允许列表。",
+      "manual_review_scope": "reported code and surrounding behavior; entire equality assertion inventory for S3415; entire JS function inputs and local preview server inspected; not blanket full-file review",
+      "evidence_note": "只复核本机源码及工具入口；不改变规则、阈值、排除路径或测试断言。"
+    },
+    {
+      "key": "84a92061-284f-42a2-9701-2c8b6bbe4cb2",
+      "rule": "python:S125",
+      "file": "services/ocr-worker/ocr_worker/math_layout.py",
+      "source_sha256": "3d05ca211492c96a33c1ad534ec9cf306a470054187cc22513c328a8432993cb",
+      "transition": "falsepositive",
+      "reason": "解释行内小公式裁剪扩展同时受配置和检测框高度约束的原因。",
+      "manual_review_scope": "reported code and surrounding behavior; entire equality assertion inventory for S3415; entire JS function inputs and local preview server inspected; not blanket full-file review",
+      "evidence_note": "只复核本机源码及工具入口；不改变规则、阈值、排除路径或测试断言。"
+    },
+    {
+      "key": "29a146e2-0e55-416b-b7af-fa375edd2c62",
+      "rule": "python:S125",
+      "file": "services/ocr-worker/ocr_worker/paper_formula.py",
+      "source_sha256": "547e2ffc4d91dd3e67d91c72a81fb833444353f88353c0593c91f0408385e2f5",
+      "transition": "falsepositive",
+      "reason": "解释检测分类和边缘裁剪异常不能通过升级识别模型修复，紧接备用模型触发条件。",
+      "manual_review_scope": "reported code and surrounding behavior; entire equality assertion inventory for S3415; entire JS function inputs and local preview server inspected; not blanket full-file review",
+      "evidence_note": "只复核本机源码及工具入口；不改变规则、阈值、排除路径或测试断言。"
+    },
+    {
+      "key": "80edea87-9b8d-41db-a7c9-1a79d1431f39",
+      "rule": "python:S125",
+      "file": "services/ocr-worker/ocr_worker/symbolic_runner.py",
+      "source_sha256": "13abbbb6d5695c5df85d4c2c3505decb2f406528f225ec75d162b9684c801929",
+      "transition": "falsepositive",
+      "reason": "解释第二阶段重试规范化用于从第一阶段短暂失败恢复的顺序。",
+      "manual_review_scope": "reported code and surrounding behavior; entire equality assertion inventory for S3415; entire JS function inputs and local preview server inspected; not blanket full-file review",
+      "evidence_note": "只复核本机源码及工具入口；不改变规则、阈值、排除路径或测试断言。"
+    },
+    {
+      "key": "4da2ff58-ea55-4887-896e-9493efc2131a",
+      "rule": "python:S125",
+      "file": "services/ocr-worker/ocr_worker/symbolic_runner.py",
+      "source_sha256": "13abbbb6d5695c5df85d4c2c3505decb2f406528f225ec75d162b9684c801929",
+      "transition": "falsepositive",
+      "reason": "解释求解集合只保存为约束事实，不能直接证明学生结论完整并计分。",
+      "manual_review_scope": "reported code and surrounding behavior; entire equality assertion inventory for S3415; entire JS function inputs and local preview server inspected; not blanket full-file review",
+      "evidence_note": "只复核本机源码及工具入口；不改变规则、阈值、排除路径或测试断言。"
+    },
+    {
+      "key": "0fbb4e62-ce85-4424-87b4-ff54ab0e5979",
+      "rule": "python:S3415",
+      "file": "services/ocr-worker/tests/test_startup_batch36.py",
+      "source_sha256": "cd7b9032a685d25b2c39b9a57d96ccaa18ad136af15f4aaed1cbec0005802cde",
+      "transition": "falsepositive",
+      "reason": "第一个参数 plan.profile_sha256 是被测 resolve_formula_runtime_plan 的实际输出；第二个参数 hashlib.sha256(raw).hexdigest() 是由固定输入字节独立计算的预期值，符合本文件统一的 actual-first unittest 约定。",
+      "manual_review_scope": "reported code and surrounding behavior; entire equality assertion inventory for S3415; entire JS function inputs and local preview server inspected; not blanket full-file review",
+      "evidence_note": "只复核本机源码及工具入口；不改变规则、阈值、排除路径或测试断言。"
+    },
+    {
+      "key": "2674ad9e-690b-4a95-a569-05ee335514b7",
+      "rule": "python:S125",
+      "file": "services/page-processing-worker/page_processing/config.py",
+      "source_sha256": "65e6299c54efbfa79f2479a4ffcc06a0c028364955ae32ac446fec3fd45f74d4",
+      "transition": "falsepositive",
+      "reason": "解释顺序处理且只给当前任务发心跳，批量提前领任务会造成后续租约失效。",
+      "manual_review_scope": "reported code and surrounding behavior; entire equality assertion inventory for S3415; entire JS function inputs and local preview server inspected; not blanket full-file review",
+      "evidence_note": "只复核本机源码及工具入口；不改变规则、阈值、排除路径或测试断言。"
+    },
+    {
+      "key": "89cc6e21-a251-4e66-8504-04944e1ae32f",
+      "rule": "python:S125",
+      "file": "services/page-processing-worker/page_processing/omr.py",
+      "source_sha256": "2abd891a47f7d46e4298900f20a62e642c1772e33f10fe8e2c808cca00ab6808",
+      "transition": "falsepositive",
+      "reason": "解释空白参考图配准产生窄光晕，测量新增墨迹前去除该光晕的边界。",
+      "manual_review_scope": "reported code and surrounding behavior; entire equality assertion inventory for S3415; entire JS function inputs and local preview server inspected; not blanket full-file review",
+      "evidence_note": "只复核本机源码及工具入口；不改变规则、阈值、排除路径或测试断言。"
+    },
+    {
+      "key": "3800c8aa-b10c-4729-8558-c3b6289ae013",
+      "rule": "python:S125",
+      "file": "services/page-processing-worker/page_processing/omr_acceptance.py",
+      "source_sha256": "895fc941df4007b0a0af4b26e6cac72a858a4b83db2fc440652afed3b84d38ed",
+      "transition": "falsepositive",
+      "reason": "解释确定性扫描噪声必须放在答案内部以外，避免验收只处理相同图像副本。",
+      "manual_review_scope": "reported code and surrounding behavior; entire equality assertion inventory for S3415; entire JS function inputs and local preview server inspected; not blanket full-file review",
+      "evidence_note": "只复核本机源码及工具入口；不改变规则、阈值、排除路径或测试断言。"
+    },
+    {
+      "key": "11d11e79-e1bd-4e27-a449-377dd9f6d43b",
+      "rule": "python:S125",
+      "file": "services/page-processing-worker/page_processing/runner.py",
+      "source_sha256": "32d236c9d4fa337d61ac403cd1d9b8e3a05d5f5dcbd0a1330284ad778694041e",
+      "transition": "falsepositive",
+      "reason": "解释失败报告也失败时仍维持工作循环及记录原始失败原因的恢复边界。",
+      "manual_review_scope": "reported code and surrounding behavior; entire equality assertion inventory for S3415; entire JS function inputs and local preview server inspected; not blanket full-file review",
+      "evidence_note": "只复核本机源码及工具入口；不改变规则、阈值、排除路径或测试断言。"
+    },
+    {
+      "key": "60b4486b-ab39-42bd-914d-ebe6e345921f",
+      "rule": "python:S5332",
+      "file": "docs/architecture/tools/preview_server.py",
+      "source_sha256": "72ef85e9f65e34f899ea8dcefb2c14ffdfaa7bc8c40e9a7f4890f586d464e08d",
+      "transition": "accept",
+      "reason": "静态架构预览与渲染结果回写监听固定 IPv4 回环 127.0.0.1:8766；不是生产阅卷接口。路径允许列表、20MiB上传上限及 resolve 后的 BASE 范围检查在同一文件。当前选择保留本机预览 HTTP，需平台按上下文记录接受，而非声称已升级TLS。",
+      "manual_review_scope": "reported code and surrounding behavior; entire equality assertion inventory for S3415; entire JS function inputs and local preview server inspected; not blanket full-file review",
+      "evidence_note": "只复核本机源码及工具入口；不改变规则、阈值、排除路径或测试断言。"
+    },
+    {
+      "key": "53d83cb5-de5b-4947-afec-13d86cc28adc",
+      "rule": "typescript:S8980",
+      "file": "apps/student-portal/src/App.releaseConsistency.test.tsx",
+      "source_sha256": "95c238c303b005740b70f697455bcbad2f83005f05f6486b7b47bca613e23469",
+      "transition": "falsepositive",
+      "reason": "外层 act 合并同一事件批次，用于测试同步 ref 在 disabled 重绘前阻止提交或退出。拆为各自 fireEvent 的 act 会提前刷新 UI，失去该时序保证。",
+      "manual_review_scope": "reported code and surrounding behavior; entire equality assertion inventory for S3415; entire JS function inputs and local preview server inspected; not blanket full-file review",
+      "evidence_note": "只复核本机源码及工具入口；不改变规则、阈值、排除路径或测试断言。"
+    },
+    {
+      "key": "e523e830-fd7b-4360-a4f2-b2d6260bf960",
+      "rule": "typescript:S8980",
+      "file": "apps/student-portal/src/App.submissionReceipt.test.tsx",
+      "source_sha256": "0e42cd9b976a1fd22fb236fa0df96962abbc5214b221a36b19cf361b2c6c5de3",
+      "transition": "falsepositive",
+      "reason": "外层 act 合并同一事件批次，用于测试同步 ref 在 disabled 重绘前阻止提交或退出。拆为各自 fireEvent 的 act 会提前刷新 UI，失去该时序保证。",
+      "manual_review_scope": "reported code and surrounding behavior; entire equality assertion inventory for S3415; entire JS function inputs and local preview server inspected; not blanket full-file review",
+      "evidence_note": "只复核本机源码及工具入口；不改变规则、阈值、排除路径或测试断言。"
+    },
+    {
+      "key": "ab84da33-c3ed-4e22-8690-fe7c1b35cc99",
+      "rule": "typescript:S8980",
+      "file": "apps/student-portal/src/App.submissionReceipt.test.tsx",
+      "source_sha256": "0e42cd9b976a1fd22fb236fa0df96962abbc5214b221a36b19cf361b2c6c5de3",
+      "transition": "falsepositive",
+      "reason": "外层 act 合并同一事件批次，用于测试同步 ref 在 disabled 重绘前阻止提交或退出。拆为各自 fireEvent 的 act 会提前刷新 UI，失去该时序保证。",
+      "manual_review_scope": "reported code and surrounding behavior; entire equality assertion inventory for S3415; entire JS function inputs and local preview server inspected; not blanket full-file review",
+      "evidence_note": "只复核本机源码及工具入口；不改变规则、阈值、排除路径或测试断言。"
+    },
+    {
+      "key": "3ea8c773-5a14-4880-bc36-8b0adf2fda7f",
+      "rule": "typescript:S6822",
+      "file": "apps/web-admin/src/pages/ArbitrationTaskRail.tsx",
+      "source_sha256": "205bf807531e5ace73d596bdd071f4761ad7ab18e9cb3bd4282eef8eb59ce4ba",
+      "transition": "falsepositive",
+      "reason": "listStyle:none 时 Safari 会从可访问性树移除原生列表；显式 role=list 保留列表语义，已有中文维护注释与 MDN 依据。",
+      "manual_review_scope": "reported code and surrounding behavior; entire equality assertion inventory for S3415; entire JS function inputs and local preview server inspected; not blanket full-file review",
+      "evidence_note": "只复核本机源码及工具入口；不改变规则、阈值、排除路径或测试断言。"
+    },
+    {
+      "key": "75ac3d77-53f0-47a5-9335-dc49df53ed13",
+      "rule": "javascript:S905",
+      "file": "docs/architecture/tools/capture_preview_qa.js",
+      "source_sha256": "47a3ce999f9b5b93993006ef6685d3c6670471ae66e1e667833d346891888496",
+      "transition": "falsepositive",
+      "reason": "playwright-cli run-code 接收整个文件中的函数表达式，由工具传入真实 page 并执行；不能改成无人调用的模块导出或自行执行脚本。",
+      "manual_review_scope": "reported code and surrounding behavior; entire equality assertion inventory for S3415; entire JS function inputs and local preview server inspected; not blanket full-file review",
+      "evidence_note": "只复核本机源码及工具入口；不改变规则、阈值、排除路径或测试断言。"
+    },
+    {
+      "key": "e50a781b-1426-49d6-aa49-aa91cee217ae",
+      "rule": "javascript:S905",
+      "file": "docs/architecture/tools/render_native.js",
+      "source_sha256": "85e0b8d9604713f3506c56758a3af02977ef66e35bc66ff7d3136e129eefac65",
+      "transition": "falsepositive",
+      "reason": "playwright-cli run-code 接收整个文件中的函数表达式，由工具传入真实 page 并执行；不能改成无人调用的模块导出或自行执行脚本。",
+      "manual_review_scope": "reported code and surrounding behavior; entire equality assertion inventory for S3415; entire JS function inputs and local preview server inspected; not blanket full-file review",
+      "evidence_note": "只复核本机源码及工具入口；不改变规则、阈值、排除路径或测试断言。"
+    }
+  ],
+  "actions_performed": false,
+  "scope": "29 individually reviewed original issues; 2 production TLS findings await actual rescan"
+}

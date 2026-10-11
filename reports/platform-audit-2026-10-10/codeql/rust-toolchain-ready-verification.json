@@ -1,0 +1,46 @@
+{
+  "rustc": {
+    "command": [
+      "rustup",
+      "run",
+      "1.98.1",
+      "rustc",
+      "--version"
+    ],
+    "exit_code": 0,
+    "output": "rustc 1.98.1 (48a229cea 2026-09-01)"
+  },
+  "cargo": {
+    "command": [
+      "rustup",
+      "run",
+      "1.98.1",
+      "cargo",
+      "--version"
+    ],
+    "exit_code": 0,
+    "output": "cargo 1.98.1 (797e8a9bc 2026-08-05)"
+  },
+  "installed_components": {
+    "command": [
+      "rustup",
+      "component",
+      "list",
+      "--toolchain",
+      "1.98.1",
+      "--installed"
+    ],
+    "exit_code": 0,
+    "output": "cargo-x86_64-pc-windows-msvc\nclippy-x86_64-pc-windows-msvc\nrust-docs-x86_64-pc-windows-msvc\nrust-src\nrust-std-x86_64-pc-windows-msvc\nrustc-x86_64-pc-windows-msvc\nrustfmt-x86_64-pc-windows-msvc"
+  },
+  "verified_at": "2026-10-11T13:55:34+08:00",
+  "actual_observed_cargo_environment": {
+    "CARGO_HOME": "D:/rust/.cargo",
+    "CARGO_NET_OFFLINE": "true",
+    "RUSTUP_AUTO_INSTALL": "1",
+    "RUSTUP_HOME": "D:/rust/.rustup",
+    "RUSTUP_TOOLCHAIN": "1.98.1"
+  },
+  "observed_cargo_command": "cargo check --quiet --workspace --message-format=json --manifest-path D:/tools/audit-codeql-20261010/source-20261011/apps/desktop-client/src-tauri/Cargo.toml --target-dir D:/tools/audit-codeql-20261010/databases/rust-20261011-toolchain-ready/working/target --all-features --keep-going --compile-time-deps --all-targets -Zunstable-options",
+  "environment_evidence": "本次提取期间对 Rust Cargo 子进程 PEB 仅读取工具链环境白名单，未导出 token；同一父子进程实际调用上述 rustup 工具链 Cargo。"
+}

@@ -1,0 +1,16 @@
+{
+  "command": [
+    "go",
+    "run",
+    "D:\\project\\yuejuan\\reports\\sonar-remediation-2026-10-11\\go-structure-check.go"
+  ],
+  "actual_exit_code": 0,
+  "paths": [
+    "services/api-gateway/internal/server/e2e_question_bank_acl_ux_test.go",
+    "services/api-gateway/internal/server/e2e_question_bank_import_test.go",
+    "services/api-gateway/internal/server/e2e_question_bank_metadata_acl_search_test.go",
+    "services/api-gateway/internal/server/e2e_question_bank_publication_test.go",
+    "services/api-gateway/internal/server/e2e_question_bank_test.go"
+  ],
+  "updated_at": "2026-10-11T19:04:42.198168+08:00"
+}

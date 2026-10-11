@@ -92,7 +92,7 @@ func TestTemplateDifferenceApprovedCalibrationRequiresExactScope(t *testing.T) {
 		EvidenceHash:         "sha256:evidence",
 		Status:               "approved",
 	}
-	policy := OMRAutoConfirmPolicyForTemplateReferenceAndCalibration(layout, "locked", "template-hash", "template-hash", reference, "question-1", "template-1", &approval)
+	policy := OMRAutoConfirmPolicyForTemplateReferenceAndCalibration(AnswerSheetTemplate{Layout: layout, Status: "locked", ContentHash: "template-hash", ID: "template-1"}, "template-hash", reference, "question-1", &approval)
 	if !policy.AutoConfirmEligible || policy.Reason != OMRAutoConfirmReasonCalibrationApproved {
 		t.Fatalf("exact approved scope must permit auto-confirmation: %#v", policy)
 	}
@@ -109,7 +109,7 @@ func TestTemplateDifferenceApprovedCalibrationRequiresExactScope(t *testing.T) {
 		"reference": wrongReference,
 	} {
 		t.Run(name, func(t *testing.T) {
-			policy := OMRAutoConfirmPolicyForTemplateReferenceAndCalibration(layout, "locked", "template-hash", "template-hash", reference, "question-1", "template-1", &mismatched)
+			policy := OMRAutoConfirmPolicyForTemplateReferenceAndCalibration(AnswerSheetTemplate{Layout: layout, Status: "locked", ContentHash: "template-hash", ID: "template-1"}, "template-hash", reference, "question-1", &mismatched)
 			if policy.AutoConfirmEligible || policy.Reason != OMRAutoConfirmReasonCalibrationScopeMismatch {
 				t.Fatalf("mismatched approval must fail closed: %#v", policy)
 			}

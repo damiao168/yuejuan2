@@ -6,9 +6,9 @@ export interface StudentAnnotationOverlayProps {
   annotations: readonly StudentReviewAnnotation[];
 }
 
-// This component intentionally accepts only the student-safe SDK DTO. Teacher
-// annotations cannot be passed without an explicit, reviewed projection.
-export function StudentAnnotationOverlay({ annotations }: StudentAnnotationOverlayProps) {
+// 该组件只接受适合学生端展示的 SDK DTO；教师批注
+// 必须先经过显式且已审查的投影，才能传入。
+export function StudentAnnotationOverlay({ annotations }: Readonly<StudentAnnotationOverlayProps>) {
   return (
     <div className="student-annotation-overlay" aria-label="教师公开批注">
       {annotations.map((annotation) => {

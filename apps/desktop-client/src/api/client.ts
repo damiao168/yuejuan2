@@ -148,7 +148,7 @@ function addIdempotencyHeader(path: string, method: string | undefined, headers:
 }
 
 export function normalizeBaseUrl(value: string) {
-  const trimmed = value.trim().replace(/\/+$/, "");
+  const trimmed = trimTrailingSlashes(value.trim());
   if (!trimmed) {
     throw new Error("API 服务端地址不能为空");
   }
@@ -167,7 +167,16 @@ export function normalizeBaseUrl(value: string) {
   if (parsed.protocol !== "https:" && !(parsed.protocol === "http:" && isLoopbackHost(parsed.hostname))) {
     throw new Error("远程 API 必须使用 HTTPS；HTTP 仅允许本机开发地址");
   }
-  return parsed.toString().replace(/\/+$/, "");
+  return trimTrailingSlashes(parsed.toString());
+}
+
+function trimTrailingSlashes(value: string): string {
+  // 只从末尾移除 ASCII /，保留协议和路径内部的斜杠；两处调用仍分别位于 URL 校验前后。
+  let end = value.length;
+  while (end > 0 && value[end - 1] === "/") {
+    end -= 1;
+  }
+  return value.slice(0, end);
 }
 
 function isLoopbackHost(hostname: string) {
@@ -190,7 +199,7 @@ function filenameFromDisposition(disposition: string | null): string | undefined
   if (!disposition) {
     return undefined;
   }
-  const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+  const utf8Match = /filename\*=UTF-8''([^;]+)/i.exec(disposition);
   if (utf8Match?.[1]) {
     try {
       return decodeURIComponent(utf8Match[1]);
@@ -198,6 +207,6 @@ function filenameFromDisposition(disposition: string | null): string | undefined
       return utf8Match[1];
     }
   }
-  const plainMatch = disposition.match(/filename="?([^";]+)"?/i);
+  const plainMatch = /filename="?([^";]+)"?/i.exec(disposition);
   return plainMatch?.[1];
 }

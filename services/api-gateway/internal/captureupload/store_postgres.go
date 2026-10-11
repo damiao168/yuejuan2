@@ -54,9 +54,7 @@ VALUES ($1, $2, $3::uuid, $4::uuid, $5, $6, $7, $8, $9, $10, 0, 'uploading')
 RETURNING `+sessionColumns, uuid.NewString(), tenantID, input.ExamID, input.BatchID, input.IdempotencyKey, input.Filename, input.MIME, input.SHA256, input.Size, chunkSize)
 	created, err := scanSession(row)
 	if err != nil {
-		// A concurrent idempotent init may have won between the select and
-		// insert. Re-read its immutable contract after releasing this
-		// transaction; do not recursively retain the first transaction.
+		// 查询和插入之间，另一个并发幂等初始化可能已先完成。释放本事务后重新读取其不可变约定，不要递归调用并保留第一个事务。
 		if isUniqueViolation(err) {
 			_ = tx.Rollback()
 			current, readErr := s.findByIdempotency(ctx, tenantID, input.BatchID, input.IdempotencyKey)
@@ -287,8 +285,7 @@ WHERE tenant_id=$1 AND id::text=$2 AND status='finalizing' AND completion_token=
 	if count == 0 {
 		return ErrConflict
 	}
-	// The workstation retains the source asset. Keeping failed server chunks
-	// would only retain an untrusted duplicate without making it resumable.
+	// 工作站保留来源资源。保留服务端失败分块只会留下不可信副本，无法帮助续传。
 	if _, err := tx.ExecContext(ctx, `DELETE FROM capture_upload_chunk WHERE tenant_id=$1 AND capture_upload_session_id::text=$2`, tenantID, uploadID); err != nil {
 		return err
 	}

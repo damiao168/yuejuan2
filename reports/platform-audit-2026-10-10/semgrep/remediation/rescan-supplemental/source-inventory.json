@@ -1,0 +1,30 @@
+{
+  "snapshot": "C:\\Users\\pc\\AppData\\Local\\Temp\\yuejuan-semgrep-xml-supplemental-yoo6xk24",
+  "files": [
+    {
+      "path": "docs/architecture/tools/build_preview.py",
+      "sha256": "56d94138d0123f4ae3f7beba356fbde9703403ba955aa85638871ed6e9bdc9bd",
+      "full_file_review": "pending"
+    },
+    {
+      "path": "docs/architecture/tools/verify_typography.py",
+      "sha256": "1275521d6cc92bb784c3dc852647889845cc14be7188f5d9e880a0349c71399d",
+      "full_file_review": "pending"
+    },
+    {
+      "path": "docs/architecture/tools/test_xml_supplemental_security.py",
+      "sha256": "9e195e6bf60d118915b9e2ae2208e8be312dc9973e8fb4dbb1405fa23324d015",
+      "full_file_review": "pending"
+    },
+    {
+      "path": "docs/architecture/tools/requirements.txt",
+      "sha256": "36f60fecd9c3546ad484e50324b4b2657649c51a8578ab8ca76a0ae8d9306a8a",
+      "full_file_review": "pending"
+    },
+    {
+      "path": "docs/architecture/DIAGRAM_MAINTENANCE.md",
+      "sha256": "1fbba093789c1766f81210e5bf74d7ca08e61ec5732b99e541791f012b900723",
+      "full_file_review": "pending"
+    }
+  ]
+}

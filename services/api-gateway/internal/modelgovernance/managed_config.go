@@ -124,7 +124,7 @@ type ManagedAPIProbeResult struct {
 	ConnectionDiagnostic ManagedAPIConnectionDiagnostic `json:"connection_diagnostic"`
 }
 
-// Connection diagnostics contain timing only; never record endpoint URLs or credentials.
+// 连接诊断只包含耗时，不记录端点 URL 或凭据。
 type ManagedAPIConnectionDiagnostic struct {
 	Attempts     int    `json:"attempts,omitempty"`
 	DNSMS        int64  `json:"dns_ms,omitempty"`
@@ -142,9 +142,8 @@ type ManagedAPIProbeUsage struct {
 	TotalTokens       int64 `json:"total_tokens"`
 }
 
-// ManagedAPIProbeDiagnostic contains bounded, non-secret evidence explaining a
-// capability result. ContentPreview is returned only for the current request;
-// stores must clear it before persistence.
+// ManagedAPIProbeDiagnostic 包含范围受限、无密钥的能力结果解释证据。
+// ContentPreview 仅向当前请求返回，存储必须在持久化前清除它。
 type ManagedAPIProbeDiagnostic struct {
 	FinishReason   string `json:"finish_reason,omitempty"`
 	ResponseFormat string `json:"response_format,omitempty"`
@@ -180,8 +179,7 @@ type ManagedAPIQuickProber interface {
 	ProbeQuick(ctx context.Context, connection ManagedAPIConnection) ManagedAPIProbeResult
 }
 
-// No default means the existing local parser remains in use. An explicitly
-// selected but disabled/unreadable default must not silently switch providers.
+// 无默认模型时继续使用现有本地解析器；显式选择的默认模型若停用或不可读，不得静默切换提供方。
 func ResolveDefaultManagedAPI(ctx context.Context, store ManagedAPIConfigStore, tenantID string) (*ManagedAPIConnection, error) {
 	items, err := store.ListManagedAPIConfigs(ctx, tenantID)
 	if err != nil {
@@ -266,15 +264,7 @@ func normalizeManagedAPIInput(input ManagedAPIConfigInput, requireKey bool) (Man
 	input.Status = strings.TrimSpace(input.Status)
 	input.ConfigSource = strings.TrimSpace(input.ConfigSource)
 	input.ProviderRegistryVersion = strings.TrimSpace(input.ProviderRegistryVersion)
-	if input.Status == "" {
-		input.Status = "active"
-	}
-	if input.ConfigSource == "" {
-		input.ConfigSource = "manual"
-	}
-	if input.Region == "" {
-		input.Region = "global"
-	}
+	input = defaultManagedAPIInput(input)
 	if !governanceKey.MatchString(input.ProviderKey) ||
 		(input.AdapterType != "openai_compatible" && input.AdapterType != "dashscope_native") ||
 		(input.Status != "active" && input.Status != "disabled") ||
@@ -289,17 +279,37 @@ func normalizeManagedAPIInput(input ManagedAPIConfigInput, requireKey bool) (Man
 	if input.ConfigSource != "manual" && input.ConfigSource != "auto" && input.ConfigSource != "imported" {
 		return ManagedAPIConfigInput{}, ErrInvalidManagedConfig
 	}
-	parsed, err := url.Parse(input.BaseURL)
-	if err != nil || parsed.Scheme != "https" || parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
-		return ManagedAPIConfigInput{}, ErrInvalidManagedConfig
-	}
-	if input.AdapterType == "dashscope_native" && (parsed.Host != "dashscope.aliyuncs.com" || strings.TrimRight(parsed.Path, "/") != "/api/v1") {
-		return ManagedAPIConfigInput{}, ErrInvalidManagedConfig
-	}
-	if len(input.APIKey) > 1024 || strings.ContainsAny(input.APIKey, "\r\n\x00") {
+	if !validManagedAPIEndpointAndKey(input) {
 		return ManagedAPIConfigInput{}, ErrInvalidManagedConfig
 	}
 	return input, nil
+}
+
+func defaultManagedAPIInput(input ManagedAPIConfigInput) ManagedAPIConfigInput {
+	if input.Status == "" {
+		input.Status = "active"
+	}
+	if input.ConfigSource == "" {
+		input.ConfigSource = "manual"
+	}
+	if input.Region == "" {
+		input.Region = "global"
+	}
+	return input
+}
+
+func validManagedAPIEndpointAndKey(input ManagedAPIConfigInput) bool {
+	parsed, err := url.Parse(input.BaseURL)
+	if err != nil || parsed.Scheme != "https" || parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
+		return false
+	}
+	if input.AdapterType == "dashscope_native" && (parsed.Host != "dashscope.aliyuncs.com" || strings.TrimRight(parsed.Path, "/") != "/api/v1") {
+		return false
+	}
+	if len(input.APIKey) > 1024 || strings.ContainsAny(input.APIKey, "\r\n\x00") {
+		return false
+	}
+	return true
 }
 
 func normalizeManagedAPIUpdate(input ManagedAPIConfigUpdateInput) (ManagedAPIConfigUpdateInput, error) {

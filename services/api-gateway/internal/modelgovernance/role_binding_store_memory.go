@@ -24,6 +24,11 @@ func (s *MemoryStore) SaveModelRoleBinding(_ context.Context, tenantID, actorID 
 		(input.Status == "active" && (config.Status != "active" || config.LastCapabilityStatus != "success" || config.LastCapabilityVersion != ManagedCapabilityProbeVersion)) {
 		return ModelRoleBinding{}, ErrManagedCapabilityRequired
 	}
+	// 比较修订与写入共用一把锁，首次创建竞争和旧修订重试都只能有一次成功。
+	if (!previouslyBound && input.ExpectedRevision != ModelRoleBindingAbsent) ||
+		(previouslyBound && input.ExpectedRevision != previous.Revision) {
+		return ModelRoleBinding{}, ErrModelRoleBindingChanged
+	}
 	now := time.Now().UTC()
 	item, exists := s.roleBindings[key]
 	if !exists {
@@ -32,6 +37,7 @@ func (s *MemoryStore) SaveModelRoleBinding(_ context.Context, tenantID, actorID 
 	item.TenantID, item.EducationStage, item.SubjectCode, item.ArchetypeCode = tenantID, input.EducationStage, input.SubjectCode, input.ArchetypeCode
 	item.AgentRole, item.ManagedModelAPIConfigID, item.PromptVersion = input.AgentRole, input.ManagedModelAPIConfigID, input.PromptVersion
 	item.StrengthRank, item.Status, item.UpdatedAt = input.StrengthRank, input.Status, now
+	item.Revision = uuid.NewString()
 	s.roleBindings[key] = item
 	return item, nil
 }

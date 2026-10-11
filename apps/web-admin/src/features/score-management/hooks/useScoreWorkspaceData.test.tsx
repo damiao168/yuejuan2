@@ -2,15 +2,17 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ApiClientError } from "../../../api/client";
 import { useScoreWorkspaceData } from "./useScoreWorkspaceData";
 
 const api = vi.hoisted(() => ({
   listExams: vi.fn(), listSubmissions: vi.fn(), listExamGrades: vi.fn(),
   checkExamGradeQuality: vi.fn(), listExamRoster: vi.fn(), listAuditLogs: vi.fn(),
-  getScoreReleaseGate: vi.fn(), listScoreReleases: vi.fn(), listRegradeJobs: vi.fn()
+  getScoreReleaseGate: vi.fn(), listScoreReleases: vi.fn(),
+  getCurrentPublishedScoreRelease: vi.fn(), listRegradeJobs: vi.fn()
 }));
 vi.mock("antd", () => ({ App: { useApp: () => ({ message: { error: vi.fn() } }) } }));
-vi.mock("../../../api/exams", () => ({ listExams: api.listExams }));
+vi.mock("../../../api/exams", () => ({ listAllExams: api.listExams }));
 vi.mock("../../../api/submissions", () => ({ listSubmissions: api.listSubmissions }));
 vi.mock("../../../api/scores", () => ({
   listExamGrades: api.listExamGrades, checkExamGradeQuality: api.checkExamGradeQuality,
@@ -19,7 +21,9 @@ vi.mock("../../../api/scores", () => ({
 vi.mock("../../../api/audit", () => ({ listAuditLogs: api.listAuditLogs }));
 vi.mock("../../../api/scoreReleases", () => ({
   getScoreReleaseGate: api.getScoreReleaseGate,
-  listScoreReleases: api.listScoreReleases, listRegradeJobs: api.listRegradeJobs
+  listScoreReleases: api.listScoreReleases,
+  getCurrentPublishedScoreRelease: api.getCurrentPublishedScoreRelease,
+  listRegradeJobs: api.listRegradeJobs
 }));
 
 function deferred<T>() {
@@ -49,6 +53,9 @@ describe("score workspace controller", () => {
     api.listAuditLogs.mockResolvedValue({ audit_logs: [] });
     api.getScoreReleaseGate.mockResolvedValue({ release_gate: null });
     api.listScoreReleases.mockResolvedValue({ score_releases: [] });
+    api.getCurrentPublishedScoreRelease.mockRejectedValue(
+      new ApiClientError(404, "score_release_not_found", "尚无正式版本")
+    );
     api.listRegradeJobs.mockResolvedValue({ regrade_jobs: [] });
     container = document.createElement("div");
     document.body.appendChild(container);
@@ -84,6 +91,21 @@ describe("score workspace controller", () => {
     expect(current.error).toBeTruthy();
   });
 
+  it.each([
+    "listSubmissions", "listExamGrades", "checkExamGradeQuality", "listExamRoster",
+    "getScoreReleaseGate", "listScoreReleases", "getCurrentPublishedScoreRelease", "listRegradeJobs"
+  ] as const)("任一必需数据 %s 失败时都保留原完整快照", async (name) => {
+    await mount();
+    const grades = current.grades;
+    const submissions = current.submissions;
+    api[name].mockRejectedValueOnce(new Error(`${name} unavailable`));
+    await act(async () => { await current.loadScores("exam-a"); });
+    expect(current.grades).toBe(grades);
+    expect(current.submissions).toBe(submissions);
+    expect(current.error).toBeTruthy();
+    expect(current.loadingScores).toBe(false);
+  });
+
   it("does not let a stale exam response replace the current exam", async () => {
     const oldQuality = deferred<{ passed: boolean }>();
     api.checkExamGradeQuality.mockImplementationOnce(() => oldQuality.promise)
@@ -102,6 +124,32 @@ describe("score workspace controller", () => {
     expect(current.grades.map((grade) => grade.id)).toEqual(["grade-exam-a"]);
     expect(current.auditLogs).toEqual([]);
     expect(current.error).toBeNull();
+  });
+
+  it("uses the server current pointer when an older draft is published after a newer version", async () => {
+    // 列表按创建版本倒序；再次发布较早草稿时，最高版本号不代表学生门户当前可见版本。
+    api.listScoreReleases.mockResolvedValue({ score_releases: [
+      { id: "release-v2", version: 2, status: "published" },
+      { id: "release-v1", version: 1, status: "published" }
+    ] });
+    api.getCurrentPublishedScoreRelease.mockResolvedValue({
+      release: { id: "release-v1", version: 1, status: "published" }, items: [], questions: []
+    });
+    await mount();
+    expect(current.scoreReleases[0]?.id).toBe("release-v2");
+    expect(current.currentPublishedRelease?.id).toBe("release-v1");
+  });
+
+  it("keeps the old snapshot when current-version lookup fails for a reason other than no release", async () => {
+    api.getCurrentPublishedScoreRelease.mockResolvedValueOnce({
+      release: { id: "release-v1", version: 1, status: "published" }, items: [], questions: []
+    });
+    await mount();
+    expect(current.currentPublishedRelease?.id).toBe("release-v1");
+    api.getCurrentPublishedScoreRelease.mockRejectedValueOnce(new Error("portal unavailable"));
+    await act(async () => { await current.loadScores("exam-a"); });
+    expect(current.error).toBeTruthy();
+    expect(current.currentPublishedRelease?.id).toBe("release-v1");
   });
 
   it("appends a grade page without losing the first page", async () => {

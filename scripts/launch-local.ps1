@@ -340,8 +340,8 @@ if ($firstInstall -and -not $SkipBootstrap) {
             Pop-Location
         }
 
-        # Persist the bootstrap boundary before the authenticated smoke test so
-        # a transient HTTP failure cannot cause a second bootstrap attempt.
+        # 在带认证的冒烟测试前持久化初始化边界，
+        # 避免暂时的 HTTP 失败导致第二次初始化。
         Write-InstallMarker
         $env:EDUGRADE_SMOKE_TENANT_CODE = "platform"
         $env:EDUGRADE_SMOKE_USERNAME = "platform_admin"

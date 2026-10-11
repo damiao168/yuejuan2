@@ -1,0 +1,573 @@
+{
+  "engine": "GitHub CodeQL CLI 2.27.2",
+  "source_snapshot": {
+    "snapshot_completed": "2026-10-11T10:55:42+08:00",
+    "manifest": "D:\\project\\yuejuan\\reports\\platform-audit-2026-10-10\\source-manifest-resume-2026-10-11.csv",
+    "verification": "All copied files match manifest SHA256",
+    "manifest_sha256": "f939ec3a24e837f45fba766fc1d614ad75d63707d8303e2f090029787506a56f",
+    "source_root": "D:\\tools\\audit-codeql-20261010\\source-20261011",
+    "files": 2502
+  },
+  "languages": {
+    "python": {
+      "create": {
+        "language": "python",
+        "stage": "create",
+        "started": "2026-10-11T10:57:04+08:00",
+        "command": [
+          "D:\\tools\\audit-codeql-20261010\\codeql\\codeql.exe",
+          "database",
+          "create",
+          "D:\\tools\\audit-codeql-20261010\\databases\\python-20261011",
+          "--language=python",
+          "--source-root=D:\\tools\\audit-codeql-20261010\\source-20261011",
+          "--threads=2",
+          "--ram=1024",
+          "--build-mode=none",
+          "--common-caches=D:\\tools\\audit-codeql-20261010\\common-caches"
+        ],
+        "log": "D:\\project\\yuejuan\\reports\\platform-audit-2026-10-10\\codeql\\python-create.log",
+        "exit_code": 0,
+        "finished": "2026-10-11T10:58:31+08:00",
+        "elapsed_seconds": 87.16
+      },
+      "analyze": {
+        "language": "python",
+        "stage": "analyze",
+        "started": "2026-10-11T11:30:00+08:00",
+        "command": [
+          "D:\\tools\\audit-codeql-20261010\\codeql\\codeql.exe",
+          "database",
+          "analyze",
+          "D:\\tools\\audit-codeql-20261010\\databases\\python-20261011",
+          "codeql/python-queries:codeql-suites/python-security-and-quality.qls",
+          "--threads=2",
+          "--ram=2048",
+          "--max-disk-cache=2048",
+          "--min-disk-free=8192",
+          "--no-download",
+          "--format=sarifv2.1.0",
+          "--output=D:\\project\\yuejuan\\reports\\platform-audit-2026-10-10\\codeql\\python.sarif",
+          "--sarif-category=python",
+          "--sarif-include-query-help=always",
+          "--no-sarif-add-file-contents",
+          "--no-sarif-add-snippets",
+          "--common-caches=D:\\tools\\audit-codeql-20261010\\common-caches"
+        ],
+        "log": "D:\\project\\yuejuan\\reports\\platform-audit-2026-10-10\\codeql\\python-analyze.log",
+        "exit_code": 0,
+        "finished": "2026-10-11T11:31:42+08:00",
+        "elapsed_seconds": 102.06
+      },
+      "status": "analyzed",
+      "scanned_files_diagnostic": [
+        "CodeQL scanned 182 out of 182 Python files and 3 out of 3 GitHub Actions files in this invocation. Typically CodeQL is configured to analyze a single CodeQL language per invocation, so check other invocations to determine overall coverage information."
+      ],
+      "query_evaluation_completions_in_log": 174,
+      "selected_queries": 174,
+      "database": {
+        "baselineLinesOfCode": "29559",
+        "primaryLanguage": "python",
+        "buildMode": "none",
+        "finalised": "true",
+        "sourceLocationPrefix": "D:\\tools\\audit-codeql-20261010\\source-20261011",
+        "archived_source_files": 191
+      },
+      "tool_execution_notifications": {
+        "none": 2362,
+        "note": 13
+      },
+      "sarif_invocations_successful": true,
+      "alerts": 55,
+      "rules_in_sarif": 172,
+      "result_rules": {
+        "py/polynomial-redos": 1,
+        "py/attribute-shadows-method": 3,
+        "py/empty-except": 5,
+        "py/implicit-string-concatenation-in-list": 4,
+        "py/unnecessary-lambda": 2,
+        "py/procedure-return-value-used": 1,
+        "py/import-and-import-from": 1,
+        "py/unused-import": 1,
+        "py/ineffectual-statement": 22,
+        "py/unused-global-variable": 15
+      },
+      "levels": {
+        "warning": 6,
+        "error": 3,
+        "note": 46
+      },
+      "security_severity": {
+        "high": 1,
+        "not_security": 54
+      },
+      "affected_files": 17,
+      "quality_human_verdicts": {
+        "intentional_behavior": 7,
+        "low_maintenance": 8,
+        "false_positive_context": 39
+      },
+      "quality_finding_reviews_pending": 0
+    },
+    "javascript": {
+      "create": {
+        "language": "javascript",
+        "stage": "create",
+        "started": "2026-10-11T12:00:39+08:00",
+        "command": [
+          "D:\\tools\\audit-codeql-20261010\\codeql\\codeql.exe",
+          "database",
+          "create",
+          "D:\\tools\\audit-codeql-20261010\\databases\\javascript-20261011-context",
+          "--language=javascript",
+          "--source-root=D:\\tools\\audit-codeql-20261010\\source-20261011",
+          "--threads=2",
+          "--ram=2048",
+          "--build-mode=none",
+          "--common-caches=D:\\tools\\audit-codeql-20261010\\common-caches"
+        ],
+        "log": "D:\\project\\yuejuan\\reports\\platform-audit-2026-10-10\\codeql\\javascript-create.log",
+        "exit_code": 0,
+        "finished": "2026-10-11T12:05:42+08:00",
+        "elapsed_seconds": 303.53
+      },
+      "analyze": {
+        "language": "javascript",
+        "stage": "analyze",
+        "started": "2026-10-11T12:10:15+08:00",
+        "command": [
+          "D:\\tools\\audit-codeql-20261010\\codeql\\codeql.exe",
+          "database",
+          "analyze",
+          "D:\\tools\\audit-codeql-20261010\\databases\\javascript-20261011-context",
+          "codeql/javascript-queries:codeql-suites/javascript-security-and-quality.qls",
+          "--threads=1",
+          "--ram=3072",
+          "--max-disk-cache=2048",
+          "--min-disk-free=8192",
+          "--no-download",
+          "--format=sarifv2.1.0",
+          "--output=D:\\project\\yuejuan\\reports\\platform-audit-2026-10-10\\codeql\\javascript.sarif",
+          "--sarif-category=javascript",
+          "--sarif-include-query-help=always",
+          "--no-sarif-add-file-contents",
+          "--no-sarif-add-snippets",
+          "--common-caches=D:\\tools\\audit-codeql-20261010\\common-caches"
+        ],
+        "log": "D:\\project\\yuejuan\\reports\\platform-audit-2026-10-10\\codeql\\javascript-analyze.log",
+        "exit_code": 0,
+        "finished": "2026-10-11T12:26:15+08:00",
+        "elapsed_seconds": 960.0
+      },
+      "status": "analyzed",
+      "scanned_files_diagnostic": [
+        "CodeQL scanned 960 out of 960 JavaScript/TypeScript files and 3 out of 3 GitHub Actions files in this invocation. Typically CodeQL is configured to analyze a single CodeQL language per invocation, so check other invocations to determine overall coverage information."
+      ],
+      "query_evaluation_completions_in_log": 203,
+      "selected_queries": 203,
+      "database": {
+        "baselineLinesOfCode": "112602",
+        "primaryLanguage": "javascript",
+        "buildMode": "none",
+        "finalised": "true",
+        "sourceLocationPrefix": "D:\\tools\\audit-codeql-20261010\\source-20261011",
+        "archived_source_files": 1093
+      },
+      "tool_execution_notifications": {
+        "none": 3154
+      },
+      "sarif_invocations_successful": true,
+      "alerts": 14,
+      "rules_in_sarif": 201,
+      "result_rules": {
+        "js/file-system-race": 4,
+        "js/unused-local-variable": 2,
+        "js/duplicate-property": 1,
+        "js/useless-expression": 2,
+        "js/superfluous-trailing-arguments": 2,
+        "js/trivial-conditional": 3
+      },
+      "levels": {
+        "warning": 12,
+        "note": 2
+      },
+      "security_severity": {
+        "high": 4,
+        "not_security": 10
+      },
+      "affected_files": 9,
+      "human_verdicts": {
+        "conditional_local_hardening": 4,
+        "low_maintenance": 5,
+        "intentional_behavior": 3,
+        "false_positive_context": 2
+      },
+      "finding_reviews_pending": 0
+    },
+    "go": {
+      "create": {
+        "language": "go",
+        "stage": "create",
+        "started": "2026-10-11T13:11:05+08:00",
+        "command": [
+          "D:\\tools\\audit-codeql-20261010\\codeql\\codeql.exe",
+          "database",
+          "create",
+          "D:\\tools\\audit-codeql-20261010\\databases\\go-20261011",
+          "--language=go",
+          "--source-root=D:\\tools\\audit-codeql-20261010\\source-20261011",
+          "--threads=1",
+          "--ram=3072",
+          "--build-mode=autobuild",
+          "--working-dir=D:\\tools\\audit-codeql-20261010\\source-20261011\\services\\api-gateway",
+          "--extractor-option=go.extract_tests=true",
+          "--common-caches=D:\\tools\\audit-codeql-20261010\\common-caches"
+        ],
+        "log": "D:\\project\\yuejuan\\reports\\platform-audit-2026-10-10\\codeql\\go-create.log",
+        "exit_code": 0,
+        "finished": "2026-10-11T13:21:12+08:00",
+        "elapsed_seconds": 607.55
+      },
+      "analyze": {
+        "language": "go",
+        "stage": "analyze",
+        "started": "2026-10-11T13:21:12+08:00",
+        "command": [
+          "D:\\tools\\audit-codeql-20261010\\codeql\\codeql.exe",
+          "database",
+          "analyze",
+          "D:\\tools\\audit-codeql-20261010\\databases\\go-20261011",
+          "codeql/go-queries:codeql-suites/go-security-and-quality.qls",
+          "--threads=1",
+          "--ram=3072",
+          "--max-disk-cache=2048",
+          "--min-disk-free=8192",
+          "--no-download",
+          "--format=sarifv2.1.0",
+          "--output=D:\\project\\yuejuan\\reports\\platform-audit-2026-10-10\\codeql\\go.sarif",
+          "--sarif-category=go",
+          "--sarif-include-query-help=always",
+          "--no-sarif-add-file-contents",
+          "--no-sarif-add-snippets",
+          "--common-caches=D:\\tools\\audit-codeql-20261010\\common-caches"
+        ],
+        "log": "D:\\project\\yuejuan\\reports\\platform-audit-2026-10-10\\codeql\\go-analyze.log",
+        "exit_code": 0,
+        "finished": "2026-10-11T13:28:30+08:00",
+        "elapsed_seconds": 437.77
+      },
+      "status": "analyzed",
+      "scanned_files_diagnostic": [
+        "CodeQL scanned 1026 out of 1026 Go files in this invocation. Typically CodeQL is configured to analyze a single CodeQL language per invocation, so check other invocations to determine overall coverage information."
+      ],
+      "query_evaluation_completions_in_log": 59,
+      "selected_queries": 59,
+      "database": {
+        "baselineLinesOfCode": "197805",
+        "primaryLanguage": "go",
+        "buildMode": "autobuild",
+        "finalised": "true",
+        "sourceLocationPrefix": "D:\\tools\\audit-codeql-20261010\\source-20261011",
+        "archived_source_files": 1095
+      },
+      "tool_execution_notifications": {
+        "none": 3198,
+        "note": 1
+      },
+      "sarif_invocations_successful": true,
+      "alerts": 23,
+      "rules_in_sarif": 57,
+      "result_rules": {
+        "go/unsafe-quoting": 6,
+        "go/allocation-size-overflow": 1,
+        "go/insecure-tls": 1,
+        "go/weak-sensitive-data-hashing": 2,
+        "go/uncontrolled-allocation-size": 4,
+        "go/request-forgery": 1,
+        "go/log-injection": 1,
+        "go/index-out-of-bounds": 1,
+        "go/useless-assignment-to-field": 3,
+        "go/useless-assignment-to-local": 3
+      },
+      "levels": {
+        "warning": 16,
+        "error": 7
+      },
+      "security_severity": {
+        "critical": 7,
+        "high": 8,
+        "medium": 1,
+        "not_security": 7
+      },
+      "affected_files": 18,
+      "human_verdicts": {
+        "false_positive_context": 14,
+        "low_hardening": 1,
+        "intentional_test_behavior": 1,
+        "conditional_deployment_review": 1,
+        "low_maintenance": 6
+      },
+      "finding_reviews_pending": 0
+    },
+    "rust": {
+      "create": {
+        "language": "rust",
+        "stage": "create",
+        "started": "2026-10-11T15:14:50+08:00",
+        "command": [
+          "D:\\tools\\audit-codeql-20261010\\codeql\\codeql.exe",
+          "database",
+          "create",
+          "D:\\tools\\audit-codeql-20261010\\databases\\rust-20261011-context",
+          "--language=rust",
+          "--source-root=D:\\tools\\audit-codeql-20261010\\source-rust-context-20261011",
+          "--threads=1",
+          "--ram=4096",
+          "--build-mode=none",
+          "--working-dir=D:\\tools\\audit-codeql-20261010\\source-rust-context-20261011\\apps\\desktop-client\\src-tauri",
+          "--extractor-option=rust.cargo_target_dir=D:\\tools\\audit-codeql-20261010\\databases\\rust-20261011-toolchain-ready\\working\\target",
+          "--extractor-option=rust.trap.compression=gzip",
+          "--common-caches=D:\\tools\\audit-codeql-20261010\\common-caches"
+        ],
+        "log": "D:\\project\\yuejuan\\reports\\platform-audit-2026-10-10\\codeql\\rust-create.log",
+        "environment_overrides": {
+          "RAYON_NUM_THREADS": "1",
+          "CARGO_BUILD_JOBS": "1",
+          "CARGO_NET_OFFLINE": "true",
+          "TEMP": "D:\\tools\\audit-codeql-20261010\\rust-low-memory-temp",
+          "TMP": "D:\\tools\\audit-codeql-20261010\\rust-low-memory-temp"
+        },
+        "exit_code": 0,
+        "finished": "2026-10-11T15:29:16+08:00",
+        "elapsed_seconds": 865.48
+      },
+      "analyze": {
+        "language": "rust",
+        "stage": "analyze",
+        "started": "2026-10-11T15:34:35+08:00",
+        "command": [
+          "D:\\tools\\audit-codeql-20261010\\codeql\\codeql.exe",
+          "database",
+          "analyze",
+          "D:\\tools\\audit-codeql-20261010\\databases\\rust-20261011-context",
+          "codeql/rust-queries:codeql-suites/rust-security-and-quality.qls",
+          "--threads=1",
+          "--ram=3072",
+          "--max-disk-cache=2048",
+          "--min-disk-free=8192",
+          "--no-download",
+          "--format=sarifv2.1.0",
+          "--output=D:\\project\\yuejuan\\reports\\platform-audit-2026-10-10\\codeql\\rust.sarif",
+          "--sarif-category=rust",
+          "--sarif-include-query-help=always",
+          "--no-sarif-add-file-contents",
+          "--no-sarif-add-snippets",
+          "--common-caches=D:\\tools\\audit-codeql-20261010\\common-caches"
+        ],
+        "log": "D:\\project\\yuejuan\\reports\\platform-audit-2026-10-10\\codeql\\rust-analyze.log",
+        "environment_overrides": {
+          "RAYON_NUM_THREADS": "1",
+          "CARGO_BUILD_JOBS": "1",
+          "CARGO_NET_OFFLINE": "true",
+          "TEMP": "D:\\tools\\audit-codeql-20261010\\rust-low-memory-temp",
+          "TMP": "D:\\tools\\audit-codeql-20261010\\rust-low-memory-temp"
+        },
+        "exit_code": 0,
+        "finished": "2026-10-11T16:20:55+08:00",
+        "elapsed_seconds": 2780.03
+      },
+      "status": "analyzed",
+      "scanned_files_diagnostic": [
+        "CodeQL scanned 16 out of 16 Rust files in this invocation. Typically CodeQL is configured to analyze a single CodeQL language per invocation, so check other invocations to determine overall coverage information."
+      ],
+      "query_evaluation_completions_in_log": 41,
+      "official_extraction_metrics": {
+        "files_with_extraction_errors": 2,
+        "files_without_extraction_error": 14
+      },
+      "extraction_warning_count": 28,
+      "extraction_limitations": [
+        "被归档的维护源码数量不等于全部宏、字符串与类型语义完整。",
+        "CRLF 字面量警告的位置须核验；Rust 官方输入规范会先归一化 CRLF，但不能据此保证本提取器已正确解码。",
+        "本轮原生日志没有宏和表达式警告，官方 UnresolvedMacroCalls 查询返回 0；该结论只针对当前数据库，不能证明所有未被规则建模的业务语义完整。"
+      ],
+      "official_diagnostic_query_counts": {
+        "ExtractedFiles": 16,
+        "ExtractionErrors": 0,
+        "ExtractionWarnings": 28,
+        "UnextractedElements": 0,
+        "UnresolvedMacroCalls": 0,
+        "NumberOfFilesExtractedWithErrors": 2,
+        "NumberOfSuccessfullyExtractedFiles": 14
+      },
+      "official_diagnostic_query_summary": "rust-diagnostic-query-summary.json",
+      "selected_queries": 41,
+      "database": {
+        "baselineLinesOfCode": "4426",
+        "primaryLanguage": "rust",
+        "buildMode": "none",
+        "finalised": "true",
+        "sourceLocationPrefix": "D:\\tools\\audit-codeql-20261010\\source-rust-context-20261011",
+        "archived_source_files": 8536
+      },
+      "source_context_supplement": {
+        "source_root": "D:\\tools\\audit-codeql-20261010\\source-rust-context-20261011",
+        "original_manifest_entries": 2514,
+        "all_original_manifest_entries_unchanged": true,
+        "added_assets": [
+          {
+            "path": "apps/desktop-client/src-tauri/icons/icon.ico",
+            "origin": "D:\\project\\yuejuan\\apps\\desktop-client\\src-tauri\\icons\\icon.ico",
+            "bytes": 4734,
+            "sha256": "016265bc71058837ebb82d73e5289a0fef8f81737cf7e7f5b6e75de723f87a17",
+            "origin_mtime_ns": 1785206536086579700,
+            "proof": "rust-macro-probe-attempt2.stderr.log: icons/icon.ico not found; required for generating a Windows Resource file during tauri-build"
+          }
+        ],
+        "generated_build_context": [
+          {
+            "path": "apps/desktop-client/src-tauri/gen/schemas/acl-manifests.json",
+            "bytes": 65934,
+            "sha256": "b8665c2471bd4c59d570c77e226f37410ce396da52525383a15b5cbbff9d786e",
+            "origin": "Generated by existing build.rs / tauri-build during rust-macro-probe attempt3, successful Cargo exit0."
+          },
+          {
+            "path": "apps/desktop-client/src-tauri/gen/schemas/capabilities.json",
+            "bytes": 337,
+            "sha256": "184639d747fbd454f29939127d5309a351613b6ac532951e8d47d35993c444c5",
+            "origin": "Generated by existing build.rs / tauri-build during rust-macro-probe attempt3, successful Cargo exit0."
+          },
+          {
+            "path": "apps/desktop-client/src-tauri/gen/schemas/desktop-schema.json",
+            "bytes": 116049,
+            "sha256": "f68a9c570ecff07ac6826145d33b966d6fc02f7d680967f44437268b08a6ba78",
+            "origin": "Generated by existing build.rs / tauri-build during rust-macro-probe attempt3, successful Cargo exit0."
+          },
+          {
+            "path": "apps/desktop-client/src-tauri/gen/schemas/windows-schema.json",
+            "bytes": 116049,
+            "sha256": "f68a9c570ecff07ac6826145d33b966d6fc02f7d680967f44437268b08a6ba78",
+            "origin": "Generated by existing build.rs / tauri-build during rust-macro-probe attempt3, successful Cargo exit0."
+          }
+        ],
+        "verification_file": "rust-context-source-verification.json"
+      },
+      "tool_execution_notifications": {
+        "note": 68,
+        "none": 2187,
+        "warning": 28
+      },
+      "sarif_invocations_successful": true,
+      "alerts": 14,
+      "rules_in_sarif": 30,
+      "result_rules": {
+        "rust/hard-coded-cryptographic-value": 14
+      },
+      "levels": {
+        "warning": 14
+      },
+      "security_severity": {
+        "critical": 14
+      },
+      "affected_files": 6,
+      "human_verdicts": {
+        "false_positive_context": 3,
+        "intentional_test_behavior": 11
+      },
+      "finding_reviews_pending": 0
+    },
+    "actions": {
+      "create": {
+        "language": "actions",
+        "stage": "create",
+        "started": "2026-10-11T11:17:27+08:00",
+        "command": [
+          "D:\\tools\\audit-codeql-20261010\\codeql\\codeql.exe",
+          "database",
+          "create",
+          "D:\\tools\\audit-codeql-20261010\\databases\\actions-20261011-process-policy",
+          "--language=actions",
+          "--source-root=D:\\tools\\audit-codeql-20261010\\source-20261011",
+          "--threads=2",
+          "--ram=2048",
+          "--build-mode=none",
+          "--common-caches=D:\\tools\\audit-codeql-20261010\\common-caches"
+        ],
+        "log": "D:\\project\\yuejuan\\reports\\platform-audit-2026-10-10\\codeql\\actions-create.log",
+        "exit_code": 0,
+        "finished": "2026-10-11T11:17:58+08:00",
+        "elapsed_seconds": 31.28
+      },
+      "analyze": {
+        "language": "actions",
+        "stage": "analyze",
+        "started": "2026-10-11T11:31:44+08:00",
+        "command": [
+          "D:\\tools\\audit-codeql-20261010\\codeql\\codeql.exe",
+          "database",
+          "analyze",
+          "D:\\tools\\audit-codeql-20261010\\databases\\actions-20261011-process-policy",
+          "codeql/actions-queries:codeql-suites/actions-security-and-quality.qls",
+          "--threads=2",
+          "--ram=2048",
+          "--max-disk-cache=2048",
+          "--min-disk-free=8192",
+          "--no-download",
+          "--format=sarifv2.1.0",
+          "--output=D:\\project\\yuejuan\\reports\\platform-audit-2026-10-10\\codeql\\actions.sarif",
+          "--sarif-category=actions",
+          "--sarif-include-query-help=always",
+          "--no-sarif-add-file-contents",
+          "--no-sarif-add-snippets",
+          "--common-caches=D:\\tools\\audit-codeql-20261010\\common-caches"
+        ],
+        "log": "D:\\project\\yuejuan\\reports\\platform-audit-2026-10-10\\codeql\\actions-analyze.log",
+        "exit_code": 0,
+        "finished": "2026-10-11T11:32:19+08:00",
+        "elapsed_seconds": 35.69
+      },
+      "status": "analyzed",
+      "scanned_files_diagnostic": [
+        "CodeQL scanned 3 out of 3 GitHub Actions files in this invocation. Typically CodeQL is configured to analyze a single CodeQL language per invocation, so check other invocations to determine overall coverage information."
+      ],
+      "query_evaluation_completions_in_log": 28,
+      "selected_queries": 28,
+      "database": {
+        "baselineLinesOfCode": "914",
+        "primaryLanguage": "actions",
+        "buildMode": "none",
+        "finalised": "true",
+        "sourceLocationPrefix": "D:\\tools\\audit-codeql-20261010\\source-20261011",
+        "archived_source_files": 3
+      },
+      "tool_execution_notifications": {
+        "none": 2174
+      },
+      "sarif_invocations_successful": true,
+      "alerts": 0,
+      "rules_in_sarif": 27,
+      "result_rules": {},
+      "levels": {},
+      "security_severity": {},
+      "affected_files": 0
+    }
+  },
+  "completed_language_count": 5,
+  "planned_language_count": 5,
+  "total_alerts": 106,
+  "all_planned_language_analyses_successful": true,
+  "selected_query_count": 505,
+  "query_evaluation_completions_in_successful_logs": 505,
+  "all_selected_queries_have_logged_evaluation_completion": true,
+  "human_verdict_counts": {
+    "confirmed_cpu_amplification_conditional": 1,
+    "intentional_behavior": 10,
+    "low_maintenance": 19,
+    "false_positive_context": 58,
+    "conditional_local_hardening": 4,
+    "low_hardening": 1,
+    "intentional_test_behavior": 12,
+    "conditional_deployment_review": 1
+  },
+  "finding_reviews_pending": 0
+}

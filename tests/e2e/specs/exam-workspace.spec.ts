@@ -4,6 +4,10 @@ import { captureFailedRequests, installApiMocks } from "../fixtures/apiMocks";
 test("mock API 支持动态考试 ID，并在测试层拦截未配置接口", async ({ page }) => {
   await installApiMocks(page, { role: "school_admin", initiallyAuthenticated: true });
   const failedRequests = captureFailedRequests(page);
+  let capabilitiesSucceeded = false;
+  page.on("response", (response) => {
+    if (new URL(response.url()).pathname === "/api/v1/school-assistant/capabilities" && response.status() === 200) capabilitiesSucceeded = true;
+  });
   await page.goto("/#/admin/dashboard", { waitUntil: "domcontentloaded" });
 
   const result = await page.evaluate(async () => {
@@ -25,7 +29,9 @@ test("mock API 支持动态考试 ID，并在测试层拦截未配置接口", as
     missingStatus: 404,
     missingCode: "e2e_mock_missing"
   });
-  expect(failedRequests).toEqual([]);
+  // StrictMode 会取消首次后台能力查询；这里只检查本用例的两次接口，并另核实能力查询最终成功。
+  expect(failedRequests.filter((failure) => /\/api\/v1\/(?:exams\/exam-created-math\/workspace|e2e-unconfigured)(?:[?\s]|$)/.test(failure))).toEqual([]);
+  await expect.poll(() => capabilitiesSucceeded).toBe(true);
 });
 
 test("考试工作区按四阶段导航，并让阻断项跳到可处理环节", async ({ page }) => {
@@ -119,7 +125,7 @@ test("同场次学科切换直接使用工作台投影，不拉取全校考试�
     if (new URL(request.url()).pathname === "/api/v1/exams") examListRequests += 1;
   });
 
-  await page.goto("/#/admin/exams/exam-1/settings", { waitUntil: "networkidle" });
+  await page.goto("/#/admin/exams/exam-1/settings", { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: "2026 春季期中考试" })).toBeVisible();
   await page.locator(".exam-workspace-subject .ant-select-selector").click();
   await page.getByTitle("物理 · 100 分").click();

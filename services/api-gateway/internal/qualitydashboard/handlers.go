@@ -12,9 +12,8 @@ type Handler struct{ service *Service }
 
 func NewHandler(service *Service) *Handler { return &Handler{service: service} }
 
-// RegisterRoutes intentionally accepts the composition-root permission
-// wrapper. The dashboard is a school-manager projection and must not be made
-// available to ordinary graders merely because they can work a review task.
+// RegisterRoutes 接受组装入口的权限包装器。
+// 此仪表盘是学校管理员投影，不能仅因普通阅卷人员能处理复核任务就向其开放。
 func RegisterRoutes(mux *http.ServeMux, handler *Handler, requireRead func(http.HandlerFunc) http.Handler) {
 	mux.Handle("GET /api/v1/exams/{examId}/quality-dashboard", requireRead(handler.Get))
 }

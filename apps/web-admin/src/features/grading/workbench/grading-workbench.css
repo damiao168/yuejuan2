@@ -1,5 +1,5 @@
-/* Grading Workbench feature styles.
-   Keep new workbench-specific rules here; shared foundation and shell styles remain in styles.css. */
+/* 阅卷工作台功能样式。
+   新增工作台专用规则放在这里；共享基础和外壳样式仍保留在 styles.css。 */
 
 .grading-field { display: flex; flex-direction: column; gap: 4px; }
 .grading-field-label { display: flex; align-items: center; gap: 8px; }
@@ -1043,10 +1043,11 @@
   }
 }
 
-/* Immersive grading keeps the answer, scoring basis and next action in one viewport. */
+/* 沉浸式阅卷让答案、评分依据和下一步操作保持在同一个视口中。 */
 .immersive-workspace .grading-shell {
   height: 100%;
   min-height: 0;
+  container-type: inline-size;
   display: flex;
   flex-direction: column;
   gap: 0;
@@ -1382,6 +1383,27 @@
   .immersive-workspace .grading-taskbar .ant-input-affix-wrapper {
     width: 100%;
   }
+}
+
+/* 阅卷区按工作区实际宽度分段，不让任务栏与评分栏共同挤压答卷证据。 */
+@container (max-width: 1224px) {
+  .immersive-workspace .grading-workspace { grid-template-columns: 190px minmax(0, 1fr); }
+  .immersive-workspace .grading-panels { grid-template-columns: minmax(0, 1fr) minmax(300px, 340px); grid-template-areas: "answer inspector"; }
+}
+
+@container (max-width: 1050px) {
+  .immersive-workspace .grading-workspace { height: auto; grid-template-columns: minmax(0, 1fr); overflow: visible; }
+  .immersive-workspace .grading-task-rail { position: static; height: auto; max-height: 200px; border-width: 0 0 1px; }
+  .immersive-workspace .grading-task-list { max-height: 114px; }
+  .immersive-workspace .grading-main,
+  .immersive-workspace .grading-panels { height: auto; overflow: visible; }
+  .immersive-workspace .grading-panels { grid-template-columns: minmax(0, 1fr) minmax(300px, 340px); grid-template-areas: "answer inspector"; }
+  .immersive-workspace .grading-inspector { height: auto; overflow-y: auto; }
+}
+
+@container (max-width: 920px) {
+  .immersive-workspace .grading-panels { grid-template-columns: minmax(0, 1fr); grid-template-areas: "answer" "inspector"; }
+  .immersive-workspace .grading-inspector { overflow: visible; }
 }
 
 .grading-reason-banner { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 14px; padding: 13px 16px; border-left: 3px solid #d48806; background: #fffaf0; }

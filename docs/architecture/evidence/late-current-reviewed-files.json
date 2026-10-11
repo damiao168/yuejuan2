@@ -1,0 +1,78 @@
+{
+  "checked_at_utc": "2026-10-11T04:06:44.091712+00:00",
+  "scope": "已实际读取的当前架构边界；不将协作抽读和检索提升为全文件审计完成",
+  "files": [
+    {
+      "file": "services/api-gateway/internal/releasegate/service.go",
+      "source_sha256": "1a66121cfe3df61d7be016e0b85dc7a99a2c1991ec66531e77958127fd5ac05b",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "status": "pending",
+      "modified": false,
+      "reason": "根任务与协作复核发布入口、只读Inspect及共用求值；旧发布仍独立，冻结release检查仍由scorerelease完成。"
+    },
+    {
+      "file": "ai-services/grading_agent/server.py",
+      "source_sha256": "62c2b234657f1f29d444968d8ce815647f820b1b8c7b3eb7d6a6db6d617c637e",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "status": "pending",
+      "modified": false,
+      "reason": "协作全文读TLS监听与绑定前验证，根任务抽读HTTP边界；不据此认定整个服务运行完成。"
+    },
+    {
+      "file": "ai-services/grading_agent/config.py",
+      "source_sha256": "2ff9cbe6105aa62ab6098f53cc5d8cf0bde0d858e8bf7bc5992ec48648d3b460",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "status": "pending",
+      "modified": false,
+      "reason": "协作核对TLS配置成对、明确本地回环例外；当前事实有依据，仍未做运行验收。"
+    },
+    {
+      "file": "infra/docker-compose/docker-compose.yml",
+      "source_sha256": "e3bf76a592b30e82e2d6534b943710e453db9f8fb2c8e0bf5f1b415e3cc43067",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "status": "pending",
+      "modified": false,
+      "reason": "协作与根任务抽读API、Agent、Worker、数据和观测配置；API到Agent及OCR到Math使用HTTPS，外Nginx保持HTTP。"
+    },
+    {
+      "file": "infra/docker-compose/.env.example",
+      "source_sha256": "2040d57834f2213a0be3a26176e6f30ba231d8dbaae3aa7dc339433c68eb1499",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "status": "pending",
+      "modified": false,
+      "reason": "协作核对内部HTTPS样例与证书/CA字段，仅记录字段和协议不记录凭据。"
+    },
+    {
+      "file": "infra/docker-compose/scripts/preflight.ps1",
+      "source_sha256": "78cc6e4ba5c5356c159bc12716b0b6f51ae7fa7b86725a00553e8f704de3557b",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "status": "pending",
+      "modified": false,
+      "reason": "协作与根任务抽读跨容器两条HTTPS链路强制检查，未运行preflight或部署验收。"
+    },
+    {
+      "file": "services/math-verification-worker/math_verification_worker/server.py",
+      "source_sha256": "d9d6a02c89cea615738f507e3462e185e4c9992537acdb6b93ce28427f9a4f1f",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "status": "pending",
+      "modified": false,
+      "reason": "协作全文读取189行与当前hash；spawn运算预算、超时uncertain和TLS最低1.2/显式本地回环例外；仍未运行效果验收。"
+    },
+    {
+      "file": "services/ocr-worker/ocr_worker/config.py",
+      "source_sha256": "d49444a1ead2f5f5c3d8277cd75c2a7823e5e6b7c200a91b5ef496292d0ecc59",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "status": "pending",
+      "modified": false,
+      "reason": "协作核对当前HTTPS默认与配置约束；限定partial，不续认此前版本。"
+    }
+  ]
+}

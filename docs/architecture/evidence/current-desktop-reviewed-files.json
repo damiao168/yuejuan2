@@ -1,0 +1,69 @@
+{
+  "reviewed_at_utc": "2026-10-11T03:51:18.6199496+00:00",
+  "review_scope": "当前 OfflineWorkbench.tsx 单文件全文与桌面架构相关调用边界；导入模块、测试及运行验收不在本批完成范围。",
+  "read_range_semantics": "inclusive_1_based",
+  "analysis_status": "complete",
+  "full_read_file_count": 1,
+  "tests_executed": false,
+  "modified_business_files": false,
+  "modified_diagram_files": false,
+  "diagram_01_08_10_fact_change_required": false,
+  "native_crypto_revalidated": false,
+  "resource_limit_encountered": false,
+  "files": [
+    {
+      "file": "apps/desktop-client/src/components/OfflineWorkbench.tsx",
+      "status": "existing_sufficient",
+      "read_status": "complete",
+      "analysis_status": "complete",
+      "handling": "read_only",
+      "previous_reviewed_source_sha256": "5c41e3e4d4ee974e8a49bc5c04a7204c168fb69347fd313d2c9674f531fedfa6",
+      "previous_review_stale": true,
+      "source_sha256": "d4bc67fb9e21a876a18f3d92daa63bb23c7a0f00d7d40c062db9e44b0f345fe3",
+      "reviewed_source_sha256": "d4bc67fb9e21a876a18f3d92daa63bb23c7a0f00d7d40c062db9e44b0f345fe3",
+      "before_read_source_sha256": "d4bc67fb9e21a876a18f3d92daa63bb23c7a0f00d7d40c062db9e44b0f345fe3",
+      "after_read_source_sha256": "d4bc67fb9e21a876a18f3d92daa63bb23c7a0f00d7d40c062db9e44b0f345fe3",
+      "hash_stable": true,
+      "line_count": 1143,
+      "read_ranges": [
+        [1, 220],
+        [221, 440],
+        [441, 660],
+        [661, 880],
+        [881, 1100],
+        [1101, 1143]
+      ],
+      "modified": false,
+      "reason": "真实逐块全文审读，含全部组件、JSX和辅助函数；核对任务冻结、真实材料可读状态、加密正文委托、稳定命令先持久化后sync、回执与版本/会话边界，附近注释与本文件控制流相符。未修改源码。",
+      "scope": "完整当前文件；完整审读不代表已复核导入模块的密码、授权、回执或服务端版本实现，也不代表运行测试和原生验收。"
+    }
+  ],
+  "architecture_comparison": [
+    {
+      "diagram": "01-feature-tree",
+      "nodes": ["f10/F10.02", "f10/F10.02.features"],
+      "fact_change_required": false,
+      "reason": "任务下载、加密草稿载荷委托、版本冲突/回执核对和联网同步的工作台边界仍成立；本机授权、凭据库和存储隔离不从本文件独立确证。"
+    },
+    {
+      "diagram": "08-api-data-flow",
+      "nodes": ["files-workers/local", "files-workers/download"],
+      "fact_change_required": false,
+      "reason": "先本地持久化后同步、状态投影和任务受控图像来源不变；图片是本次会话Blob，不随草稿恢复，不推断阅卷图片已永久存入Spool。"
+    },
+    {
+      "diagram": "10-security-deployment",
+      "nodes": [],
+      "fact_change_required": false,
+      "reason": "当前图10没有SQLite加密节点；既有旁置结论仅为payload/Spool加密，没有整库SQLCipher保证。本组件未引入整库加密，也不足以重新验证原生密码实现。"
+    }
+  ],
+  "out_of_scope_unreviewed_dependencies": [
+    "apps/desktop-client/src/lib/offlineStore.ts",
+    "apps/desktop-client/src/lib/durableStore.ts",
+    "apps/desktop-client/src/lib/offlineReviewCommand.ts",
+    "apps/desktop-client/src/components/AnswerDocumentViewer.tsx",
+    "apps/desktop-client/src-tauri/src/durable_store/",
+    "上层会话装配、相关测试与服务端处理"
+  ]
+}

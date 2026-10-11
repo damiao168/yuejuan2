@@ -202,6 +202,9 @@ func cloneMetrics(value *Metrics) *Metrics {
 }
 func cloneSession(value Session) Session {
 	value.Samples = append([]GoldSample(nil), value.Samples...)
+	for i := range value.Samples {
+		value.Samples[i] = publicSamples([]goldReference{{GoldSample: value.Samples[i]}})[0]
+	}
 	value.Metrics, value.CompletedAt, value.InvalidatedAt = cloneMetrics(value.Metrics), cloneTime(value.CompletedAt), cloneTime(value.InvalidatedAt)
 	return value
 }
@@ -209,6 +212,7 @@ func cloneReferences(values []goldReference) []goldReference {
 	out := make([]goldReference, len(values))
 	copy(out, values)
 	for i := range out {
+		out[i].GoldSample = publicSamples([]goldReference{out[i]})[0]
 		out[i].ExpectedCriteria = cloneObject(out[i].ExpectedCriteria)
 	}
 	return out

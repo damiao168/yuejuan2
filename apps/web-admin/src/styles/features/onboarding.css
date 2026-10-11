@@ -1,5 +1,5 @@
-/* First-use readiness is an operational checklist: hierarchy comes from
-   spacing and dividers, while surfaces appear only where the user acts. */
+/* 首次使用的就绪检查采用操作清单：用间距和分隔线建立层级，
+   只在用户实际操作的地方使用独立面板。 */
 .platform-onboarding-page { max-width: 1080px; margin: 0 auto; }
 .platform-onboarding-heading { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: 16px; align-items: start; padding: 10px 0 26px; border-bottom: 1px solid #dfe5ec; animation: onboarding-enter 180ms ease-out; }
 .platform-onboarding-heading > div:nth-child(2) > span { color: #0f766e; font-size: var(--eg-font-caption); font-weight: 700; letter-spacing: .05em; }
@@ -17,14 +17,14 @@
 .onboarding-check:nth-child(3) { animation-delay: 50ms; }
 .onboarding-check:nth-child(4) { animation-delay: 75ms; }
 .onboarding-check:nth-child(5) { animation-delay: 100ms; }
-.onboarding-check-icon { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 50%; color: #64748b; background: #f1f5f9; }
+.onboarding-check-icon { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 50%; color: #59697f; background: #f1f5f9; }
 .onboarding-check.ready .onboarding-check-icon { color: #047857; background: #ecfdf5; }
-.onboarding-check.warning .onboarding-check-icon { color: #b45309; background: #fffbeb; }
+.onboarding-check.warning .onboarding-check-icon { color: #92400e; background: #fffbeb; }
 .onboarding-check.unavailable .onboarding-check-icon { color: #9f1239; background: #fff1f2; }
 .onboarding-check-copy { min-width: 0; }
 .onboarding-check-title { display: flex; align-items: center; gap: 10px; }
 .onboarding-check-title h2 { margin: 1px 0 0; color: #172033; font-size: 1rem; font-weight: 680; }
-.onboarding-check-title span { padding: 2px 7px; border-radius: 999px; color: #64748b; background: #f1f5f9; font-size: 11px; }
+.onboarding-check-title span { padding: 2px 7px; border-radius: 999px; color: #475569; background: #f1f5f9; font-size: 11px; }
 .onboarding-check.ready .onboarding-check-title span { color: #047857; background: #ecfdf5; }
 .onboarding-check.warning .onboarding-check-title span { color: #92400e; background: #fef3c7; }
 .onboarding-check-copy > p { margin: 5px 0 0; color: #64748b; }

@@ -1,0 +1,53 @@
+{
+  "started_at": "2026-10-11T17:05:21.265738+08:00",
+  "finished_at": "2026-10-11T17:05:41.654990+08:00",
+  "duration_seconds": 20.375,
+  "command": [
+    "go",
+    "test",
+    "-json",
+    "-p",
+    "1",
+    "-count=1",
+    "-timeout=5m",
+    "./internal/answergroup",
+    "./internal/modelcalibration",
+    "./internal/gradingevaluation"
+  ],
+  "cwd": "D:\\project\\yuejuan\\services\\api-gateway",
+  "exit_code": 0,
+  "isolation": {
+    "toolchain": "local",
+    "module_proxy": "off",
+    "checksum_service": "off",
+    "GOMAXPROCS": 2,
+    "cleared_environment_names": []
+  },
+  "package_results": [
+    {
+      "Time": "2026-10-11T17:05:33.6495724+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/answergroup",
+      "Elapsed": 1.042
+    },
+    {
+      "Time": "2026-10-11T17:05:37.9319274+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/modelcalibration",
+      "Elapsed": 1.495
+    },
+    {
+      "Time": "2026-10-11T17:05:41.2079073+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/gradingevaluation",
+      "Elapsed": 1.183
+    }
+  ],
+  "test_result_counts": {
+    "pass": 48,
+    "fail": 0,
+    "skip": 0
+  },
+  "skipped_tests": [],
+  "note": "只报告实际运行的包；环境缺失跳过项不算真实数据库或外部模型集成通过。"
+}

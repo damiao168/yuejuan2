@@ -1,0 +1,6 @@
+{"#select":{"columns":[
+   {"name":"error","kind":"Entity"}
+  ,{"kind":"String"}
+  ,{"kind":"Integer"}]
+ ,"tuples":[]
+ }}

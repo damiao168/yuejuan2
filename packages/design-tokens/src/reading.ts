@@ -8,5 +8,5 @@ export function readReadingSize(): ReadingSize {
 
 export function applyReadingSize(size: ReadingSize) {
   document.documentElement.dataset.readingSize = size;
-  try { window.localStorage.setItem(storageKey, size); } catch { /* Session preference still works. */ }
+  try { window.localStorage.setItem(storageKey, size); } catch { /* 当前会话中的偏好设置仍然有效。 */ }
 }

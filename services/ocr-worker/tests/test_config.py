@@ -39,9 +39,59 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(settings.formula_max_padding_height_ratio, 0.75)
         self.assertEqual(settings.formula_model_lifecycle, "auto")
         self.assertFalse(settings.formula_prewarm_fallback)
+        self.assertEqual(settings.math_verify_base_url, "https://math-verification-worker:8092")
         plan = resolve_formula_plan(settings)
         self.assertEqual((plan.lifecycle, plan.batch_size), ("per_job", 1))
         self.assertEqual(plan.source, "compatibility_default")
+
+    @patch.dict(
+        os.environ,
+        {
+            **BASE_ENV,
+            "EDUGRADE_ENV": "production",
+            "EDUGRADE_API_BASE_URL": "https://api-gateway:8443",
+            "EDUGRADE_MATH_RUNTIME_ENABLED": "true",
+            "EDUGRADE_MATH_VERIFY_TOKEN": "synthetic-math-token-" + "x" * 32,
+        },
+        clear=True,
+    )
+    def test_math_runtime_default_verifier_url_is_https_in_production(self):
+        settings = load_settings()
+
+        self.assertTrue(settings.math_runtime_enabled)
+        self.assertEqual(settings.math_verify_base_url, "https://math-verification-worker:8092")
+
+    @patch.dict(
+        os.environ,
+        {
+            **BASE_ENV,
+            "EDUGRADE_ENV": "test",
+            "EDUGRADE_MATH_RUNTIME_ENABLED": "true",
+            "EDUGRADE_MATH_VERIFY_BASE_URL": "http://127.0.0.1:8092",
+            "EDUGRADE_MATH_VERIFY_TOKEN": "synthetic-math-token-" + "x" * 32,
+        },
+        clear=True,
+    )
+    def test_explicit_development_verifier_url_keeps_loopback_override(self):
+        settings = load_settings()
+
+        self.assertEqual(settings.math_verify_base_url, "http://127.0.0.1:8092")
+
+    @patch.dict(
+        os.environ,
+        {
+            **BASE_ENV,
+            "EDUGRADE_ENV": "production",
+            "EDUGRADE_API_BASE_URL": "https://api-gateway:8443",
+            "EDUGRADE_MATH_RUNTIME_ENABLED": "true",
+            "EDUGRADE_MATH_VERIFY_BASE_URL": "http://math-verification-worker:8092",
+            "EDUGRADE_MATH_VERIFY_TOKEN": "synthetic-math-token-" + "x" * 32,
+        },
+        clear=True,
+    )
+    def test_production_verifier_url_rejects_explicit_non_loopback_http(self):
+        with self.assertRaisesRegex(ValueError, "MATH_VERIFY_BASE_URL"):
+            load_settings()
 
     @patch.dict(
         os.environ,

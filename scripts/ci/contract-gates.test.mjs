@@ -31,6 +31,66 @@ test("breaking gate rejects removal of a required field and status enum value", 
   assert.ok(failures.some((failure) => failure.includes('removed enum value "failed" from Result.status')), failures.join("\n"));
 });
 
+test("breaking gate preserves parameter and nested payload diagnostic order", () => {
+  const operation = {
+    operationId: "readResult",
+    parameters: [
+      { in: "query", name: "removed", schema: { type: "string" }, required: false },
+      { in: "query", name: "changed", schema: { type: "string" }, required: false },
+      { in: "query", name: "required", schema: { type: "string" }, required: false },
+    ],
+    requestBody: { required: false, schema: { type: "array", items: { type: "object", required: ["id"], properties: { id: { type: "string" } } } } },
+    response: { type: "object", properties: { status: { type: "string", enum: ["ok", "failed"] } } },
+  };
+  const baseline = { operations: { "GET /result": operation }, schemas: {} };
+  assert.deepEqual(findBreakingChanges(baseline, structuredClone(baseline)), []);
+  const candidate = structuredClone(operation);
+  candidate.operationId = "different";
+  candidate.parameters.shift();
+  candidate.parameters[0].schema = { type: "number" };
+  candidate.parameters[1].required = true;
+  candidate.parameters.push({ in: "header", name: "new", schema: { type: "string" }, required: true });
+  candidate.requestBody.required = true;
+  candidate.requestBody.schema.items.required = [];
+  delete candidate.requestBody.schema.items.properties.id;
+  candidate.response.properties.status.enum = ["ok"];
+  assert.deepEqual(findBreakingChanges(baseline, { operations: { "GET /result": candidate }, schemas: {} }), [
+    "changed operationId for GET /result",
+    "removed parameter query:removed from GET /result",
+    "changed parameter type query:changed in GET /result",
+    "made parameter required query:required in GET /result",
+    "added required parameter header:new to GET /result",
+    "made request body required in GET /result",
+    "made required field optional GET /result request[].id",
+    "removed property GET /result request[].id",
+    'removed enum value "failed" from GET /result response.status',
+  ]);
+});
+
+test("breaking gate retains missing operation, shape, ref and response checks", () => {
+  const baseline = {
+    operations: {
+      "GET /removed": { operationId: "removed", parameters: [] },
+      "POST /result": { operationId: "result", parameters: [], requestBody: { required: true }, response: { type: "object" } },
+    },
+    schemas: { Absent: { type: "string" }, Scalar: 1, Array: [], Shape: { type: "object" }, Reference: { $ref: "#/before" } },
+  };
+  const current = {
+    operations: { "POST /result": { operationId: "result", parameters: [] } },
+    schemas: { Scalar: 2, Array: {}, Shape: "text", Reference: { $ref: "#/after" } },
+  };
+  assert.deepEqual(findBreakingChanges(baseline, current), [
+    "removed operation GET /removed",
+    "removed request body from POST /result",
+    "removed success response from POST /result",
+    "removed schema Absent",
+    "changed schema Scalar",
+    "changed schema Array",
+    "removed schema shape Shape",
+    "changed ref for Reference",
+  ]);
+});
+
 test("route gate rejects a newly registered route until its exact exception is reviewed", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "edugrade-contract-gate-"));
   const gatewayRoot = path.join(root, "services/api-gateway/internal/server");
@@ -83,4 +143,40 @@ test("OpenAPI debt ratchet rejects growth and new public commands even when tota
 
   swapped.routes.at(-1).interface_category = "public-feature";
   assert.ok(findRouteDebtFailures(budget, swapped).some((failure) => failure.includes("new public command exception")));
+});
+
+test("route coverage preserves exact approvals, duplicate checks and stale approval rejection", (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "edugrade-route-validation-"));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const gatewayRoot = path.join(root, "gateway");
+  const openapiPath = path.join(root, "openapi.json");
+  const exceptionsPath = path.join(root, "exceptions.json");
+  fs.mkdirSync(gatewayRoot);
+  const policy = {
+    id: "reviewed", interface_category: "test", contract_carrier: "test schema",
+    exception_scope: "exact fixture", owner: "test", review_after: "2026-12-31",
+    reason: "reviewed fixture", routes: ["POST /gap"],
+  };
+  fs.writeFileSync(path.join(gatewayRoot, "routes.go"), 'package gateway\nfunc register() { mux.Handle("GET /contracted", handler); mux.Handle("POST /gap", handler) }\n');
+  fs.writeFileSync(openapiPath, JSON.stringify({ paths: { "/contracted": { get: { operationId: "readContract" } } } }));
+  fs.writeFileSync(exceptionsPath, JSON.stringify({ policies: [policy] }));
+  const options = { root, gatewayRoot, openapiPath, exceptionsPath };
+  const coverage = buildRouteCoverage(options);
+  assert.deepEqual(coverage.counts, { registered: 2, openapi: 1, registered_gaps: 1 });
+  assert.deepEqual(coverage.routes[0], { method: "GET", path: "/contracted", source: "gateway/routes.go", coverage: "openapi", operation_id: "readContract" });
+  const invalidLedgers = [
+    { policies: [policy, policy], error: /duplicate registered-gap policy reviewed/ },
+    { policies: [policy, { ...policy, id: "other" }], error: /duplicate registered-gap approval POST \/gap/ },
+    { policies: [{ ...policy, routes: [] }], error: /requires exact routes/ },
+    { policies: [{ ...policy, routes: ["POST /gap/*"] }], error: /requires an exact route/ },
+    { policies: [{ ...policy, routes: ["POST /missing"] }], error: /unapproved registered route without OpenAPI contract: POST \/gap/ },
+    { policies: [{ ...policy, routes: ["POST /gap", "GET /contracted"] }], error: /stale registered-gap approvals.*GET \/contracted/ },
+  ];
+  for (const { policies, error } of invalidLedgers) {
+    fs.writeFileSync(exceptionsPath, JSON.stringify({ policies }));
+    assert.throws(() => buildRouteCoverage(options), error);
+  }
+  fs.writeFileSync(exceptionsPath, JSON.stringify({ policies: [policy] }));
+  fs.writeFileSync(path.join(gatewayRoot, "duplicate.go"), 'package gateway\nfunc other() { mux.Handle("GET /contracted", handler) }\n');
+  assert.throws(() => buildRouteCoverage(options), /duplicate registered routes: GET \/contracted/);
 });

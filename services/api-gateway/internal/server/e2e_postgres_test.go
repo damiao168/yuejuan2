@@ -100,33 +100,28 @@ func TestCoreWorkflowE2EWithPostgresTestDatabase(t *testing.T) {
 	studentToken := e2eLoginWithTenant(t, router, "demo", "student", "ChangeMe123!")
 	otherStudentToken := e2eLoginWithTenant(t, router, "demo", otherUsername, "ChangeMe123!")
 
+	scope := postgresWorkflowScope{DB: db, Router: router, TenantID: demoTenantID, SchoolID: schoolID, GradeID: gradeID, ClassID: classID, StudentID: studentID, OtherStudentID: otherStudentID, Suffix: suffix, AdminToken: adminToken, TeacherToken: teacherToken, GraderToken: graderToken, StudentToken: studentToken, OtherStudentToken: otherStudentToken, SchoolAdminToken: schoolAdminToken, TeacherID: teacherID, GraderID: graderID, AppealReviewerID: appealReviewerID, AppealReviewerToken: appealReviewerToken}
+	examID := e2ePreparePostgresExamAndFrozenPaper(t, scope)
+	segmentID := e2eCollectPostgresAnswerAndAbstainFromAI(t, scope, examID)
+	e2eCompletePostgresReviewWithDraftIsolation(t, scope, examID, segmentID)
+	e2ePublishPostgresGradeAndReviewAppeal(t, scope, examID, segmentID)
+}
+
+type postgresWorkflowScope struct {
+	DB                                                                                       *sql.DB
+	Router                                                                                   http.Handler
+	TenantID, SchoolID, GradeID, ClassID, StudentID, OtherStudentID, Suffix                  string
+	AdminToken, TeacherToken, GraderToken, StudentToken, OtherStudentToken, SchoolAdminToken string
+	TeacherID, GraderID, AppealReviewerID, AppealReviewerToken                               string
+}
+
+// 先冻结考试名单和评估规则再接收答卷；跨学科策略拒绝与正确学科快照分别保留。
+func e2ePreparePostgresExamAndFrozenPaper(t *testing.T, scope postgresWorkflowScope) string {
+	t.Helper()
+	db, router, schoolID, classID, suffix, adminToken := scope.DB, scope.Router, scope.SchoolID, scope.ClassID, scope.Suffix, scope.AdminToken
 	examResp := e2ePostJSON(t, router, http.MethodPost, "/api/v1/exams", adminToken, `{"school_id":"`+schoolID+`","name":"Story 041 Synthetic Exam","subject":"physics","exam_type":"midterm","total_score":5,"grading_mode":"ai_assisted","appeal_enabled":true,"publish_policy":"manual_after_confirmation","class_ids":["`+classID+`"]}`, http.StatusCreated)["exam"].(map[string]any)
 	examID := e2eString(t, examResp, "id")
-	var candidateCount int
-	if err := db.QueryRow(`SELECT COUNT(*) FROM exam_candidate_snapshot WHERE tenant_id=$1::uuid AND exam_id=$2::uuid`, demoTenantID, examID).Scan(&candidateCount); err != nil || candidateCount != 2 {
-		t.Fatalf("exam creation must freeze two candidate identities, count=%d err=%v", candidateCount, err)
-	}
-	if _, err := db.Exec(`UPDATE student SET name='Story 041 Current Renamed Student' WHERE tenant_id=$1::uuid AND id=$2::uuid`, demoTenantID, studentID); err != nil {
-		t.Fatalf("rename current student after snapshot: %v", err)
-	}
-	transferClass := e2ePostJSON(t, router, http.MethodPost, "/api/v1/classes", adminToken, `{"school_id":"`+schoolID+`","grade_id":"`+gradeID+`","name":"Story 041 Transfer Class","code":"story041-transfer-`+suffix+`"}`, http.StatusCreated)["class"].(map[string]any)
-	transferClassID := e2eString(t, transferClass, "id")
-	e2ePostJSON(t, router, http.MethodPut, "/api/v1/students/"+studentID+"/enrollment", adminToken, `{"class_id":"`+transferClassID+`"}`, http.StatusOK)
-	enrollments := e2eGetJSON(t, router, "/api/v1/students/"+studentID+"/enrollments", adminToken, http.StatusOK)["enrollments"].([]any)
-	if len(enrollments) != 2 || enrollments[0].(map[string]any)["class_id"] != transferClassID || enrollments[1].(map[string]any)["class_id"] != classID {
-		t.Fatalf("student transfer must preserve enrollment history: %#v", enrollments)
-	}
-	roster := e2eGetJSON(t, router, "/api/v1/exams/"+examID+"/roster", adminToken, http.StatusOK)["roster"].(map[string]any)
-	foundFrozenIdentity := false
-	for _, rawEntry := range roster["entries"].([]any) {
-		entry := rawEntry.(map[string]any)
-		if entry["student_id"] == studentID {
-			foundFrozenIdentity = entry["student_name"] == "Story 041 Synthetic Student" && entry["class_id"] == classID
-		}
-	}
-	if !foundFrozenIdentity {
-		t.Fatalf("exam roster must retain the student name captured at exam creation: %#v", roster)
-	}
+	e2eAssertPostgresExamRosterSnapshot(t, scope, examID)
 	paperFileID := e2eUploadSyntheticPDF(t, router, adminToken, "story041-paper-"+suffix+".pdf", "%PDF-1.4\n% story 041 synthetic paper "+suffix+"\n")
 	paperResp := e2ePostJSON(t, router, http.MethodPost, "/api/v1/exams/"+examID+"/papers", adminToken, `{"file_asset_id":"`+paperFileID+`"}`, http.StatusCreated)["paper"].(map[string]any)
 	paperID := e2eString(t, paperResp, "id")
@@ -158,6 +153,44 @@ func TestCoreWorkflowE2EWithPostgresTestDatabase(t *testing.T) {
 		t.Fatalf("test database paper config should be valid: %#v", validation)
 	}
 
+	return examID
+}
+
+// 考试创建后改名和转班只更新当前学籍，名单仍使用考试时的姓名和班级，历史学籍顺序也必须保留。
+func e2eAssertPostgresExamRosterSnapshot(t *testing.T, scope postgresWorkflowScope, examID string) {
+	t.Helper()
+	db, router, demoTenantID, schoolID, gradeID, classID, studentID, suffix, adminToken := scope.DB, scope.Router, scope.TenantID, scope.SchoolID, scope.GradeID, scope.ClassID, scope.StudentID, scope.Suffix, scope.AdminToken
+	var candidateCount int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM exam_candidate_snapshot WHERE tenant_id=$1::uuid AND exam_id=$2::uuid`, demoTenantID, examID).Scan(&candidateCount); err != nil || candidateCount != 2 {
+		t.Fatalf("exam creation must freeze two candidate identities, count=%d err=%v", candidateCount, err)
+	}
+	if _, err := db.Exec(`UPDATE student SET name='Story 041 Current Renamed Student' WHERE tenant_id=$1::uuid AND id=$2::uuid`, demoTenantID, studentID); err != nil {
+		t.Fatalf("rename current student after snapshot: %v", err)
+	}
+	transferClass := e2ePostJSON(t, router, http.MethodPost, "/api/v1/classes", adminToken, `{"school_id":"`+schoolID+`","grade_id":"`+gradeID+`","name":"Story 041 Transfer Class","code":"story041-transfer-`+suffix+`"}`, http.StatusCreated)["class"].(map[string]any)
+	transferClassID := e2eString(t, transferClass, "id")
+	e2ePostJSON(t, router, http.MethodPut, "/api/v1/students/"+studentID+"/enrollment", adminToken, `{"class_id":"`+transferClassID+`"}`, http.StatusOK)
+	enrollments := e2eGetJSON(t, router, "/api/v1/students/"+studentID+"/enrollments", adminToken, http.StatusOK)["enrollments"].([]any)
+	if len(enrollments) != 2 || enrollments[0].(map[string]any)["class_id"] != transferClassID || enrollments[1].(map[string]any)["class_id"] != classID {
+		t.Fatalf("student transfer must preserve enrollment history: %#v", enrollments)
+	}
+	roster := e2eGetJSON(t, router, "/api/v1/exams/"+examID+"/roster", adminToken, http.StatusOK)["roster"].(map[string]any)
+	foundFrozenIdentity := false
+	for _, rawEntry := range roster["entries"].([]any) {
+		entry := rawEntry.(map[string]any)
+		if entry["student_id"] == studentID {
+			foundFrozenIdentity = entry["student_name"] == "Story 041 Synthetic Student" && entry["class_id"] == classID
+		}
+	}
+	if !foundFrozenIdentity {
+		t.Fatalf("exam roster must retain the student name captured at exam creation: %#v", roster)
+	}
+}
+
+// 按原顺序完成图像质量、OCR 租约和切题；生产组合没有 AI 资格时必须弃权并要求人工复核。
+func e2eCollectPostgresAnswerAndAbstainFromAI(t *testing.T, scope postgresWorkflowScope, examID string) string {
+	t.Helper()
+	db, router, demoTenantID, studentID, suffix, adminToken := scope.DB, scope.Router, scope.TenantID, scope.StudentID, scope.Suffix, scope.AdminToken
 	answerFileID := e2eUploadSyntheticPDF(t, router, adminToken, "story041-answer-"+suffix+".pdf", "%PDF-1.4\n% story 041 synthetic answer "+suffix+"\n")
 	submissionResp := e2ePostJSON(t, router, http.MethodPost, "/api/v1/exams/"+examID+"/submissions", adminToken, `{"student_id":"`+studentID+`","candidate_no":"SYN-`+suffix+`","source_type":"pdf_upload","expected_page_count":1}`, http.StatusCreated)["submission"].(map[string]any)
 	submissionID := e2eString(t, submissionResp, "id")
@@ -192,6 +225,31 @@ func TestCoreWorkflowE2EWithPostgresTestDatabase(t *testing.T) {
 	if ocrDone["status"] != "completed" {
 		t.Fatalf("ocr task should complete in test database workflow: %#v", ocrDone)
 	}
+	e2eAssertPostgresProcessingProjectionIsReadOnly(t, scope, examID, ocrTaskID)
+	segmentResult := e2ePostJSON(t, router, http.MethodPost, "/api/v1/submissions/"+submissionID+"/segment-answers", adminToken, `{}`, http.StatusOK)["result"].(map[string]any)
+	segments := segmentResult["segments"].([]any)
+	if len(segments) != 1 {
+		t.Fatalf("test database workflow expected one answer segment, got %#v", segments)
+	}
+	segmentID := e2eString(t, segments[0].(map[string]any), "id")
+	e2ePostJSON(t, router, http.MethodPut, "/api/v1/answer-segments/"+segmentID+"/answer", adminToken, `{"answer_text":"`+answerText+`","answer_payload":{"answer":"`+answerText+`"},"source":"ocr_text","confidence":0.76}`, http.StatusOK)
+	aiGrade := e2ePostJSON(t, router, http.MethodPost, "/api/v1/answer-segments/"+segmentID+"/subjective-ai-grade", adminToken, `{"model_policy":{"model_version":"mock-llm-story041","prompt_version":"story041-synthetic","min_confidence":0.8}}`, http.StatusCreated)["grade"].(map[string]any)
+	if aiGrade["mock"] != false || aiGrade["needs_human_review"] != true || aiGrade["failure_reason"] != "ai_eligibility_abstained" {
+		t.Fatalf("production PostgreSQL composition must enforce AI eligibility and route missing policy to review: %#v", aiGrade)
+	}
+	aiGradeID := e2eString(t, aiGrade, "id")
+	evidenceJob := e2ePostJSON(t, router, http.MethodPost, "/api/v1/ai-grades/"+aiGradeID+"/verify-evidence", adminToken, `{}`, http.StatusCreated)["job"].(map[string]any)
+	if evidenceJob["needs_human_review"] != true {
+		t.Fatalf("PostgreSQL evidence job should require review for an eligibility abstention: %#v", evidenceJob)
+	}
+
+	return segmentID
+}
+
+// 只读 HTTP 查询不能移动投影游标；随后重新投影也不能覆盖阅卷员已认领的异常归属。
+func e2eAssertPostgresProcessingProjectionIsReadOnly(t *testing.T, scope postgresWorkflowScope, examID, ocrTaskID string) {
+	t.Helper()
+	db, router, demoTenantID, adminToken, graderID := scope.DB, scope.Router, scope.TenantID, scope.AdminToken, scope.GraderID
 	processingStore := processing.NewPostgresStore(db)
 	e2eProjectProcessingUntilCurrent(t, db, processingStore, demoTenantID, examID)
 	var requestedBefore, projectedBefore int64
@@ -229,23 +287,12 @@ func TestCoreWorkflowE2EWithPostgresTestDatabase(t *testing.T) {
 	if err != nil || preserved.Status != processing.ExceptionAssigned || preserved.AssignedTo != graderID {
 		t.Fatalf("query refresh must preserve manual assignment: %#v, %v", preserved, err)
 	}
-	segmentResult := e2ePostJSON(t, router, http.MethodPost, "/api/v1/submissions/"+submissionID+"/segment-answers", adminToken, `{}`, http.StatusOK)["result"].(map[string]any)
-	segments := segmentResult["segments"].([]any)
-	if len(segments) != 1 {
-		t.Fatalf("test database workflow expected one answer segment, got %#v", segments)
-	}
-	segmentID := e2eString(t, segments[0].(map[string]any), "id")
-	e2ePostJSON(t, router, http.MethodPut, "/api/v1/answer-segments/"+segmentID+"/answer", adminToken, `{"answer_text":"`+answerText+`","answer_payload":{"answer":"`+answerText+`"},"source":"ocr_text","confidence":0.76}`, http.StatusOK)
-	aiGrade := e2ePostJSON(t, router, http.MethodPost, "/api/v1/answer-segments/"+segmentID+"/subjective-ai-grade", adminToken, `{"model_policy":{"model_version":"mock-llm-story041","prompt_version":"story041-synthetic","min_confidence":0.8}}`, http.StatusCreated)["grade"].(map[string]any)
-	if aiGrade["mock"] != false || aiGrade["needs_human_review"] != true || aiGrade["failure_reason"] != "ai_eligibility_abstained" {
-		t.Fatalf("production PostgreSQL composition must enforce AI eligibility and route missing policy to review: %#v", aiGrade)
-	}
-	aiGradeID := e2eString(t, aiGrade, "id")
-	evidenceJob := e2ePostJSON(t, router, http.MethodPost, "/api/v1/ai-grades/"+aiGradeID+"/verify-evidence", adminToken, `{}`, http.StatusCreated)["job"].(map[string]any)
-	if evidenceJob["needs_human_review"] != true {
-		t.Fatalf("PostgreSQL evidence job should require review for an eligibility abstention: %#v", evidenceJob)
-	}
+}
 
+// 管理员派发后才可人工评分；临时改派立即阻断原阅卷员读写草稿，再恢复原派发并核对超分拒绝与命令重放。
+func e2eCompletePostgresReviewWithDraftIsolation(t *testing.T, scope postgresWorkflowScope, examID, segmentID string) {
+	t.Helper()
+	db, router, demoTenantID, adminToken, teacherToken, graderToken, teacherID, graderID := scope.DB, scope.Router, scope.TenantID, scope.AdminToken, scope.TeacherToken, scope.GraderToken, scope.TeacherID, scope.GraderID
 	reviewTask := e2ePostJSON(t, router, http.MethodPost, "/api/v1/review-tasks", adminToken, `{"answer_segment_id":"`+segmentID+`","source":"evidence_verification_failed","priority":5}`, http.StatusCreated)["task"].(map[string]any)
 	reviewTaskID := e2eString(t, reviewTask, "id")
 	e2eExpectStatus(t, router, http.MethodPost, "/api/v1/exams/"+examID+"/publish", adminToken, `{"reason":"too early"}`, http.StatusConflict)
@@ -281,6 +328,12 @@ func TestCoreWorkflowE2EWithPostgresTestDatabase(t *testing.T) {
 	e2eExpectStatus(t, router, http.MethodPost, "/api/v1/review-tasks/"+reviewTaskID+"/submit", graderToken, `{"expected_revision":2,"score":6,"rubric_selections":[{"point_id":"p1","score":6}],"comments":"over max"}`, http.StatusBadRequest)
 	e2eBusinessCommandReplay(t, router, "/api/v1/review-tasks/"+reviewTaskID+"/submit", graderToken, `{"expected_revision":2,"score":4,"rubric_selections":[{"point_id":"p1","score":4}],"comments":"story041 synthetic human grade","reason":"manual review after mock AI"}`, "review", http.StatusCreated)
 
+}
+
+// 待确认成绩先经过确认和缺考登记再发布；学生隔离、独立申诉建议、最终调整和审计依原顺序执行。
+func e2ePublishPostgresGradeAndReviewAppeal(t *testing.T, scope postgresWorkflowScope, examID, segmentID string) {
+	t.Helper()
+	db, router, demoTenantID, studentID, otherStudentID, adminToken, studentToken, otherStudentToken, schoolAdminToken, graderID, appealReviewerID, appealReviewerToken := scope.DB, scope.Router, scope.TenantID, scope.StudentID, scope.OtherStudentID, scope.AdminToken, scope.StudentToken, scope.OtherStudentToken, scope.SchoolAdminToken, scope.GraderID, scope.AppealReviewerID, scope.AppealReviewerToken
 	finalized := e2ePostJSON(t, router, http.MethodPost, "/api/v1/exams/"+examID+"/finalize", adminToken, `{}`, http.StatusCreated)
 	if finalized["status"] != "pending_confirmation" || e2eFloat(t, finalized, "created_finals") != 1 {
 		t.Fatalf("PostgreSQL finalize should create one final grade: %#v", finalized)
@@ -313,7 +366,8 @@ func TestCoreWorkflowE2EWithPostgresTestDatabase(t *testing.T) {
 	}
 	audits := e2eGetJSON(t, router, "/api/v1/audit-logs?limit=200", adminToken, http.StatusOK)["audit_logs"].([]any)
 	e2eAssertAuditActions(t, audits, []string{"score.roster_attendance_updated", "score.published", "appeal.assigned", "appeal.teacher_recommendation_submitted", "appeal.reviewed", "review.human_grade_submitted"})
-	e2eArbitrationAndExportCommands(t, db, demoTenantID, examID, segmentID, graderID, e2eLookupUserID(t, db, "demo", "school_admin"), e2eLookupUserID(t, db, "demo", "tenant_admin"))
+	e2eArbitrationAndExportCommands(t, db, arbitrationCommandFixture{Tenant: demoTenantID, Exam: examID, Segment: segmentID, FirstActor: graderID, SecondActor: e2eLookupUserID(t, db, "demo", "school_admin"), Arbitrator: e2eLookupUserID(t, db, "demo", "tenant_admin")})
+
 }
 
 func e2eAssertHighRiskTenantRLS(t *testing.T, adminDB *sql.DB, dsn, tenantID, studentID string) {
@@ -334,20 +388,9 @@ WHERE rolname=SESSION_USER
 		t.Fatalf("migration did not grant the tenant RLS runtime role access to public.student in %q", adminDatabase)
 	}
 	if privilegedLogin {
-		unsafeDB, closeUnsafeDB, err := database.OpenPostgres(config.PostgresConfig{
-			DSN: dsn, TenantRLSEnabled: true,
-			MaxOpenConns: 1, MaxIdleConns: 1, StatementTimeout: time.Minute, LockTimeout: 5 * time.Second,
-		})
-		if err != nil {
-			t.Fatalf("open privileged RLS database: %v", err)
-		}
-		var sentinel int
-		err = unsafeDB.QueryRowContext(context.Background(), `SELECT 1`).Scan(&sentinel)
-		_ = closeUnsafeDB()
-		if err == nil || !strings.Contains(err.Error(), "non-superuser database login without BYPASSRLS") {
-			t.Fatalf("tenant RLS accepted a privileged database login: sentinel=%d err=%v", sentinel, err)
-		}
+		e2eAssertPrivilegedTenantRLSLoginRejected(t, dsn)
 	}
+
 	roleName := "e2e_rls_" + strings.ReplaceAll(uuid.NewString(), "-", "")
 	quotedRole := pgx.Identifier{roleName}.Sanitize()
 	rolePassword := "Rls" + strings.ReplaceAll(uuid.NewString(), "-", "")
@@ -401,20 +444,51 @@ WHERE n.nspname='public' AND c.relname='student'
 		t.Fatalf("tenant RLS runtime role is not ready: role=%q session_role=%q admin_database=%q database=%q search_path=%q schema_usage=%t protected_table=%q catalog_table=%q", currentRole, sessionRole, adminDatabase, databaseName, searchPath, hasSchemaUsage, protectedTable.String, catalogTable)
 	}
 
+	e2eAssertStudentTenantRLSScopes(t, scopedDB, tenantID, studentID, currentRole, searchPath)
+	e2eAssertLoginFactTenantRLSScopes(t, scopedDB, tenantID, studentID)
+}
+
+// 即使显式启用 RLS，超级用户或 BYPASSRLS 登录也不能进入租户运行查询。
+func e2eAssertPrivilegedTenantRLSLoginRejected(t *testing.T, dsn string) {
+	t.Helper()
+	unsafeDB, closeUnsafeDB, err := database.OpenPostgres(config.PostgresConfig{
+		DSN: dsn, TenantRLSEnabled: true,
+		MaxOpenConns: 1, MaxIdleConns: 1, StatementTimeout: time.Minute, LockTimeout: 5 * time.Second,
+	})
+	if err != nil {
+		t.Fatalf("open privileged RLS database: %v", err)
+	}
+	var sentinel int
+	err = unsafeDB.QueryRowContext(context.Background(), `SELECT 1`).Scan(&sentinel)
+	_ = closeUnsafeDB()
+	if err == nil || !strings.Contains(err.Error(), "non-superuser database login without BYPASSRLS") {
+		t.Fatalf("tenant RLS accepted a privileged database login: sentinel=%d err=%v", sentinel, err)
+	}
+}
+
+// 无租户与错误租户看不到学生；所属租户与显式维护上下文各能读到唯一记录。
+func e2eAssertStudentTenantRLSScopes(t *testing.T, scopedDB *sql.DB, tenantID, studentID, currentRole, searchPath string) {
+	t.Helper()
 	var count int
-	if err = scopedDB.QueryRowContext(context.Background(), `SELECT count(*) FROM student WHERE id=$1::uuid`, studentID).Scan(&count); err != nil || count != 0 {
+	if err := scopedDB.QueryRowContext(context.Background(), `SELECT count(*) FROM student WHERE id=$1::uuid`, studentID).Scan(&count); err != nil || count != 0 {
 		t.Fatalf("unscoped context did not fail closed: role=%q search_path=%q count=%d err=%v", currentRole, searchPath, count, err)
 	}
-	if err = scopedDB.QueryRowContext(database.WithTenant(context.Background(), uuid.NewString()), `SELECT count(*) FROM student WHERE id=$1::uuid`, studentID).Scan(&count); err != nil || count != 0 {
+	if err := scopedDB.QueryRowContext(database.WithTenant(context.Background(), uuid.NewString()), `SELECT count(*) FROM student WHERE id=$1::uuid`, studentID).Scan(&count); err != nil || count != 0 {
 		t.Fatalf("RLS exposed a student to another tenant: count=%d err=%v", count, err)
 	}
-	if err = scopedDB.QueryRowContext(database.WithTenant(context.Background(), tenantID), `SELECT count(*) FROM student WHERE id=$1::uuid`, studentID).Scan(&count); err != nil || count != 1 {
+	if err := scopedDB.QueryRowContext(database.WithTenant(context.Background(), tenantID), `SELECT count(*) FROM student WHERE id=$1::uuid`, studentID).Scan(&count); err != nil || count != 1 {
 		t.Fatalf("RLS hid a student from its tenant: count=%d err=%v", count, err)
 	}
-	if err = scopedDB.QueryRowContext(database.WithTenantMaintenance(context.Background()), `SELECT count(*) FROM student WHERE id=$1::uuid`, studentID).Scan(&count); err != nil || count != 1 {
+	if err := scopedDB.QueryRowContext(database.WithTenantMaintenance(context.Background()), `SELECT count(*) FROM student WHERE id=$1::uuid`, studentID).Scan(&count); err != nil || count != 1 {
 		t.Fatalf("explicit maintenance scope could not inspect a protected row: count=%d err=%v", count, err)
 	}
 
+}
+
+// 先通过真实认证路由写入风险和设备事实，再验证两种事实都遵守租户隔离。
+func e2eAssertLoginFactTenantRLSScopes(t *testing.T, scopedDB *sql.DB, tenantID, studentID string) {
+	t.Helper()
+	var count int
 	runtimeRouter := e2ePostgresRouter(scopedDB)
 	runtimeToken := e2eLoginWithTenant(t, runtimeRouter, "demo", "tenant_admin", "ChangeMe123!")
 	_, runtimeDeviceCookie := e2eBrowserLogin(t, runtimeRouter, "demo", "tenant_admin", "ChangeMe123!", nil)
@@ -425,22 +499,22 @@ WHERE n.nspname='public' AND c.relname='student'
 	if len(runtimeStudents) != 1 || e2eString(t, runtimeStudents[0].(map[string]any), "id") != studentID {
 		t.Fatalf("authenticated API tenant context did not expose the owning tenant's student: %#v", runtimeStudents)
 	}
-	if err = scopedDB.QueryRowContext(context.Background(), `SELECT count(*) FROM auth_risk_event`).Scan(&count); err != nil || count != 0 {
+	if err := scopedDB.QueryRowContext(context.Background(), `SELECT count(*) FROM auth_risk_event`).Scan(&count); err != nil || count != 0 {
 		t.Fatalf("unscoped context exposed login risk events: count=%d err=%v", count, err)
 	}
-	if err = scopedDB.QueryRowContext(database.WithTenant(context.Background(), uuid.NewString()), `SELECT count(*) FROM auth_risk_event`).Scan(&count); err != nil || count != 0 {
+	if err := scopedDB.QueryRowContext(database.WithTenant(context.Background(), uuid.NewString()), `SELECT count(*) FROM auth_risk_event`).Scan(&count); err != nil || count != 0 {
 		t.Fatalf("RLS exposed login risk events to another tenant: count=%d err=%v", count, err)
 	}
-	if err = scopedDB.QueryRowContext(database.WithTenant(context.Background(), tenantID), `SELECT count(*) FROM auth_risk_event`).Scan(&count); err != nil || count == 0 {
+	if err := scopedDB.QueryRowContext(database.WithTenant(context.Background(), tenantID), `SELECT count(*) FROM auth_risk_event`).Scan(&count); err != nil || count == 0 {
 		t.Fatalf("RLS hid login risk events from their tenant: count=%d err=%v", count, err)
 	}
-	if err = scopedDB.QueryRowContext(context.Background(), `SELECT count(*) FROM auth_trusted_device`).Scan(&count); err != nil || count != 0 {
+	if err := scopedDB.QueryRowContext(context.Background(), `SELECT count(*) FROM auth_trusted_device`).Scan(&count); err != nil || count != 0 {
 		t.Fatalf("unscoped context exposed device bindings: count=%d err=%v", count, err)
 	}
-	if err = scopedDB.QueryRowContext(database.WithTenant(context.Background(), uuid.NewString()), `SELECT count(*) FROM auth_trusted_device`).Scan(&count); err != nil || count != 0 {
+	if err := scopedDB.QueryRowContext(database.WithTenant(context.Background(), uuid.NewString()), `SELECT count(*) FROM auth_trusted_device`).Scan(&count); err != nil || count != 0 {
 		t.Fatalf("RLS exposed device bindings to another tenant: count=%d err=%v", count, err)
 	}
-	if err = scopedDB.QueryRowContext(database.WithTenant(context.Background(), tenantID), `SELECT count(*) FROM auth_trusted_device`).Scan(&count); err != nil || count == 0 {
+	if err := scopedDB.QueryRowContext(database.WithTenant(context.Background(), tenantID), `SELECT count(*) FROM auth_trusted_device`).Scan(&count); err != nil || count == 0 {
 		t.Fatalf("RLS hid device bindings from their tenant: count=%d err=%v", count, err)
 	}
 }
@@ -749,9 +823,8 @@ func e2eApplyPostgresMigrationsThrough(t *testing.T, db *sql.DB, lastMigration s
 		t.Fatal("no migrations found for PostgreSQL E2E")
 	}
 	sort.Strings(files)
-	// This provisions the entire historical schema (123+ migrations), not one
-	// query. Keep setup bounded without conflating disk contention with a
-	// business-operation performance regression.
+	// 此处创建完整历史结构（123 次以上迁移），不只是运行一条查询。
+	// 为初始化设置合理时限，避免把磁盘竞争误判为业务操作性能回归。
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
 	if _, err := db.ExecContext(ctx, `
@@ -790,71 +863,86 @@ CREATE TABLE IF NOT EXISTS edugrade_e2e_applied_migration (
 }
 
 func e2eSplitSQLStatements(sqlText string) []string {
-	statements := []string{}
-	var current strings.Builder
-	inSingleQuote := false
-	dollarQuoteTag := ""
+	splitter := e2eSQLStatementSplitter{statements: []string{}}
 	for i := 0; i < len(sqlText); {
-		if dollarQuoteTag != "" {
-			if strings.HasPrefix(sqlText[i:], dollarQuoteTag) {
-				current.WriteString(dollarQuoteTag)
-				i += len(dollarQuoteTag)
-				dollarQuoteTag = ""
-				continue
-			}
-			current.WriteByte(sqlText[i])
-			i++
-			continue
+		switch {
+		case splitter.dollarQuoteTag != "":
+			i = splitter.consumeDollarQuote(sqlText, i)
+		case splitter.inSingleQuote:
+			i = splitter.consumeSingleQuote(sqlText, i)
+		default:
+			i = splitter.consumeOutsideQuote(sqlText, i)
 		}
-		ch := sqlText[i]
-		if inSingleQuote {
-			current.WriteByte(ch)
-			if ch == '\'' {
-				if i+1 < len(sqlText) && sqlText[i+1] == '\'' {
-					current.WriteByte(sqlText[i+1])
-					i += 2
-					continue
-				}
-				inSingleQuote = false
-			}
-			i++
-			continue
-		}
-		if ch == '\'' {
-			inSingleQuote = true
-			current.WriteByte(ch)
-			i++
-			continue
-		}
-		if ch == '-' && i+1 < len(sqlText) && sqlText[i+1] == '-' {
-			for i < len(sqlText) && sqlText[i] != '\n' {
-				current.WriteByte(sqlText[i])
-				i++
-			}
-			continue
-		}
-		if ch == '$' {
-			if tag, ok := e2eDollarQuoteTag(sqlText[i:]); ok {
-				dollarQuoteTag = tag
-				current.WriteString(tag)
-				i += len(tag)
-				continue
-			}
-		}
-		current.WriteByte(ch)
-		if ch == ';' && !inSingleQuote {
-			statement := strings.TrimSpace(current.String())
-			if statement != "" {
-				statements = append(statements, statement)
-			}
-			current.Reset()
-		}
-		i++
 	}
-	if tail := strings.TrimSpace(current.String()); tail != "" {
-		statements = append(statements, tail)
+	splitter.finishStatement()
+	return splitter.statements
+}
+
+// 迁移拆句只在引号外识别分号；保持单引号转义、dollar quote 与行注释的原始字节。
+type e2eSQLStatementSplitter struct {
+	statements     []string
+	current        strings.Builder
+	inSingleQuote  bool
+	dollarQuoteTag string
+}
+
+func (s *e2eSQLStatementSplitter) consumeDollarQuote(sqlText string, i int) int {
+	if strings.HasPrefix(sqlText[i:], s.dollarQuoteTag) {
+		s.current.WriteString(s.dollarQuoteTag)
+		i += len(s.dollarQuoteTag)
+		s.dollarQuoteTag = ""
+		return i
 	}
-	return statements
+	s.current.WriteByte(sqlText[i])
+	return i + 1
+}
+
+func (s *e2eSQLStatementSplitter) consumeSingleQuote(sqlText string, i int) int {
+	ch := sqlText[i]
+	s.current.WriteByte(ch)
+	if ch == '\'' {
+		if i+1 < len(sqlText) && sqlText[i+1] == '\'' {
+			s.current.WriteByte(sqlText[i+1])
+			return i + 2
+		}
+		s.inSingleQuote = false
+	}
+	return i + 1
+}
+
+func (s *e2eSQLStatementSplitter) consumeOutsideQuote(sqlText string, i int) int {
+	ch := sqlText[i]
+	if ch == '\'' {
+		s.inSingleQuote = true
+		s.current.WriteByte(ch)
+		return i + 1
+	}
+	if ch == '-' && i+1 < len(sqlText) && sqlText[i+1] == '-' {
+		for i < len(sqlText) && sqlText[i] != '\n' {
+			s.current.WriteByte(sqlText[i])
+			i++
+		}
+		return i
+	}
+	if ch == '$' {
+		if tag, ok := e2eDollarQuoteTag(sqlText[i:]); ok {
+			s.dollarQuoteTag = tag
+			s.current.WriteString(tag)
+			return i + len(tag)
+		}
+	}
+	s.current.WriteByte(ch)
+	if ch == ';' && !s.inSingleQuote {
+		s.finishStatement()
+	}
+	return i + 1
+}
+
+func (s *e2eSQLStatementSplitter) finishStatement() {
+	if statement := strings.TrimSpace(s.current.String()); statement != "" {
+		s.statements = append(s.statements, statement)
+	}
+	s.current.Reset()
 }
 
 func e2eDollarQuoteTag(sqlText string) (string, bool) {

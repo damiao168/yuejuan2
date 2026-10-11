@@ -1,0 +1,26 @@
+{
+  "checkpoint": "full-checkpoint-03",
+  "analysis_id": "a741715d-5427-49a6-ac74-7dd92ad5cfa1",
+  "records": [
+    {
+      "key": "eb390af3-af14-4c27-b33c-0b1442f95181",
+      "rule": "python:S125",
+      "file": "docs/architecture/tools/build_preview.py",
+      "source_sha256": "56d94138d0123f4ae3f7beba356fbde9703403ba955aa85638871ed6e9bdc9bd",
+      "transition": "falsepositive",
+      "reason": "命中的两行是中文维护说明：离线阅读机缺少微软雅黑时补通用无衬线字体，仅修改HTML内嵌副本。该说明准确对应紧接的svg.replace调用，不是被注释停用的代码；误判由说明中HTML/SVG标识等文本触发。",
+      "manual_review_scope": "根智能体完整审读当前build_preview.py，核对命中说明、字体替换、SVG安全解析及生成输出边界；独立Python智能体复核相同当前源码。",
+      "evidence_note": "当前SHA与full03冻结源码一致；已有另外XML解析加固保留，本项没有改动运行输入或删去必要中文说明。"
+    },
+    {
+      "key": "98688ff8-f75e-4bbb-897a-2eaf11ee1c8f",
+      "rule": "javascript:S905",
+      "file": "docs/architecture/tools/check_preview_typography.js",
+      "source_sha256": "1ef9d115d07883936333d8c4b77cbd46832e3a01f563b4c5da45e3a7841714b2",
+      "transition": "falsepositive",
+      "reason": "整个文件中的async(page)=>函数表达式是playwright-cli run-code工具的函数输入。实际本机loader从filename读取代码，runInContext('(' + code + ')')保存函数为__fn__，再await __fn__(page)调用并注入page；不是业务模块中无人使用的表达式。改变为模块导出或自行调用会违反现有工具输入协议。",
+      "manual_review_scope": "根智能体完整审读当前文件、六处Error显式构造及本地预览请求；Python智能体只读核对已安装@playwright/cli与playwright-core实际loader调用。",
+      "evidence_note": "当前SHA与full03冻结源码一致。本次仅进行语法验证和执行协议审读，没有把Node桩或只读loader检查说成真实浏览器图纸检查。"
+    }
+  ]
+}

@@ -285,12 +285,7 @@ func (s *MemoryStore) processingSummaryLocked(tenantID, submissionID string) (Pr
 			continue
 		}
 		blocker := ProcessingBlocker{PageID: page.ID, PageNo: page.AssignedPageNo, Stage: "processing", Code: "pending", Action: "wait"}
-		var latest RegistrationRun
-		for _, run := range s.registrations {
-			if run.CapturePageID == page.ID && (latest.ID == "" || run.CreatedAt.After(latest.CreatedAt)) {
-				latest = run
-			}
-		}
+		latest := s.latestPageRegistrationLocked(page.ID)
 		blocker.RegistrationRunID = latest.ID
 		switch {
 		case page.Status == "quality_rejected" || page.Status == "needs_review":
@@ -315,6 +310,16 @@ func (s *MemoryStore) processingSummaryLocked(tenantID, submissionID string) (Pr
 	}
 	out.CanComplete = out.ReadyPages == out.TotalPages
 	return out, nil
+}
+
+func (s *MemoryStore) latestPageRegistrationLocked(pageID string) RegistrationRun {
+	var latest RegistrationRun
+	for _, run := range s.registrations {
+		if run.CapturePageID == pageID && (latest.ID == "" || run.CreatedAt.After(latest.CreatedAt)) {
+			latest = run
+		}
+	}
+	return latest
 }
 
 func (s *MemoryStore) QueueSubmissionPages(_ context.Context, tenantID, submissionID, actorID string) ([]RegistrationRun, error) {
@@ -476,22 +481,28 @@ func (s *MemoryStore) ListBatches(_ context.Context, tenantID, examID string, fi
 		return out[i].CreatedAt.After(out[j].CreatedAt)
 	})
 	if filter.CursorID != "" {
-		start := 0
-		for start < len(out) {
-			item := out[start]
-			if item.CreatedAt.Before(filter.CursorCreatedAt) ||
-				(item.CreatedAt.Equal(filter.CursorCreatedAt) && item.ID < filter.CursorID) {
-				break
-			}
-			start++
-		}
-		out = out[start:]
+		out = captureBatchesAfterCursor(out, filter)
 	}
 	if filter.Limit > 0 && len(out) > filter.Limit {
 		out = out[:filter.Limit]
 	}
 	return out, nil
 }
+
+// 输入已按创建时间、ID 降序排列；游标所在条目不重复返回，同时间只保留较小 ID。
+func captureBatchesAfterCursor(batches []Batch, filter BatchListFilter) []Batch {
+	start := 0
+	for start < len(batches) {
+		item := batches[start]
+		if item.CreatedAt.Before(filter.CursorCreatedAt) ||
+			(item.CreatedAt.Equal(filter.CursorCreatedAt) && item.ID < filter.CursorID) {
+			break
+		}
+		start++
+	}
+	return batches[start:]
+}
+
 func (s *MemoryStore) GetBatch(_ context.Context, tenantID, batchID string) (Batch, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -521,13 +532,7 @@ func (s *MemoryStore) RegisterFile(_ context.Context, tenantID, batchID, actorID
 			return x, nil
 		}
 	}
-	status := "uploaded"
-	for _, x := range s.files {
-		if x.TenantID == tenantID && x.CaptureBatchID == batchID && x.SHA256 == asset.SHA256 &&
-			(x.Status == "uploaded" || x.Status == "queued" || x.Status == "processing" || x.Status == "completed") {
-			status = "duplicate"
-		}
-	}
+	status := s.registeredFileStatusLocked(tenantID, batchID, asset.SHA256)
 	x := File{ID: uuid.NewString(), TenantID: tenantID, CaptureBatchID: batchID, FileAssetID: asset.ID, OriginalName: asset.OriginalName, ContentType: asset.ContentType, SHA256: asset.SHA256, ByteSize: asset.SizeBytes, Status: status, IdempotencyKey: input.IdempotencyKey, UploadedBy: actorID, CreatedAt: time.Now().UTC()}
 	s.files[x.ID] = x
 	batch.FileCount++
@@ -535,6 +540,20 @@ func (s *MemoryStore) RegisterFile(_ context.Context, tenantID, batchID, actorID
 	batch.Revision++
 	s.batches[batchID] = batch
 	return x, nil
+}
+
+// 调用方持有注册文件的写锁；重复判定只看同批次仍可处理的文件，失败文件允许重传。
+func (s *MemoryStore) registeredFileStatusLocked(tenantID, batchID, sha256 string) string {
+	for _, file := range s.files {
+		if file.TenantID != tenantID || file.CaptureBatchID != batchID || file.SHA256 != sha256 {
+			continue
+		}
+		switch file.Status {
+		case "uploaded", "queued", "processing", "completed":
+			return "duplicate"
+		}
+	}
+	return "uploaded"
 }
 
 func (s *MemoryStore) ListFiles(_ context.Context, tenantID, batchID string) ([]File, error) {

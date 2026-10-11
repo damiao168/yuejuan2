@@ -1,0 +1,61 @@
+{
+  "started_at": "2026-10-11T17:16:09.988602+08:00",
+  "finished_at": "2026-10-11T17:16:28.408121+08:00",
+  "duration_seconds": 18.422000000005937,
+  "command": [
+    "go",
+    "test",
+    "-json",
+    "-p",
+    "1",
+    "-count=1",
+    "-timeout=5m",
+    "./internal/apicontract",
+    "./internal/qualitydashboard",
+    "./internal/mathunderstanding"
+  ],
+  "cwd": "D:\\project\\yuejuan\\services\\api-gateway",
+  "exit_code": 0,
+  "isolation": {
+    "toolchain": "local",
+    "module_proxy": "off",
+    "checksum_service": "off",
+    "GOMAXPROCS": 2,
+    "cleared_environment_names": []
+  },
+  "package_results": [
+    {
+      "Time": "2026-10-11T17:16:18.449719+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/apicontract",
+      "Elapsed": 1.885
+    },
+    {
+      "Time": "2026-10-11T17:16:22.8394221+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/qualitydashboard",
+      "Elapsed": 2.122
+    },
+    {
+      "Time": "2026-10-11T17:16:27.8788576+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/mathunderstanding",
+      "Elapsed": 1.885
+    }
+  ],
+  "test_result_counts": {
+    "pass": 232,
+    "fail": 0,
+    "skip": 1
+  },
+  "skipped_tests": [
+    {
+      "Time": "2026-10-11T17:16:18.3122228+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/apicontract",
+      "Test": "TestReliabilitySharedClientContract",
+      "Elapsed": 0
+    }
+  ],
+  "note": "只报告实际运行的包；环境缺失跳过项不算真实数据库或外部模型集成通过。"
+}

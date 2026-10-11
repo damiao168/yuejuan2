@@ -38,27 +38,7 @@ class GradingAgentApplication:
         request = copy.deepcopy(payload)
         validate_request(request)
         request_id = request["request_id"]
-        if idempotency_key != request_id:
-            raise AgentError(
-                "idempotency_conflict",
-                "Idempotency-Key must equal request_id",
-                status=409,
-                request_id=request_id,
-            )
-        if request["model_policy"]["model_version"] != self.settings.model_version:
-            raise AgentError(
-                "invalid_request",
-                "requested model version is not the configured governed model",
-                status=400,
-                request_id=request_id,
-            )
-        if request["prompt_version"] != self.settings.prompt_version:
-            raise AgentError(
-                "invalid_request",
-                "requested prompt version is not the configured governed prompt",
-                status=400,
-                request_id=request_id,
-            )
+        self._validate_governed_request(request, idempotency_key)
 
         local_guard = detect_prompt_injection(request["answer_text"])
         if local_guard["detected"]:
@@ -109,30 +89,7 @@ class GradingAgentApplication:
 
         # 同键同内容只由首个请求执行推理；等待者共享结果或错误，不能再次消耗模型额度。
         if not owner:
-            wait_seconds = (
-                self.settings.model_queue_timeout_seconds
-                + self.settings.model_timeout_seconds * (self.settings.model_max_retries + 1)
-                + 5
-            )
-            if not inflight["event"].wait(wait_seconds):
-                raise AgentError(
-                    "model_timeout",
-                    "timed out waiting for the in-flight idempotent request",
-                    status=504,
-                    retryable=True,
-                    request_id=request_id,
-                )
-            if inflight["error"]:
-                error = inflight["error"]
-                raise AgentError(
-                    error.code,
-                    error.message,
-                    status=error.status,
-                    retryable=error.retryable,
-                    request_id=request_id,
-                )
-            self._log(request_id, "replayed", attempts=inflight["result"]["telemetry"]["attempts"])
-            return copy.deepcopy(inflight["result"]), True
+            return self._wait_for_inflight(inflight, request_id), True
 
         try:
             suggestion = self._grade_uncached(request, route)
@@ -164,6 +121,57 @@ class GradingAgentApplication:
             inflight["event"].set()
             self._inflight.pop(idempotency_key, None)
         return suggestion, False
+
+    def _validate_governed_request(self, request, idempotency_key):
+        request_id = request["request_id"]
+        if idempotency_key != request_id:
+            raise AgentError(
+                "idempotency_conflict",
+                "Idempotency-Key must equal request_id",
+                status=409,
+                request_id=request_id,
+            )
+        if request["model_policy"]["model_version"] != self.settings.model_version:
+            raise AgentError(
+                "invalid_request",
+                "requested model version is not the configured governed model",
+                status=400,
+                request_id=request_id,
+            )
+        if request["prompt_version"] != self.settings.prompt_version:
+            raise AgentError(
+                "invalid_request",
+                "requested prompt version is not the configured governed prompt",
+                status=400,
+                request_id=request_id,
+            )
+
+    def _wait_for_inflight(self, inflight, request_id):
+        wait_seconds = (
+            self.settings.model_queue_timeout_seconds
+            + self.settings.model_timeout_seconds * (self.settings.model_max_retries + 1)
+            + 5
+        )
+        # 等待发生在缓存锁外，否则执行者无法发布结果并唤醒重复请求。
+        if not inflight["event"].wait(wait_seconds):
+            raise AgentError(
+                "model_timeout",
+                "timed out waiting for the in-flight idempotent request",
+                status=504,
+                retryable=True,
+                request_id=request_id,
+            )
+        if inflight["error"]:
+            error = inflight["error"]
+            raise AgentError(
+                error.code,
+                error.message,
+                status=error.status,
+                retryable=error.retryable,
+                request_id=request_id,
+            )
+        self._log(request_id, "replayed", attempts=inflight["result"]["telemetry"]["attempts"])
+        return copy.deepcopy(inflight["result"])
 
     def _grade_uncached(self, request, route):
         started = time.monotonic()
@@ -237,7 +245,7 @@ class GradingAgentApplication:
     def refresh_readiness(self):
         try:
             ready = bool(self.model.ready())
-        except Exception:  # noqa: BLE001 - dependency probes fail closed.
+        except Exception:  # noqa: BLE001 - 依赖探测失败时拒绝放行。
             ready = False
         with self._readiness_lock:
             self._readiness_ready = ready

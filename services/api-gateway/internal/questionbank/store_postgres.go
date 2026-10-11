@@ -11,6 +11,11 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
+// 锁片段前保留空格；调用方直接追加到 SQL 末尾，共享锁范围仍限题库别名 b。
+const (
+	bankShareLockClause = " FOR SHARE OF b"
+)
+
 type PostgresStore struct{ db *sql.DB }
 
 func NewPostgresStore(db *sql.DB) *PostgresStore { return &PostgresStore{db: db} }
@@ -133,9 +138,15 @@ func (s *PostgresStore) GetVersion(ctx context.Context, scope auth.AccessScope, 
 	return v, err
 }
 
-// Every mutation and its receipt commit together; the command lock is acquired
-// before bank/item locks. Replays still check the actor's current content ACL.
-func pgMutation[T any](ctx context.Context, s *PostgresStore, scope auth.AccessScope, op, target string, input any, action string, fn func(*sql.Tx) (T, error)) (out T, err error) {
+type pgMutationCommand struct {
+	op, target string
+	input      any
+	action     string
+}
+
+// 每次变更与其收据一同提交；命令锁在题库和条目锁之前获取。
+// 重放仍检查操作者当前的内容 ACL；失败时不返回已保存的结果。
+func pgMutation[T any](ctx context.Context, s *PostgresStore, scope auth.AccessScope, command pgMutationCommand, fn func(*sql.Tx) (T, error)) (out T, err error) {
 	if !validScope(scope) {
 		return out, auth.ErrForbidden
 	}
@@ -144,43 +155,13 @@ func pgMutation[T any](ctx context.Context, s *PostgresStore, scope auth.AccessS
 		return out, err
 	}
 	defer tx.Rollback()
-	replay, err := commandreceipt.Load(ctx, tx, scope.TenantID, scope.ActorID, op, target, input, &out)
+	identity := commandreceipt.Identity{TenantID: scope.TenantID, ActorID: scope.ActorID, Operation: command.op, TargetID: command.target}
+	replay, err := commandreceipt.Load(ctx, tx, identity, command.input, &out)
 	if err != nil {
 		return out, err
 	}
 	if replay {
-		switch v := any(out).(type) {
-		case Bank:
-			_, err = s.bank(ctx, tx, scope, v.ID, action, "")
-		case ItemResult:
-			_, err = s.bank(ctx, tx, scope, v.Item.BankID, action, "")
-		case Version:
-			_, err = s.item(ctx, tx, scope, v.ItemID, action, "")
-		case MaterializeResult:
-			err = s.checkExam(ctx, tx, scope, v.ExamID)
-			if err == nil {
-				for _, id := range v.SourceVersionIDs {
-					if _, err = s.version(ctx, tx, scope, id, "read"); err != nil {
-						break
-					}
-				}
-			}
-		case MetadataSchema:
-			_, err = s.bank(ctx, tx, scope, v.BankID, "manage", "")
-		case ACLDocument:
-			_, err = s.bank(ctx, tx, scope, v.BankID, "manage", "")
-		case Item:
-			_, err = s.item(ctx, tx, scope, v.ID, action, "")
-		case ImportResult:
-			_, err = s.bank(ctx, tx, scope, v.Provenance.TargetBankID, "create", "")
-			if err == nil && !scope.AllowsExam(v.Provenance.Source.ExamID) {
-				err = ErrNotFound
-			}
-			if err == nil && v.Provenance.LinkedItemID != "" {
-				_, err = s.item(ctx, tx, scope, v.Provenance.LinkedItemID, "edit", "")
-			}
-		}
-		if err != nil {
+		if err = s.checkMutationReplay(ctx, tx, scope, command.action, out); err != nil {
 			var zero T
 			return zero, err
 		}
@@ -205,7 +186,7 @@ func pgMutation[T any](ctx context.Context, s *PostgresStore, scope auth.AccessS
 		return out, err
 	}
 	var aggregate string
-	facts := map[string]any{"operation": op, "command_id": commandreceipt.ID(ctx)}
+	facts := map[string]any{"operation": command.op, "command_id": commandreceipt.ID(ctx)}
 	switch v := any(out).(type) {
 	case Bank:
 		aggregate = v.ID
@@ -234,23 +215,72 @@ func pgMutation[T any](ctx context.Context, s *PostgresStore, scope auth.AccessS
 		facts["source_exam_id"], facts["source_question_id"] = v.Provenance.Source.ExamID, v.Provenance.Source.QuestionID
 		facts["source_snapshot_hash"], facts["source_assessment_hash"] = v.Provenance.Source.SnapshotHash, v.Provenance.Source.AssessmentSnapshotHash
 	}
-	// Only fingerprints and identities go to audit/outbox, never stems/answers.
+	// 审计和 outbox 只接收指纹与身份，绝不接收题干或答案。
 	facts["resource_id"] = aggregate
 	payload, _ := json.Marshal(facts)
-	_, err = tx.ExecContext(ctx, `INSERT INTO audit_log(tenant_id,actor_id,action,target_type,target_id,after_value) VALUES($1::uuid,$2::uuid,$3,'question_bank',$4::uuid,$5::jsonb)`, scope.TenantID, scope.ActorID, op, aggregate, payload)
+	_, err = tx.ExecContext(ctx, `INSERT INTO audit_log(tenant_id,actor_id,action,target_type,target_id,after_value) VALUES($1::uuid,$2::uuid,$3,'question_bank',$4::uuid,$5::jsonb)`, scope.TenantID, scope.ActorID, command.op, aggregate, payload)
 	if err != nil {
 		return out, err
 	}
-	_, err = tx.ExecContext(ctx, `INSERT INTO event_outbox(tenant_id,aggregate_type,aggregate_id,event_type,payload) VALUES($1::uuid,'question_bank',$2::uuid,$3,$4::jsonb)`, scope.TenantID, aggregate, op, payload)
+	_, err = tx.ExecContext(ctx, `INSERT INTO event_outbox(tenant_id,aggregate_type,aggregate_id,event_type,payload) VALUES($1::uuid,'question_bank',$2::uuid,$3,$4::jsonb)`, scope.TenantID, aggregate, command.op, payload)
 	if err != nil {
 		return out, err
 	}
-	if err = commandreceipt.Save(ctx, tx, scope.TenantID, scope.ActorID, op, target, input, out); err != nil {
+	if err = commandreceipt.Save(ctx, tx, identity, command.input, out); err != nil {
 		return out, err
 	}
 	err = tx.Commit()
 	return
 }
+
+func (s *PostgresStore) checkMutationReplay(ctx context.Context, tx *sql.Tx, scope auth.AccessScope, action string, out any) (err error) {
+	switch v := out.(type) {
+	case Bank:
+		_, err = s.bank(ctx, tx, scope, v.ID, action, "")
+	case ItemResult:
+		_, err = s.bank(ctx, tx, scope, v.Item.BankID, action, "")
+	case Version:
+		_, err = s.item(ctx, tx, scope, v.ItemID, action, "")
+	case MaterializeResult:
+		err = s.checkMaterializeReplay(ctx, tx, scope, v)
+	case MetadataSchema:
+		_, err = s.bank(ctx, tx, scope, v.BankID, "manage", "")
+	case ACLDocument:
+		_, err = s.bank(ctx, tx, scope, v.BankID, "manage", "")
+	case Item:
+		_, err = s.item(ctx, tx, scope, v.ID, action, "")
+	case ImportResult:
+		err = s.checkImportReplay(ctx, tx, scope, v)
+	}
+	return err
+}
+
+func (s *PostgresStore) checkMaterializeReplay(ctx context.Context, tx *sql.Tx, scope auth.AccessScope, out MaterializeResult) error {
+	if err := s.checkExam(ctx, tx, scope, out.ExamID); err != nil {
+		return err
+	}
+	for _, id := range out.SourceVersionIDs {
+		if _, err := s.version(ctx, tx, scope, id, "read"); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *PostgresStore) checkImportReplay(ctx context.Context, tx *sql.Tx, scope auth.AccessScope, out ImportResult) error {
+	if _, err := s.bank(ctx, tx, scope, out.Provenance.TargetBankID, "create", ""); err != nil {
+		return err
+	}
+	if !scope.AllowsExam(out.Provenance.Source.ExamID) {
+		return ErrNotFound
+	}
+	if out.Provenance.LinkedItemID != "" {
+		_, err := s.item(ctx, tx, scope, out.Provenance.LinkedItemID, "edit", "")
+		return err
+	}
+	return nil
+}
+
 func (s *PostgresStore) CreateBank(ctx context.Context, scope auth.AccessScope, input CreateBankInput) (Bank, error) {
 	in, err := normalizeBank(input)
 	if err != nil {
@@ -259,7 +289,7 @@ func (s *PostgresStore) CreateBank(ctx context.Context, scope auth.AccessScope, 
 	if !validScope(scope) || !scope.AllowsSchool(in.SchoolID) {
 		return Bank{}, auth.ErrForbidden
 	}
-	return pgMutation(ctx, s, scope, "question_bank.create", "", input, "read", func(tx *sql.Tx) (Bank, error) {
+	return pgMutation(ctx, s, scope, pgMutationCommand{op: "question_bank.create", input: input, action: "read"}, func(tx *sql.Tx) (Bank, error) {
 		b, err := scanBank(tx.QueryRowContext(ctx, `INSERT INTO question_bank AS b(tenant_id,school_id,name,description,created_by) SELECT $1::uuid,$2::uuid,$3,$4,$5::uuid FROM school WHERE tenant_id=$1::uuid AND id=$2::uuid AND status='active' AND deleted_at IS NULL RETURNING `+bankCols, scope.TenantID, in.SchoolID, in.Name, in.Description, scope.ActorID))
 		if err != nil {
 			return b, err
@@ -279,7 +309,7 @@ func (s *PostgresStore) UpdateBank(ctx context.Context, scope auth.AccessScope, 
 	if err != nil {
 		return Bank{}, err
 	}
-	return pgMutation(ctx, s, scope, "question_bank.update", id, in, "manage", func(tx *sql.Tx) (Bank, error) {
+	return pgMutation(ctx, s, scope, pgMutationCommand{op: "question_bank.update", target: id, input: in, action: "manage"}, func(tx *sql.Tx) (Bank, error) {
 		b, err := s.bank(ctx, tx, scope, id, "manage", " FOR UPDATE OF b")
 		if err != nil {
 			return b, err
@@ -305,8 +335,8 @@ func (s *PostgresStore) CreateItem(ctx context.Context, scope auth.AccessScope, 
 	if input.Kind == "rubric_template" {
 		op = "question_bank.template.create"
 	}
-	return pgMutation(ctx, s, scope, op, bankID, input, "create", func(tx *sql.Tx) (ItemResult, error) {
-		b, err := s.bank(ctx, tx, scope, bankID, "create", " FOR SHARE OF b")
+	return pgMutation(ctx, s, scope, pgMutationCommand{op: op, target: bankID, input: input, action: "create"}, func(tx *sql.Tx) (ItemResult, error) {
+		b, err := s.bank(ctx, tx, scope, bankID, "create", bankShareLockClause)
 		if err != nil {
 			return ItemResult{}, err
 		}
@@ -324,26 +354,35 @@ func (s *PostgresStore) CreateItem(ctx context.Context, scope auth.AccessScope, 
 		if err != nil {
 			return ItemResult{}, err
 		}
-		v, err := s.insertVersion(ctx, tx, scope, i.ID, 1, b.MetadataSchemaVersion, nil, content, emptyScoring())
+		v, err := s.insertVersion(ctx, tx, scope, versionInsert{itemID: i.ID, no: 1, schemaVersion: b.MetadataSchemaVersion, content: content, scoring: emptyScoring()})
 		return ItemResult{Item: i, Version: v}, err
 	})
 }
-func (s *PostgresStore) insertVersion(ctx context.Context, tx *sql.Tx, scope auth.AccessScope, itemID string, no, schemaVersion int, source *string, content Content, scoring Scoring) (Version, error) {
+
+type versionInsert struct {
+	itemID            string
+	no, schemaVersion int
+	source            *string
+	content           Content
+	scoring           Scoring
+}
+
+func (s *PostgresStore) insertVersion(ctx context.Context, tx *sql.Tx, scope auth.AccessScope, in versionInsert) (Version, error) {
 	// 整包哈希及答案、Rubric 子版本由数据库触发器维护，定义见迁移 000141。
-	raw, _ := json.Marshal(content)
-	scoreRaw, _ := json.Marshal(scoring)
-	return scanVersion(tx.QueryRowContext(ctx, `INSERT INTO question_bank_item_version(tenant_id,item_id,version_no,schema_version,source_version_id,author_id,content,content_hash,scoring) VALUES($1::uuid,$2::uuid,$3,$4,$5::uuid,$6::uuid,$7::jsonb,$8,$9::jsonb) RETURNING `+versionCols, scope.TenantID, itemID, no, schemaVersion, source, scope.ActorID, raw, contentHash(content), scoreRaw))
+	raw, _ := json.Marshal(in.content)
+	scoreRaw, _ := json.Marshal(in.scoring)
+	return scanVersion(tx.QueryRowContext(ctx, `INSERT INTO question_bank_item_version(tenant_id,item_id,version_no,schema_version,source_version_id,author_id,content,content_hash,scoring) VALUES($1::uuid,$2::uuid,$3,$4,$5::uuid,$6::uuid,$7::jsonb,$8,$9::jsonb) RETURNING `+versionCols, scope.TenantID, in.itemID, in.no, in.schemaVersion, in.source, scope.ActorID, raw, contentHash(in.content), scoreRaw))
 }
 func (s *PostgresStore) CreateVersion(ctx context.Context, scope auth.AccessScope, itemID string, in CreateVersionInput) (Version, error) {
 	if !validID(in.SourceVersionID) {
 		return Version{}, ErrInvalidInput
 	}
-	return pgMutation(ctx, s, scope, "question_bank.version.create", itemID, in, "edit", func(tx *sql.Tx) (Version, error) {
+	return pgMutation(ctx, s, scope, pgMutationCommand{op: "question_bank.version.create", target: itemID, input: in, action: "edit"}, func(tx *sql.Tx) (Version, error) {
 		i, err := s.item(ctx, tx, scope, itemID, "edit", "")
 		if err != nil {
 			return Version{}, err
 		}
-		b, err := s.bank(ctx, tx, scope, i.BankID, "edit", " FOR SHARE OF b")
+		b, err := s.bank(ctx, tx, scope, i.BankID, "edit", bankShareLockClause)
 		if err != nil {
 			return Version{}, err
 		}
@@ -371,7 +410,7 @@ func (s *PostgresStore) CreateVersion(ctx context.Context, scope auth.AccessScop
 		if err != nil {
 			return Version{}, err
 		}
-		return s.insertVersion(ctx, tx, scope, itemID, no, b.MetadataSchemaVersion, &source.ID, content, source.Scoring)
+		return s.insertVersion(ctx, tx, scope, versionInsert{itemID: itemID, no: no, schemaVersion: b.MetadataSchemaVersion, source: &source.ID, content: content, scoring: source.Scoring})
 	})
 }
 func (s *PostgresStore) UpdateVersion(ctx context.Context, scope auth.AccessScope, id string, input UpdateVersionInput) (Version, error) {
@@ -379,7 +418,7 @@ func (s *PostgresStore) UpdateVersion(ctx context.Context, scope auth.AccessScop
 	if err != nil || input.ExpectedRevision <= 0 {
 		return Version{}, ErrInvalidInput
 	}
-	return pgMutation(ctx, s, scope, "question_bank.version.update", id, input, "edit", func(tx *sql.Tx) (Version, error) {
+	return pgMutation(ctx, s, scope, pgMutationCommand{op: "question_bank.version.update", target: id, input: input, action: "edit"}, func(tx *sql.Tx) (Version, error) {
 		v, err := s.version(ctx, tx, scope, id, "edit")
 		if err != nil {
 			return Version{}, err
@@ -388,7 +427,7 @@ func (s *PostgresStore) UpdateVersion(ctx context.Context, scope auth.AccessScop
 		if err != nil {
 			return Version{}, err
 		}
-		b, err := s.bank(ctx, tx, scope, i.BankID, "edit", " FOR SHARE OF b")
+		b, err := s.bank(ctx, tx, scope, i.BankID, "edit", bankShareLockClause)
 		if err != nil {
 			return Version{}, err
 		}

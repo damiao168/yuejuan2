@@ -86,24 +86,7 @@ func TestSeedPolicySamplingAndHiddenTraitObservation(t *testing.T) {
 		}
 	}
 
-	receipt, handled, err := service.TrySubmit(context.Background(), "tenant-a", task.ID, "grader-a", SubmitInput{
-		Score: 3, ExpectedRevision: task.Revision, RubricSelections: map[string]any{"ideas": 2, "language": "clear"},
-	})
-	if err != nil || !handled || receipt.Status != "completed" || receipt.Revision != 2 {
-		t.Fatalf("receipt=%+v handled=%v err=%v", receipt, handled, err)
-	}
-	receiptJSON, _ := json.Marshal(receipt)
-	if strings.Contains(string(receiptJSON), "reference") || strings.Contains(string(receiptJSON), "seed") || strings.Contains(string(receiptJSON), "gold") {
-		t.Fatalf("completion revealed hidden quality task: %s", receiptJSON)
-	}
-	observations, err := service.ListObservations(context.Background(), "tenant-a", ObservationFilter{ExamID: "exam-a"})
-	if err != nil || len(observations) != 1 {
-		t.Fatalf("observations=%+v err=%v", observations, err)
-	}
-	observation := observations[0]
-	if observation.ObservationKind != ObservationTrait || observation.TraitObservation["ideas"] != 2 || observation.CriterionObservation != nil || observation.AbsoluteError != 1 {
-		t.Fatalf("unexpected trait observation: %+v", observation)
-	}
+	assertHiddenSeedTraitSubmission(t, service, task)
 }
 
 func TestStructuredSeedStoresCriterionObservationAndNeverFallsThrough(t *testing.T) {
@@ -132,8 +115,7 @@ func TestStructuredSeedStoresCriterionObservationAndNeverFallsThrough(t *testing
 		items[0].RubricAgreement == nil || *items[0].RubricAgreement != .5 {
 		t.Fatalf("unexpected criterion observation: %+v", items)
 	}
-	// Seed IDs are fully handled by this boundary, so the review submit path
-	// must not continue and cannot create human_grade/final_grade facts.
+	// Seed ID 完全由此边界处理，因此复核提交路径不能继续，也不能创建 human_grade/final_grade 事实。
 	if _, handled, err = service.TrySubmit(context.Background(), "tenant-a", task.ID, "grader-a", SubmitInput{
 		Score: 4, ExpectedRevision: 1,
 	}); !handled || !errors.Is(err, ErrConflict) {
@@ -226,4 +208,27 @@ func activeGold(id string, version int, archetype string, criteria map[string]an
 		AnswerImageURL: "/api/v1/answer-segments/hidden/image", ActiveVersion: version, Status: goldpaper.StatusActive,
 		ArchetypeCode: archetype, Versions: []goldpaper.Version{{Version: version, ExamQuestionSnapshotID: "snapshot-a",
 			ReferenceScore: 4, MaxScore: 5, TraitScores: criteria, ApprovedAt: &now}}}
+}
+
+// 阅卷者提交只得到普通回执；管理侧随后读取独立的质量观察事实。
+func assertHiddenSeedTraitSubmission(t *testing.T, service *Service, task Task) {
+	t.Helper()
+	receipt, handled, err := service.TrySubmit(context.Background(), "tenant-a", task.ID, "grader-a", SubmitInput{
+		Score: 3, ExpectedRevision: task.Revision, RubricSelections: map[string]any{"ideas": 2, "language": "clear"},
+	})
+	if err != nil || !handled || receipt.Status != "completed" || receipt.Revision != 2 {
+		t.Fatalf("receipt=%+v handled=%v err=%v", receipt, handled, err)
+	}
+	receiptJSON, _ := json.Marshal(receipt)
+	if strings.Contains(string(receiptJSON), "reference") || strings.Contains(string(receiptJSON), "seed") || strings.Contains(string(receiptJSON), "gold") {
+		t.Fatalf("completion revealed hidden quality task: %s", receiptJSON)
+	}
+	observations, err := service.ListObservations(context.Background(), "tenant-a", ObservationFilter{ExamID: "exam-a"})
+	if err != nil || len(observations) != 1 {
+		t.Fatalf("observations=%+v err=%v", observations, err)
+	}
+	observation := observations[0]
+	if observation.ObservationKind != ObservationTrait || observation.TraitObservation["ideas"] != 2 || observation.CriterionObservation != nil || observation.AbsoluteError != 1 {
+		t.Fatalf("unexpected trait observation: %+v", observation)
+	}
 }

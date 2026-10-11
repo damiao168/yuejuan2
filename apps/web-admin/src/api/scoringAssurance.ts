@@ -2,23 +2,13 @@ import { EduGradeApi } from "@edugrade/sdk";
 import type {
   AddGradingEvaluationObservationRequest,
   AddModelCalibrationEvidenceRequest,
-  AIEligibilityDecision,
-  AIEligibilityPolicy,
-  AIHumanDisagreement,
   AIHumanDisagreementSeverity,
   AIHumanDisagreementStatus,
-  AIHumanDisagreementTaxonomy,
   ClassifyAIHumanDisagreementRequest,
   CreateGradingEvaluationRequest,
   CreateModelCalibrationRequest,
   EducationStage,
   ExamRiskTier,
-  GradingEvaluationResponseDifficulty,
-  GradingEvaluationQualitySummary,
-  GradingEvaluationRun,
-  GradingEvaluationSliceMetric,
-  ModelCalibration,
-  ModelCalibrationEvidence,
   PutAIEligibilityPolicyRequest,
   RouteAIHumanDisagreementRequest,
   SubjectCode
@@ -63,7 +53,7 @@ export type {
   PutAIEligibilityPolicyRequest,
   RouteAIHumanDisagreementRequest,
   SubjectCode
-};
+} from "@edugrade/sdk";
 
 export interface EligibilityAxis {
   subject_code: SubjectCode;

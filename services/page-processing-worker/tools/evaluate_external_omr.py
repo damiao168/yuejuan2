@@ -3,8 +3,8 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import re
 import time
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -37,10 +37,41 @@ def parse_args() -> argparse.Namespace:
 
 
 def parse_labels(path: Path) -> dict[int, str]:
-    labels = {int(number): label for number, label in re.findall(r"(\d+)\s*:\s*([ABCDXM])", path.read_text(encoding="utf-8"))}
+    text = path.read_text(encoding="utf-8")
+    labels: dict[int, str] = {}
+    cursor = 0
+    while cursor < len(text):
+        if not text[cursor].isdecimal():
+            cursor += 1
+            continue
+        start = cursor
+        cursor = _decimal_end(text, cursor)
+        label_position = _skip_label_space(text, cursor)
+        if label_position < len(text) and text[label_position] == ":":
+            label_position = _skip_label_space(text, label_position + 1)
+            if label_position < len(text) and text[label_position] in "ABCDXM":
+                # 保留原非锚定匹配及重复题号后者覆盖；数字和空白仍采用 Unicode 语义。
+                labels[int(text[start:cursor])] = text[label_position]
+                label_position += 1
+        # 游标不回到数字串内部；畸形后缀中的新数字仍从当前位置继续尝试。
+        cursor = label_position
     if set(labels) != set(range(1, QUESTION_COUNT + 1)):
         raise ValueError(f"{path} does not contain one governed label for every item")
     return labels
+
+
+def _decimal_end(text: str, start: int) -> int:
+    cursor = start
+    while cursor < len(text) and text[cursor].isdecimal():
+        cursor += 1
+    return cursor
+
+
+def _skip_label_space(text: str, start: int) -> int:
+    cursor = start
+    while cursor < len(text) and text[cursor].isspace():
+        cursor += 1
+    return cursor
 
 
 def register_answer_area(path: Path) -> np.ndarray:
@@ -101,6 +132,15 @@ def percentile(values: list[float], value: float) -> float:
     return round(float(np.percentile(values, value)), 3) if values else 0.0
 
 
+@dataclass
+class EvaluationTotals:
+    raw: dict[str, Any]
+    gated: dict[str, Any]
+    decisions: dict[str, int]
+    durations_ms: list[float]
+    selected_confidences: list[float]
+
+
 def evaluate(dataset_dir: Path) -> dict[str, Any]:
     images = sorted(dataset_dir.glob("*.jpg"))
     if len(images) < 2 or len(images) % 2:
@@ -140,62 +180,89 @@ def evaluate(dataset_dir: Path) -> dict[str, Any]:
     decisions = {"selected": 0, "blank": 0, "multiple": 0, "ambiguous": 0}
     durations_ms: list[float] = []
     selected_confidences: list[float] = []
-    half = len(images) // 2
+    totals = EvaluationTotals(raw, gated, decisions, durations_ms, selected_confidences)
 
-    # Each half is evaluated against a median blank reference built only from
-    # the other half. Labels never participate in registration or reference generation.
     for fold in range(2):
-        evaluation_indices = range(fold * half, (fold + 1) * half)
-        calibration_indices = range((1 - fold) * half, (2 - fold) * half)
-        reference = np.median(np.stack([registered[index] for index in calibration_indices]), axis=0).astype(np.uint8)
-        for index in evaluation_indices:
-            labels = parse_labels(label_files[index])
-            for question_no in range(1, QUESTION_COUNT + 1):
-                crop, regions = question_crop(registered[index], question_no)
-                reference_crop, _ = question_crop(reference, question_no)
-                started = time.perf_counter_ns()
-                result = extract_marks(
-                    encode_png(crop),
-                    regions,
-                    profile=profile,
-                    reference_image_bytes=encode_png(reference_crop),
-                    reference_content_type="image/png",
-                    reference_question_region={"x": 0, "y": 0, "width": 1, "height": 1},
-                )
-                durations_ms.append((time.perf_counter_ns() - started) / 1_000_000)
-                decisions[result["decision"]] += 1
-                if result["decision"] == "selected":
-                    selected_confidences.append(float(result["confidence"]))
-
-                expected = labels[question_no]
-                unsafe = expected in UNSAFE_LABELS
-                extractor_review = bool(result["needs_human_review"])
-                automatic = not extractor_review and float(result["confidence"]) >= AUTO_CONFIRM_MINIMUM_CONFIDENCE
-                if unsafe:
-                    raw["unsafe_label_count"] += 1
-                    raw["unsafe_routed_to_review_count" if extractor_review else "unsafe_selected_count"] += 1
-                    gated["unsafe_automatic_count" if automatic else "unsafe_routed_to_review_count"] += 1
-                    if automatic and result["decision"] == "blank":
-                        gated["silent_unsafe_zero_count"] += 1
-                else:
-                    raw["clear_label_count"] += 1
-                    if extractor_review:
-                        raw["clear_routed_to_review_count"] += 1
-                    elif result["selected"] == [expected]:
-                        raw["correct_selected_count"] += 1
-                    else:
-                        raw["wrong_selected_count"] += 1
-
-                if automatic:
-                    gated["automatic_count"] += 1
-                    if not unsafe and result["selected"] == [expected]:
-                        gated["correct_automatic_count"] += 1
-                    else:
-                        gated["wrong_automatic_count"] += 1
-                else:
-                    gated["manual_review_count"] += 1
+        _evaluate_fold(registered, label_files, fold, profile, totals)
 
     item_count = len(images) * QUESTION_COUNT
+    _finalize_metrics(raw, gated, item_count)
+    return _build_evaluation_report(dataset_dir, images, label_files, profile, totals)
+
+
+def _evaluate_fold(registered: list[np.ndarray], label_files: list[Path], fold: int, profile: OMRProfile, totals: EvaluationTotals) -> None:
+    half = len(registered) // 2
+    evaluation_indices = range(fold * half, (fold + 1) * half)
+    calibration_indices = range((1 - fold) * half, (2 - fold) * half)
+    # 每一半只使用另一半生成参考；标签仅在参考生成后读取，不参与配准或参考计算。
+    reference = np.median(np.stack([registered[index] for index in calibration_indices]), axis=0).astype(np.uint8)
+    for index in evaluation_indices:
+        labels = parse_labels(label_files[index])
+        for question_no in range(1, QUESTION_COUNT + 1):
+            result, duration_ms = _extract_question(registered[index], reference, question_no, profile)
+            _record_question(totals, labels, question_no, result, duration_ms)
+
+
+def _extract_question(image: np.ndarray, reference: np.ndarray, question_no: int, profile: OMRProfile) -> tuple[dict[str, Any], float]:
+    crop, regions = question_crop(image, question_no)
+    reference_crop, _ = question_crop(reference, question_no)
+    # 保留原计时范围：不含配准、参考生成和裁剪，只含两次编码与提取。
+    started = time.perf_counter_ns()
+    result = extract_marks(
+        encode_png(crop),
+        regions,
+        profile=profile,
+        reference_image_bytes=encode_png(reference_crop),
+        reference_content_type="image/png",
+        reference_question_region={"x": 0, "y": 0, "width": 1, "height": 1},
+    )
+    return result, (time.perf_counter_ns() - started) / 1_000_000
+
+
+def _record_question(totals: EvaluationTotals, labels: dict[int, str], question_no: int, result: dict[str, Any], duration_ms: float) -> None:
+    totals.durations_ms.append(duration_ms)
+    totals.decisions[result["decision"]] += 1
+    if result["decision"] == "selected":
+        totals.selected_confidences.append(float(result["confidence"]))
+    expected = labels[question_no]
+    unsafe = expected in UNSAFE_LABELS
+    extractor_review = bool(result["needs_human_review"])
+    automatic = not extractor_review and float(result["confidence"]) >= AUTO_CONFIRM_MINIMUM_CONFIDENCE
+    _record_raw_counts(totals.raw, expected, result, unsafe, extractor_review)
+    _record_gate_counts(totals.gated, expected, result, unsafe, automatic)
+
+
+def _record_raw_counts(raw: dict[str, Any], expected: str, result: dict[str, Any], unsafe: bool, extractor_review: bool) -> None:
+    if unsafe:
+        # X/M 是人工观察到的风险标签；不能作为可自动评分的空白答案。
+        raw["unsafe_label_count"] += 1
+        raw["unsafe_routed_to_review_count" if extractor_review else "unsafe_selected_count"] += 1
+    else:
+        raw["clear_label_count"] += 1
+        if extractor_review:
+            raw["clear_routed_to_review_count"] += 1
+        elif result["selected"] == [expected]:
+            raw["correct_selected_count"] += 1
+        else:
+            raw["wrong_selected_count"] += 1
+
+
+def _record_gate_counts(gated: dict[str, Any], expected: str, result: dict[str, Any], unsafe: bool, automatic: bool) -> None:
+    if unsafe:
+        gated["unsafe_automatic_count" if automatic else "unsafe_routed_to_review_count"] += 1
+        if automatic and result["decision"] == "blank":
+            gated["silent_unsafe_zero_count"] += 1
+    if automatic:
+        gated["automatic_count"] += 1
+        if not unsafe and result["selected"] == [expected]:
+            gated["correct_automatic_count"] += 1
+        else:
+            gated["wrong_automatic_count"] += 1
+    else:
+        gated["manual_review_count"] += 1
+
+
+def _finalize_metrics(raw: dict[str, Any], gated: dict[str, Any], item_count: int) -> None:
     raw_selected = raw["correct_selected_count"] + raw["wrong_selected_count"] + raw["unsafe_selected_count"]
     raw["selected_precision"] = raw["correct_selected_count"] / raw_selected if raw_selected else 0.0
     raw["clear_selected_coverage"] = (
@@ -213,6 +280,9 @@ def evaluate(dataset_dir: Path) -> dict[str, Any]:
         gated["unsafe_routed_to_review_count"] / raw["unsafe_label_count"] if raw["unsafe_label_count"] else 1.0
     )
 
+
+def _build_evaluation_report(dataset_dir: Path, images: list[Path], label_files: list[Path], profile: OMRProfile, totals: EvaluationTotals) -> dict[str, Any]:
+    item_count = len(images) * QUESTION_COUNT
     governed_files = images + label_files
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -242,19 +312,19 @@ def evaluate(dataset_dir: Path) -> dict[str, Any]:
             },
             "auto_confirm_minimum_confidence": AUTO_CONFIRM_MINIMUM_CONFIDENCE,
         },
-        "decision_counts": decisions,
-        "raw_extractor": raw,
-        "production_gate": gated,
+        "decision_counts": totals.decisions,
+        "raw_extractor": totals.raw,
+        "production_gate": totals.gated,
         "throughput": {
             "scope": "per-question extraction after registration and reference generation",
-            "average_duration_ms": round(float(np.mean(durations_ms)), 3),
-            "p95_duration_ms": percentile(durations_ms, 95),
-            "sequential_items_per_second": round(1000.0 / float(np.mean(durations_ms)), 2),
+            "average_duration_ms": round(float(np.mean(totals.durations_ms)), 3),
+            "p95_duration_ms": percentile(totals.durations_ms, 95),
+            "sequential_items_per_second": round(1000.0 / float(np.mean(totals.durations_ms)), 2),
         },
         "selected_confidence": {
-            "p50": percentile(selected_confidences, 50),
-            "p95": percentile(selected_confidences, 95),
-            "maximum": percentile(selected_confidences, 100),
+            "p50": percentile(totals.selected_confidences, 50),
+            "p95": percentile(totals.selected_confidences, 95),
+            "maximum": percentile(totals.selected_confidences, 100),
         },
         "verdict": {
             "auto_confirmation_profile_approved": False,

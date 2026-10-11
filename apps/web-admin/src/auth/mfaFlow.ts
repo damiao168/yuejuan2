@@ -21,7 +21,7 @@ export function validMFAStatus(value: MFAStatusResponse): boolean {
 }
 
 export function safeTOTPQRCode(value: string): boolean {
-  // Only the locally generated PNG. Never fetch a QR endpoint carrying a seed.
+  // 只接受本地生成的 PNG，不请求携带种子密钥的二维码端点。
   return typeof value === "string" && value.length <= 200_000 && /^data:image\/png;base64,iVBORw0KGgo[A-Za-z0-9+/]*={0,2}$/.test(value);
 }
 
@@ -32,7 +32,7 @@ function expiresAt(value: string, now: number, ttl: number): number {
 }
 
 function recoveryCodes(value: MFARecoveryCodesResponse, expected: "enabled" | "rotated"): string[] {
-  if (!value || value.status !== expected || !Array.isArray(value.recovery_codes) || value.recovery_codes.length !== 10 ||
+  if (value?.status !== expected || !Array.isArray(value.recovery_codes) || value.recovery_codes.length !== 10 ||
     value.recovery_codes.some((code) => typeof code !== "string" || !/^[a-f0-9]{8}(?:-[a-f0-9]{8}){3}$/.test(code)) ||
     new Set(value.recovery_codes).size !== 10) throw new Error("invalid recovery response");
   return [...value.recovery_codes];
@@ -42,12 +42,12 @@ export function validMFACode(method: MFAMethod, code: string): boolean {
   return method === "totp" ? /^\d{6}$/.test(code.trim()) : /^[a-f0-9]{32}$/i.test(code.trim().replace(/-/g, ""));
 }
 
-// A single, ephemeral flow. No password/OTP is retained. Revision + abort fence
-// late responses on expiry, navigation, lock or dialog cancellation. Aborting a
-// request does not undo a server mutation; ambiguous results are never replayed.
+// 单次短暂流程，不保留密码或 OTP。修订号和中止机制
+// 在过期、导航、锁定或取消对话框后拦截迟到响应。
+// 中止请求不会撤销服务端变更；结果不明确的操作不会重放。
 export class MFAFlowController {
   private state: MFAFlowState = { phase: "closed", busy: false };
-  private listeners = new Set<() => void>();
+  private readonly listeners = new Set<() => void>();
   private revision = 0;
   private request?: AbortController;
 
@@ -150,7 +150,7 @@ export class MFAFlowController {
       const expiry = expiresAt(result.expires_at, this.now(), 300_000);
       if (result.status !== "verified" || result.operation !== state.challenge.operation || expiry > state.expiresAt) throw new Error("invalid verification response");
       if (revision === this.revision) this.publish({ phase: "verified", challenge: state.challenge, method, expiresAt: expiry, busy: true });
-      // Never call disable/rotate here. Execution requires another explicit click.
+      // 此处不调用 disable 或 rotate，执行操作需要用户再次明确点击。
       return undefined;
     }, state, "验证结果不确定，验证码或恢复码可能已经使用。原操作尚未由此页执行，请重新开始并使用新的码。");
   }

@@ -123,30 +123,10 @@ func parseDocumentStream(body io.Reader, onProgress func(map[string]any) error) 
 		if err := json.Unmarshal(scanner.Bytes(), &frame); err != nil {
 			return DocumentParseResponse{}, errors.New("paper parser stream contained invalid JSON")
 		}
-		switch frame.Type {
-		case "progress":
-			if onProgress != nil {
-				if err := onProgress(frame.Progress); err != nil {
-					return DocumentParseResponse{}, err
-				}
-			}
-		case "result":
-			if frame.Result == nil || result != nil {
-				return DocumentParseResponse{}, errors.New("paper parser stream contained an invalid result")
-			}
-			result = frame.Result
-		case "error":
-			var detail documentStreamError
-			if json.Unmarshal(frame.Error, &detail) != nil {
-				return DocumentParseResponse{}, errors.New("paper parser stream reported an invalid error")
-			}
-			code := strings.TrimSpace(detail.Error.Code)
-			if code == "" {
-				code = "unknown_error"
-			}
-			return DocumentParseResponse{}, fmt.Errorf("paper parser stream failed: %s", code)
-		default:
-			return DocumentParseResponse{}, errors.New("paper parser stream contained an unknown event")
+		var err error
+		result, err = applyDocumentStreamFrame(frame, result, onProgress)
+		if err != nil {
+			return DocumentParseResponse{}, err
 		}
 	}
 	if err := scanner.Err(); err != nil {
@@ -156,4 +136,34 @@ func parseDocumentStream(body io.Reader, onProgress func(map[string]any) error) 
 		return DocumentParseResponse{}, errors.New("paper parser stream ended without a result")
 	}
 	return *result, nil
+}
+
+// 帧分派只登记候选 result；外层仍须读到 EOF，后续帧和回调的错误继续使整次解析失败。
+func applyDocumentStreamFrame(frame documentStreamFrame, result *DocumentParseResponse, onProgress func(map[string]any) error) (*DocumentParseResponse, error) {
+	switch frame.Type {
+	case "progress":
+		if onProgress != nil {
+			if err := onProgress(frame.Progress); err != nil {
+				return nil, err
+			}
+		}
+	case "result":
+		if frame.Result == nil || result != nil {
+			return nil, errors.New("paper parser stream contained an invalid result")
+		}
+		result = frame.Result
+	case "error":
+		var detail documentStreamError
+		if json.Unmarshal(frame.Error, &detail) != nil {
+			return nil, errors.New("paper parser stream reported an invalid error")
+		}
+		code := strings.TrimSpace(detail.Error.Code)
+		if code == "" {
+			code = "unknown_error"
+		}
+		return nil, fmt.Errorf("paper parser stream failed: %s", code)
+	default:
+		return nil, errors.New("paper parser stream contained an unknown event")
+	}
+	return result, nil
 }

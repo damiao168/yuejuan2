@@ -43,17 +43,79 @@
 .school-chat-message-actions .ant-btn { display: inline-flex; align-items: center; gap: 5px; padding-inline: 5px; color: #6f7988; font-size: 12px; }
 .school-chat-message-files { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; margin-bottom: 8px; }
 .school-chat-message-files > span { display: inline-flex; max-width: 260px; align-items: center; gap: 6px; overflow: hidden; padding: 5px 9px; border: 1px solid #dce3ec; border-radius: 8px; color: #526070; background: #fff; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
-.school-chat-message .math-markdown > :first-child { margin-top: 0; }
-.school-chat-message .math-markdown > :last-child { margin-bottom: 0; }
-.school-chat-message .math-markdown pre { overflow-x: auto; padding: 14px; border-radius: 8px; background: #f4f6f9; }
+.school-chat-shell .math-markdown { min-width: 0; max-width: 100%; font-size: 14px; line-height: 1.8; white-space: normal; }
+.school-chat-shell .math-markdown > :first-child { margin-top: 0; }
+.school-chat-shell .math-markdown > :last-child { margin-bottom: 0; }
+.school-chat-shell .math-markdown p { margin: 0 0 12px; }
+.school-chat-shell .math-markdown h1,
+.school-chat-shell .math-markdown h2,
+.school-chat-shell .math-markdown h3,
+.school-chat-shell .math-markdown h4,
+.school-chat-shell .math-markdown h5,
+.school-chat-shell .math-markdown h6 { margin: 22px 0 10px; color: #202c3d; font-weight: 650; line-height: 1.45; }
+.school-chat-shell .math-markdown h1 { font-size: 23px; }
+.school-chat-shell .math-markdown h2 { font-size: 20px; }
+.school-chat-shell .math-markdown h3 { font-size: 17px; }
+.school-chat-shell .math-markdown h4 { font-size: 15px; }
+.school-chat-shell .math-markdown h5,
+.school-chat-shell .math-markdown h6 { font-size: 14px; }
+.school-chat-shell .math-markdown ul,
+.school-chat-shell .math-markdown ol { margin: 10px 0 14px; padding-left: 25px; }
+.school-chat-shell .math-markdown li { margin: 5px 0; padding-left: 2px; }
+.school-chat-shell .math-markdown li > p { margin-bottom: 7px; }
+.school-chat-shell .math-markdown li > ul,
+.school-chat-shell .math-markdown li > ol { margin-top: 5px; margin-bottom: 8px; }
+.school-chat-shell .math-markdown blockquote { margin: 14px 0; padding: 8px 14px; border-left: 3px solid #b5c9e3; border-radius: 0 6px 6px 0; background: #f6f8fc; color: #536176; }
+.school-chat-shell .math-markdown blockquote > :last-child { margin-bottom: 0; }
+.school-chat-shell .math-markdown hr { margin: 22px 0; border: 0; border-top: 1px solid #e1e6ed; }
+.school-chat-shell .math-markdown :not(pre) > code { padding: 2px 5px; border-radius: 4px; background: #f0f3f7; color: #43546d; font-size: .9em; }
+.school-chat-shell .math-markdown .math-markdown-code-block { min-width: 0; max-width: 100%; margin: 14px 0; overflow: hidden; border: 1px solid #dfe6ef; border-radius: 8px; background: #f6f8fb; }
+.school-chat-shell .math-markdown .math-markdown-code-header { display: flex; min-height: 35px; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 12px; border-bottom: 1px solid #e3e8ef; background: #edf1f6; color: #5b6980; font-size: 12px; line-height: 1.5; }
+.school-chat-shell .math-markdown .math-markdown-code-header button { padding: 3px 6px; border: 0; border-radius: 4px; background: transparent; color: #516881; cursor: pointer; font: inherit; white-space: nowrap; }
+.school-chat-shell .math-markdown .math-markdown-code-header button:hover { background: #dfe8f3; color: #285f9f; }
+.school-chat-shell .math-markdown .math-markdown-code-header button:focus-visible,
+.school-chat-shell .math-markdown .math-markdown-table-scroll:focus-visible { outline: 2px solid #397acb; outline-offset: -2px; }
+/* 横向溢出由代码、表格和公式自身承接，不能撑宽流式回复或移动端聊天栏。 */
+.school-chat-shell .math-markdown pre { max-width: 100%; margin: 0; overflow-x: auto; padding: 14px; border-radius: 0; background: #f6f8fb; font-size: 12.5px; line-height: 1.65; overflow-wrap: normal; white-space: pre; }
+.school-chat-shell .math-markdown pre code { display: block; padding: 0; background: transparent; font-size: inherit; overflow-wrap: normal; white-space: inherit; }
+.school-chat-shell .math-markdown .math-markdown-table-scroll { max-width: 100%; margin: 14px 0; overflow-x: auto; border: 1px solid #dce4ee; border-radius: 8px; scrollbar-width: thin; }
+.school-chat-shell .math-markdown table { min-width: 100%; width: max-content; border-collapse: collapse; font-size: 13px; line-height: 1.7; }
+.school-chat-shell .math-markdown th,
+.school-chat-shell .math-markdown td { max-width: 340px; padding: 9px 12px; border: 1px solid #e1e7ef; vertical-align: top; overflow-wrap: break-word; white-space: normal; }
+.school-chat-shell .math-markdown th { background: #f1f5fa; color: #344960; font-weight: 600; }
+.school-chat-shell .math-markdown tr:first-child > th { border-top: 0; }
+.school-chat-shell .math-markdown tr > :first-child { border-left: 0; }
+.school-chat-shell .math-markdown tr > :last-child { border-right: 0; }
+.school-chat-shell .math-markdown tbody tr:last-child > td { border-bottom: 0; }
+.school-chat-shell .math-markdown tbody tr:nth-child(even) { background: #fafbfd; }
+.school-chat-shell .math-markdown td > p:last-child { margin-bottom: 0; }
+.school-chat-shell .math-markdown .contains-task-list { padding-left: 5px; list-style: none; }
+.school-chat-shell .math-markdown .task-list-item { padding-left: 0; }
+.school-chat-shell .math-markdown .task-list-item input[type="checkbox"] { width: 13px; height: 13px; margin: 0 8px 0 0; accent-color: #397acb; vertical-align: -1px; }
+.school-chat-shell .math-markdown .katex { overflow-wrap: normal; word-break: normal; white-space: nowrap; }
+.school-chat-shell .math-markdown .katex-display { max-width: 100%; margin: 14px 0; overflow-x: auto; overflow-y: hidden; padding-block: 2px; scrollbar-width: thin; }
+.school-chat-shell .math-markdown .katex-display > .katex { display: block; width: max-content; min-width: 100%; max-width: none; line-height: normal; text-align: left; white-space: nowrap; }
+.school-chat-shell .math-markdown .footnotes { margin-top: 24px; padding-top: 12px; border-top: 1px solid #e1e6ed; color: #69768a; font-size: 12px; }
+.school-chat-shell .math-markdown .footnotes ol { margin-bottom: 0; }
+.school-chat-shell .math-markdown [data-footnote-ref],
+.school-chat-shell .math-markdown [data-footnote-backref] { color: #3168b2; }
 .school-chat-waiting { display: flex; align-items: center; gap: 12px; color: #6f7b8b; font-size: 13px; animation: school-chat-enter .2s ease-out; }
 .school-chat-live-body { min-width: 0; flex: 1; color: #273141; font-size: 14px; line-height: 1.75; overflow-wrap: anywhere; }
-.school-chat-reasoning { margin: 0 0 12px; padding: 9px 12px; border-left: 2px solid #b8c9df; border-radius: 0 7px 7px 0; background: #f7f9fc; color: #687789; font-size: 12px; line-height: 1.65; }
+.school-chat-reasoning { margin: 0 0 12px; padding: 9px 12px; border-left: 2px solid #b8c9df; border-radius: 0 7px 7px 0; background: #f7f9fc; color: #526174; font-size: 12px; line-height: 1.65; }
 .school-chat-reasoning-toggle { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 12px; padding: 0; border: 0; background: transparent; color: inherit; cursor: pointer; font: inherit; font-weight: 600; text-align: left; }
 .school-chat-reasoning-toggle:focus-visible { outline: 2px solid #397acb; outline-offset: 3px; }
 .school-chat-reasoning-control { display: inline-flex; align-items: center; gap: 3px; color: #3168b2; font-weight: 500; white-space: nowrap; }
 .school-chat-reasoning.is-expanded .school-chat-reasoning-control svg { transform: rotate(180deg); }
-.school-chat-reasoning-content { margin-top: 8px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.school-chat-reasoning-content { min-width: 0; margin-top: 8px; white-space: normal; overflow-wrap: anywhere; }
+.school-chat-shell .school-chat-reasoning .math-markdown { color: inherit; font-size: 12px; line-height: 1.7; }
+.school-chat-shell .school-chat-reasoning .math-markdown h1,
+.school-chat-shell .school-chat-reasoning .math-markdown h2,
+.school-chat-shell .school-chat-reasoning .math-markdown h3 { font-size: 14px; }
+.school-chat-shell .school-chat-reasoning .math-markdown h4,
+.school-chat-shell .school-chat-reasoning .math-markdown h5,
+.school-chat-shell .school-chat-reasoning .math-markdown h6 { font-size: 12px; }
+.school-chat-shell .school-chat-reasoning .math-markdown table,
+.school-chat-shell .school-chat-reasoning .math-markdown pre { font-size: 11.5px; }
 .school-chat-interrupted { color: #8791a0; font-size: 12px; }
 .school-chat-thinking { display: inline-flex; align-items: center; gap: 7px; }
 .school-chat-thinking > span { display: inline-flex; align-items: center; gap: 3px; }
@@ -66,9 +128,8 @@
 .school-chat-composer:focus-within { border-color: #82a9df; box-shadow: 0 6px 25px rgba(42, 95, 165, .12); }
 .school-chat-composer .ant-input { padding: 4px 5px; border: 0; box-shadow: none !important; resize: none; font-size: 14px; line-height: 1.6; }
 .school-chat-composer-bottom { display: flex; align-items: center; justify-content: space-between; padding: 3px 3px 0; color: #9ba4b1; font-size: 11px; }
-.school-chat-composer-bottom > .ant-btn:first-of-type { display: inline-flex; align-items: center; gap: 5px; margin-left: -4px; color: #66758a; }
 .school-chat-composer-bottom .ant-btn { width: 33px; height: 33px; }
-.school-chat-composer-bottom > .ant-btn:first-of-type { width: auto; }
+.school-chat-composer-bottom > .ant-btn:first-of-type { display: inline-flex; align-items: center; gap: 5px; margin-left: -4px; color: #66758a; width: auto; }
 .school-chat-file-input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
 .school-chat-attachments { display: flex; flex-wrap: wrap; gap: 7px; padding: 1px 4px 8px; }
 .school-chat-attachments > span { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto 22px; align-items: center; gap: 6px; max-width: min(100%, 310px); padding: 6px 6px 6px 9px; border: 1px solid #dce3ec; border-radius: 9px; color: #526070; background: #f7f9fc; }

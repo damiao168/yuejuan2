@@ -7,6 +7,10 @@ import (
 )
 
 func (s *PostgresStore) CreatePaper(ctx context.Context, tenantID string, examID string, userID string, input CreatePaperInput) (Paper, error) {
+	purpose, err := normalizePaperPurpose(input.Purpose)
+	if err != nil {
+		return Paper{}, err
+	}
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return Paper{}, err
@@ -30,6 +34,7 @@ func (s *PostgresStore) CreatePaper(ctx context.Context, tenantID string, examID
 SELECT id::text, COALESCE(exam_id::text, ''), original_name, content_type, size_bytes, hash_sha256, storage_bucket, storage_key
 FROM file_asset
 WHERE tenant_id = $1 AND id::text = $2 AND deleted_at IS NULL
+FOR UPDATE
 `, tenantID, fileID).Scan(&fileID, &linkedExamID, &fileInput.OriginalName, &fileInput.ContentType, &fileInput.SizeBytes, &fileInput.HashSHA256, &fileInput.StorageBucket, &fileInput.StorageKey)
 		if errors.Is(err, sql.ErrNoRows) {
 			return Paper{}, ErrNotFound
@@ -39,6 +44,19 @@ WHERE tenant_id = $1 AND id::text = $2 AND deleted_at IS NULL
 		}
 		if linkedExamID != "" && linkedExamID != examID {
 			return Paper{}, ErrInvalidInput
+		}
+		// 上传成功后登记响应可能丢失；同一资产的重试返回原版本，不能重复登记或改作另一种用途。
+		var existing Paper
+		err = tx.QueryRowContext(ctx, `SELECT id::text, tenant_id::text, exam_id::text, file_asset_id::text, version_no, status, purpose FROM exam_paper WHERE tenant_id = $1 AND file_asset_id::text = $2 AND deleted_at IS NULL LIMIT 1`, tenantID, fileID).Scan(&existing.ID, &existing.TenantID, &existing.ExamID, &existing.FileAssetID, &existing.VersionNo, &existing.Status, &existing.Purpose)
+		if err == nil {
+			if existing.ExamID != examID || existing.Purpose != purpose {
+				return Paper{}, ErrInvalidInput
+			}
+			existing.File = fileInput
+			return existing, nil
+		}
+		if !errors.Is(err, sql.ErrNoRows) {
+			return Paper{}, err
 		}
 		if _, err := tx.ExecContext(ctx, `
 UPDATE file_asset
@@ -59,12 +77,12 @@ VALUES ($1, $2, $3, 'exam_paper', $4, $5, $6, $7, $8, $9, $10, 'private', $11)
 		}
 	}
 	row := tx.QueryRowContext(ctx, `
-INSERT INTO exam_paper (id, tenant_id, exam_id, file_asset_id, version_no, status, uploaded_by)
-VALUES ($1, $2, $3, $4, $5, 'uploaded', $6)
-RETURNING id::text, tenant_id::text, exam_id::text, file_asset_id::text, version_no, status
-`, paperID, tenantID, examID, fileID, version, userID)
+INSERT INTO exam_paper (id, tenant_id, exam_id, file_asset_id, version_no, status, uploaded_by, purpose)
+VALUES ($1, $2, $3, $4, $5, 'uploaded', $6, $7)
+RETURNING id::text, tenant_id::text, exam_id::text, file_asset_id::text, version_no, status, purpose
+`, paperID, tenantID, examID, fileID, version, userID, purpose)
 	var out Paper
-	if err := row.Scan(&out.ID, &out.TenantID, &out.ExamID, &out.FileAssetID, &out.VersionNo, &out.Status); err != nil {
+	if err := row.Scan(&out.ID, &out.TenantID, &out.ExamID, &out.FileAssetID, &out.VersionNo, &out.Status, &out.Purpose); err != nil {
 		return Paper{}, err
 	}
 	out.File = fileInput
@@ -80,7 +98,7 @@ func (s *PostgresStore) ListPapers(ctx context.Context, tenantID string, examID 
 
 func listPapers(ctx context.Context, queryer postgresQueryer, tenantID string, examID string) ([]Paper, error) {
 	rows, err := queryer.QueryContext(ctx, `
-SELECT p.id::text, p.tenant_id::text, p.exam_id::text, p.file_asset_id::text, p.version_no, p.status,
+SELECT p.id::text, p.tenant_id::text, p.exam_id::text, p.file_asset_id::text, p.version_no, p.status, p.purpose,
        f.original_name, f.content_type, f.size_bytes, f.hash_sha256, f.storage_bucket, f.storage_key
 FROM exam_paper p
 JOIN file_asset f ON f.tenant_id = p.tenant_id AND f.id = p.file_asset_id
@@ -94,7 +112,7 @@ ORDER BY p.version_no DESC
 	out := []Paper{}
 	for rows.Next() {
 		var item Paper
-		if err := rows.Scan(&item.ID, &item.TenantID, &item.ExamID, &item.FileAssetID, &item.VersionNo, &item.Status, &item.File.OriginalName, &item.File.ContentType, &item.File.SizeBytes, &item.File.HashSHA256, &item.File.StorageBucket, &item.File.StorageKey); err != nil {
+		if err := rows.Scan(&item.ID, &item.TenantID, &item.ExamID, &item.FileAssetID, &item.VersionNo, &item.Status, &item.Purpose, &item.File.OriginalName, &item.File.ContentType, &item.File.SizeBytes, &item.File.HashSHA256, &item.File.StorageBucket, &item.File.StorageKey); err != nil {
 			return nil, err
 		}
 		out = append(out, item)

@@ -62,3 +62,11 @@ export function resolveProcessingException(exceptionId: string, resolution: stri
     body: { resolution }
   });
 }
+
+export type { ProcessingExceptionContext } from "@edugrade/sdk";
+export function getProcessingExceptionContext(id: string, signal?: AbortSignal) {
+  return processingApi.getProcessingExceptionContext({ path: { id }, signal });
+}
+export function getProcessingExceptionImage(id: string, signal?: AbortSignal) {
+  return apiClient.requestBlob(`/api/v1/processing/exceptions/${encodeURIComponent(id)}/page-image`, { signal });
+}

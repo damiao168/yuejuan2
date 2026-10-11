@@ -89,6 +89,47 @@ export function isTransientProbeError(code?: string) {
   return code === "provider_timeout" || code === "provider_unavailable";
 }
 
+export function applySavedModelConfig(current: ManagedModelAPIConfig[], saved: ManagedModelAPIConfig) {
+  // 默认模型由服务端确认；同一学校只能保留一个日常对话默认项。
+  return current.map((item) => {
+    if (item.id === saved.id) return saved;
+    if (saved.is_default) return { ...item, is_default: false };
+    return item;
+  });
+}
+
+export function modelUsageMessage(config: ManagedModelAPIConfig, status: "active" | "disabled", isDefault: boolean) {
+  if (isDefault) return `${config.display_name} 已设为日常对话模型`;
+  if (status === "disabled") {
+    const fallback = config.is_default ? "，日常对话已切回本地模型" : "";
+    return `${config.display_name} 已停用${fallback}`;
+  }
+  if (config.is_default) return "日常对话已切回本地模型";
+  return `${config.display_name} 已恢复`;
+}
+
+export function modelSaveLabel(editing: ManagedModelAPIConfig | null) {
+  if (editing?.is_default) return "验证并更新";
+  if (editing) return "检测连接并更新";
+  return "检测连接并保存";
+}
+
+export function hasModelFormChanges(values: ConfigFormValues, editing: ManagedModelAPIConfig | null, credentialSource: ManagedModelAPIConfig | null) {
+  const apiKey = String(values.api_key ?? "").trim();
+  const baseURL = String(values.base_url ?? "").trim();
+  const modelName = String(values.model_name ?? "").trim();
+  if (editing) return apiKey !== "" || baseURL !== editing.base_url || modelName !== editing.model_name;
+  // 沿用密钥的新模型不编辑供应商和地址，只判断用户是否填写了模型名。
+  if (credentialSource) return modelName !== "";
+  return Boolean(values.supplier || apiKey || baseURL || modelName);
+}
+
+export function capabilityDialogPresentation(displayName: string, temporarilyUnavailable: boolean, failed: boolean): { kind: "warning" | "error" | "info"; title: string } {
+  if (temporarilyUnavailable) return { kind: "warning", title: `${displayName}：能力检测暂时无法完成` };
+  if (failed) return { kind: "error", title: `${displayName}：结构化输出检测未通过` };
+  return { kind: "info", title: `${displayName}：能力检测详情` };
+}
+
 export function connectionStatusLabel(config: ManagedModelAPIConfig) {
   if (config.last_test_status === "success") return "正常";
   if (config.last_test_status === "temporary_unavailable") return "暂时无法验证";

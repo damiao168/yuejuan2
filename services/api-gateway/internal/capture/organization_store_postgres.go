@@ -103,7 +103,10 @@ func (s *PostgresStore) SplitSubmission(ctx context.Context, tenantID, batchID, 
 	if err = movePagesTx(ctx, tx, tenantID, batchID, input.SubmissionID, newID, input.PageIDs); err != nil {
 		return MatchingQueue{}, err
 	}
-	if err = recordGroupOperation(ctx, tx, tenantID, batchID, actorID, "split", input.SubmissionID, input.Reason, map[string]any{"new_submission_id": newID, "page_ids": input.PageIDs}); err != nil {
+	if err = recordGroupOperation(ctx, tx, tenantID, batchID, actorID, submissionGroupOperation{
+		Operation: "split", TargetID: input.SubmissionID, Reason: input.Reason,
+		After: map[string]any{"new_submission_id": newID, "page_ids": input.PageIDs},
+	}); err != nil {
 		return MatchingQueue{}, err
 	}
 	if err = s.aggregateBatchTx(ctx, tx, tenantID, batchID); err != nil {
@@ -157,7 +160,10 @@ func (s *PostgresStore) MergeSubmissions(ctx context.Context, tenantID, batchID,
 	if err != nil {
 		return MatchingQueue{}, err
 	}
-	if err = recordGroupOperation(ctx, tx, tenantID, batchID, actorID, "merge", input.SourceSubmissionID, input.Reason, map[string]any{"target_submission_id": input.TargetSubmissionID}); err != nil {
+	if err = recordGroupOperation(ctx, tx, tenantID, batchID, actorID, submissionGroupOperation{
+		Operation: "merge", TargetID: input.SourceSubmissionID, Reason: input.Reason,
+		After: map[string]any{"target_submission_id": input.TargetSubmissionID},
+	}); err != nil {
 		return MatchingQueue{}, err
 	}
 	if err = s.aggregateBatchTx(ctx, tx, tenantID, batchID); err != nil {
@@ -222,8 +228,16 @@ func invalidatePageTx(ctx context.Context, tx *sql.Tx, tenantID, pageID string) 
 	_, err = tx.ExecContext(ctx, `UPDATE page_registration_run SET processing_status='invalidated',updated_at=now() WHERE tenant_id=$1 AND capture_page_id=$2::uuid AND processing_status<>'invalidated'`, tenantID, pageID)
 	return err
 }
-func recordGroupOperation(ctx context.Context, tx *sql.Tx, tenantID, batchID, actorID, op, targetID, reason string, after any) error {
-	raw, _ := json.Marshal(after)
-	_, err := tx.ExecContext(ctx, `INSERT INTO capture_operation(tenant_id,capture_batch_id,operation,target_type,target_id,actor_id,reason,before_state,after_state)VALUES($1,$2::uuid,$3,'submission',$4::uuid,$5::uuid,$6,'{}',$7)`, tenantID, batchID, op, targetID, actorID, reason, raw)
+
+type submissionGroupOperation struct {
+	Operation string
+	TargetID  string
+	Reason    string
+	After     any
+}
+
+func recordGroupOperation(ctx context.Context, tx *sql.Tx, tenantID, batchID, actorID string, operation submissionGroupOperation) error {
+	raw, _ := json.Marshal(operation.After)
+	_, err := tx.ExecContext(ctx, `INSERT INTO capture_operation(tenant_id,capture_batch_id,operation,target_type,target_id,actor_id,reason,before_state,after_state)VALUES($1,$2::uuid,$3,'submission',$4::uuid,$5::uuid,$6,'{}',$7)`, tenantID, batchID, operation.Operation, operation.TargetID, actorID, operation.Reason, raw)
 	return err
 }

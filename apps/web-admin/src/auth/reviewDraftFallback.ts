@@ -9,9 +9,9 @@ export interface ReviewDraftFallback<T> {
 
 const memoryDrafts = new Map<string, Map<string, ReviewDraftFallback<unknown>>>();
 
-// Browser drafts are deliberately memory-only. The service-side draft and its
-// revision are authoritative; sensitive comments, answers and rubrics must not
-// survive a reload or be readable from browser storage on a shared computer.
+// 浏览器草稿只存内存，以服务端草稿及其修订号为准；
+// 敏感评语、答案和评分细则不能在重载后继续保留，
+// 也不能从公用电脑的浏览器存储中读取。
 export function saveReviewDraftFallback<T>(userId: string, taskId: string, snapshot: T): boolean {
   if (!userId.trim() || !taskId.trim()) return false;
   const now = Date.now();
@@ -68,6 +68,6 @@ function purgeLegacyPersistentDrafts() {
     }
     for (const key of keys) window.localStorage.removeItem(key);
   } catch {
-    // Storage may be disabled. Memory-only operation remains safe.
+    // 存储可能被禁用；仅使用内存的操作仍然安全。
   }
 }

@@ -6,6 +6,7 @@ import json
 import socket
 import ssl
 from dataclasses import replace
+from functools import partial
 from urllib.parse import urlsplit
 
 from edugrade_worker_runtime import ResponseValidationError, read_json_response
@@ -29,6 +30,15 @@ def _endpoint(value):
     return parsed
 
 
+def _validated_tls_context():
+    """Build a client context that verifies both the chain and hostname."""
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    context.check_hostname = True
+    context.verify_mode = ssl.CERT_REQUIRED
+    context.load_default_certs()
+    return context
+
+
 def public_json_transport(url, payload, headers, timeout):
     """Pin a public DNS address while preserving TLS hostname verification."""
     parsed = _endpoint(url)
@@ -49,15 +59,25 @@ def public_json_transport(url, payload, headers, timeout):
     max_body_bytes = 48 * 1024 * 1024 if multimodal else 2_000_000
     if len(body) > max_body_bytes:
         raise AgentError("invalid_request", "document model request is too large", status=413)
-    connection = http.client.HTTPSConnection(parsed.hostname, parsed.port or 443, timeout=timeout, context=ssl.create_default_context())
-    # HTTPSConnection retains the original hostname for SNI/certificate checks;
-    # only the socket destination is replaced with the address validated above.
+    connection = http.client.HTTPSConnection(
+        parsed.hostname,
+        parsed.port or 443,
+        timeout=timeout,
+        context=_validated_tls_context(),
+    )
+    # HTTPSConnection 保留原主机名，用于 SNI 和证书检查；
+    # 只将套接字目标替换为上面已验证的地址。
     connection._create_connection = lambda _target, timeout, source_address=None: socket.create_connection(address[:2], timeout, source_address)
     try:
         connection.request("POST", parsed.path or "/", body=body, headers=headers)
         response = connection.getresponse()
         if not 200 <= response.status < 300:
-            code = "model_auth_failed" if response.status in {401, 403} else "model_rate_limited" if response.status == 429 else "model_request_rejected"
+            if response.status in {401, 403}:
+                code = "model_auth_failed"
+            elif response.status == 429:
+                code = "model_rate_limited"
+            else:
+                code = "model_request_rejected"
             raise AgentError(code, f"provider returned HTTP {response.status}", status=502)
         try:
             raw = read_json_response(response, 4_000_000)
@@ -66,6 +86,31 @@ def public_json_transport(url, payload, headers, timeout):
         return json.loads(raw)
     finally:
         connection.close()
+
+
+def _compatible_transport(config, parsed, url, body, headers, timeout):
+    body.pop("chat_template_kwargs", None)
+    body.pop("seed", None)
+    if parsed.hostname == "api.deepseek.com" or config["model_name"].strip().lower().startswith("deepseek"):
+        # 解析试卷不需要推理 token；显式关闭供应商默认思考，不依赖提示词后缀。
+        body["thinking"] = {"type": "disabled"}
+        body["reasoning_effort"] = "none"
+    schema = body["response_format"]["json_schema"]["schema"]
+    body["response_format"] = {"type": "json_object"}
+    if any(isinstance(message.get("content"), list) for message in body["messages"] if isinstance(message, dict)):
+        # 原图结构较密集，保留现有输出预算下限；本地仍按原 schema 校验结果。
+        body["max_tokens"] = max(int(body.get("max_tokens", 0)), 8_192)
+    schema_instruction = "Return a JSON object matching this schema: " + json.dumps(
+        schema, ensure_ascii=False, separators=(",", ":")
+    )
+    messages = list(body["messages"])
+    if messages and messages[0].get("role") == "system" and isinstance(messages[0].get("content"), str):
+        messages[0] = {**messages[0], "content": messages[0]["content"] + "\n" + schema_instruction}
+    else:
+        messages.insert(0, {"role": "system", "content": schema_instruction})
+    # 稳定的提示词和 schema 必须在每份试卷的图像之前，供供应商复用前缀缓存。
+    body["messages"] = messages
+    return public_json_transport(url, body, headers, timeout)
 
 
 def paper_model(application, payload):
@@ -93,35 +138,6 @@ def paper_model(application, payload):
                            provider_key=str(config.get("provider_key") or adapter).strip())
         if adapter == "dashscope_native":
             return ManagedNativePaperAdapter(settings, transport=public_json_transport)
-        def compatible_transport(url, body, headers, timeout):
-            body.pop("chat_template_kwargs", None)
-            body.pop("seed", None)
-            if parsed.hostname == "api.deepseek.com" or config["model_name"].strip().lower().startswith("deepseek"):
-                # V4.1 Flash defaults to high-effort thinking. Paper
-                # transcription is a constrained perception task, so disable
-                # hidden reasoning tokens explicitly instead of relying on a
-                # prompt suffix that the provider may ignore.
-                body["thinking"] = {"type": "disabled"}
-                body["reasoning_effort"] = "none"
-            schema = body["response_format"]["json_schema"]["schema"]
-            body["response_format"] = {"type": "json_object"}
-            if any(isinstance(message.get("content"), list) for message in body["messages"] if isinstance(message, dict)):
-                # The visual paper contract is compact and expanded locally.
-                # Keep enough room for a dense one-page exam while preventing
-                # an accidental verbose response from running to 16K tokens.
-                body["max_tokens"] = max(int(body.get("max_tokens", 0)), 8_192)
-            schema_instruction = "Return a JSON object matching this schema: " + json.dumps(
-                schema, ensure_ascii=False, separators=(",", ":")
-            )
-            messages = list(body["messages"])
-            if messages and messages[0].get("role") == "system" and isinstance(messages[0].get("content"), str):
-                messages[0] = {**messages[0], "content": messages[0]["content"] + "\n" + schema_instruction}
-            else:
-                messages.insert(0, {"role": "system", "content": schema_instruction})
-            # Keep the stable prompt + schema before the per-paper image so
-            # DeepSeek's automatic prefix cache can reuse it across imports.
-            body["messages"] = messages
-            return public_json_transport(url, body, headers, timeout)
-        return LocalLlamaCppAdapter(settings, transport=compatible_transport)
+        return LocalLlamaCppAdapter(settings, transport=partial(_compatible_transport, config, parsed))
     except (ValueError, TypeError) as exc:
         raise AgentError("invalid_request", "school model configuration is invalid", status=400) from exc

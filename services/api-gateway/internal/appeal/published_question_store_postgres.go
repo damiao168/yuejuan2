@@ -8,9 +8,7 @@ import (
 	"time"
 )
 
-// PublishedQuestionAppealPostgresStore reads the released fact and writes an
-// appeal workflow in the same database. It deliberately has no dependency on
-// submission_grade/final_grade as an authoritative source.
+// PublishedQuestionAppealPostgresStore 在同一数据库读取已发布事实并写入申诉工作流，不依赖 submission_grade 或 final_grade 作为权威来源。
 type PublishedQuestionAppealPostgresStore struct {
 	db *sql.DB
 }
@@ -195,6 +193,12 @@ func (s *PublishedQuestionAppealPostgresStore) StartPublishedQuestionAppealRevie
 	if ok, err := appealWorkerExists(ctx, tx, tenantID, input.AssignedTo); err != nil {
 		return PublishedQuestionAppeal{}, err
 	} else if !ok {
+		return PublishedQuestionAppeal{}, ErrForbidden
+	}
+	// 以申诉冻结的原成绩查参与者，原始人工批阅教师不能复核自己已发布的成绩。
+	if participated, err := publishedQuestionSourceReviewerParticipated(ctx, tx, tenantID, item.SourceFinalGradeID, input.AssignedTo); err != nil {
+		return PublishedQuestionAppeal{}, err
+	} else if participated {
 		return PublishedQuestionAppeal{}, ErrForbidden
 	}
 	item, err = scanPublishedQuestionAppeal(tx.QueryRowContext(ctx, `
@@ -405,20 +409,38 @@ SELECT EXISTS (
 	return exists, err
 }
 
-// 重评任务必须锚定同一考试、题目和原发布版本，不能借用其他批次的重评任务。
+func publishedQuestionSourceReviewerParticipated(ctx context.Context, tx *sql.Tx, tenantID, finalGradeID, reviewerID string) (bool, error) {
+	var participated bool
+	err := tx.QueryRowContext(ctx, `
+SELECT EXISTS (
+  SELECT 1 FROM human_grade human
+  JOIN final_grade grade
+    ON grade.tenant_id = human.tenant_id AND grade.answer_segment_id = human.answer_segment_id
+  WHERE grade.tenant_id = $1 AND grade.id = $2::uuid AND human.reviewer_id = $3::uuid
+    AND grade.deleted_at IS NULL AND human.deleted_at IS NULL
+)
+`, tenantID, finalGradeID, reviewerID).Scan(&participated)
+	return participated, err
+}
+
+// 重评任务必须包含原答卷的原成绩，不能借用同题但排除了该学生的任务或已取消任务。
 func matchingAppealRegradeJob(ctx context.Context, tx *sql.Tx, tenantID string, item PublishedQuestionAppeal, jobID string) (bool, error) {
 	var exists bool
 	err := tx.QueryRowContext(ctx, `
 SELECT EXISTS (
-  SELECT 1 FROM regrade_job
-  WHERE tenant_id = $1 AND id = $2::uuid AND exam_id = $3::uuid
-    AND question_id = $4::uuid AND source_release_id = $5::uuid
+  SELECT 1 FROM regrade_job job
+  JOIN regrade_item regrade ON regrade.tenant_id = job.tenant_id AND regrade.job_id = job.id
+  WHERE job.tenant_id = $1 AND job.id = $2::uuid AND job.exam_id = $3::uuid
+    AND job.question_id = $4::uuid AND job.source_release_id = $5::uuid
+    AND job.status <> 'cancelled' AND regrade.status <> 'cancelled'
+    AND regrade.submission_id = $6::uuid AND regrade.old_final_grade_id = $7::uuid
 )
-`, tenantID, jobID, item.ExamID, item.QuestionID, item.SourceReleaseID).Scan(&exists)
+`, tenantID, jobID, item.ExamID, item.QuestionID, item.SourceReleaseID, item.SubmissionID, item.SourceFinalGradeID).Scan(&exists)
 	return exists, err
 }
 
-// 结案版本不仅要更新且已发布，还必须包含原学生、原答卷和原题目的成绩事实。
+// 结案必须等关联任务完成；新版从原发布派生，且包含同学生答卷题目的已复核结果。
+// 发布表没有 job 外键，这里用来源版本、复核分数和评分来源核对已有的持久化事实。
 func successorPublishedReleaseExists(ctx context.Context, tx *sql.Tx, tenantID string, item PublishedQuestionAppeal, releaseID string) (bool, error) {
 	var exists bool
 	err := tx.QueryRowContext(ctx, `
@@ -430,14 +452,31 @@ SELECT EXISTS (
     ON successor_question.tenant_id = successor.tenant_id
    AND successor_question.release_id = successor.id
    AND successor_question.submission_id = successor_item.submission_id
+  JOIN regrade_job job
+    ON job.tenant_id = successor.tenant_id AND job.id = $8::uuid
+   AND job.exam_id = successor.exam_id AND job.question_id = successor_question.question_id
+   AND job.source_release_id = successor.source_release_id
+  JOIN regrade_item regrade
+    ON regrade.tenant_id = job.tenant_id AND regrade.job_id = job.id
+   AND regrade.submission_id = successor_item.submission_id
   WHERE successor.tenant_id = $1 AND successor.id = $2::uuid
     AND successor.exam_id = $3::uuid AND successor.status = 'published'
     AND successor.version > $4
     AND successor_item.student_id = $5::uuid
     AND successor_item.submission_id = $6::uuid
     AND successor_question.question_id = $7::uuid
+    AND successor.source = 'regrade' AND successor.source_release_id = $9::uuid
+    AND job.status = 'ready_for_release' AND job.finalized_at IS NOT NULL
+    AND successor.published_at >= job.finalized_at
+    AND regrade.status = 'resolved' AND regrade.old_final_grade_id = $10::uuid
+    AND successor_question.final_grade_id = regrade.old_final_grade_id
+    AND successor_question.score = COALESCE(regrade.reviewed_score, regrade.old_score)
+    AND successor_question.max_score = regrade.max_score
+    AND (regrade.reviewed_score IS NULL OR
+      (successor_question.source_type = 'single_review'
+       AND successor_question.source_id IS NOT DISTINCT FROM regrade.reviewed_grade_id))
 )
-`, tenantID, releaseID, item.ExamID, item.SourceReleaseVersion, item.StudentID, item.SubmissionID, item.QuestionID).Scan(&exists)
+`, tenantID, releaseID, item.ExamID, item.SourceReleaseVersion, item.StudentID, item.SubmissionID, item.QuestionID, item.RegradeJobID, item.SourceReleaseID, item.SourceFinalGradeID).Scan(&exists)
 	return exists, err
 }
 
@@ -445,20 +484,39 @@ func publishedQuestionAppealColumns(prefix string) string {
 	if prefix != "" {
 		prefix += "."
 	}
+	appealRef := prefix
+	if appealRef == "" {
+		appealRef = "question_appeal."
+	}
+	// 关联版本从同租户的正式发布记录读取，不取当前指针；学生端另外用 release ID 核对是否当前生效。
 	return prefix + `id::text, tenant_id::text, exam_id::text, student_id::text, submission_id::text,
 source_release_id::text, source_release_version, question_id::text, question_no,
 source_final_grade_id::text, source_score, source_max_score, reason_code, reason, selected_region,
 status, COALESCE(assigned_to::text, ''), COALESCE(decision, ''), public_response, private_note,
 COALESCE(regrade_job_id::text, ''), COALESCE(new_release_id::text, ''), created_by::text,
-COALESCE(decided_by::text, ''), decided_at, created_at, updated_at, revision`
+COALESCE(decided_by::text, ''), decided_at, created_at, updated_at, revision,
+COALESCE((SELECT release.version FROM score_release release
+  WHERE release.tenant_id = ` + appealRef + `tenant_id AND release.id = ` + appealRef + `new_release_id
+    AND release.status = 'published'), 0),
+(SELECT q.score::float8 FROM score_release_question q JOIN score_release r ON r.tenant_id=q.tenant_id AND r.id=q.release_id
+ WHERE q.tenant_id=` + appealRef + `tenant_id AND q.release_id=` + appealRef + `new_release_id
+ AND q.submission_id=` + appealRef + `submission_id AND q.question_id=` + appealRef + `question_id AND r.status='published'),
+(SELECT q.max_score::float8 FROM score_release_question q JOIN score_release r ON r.tenant_id=q.tenant_id AND r.id=q.release_id
+ WHERE q.tenant_id=` + appealRef + `tenant_id AND q.release_id=` + appealRef + `new_release_id
+  AND q.submission_id=` + appealRef + `submission_id AND q.question_id=` + appealRef + `question_id AND r.status='published'),
+(SELECT event.payload FROM question_appeal_event event
+ WHERE event.tenant_id=` + appealRef + `tenant_id AND event.appeal_id=` + appealRef + `id
+   AND event.event_type='review_opinion_submitted'
+ ORDER BY (event.payload->>'revision')::bigint DESC LIMIT 1)`
 }
 
 type publishedQuestionAppealScanner interface{ Scan(...any) error }
 
 func scanPublishedQuestionAppeal(scanner publishedQuestionAppealScanner) (PublishedQuestionAppeal, error) {
 	var item PublishedQuestionAppeal
-	var selectedRegion []byte
+	var selectedRegion, reviewOpinion []byte
 	var decidedAt sql.NullTime
+	var reviewedScore, reviewedMax sql.NullFloat64
 	err := scanner.Scan(
 		&item.ID, &item.TenantID, &item.ExamID, &item.StudentID, &item.SubmissionID,
 		&item.SourceReleaseID, &item.SourceReleaseVersion, &item.QuestionID, &item.QuestionNo,
@@ -466,15 +524,26 @@ func scanPublishedQuestionAppeal(scanner publishedQuestionAppealScanner) (Publis
 		&item.Status, &item.AssignedTo, &item.Decision, &item.PublicResponse, &item.PrivateNote,
 		&item.RegradeJobID, &item.NewReleaseID, &item.CreatedBy, &item.DecidedBy, &decidedAt,
 		&item.CreatedAt, &item.UpdatedAt, &item.Revision,
+		&item.NewReleaseVersion,
+		&reviewedScore, &reviewedMax, &reviewOpinion,
 	)
 	if err != nil {
 		return PublishedQuestionAppeal{}, err
+	}
+	// 历史复核分来自关联的不可变发布；后来切换当前指针不会改写该分数。
+	if reviewedScore.Valid && reviewedMax.Valid {
+		item.ReviewedScore, item.ReviewedMaxScore = &reviewedScore.Float64, &reviewedMax.Float64
 	}
 	if err := json.Unmarshal(selectedRegion, &item.SelectedRegion); err != nil {
 		return PublishedQuestionAppeal{}, err
 	}
 	if decidedAt.Valid {
 		item.DecidedAt = &decidedAt.Time
+	}
+	if len(reviewOpinion) > 0 {
+		if err := json.Unmarshal(reviewOpinion, &item.ReviewOpinion); err != nil {
+			return PublishedQuestionAppeal{}, err
+		}
 	}
 	return item, nil
 }

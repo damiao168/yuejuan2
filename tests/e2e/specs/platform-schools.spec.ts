@@ -59,7 +59,7 @@ test("平台学校总表提供运营摘要、搜索与五个详情入口", async
 
   await expect(page.getByRole("heading", { name: "学校管理" })).toBeVisible();
   await expect(page.getByText("共 1 所学校 · 1 使用中 · 0 已停用")).toBeVisible();
-  await expect(page.getByRole("columnheader")).toHaveText(["学校", "管理员", "账号 / 学生", "AI 用量", "模型", "最近活跃", "创建时间", "状态", "操作"]);
+  await expect(page.getByRole("columnheader")).toHaveText(["学校", "管理员", "账号 / 学生", "AI 用量", "对话默认模型", "最近活跃", "创建时间", "状态", "操作"]);
   await expect(page.getByRole("button", { name: "北京第一中学", exact: true })).toBeVisible();
   await expect(page.getByText("16.1M", { exact: true })).toBeVisible();
 

@@ -53,8 +53,7 @@ func TestStudentBoundBarcodeRoundTrip(t *testing.T) {
 }
 
 func TestTemplateBarcodeStaysVersionOneAndStillVerifies(t *testing.T) {
-	// Backward compatibility is load-bearing: version-1 barcodes are already
-	// printed on physical sheets and must keep verifying after the v2 rollout.
+	// 向后兼容是关键约束：第 1 版条码已印在实体答题纸上，第 2 版上线后仍须能通过验证。
 	keyring := BarcodeKeyring{ActiveKeyID: "2026-01", Keys: map[string][]byte{"2026-01": []byte(strings.Repeat("k", 32))}}
 	input := BarcodeClaims{TenantID: "11111111-1111-4111-8111-111111111111", ExamID: "22222222-2222-4222-8222-222222222222", TemplateID: "33333333-3333-4333-8333-333333333333", TemplateContentHash: "sha256:template", PageNo: 2, Nonce: "random-128-bit"}
 	value, err := keyring.Sign(input)
@@ -94,8 +93,7 @@ func TestStudentClaimsRejectInvalidIdentity(t *testing.T) {
 }
 
 func TestVersionOnePayloadCannotSmuggleStudentIdentity(t *testing.T) {
-	// A forged version-1 payload that adds student fields must fail validation:
-	// student identity is only trusted under the version-2 claim set.
+	// 向第 1 版载荷添加学生字段的伪造内容必须校验失败；学生身份仅在第 2 版声明集合中受信任。
 	forged := BarcodeClaims{
 		Version: 1, KeyID: "2026-01",
 		TenantID: "11111111-1111-4111-8111-111111111111", ExamID: "22222222-2222-4222-8222-222222222222",
@@ -120,7 +118,7 @@ func TestStudentBarcodeTamperRejection(t *testing.T) {
 		t.Fatal(err)
 	}
 	parts := strings.SplitN(value, ".", 3)
-	// re-encode the payload with a different student to simulate identity swap
+	// 使用另一名学生重新编码载荷，模拟身份替换。
 	swapped := strings.Replace(value, parts[1], parts[1][:len(parts[1])-4]+"AAAA", 1)
 	if swapped == value {
 		t.Fatal("test setup failed to alter payload")

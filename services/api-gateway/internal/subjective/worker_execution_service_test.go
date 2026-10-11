@@ -60,82 +60,31 @@ func newWorkerServiceFixture(t *testing.T, runInput CreateRunInput, sourceID str
 
 func TestWorkerExecutionServicePrepare(t *testing.T) {
 	t.Run("correct task", func(t *testing.T) {
-		fixture := newWorkerServiceFixture(t, CreateRunInput{}, "")
-		service := NewWorkerExecutionService(fixture.store, fixture.runtime, nil, allowWorkerEligibility)
-		prepared, err := service.Prepare(context.Background(), fixture.input)
-		if err != nil || prepared.Run.ID != fixture.run.ID || prepared.Task.ID != fixture.task.ID || prepared.Context.SegmentID != "segment-service-test" {
-			t.Fatalf("prepared=%#v err=%v", prepared, err)
-		}
+		assertWorkerPrepareBoundTask(t)
 	})
 
 	t.Run("source mismatch", func(t *testing.T) {
-		fixture := newWorkerServiceFixture(t, CreateRunInput{}, "another-run")
-		service := NewWorkerExecutionService(fixture.store, fixture.runtime, nil, allowWorkerEligibility)
-		if _, err := service.Prepare(context.Background(), fixture.input); !errors.Is(err, ErrWorkerTaskMismatch) {
-			t.Fatalf("expected task mismatch, got %v", err)
-		}
+		assertWorkerPrepareSourceMismatch(t)
 	})
 
 	t.Run("invalid lease", func(t *testing.T) {
-		fixture := newWorkerServiceFixture(t, CreateRunInput{}, "")
-		fixture.input.LeaseToken = "wrong-token"
-		service := NewWorkerExecutionService(fixture.store, fixture.runtime, nil, allowWorkerEligibility)
-		if _, err := service.Prepare(context.Background(), fixture.input); !errors.Is(err, ErrWorkerLeaseMismatch) {
-			t.Fatalf("expected lease mismatch, got %v", err)
-		}
+		assertWorkerPrepareInvalidLease(t)
 	})
 
 	t.Run("inactive status", func(t *testing.T) {
-		fixture := newWorkerServiceFixture(t, CreateRunInput{}, "")
-		_, err := fixture.runtime.Fail(context.Background(), workerServiceTenant, fixture.task.ID, workerruntime.FailInput{LeaseToken: fixture.task.LeaseToken, ErrorCode: "stopped"})
-		if err != nil {
-			t.Fatal(err)
-		}
-		service := NewWorkerExecutionService(fixture.store, fixture.runtime, nil, allowWorkerEligibility)
-		if _, err := service.Prepare(context.Background(), fixture.input); !errors.Is(err, ErrWorkerLeaseMismatch) {
-			t.Fatalf("expected inactive lease mismatch, got %v", err)
-		}
+		assertWorkerPrepareInactiveTask(t)
 	})
 
 	t.Run("math evidence unavailable", func(t *testing.T) {
-		fixture := newWorkerServiceFixture(t, CreateRunInput{}, "")
-		prepare := func(context.Context, string, *Context) error { return ErrActiveCropUnavailable }
-		service := NewWorkerExecutionService(fixture.store, fixture.runtime, prepare, allowWorkerEligibility)
-		if _, err := service.Prepare(context.Background(), fixture.input); !errors.Is(err, ErrActiveCropUnavailable) {
-			t.Fatalf("expected evidence error, got %v", err)
-		}
-		assertWorkerAndRunFailure(t, fixture, "math_evidence_unavailable", RunFailed)
+		assertWorkerPrepareMissingMathEvidence(t)
 	})
 
 	t.Run("math revision conflict", func(t *testing.T) {
-		value := serviceTestContext()
-		runInput := serviceTestRunInput(value)
-		runInput.MathArtifactID, runInput.MathArtifactVersion = "artifact-1", 2
-		runInput.MathCorrectionRevision, runInput.MathScoringVersion = 1, MathScoringVersionV1
-		fixture := newWorkerServiceFixture(t, runInput, "")
-		prepare := func(_ context.Context, _ string, value *Context) error {
-			value.MathEvidence = &MathEvidenceContext{ArtifactID: "artifact-changed", ArtifactVersion: 2, CorrectionRevision: 1, ScoringVersion: MathScoringVersionV1}
-			return nil
-		}
-		service := NewWorkerExecutionService(fixture.store, fixture.runtime, prepare, allowWorkerEligibility)
-		if _, err := service.Prepare(context.Background(), fixture.input); !errors.Is(err, ErrWorkerMathBindingConflict) || !errors.Is(err, mathunderstanding.ErrRevisionConflict) {
-			t.Fatalf("expected math binding conflict, got %v", err)
-		}
-		assertWorkerAndRunFailure(t, fixture, "math_evidence_version_conflict", RunConflict)
+		assertWorkerPrepareMathRevisionConflict(t)
 	})
 
 	t.Run("eligibility abstain", func(t *testing.T) {
-		fixture := newWorkerServiceFixture(t, CreateRunInput{}, "")
-		deny := func(context.Context, string, string, Context, ModelPolicy) (aieligibility.Decision, bool, error) {
-			return aieligibility.Decision{ID: "decision-denied"}, false, nil
-		}
-		service := NewWorkerExecutionService(fixture.store, fixture.runtime, nil, deny)
-		_, err := service.Prepare(context.Background(), fixture.input)
-		var abstained *EligibilityAbstainedError
-		if !errors.As(err, &abstained) || abstained.Decision.ID != "decision-denied" {
-			t.Fatalf("expected eligibility decision, got %v", err)
-		}
-		assertWorkerAndRunFailure(t, fixture, "ai_eligibility_abstained", RunFailed)
+		assertWorkerPrepareEligibilityAbstention(t)
 	})
 }
 
@@ -164,4 +113,90 @@ func assertWorkerAndRunFailure(t *testing.T, fixture workerServiceFixture, error
 	if taskErr != nil || runErr != nil || task.Status != workerruntime.StatusFailed || task.ErrorCode != errorCode || run.Status != runStatus || run.ErrorCode != errorCode {
 		t.Fatalf("task=%#v taskErr=%v run=%#v runErr=%v", task, taskErr, run, runErr)
 	}
+}
+
+func assertWorkerPrepareBoundTask(t *testing.T) {
+	t.Helper()
+	fixture := newWorkerServiceFixture(t, CreateRunInput{}, "")
+	service := NewWorkerExecutionService(fixture.store, fixture.runtime, nil, allowWorkerEligibility)
+	prepared, err := service.Prepare(context.Background(), fixture.input)
+	if err != nil || prepared.Run.ID != fixture.run.ID || prepared.Task.ID != fixture.task.ID || prepared.Context.SegmentID != "segment-service-test" {
+		t.Fatalf("prepared=%#v err=%v", prepared, err)
+	}
+}
+
+func assertWorkerPrepareSourceMismatch(t *testing.T) {
+	t.Helper()
+	fixture := newWorkerServiceFixture(t, CreateRunInput{}, "another-run")
+	service := NewWorkerExecutionService(fixture.store, fixture.runtime, nil, allowWorkerEligibility)
+	if _, err := service.Prepare(context.Background(), fixture.input); !errors.Is(err, ErrWorkerTaskMismatch) {
+		t.Fatalf("expected task mismatch, got %v", err)
+	}
+}
+
+func assertWorkerPrepareInvalidLease(t *testing.T) {
+	t.Helper()
+	fixture := newWorkerServiceFixture(t, CreateRunInput{}, "")
+	fixture.input.LeaseToken = "wrong-token"
+	service := NewWorkerExecutionService(fixture.store, fixture.runtime, nil, allowWorkerEligibility)
+	if _, err := service.Prepare(context.Background(), fixture.input); !errors.Is(err, ErrWorkerLeaseMismatch) {
+		t.Fatalf("expected lease mismatch, got %v", err)
+	}
+}
+
+func assertWorkerPrepareInactiveTask(t *testing.T) {
+	t.Helper()
+	fixture := newWorkerServiceFixture(t, CreateRunInput{}, "")
+	_, err := fixture.runtime.Fail(context.Background(), workerServiceTenant, fixture.task.ID, workerruntime.FailInput{LeaseToken: fixture.task.LeaseToken, ErrorCode: "stopped"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	service := NewWorkerExecutionService(fixture.store, fixture.runtime, nil, allowWorkerEligibility)
+	if _, err := service.Prepare(context.Background(), fixture.input); !errors.Is(err, ErrWorkerLeaseMismatch) {
+		t.Fatalf("expected inactive lease mismatch, got %v", err)
+	}
+}
+
+func assertWorkerPrepareMissingMathEvidence(t *testing.T) {
+	t.Helper()
+	fixture := newWorkerServiceFixture(t, CreateRunInput{}, "")
+	prepare := func(context.Context, string, *Context) error { return ErrActiveCropUnavailable }
+	service := NewWorkerExecutionService(fixture.store, fixture.runtime, prepare, allowWorkerEligibility)
+	if _, err := service.Prepare(context.Background(), fixture.input); !errors.Is(err, ErrActiveCropUnavailable) {
+		t.Fatalf("expected evidence error, got %v", err)
+	}
+	assertWorkerAndRunFailure(t, fixture, "math_evidence_unavailable", RunFailed)
+}
+
+func assertWorkerPrepareMathRevisionConflict(t *testing.T) {
+	t.Helper()
+	value := serviceTestContext()
+	runInput := serviceTestRunInput(value)
+	runInput.MathArtifactID, runInput.MathArtifactVersion = "artifact-1", 2
+	runInput.MathCorrectionRevision, runInput.MathScoringVersion = 1, MathScoringVersionV1
+	fixture := newWorkerServiceFixture(t, runInput, "")
+	prepare := func(_ context.Context, _ string, value *Context) error {
+		value.MathEvidence = &MathEvidenceContext{ArtifactID: "artifact-changed", ArtifactVersion: 2, CorrectionRevision: 1, ScoringVersion: MathScoringVersionV1}
+		return nil
+	}
+	service := NewWorkerExecutionService(fixture.store, fixture.runtime, prepare, allowWorkerEligibility)
+	if _, err := service.Prepare(context.Background(), fixture.input); !errors.Is(err, ErrWorkerMathBindingConflict) || !errors.Is(err, mathunderstanding.ErrRevisionConflict) {
+		t.Fatalf("expected math binding conflict, got %v", err)
+	}
+	assertWorkerAndRunFailure(t, fixture, "math_evidence_version_conflict", RunConflict)
+}
+
+func assertWorkerPrepareEligibilityAbstention(t *testing.T) {
+	t.Helper()
+	fixture := newWorkerServiceFixture(t, CreateRunInput{}, "")
+	deny := func(context.Context, string, string, Context, ModelPolicy) (aieligibility.Decision, bool, error) {
+		return aieligibility.Decision{ID: "decision-denied"}, false, nil
+	}
+	service := NewWorkerExecutionService(fixture.store, fixture.runtime, nil, deny)
+	_, err := service.Prepare(context.Background(), fixture.input)
+	var abstained *EligibilityAbstainedError
+	if !errors.As(err, &abstained) || abstained.Decision.ID != "decision-denied" {
+		t.Fatalf("expected eligibility decision, got %v", err)
+	}
+	assertWorkerAndRunFailure(t, fixture, "ai_eligibility_abstained", RunFailed)
 }

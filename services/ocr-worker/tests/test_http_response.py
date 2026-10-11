@@ -29,8 +29,9 @@ def test_content_length_over_limit_is_rejected_before_read() -> None:
 
 
 def test_body_over_limit_without_content_length_is_rejected() -> None:
+    response = Response(b'x' * 11)
     with pytest.raises(ResponseTooLarge):
-        read_bounded(Response(b"x" * 11), 10)
+        read_bounded(response, 10)
 
 
 def test_chunked_style_body_is_read_only_to_limit_plus_one() -> None:

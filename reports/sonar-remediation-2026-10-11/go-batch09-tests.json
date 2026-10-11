@@ -1,0 +1,69 @@
+{
+  "started_at": "2026-10-11T17:20:58.276745+08:00",
+  "finished_at": "2026-10-11T17:21:36.417592+08:00",
+  "duration_seconds": 38.14100000000326,
+  "command": [
+    "go",
+    "test",
+    "-json",
+    "-p",
+    "1",
+    "-count=1",
+    "-timeout=5m",
+    "./internal/auth",
+    "./internal/grading",
+    "./internal/workerruntime",
+    "./internal/subjective"
+  ],
+  "cwd": "D:\\project\\yuejuan\\services\\api-gateway",
+  "exit_code": 1,
+  "isolation": {
+    "toolchain": "local",
+    "module_proxy": "off",
+    "checksum_service": "off",
+    "GOMAXPROCS": 2,
+    "cleared_environment_names": []
+  },
+  "package_results": [
+    {
+      "Time": "2026-10-11T17:21:03.084256+08:00",
+      "Action": "fail",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/auth",
+      "Elapsed": 0,
+      "FailedBuild": "edugrade-enterprise/services/api-gateway/internal/auth [edugrade-enterprise/services/api-gateway/internal/auth.test]"
+    },
+    {
+      "Time": "2026-10-11T17:21:19.3864689+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/grading",
+      "Elapsed": 3.5
+    },
+    {
+      "Time": "2026-10-11T17:21:22.717319+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/workerruntime",
+      "Elapsed": 1.071
+    },
+    {
+      "Time": "2026-10-11T17:21:35.8712632+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/subjective",
+      "Elapsed": 4.539
+    }
+  ],
+  "test_result_counts": {
+    "pass": 645,
+    "fail": 0,
+    "skip": 1
+  },
+  "skipped_tests": [
+    {
+      "Time": "2026-10-11T17:21:34.8152924+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/subjective",
+      "Test": "TestHTTPAdapterRealLocalAgent",
+      "Elapsed": 0
+    }
+  ],
+  "note": "只报告实际运行的包；环境缺失跳过项不算真实数据库或外部模型集成通过。"
+}

@@ -96,9 +96,7 @@ func NewMemoryStore() *MemoryStore {
 	}
 }
 
-// BindWechatIdentity supports local deployments and tests. Production
-// bindings are provisioned in wechat_identity after the account owner has
-// been verified by an administrator.
+// BindWechatIdentity 支持本地部署和测试。生产绑定由管理员验证账户所有者后，在 wechat_identity 中配置。
 func (s *MemoryStore) BindWechatIdentity(appID, tenantCode, unionID, openID, userID string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -238,42 +236,42 @@ func (s *MemoryStore) ResolveResourceBoundary(_ context.Context, scope AccessSco
 	if scope.syntheticUnbounded {
 		return boundary, nil
 	}
+	if !allowsMemoryResource(scope, resourceType, resourceID) {
+		return ResourceBoundary{}, ErrResourceBoundaryNotFound
+	}
 	switch resourceType {
 	case "exam":
-		if scope.AllowsExam(resourceID) || scope.TenantWide {
-			boundary.ExamID = resourceID
-			return boundary, nil
-		}
+		boundary.ExamID = resourceID
 	case "submission":
-		if scope.AllowsSubmission(resourceID) || scope.TenantWide {
-			boundary.SubmissionID = resourceID
-			return boundary, nil
-		}
-	case "file_asset":
-		if scope.AllowsFile(resourceID) || scope.TenantWide {
-			return boundary, nil
-		}
-	case "review_task":
-		if scope.AllowsReviewTask(resourceID) || scope.TenantWide {
-			boundary.AssignedTo = scope.ActorID
-			return boundary, nil
-		}
-	case "arbitration_task":
-		if scope.AllowsArbitrationTask(resourceID) || scope.TenantWide {
-			boundary.AssignedTo = scope.ActorID
-			return boundary, nil
-		}
+		boundary.SubmissionID = resourceID
+	case "review_task", "arbitration_task":
+		boundary.AssignedTo = scope.ActorID
 	case "student":
-		if scope.AllowsStudent(resourceID) || scope.TenantWide {
-			boundary.StudentID = resourceID
-			return boundary, nil
-		}
-	default:
-		if scope.TenantWide {
-			return boundary, nil
-		}
+		boundary.StudentID = resourceID
 	}
-	return ResourceBoundary{}, ErrResourceBoundaryNotFound
+	return boundary, nil
+}
+
+func allowsMemoryResource(scope AccessScope, resourceType, resourceID string) bool {
+	if scope.TenantWide {
+		return true
+	}
+	switch resourceType {
+	case "exam":
+		return scope.AllowsExam(resourceID)
+	case "submission":
+		return scope.AllowsSubmission(resourceID)
+	case "file_asset":
+		return scope.AllowsFile(resourceID)
+	case "review_task":
+		return scope.AllowsReviewTask(resourceID)
+	case "arbitration_task":
+		return scope.AllowsArbitrationTask(resourceID)
+	case "student":
+		return scope.AllowsStudent(resourceID)
+	default:
+		return false
+	}
 }
 
 func (s *MemoryStore) AddUser(user UserWithPassword) {
@@ -299,9 +297,7 @@ func (s *MemoryStore) AddUser(user UserWithPassword) {
 	}
 }
 
-// SetTenantStatus supports tenant lifecycle checks in the in-memory runtime
-// and tests. Users and sessions remain stored, but inactive tenants cannot
-// authenticate or use an existing session.
+// SetTenantStatus 支持内存运行环境及测试中的租户生命周期检查。用户和会话仍保留，但停用租户不能认证或使用已有会话。
 func (s *MemoryStore) SetTenantStatus(tenantID, status string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -372,8 +368,7 @@ func (s *MemoryStore) ResolveAccessScope(_ context.Context, user User) (AccessSc
 	if err != nil {
 		return AccessScope{}, err
 	}
-	// Synthetic unit fixtures may explicitly request a tenant-wide in-memory
-	// boundary. Production scopes never receive this test-only expansion.
+	// 合成单元测试夹具可显式请求租户范围的内存边界；生产作用域不会取得这一测试专用扩展。
 	if scopeDeclaresSynthetic(user.DataScope) {
 		scope.syntheticUnbounded = true
 	}
@@ -447,15 +442,7 @@ func (s *MemoryStore) LoadLoginRiskContext(_ context.Context, request LoginRiskC
 	if now.IsZero() {
 		now = time.Now().UTC()
 	}
-	cutoff := now.Add(-RiskHistoryRetention)
-	history := make([]RiskEvent, 0, RiskHistoryLimit)
-	for index := len(s.riskEvents) - 1; index >= 0 && len(history) < RiskHistoryLimit; index-- {
-		event := s.riskEvents[index]
-		if event.TenantID != request.TenantID || event.UserID != request.UserID || event.Purpose != RiskPurposeLogin || event.OccurredAt.Before(cutoff) {
-			continue
-		}
-		history = append(history, event)
-	}
+	history := s.loginRiskHistory(request, now)
 	result := LoginRiskContext{PriorSuccessfulLogins: len(history)}
 	for _, event := range history {
 		if request.UserAgentHash != "" && event.UserAgentHash == request.UserAgentHash {
@@ -465,27 +452,57 @@ func (s *MemoryStore) LoadLoginRiskContext(_ context.Context, request LoginRiskC
 			result.KnownNetwork = true
 		}
 	}
-	if request.DeviceTokenHash != "" {
-		if device, ok := s.devices[request.DeviceTokenHash]; ok && device.TenantID == request.TenantID && device.UserID == request.UserID && device.ExpiresAt.After(now) {
-			result.KnownDevice = true
-			result.TrustedDevice = device.AssuranceLevel >= 2
-		}
+	if device, ok := s.loginRiskDevice(request, now); ok {
+		result.KnownDevice = true
+		result.TrustedDevice = device.AssuranceLevel >= 2
 	}
+	result.RecentFailures = s.recentLoginFailures(request, now)
+	result.RecentRecovery = s.hasRecentRecovery(request, now)
+	return result, nil
+}
+
+// 风险历史和设备均在调用方的读锁内读取，只统计当前租户、账户的事实。
+func (s *MemoryStore) loginRiskHistory(request LoginRiskContextRequest, now time.Time) []RiskEvent {
+	cutoff := now.Add(-RiskHistoryRetention)
+	history := make([]RiskEvent, 0, RiskHistoryLimit)
+	for index := len(s.riskEvents) - 1; index >= 0 && len(history) < RiskHistoryLimit; index-- {
+		event := s.riskEvents[index]
+		if event.TenantID != request.TenantID || event.UserID != request.UserID || event.Purpose != RiskPurposeLogin || event.OccurredAt.Before(cutoff) {
+			continue
+		}
+		history = append(history, event)
+	}
+	return history
+}
+
+func (s *MemoryStore) loginRiskDevice(request LoginRiskContextRequest, now time.Time) (memoryDeviceBinding, bool) {
+	device, ok := s.devices[request.DeviceTokenHash]
+	if request.DeviceTokenHash == "" || !ok || device.TenantID != request.TenantID || device.UserID != request.UserID || !device.ExpiresAt.After(now) {
+		return memoryDeviceBinding{}, false
+	}
+	return device, true
+}
+
+func (s *MemoryStore) recentLoginFailures(request LoginRiskContextRequest, now time.Time) int {
+	failures := 0
 	failureCutoff := now.Add(-RiskFailureWindow)
 	for _, record := range s.audits {
 		if record.TenantID == request.TenantID && record.ActorID == request.UserID && !record.CreatedAt.Before(failureCutoff) &&
 			(record.Action == "auth.login_failed" || record.Action == "auth.login_rate_limited") {
-			result.RecentFailures++
+			failures++
 		}
 	}
+	return failures
+}
+
+func (s *MemoryStore) hasRecentRecovery(request LoginRiskContextRequest, now time.Time) bool {
 	recoveryCutoff := now.Add(-RiskRecoveryWindow)
 	for _, recovery := range s.recoveries {
 		if recovery.TenantID == request.TenantID && recovery.UserID == request.UserID && !recovery.UsedAt.IsZero() && !recovery.UsedAt.Before(recoveryCutoff) {
-			result.RecentRecovery = true
-			break
+			return true
 		}
 	}
-	return result, nil
+	return false
 }
 
 func (s *MemoryStore) RecordRiskEvent(_ context.Context, event RiskEvent) error {
@@ -707,7 +724,7 @@ func (s *MemoryStore) Audit(_ context.Context, event AuditEvent) error {
 	return nil
 }
 
-// Caller holds s.mu, including callers that record security facts atomically.
+// 调用方持有 s.mu，包括原子记录安全事实的调用方。
 func (s *MemoryStore) appendAudit(event AuditEvent, occurredAt time.Time) {
 	s.auditSeq++
 	s.audits = append(s.audits, AuditRecord{
@@ -751,38 +768,11 @@ func (s *MemoryStore) ListAudits(_ context.Context, tenantID string, filter Audi
 	if filter.ScopeMode != "" && filter.ScopeMode != "tenant" && filter.ScopeMode != "platform" {
 		return []AuditRecord{}, nil
 	}
-	if filter.ScopeMode != "" && filter.ScopeMode != "tenant" && filter.ScopeMode != "platform" {
-		return []AuditRecord{}, nil
-	}
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	out := []AuditRecord{}
 	for _, record := range s.audits {
-		if record.TenantID != tenantID {
-			continue
-		}
-		if filter.Action != "" && record.Action != filter.Action {
-			continue
-		}
-		if filter.ActorID != "" && record.ActorID != filter.ActorID {
-			continue
-		}
-		if filter.TargetType != "" && record.TargetType != filter.TargetType {
-			continue
-		}
-		if filter.TargetID != "" && record.TargetID != filter.TargetID {
-			continue
-		}
-		if filter.ExamID != "" && record.TargetID != filter.ExamID {
-			continue
-		}
-		if filter.IPAddress != "" && record.IPAddress != filter.IPAddress {
-			continue
-		}
-		if !filter.CreatedFrom.IsZero() && record.CreatedAt.Before(filter.CreatedFrom) {
-			continue
-		}
-		if !filter.CreatedTo.IsZero() && record.CreatedAt.After(filter.CreatedTo) {
+		if !matchesAuditIdentity(record, tenantID, filter) || !matchesAuditContext(record, filter) {
 			continue
 		}
 		out = append(out, record)
@@ -794,16 +784,7 @@ func (s *MemoryStore) ListAudits(_ context.Context, tenantID string, filter Audi
 		return out[i].CreatedAt.After(out[j].CreatedAt)
 	})
 	if filter.CursorID != "" {
-		start := 0
-		for start < len(out) {
-			item := out[start]
-			if item.CreatedAt.Before(filter.CursorCreatedAt) ||
-				(item.CreatedAt.Equal(filter.CursorCreatedAt) && item.ID < filter.CursorID) {
-				break
-			}
-			start++
-		}
-		out = out[start:]
+		out = auditsAfterCursor(out, filter)
 	}
 	if limit := normalizedAuditLimit(filter.Limit); len(out) > limit {
 		out = out[:limit]
@@ -811,39 +792,54 @@ func (s *MemoryStore) ListAudits(_ context.Context, tenantID string, filter Audi
 	return out, nil
 }
 
+func matchesAuditIdentity(record AuditRecord, tenantID string, filter AuditFilter) bool {
+	if record.TenantID != tenantID {
+		return false
+	}
+	if filter.Action != "" && record.Action != filter.Action {
+		return false
+	}
+	if filter.ActorID != "" && record.ActorID != filter.ActorID {
+		return false
+	}
+	if filter.TargetType != "" && record.TargetType != filter.TargetType {
+		return false
+	}
+	return filter.TargetID == "" || record.TargetID == filter.TargetID
+}
+
+func matchesAuditContext(record AuditRecord, filter AuditFilter) bool {
+	if filter.ExamID != "" && record.TargetID != filter.ExamID {
+		return false
+	}
+	if filter.IPAddress != "" && record.IPAddress != filter.IPAddress {
+		return false
+	}
+	if !filter.CreatedFrom.IsZero() && record.CreatedAt.Before(filter.CreatedFrom) {
+		return false
+	}
+	return filter.CreatedTo.IsZero() || !record.CreatedAt.After(filter.CreatedTo)
+}
+
+// 排序与游标均按创建时间、ID 倒序；同一时刻的记录必须继续用 ID 划分下一页。
+func auditsAfterCursor(items []AuditRecord, filter AuditFilter) []AuditRecord {
+	for index, item := range items {
+		if item.CreatedAt.Before(filter.CursorCreatedAt) || (item.CreatedAt.Equal(filter.CursorCreatedAt) && item.ID < filter.CursorID) {
+			return items[index:]
+		}
+	}
+	return items[len(items):]
+}
+
 func (s *MemoryStore) ListManagedUsers(_ context.Context, tenantID string, filter ManagedUserFilter) ([]ManagedUser, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	out := []ManagedUser{}
 	for _, user := range s.users {
-		if user.TenantID != tenantID || (filter.UserID != "" && user.ID != filter.UserID) {
+		if !matchesManagedUser(user, tenantID, filter) {
 			continue
 		}
-		if filter.RestrictSchools && !containsID(filter.SchoolIDs, managedUserSchoolID(user)) {
-			continue
-		}
-		query := strings.ToLower(filter.Query)
-		if query != "" && !strings.Contains(strings.ToLower(user.Username), query) && !strings.Contains(strings.ToLower(user.DisplayName), query) && !strings.Contains(strings.ToLower(user.PhoneNormalized), query) && !strings.Contains(strings.ToLower(user.EmployeeNo), query) {
-			continue
-		}
-		if filter.Role != "" {
-			matched := false
-			for _, role := range user.Roles {
-				if role == filter.Role {
-					matched = true
-					break
-				}
-			}
-			if !matched {
-				continue
-			}
-		}
-		out = append(out, ManagedUser{
-			ID: user.ID, Username: user.Username, DisplayName: user.DisplayName,
-			PhoneMasked: MaskPhone(user.PhoneNormalized), EmployeeNo: user.EmployeeNo,
-			Status: user.Status, Roles: append([]string(nil), user.Roles...), SchoolID: managedUserSchoolID(user),
-			ActivatedAt: timePointer(user.ActivatedAt), LastLoginAt: timePointer(user.LastLoginAt), CreatedAt: user.CreatedAt,
-		})
+		out = append(out, managedUserFromMemory(user, managedUserSchoolID(user)))
 	}
 	sort.Slice(out, func(i, j int) bool {
 		if out[i].CreatedAt.Equal(out[j].CreatedAt) {
@@ -852,20 +848,44 @@ func (s *MemoryStore) ListManagedUsers(_ context.Context, tenantID string, filte
 		return out[i].CreatedAt.After(out[j].CreatedAt)
 	})
 	if filter.CursorID != "" {
-		start := 0
-		for start < len(out) {
-			item := out[start]
-			if item.CreatedAt.Before(filter.CursorCreatedAt) || (item.CreatedAt.Equal(filter.CursorCreatedAt) && item.ID < filter.CursorID) {
-				break
-			}
-			start++
-		}
-		out = out[start:]
+		out = managedUsersAfterCursor(out, filter)
 	}
 	if filter.Limit > 0 && len(out) > filter.Limit {
 		out = out[:filter.Limit]
 	}
 	return out, nil
+}
+
+func matchesManagedUser(user UserWithPassword, tenantID string, filter ManagedUserFilter) bool {
+	if user.TenantID != tenantID || (filter.UserID != "" && user.ID != filter.UserID) {
+		return false
+	}
+	if filter.RestrictSchools && !containsID(filter.SchoolIDs, managedUserSchoolID(user)) {
+		return false
+	}
+	if !matchesManagedUserQuery(user, filter.Query) {
+		return false
+	}
+	return filter.Role == "" || HasRole(user.User, filter.Role)
+}
+
+func matchesManagedUserQuery(user UserWithPassword, query string) bool {
+	query = strings.ToLower(query)
+	for _, value := range []string{user.Username, user.DisplayName, user.PhoneNormalized, user.EmployeeNo} {
+		if strings.Contains(strings.ToLower(value), query) {
+			return true
+		}
+	}
+	return false
+}
+
+func managedUsersAfterCursor(items []ManagedUser, filter ManagedUserFilter) []ManagedUser {
+	for index, item := range items {
+		if item.CreatedAt.Before(filter.CursorCreatedAt) || (item.CreatedAt.Equal(filter.CursorCreatedAt) && item.ID < filter.CursorID) {
+			return items[index:]
+		}
+	}
+	return items[len(items):]
 }
 
 func (s *MemoryStore) ListAssignableRoles(_ context.Context, actor User) ([]AssignableRole, error) {
@@ -887,34 +907,12 @@ func (s *MemoryStore) CreateManagedUser(_ context.Context, actor User, actorScop
 	if existing, exists := s.users[key]; exists && existing.User.Status != "deleted" {
 		return ManagedUser{}, ErrUsernameExists
 	}
-	for _, existing := range s.users {
-		if existing.TenantID != actor.TenantID || existing.Status == "deleted" {
-			continue
-		}
-		if (input.Phone != "" && existing.PhoneNormalized == input.Phone) || (input.EmployeeNo != "" && existing.EmployeeNo == input.EmployeeNo) {
-			return ManagedUser{}, ErrIdentityExists
-		}
+	if err := s.validateManagedUserIdentity(actor.TenantID, input); err != nil {
+		return ManagedUser{}, err
 	}
-	role, exists := s.roles[actor.TenantID][input.RoleCode]
-	if !exists {
-		return ManagedUser{}, ErrRoleNotFound
-	}
-	policy := RolePolicy(role.Code)
-	if !CanAssignManagedRole(actor, role.Code) || role.ScopeType != policy.CanonicalScope {
-		return ManagedUser{}, ErrRoleAssignment
-	}
-	if len(input.ClassIDs) > 0 && !policy.ClassBinding {
-		return ManagedUser{}, ErrInvalidRoleBinding
-	}
-	schoolID := strings.TrimSpace(input.SchoolID)
-	if schoolID == "" && HasRole(actor, "school_admin") && len(actorScope.SchoolIDs) == 1 {
-		schoolID = actorScope.SchoolIDs[0]
-	}
-	if policy.SchoolRequired && schoolID == "" {
-		return ManagedUser{}, ErrInvalidRoleBinding
-	}
-	if schoolID != "" && !actorScope.AllowsSchool(schoolID) {
-		return ManagedUser{}, ErrOrganizationScope
+	schoolID, err := s.managedUserBinding(actor, actorScope, input)
+	if err != nil {
+		return ManagedUser{}, err
 	}
 	s.userSeq++
 	status := "active"
@@ -928,15 +926,58 @@ func (s *MemoryStore) CreateManagedUser(_ context.Context, actor User, actorScop
 		User: User{
 			ID: fmt.Sprintf("managed-user-%d", s.userSeq), TenantID: actor.TenantID, TenantCode: actor.TenantCode,
 			Username: input.Username, DisplayName: input.DisplayName, Status: status,
-			Roles: []string{input.RoleCode}, Permissions: []string{}, DataScope: map[string]any{input.RoleCode: canonicalRoleDataScope(input.RoleCode, schoolID)},
+			Roles: managedRoleCodes(input), Permissions: []string{}, DataScope: managedRoleScopes(managedRoleCodes(input), schoolID),
 		},
-		PasswordHash: passwordHash, SchoolID: schoolID, PhoneNormalized: input.Phone, EmployeeNo: input.EmployeeNo, SecurityEpoch: 1, ActivatedAt: activatedAt, CreatedAt: now,
+		PasswordHash: passwordHash, SchoolID: schoolID, PhoneNormalized: input.Phone, EmployeeNo: input.EmployeeNo, SecurityEpoch: 1, ActivatedAt: activatedAt, CreatedAt: now, ManagedClassIDs: append([]string{}, input.ClassIDs...),
 	}
 	s.users[key] = user
 	if input.ActivationTokenHash != "" {
 		s.activations[input.ActivationTokenHash] = memoryActivation{TenantID: actor.TenantID, UserID: user.ID, ExpiresAt: input.ActivationExpiresAt}
 	}
 	return managedUserFromMemory(user, schoolID), nil
+}
+
+// 调用方持有写锁，身份查重、角色校验与新增账户之间不能插入另一次创建。
+func (s *MemoryStore) validateManagedUserIdentity(tenantID string, input CreateManagedUserInput) error {
+	for _, existing := range s.users {
+		if existing.TenantID != tenantID || existing.Status == "deleted" {
+			continue
+		}
+		if (input.Phone != "" && existing.PhoneNormalized == input.Phone) || (input.EmployeeNo != "" && existing.EmployeeNo == input.EmployeeNo) {
+			return ErrIdentityExists
+		}
+	}
+	return nil
+}
+
+func (s *MemoryStore) managedUserBinding(actor User, actorScope AccessScope, input CreateManagedUserInput) (string, error) {
+	roles := managedRoleCodes(input)
+	if err := validateManagedAccess(actor, roles, input.ClassIDs); err != nil {
+		return "", err
+	}
+	for _, code := range roles {
+		role, exists := s.roles[actor.TenantID][code]
+		if !exists {
+			return "", ErrRoleNotFound
+		}
+		policy := RolePolicy(role.Code)
+		if !CanAssignManagedRole(actor, role.Code) || role.ScopeType != policy.CanonicalScope {
+			return "", ErrRoleAssignment
+		}
+	}
+	schoolID := strings.TrimSpace(input.SchoolID)
+	if schoolID == "" && HasRole(actor, "school_admin") && len(actorScope.SchoolIDs) == 1 {
+		schoolID = actorScope.SchoolIDs[0]
+	}
+	for _, code := range roles {
+		if RolePolicy(code).SchoolRequired && schoolID == "" {
+			return "", ErrInvalidRoleBinding
+		}
+	}
+	if schoolID != "" && !actorScope.AllowsSchool(schoolID) {
+		return "", ErrOrganizationScope
+	}
+	return schoolID, nil
 }
 
 func (s *MemoryStore) FindActivation(_ context.Context, tokenHash string, now time.Time) (ActivationPreview, error) {
@@ -961,12 +1002,9 @@ func (s *MemoryStore) CreateActivation(_ context.Context, actor User, actorScope
 		if user.TenantID != actor.TenantID || user.ID != userID || user.Status != "invited" {
 			continue
 		}
-		if user.ID == actor.ID || !CanManageUserRoles(actor, user.Roles) {
-			return ActivationPreview{}, ErrUserStatusForbidden
-		}
-		schoolID := managedUserSchoolID(user)
-		if !actorScope.TenantWide && (schoolID == "" || !actorScope.AllowsSchool(schoolID)) {
-			return ActivationPreview{}, ErrOrganizationScope
+		schoolID, err := managedUserAuthority(actor, actorScope, user)
+		if err != nil {
+			return ActivationPreview{}, err
 		}
 		now := time.Now().UTC()
 		for hash, activation := range s.activations {
@@ -1016,12 +1054,8 @@ func (s *MemoryStore) CreateRecovery(_ context.Context, actor User, actorScope A
 		if user.TenantID != actor.TenantID || user.ID != userID || user.Status != "active" {
 			continue
 		}
-		if user.ID == actor.ID || !CanManageUserRoles(actor, user.Roles) {
-			return RecoveryPreview{}, ErrUserStatusForbidden
-		}
-		schoolID := managedUserSchoolID(user)
-		if !actorScope.TenantWide && (schoolID == "" || !actorScope.AllowsSchool(schoolID)) {
-			return RecoveryPreview{}, ErrOrganizationScope
+		if _, err := managedUserAuthority(actor, actorScope, user); err != nil {
+			return RecoveryPreview{}, err
 		}
 		for hash, recovery := range s.recoveries {
 			if recovery.TenantID == user.TenantID && recovery.UserID == user.ID && recovery.UsedAt.IsZero() {
@@ -1067,16 +1101,7 @@ func (s *MemoryStore) CompleteRecovery(_ context.Context, tokenHash string, pass
 		s.users[key] = user
 		recovery.UsedAt = now
 		s.recoveries[tokenHash] = recovery
-		for sessionToken, session := range s.sessions {
-			if session.TenantID == user.TenantID && session.UserID == user.ID {
-				delete(s.sessions, sessionToken)
-			}
-		}
-		for deviceToken, device := range s.devices {
-			if device.TenantID == user.TenantID && device.UserID == user.ID {
-				delete(s.devices, deviceToken)
-			}
-		}
+		s.revokeUserCredentials(user.TenantID, user.ID)
 		return RecoveryResult{TenantID: user.TenantID, UserID: user.ID}, nil
 	}
 	return RecoveryResult{}, ErrRecoveryInvalid
@@ -1097,12 +1122,9 @@ func (s *MemoryStore) UpdateManagedUserStatus(_ context.Context, actor User, act
 	if targetKey == "" {
 		return ManagedUser{}, "", ErrManagedUserNotFound
 	}
-	if target.ID == actor.ID || !CanManageUserRoles(actor, target.Roles) {
-		return ManagedUser{}, "", ErrUserStatusForbidden
-	}
-	schoolID := managedUserSchoolID(target)
-	if !actorScope.TenantWide && (schoolID == "" || !actorScope.AllowsSchool(schoolID)) {
-		return ManagedUser{}, "", ErrOrganizationScope
+	schoolID, err := managedUserAuthority(actor, actorScope, target)
+	if err != nil {
+		return ManagedUser{}, "", err
 	}
 	previousStatus := target.Status
 	// 邀请账户只能通过激活流程设密码，不能靠状态管理直接变成启用账户。
@@ -1112,43 +1134,68 @@ func (s *MemoryStore) UpdateManagedUserStatus(_ context.Context, actor User, act
 	if previousStatus == status {
 		return managedUserFromMemory(target, schoolID), previousStatus, nil
 	}
-	if status == "active" && previousStatus != "disabled" {
-		return ManagedUser{}, "", ErrUserStatusForbidden
-	}
-	if status == "disabled" && HasRole(target.User, "school_admin") {
-		activeAdmins := 0
-		for _, user := range s.users {
-			if user.TenantID == actor.TenantID && user.Status == "active" && HasRole(user.User, "school_admin") && managedUserSchoolID(user) == schoolID {
-				activeAdmins++
-			}
-		}
-		if activeAdmins <= 1 {
-			return ManagedUser{}, "", ErrLastSchoolAdmin
-		}
+	if err := s.validateManagedUserStatus(target, schoolID, status); err != nil {
+		return ManagedUser{}, "", err
 	}
 	target.Status = status
 	if status == "disabled" {
 		target.SecurityEpoch++
-		for tokenHash, record := range s.sessions {
-			if record.TenantID == target.TenantID && record.UserID == target.ID {
-				delete(s.sessions, tokenHash)
-			}
-		}
-		for tokenHash, device := range s.devices {
-			if device.TenantID == target.TenantID && device.UserID == target.ID {
-				delete(s.devices, tokenHash)
-			}
-		}
+		s.revokeUserCredentials(target.TenantID, target.ID)
 	}
 	s.users[targetKey] = target
 	return managedUserFromMemory(target, schoolID), previousStatus, nil
+}
+
+func managedUserAuthority(actor User, actorScope AccessScope, target UserWithPassword) (string, error) {
+	if target.ID == actor.ID || !CanManageUserRoles(actor, target.Roles) {
+		return "", ErrUserStatusForbidden
+	}
+	schoolID := managedUserSchoolID(target)
+	if !actorScope.TenantWide && (schoolID == "" || !actorScope.AllowsSchool(schoolID)) {
+		return "", ErrOrganizationScope
+	}
+	return schoolID, nil
+}
+
+func (s *MemoryStore) validateManagedUserStatus(target UserWithPassword, schoolID, status string) error {
+	if status == "active" && target.Status != "disabled" {
+		return ErrUserStatusForbidden
+	}
+	if status != "disabled" || !HasRole(target.User, "school_admin") {
+		return nil
+	}
+	// 在状态变更的同一写锁内计数，不能并发禁用同一学校的最后两名管理员。
+	activeAdmins := 0
+	for _, user := range s.users {
+		if user.TenantID == target.TenantID && user.Status == "active" && HasRole(user.User, "school_admin") && managedUserSchoolID(user) == schoolID {
+			activeAdmins++
+		}
+	}
+	if activeAdmins <= 1 {
+		return ErrLastSchoolAdmin
+	}
+	return nil
+}
+
+// 调用方持有写锁；推进安全版本和清除会话、设备凭据必须处于同一次账户变更中。
+func (s *MemoryStore) revokeUserCredentials(tenantID, userID string) {
+	for tokenHash, session := range s.sessions {
+		if session.TenantID == tenantID && session.UserID == userID {
+			delete(s.sessions, tokenHash)
+		}
+	}
+	for tokenHash, device := range s.devices {
+		if device.TenantID == tenantID && device.UserID == userID {
+			delete(s.devices, tokenHash)
+		}
+	}
 }
 
 func managedUserFromMemory(user UserWithPassword, schoolID string) ManagedUser {
 	return ManagedUser{
 		ID: user.ID, Username: user.Username, DisplayName: user.DisplayName,
 		PhoneMasked: MaskPhone(user.PhoneNormalized), EmployeeNo: user.EmployeeNo,
-		Status: user.Status, Roles: append([]string(nil), user.Roles...), SchoolID: schoolID,
+		Status: user.Status, Roles: append([]string(nil), user.Roles...), SchoolID: schoolID, ClassIDs: append([]string{}, user.ManagedClassIDs...),
 		ActivatedAt: timePointer(user.ActivatedAt), LastLoginAt: timePointer(user.LastLoginAt), CreatedAt: user.CreatedAt,
 	}
 }

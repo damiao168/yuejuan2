@@ -10,26 +10,30 @@ import (
 	"time"
 
 	"edugrade-enterprise/services/api-gateway/internal/auth"
+	"edugrade-enterprise/services/api-gateway/internal/files"
 	"edugrade-enterprise/services/api-gateway/internal/httpx"
 	"edugrade-enterprise/services/api-gateway/internal/logger"
 	"edugrade-enterprise/services/api-gateway/internal/workerruntime"
 )
 
 type Handler struct {
-	service *Service
-	audit   auth.AuditRecorder
+	service  *Service
+	audit    auth.AuditRecorder
+	download files.DownloadReader
 }
 
 func NewHandler(service *Service, audit auth.AuditRecorder) *Handler {
 	return &Handler{service: service, audit: audit}
 }
 
-// Read access is deliberately separate from operational mutation. A school
-// manager can see blockers, while retry/assignment/resolution remain under
-// the existing capture/OCR management permission selected at composition.
+// 读取权限与业务变更刻意分开。学校管理员可以查看阻断项，
+// 重试、分配和解决仍受组装时选定的既有捕获或 OCR 管理权限约束。
 func RegisterRoutes(mux *http.ServeMux, h *Handler, requireExamRead, requireExceptionRead, requireManage func(http.HandlerFunc) http.Handler) {
 	mux.Handle("GET /api/v1/exams/{examId}/processing/summary", requireExamRead(h.Summary))
+	mux.Handle("GET /api/v1/exams/{examId}/processing/actors", requireExamRead(h.ListProcessingActors))
 	mux.Handle("GET /api/v1/processing/exceptions", requireExceptionRead(h.ListExceptions))
+	mux.Handle("GET /api/v1/processing/exceptions/{id}/context", requireExceptionRead(h.GetExceptionContext))
+	mux.Handle("GET /api/v1/processing/exceptions/{id}/page-image", requireExceptionRead(h.GetExceptionImage))
 	mux.Handle("POST /api/v1/processing/exceptions/{id}/retry", requireManage(h.Retry))
 	mux.Handle("POST /api/v1/processing/exceptions/{id}/assign", requireManage(h.Assign))
 	mux.Handle("POST /api/v1/processing/exceptions/{id}/resolve", requireManage(h.Resolve))

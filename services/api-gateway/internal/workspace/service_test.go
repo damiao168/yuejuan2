@@ -281,13 +281,7 @@ func TestReviewRequiredPaperImportIsTheFirstPreparationAction(t *testing.T) {
 
 func TestPaperImportWorkspaceNoticesUseLatestStatusAndCanonicalReadiness(t *testing.T) {
 	now := time.Date(2026, 8, 31, 10, 0, 0, 0, time.UTC)
-	tests := []struct {
-		name        string
-		readiness   paper.ReadinessResult
-		imports     []paper.PaperImportJob
-		warningCode string
-		blockerCode string
-	}{
+	tests := []workspacePaperImportNoticeCase{
 		{
 			name:        "processing is a warning",
 			imports:     []paper.PaperImportJob{{ID: "processing", Status: "processing", CreatedAt: now}},
@@ -320,33 +314,7 @@ func TestPaperImportWorkspaceNoticesUseLatestStatusAndCanonicalReadiness(t *test
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			service := NewService(Dependencies{
-				Exams:        fakeExamReader{item: exam.Exam{ID: "exam-1", TenantID: "tenant-1", Status: "configured"}},
-				Papers:       fakePaperReader{readiness: testCase.readiness},
-				PaperImports: fakePaperImportReader{items: testCase.imports},
-				Submissions:  fakeSubmissionReader{},
-				Reviews:      fakeReviewReader{},
-				Now:          func() time.Time { return now },
-			})
-			result, err := service.Get(context.Background(), auth.AccessScope{TenantID: "tenant-1", TenantWide: true}, "exam-1")
-			if err != nil {
-				t.Fatal(err)
-			}
-			workspaceNoticeFound := false
-			for _, notice := range append(append([]Notice{}, result.Warnings...), result.Blockers...) {
-				if notice.Code == "paper_import_processing" || notice.Code == "paper_import_review_required" || notice.Code == "paper_import_failed" {
-					workspaceNoticeFound = true
-				}
-			}
-			if testCase.warningCode == "" && testCase.blockerCode == "" && workspaceNoticeFound {
-				t.Fatalf("historical import unexpectedly produced a notice: warnings=%#v blockers=%#v", result.Warnings, result.Blockers)
-			}
-			if testCase.warningCode != "" && !noticeListHasCode(result.Warnings, testCase.warningCode) {
-				t.Fatalf("missing warning %s: %#v", testCase.warningCode, result.Warnings)
-			}
-			if testCase.blockerCode != "" && !noticeListHasCode(result.Blockers, testCase.blockerCode) {
-				t.Fatalf("missing blocker %s: %#v", testCase.blockerCode, result.Blockers)
-			}
+			assertWorkspaceLatestPaperImportNotice(t, testCase, now)
 		})
 	}
 }
@@ -358,4 +326,43 @@ func noticeListHasCode(values []Notice, code string) bool {
 		}
 	}
 	return false
+}
+
+type workspacePaperImportNoticeCase struct {
+	name        string
+	readiness   paper.ReadinessResult
+	imports     []paper.PaperImportJob
+	warningCode string
+	blockerCode string
+}
+
+func assertWorkspaceLatestPaperImportNotice(t *testing.T, testCase workspacePaperImportNoticeCase, now time.Time) {
+	t.Helper()
+	service := NewService(Dependencies{
+		Exams:        fakeExamReader{item: exam.Exam{ID: "exam-1", TenantID: "tenant-1", Status: "configured"}},
+		Papers:       fakePaperReader{readiness: testCase.readiness},
+		PaperImports: fakePaperImportReader{items: testCase.imports},
+		Submissions:  fakeSubmissionReader{},
+		Reviews:      fakeReviewReader{},
+		Now:          func() time.Time { return now },
+	})
+	result, err := service.Get(context.Background(), auth.AccessScope{TenantID: "tenant-1", TenantWide: true}, "exam-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	workspaceNoticeFound := false
+	for _, notice := range append(append([]Notice{}, result.Warnings...), result.Blockers...) {
+		if notice.Code == "paper_import_processing" || notice.Code == "paper_import_review_required" || notice.Code == "paper_import_failed" {
+			workspaceNoticeFound = true
+		}
+	}
+	if testCase.warningCode == "" && testCase.blockerCode == "" && workspaceNoticeFound {
+		t.Fatalf("historical import unexpectedly produced a notice: warnings=%#v blockers=%#v", result.Warnings, result.Blockers)
+	}
+	if testCase.warningCode != "" && !noticeListHasCode(result.Warnings, testCase.warningCode) {
+		t.Fatalf("missing warning %s: %#v", testCase.warningCode, result.Warnings)
+	}
+	if testCase.blockerCode != "" && !noticeListHasCode(result.Blockers, testCase.blockerCode) {
+		t.Fatalf("missing blocker %s: %#v", testCase.blockerCode, result.Blockers)
+	}
 }

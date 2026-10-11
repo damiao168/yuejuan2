@@ -1,3 +1,5 @@
+import copy
+
 import pytest
 from grading_agent.errors import AgentError
 from grading_agent.paper_compact import (
@@ -35,7 +37,7 @@ def _block(block_id, text, bbox):
 def test_two_column_page_is_converted_to_column_major_reading_order():
     blocks = [_block("header", "试卷标题", [100, 10, 800, 30])]
     for row in range(4):
-        # Detector order is row-major and therefore interleaves both columns.
+        # 检测器按行优先排序，因此两列的结果会交错。
         blocks.extend(
             [
                 _block(f"right-{row}", f"右栏{row}", [600, 100 + row * 40, 300, 20]),
@@ -64,7 +66,7 @@ def test_two_column_page_is_converted_to_column_major_reading_order():
 def test_three_column_page_is_recursively_ordered_by_geometry():
     blocks = []
     for row in range(4):
-        # Real detectors often emit same-row boxes before finishing a column.
+        # 真实检测器常在处理完一列前，先输出同一行的检测框。
         blocks.extend(
             [
                 _block(f"middle-{row}", f"中栏{row}", [360, 80 + row * 35, 220, 18]),
@@ -167,6 +169,34 @@ def test_model_cannot_invent_a_compact_reference():
     assert raised.value.code == "model_output_invalid"
 
 
+def test_solution_and_rubric_expansion_keep_chunk_scoped_numbering_and_provenance():
+    chunk = build_compact_chunks([_document([_block("trusted", "1. 计算", [10, 20, 30, 40])])])[0]
+    result = expand_compact_output({
+        "documents": [], "question_candidates": [], "answer_candidates": [],
+        "solution_candidates": [{"source_refs": ["r001"], "steps": ["移项", 2]}],
+        "rubric_candidates": [{"source_refs": ["r001"], "points": [{"description": "求解", "score": None, "required": True}]}],
+        "issues": [{"source_refs": []}],
+    }, chunk, 3)
+    solution = result["solution_candidates"][0]
+    rubric = result["rubric_candidates"][0]
+    assert solution["candidate_id"] == "s-003-001"
+    assert solution["steps"] == [{"step_no": 1, "content": "移项"}, {"step_no": 2, "content": "2"}]
+    assert rubric["candidate_id"] == "r-003-001"
+    assert rubric["points"] == [{"id": "rp-003-001-001", "description": "求解", "score": None, "required": True, "evidence_requirements": []}]
+    assert rubric["source_refs"][0]["block_id"] == "trusted"
+    assert result["issues"][0]["source_refs"] == []
+
+
+def test_one_oversized_ocr_block_is_retained_and_splitting_makes_progress():
+    blocks = [
+        _block("large", "x" * 15_000, [50, 100, 500, 20]),
+        _block("following", "following text", [50, 150, 500, 20]),
+    ]
+    chunks = build_compact_chunks([_document(blocks)])
+    assert len(chunks) == 2
+    assert [ref["block_id"] for chunk in chunks for ref in chunk.references.values()] == ["large", "following"]
+
+
 def test_explicit_number_answer_and_solution_markers_use_rule_fast_path():
     blocks = [
         _block("q1", "1. 已知集合A，求A的补集（ ）", [50, 100, 500, 20]),
@@ -215,7 +245,7 @@ def test_rule_fast_path_excludes_bottom_page_number_and_distribution_watermark()
     excluded = page_furniture_issues([_document(blocks)])
     assert {issue["source_refs"][0]["block_id"] for issue in excluded} == {"page", "watermark"}
     assert all(issue["severity"] == "info" for issue in excluded)
-    assert len(blocks) == 8  # Raw OCR evidence is never mutated.
+    assert len(blocks) == 8  # 原始 OCR 证据始终保持不变。
 
 
 def test_furniture_filter_keeps_question_about_public_account_at_bottom():
@@ -423,3 +453,72 @@ def test_partial_explicit_marking_prose_routes_to_model_without_dropping_remaind
     ]
 
     assert anchored_paper_result([_document(blocks)]) is None
+
+
+def test_fast_path_fallback_does_not_leak_partial_candidates_into_a_corrected_retry():
+    first = _document([
+        _block("q1", "1. 计算1+1", [50, 100, 500, 20]),
+        _block("a1", "【答案】2", [50, 130, 100, 20]),
+        _block("q2", "2. 计算2+2", [50, 200, 500, 20]),
+        _block("a2", "【答案】4", [50, 230, 100, 20]),
+    ])
+    second = _document([
+        _block("q3", "3. （4分）解方程", [50, 100, 500, 20]),
+        _block("a3", "【答案】x=2", [50, 130, 100, 20]),
+        _block("r3", "【评分标准】移项正确得2分；其他合理解法酌情给分", [50, 160, 500, 20]),
+        _block("q4", "4. 计算2+2", [50, 220, 500, 20]),
+        _block("a4", "【答案】4", [50, 250, 100, 20]),
+    ])
+    second["source_id"] = "source-2"
+    second["document_index"] = 1
+    documents = [first, second]
+    before = copy.deepcopy(documents)
+    assert anchored_paper_result(documents) is None
+    assert documents == before
+
+    second["blocks"][2]["text"] = "【评分标准】移项正确得2分；求得结果得2分"
+    result = anchored_paper_result(documents)
+    assert [question["candidate_id"] for question in result["question_candidates"]] == [
+        "q-rule-source1-001", "q-rule-source1-002", "q-rule-source2-003", "q-rule-source2-004",
+    ]
+    assert [point["score"] for point in result["rubric_candidates"][0]["points"]] == [2, 2]
+
+
+def test_question_number_restart_in_a_later_section_declines_fast_path():
+    document = {
+        "source_id": "direct", "document_index": 0, "content":
+        "一、选择题\n1. 求值\n【答案】A\n二、填空题\n1. 求值\n【答案】2",
+    }
+    assert anchored_paper_result([document]) is None
+
+
+def test_solution_before_answer_keeps_each_marker_range_and_provenance_separate():
+    document = {
+        "source_id": "direct", "document_index": 0, "content":
+        "1. 求值\n【详解】第一步\n第二步\n【答案】\n2\n【评分标准】求得结果得4分",
+    }
+    result = anchored_paper_result([document])
+    assert result["solution_candidates"][0]["raw_text"] == "第一步\n第二步"
+    assert result["answer_candidates"][0]["standard_answer"] == "2"
+    assert result["rubric_candidates"][0]["points"][0]["description"] == "求得结果"
+    source_text = document["content"]
+    for collection, expected_text in (
+        ("solution_candidates", "【详解】第一步第二步"),
+        ("answer_candidates", "【答案】2"),
+        ("rubric_candidates", "【评分标准】求得结果得4分"),
+    ):
+        refs = result[collection][0]["source_refs"]
+        assert "".join(source_text[ref["text_start"]:ref["text_end"]] for ref in refs) == expected_text
+
+
+def test_furniture_detection_keeps_unknown_geometry_and_protected_question_anchors():
+    blocks = [
+        _block("q1", "1. 计算1+1", [50, 100, 500, 20]),
+        _block("a1", "【答案】2", [50, 130, 100, 20]),
+        _block("q2", "2. 公众号资料分享问题", [50, 950, 500, 20]),
+        _block("a2", "【答案】4", [50, 975, 100, 20]),
+        _block("unboxed", "试卷第1页，共1页", None),
+    ]
+    assert page_furniture_issues([_document(blocks)]) == []
+    result = anchored_paper_result([_document(blocks)])
+    assert [question["question_no_normalized"] for question in result["question_candidates"]] == ["1", "2"]

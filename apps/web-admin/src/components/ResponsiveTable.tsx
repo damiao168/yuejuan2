@@ -1,13 +1,15 @@
-import { Fragment, useEffect, useMemo, useState, type KeyboardEvent } from "react";
+import { Fragment, useEffect, useMemo, useState, type Key, type ReactNode } from "react";
+import { ArrowUpRight } from "lucide-react";
 import { Empty, Grid, Pagination, Spin, Table, type TableColumnsType, type TableProps } from "antd";
 import type { ColumnGroupType, ColumnType } from "antd/es/table";
-import type { Key, ReactNode } from "react";
+import { primitiveDisplayValue } from "../utils/displayValue";
+import { keyboardAccessibleRows, ScrollableTableRegion } from "./responsiveTableInteraction";
 
-type ResponsiveTableProps<T extends object> = Omit<TableProps<T>, "columns"> & {
+type ResponsiveTableProps<T extends object> = Readonly<Omit<TableProps<T>, "columns"> & {
   columns: TableColumnsType<T>;
   mobilePrimaryCount?: number;
   mobilePrimaryKeys?: string[];
-};
+}>;
 
 function flattenColumns<T extends object>(columns: TableColumnsType<T>): ColumnType<T>[] {
   return columns.flatMap((column) => {
@@ -36,14 +38,24 @@ function renderedValue<T extends object>(column: ColumnType<T>, record: T, index
     return (rendered as { children?: ReactNode }).children ?? null;
   }
   if (rendered === null || rendered === undefined || rendered === "") return <span className="muted">-</span>;
-  if (["string", "number", "boolean"].includes(typeof rendered)) return String(rendered);
+  if (typeof rendered === "string" || typeof rendered === "number" || typeof rendered === "boolean") return String(rendered);
   return rendered as ReactNode;
+}
+
+function columnIdentity<T extends object>(column: ColumnType<T>, index?: number): string {
+  const value = column.key ?? column.dataIndex ?? index;
+  // AntD 的复合 dataIndex 是字段路径，保留已有逗号拼接；对象不适合作为列标识。
+  if (Array.isArray(value)) return value.map((part) => primitiveDisplayValue(part, "")).join(",");
+  return primitiveDisplayValue(value, index === undefined ? "undefined" : String(index));
 }
 
 function recordKey<T extends object>(rowKey: TableProps<T>["rowKey"], record: T, index: number): Key {
   if (typeof rowKey === "function") return rowKey(record);
-  if (typeof rowKey === "string") return String((record as Record<string, unknown>)[rowKey] ?? index);
-  return String((record as Record<string, unknown>).key ?? index);
+  const field = typeof rowKey === "string" ? rowKey : "key";
+  const value = (record as Record<string, unknown>)[field];
+  // 对象不能作为稳定行标识，否则不同记录都会变成同一个 [object Object]。
+  if (typeof value === "string" || typeof value === "number" || typeof value === "bigint") return String(value);
+  return index;
 }
 
 export function ResponsiveTable<T extends object>({
@@ -65,6 +77,7 @@ export function ResponsiveTable<T extends object>({
   const mobile = !screens.lg;
   const flatColumns = useMemo(() => flattenColumns(columns), [columns]);
   const paginationConfig = pagination === false ? null : (pagination ?? {});
+  const hasPagination = pagination !== false;
   const [mobilePage, setMobilePage] = useState(paginationConfig?.defaultCurrent ?? 1);
   const [mobilePageSize, setMobilePageSize] = useState(paginationConfig?.defaultPageSize ?? 10);
   const pageSize = paginationConfig?.pageSize ?? mobilePageSize;
@@ -77,40 +90,18 @@ export function ResponsiveTable<T extends object>({
     : dataSource.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   useEffect(() => {
-    if (!paginationConfig || controlledPagination) return;
+    if (!hasPagination || controlledPagination) return;
     const lastPage = Math.max(1, Math.ceil(total / Math.max(1, pageSize)));
     setMobilePage((current) => Math.min(current, lastPage));
-  }, [controlledPagination, pageSize, paginationConfig !== null, total]);
+  }, [controlledPagination, hasPagination, pageSize, total]);
 
-  const accessibleOnRow = onRow
-    ? (record: T, index?: number) => {
-        const rowProps = onRow(record, index);
-        if (!rowProps.onClick) return rowProps;
-        const originalKeyDown = rowProps.onKeyDown;
-        return {
-          ...rowProps,
-          tabIndex: rowProps.tabIndex ?? 0,
-          onKeyDown: (event: KeyboardEvent<HTMLElement>) => {
-            originalKeyDown?.(event);
-            if (
-              event.target === event.currentTarget
-              && !event.defaultPrevented
-              && (event.key === "Enter" || event.key === " ")
-            ) {
-              event.preventDefault();
-              event.currentTarget.click();
-            }
-          }
-        };
-      }
-    : undefined;
+  const accessibleOnRow = keyboardAccessibleRows(onRow);
 
-  // Preserve Ant Design's complete interaction contract for selection, filtering,
-  // expansion and sorting. A read-only card conversion must not drop controls.
-  const needsFullTable = Boolean(tableProps.rowSelection || tableProps.expandable || flatColumns.some((column) => column.sorter || column.filters || column.filterDropdown));
+  // 选择、筛选、展开和排序依赖完整表格；移动端也不能把这些控件变成只读卡片。
+  const needsFullTable = Boolean(tableProps.rowSelection || tableProps.expandable || flatColumns.some((column) => Boolean(column.sorter || column.filters || column.filterDropdown)));
   if (!mobile) {
     return (
-      <div className="responsive-table-region" role="region" aria-label="数据表格">
+      <section className="responsive-table-region" aria-label="数据表格">
       <Table<T>
         {...tableProps}
         columns={columns}
@@ -126,14 +117,14 @@ export function ResponsiveTable<T extends object>({
         scroll={scroll}
         size={tableProps.size ?? "small"}
       />
-      </div>
+      </section>
     );
   }
 
   if (needsFullTable) {
+    // 原生按钮提供键盘滚动入口，排序、筛选和选择仍由完整表格处理。
     return (
-      <div className="responsive-table-region" role="region" aria-label="数据表格" tabIndex={0}>
-        <p className="table-interaction-hint">左右滑动查看各列；可在表头筛选、排序或选择记录。</p>
+      <ScrollableTableRegion>
         <Table<T>
           {...tableProps}
           columns={columns}
@@ -149,7 +140,7 @@ export function ResponsiveTable<T extends object>({
           scroll={{ ...scroll, x: scroll?.x ?? "max-content" }}
           size={tableProps.size ?? "small"}
         />
-      </div>
+      </ScrollableTableRegion>
     );
   }
 
@@ -163,23 +154,27 @@ export function ResponsiveTable<T extends object>({
 
   return (
     <>
-      <div className="responsive-record-list" role="list">
+      <ul className="responsive-record-list">
       {mobileDataSource.map((record, pageIndex) => {
         const index = serverPaginated ? pageIndex : (currentPage - 1) * pageSize + pageIndex;
-        const primaryColumns = flatColumns.filter((column, columnIndex) => (mobilePrimaryKeys ? mobilePrimaryKeys.includes(String(column.key ?? column.dataIndex)) : columnIndex < mobilePrimaryCount) || columnLabel(column) === "操作");
+        const primaryColumns = flatColumns.filter((column, columnIndex) => (mobilePrimaryKeys ? mobilePrimaryKeys.includes(columnIdentity(column)) : columnIndex < mobilePrimaryCount) || columnLabel(column) === "操作");
         const detailColumns = flatColumns.filter((column) => !primaryColumns.includes(column));
-        const rowProps = accessibleOnRow?.(record, index) ?? {};
+        const rowProps = onRow?.(record, index) ?? {};
         const className = typeof rowClassName === "function" ? rowClassName(record, index, 0) : rowClassName;
         return (
-          <article
-            {...rowProps}
+          <li
             className={`responsive-record ${className ?? ""}`.trim()}
             key={recordKey(rowKey, record, index)}
-            role={rowProps.onClick ? "button" : "listitem"}
           >
+            {/* 行操作与详情、列内按钮分开；原生按钮负责 Enter/Space，避免嵌套交互与重复激活。 */}
+            {rowProps.onClick ? (
+              <button {...rowProps} type="button" className="responsive-record-action" aria-label={`打开第 ${index + 1} 条记录`} title="打开记录">
+                <ArrowUpRight size={16} aria-hidden="true" />
+              </button>
+            ) : null}
             <dl>
               {primaryColumns.map((column, columnIndex) => (
-                <Fragment key={String(column.key ?? column.dataIndex ?? columnIndex)}>
+                <Fragment key={columnIdentity(column, columnIndex)}>
                   <div className="responsive-record-field">
                     <dt>{columnLabel(column)}</dt>
                     <dd>{renderedValue(column, record, index)}</dd>
@@ -188,11 +183,11 @@ export function ResponsiveTable<T extends object>({
               ))}
             </dl>
             {detailColumns.length ? (
-              <details className="responsive-record-details" onClick={(event) => event.stopPropagation()}>
+              <details className="responsive-record-details">
                 <summary>查看完整信息</summary>
                 <dl>
                   {detailColumns.map((column, columnIndex) => (
-                    <div className="responsive-record-field" key={String(column.key ?? column.dataIndex ?? columnIndex)}>
+                    <div className="responsive-record-field" key={columnIdentity(column, columnIndex)}>
                       <dt>{columnLabel(column)}</dt>
                       <dd>{renderedValue(column, record, index)}</dd>
                     </div>
@@ -200,10 +195,10 @@ export function ResponsiveTable<T extends object>({
                 </dl>
               </details>
             ) : null}
-          </article>
+          </li>
         );
       })}
-      </div>
+      </ul>
       {paginationConfig && total > pageSize ? (
         <Pagination
           className="responsive-record-pagination"

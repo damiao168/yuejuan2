@@ -2,11 +2,22 @@
 .exam-module-return { margin: 0 0 10px; padding-inline: 0 !important; }
 
 .member-management-page { display: grid; gap: 16px; }
+.class-management-page { container: class-management / inline-size; }
+.class-management-scope { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; max-width: 900px; }
+.class-management-scope label { display: grid; gap: 6px; min-width: 0; color: var(--text-muted); font-size: var(--eg-font-caption); }
+.class-management-scope .ant-select { width: 100%; }
 .member-management-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
 .member-management-heading h1 { margin: 0 0 5px; font-size: var(--eg-font-title); }
 .member-management-heading p { margin: 0; color: var(--text-muted); font-size: var(--eg-font-body); }
 .member-management-heading > div:last-child { display: flex; gap: 8px; }
 .class-management-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 16px; }
+@container class-management (max-width: 899px) {
+  .class-management-layout { grid-template-columns: minmax(0, 1fr); }
+  .class-management-layout > aside { display: none; }
+}
+@container class-management (max-width: 620px) {
+  .class-management-scope { grid-template-columns: minmax(0, 1fr); }
+}
 .class-management-layout > aside, .member-table-section { border: 1px solid var(--border); border-radius: 5px; background: var(--surface); }
 .class-management-layout > aside { overflow: hidden; }
 .class-management-layout > aside h2 { margin: 0; padding: 15px 16px; border-bottom: 1px solid var(--border); font-size: 0.9375rem; }
@@ -87,45 +98,6 @@
 .paper-import-option { min-width: 0; padding: 0 4px; border-radius: 4px; }
 .paper-import-option.is-correct { color: #cf1322; background: #fff1f0; font-weight: 750; }
 .paper-import-raw-editor { display: grid; gap: 10px; margin-top: 8px; }
-.math-markdown { min-width: 0; overflow-wrap: anywhere; font-size: 15px; line-height: 2; }
-.math-markdown > :first-child { margin-top: 0; }
-.math-markdown > :last-child { margin-bottom: 0; }
-.math-markdown p { margin: 0 0 10px; line-height: 2; }
-.math-markdown ul, .math-markdown ol { margin: 4px 0; padding-left: 22px; }
-.math-markdown pre { overflow: auto; padding: 10px; border-radius: 6px; background: #eef3f8; }
-.math-markdown .katex {
-  max-width: 100%;
-  overflow-wrap: normal;
-  word-break: normal;
-}
-.math-markdown p > .katex {
-  display: inline-block;
-  margin: .16em .05em;
-  padding: .25em 0 .32em;
-  line-height: normal;
-  vertical-align: -.3em;
-}
-.math-markdown .katex-display {
-  display: block;
-  max-width: 100%;
-  margin: .7em 0;
-  padding: .45em 0 .55em;
-  overflow: auto hidden;
-  overscroll-behavior-inline: contain;
-  scrollbar-width: thin;
-  text-align: left;
-}
-.math-markdown .katex-display > .katex {
-  display: block;
-  max-width: 100%;
-  margin: 0;
-  padding: 0 .1em;
-  line-height: 1.5;
-  text-align: left;
-  white-space: normal;
-}
-.math-markdown .katex-display > .katex > .katex-html > .katex-base { margin: .3em 0; }
-
 @media (max-width: 640px) {
   .paper-import-review-pagination { align-items: flex-start; flex-direction: column; }
   .paper-import-review-pagination .ant-pagination { max-width: 100%; }

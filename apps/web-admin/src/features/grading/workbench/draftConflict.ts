@@ -36,9 +36,9 @@ export function mergeDraftConflict(
   return {
     draft: {
       ...server.draft,
-      // These local-only editor fields are not part of the server draft API.
-      // Keeping them avoids losing a reason or OCR correction while resolving
-      // an optimistic-lock conflict in the persisted fields below.
+      // 这些仅用于本地编辑器的字段不属于服务端草稿 API。
+      // 保留它们，避免在处理下面持久化字段的乐观锁冲突时，
+      // 丢失原因说明或 OCR 更正内容。
       reason: local.draft.reason,
       disputeReason: local.draft.disputeReason,
       answerText: local.draft.answerText,

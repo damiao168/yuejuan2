@@ -95,29 +95,16 @@ func (h *Handler) settleMathOutput(ctx context.Context, tenantID string, value C
 	if output == nil || value.MathEvidence == nil || output.SchemaVersion != gradingAgentV2BuilderSchemaVersion || output.Mock || output.DeliveryMode != "teacher_suggestion" {
 		return ErrInvalidModelOutput
 	}
-	// The worker result envelope may carry a previously settled suggestion,
-	// but none of its score-bearing fields survive without server recomputation.
+	// worker 结果封装可携带已结算建议，但其中所有含分数的字段都必须经过服务器重算才能保留。
 	output.SuggestedScore, output.MathScore = 0, nil
 	output.MatchedPoints, output.MissingPoints, output.Evidence = nil, nil, nil
 	output.NeedsHumanReview = true
 	if len(output.MathCandidates) > 100 {
 		return ErrInvalidModelOutput
 	}
-	candidates := make([]mathunderstanding.CriterionCandidate, 0, len(output.MathCandidates))
-	for _, candidate := range output.MathCandidates {
-		if (candidate.Status != "supported" && candidate.Status != "contradicted" && candidate.Status != "uncertain") ||
-			math.IsNaN(candidate.Confidence) || math.IsInf(candidate.Confidence, 0) || candidate.Confidence < 0 || candidate.Confidence > 1 ||
-			strings.TrimSpace(candidate.ReasonCode) == "" || len(candidate.ReasonCode) > 256 || len(candidate.EvidenceIDs) > 100 {
-			return ErrInvalidModelOutput
-		}
-		seenEvidence := map[string]bool{}
-		for _, id := range candidate.EvidenceIDs {
-			if seenEvidence[id] {
-				return ErrInvalidModelOutput
-			}
-			seenEvidence[id] = true
-		}
-		candidates = append(candidates, mathunderstanding.CriterionCandidate{RubricPointID: candidate.RubricPointID, Status: candidate.Status, EvidenceIDs: nonNilStrings(candidate.EvidenceIDs)})
+	candidates, err := mathScoringCandidates(output.MathCandidates)
+	if err != nil {
+		return err
 	}
 	score, err := mathunderstanding.ScoreFrozenRubric(value.MathEvidence.frozen, value.MathEvidence.effective, candidates)
 	if err != nil {
@@ -150,6 +137,27 @@ func (h *Handler) settleMathOutput(ctx context.Context, tenantID string, value C
 	output.NeedsHumanReview = true
 	output.RiskFlags = appendFlag(output.RiskFlags, "human_review_required")
 	return nil
+}
+
+// 候选只携带分类和证据关联，数值评分仍由冻结量规计算。
+func mathScoringCandidates(input []MathCriterionCandidate) ([]mathunderstanding.CriterionCandidate, error) {
+	candidates := make([]mathunderstanding.CriterionCandidate, 0, len(input))
+	for _, candidate := range input {
+		if (candidate.Status != "supported" && candidate.Status != "contradicted" && candidate.Status != "uncertain") ||
+			math.IsNaN(candidate.Confidence) || math.IsInf(candidate.Confidence, 0) || candidate.Confidence < 0 || candidate.Confidence > 1 ||
+			strings.TrimSpace(candidate.ReasonCode) == "" || len(candidate.ReasonCode) > 256 || len(candidate.EvidenceIDs) > 100 {
+			return nil, ErrInvalidModelOutput
+		}
+		seenEvidence := map[string]bool{}
+		for _, id := range candidate.EvidenceIDs {
+			if seenEvidence[id] {
+				return nil, ErrInvalidModelOutput
+			}
+			seenEvidence[id] = true
+		}
+		candidates = append(candidates, mathunderstanding.CriterionCandidate{RubricPointID: candidate.RubricPointID, Status: candidate.Status, EvidenceIDs: nonNilStrings(candidate.EvidenceIDs)})
+	}
+	return candidates, nil
 }
 
 func mathScoreEvidence(segmentID string, score mathunderstanding.RubricScore) []grading.Evidence {

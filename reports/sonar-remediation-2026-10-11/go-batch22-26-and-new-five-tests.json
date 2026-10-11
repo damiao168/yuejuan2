@@ -1,0 +1,95 @@
+{
+  "started_at": "2026-10-11T18:34:53.756957+08:00",
+  "finished_at": "2026-10-11T18:36:13.693635+08:00",
+  "duration_seconds": 79.9369999999908,
+  "command": [
+    "go",
+    "test",
+    "-json",
+    "-p",
+    "1",
+    "-count=1",
+    "-timeout=5m",
+    "./internal/paper",
+    "./internal/subjective",
+    "./internal/apicontract",
+    "./internal/mathunderstanding",
+    "./internal/releasegate",
+    "./internal/review"
+  ],
+  "cwd": "D:\\project\\yuejuan\\services\\api-gateway",
+  "exit_code": 0,
+  "isolation": {
+    "toolchain": "local",
+    "module_proxy": "off",
+    "checksum_service": "off",
+    "GOMAXPROCS": 1,
+    "cleared_environment_names": []
+  },
+  "source_identity": {
+    "before": "go-batch22-26-and-new-five-source-before.json",
+    "after": "go-batch22-26-and-new-five-source-after.json",
+    "count": 706,
+    "changed_paths": []
+  },
+  "package_results": [
+    {
+      "Time": "2026-10-11T18:35:38.4416043+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/paper",
+      "Elapsed": 3.043
+    },
+    {
+      "Time": "2026-10-11T18:35:54.1851047+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/subjective",
+      "Elapsed": 3.2800000000000002
+    },
+    {
+      "Time": "2026-10-11T18:36:01.0911724+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/apicontract",
+      "Elapsed": 1.678
+    },
+    {
+      "Time": "2026-10-11T18:36:05.5931869+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/mathunderstanding",
+      "Elapsed": 1.325
+    },
+    {
+      "Time": "2026-10-11T18:36:08.4835393+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/releasegate",
+      "Elapsed": 1.065
+    },
+    {
+      "Time": "2026-10-11T18:36:12.7740242+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/review",
+      "Elapsed": 1.139
+    }
+  ],
+  "test_result_counts": {
+    "pass": 1158,
+    "fail": 0,
+    "skip": 2
+  },
+  "skipped_tests": [
+    {
+      "Time": "2026-10-11T18:35:52.8587987+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/subjective",
+      "Test": "TestHTTPAdapterRealLocalAgent",
+      "Elapsed": 0
+    },
+    {
+      "Time": "2026-10-11T18:36:00.9233669+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/apicontract",
+      "Test": "TestReliabilitySharedClientContract",
+      "Elapsed": 0
+    }
+  ],
+  "note": "只报告实际运行的包；环境缺失跳过项不算真实数据库或外部模型集成通过。"
+}

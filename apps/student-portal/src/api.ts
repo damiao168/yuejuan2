@@ -23,10 +23,11 @@ export interface PublishedExam {
 }
 
 export interface StudentScoreReference {
-  scope: "grade" | "class";
+  scope: "grade" | "class" | "exam";
   sample_size: number;
   statistics_available: boolean;
-  unavailable_reason?: "small_cohort" | string;
+  // 无法公开统计的原因来自服务端，类型保留新增的原因代码。
+  unavailable_reason?: string;
   mean_score?: number;
   median_score?: number;
   q1?: number;
@@ -52,10 +53,12 @@ export interface StudentQuestion {
     mean_score_rate: number;
     full_score_rate: number;
     zero_score_rate: number;
-    class_mean_score: number;
+    class_mean_score?: number;
+    class_unavailable_reason?: string;
     school_mean_score: number;
     median_score: number;
   };
+  cohort_unavailable_reason?: string;
   correct_answer?: string;
   actual_answer?: string;
   page_no?: number;
@@ -67,9 +70,9 @@ export interface StudentQuestion {
 
 export interface StudentResult {
   exam_id: string;
-  // The release identifier is an immutable public-score version anchor. It is
-  // sent back only when a student starts an appeal; the server still derives
-  // the original score from that release rather than trusting the browser.
+  // 发布标识是不可变的公开成绩版本锚点，
+  // 题目、批注和图片读取及申诉都会回传，防止新证据混入旧版申请；
+  // 服务端仍从该发布版本读取原始成绩，不信任浏览器提供的分数。
   release_id: string;
   release_version: number;
   exam?: {
@@ -84,7 +87,8 @@ export interface StudentResult {
   overall_max_score?: number;
   score_rate?: number;
   reference?: StudentScoreReference;
-  rankings?: { class_rank: number; class_size: number; grade_rank: number; grade_size: number };
+  rankings?: { class_rank: number; class_size: number; grade_rank: number; grade_size: number; class_unavailable_reason?: string; grade_unavailable_reason?: string };
+  session_summary?: { published_count: number; expected_count: number; subjects: Array<{ exam_id: string; subject: string; name: string; status: string; score?: number; max_score?: number; published_at?: string; statistics_available: boolean; statistics_reason?: string; mean_score_rate?: number; sample_size?: number }> };
   paper_pages?: Array<{ page_no: number; question_id: string; submission_page_id?: string }>;
   high_score_paper?: {
     available: boolean;
@@ -102,6 +106,8 @@ export interface StudentResult {
   questions?: StudentQuestion[];
   appeal_window: {
     open: boolean;
+    state?: "disabled" | "upcoming" | "open" | "closed";
+    opens_at?: string;
     closes_at?: string;
     allowed_reason_codes?: string[];
   };
@@ -122,6 +128,9 @@ export interface StudentQuestionAppeal {
   decision?: string;
   public_response?: string;
   new_release_id?: string;
+  new_release_version?: number;
+  reviewed_score?: number;
+  reviewed_max_score?: number;
   created_at: string;
   updated_at: string;
 }
@@ -134,8 +143,8 @@ export interface SelectedAppealRegion {
   height: number;
 }
 
-// Generated from the public OpenAPI contract. It deliberately has no
-// reviewer, tenant, revision, visibility, or payload fields.
+// 由公开 OpenAPI 契约生成，刻意不包含
+// reviewer、tenant、revision、visibility 或 payload 字段。
 export type StudentQuestionAnnotation = StudentReviewAnnotation;
 
 export class PortalApiError extends Error {
@@ -145,7 +154,15 @@ export class PortalApiError extends Error {
   }
 }
 
-const baseUrl = (import.meta.env.VITE_API_BASE_URL ?? "").trim().replace(/\/+$/, "");
+function normalizeApiBaseUrl(value: string): string {
+  // 空地址用于同源请求，相对路径也可配置；只清除首尾空白和末尾斜杠。
+  const trimmed = value.trim();
+  let end = trimmed.length;
+  while (end > 0 && trimmed[end - 1] === "/") end -= 1;
+  return trimmed.slice(0, end);
+}
+
+const baseUrl = normalizeApiBaseUrl(import.meta.env.VITE_API_BASE_URL ?? "");
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const response = await fetch(`${baseUrl}${path}`, {
@@ -158,7 +175,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     try {
       payload = await response.json() as typeof payload;
     } catch {
-      // The status is still useful when a proxy rejects a request without JSON.
+      // 代理拒绝请求且未返回 JSON 时，状态码仍有助于判断错误。
     }
     throw new PortalApiError(
       response.status,
@@ -169,8 +186,8 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-// Keep the portal's existing session/cookie and PortalApiError behavior while
-// routing new contract-backed calls through the shared generated SDK.
+// 保留学生端现有会话、Cookie 和 PortalApiError 行为，
+// 同时通过共享的生成 SDK 调用新的契约接口。
 const sdkTransport: ApiTransport = { request };
 const sdk = new EduGradeApi(sdkTransport);
 
@@ -198,24 +215,24 @@ export function getResult(examID: string) {
   return request<{ result: StudentResult }>(`/api/v1/student/exams/${encodeURIComponent(examID)}/result`);
 }
 
-export function getQuestion(examID: string, questionID: string) {
-  return request<{ question: StudentQuestion }>(`/api/v1/student/exams/${encodeURIComponent(examID)}/questions/${encodeURIComponent(questionID)}`);
+export function getQuestion(examID: string, questionID: string, expectedReleaseID?: string) {
+  return request<{ question: StudentQuestion }>(`/api/v1/student/exams/${encodeURIComponent(examID)}/questions/${encodeURIComponent(questionID)}${studentReleaseQuery(expectedReleaseID)}`);
 }
 
-// This is a student-scoped, per-question crop URL. The API authorizes it
-// against the student's current published score release; no answer-segment ID
-// or storage URL is exposed to the portal.
-export function studentQuestionAnswerImageURL(examID: string, questionID: string) {
-  return `${baseUrl}/api/v1/student/exams/${encodeURIComponent(examID)}/questions/${encodeURIComponent(questionID)}/answer-image`;
+// 这是限定到学生及单道题的裁切图 URL。API 根据
+// 该学生当前已发布的成绩版本进行授权；学生端不会获得
+// 答题片段 ID 或存储 URL。
+export function studentQuestionAnswerImageURL(examID: string, questionID: string, expectedReleaseID?: string) {
+  return `${baseUrl}/api/v1/student/exams/${encodeURIComponent(examID)}/questions/${encodeURIComponent(questionID)}/answer-image${studentReleaseQuery(expectedReleaseID)}`;
 }
 
-export function studentPaperPageImageURL(examID: string, questionID: string, highScore = false) {
-  const query = highScore ? "?variant=high_score" : "";
+export function studentPaperPageImageURL(examID: string, questionID: string, highScore = false, expectedReleaseID?: string) {
+  const query = studentReleaseQuery(expectedReleaseID, highScore);
   return `${baseUrl}/api/v1/student/exams/${encodeURIComponent(examID)}/questions/${encodeURIComponent(questionID)}/page-image${query}`;
 }
 
-export function listQuestionAnnotations(examID: string, questionID: string) {
-  return sdk.listStudentQuestionReviewAnnotations({ path: { examId: examID, questionId: questionID } });
+export function listQuestionAnnotations(examID: string, questionID: string, expectedReleaseID?: string) {
+  return sdk.listStudentQuestionReviewAnnotations({ path: { examId: examID, questionId: questionID }, ...(expectedReleaseID ? { query: { expected_release_id: expectedReleaseID } } : {}) });
 }
 
 export function createQuestionAppeal(examID: string, input: {
@@ -234,4 +251,13 @@ export function createQuestionAppeal(examID: string, input: {
 
 export function listQuestionAppeals(examID: string) {
   return request<{ appeals: StudentQuestionAppeal[] }>(`/api/v1/student/question-appeals?exam_id=${encodeURIComponent(examID)}`);
+}
+
+// 页面绑定的发布 ID 随每次证据请求发送；服务端比较实际读取版本，不能由前端预查指针代替。
+function studentReleaseQuery(expectedReleaseID?: string, highScore = false) {
+ const query = new URLSearchParams();
+ if (expectedReleaseID) query.set("expected_release_id", expectedReleaseID);
+ if (highScore) query.set("variant", "high_score");
+ const value = query.toString();
+ return value ? `?${value}` : "";
 }

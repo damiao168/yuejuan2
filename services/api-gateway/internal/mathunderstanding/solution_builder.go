@@ -30,8 +30,33 @@ func BuildSolutionGraph(input SolutionBuildInput) (SolutionGraph, error) {
 		formulaByBlock[formula.BlockID] = append(formulaByBlock[formula.BlockID], formula.ID)
 	}
 	steps, stepByBlock := SegmentSolutionSteps(input.Blocks, formulaByBlock)
+	edges := buildSolutionEdges(input.Relations, stepByBlock, minimum)
+	// 整体置信度取最弱步骤，避免其他步骤的高分掩盖一个识别不清的步骤。
+	confidence := 1.0
+	if len(steps) == 0 {
+		confidence = 0
+	}
+	for _, step := range steps {
+		confidence = min(confidence, step.Confidence)
+	}
+	graph := SolutionGraph{ID: fmt.Sprintf("solution-%s", input.AnswerSegmentID), AnswerSegmentID: input.AnswerSegmentID, BuilderVersion: input.BuilderVersion, FormulaModelVersion: input.FormulaModelVersion, OverallConfidence: confidence, RequiresHumanReview: confidence < .75 || len(steps) == 0, Steps: steps, Edges: edges}
+	blocks, formulas := map[string]bool{}, map[string]bool{}
+	for _, b := range input.Blocks {
+		blocks[b.ID] = true
+	}
+	for _, f := range input.Formulas {
+		formulas[f.ID] = true
+	}
+	if err := validateGraph(graph, blocks, formulas); err != nil {
+		return SolutionGraph{}, err
+	}
+	return graph, nil
+}
+
+// 同一步骤对重复出现时沿用最后一条关系；组装后按步骤 ID 排序，环检测仍由调用方执行。
+func buildSolutionEdges(relations []SpatialRelation, stepByBlock map[string]string, minimum float64) []SolutionEdge {
 	edgeMap := map[string]SolutionEdge{}
-	for _, relation := range input.Relations {
+	for _, relation := range relations {
 		from, fromOK := stepByBlock[relation.FromID]
 		to, toOK := stepByBlock[relation.ToID]
 		if !fromOK || !toOK || from == to || relation.Confidence < minimum {
@@ -53,24 +78,5 @@ func BuildSolutionGraph(input SolutionBuildInput) (SolutionGraph, error) {
 		}
 		return edges[i].FromStepID < edges[j].FromStepID
 	})
-	// 整体置信度取最弱步骤，避免其他步骤的高分掩盖一个识别不清的步骤。
-	confidence := 1.0
-	if len(steps) == 0 {
-		confidence = 0
-	}
-	for _, step := range steps {
-		confidence = min(confidence, step.Confidence)
-	}
-	graph := SolutionGraph{ID: fmt.Sprintf("solution-%s", input.AnswerSegmentID), AnswerSegmentID: input.AnswerSegmentID, BuilderVersion: input.BuilderVersion, FormulaModelVersion: input.FormulaModelVersion, OverallConfidence: confidence, RequiresHumanReview: confidence < .75 || len(steps) == 0, Steps: steps, Edges: edges}
-	blocks, formulas := map[string]bool{}, map[string]bool{}
-	for _, b := range input.Blocks {
-		blocks[b.ID] = true
-	}
-	for _, f := range input.Formulas {
-		formulas[f.ID] = true
-	}
-	if err := validateGraph(graph, blocks, formulas); err != nil {
-		return SolutionGraph{}, err
-	}
-	return graph, nil
+	return edges
 }

@@ -17,29 +17,8 @@ export function loadLocalRuntimeManifest(path = DEFAULT_RUNTIME_MANIFEST) {
   return JSON.parse(readFileSync(path, "utf8"));
 }
 
-export function validateLocalRuntimeManifest(manifest) {
-  const errors = [];
-  if (!manifest || typeof manifest !== "object" || Array.isArray(manifest)) {
-    return { valid: false, errors: ["runtime manifest must be an object"] };
-  }
-  if (manifest.schema_version !== "local-runtime-v1") errors.push("unsupported runtime manifest schema_version");
-  if (manifest.runtime?.name !== "llama.cpp") errors.push("runtime.name must be llama.cpp");
-  if (!/^b\d+$/.test(manifest.runtime?.release ?? "")) errors.push("runtime.release must be pinned");
-  if (!/^https:\/\//.test(manifest.runtime?.url ?? "")) errors.push("runtime.url must use https");
-  if (!/^https:\/\/github\.com\//.test(manifest.runtime?.source_url ?? "")) {
-    errors.push("runtime.source_url must identify the official GitHub asset");
-  }
-  if (!Number.isInteger(manifest.runtime?.expected_bytes) || manifest.runtime.expected_bytes <= 0) {
-    errors.push("runtime.expected_bytes must be positive");
-  }
-  if (!/^[a-f0-9]{64}$/.test(manifest.runtime?.expected_sha256 ?? "")) errors.push("runtime.expected_sha256 is required");
-  if (!isSafeLabRelativePath(manifest.runtime?.install_dir)) errors.push("runtime.install_dir must stay inside lab");
-  if (!isSafeLabRelativePath(manifest.model?.model_path)) errors.push("model.model_path must stay inside lab");
-  if (!/^https:\/\//.test(manifest.model?.url ?? "")) errors.push("model.url must use https");
-  if (!Number.isInteger(manifest.model?.expected_bytes) || manifest.model.expected_bytes <= 0) {
-    errors.push("model.expected_bytes must be positive");
-  }
-  if (!/^[a-f0-9]{64}$/.test(manifest.model?.expected_sha256 ?? "")) errors.push("model.expected_sha256 is required");
+function validateBaselineExecution(manifest, errors) {
+  // CPU、单请求和零温度属于同一初始评测基线，不能混入其他执行条件。
   if (manifest.execution?.gpu_layers !== 0) errors.push("initial baseline must be CPU-only with gpu_layers=0");
   if (manifest.execution?.parallel_requests !== 1) errors.push("initial baseline must use one request at a time");
   if (manifest.execution?.temperature !== 0) errors.push("grading baseline temperature must be zero");
@@ -50,6 +29,33 @@ export function validateLocalRuntimeManifest(manifest) {
   ) {
     errors.push("runtime context must be between 1024 and 32768 tokens");
   }
+}
+
+export function validateLocalRuntimeManifest(manifest) {
+  const errors = [];
+  if (!manifest || typeof manifest !== "object" || Array.isArray(manifest)) {
+    return { valid: false, errors: ["runtime manifest must be an object"] };
+  }
+  if (manifest.schema_version !== "local-runtime-v1") errors.push("unsupported runtime manifest schema_version");
+  if (manifest.runtime?.name !== "llama.cpp") errors.push("runtime.name must be llama.cpp");
+  if (!/^b\d+$/.test(manifest.runtime?.release ?? "")) errors.push("runtime.release must be pinned");
+  // 这里只检查 URL 前缀；模板转换保留原正则对非字符串输入的转换和异常。
+  if (!`${manifest.runtime?.url ?? ""}`.startsWith("https://")) errors.push("runtime.url must use https");
+  if (!`${manifest.runtime?.source_url ?? ""}`.startsWith("https://github.com/")) {
+    errors.push("runtime.source_url must identify the official GitHub asset");
+  }
+  if (!Number.isInteger(manifest.runtime?.expected_bytes) || manifest.runtime.expected_bytes <= 0) {
+    errors.push("runtime.expected_bytes must be positive");
+  }
+  if (!/^[a-f0-9]{64}$/.test(manifest.runtime?.expected_sha256 ?? "")) errors.push("runtime.expected_sha256 is required");
+  if (!isSafeLabRelativePath(manifest.runtime?.install_dir)) errors.push("runtime.install_dir must stay inside lab");
+  if (!isSafeLabRelativePath(manifest.model?.model_path)) errors.push("model.model_path must stay inside lab");
+  if (!`${manifest.model?.url ?? ""}`.startsWith("https://")) errors.push("model.url must use https");
+  if (!Number.isInteger(manifest.model?.expected_bytes) || manifest.model.expected_bytes <= 0) {
+    errors.push("model.expected_bytes must be positive");
+  }
+  if (!/^[a-f0-9]{64}$/.test(manifest.model?.expected_sha256 ?? "")) errors.push("model.expected_sha256 is required");
+  validateBaselineExecution(manifest, errors);
   return { valid: errors.length === 0, errors };
 }
 

@@ -1,0 +1,17 @@
+{
+  "verified_at": "2026-10-11T16:23:03+08:00",
+  "source_root": "D:\\tools\\audit-codeql-20261010\\source-20261011",
+  "maintenance_source": {
+    "manifest": "D:\\project\\yuejuan\\reports\\platform-audit-2026-10-10\\source-manifest-resume-2026-10-11.csv",
+    "checked_files": 2502,
+    "changed": [],
+    "missing": []
+  },
+  "build_context": {
+    "manifest": "D:\\project\\yuejuan\\reports\\platform-audit-2026-10-10\\codeql\\build-context-manifest.csv",
+    "checked_files": 12,
+    "changed": [],
+    "missing": []
+  },
+  "all_manifest_files_unchanged": true
+}

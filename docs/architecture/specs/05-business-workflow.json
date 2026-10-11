@@ -1,0 +1,1283 @@
+{
+  "file": "05-business-workflow.drawio",
+  "title": "考试与阅卷业务流程",
+  "pages": [
+    {
+      "id": "intake",
+      "title": "01 创建考试、资料冻结与答题卡处理",
+      "width": 2340,
+      "height": 1963,
+      "note": "采集、识别、评分是多个命令与队列；不表示所有阶段由一次上传自动完成。",
+      "nodes": [
+        {
+          "id": "create",
+          "label": "用户：创建考试\nCreateExam → 作用域校验 → Store",
+          "x": 228,
+          "y": 253,
+          "w": 312,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/exam/handlers.go:24",
+          "display_label": "创建考试",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "configure",
+          "label": "用户：配置试卷、题目、名单、模板\n准备确认冻结配置；评分启动读取模式",
+          "x": 850,
+          "y": 265,
+          "w": 550,
+          "h": 87,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/paper/configuration_handlers.go:138",
+          "display_label": "配置试卷 / 名单 / 模板",
+          "show_evidence": false,
+          "title_font_size": 52,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "ready",
+          "label": "用户：准备确认、开始采集\n配置 hash 改变会拒绝开始",
+          "x": 1590,
+          "y": 264,
+          "w": 551,
+          "h": 90,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/paper/configuration_handlers.go:167",
+          "display_label": "准备确认 → 开始采集",
+          "show_evidence": false,
+          "title_font_size": 55,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "capture",
+          "label": "用户：上传并启动采集批次\ncapture_file → capture_file_decode task",
+          "x": 1710,
+          "y": 604,
+          "w": 312,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/capture/store_postgres.go:180",
+          "display_label": "上传答卷",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "decode",
+          "label": "自动：解码 PDF / 图像为页 PNG\n页上传后检测条码；还不是配准",
+          "x": 932,
+          "y": 604,
+          "w": 384,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/page-processing-worker/page_processing/runner.py:182",
+          "display_label": "解码为页面",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "quality",
+          "label": "自动：图像质量任务\nEXIF 归正、有限纠偏、质量证据",
+          "x": 228,
+          "y": 604,
+          "w": 312,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/image-quality-worker/image_quality/engine.py:43",
+          "display_label": "质量检测",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "quality_result",
+          "label": "quality_status = passed？",
+          "x": 106,
+          "y": 951,
+          "w": 555,
+          "h": 152,
+          "status": "implemented",
+          "kind": "decision",
+          "evidence": "services/api-gateway/internal/imagequality/coordinator_postgres.go:79",
+          "display_label": "质量通过？",
+          "show_evidence": false,
+          "title_font_size": 70,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "review_quality",
+          "label": "用户：质量 / 身份复核\nreview、failed 或条码冲突阻塞",
+          "x": 109,
+          "y": 1354,
+          "w": 549,
+          "h": 94,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/capture/registration_review_store_postgres.go:129",
+          "display_label": "人工质量 / 身份复核",
+          "show_evidence": false,
+          "title_font_size": 58,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "template",
+          "label": "自动：已验证纸张 / 考试绑定 / 唯一模板\n否则仅对已有锁定模板做候选匹配",
+          "x": 896,
+          "y": 955,
+          "w": 456,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/capture/registration_store_postgres.go:240",
+          "display_label": "确定已有模板",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "registration",
+          "label": "自动：OpenCV 配准并按 ROI 切题\n不是任意版面自动学习",
+          "x": 1586,
+          "y": 957,
+          "w": 559,
+          "h": 107,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/page-processing-worker/page_processing/runner.py:205",
+          "display_label": "配准 → ROI 切题",
+          "show_evidence": false,
+          "title_font_size": 69,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "segments",
+          "label": "answer_segment + 裁片资产\n低置信度页面需人工确认；见图06",
+          "x": 1710,
+          "y": 1345,
+          "w": 312,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/capture/registration_store_postgres.go:430",
+          "display_label": "答案裁片",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "recognize",
+          "label": "用户另行启动 OCR / 数学理解等任务\n配准完成未直接调用 AI 评分",
+          "x": 846,
+          "y": 1361,
+          "w": 557,
+          "h": 80,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/ocr/runtime_coordinator_postgres.go:16",
+          "display_label": "另行启动 OCR / 数学理解",
+          "show_evidence": false,
+          "title_font_size": 46,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "next",
+          "label": "进入业务评分、人工终评与发布\n请阅读下一页及图07、09",
+          "x": 1339,
+          "y": 1667,
+          "w": 312,
+          "h": 111,
+          "status": "infra",
+          "kind": "note",
+          "evidence": "services/api-gateway/internal/grading/scoring_run_routing.go:59",
+          "display_label": "进入评分",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        }
+      ],
+      "edges": [
+        {
+          "source": "create",
+          "target": "configure",
+          "label": "配置",
+          "dashed": false,
+          "display_label": "配置"
+        },
+        {
+          "source": "configure",
+          "target": "ready",
+          "label": "复核后确认",
+          "dashed": false,
+          "display_label": "复核后确认"
+        },
+        {
+          "source": "ready",
+          "target": "capture",
+          "label": "collecting",
+          "dashed": false,
+          "display_label": "collecting"
+        },
+        {
+          "source": "capture",
+          "target": "decode",
+          "label": "队列领取",
+          "dashed": false,
+          "display_label": "队列领取"
+        },
+        {
+          "source": "decode",
+          "target": "quality",
+          "label": "ApplyFileResult 排质量任务",
+          "dashed": false,
+          "display_label": "ApplyFileResult 排质量任务"
+        },
+        {
+          "source": "quality",
+          "target": "quality_result",
+          "label": "提交质量事实",
+          "dashed": false,
+          "display_label": "提交质量事实"
+        },
+        {
+          "source": "quality_result",
+          "target": "template",
+          "label": "passed",
+          "dashed": false,
+          "display_label": "passed"
+        },
+        {
+          "source": "quality_result",
+          "target": "review_quality",
+          "label": "review / failed",
+          "dashed": false,
+          "display_label": "review / failed"
+        },
+        {
+          "source": "template",
+          "target": "registration",
+          "label": "选择模板后排任务",
+          "dashed": false,
+          "display_label": "选择模板后排任务"
+        },
+        {
+          "source": "registration",
+          "target": "segments",
+          "label": "配准 + ROI 产物",
+          "dashed": false,
+          "display_label": "配准 + ROI 产物"
+        },
+        {
+          "source": "segments",
+          "target": "recognize",
+          "label": "可启动识别",
+          "dashed": false,
+          "display_label": "可启动识别"
+        },
+        {
+          "source": "recognize",
+          "target": "next",
+          "label": "识别事实 / 已有答案",
+          "dashed": false,
+          "display_label": "识别事实 / 已有答案"
+        }
+      ],
+      "display_note": "",
+      "typography_layout_base": {
+        "width": 1800,
+        "height": 1510,
+        "nodes": {
+          "create": {
+            "x": 80,
+            "y": 170,
+            "w": 430,
+            "h": 135
+          },
+          "configure": {
+            "x": 650,
+            "y": 170,
+            "w": 430,
+            "h": 135
+          },
+          "ready": {
+            "x": 1220,
+            "y": 170,
+            "w": 430,
+            "h": 135
+          },
+          "capture": {
+            "x": 1220,
+            "y": 440,
+            "w": 430,
+            "h": 135
+          },
+          "decode": {
+            "x": 650,
+            "y": 440,
+            "w": 430,
+            "h": 135
+          },
+          "quality": {
+            "x": 80,
+            "y": 440,
+            "w": 430,
+            "h": 135
+          },
+          "quality_result": {
+            "x": 80,
+            "y": 710,
+            "w": 430,
+            "h": 160
+          },
+          "review_quality": {
+            "x": 80,
+            "y": 1010,
+            "w": 430,
+            "h": 135
+          },
+          "template": {
+            "x": 650,
+            "y": 710,
+            "w": 430,
+            "h": 135
+          },
+          "registration": {
+            "x": 1220,
+            "y": 710,
+            "w": 430,
+            "h": 135
+          },
+          "segments": {
+            "x": 1220,
+            "y": 1010,
+            "w": 430,
+            "h": 135
+          },
+          "recognize": {
+            "x": 650,
+            "y": 1010,
+            "w": 430,
+            "h": 135
+          },
+          "next": {
+            "x": 650,
+            "y": 1270,
+            "w": 1000,
+            "h": 110
+          }
+        },
+        "points": {}
+      }
+    },
+    {
+      "id": "grading_release",
+      "title": "02 评分分流、人工终评与不可变发布",
+      "width": 2340,
+      "height": 1950,
+      "note": "评分编排、单 adapter AI、人工双评与三智能体内核各有边界；本页展示新发布路径，旧发布路径仍挂载，详见下一页。",
+      "nodes": [
+        {
+          "id": "start",
+          "label": "用户：启动 ScoringRun\n幂等键重放；就绪门禁与考试锁",
+          "x": 228,
+          "y": 253,
+          "w": 312,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/grading/scoring_run_start.go:56",
+          "display_label": "启动评分",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "mode",
+          "label": "读取冻结 scoring_mode",
+          "x": 799,
+          "y": 276,
+          "w": 652,
+          "h": 97,
+          "status": "implemented",
+          "kind": "decision",
+          "evidence": "services/api-gateway/internal/grading/scoring_run_routing.go:59",
+          "display_label": "冻结的 scoring_mode",
+          "show_evidence": false,
+          "title_font_size": 40,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "human",
+          "label": "HUMAN_PRIMARY / DUAL_HUMAN / MANUAL_ONLY\n直接创建人工 ReviewTask",
+          "x": 1710,
+          "y": 230,
+          "w": 312,
+          "h": 157,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/grading/scoring_run_routing.go:61",
+          "display_label": "人工评分\n单评 / 双评 / 手工",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "rule",
+          "label": "RULE_AUTO：已有文本答案 + 规则\nfill_blank / numeric → 规则引擎",
+          "x": 156,
+          "y": 581,
+          "w": 456,
+          "h": 157,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/grading/scoring_run_routing.go:36",
+          "display_label": "RULE_AUTO\n文本规则",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "omr",
+          "label": "RULE_AUTO：选择题 + 选项 ROI + 规则\n排 omr_extract，保留 overlay 证据",
+          "x": 897,
+          "y": 581,
+          "w": 456,
+          "h": 157,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/grading/scoring_run_routing.go:42",
+          "display_label": "RULE_AUTO\nOMR 规则",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "ai_assist",
+          "label": "AI_ASSIST / AI_FAST_CONFIRM\n主观题创建教师确认任务；不直接排 Panel",
+          "x": 1543,
+          "y": 600,
+          "w": 646,
+          "h": 119,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/grading/scoring_run_routing.go:63",
+          "display_label": "AI_ASSIST / AI_FAST_CONFIRM\n人工确认",
+          "show_evidence": false,
+          "title_font_size": 40,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "confirm_rule",
+          "label": "自动确认条件满足？\n不支持 / 不安全 / 缺规则 → 人工",
+          "x": 106,
+          "y": 970,
+          "w": 555,
+          "h": 115,
+          "status": "implemented",
+          "kind": "decision",
+          "evidence": "services/api-gateway/internal/grading/scoring_run_process.go:42",
+          "display_label": "允许自动确认？",
+          "show_evidence": false,
+          "title_font_size": 50,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "review",
+          "label": "用户：领取、提交人工评分\n单评或冻结阈值双评；分歧转人工仲裁",
+          "x": 968,
+          "y": 955,
+          "w": 312,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/review/store_postgres_resolution.go:45",
+          "display_label": "人工终评",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "ai_optional",
+          "label": "独立 AI 批次 / 单题调用入口\nai_grade 只是建议，见图07\n需要用户/业务命令触发",
+          "x": 1588,
+          "y": 957,
+          "w": 555,
+          "h": 107,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/subjective/handlers_worker.go:76",
+          "display_label": "独立 AI 建议入口",
+          "show_evidence": false,
+          "title_font_size": 69,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "finalize",
+          "label": "用户：FinalizeExam\nhuman / rule → final_grade\n汇总 submission_grade",
+          "x": 228,
+          "y": 1345,
+          "w": 312,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/score/store_postgres.go:25",
+          "display_label": "汇总成绩",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "confirm",
+          "label": "用户：确认成绩\n质量门禁 + 命令收据\npending_confirmation → confirmed",
+          "x": 968,
+          "y": 1345,
+          "w": 312,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/score/store_postgres.go:301",
+          "display_label": "确认成绩",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "release",
+          "label": "用户：创建 score_release 草稿并 Publish\n策略门禁 + 来源/快照门禁 → 切当前指针",
+          "x": 1602,
+          "y": 1345,
+          "w": 528,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/releasegate/coordinator.go:29",
+          "display_label": "创建并发布快照",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "student",
+          "label": "新学生结果读取当前 published release\n旧 grade 与 CSV 来源另见下一页",
+          "x": 1590,
+          "y": 1684,
+          "w": 552,
+          "h": 104,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/scorerelease/service.go:125",
+          "display_label": "学生读取当前快照",
+          "show_evidence": false,
+          "title_font_size": 66,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        }
+      ],
+      "edges": [
+        {
+          "source": "start",
+          "target": "mode",
+          "label": "冻结策略",
+          "dashed": false,
+          "display_label": "冻结策略"
+        },
+        {
+          "source": "mode",
+          "target": "human",
+          "label": "人工模式",
+          "dashed": false,
+          "display_label": "人工模式"
+        },
+        {
+          "source": "mode",
+          "target": "rule",
+          "label": "RULE_AUTO 有文本",
+          "dashed": false,
+          "points": [
+            [
+              845,
+              481
+            ],
+            [
+              390,
+              481
+            ]
+          ],
+          "display_label": "RULE_AUTO 有文本"
+        },
+        {
+          "source": "mode",
+          "target": "omr",
+          "label": "RULE_AUTO 选择题",
+          "dashed": false,
+          "display_label": "RULE_AUTO 选择题"
+        },
+        {
+          "source": "mode",
+          "target": "ai_assist",
+          "label": "AI 辅助模式",
+          "dashed": false,
+          "exitX": 1,
+          "exitY": 0.75,
+          "entryX": 0,
+          "entryY": 0.25,
+          "points": [
+            [
+              1430,
+              377
+            ],
+            [
+              1560,
+              377
+            ],
+            [
+              1560,
+              616
+            ]
+          ],
+          "display_label": "AI 辅助模式"
+        },
+        {
+          "source": "rule",
+          "target": "confirm_rule",
+          "label": "规则候选",
+          "dashed": false,
+          "display_label": "规则候选"
+        },
+        {
+          "source": "omr",
+          "target": "confirm_rule",
+          "label": "OMR 确认候选",
+          "dashed": false,
+          "points": [
+            [
+              780,
+              806
+            ],
+            [
+              390,
+              806
+            ]
+          ],
+          "display_label": "OMR 确认候选"
+        },
+        {
+          "source": "human",
+          "target": "review",
+          "label": "人工任务",
+          "dashed": false,
+          "points": [
+            [
+              2236,
+              481
+            ],
+            [
+              2236,
+              1209
+            ],
+            [
+              1469,
+              1209
+            ]
+          ],
+          "display_label": "人工任务"
+        },
+        {
+          "source": "ai_assist",
+          "target": "review",
+          "label": "教师确认",
+          "dashed": false,
+          "exitX": 0,
+          "exitY": 0.75,
+          "entryX": 1,
+          "entryY": 0.25,
+          "points": [
+            [
+              1560,
+              704
+            ],
+            [
+              1430,
+              704
+            ],
+            [
+              1430,
+              967
+            ]
+          ],
+          "display_label": "教师确认"
+        },
+        {
+          "source": "ai_optional",
+          "target": "review",
+          "label": "AI 建议",
+          "dashed": true,
+          "display_label": "AI 建议"
+        },
+        {
+          "source": "confirm_rule",
+          "target": "finalize",
+          "label": "可自动确认",
+          "dashed": false,
+          "display_label": "可自动确认"
+        },
+        {
+          "source": "confirm_rule",
+          "target": "review",
+          "label": "否则",
+          "dashed": false,
+          "display_label": "否则"
+        },
+        {
+          "source": "review",
+          "target": "finalize",
+          "label": "人工终评",
+          "dashed": false,
+          "points": [
+            [
+              1105,
+              1216
+            ],
+            [
+              390,
+              1216
+            ]
+          ],
+          "display_label": "人工终评"
+        },
+        {
+          "source": "finalize",
+          "target": "confirm",
+          "label": "汇总待确认",
+          "dashed": false,
+          "display_label": "汇总待确认"
+        },
+        {
+          "source": "confirm",
+          "target": "release",
+          "label": "confirmed",
+          "dashed": false,
+          "display_label": "confirmed"
+        },
+        {
+          "source": "release",
+          "target": "student",
+          "label": "发布后",
+          "dashed": false,
+          "display_label": "发布后"
+        }
+      ],
+      "display_note": "",
+      "typography_layout_base": {
+        "width": 1800,
+        "height": 1500,
+        "nodes": {
+          "start": {
+            "x": 80,
+            "y": 170,
+            "w": 430,
+            "h": 135
+          },
+          "mode": {
+            "x": 650,
+            "y": 170,
+            "w": 430,
+            "h": 160
+          },
+          "human": {
+            "x": 1220,
+            "y": 170,
+            "w": 430,
+            "h": 135
+          },
+          "rule": {
+            "x": 80,
+            "y": 440,
+            "w": 430,
+            "h": 135
+          },
+          "omr": {
+            "x": 650,
+            "y": 440,
+            "w": 430,
+            "h": 135
+          },
+          "ai_assist": {
+            "x": 1220,
+            "y": 440,
+            "w": 430,
+            "h": 135
+          },
+          "confirm_rule": {
+            "x": 80,
+            "y": 710,
+            "w": 430,
+            "h": 160
+          },
+          "review": {
+            "x": 650,
+            "y": 710,
+            "w": 430,
+            "h": 135
+          },
+          "ai_optional": {
+            "x": 1220,
+            "y": 710,
+            "w": 430,
+            "h": 135
+          },
+          "finalize": {
+            "x": 80,
+            "y": 1010,
+            "w": 430,
+            "h": 135
+          },
+          "confirm": {
+            "x": 650,
+            "y": 1010,
+            "w": 430,
+            "h": 135
+          },
+          "release": {
+            "x": 1220,
+            "y": 1010,
+            "w": 430,
+            "h": 135
+          },
+          "student": {
+            "x": 1220,
+            "y": 1280,
+            "w": 430,
+            "h": 110
+          }
+        },
+        "points": {
+          "2": [
+            [
+              650,
+              370
+            ],
+            [
+              300,
+              370
+            ]
+          ],
+          "4": [
+            [
+              1100,
+              290.0
+            ],
+            [
+              1200,
+              290.0
+            ],
+            [
+              1200,
+              473.75
+            ]
+          ],
+          "6": [
+            [
+              600,
+              620
+            ],
+            [
+              300,
+              620
+            ]
+          ],
+          "7": [
+            [
+              1720,
+              370
+            ],
+            [
+              1720,
+              930
+            ],
+            [
+              1130,
+              930
+            ]
+          ],
+          "8": [
+            [
+              1200,
+              541.25
+            ],
+            [
+              1100,
+              541.25
+            ],
+            [
+              1100,
+              743.75
+            ]
+          ],
+          "12": [
+            [
+              850,
+              935
+            ],
+            [
+              300,
+              935
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "publication_paths",
+      "title": "03 两条发布与学生读取路径并存",
+      "width": 2340,
+      "height": 1898,
+      "note": "两组 API 均已挂载。旧路径有基本门禁，但未接入新增完整性/重评/质量策略门禁；这是静态可达风险，未声称生产实际调用。",
+      "nodes": [
+        {
+          "id": "old_route",
+          "label": "旧入口：POST /exams/{examId}/publish\nscore:manage + 近期认证 + 考试作用域",
+          "x": 192,
+          "y": 253,
+          "w": 384,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_release.go:18",
+          "display_label": "旧发布入口",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "old_gate",
+          "label": "旧 qualityReportTx\n人工/OCR/已有片段终评、名单页数、确认\n不检查精确官方题覆盖/题分总分一致",
+          "x": 932,
+          "y": 253,
+          "w": 384,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/score/store_postgres.go:587",
+          "display_label": "旧质量检查",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "old_publish",
+          "label": "同事务：submission_grade published/locked\nfinal_grade locked；exam.status=published\n命令收据；不创建 score_release",
+          "x": 1638,
+          "y": 253,
+          "w": 456,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/score/store_postgres.go:333",
+          "display_label": "锁定工作成绩",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "old_student",
+          "label": "旧学生 GET /students/{studentId}/exams/{examId}/grade\npublished+locked 总分 + final_grade\n不解析当前 release 或 VisibilityPolicy",
+          "x": 1602,
+          "y": 656,
+          "w": 528,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/score/store_postgres.go:398",
+          "display_label": "旧学生成绩接口",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "new_route",
+          "label": "新入口：POST /score-releases/{id}/publish\n读取同租户 release → exam 再校验作用域",
+          "x": 156,
+          "y": 1059,
+          "w": 456,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/scorerelease/handlers.go:214",
+          "display_label": "快照发布入口",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "new_gate",
+          "label": "PublicationCoordinator → RecheckForPublish\n来源完整性 + 看板 + 重评 + 策略警告批准\n只追加发布门禁证据",
+          "x": 851,
+          "y": 1074,
+          "w": 547,
+          "h": 81,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/releasegate/service.go:50;services/api-gateway/internal/releasegate/service.go:131",
+          "display_label": "完整性 / 质量 / 重评门禁",
+          "show_evidence": false,
+          "title_font_size": 47,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "new_publish",
+          "label": "同事务再验来源/快照、记录 gate_snapshot\nrelease published + current 指针\n重评基础必须仍是当前 release",
+          "x": 1586,
+          "y": 1075,
+          "w": 558,
+          "h": 80,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/scorerelease/store_postgres.go:259",
+          "display_label": "发布快照 → 更新当前指针",
+          "show_evidence": false,
+          "title_font_size": 46,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "new_student",
+          "label": "新学生 GET /student/exams/{examId}/result\n只读当前 release 的冻结总分/题分\n遵守 VisibilityPolicy",
+          "x": 1602,
+          "y": 1462,
+          "w": 528,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/scorerelease/student_detail_postgres.go:10",
+          "display_label": "新学生结果接口",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "gap",
+          "label": "P1：旧路径可绕过新增门禁\n例：官方2题却仅1题裁片+终评、名单页数合格\n旧可发布；新版 question_coverage 拒绝",
+          "x": 310,
+          "y": 666,
+          "w": 888,
+          "h": 111,
+          "status": "issue",
+          "kind": "box",
+          "evidence": "docs/architecture/evidence/pipeline-audit.md:117",
+          "display_label": "问题：旧入口绕过新增门禁",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "split",
+          "label": "旧公开成绩可见、新接口无快照而查无结果\n兼容接口应统一发布来源与可见性\n不能宣称全系统只使用不可变发布",
+          "x": 274,
+          "y": 1462,
+          "w": 960,
+          "h": 111,
+          "status": "issue",
+          "kind": "box",
+          "evidence": "docs/architecture/evidence/pipeline-audit.md:121",
+          "display_label": "问题：两套公开来源可能分裂",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        }
+      ],
+      "edges": [
+        {
+          "source": "old_route",
+          "target": "old_gate",
+          "label": "基本门禁",
+          "dashed": false,
+          "display_label": "基本门禁"
+        },
+        {
+          "source": "old_gate",
+          "target": "old_publish",
+          "label": "通过",
+          "dashed": false,
+          "display_label": "通过"
+        },
+        {
+          "source": "old_publish",
+          "target": "old_student",
+          "label": "旧公开来源",
+          "dashed": false,
+          "display_label": "旧公开来源"
+        },
+        {
+          "source": "new_route",
+          "target": "new_gate",
+          "label": "策略重新求值",
+          "dashed": false,
+          "display_label": "策略重新求值"
+        },
+        {
+          "source": "new_gate",
+          "target": "new_publish",
+          "label": "通过",
+          "dashed": false,
+          "display_label": "通过"
+        },
+        {
+          "source": "new_publish",
+          "target": "new_student",
+          "label": "冻结发布来源",
+          "dashed": false,
+          "display_label": "冻结发布来源"
+        }
+      ],
+      "display_note": "",
+      "typography_layout_base": {
+        "width": 1800,
+        "height": 1460,
+        "nodes": {
+          "old_route": {
+            "x": 80,
+            "y": 170,
+            "w": 430,
+            "h": 135
+          },
+          "old_gate": {
+            "x": 650,
+            "y": 170,
+            "w": 430,
+            "h": 135
+          },
+          "old_publish": {
+            "x": 1220,
+            "y": 170,
+            "w": 430,
+            "h": 135
+          },
+          "old_student": {
+            "x": 1220,
+            "y": 480,
+            "w": 430,
+            "h": 135
+          },
+          "new_route": {
+            "x": 80,
+            "y": 790,
+            "w": 430,
+            "h": 135
+          },
+          "new_gate": {
+            "x": 650,
+            "y": 790,
+            "w": 430,
+            "h": 135
+          },
+          "new_publish": {
+            "x": 1220,
+            "y": 790,
+            "w": 430,
+            "h": 135
+          },
+          "new_student": {
+            "x": 1220,
+            "y": 1100,
+            "w": 430,
+            "h": 135
+          },
+          "gap": {
+            "x": 80,
+            "y": 480,
+            "w": 1000,
+            "h": 150
+          },
+          "split": {
+            "x": 80,
+            "y": 1100,
+            "w": 1000,
+            "h": 135
+          }
+        },
+        "points": {}
+      }
+    }
+  ],
+  "compact": true
+}

@@ -1,0 +1,16 @@
+{
+  "files": [
+    {
+      "file": "services/api-gateway/internal/server/e2e_exam_archive_commands_test.go",
+      "sha256": "a3efffb6f3a4e55f795d00aeb894a98d19acbe1a7e7c713cf9d26f99c6dd3ab9",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_exam_archive_commands_test.go"
+    }
+  ],
+  "issue_functions": [
+    {
+      "file": "services/api-gateway/internal/server/e2e_exam_archive_commands_test.go",
+      "function": "TestExamArchiveCommandsE2EWithPostgresTestDatabase"
+    }
+  ],
+  "checkpoint_relation": "after checkpoint02; requires subsequent scan"
+}

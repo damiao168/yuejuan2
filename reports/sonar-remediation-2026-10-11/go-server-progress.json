@@ -1,0 +1,2335 @@
+{
+  "count": 62,
+  "issues": [
+    {
+      "key": "02db44b6-53aa-4785-af59-1940189d2f8e",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/appeal_route_test.go",
+      "original_line": 83,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "e3b7f2408ecf974ef18d16a5c898d49078fbbe97b9cb68c395146cc16ba81602",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "5441f7bd-8bb6-4bd4-a3a2-19298d33ba97",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_anonymous_paper_test.go",
+      "original_line": 20,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "a293cf350b6fe3cc53a64b1ea3480a80cfa951de88836e2d3b5534286213e97d",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "27058d46-50e2-4abb-affd-7b15e33e2596",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_auth_security_test.go",
+      "original_line": 20,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "3faa3c15e856c604383cf6d5d25f556fbfa710ffe7a42f07b2d5108b46399b5c",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "355d2730-b341-4d05-938e-d0649b88200a",
+      "rule": "go:S107",
+      "severity": "MAJOR",
+      "path": "services/api-gateway/internal/server/e2e_business_command_test.go",
+      "original_line": 117,
+      "state": "implemented_needs_validation",
+      "batch": "domain_parameters",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "704dfeb9bdee1b96f4c59900f06966a2d738f48b261aeaf6bbceb045b032fc61",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "8dde4c3c-a554-44bd-a3f9-81cd925db6b1",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_business_command_test.go",
+      "original_line": 117,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "704dfeb9bdee1b96f4c59900f06966a2d738f48b261aeaf6bbceb045b032fc61",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "e0fed87e-570f-419a-ad8a-18c9d0f5ce53",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_business_command_test.go",
+      "original_line": 372,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "704dfeb9bdee1b96f4c59900f06966a2d738f48b261aeaf6bbceb045b032fc61",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "592ae856-9652-4d38-af48-fd5cb6ca8c0f",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_business_command_test.go",
+      "original_line": 507,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "704dfeb9bdee1b96f4c59900f06966a2d738f48b261aeaf6bbceb045b032fc61",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "fe2b3df2-0c82-40fb-9577-bb24b401bda7",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_core_workflow_test.go",
+      "original_line": 59,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "743bb2f8b5951b775ce0908bb22c8911e5370350d6331c7d659eb01594bc609b",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "edeebb35-5655-438a-a67e-cbee771171f0",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_exam_archive_commands_test.go",
+      "original_line": 21,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "524341a71af27e533bafb0dcafec13e47e9f7cdcfbbea3007040949648c130f9",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "002bfb82-d88d-4a6a-bcd0-51c4dc63f978",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_exam_management_test.go",
+      "original_line": 18,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "1896988b1f9533e4614611e7b7c7a4c7754ad0665ae5208f8723d7397180f7e6",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "1dafed1d-6648-4754-a97d-c8cdae4b8e23",
+      "rule": "go:S107",
+      "severity": "MAJOR",
+      "path": "services/api-gateway/internal/server/e2e_file_reconciliation_test.go",
+      "original_line": 82,
+      "state": "implemented_needs_validation",
+      "batch": "domain_parameters",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "60dce163591d25988172238f01083f18998b5bd5579452595ec41c201a5613d4",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "821d2b73-3871-4798-aa29-29aa365ec2ef",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_idempotency_test.go",
+      "original_line": 16,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "579444fb7bb25e302b4153f1a40c0da1b368fcf4fdae0706248de69c2afc42d2",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "d41bddc7-6de0-443d-9e8c-9d64dc7eb662",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_math_effective_evidence_test.go",
+      "original_line": 17,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "cd79fa693af6c89f078afc9db248ab63ed845f7d331771f6f7c8b68b9e478cf4",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "28ea3104-b4ca-4dee-b958-5f3f1ba48a2c",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_math_grading_binding_test.go",
+      "original_line": 19,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "94274051224e2355959f918c6354dd43441124271062e16e9703047d6c878880",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "fc9744fc-12f7-49b2-b3a8-96189981129b",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_math_rubric_score_test.go",
+      "original_line": 27,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "a6d723c18f9263b76b3bea446797cf603c062acd448ebb17cca9d9beeb10b152",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "5f3837d7-51e2-4452-94a8-6d1e56eb7ea1",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_math_verification_runtime_test.go",
+      "original_line": 21,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "e11fa25682d81a491e4574c4473f834933cfb7a3aa49f6a7bf6a960b2b3ad75b",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "77deafaa-c4d0-42b5-b5be-ee17beb415fc",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_mfa_test.go",
+      "original_line": 25,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "d96120d9299f453d22441a852eb7c476c34feba291727c07c79a794012f8e9f0",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "eddd2f8f-ec04-42a6-a250-267378faaea9",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_mfa_test.go",
+      "original_line": 231,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "d96120d9299f453d22441a852eb7c476c34feba291727c07c79a794012f8e9f0",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "ad33caf4-951a-4590-8477-d2f83c3c410e",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_paper_import_reconciliation_test.go",
+      "original_line": 22,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "32dcfc45e8f721bf214fa1babbf60460d5702d9868f147d470663ef3b1fe76b6",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "806f255e-a3f3-4b1f-a544-00c400209b3f",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+      "original_line": 34,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "3f8697a78bcfd1c2081bf1b95bd73556f705c8d085d58b6701f75db855ceecbf",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "0d76ce3f-6815-4c1a-a644-1176be68e60d",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+      "original_line": 319,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "3f8697a78bcfd1c2081bf1b95bd73556f705c8d085d58b6701f75db855ceecbf",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "34f43eef-3fbd-4f67-a180-c0d8211b6a67",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+      "original_line": 791,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "3f8697a78bcfd1c2081bf1b95bd73556f705c8d085d58b6701f75db855ceecbf",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "7cb650e1-5588-44da-a10b-b257e3c7552f",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_question_bank_acl_ux_test.go",
+      "original_line": 17,
+      "state": "delegated_implemented_needs_validation",
+      "batch": null,
+      "change": null,
+      "owner": "sonar_go_fix",
+      "evidence": "go-server-question-bank-progress.json",
+      "current_sha256": "0802da4ac27b59f666bce1ef0b4f0e9e88f59c6a1a65a8e3b76fe00d318d9baf",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "5964a35d-7fae-423d-a1ed-a4a30ede5062",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_question_bank_import_test.go",
+      "original_line": 20,
+      "state": "delegated_implemented_needs_validation",
+      "batch": null,
+      "change": null,
+      "owner": "sonar_go_fix",
+      "evidence": "go-server-question-bank-progress.json",
+      "current_sha256": "39f803060f73dd922286cb3f6073f7ea4f324b9c4d72c0bb9ae04c85b6fe9c18",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "401d2b22-9756-477e-bc8b-3e8ec7e98bd4",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_question_bank_metadata_acl_search_test.go",
+      "original_line": 16,
+      "state": "delegated_implemented_needs_validation",
+      "batch": null,
+      "change": null,
+      "owner": "sonar_go_fix",
+      "evidence": "go-server-question-bank-progress.json",
+      "current_sha256": "5a2fca9a8cad75c2e184334d89aa1ba89f8207edf57910ca4db62f0c7a90d3ba",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "d3266c6c-bdb5-4c2f-b29f-bb05a0814c28",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_question_bank_publication_test.go",
+      "original_line": 19,
+      "state": "delegated_implemented_needs_validation",
+      "batch": null,
+      "change": null,
+      "owner": "sonar_go_fix",
+      "evidence": "go-server-question-bank-progress.json",
+      "current_sha256": "20cb4b16c6c0683e64c0db35b2ca9efac0ae81424653aaaaf11dcf9bccdc8d2a",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "b4fa2740-1843-412d-9e61-3213f6e47909",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_question_bank_test.go",
+      "original_line": 23,
+      "state": "delegated_implemented_needs_validation",
+      "batch": null,
+      "change": null,
+      "owner": "sonar_go_fix",
+      "evidence": "go-server-question-bank-progress.json",
+      "current_sha256": "bbebcb159909d201f1b1a304c0a28526403d68b73a7c55843f3fd99fa027b117",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "da632cfa-2302-4f56-a2cc-1c1444d42d90",
+      "rule": "go:S107",
+      "severity": "MAJOR",
+      "path": "services/api-gateway/internal/server/e2e_question_bank_test.go",
+      "original_line": 325,
+      "state": "implemented_needs_validation",
+      "batch": "domain_parameters",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "bbebcb159909d201f1b1a304c0a28526403d68b73a7c55843f3fd99fa027b117",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "26b49389-9514-4bfe-9e24-2bb14261d028",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+      "original_line": 41,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "cc32f33ac7a8244037e3ea59dc0d3ad481c697fc278583ff50164544a65407a4",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "a6992c8c-5bbc-4e9f-9495-0cfc1d40e920",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+      "original_line": 1050,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "cc32f33ac7a8244037e3ea59dc0d3ad481c697fc278583ff50164544a65407a4",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "30e4b54c-5d74-4a65-bf28-ec0a763d255d",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_review_recovery_test.go",
+      "original_line": 38,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "62bfdb101547b6044d361b007d18c1ceea01329bc1000568850b16ebdc94bee2",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "f6df961e-375a-4caf-a5ba-bca9114d86e6",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_review_repairs_test.go",
+      "original_line": 126,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "afd24da1ed9fd595146407c8572f7f7904cbf080c00abd53271826896d9c2642",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "e90f8bbb-686d-4c42-87a4-b4ac8aaf8e1c",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_review_repairs_test.go",
+      "original_line": 288,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "afd24da1ed9fd595146407c8572f7f7904cbf080c00abd53271826896d9c2642",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "0e7c8bdf-2083-4d43-a53f-a95331adf40b",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_scoring_command_test.go",
+      "original_line": 18,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "9f0788701c366459f54d0519a79428e7f3396bbe8366b4feb4b19a69e08e74e4",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "bceb0567-6074-4e2a-8c99-b499a852fffc",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_scoring_double_mark_test.go",
+      "original_line": 15,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "d062a59c3ad1d1b42552878f3216482db05bf8e72294af2243fb95f5a2bbbf53",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "881f81cd-b61d-4b03-9da7-11487f0f166b",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_story056_calibration_test.go",
+      "original_line": 21,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "21cc68f45394ffc9aca70891fd648ad2cb25ca24352d41076b6f84f9a9e3953a",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "052382f9-98c1-4502-9cf3-9263babc38e4",
+      "rule": "go:S107",
+      "severity": "MAJOR",
+      "path": "services/api-gateway/internal/server/e2e_story056_calibration_test.go",
+      "original_line": 530,
+      "state": "implemented_needs_validation",
+      "batch": "domain_parameters",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "21cc68f45394ffc9aca70891fd648ad2cb25ca24352d41076b6f84f9a9e3953a",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "251a544a-6153-4d96-8f79-f1ed602751a6",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_story056_lease_test.go",
+      "original_line": 195,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "acc0ccce26a92826da6e41d720e42e81c8786f0dd0a8870e2977da759aaae42b",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "73fcb99f-02f2-4712-887e-9acfa90be764",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+      "original_line": 45,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "72e1f6190e2e8ae1f1e8cb8f81efee3d4a056904662500282a1e0a3e33313f79",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "bb21233c-220c-4011-81fa-8dedcffb59e1",
+      "rule": "go:S107",
+      "severity": "MAJOR",
+      "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+      "original_line": 327,
+      "state": "implemented_needs_validation",
+      "batch": "domain_parameters",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "72e1f6190e2e8ae1f1e8cb8f81efee3d4a056904662500282a1e0a3e33313f79",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "9083f1fb-3e73-4298-bf44-65bc2044707e",
+      "rule": "go:S107",
+      "severity": "MAJOR",
+      "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+      "original_line": 586,
+      "state": "implemented_needs_validation",
+      "batch": "domain_parameters",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "72e1f6190e2e8ae1f1e8cb8f81efee3d4a056904662500282a1e0a3e33313f79",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "04c5b6da-0eef-44ca-a0b6-480f47e9ac4f",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+      "original_line": 621,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "72e1f6190e2e8ae1f1e8cb8f81efee3d4a056904662500282a1e0a3e33313f79",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "cc1eb7ba-ff20-4ed5-85ae-92bba3f44970",
+      "rule": "go:S107",
+      "severity": "MAJOR",
+      "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+      "original_line": 621,
+      "state": "implemented_needs_validation",
+      "batch": "domain_parameters",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "72e1f6190e2e8ae1f1e8cb8f81efee3d4a056904662500282a1e0a3e33313f79",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "763787f5-4d25-40ca-9b20-fb122a3fd435",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_story060_capture_recovery_test.go",
+      "original_line": 20,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "5fb26c465effc8ae0398e317eb94b24187484acb0a7e494c217ccbd828f53fd3",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "04978ae6-aa72-4e5c-a103-0bb516c471c9",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_story060_provision_test.go",
+      "original_line": 12,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "8f5d5208f9cd828f42e4d467a9508d305f733fc659d4302362e3609d79905c95",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "6d045e4b-df38-4860-87ba-f84850349c5e",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_story060_roster_test.go",
+      "original_line": 174,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "0cc5ffd6b12e538f44a0a7b3e2da3778ee09ec87cf05edbb976f7ad5b3bbb16c",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "79778945-8950-4b10-8307-a448be94bc2f",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_story060_sheet_identity_test.go",
+      "original_line": 17,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "998e63de0ba7b18da38cf920981fd6526935b7b788301a6a857a9949f8ff9d63",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "0c53b85c-266b-4035-810d-2b58c3dde6e9",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_story060_sheet_identity_test.go",
+      "original_line": 403,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "998e63de0ba7b18da38cf920981fd6526935b7b788301a6a857a9949f8ff9d63",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "94a4df0b-6f1f-42eb-bf1f-3eacf27e5fef",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_story061_governance_test.go",
+      "original_line": 16,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "895dd9d693a1eb2bdef1b7a49255c2e2028a1ca790ffd990b5ee7c189b75e68b",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "b7686be2-e360-4b3d-aba9-bf296853b0e3",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_subjective_command_test.go",
+      "original_line": 14,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "fb913d3f09ac5cc550dcbddf6cfeb03689e8aa701981fbf9bde6934e3f984a6f",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "f2c7125d-8fb0-4bbc-99df-d9c74fa345bb",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_subjective_panel_test.go",
+      "original_line": 20,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "309b55569bd209172366cc9a56b957a5f2eb87159fd4ac04dfbb906290f74e5f",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "f567e83e-3a26-4547-ada0-fc2bae8372bb",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_worker_runtime_reliability_test.go",
+      "original_line": 19,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "4ebed662d22232c5e8188410c705339c2a86bbebeed570571cc2dcd18baca912",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "1a328436-93ef-4b77-8df6-b8e1119ab616",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/managed_config_postgres_test.go",
+      "original_line": 15,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "71a5793a7b0670497c8b85329a6e7665dc7e96750c3fd5b0fe5ffcf54f187b50",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "afa3f400-7f5b-4eb4-be08-9d156b00c0b6",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/migration_upgrade_test.go",
+      "original_line": 21,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "256090547f893d3209853c1744ea1787b47ade409ffb4598a3873aced023a63e",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "19cce2dd-88da-4961-af92-bd088c13d52e",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/platform_schools_route_test.go",
+      "original_line": 18,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "e4c8319995dab1d6b760ea521606f512d23590f6195cfbf0763dd4853e095932",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "ac333da4-2bf8-46c5-a9c2-04f01449da9f",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/readers_batch47_test.go",
+      "original_line": 65,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "148b459927d7434409a6315577d4a516cbb10b5e2cccca60df7f42e1df62242c",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "f6b0eecd-060b-4283-932b-32b824ffdfae",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/review_route_test.go",
+      "original_line": 183,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "d0f7dcbe8dba37803ce6e1d756b3210dd9f8f56118cb660f3f405b5e030b7772",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "c037921b-d14c-412c-911c-03dcedb4ea28",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/review_route_test.go",
+      "original_line": 465,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "d0f7dcbe8dba37803ce6e1d756b3210dd9f8f56118cb660f3f405b5e030b7772",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "2786080b-a181-42ff-beb4-d5e03ef163df",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/review_route_test.go",
+      "original_line": 821,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "d0f7dcbe8dba37803ce6e1d756b3210dd9f8f56118cb660f3f405b5e030b7772",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "1d3ffd34-4a5a-407d-9cbc-ccacd95c6f4c",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/review_route_test.go",
+      "original_line": 987,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "d0f7dcbe8dba37803ce6e1d756b3210dd9f8f56118cb660f3f405b5e030b7772",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "8a691a5b-d705-476a-bbb0-4e4cd57dd5f0",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/score_route_test.go",
+      "original_line": 18,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "29326381599a687731a597de4296fceba5d778699c150cea7df2a895f8fa3de2",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    },
+    {
+      "key": "c2c48cf9-df54-421c-95b3-8c5dc882b906",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/server_test.go",
+      "original_line": 443,
+      "state": "implemented_needs_validation",
+      "batch": "named_business_stages",
+      "change": "按具名业务阶段提取，保留原 guard、Fatal 中止、租约身份、事务/故障恢复和请求顺序",
+      "current_sha256": "763b99f5bd12dbe603521be3f231d264e3ceda2fc681063e11041720a015e084",
+      "compilation_validation": {
+        "status": "passed_for_current_sha",
+        "evidence": "go-server-batch04-tests.json",
+        "source_sha": "go-server-batch04-source-sha.json",
+        "postgres_condition_skip_not_counted_as_pass": true
+      }
+    }
+  ],
+  "files": {
+    "services/api-gateway/internal/server/appeal_route_test.go": {
+      "review_status": "pending",
+      "review_scope": "仅原告警函数或参数调用上下文；全文件审读未完成",
+      "current_sha256": "e3b7f2408ecf974ef18d16a5c898d49078fbbe97b9cb68c395146cc16ba81602",
+      "package_validation": {
+        "compiled_for_current_sha": true,
+        "evidence": "go-server-batch04-tests.json",
+        "tests_in_file": [
+          {
+            "Time": "2026-10-11T19:13:15.9993982+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestAppealRoutesCreateReviewAdjustCloseAndStatistics",
+            "Elapsed": 0.08
+          },
+          {
+            "Time": "2026-10-11T19:13:16.152118+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestAppealTeacherOnlyWorksAssignedAppealsAndCannotFinalize",
+            "Elapsed": 0.15
+          },
+          {
+            "Time": "2026-10-11T19:13:16.2028577+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestAppealRoutesRequirePermission",
+            "Elapsed": 0.05
+          }
+        ]
+      }
+    },
+    "services/api-gateway/internal/server/e2e_anonymous_paper_test.go": {
+      "review_status": "annotated",
+      "review_scope": "已完整审读并核对本次维护边界",
+      "current_sha256": "a293cf350b6fe3cc53a64b1ea3480a80cfa951de88836e2d3b5534286213e97d",
+      "package_validation": {
+        "compiled_for_current_sha": true,
+        "evidence": "go-server-batch04-tests.json",
+        "tests_in_file": [
+          {
+            "Time": "2026-10-11T19:13:16.2028577+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestHighScorePaperShareRedactsAndRevokesWithPostgresTestDatabase",
+            "Elapsed": 0
+          }
+        ]
+      }
+    },
+    "services/api-gateway/internal/server/e2e_auth_security_test.go": {
+      "review_status": "annotated",
+      "review_scope": "已完整审读并核对本次维护边界",
+      "current_sha256": "3faa3c15e856c604383cf6d5d25f556fbfa710ffe7a42f07b2d5108b46399b5c",
+      "package_validation": {
+        "compiled_for_current_sha": true,
+        "evidence": "go-server-batch04-tests.json",
+        "tests_in_file": [
+          {
+            "Time": "2026-10-11T19:13:16.2028577+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestTeacherAccountSecurityE2EWithPostgres",
+            "Elapsed": 0
+          }
+        ]
+      }
+    },
+    "services/api-gateway/internal/server/e2e_business_command_test.go": {
+      "review_status": "pending",
+      "review_scope": "仅原告警函数或参数调用上下文；全文件审读未完成",
+      "current_sha256": "704dfeb9bdee1b96f4c59900f06966a2d738f48b261aeaf6bbceb045b032fc61",
+      "package_validation": {
+        "compiled_for_current_sha": true,
+        "evidence": "go-server-batch04-tests.json",
+        "tests_in_file": [
+          {
+            "Time": "2026-10-11T19:13:16.2028577+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestBusinessCommandReservationCrashHelper",
+            "Elapsed": 0
+          }
+        ]
+      }
+    },
+    "services/api-gateway/internal/server/e2e_core_workflow_test.go": {
+      "review_status": "pending",
+      "review_scope": "仅原告警函数或参数调用上下文；全文件审读未完成",
+      "current_sha256": "743bb2f8b5951b775ce0908bb22c8911e5370350d6331c7d659eb01594bc609b",
+      "package_validation": {
+        "compiled_for_current_sha": true,
+        "evidence": "go-server-batch04-tests.json",
+        "tests_in_file": [
+          {
+            "Time": "2026-10-11T19:13:16.356847+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestCoreWorkflowE2EWithSyntheticMemoryStores",
+            "Elapsed": 0.15
+          }
+        ]
+      }
+    },
+    "services/api-gateway/internal/server/e2e_exam_archive_commands_test.go": {
+      "review_status": "annotated",
+      "review_scope": "已完整审读并核对本次维护边界",
+      "current_sha256": "524341a71af27e533bafb0dcafec13e47e9f7cdcfbbea3007040949648c130f9",
+      "package_validation": {
+        "compiled_for_current_sha": true,
+        "evidence": "go-server-batch04-tests.json",
+        "tests_in_file": [
+          {
+            "Time": "2026-10-11T19:13:16.356847+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestExamArchiveCommandsE2EWithPostgresTestDatabase",
+            "Elapsed": 0
+          }
+        ]
+      }
+    },
+    "services/api-gateway/internal/server/e2e_exam_management_test.go": {
+      "review_status": "annotated",
+      "review_scope": "已完整审读并核对本次维护边界",
+      "current_sha256": "1896988b1f9533e4614611e7b7c7a4c7754ad0665ae5208f8723d7397180f7e6",
+      "package_validation": {
+        "compiled_for_current_sha": true,
+        "evidence": "go-server-batch04-tests.json",
+        "tests_in_file": [
+          {
+            "Time": "2026-10-11T19:13:16.356847+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestWholeExamManagementE2EWithPostgresTestDatabase",
+            "Elapsed": 0
+          }
+        ]
+      }
+    },
+    "services/api-gateway/internal/server/e2e_file_reconciliation_test.go": {
+      "review_status": "pending",
+      "review_scope": "仅原告警函数或参数调用上下文；全文件审读未完成",
+      "current_sha256": "60dce163591d25988172238f01083f18998b5bd5579452595ec41c201a5613d4",
+      "package_validation": {
+        "compiled_for_current_sha": true,
+        "evidence": "go-server-batch04-tests.json",
+        "tests_in_file": [
+          {
+            "Time": "2026-10-11T19:13:16.356847+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestFileReconciliationWithPostgresTestDatabase",
+            "Elapsed": 0
+          }
+        ]
+      }
+    },
+    "services/api-gateway/internal/server/e2e_idempotency_test.go": {
+      "review_status": "annotated",
+      "review_scope": "已完整审读并核对本次维护边界",
+      "current_sha256": "579444fb7bb25e302b4153f1a40c0da1b368fcf4fdae0706248de69c2afc42d2",
+      "package_validation": {
+        "compiled_for_current_sha": true,
+        "evidence": "go-server-batch04-tests.json",
+        "tests_in_file": [
+          {
+            "Time": "2026-10-11T19:13:16.356847+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestRequestIdempotencyWithPostgresTestDatabase",
+            "Elapsed": 0
+          },
+          {
+            "Time": "2026-10-11T19:13:16.356847+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestOutboxLeaseRecoveryWithPostgresTestDatabase",
+            "Elapsed": 0
+          }
+        ]
+      }
+    },
+    "services/api-gateway/internal/server/e2e_math_effective_evidence_test.go": {
+      "review_status": "annotated",
+      "review_scope": "已完整审读并核对本次维护边界",
+      "current_sha256": "cd79fa693af6c89f078afc9db248ab63ed845f7d331771f6f7c8b68b9e478cf4",
+      "package_validation": {
+        "compiled_for_current_sha": true,
+        "evidence": "go-server-batch04-tests.json",
+        "tests_in_file": [
+          {
+            "Time": "2026-10-11T19:13:16.3574303+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestPostgresMathEffectiveEvidenceProjection",
+            "Elapsed": 0
+          }
+        ]
+      }
+    },
+    "services/api-gateway/internal/server/e2e_math_grading_binding_test.go": {
+      "review_status": "annotated",
+      "review_scope": "已完整审读并核对本次维护边界",
+      "current_sha256": "94274051224e2355959f918c6354dd43441124271062e16e9703047d6c878880",
+      "package_validation": {
+        "compiled_for_current_sha": true,
+        "evidence": "go-server-batch04-tests.json",
+        "tests_in_file": [
+          {
+            "Time": "2026-10-11T19:13:16.3574303+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestPostgresMathGradingBindingsRoundTripAndRejectWrongVersion",
+            "Elapsed": 0
+          }
+        ]
+      }
+    },
+    "services/api-gateway/internal/server/e2e_math_rubric_score_test.go": {
+      "review_status": "annotated",
+      "review_scope": "已完整审读并核对本次维护边界",
+      "current_sha256": "a6d723c18f9263b76b3bea446797cf603c062acd448ebb17cca9d9beeb10b152",
+      "package_validation": {
+        "compiled_for_current_sha": true,
+        "evidence": "go-server-batch04-tests.json",
+        "tests_in_file": [
+          {
+            "Time": "2026-10-11T19:13:16.3574303+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestPostgresMathRubricScoreUsesOnlyFrozenExamRubric",
+            "Elapsed": 0
+          }
+        ]
+      }
+    },
+    "services/api-gateway/internal/server/e2e_math_verification_runtime_test.go": {
+      "review_status": "annotated",
+      "review_scope": "已完整审读并核对本次维护边界",
+      "current_sha256": "e11fa25682d81a491e4574c4473f834933cfb7a3aa49f6a7bf6a960b2b3ad75b",
+      "package_validation": {
+        "compiled_for_current_sha": true,
+        "evidence": "go-server-batch04-tests.json",
+        "tests_in_file": [
+          {
+            "Time": "2026-10-11T19:13:16.3574303+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestPostgresMathVerificationRuntimeAtomicActivation",
+            "Elapsed": 0
+          }
+        ]
+      }
+    },
+    "services/api-gateway/internal/server/e2e_mfa_test.go": {
+      "review_status": "pending",
+      "review_scope": "仅原告警函数或参数调用上下文；全文件审读未完成",
+      "current_sha256": "d96120d9299f453d22441a852eb7c476c34feba291727c07c79a794012f8e9f0",
+      "package_validation": {
+        "compiled_for_current_sha": true,
+        "evidence": "go-server-batch04-tests.json",
+        "tests_in_file": [
+          {
+            "Time": "2026-10-11T19:13:16.3574303+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestTOTPManagementE2EWithPostgres",
+            "Elapsed": 0
+          }
+        ]
+      }
+    },
+    "services/api-gateway/internal/server/e2e_paper_import_reconciliation_test.go": {
+      "review_status": "annotated",
+      "review_scope": "已完整审读并核对本次维护边界",
+      "current_sha256": "32dcfc45e8f721bf214fa1babbf60460d5702d9868f147d470663ef3b1fe76b6",
+      "package_validation": {
+        "compiled_for_current_sha": true,
+        "evidence": "go-server-batch04-tests.json",
+        "tests_in_file": [
+          {
+            "Time": "2026-10-11T19:13:16.3574303+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestPaperImportApplyGateE2EWithPostgresTestDatabase",
+            "Elapsed": 0
+          }
+        ]
+      }
+    },
+    "services/api-gateway/internal/server/e2e_postgres_test.go": {
+      "review_status": "pending",
+      "review_scope": "仅原告警函数或参数调用上下文；全文件审读未完成",
+      "current_sha256": "3f8697a78bcfd1c2081bf1b95bd73556f705c8d085d58b6701f75db855ceecbf",
+      "package_validation": {
+        "compiled_for_current_sha": true,
+        "evidence": "go-server-batch04-tests.json",
+        "tests_in_file": [
+          {
+            "Time": "2026-10-11T19:13:16.3574303+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestCoreWorkflowE2EWithPostgresTestDatabase",
+            "Elapsed": 0
+          }
+        ]
+      }
+    },
+    "services/api-gateway/internal/server/e2e_question_bank_acl_ux_test.go": {
+      "review_status": "delegated_read_and_refactored",
+      "review_scope": "题库智能体完整审读，独立来源见 go-server-question-bank-progress.json",
+      "current_sha256": "0802da4ac27b59f666bce1ef0b4f0e9e88f59c6a1a65a8e3b76fe00d318d9baf",
+      "package_validation": {
+        "compiled_for_current_sha": true,
+        "evidence": "go-server-batch04-tests.json",
+        "tests_in_file": [
+          {
+            "Time": "2026-10-11T19:13:16.3579622+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestE2EPostgresUXHistoricalACLAndActualMemberResponsibilities",
+            "Elapsed": 0
+          }
+        ]
+      }
+    },
+    "services/api-gateway/internal/server/e2e_question_bank_import_test.go": {
+      "review_status": "delegated_read_and_refactored",
+      "review_scope": "题库智能体完整审读，独立来源见 go-server-question-bank-progress.json",
+      "current_sha256": "39f803060f73dd922286cb3f6073f7ea4f324b9c4d72c0bb9ae04c85b6fe9c18",
+      "package_validation": {
+        "compiled_for_current_sha": true,
+        "evidence": "go-server-batch04-tests.json",
+        "tests_in_file": [
+          {
+            "Time": "2026-10-11T19:13:16.3579622+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestE2EPostgresQuestionBankFrozenImport",
+            "Elapsed": 0
+          }
+        ]
+      }
+    },
+    "services/api-gateway/internal/server/e2e_question_bank_metadata_acl_search_test.go": {
+      "review_status": "delegated_read_and_refactored",
+      "review_scope": "题库智能体完整审读，独立来源见 go-server-question-bank-progress.json",
+      "current_sha256": "5a2fca9a8cad75c2e184334d89aa1ba89f8207edf57910ca4db62f0c7a90d3ba",
+      "package_validation": {
+        "compiled_for_current_sha": true,
+        "evidence": "go-server-batch04-tests.json",
+        "tests_in_file": [
+          {
+            "Time": "2026-10-11T19:13:16.3579622+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestE2EPostgresQuestionBankMetadataACLSearch",
+            "Elapsed": 0
+          }
+        ]
+      }
+    },
+    "services/api-gateway/internal/server/e2e_question_bank_publication_test.go": {
+      "review_status": "delegated_read_and_refactored",
+      "review_scope": "题库智能体完整审读，独立来源见 go-server-question-bank-progress.json",
+      "current_sha256": "20cb4b16c6c0683e64c0db35b2ca9efac0ae81424653aaaaf11dcf9bccdc8d2a",
+      "package_validation": {
+        "compiled_for_current_sha": true,
+        "evidence": "go-server-batch04-tests.json",
+        "tests_in_file": [
+          {
+            "Time": "2026-10-11T19:13:16.3579622+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestE2EPostgresQuestionBankPublication",
+            "Elapsed": 0
+          }
+        ]
+      }
+    },
+    "services/api-gateway/internal/server/e2e_question_bank_test.go": {
+      "review_status": "delegated_read_and_refactored",
+      "review_scope": "题库智能体完整审读，独立来源见 go-server-question-bank-progress.json",
+      "current_sha256": "bbebcb159909d201f1b1a304c0a28526403d68b73a7c55843f3fd99fa027b117",
+      "package_validation": {
+        "compiled_for_current_sha": true,
+        "evidence": "go-server-batch04-tests.json",
+        "tests_in_file": [
+          {
+            "Time": "2026-10-11T19:13:16.3584981+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestE2EPostgresQuestionBank",
+            "Elapsed": 0
+          }
+        ]
+      }
+    },
+    "services/api-gateway/internal/server/e2e_reliability_command_test.go": {
+      "review_status": "annotated",
+      "review_scope": "已完整审读并核对本次维护边界",
+      "current_sha256": "cc32f33ac7a8244037e3ea59dc0d3ad481c697fc278583ff50164544a65407a4",
+      "package_validation": {
+        "compiled_for_current_sha": true,
+        "evidence": "go-server-batch04-tests.json",
+        "tests_in_file": [
+          {
+            "Time": "2026-10-11T19:13:16.3584981+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestReliabilityCommandRecoveryWithPostgresTestDatabase",
+            "Elapsed": 0
+          },
+          {
+            "Time": "2026-10-11T19:13:16.3590249+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestReliabilityMigrationFrom000122PostgresTestDatabase",
+            "Elapsed": 0
+          }
+        ]
+      }
+    },
+    "services/api-gateway/internal/server/e2e_review_recovery_test.go": {
+      "review_status": "annotated",
+      "review_scope": "已完整审读并核对本次维护边界",
+      "current_sha256": "62bfdb101547b6044d361b007d18c1ceea01329bc1000568850b16ebdc94bee2",
+      "package_validation": {
+        "compiled_for_current_sha": true,
+        "evidence": "go-server-batch04-tests.json",
+        "tests_in_file": [
+          {
+            "Time": "2026-10-11T19:13:16.3590249+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestReviewRepairsRecoveryWithPostgresTestDatabase",
+            "Elapsed": 0
+          }
+        ]
+      }
+    },
+    "services/api-gateway/internal/server/e2e_review_repairs_test.go": {
+      "review_status": "pending",
+      "review_scope": "仅原告警函数或参数调用上下文；全文件审读未完成",
+      "current_sha256": "afd24da1ed9fd595146407c8572f7f7904cbf080c00abd53271826896d9c2642",
+      "package_validation": {
+        "compiled_for_current_sha": true,
+        "evidence": "go-server-batch04-tests.json",
+        "tests_in_file": [
+          {
+            "Time": "2026-10-11T19:13:16.3590249+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestReviewRepairsReleaseAndStudentReadWithPostgresTestDatabase",
+            "Elapsed": 0
+          },
+          {
+            "Time": "2026-10-11T19:13:16.3590249+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestReleaseFeedbackUsesFinalArbitrationAndFreezesIt",
+            "Elapsed": 0
+          },
+          {
+            "Time": "2026-10-11T19:13:16.3590249+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestCancelledScoringRunCannotReassignOrSubmitReview",
+            "Elapsed": 0
+          },
+          {
+            "Time": "2026-10-11T19:13:16.3590249+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestRuleConfirmationWaitsForConcurrentCancellation",
+            "Elapsed": 0
+          },
+          {
+            "Time": "2026-10-11T19:13:16.3590249+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestScoringAIBatchCancellationBlocksNewTasks",
+            "Elapsed": 0
+          },
+          {
+            "Time": "2026-10-11T19:13:16.3590249+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestFailedScoringAIBatchSegmentsRequireOpenTeacherTask",
+            "Elapsed": 0
+          }
+        ]
+      }
+    },
+    "services/api-gateway/internal/server/e2e_scoring_command_test.go": {
+      "review_status": "annotated",
+      "review_scope": "已完整审读并核对本次维护边界",
+      "current_sha256": "9f0788701c366459f54d0519a79428e7f3396bbe8366b4feb4b19a69e08e74e4",
+      "package_validation": {
+        "compiled_for_current_sha": true,
+        "evidence": "go-server-batch04-tests.json",
+        "tests_in_file": [
+          {
+            "Time": "2026-10-11T19:13:16.3595771+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestScoringCommandRecoveryWithPostgresTestDatabase",
+            "Elapsed": 0
+          }
+        ]
+      }
+    },
+    "services/api-gateway/internal/server/e2e_scoring_double_mark_test.go": {
+      "review_status": "annotated",
+      "review_scope": "已完整审读并核对本次维护边界",
+      "current_sha256": "d062a59c3ad1d1b42552878f3216482db05bf8e72294af2243fb95f5a2bbbf53",
+      "package_validation": {
+        "compiled_for_current_sha": true,
+        "evidence": "go-server-batch04-tests.json",
+        "tests_in_file": [
+          {
+            "Time": "2026-10-11T19:13:16.3595771+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestScoringDoubleMarkLifecycleWithPostgresTestDatabase",
+            "Elapsed": 0
+          }
+        ]
+      }
+    },
+    "services/api-gateway/internal/server/e2e_story056_calibration_test.go": {
+      "review_status": "pending",
+      "review_scope": "仅原告警函数或参数调用上下文；全文件审读未完成",
+      "current_sha256": "21cc68f45394ffc9aca70891fd648ad2cb25ca24352d41076b6f84f9a9e3953a",
+      "package_validation": {
+        "compiled_for_current_sha": true,
+        "evidence": "go-server-batch04-tests.json",
+        "tests_in_file": [
+          {
+            "Time": "2026-10-11T19:13:16.3595771+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestStory056TemplateDifferenceCalibrationApprovalAndRevocationE2E",
+            "Elapsed": 0
+          },
+          {
+            "Time": "2026-10-11T19:13:16.3595771+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestStory056ApprovedCalibrationIsInheritedByTemplateCloneE2E",
+            "Elapsed": 0
+          },
+          {
+            "Time": "2026-10-11T19:13:16.3595771+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestStory056TemplateCloneIsRejectedAfterReadinessConfirmationE2E",
+            "Elapsed": 0
+          },
+          {
+            "Time": "2026-10-11T19:13:16.3595771+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestReadinessConfirmationSerializesConcurrentConfigurationWriteE2E",
+            "Elapsed": 0
+          }
+        ]
+      }
+    },
+    "services/api-gateway/internal/server/e2e_story056_lease_test.go": {
+      "review_status": "pending",
+      "review_scope": "仅原告警函数或参数调用上下文；全文件审读未完成",
+      "current_sha256": "acc0ccce26a92826da6e41d720e42e81c8786f0dd0a8870e2977da759aaae42b",
+      "package_validation": {
+        "compiled_for_current_sha": true,
+        "evidence": "go-server-batch04-tests.json",
+        "tests_in_file": [
+          {
+            "Time": "2026-10-11T19:13:16.3595771+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestStory056OMRAutoGradeConfirmationFailureFallsBackToReviewE2E",
+            "Elapsed": 0
+          },
+          {
+            "Time": "2026-10-11T19:13:16.3595771+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestStory056ManualOnlyOMRProfileRequiresReviewE2E",
+            "Elapsed": 0
+          },
+          {
+            "Time": "2026-10-11T19:13:16.3601154+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestStory056RejectsMismatchedOMRProfileBeforeCompletingTaskE2E",
+            "Elapsed": 0
+          },
+          {
+            "Time": "2026-10-11T19:13:16.3601154+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestStory056TemplateDifferenceReferenceSnapshotE2E",
+            "Elapsed": 0
+          },
+          {
+            "Time": "2026-10-11T19:13:16.3601154+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestStory056OMRSameVersionChangedMeasurementsIsConflictE2E",
+            "Elapsed": 0
+          },
+          {
+            "Time": "2026-10-11T19:13:16.3601154+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestStory056ExpiredOMRLeaseLeavesScoringFactsUntouchedE2E",
+            "Elapsed": 0
+          }
+        ]
+      }
+    },
+    "services/api-gateway/internal/server/e2e_story056_test.go": {
+      "review_status": "pending",
+      "review_scope": "仅原告警函数或参数调用上下文；全文件审读未完成",
+      "current_sha256": "72e1f6190e2e8ae1f1e8cb8f81efee3d4a056904662500282a1e0a3e33313f79",
+      "package_validation": {
+        "compiled_for_current_sha": true,
+        "evidence": "go-server-batch04-tests.json",
+        "tests_in_file": [
+          {
+            "Time": "2026-10-11T19:13:16.3601154+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestStory056ObjectiveScoringRecoveryE2EWithPostgresTestDatabase",
+            "Elapsed": 0
+          }
+        ]
+      }
+    },
+    "services/api-gateway/internal/server/e2e_story060_capture_recovery_test.go": {
+      "review_status": "annotated",
+      "review_scope": "已完整审读并核对本次维护边界",
+      "current_sha256": "5fb26c465effc8ae0398e317eb94b24187484acb0a7e494c217ccbd828f53fd3",
+      "package_validation": {
+        "compiled_for_current_sha": true,
+        "evidence": "go-server-batch04-tests.json",
+        "tests_in_file": [
+          {
+            "Time": "2026-10-11T19:13:16.3601154+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestStory060CaptureRecoveryE2EWithPostgresTestDatabase",
+            "Elapsed": 0
+          }
+        ]
+      }
+    },
+    "services/api-gateway/internal/server/e2e_story060_provision_test.go": {
+      "review_status": "annotated",
+      "review_scope": "已完整审读并核对本次维护边界",
+      "current_sha256": "8f5d5208f9cd828f42e4d467a9508d305f733fc659d4302362e3609d79905c95",
+      "package_validation": {
+        "compiled_for_current_sha": true,
+        "evidence": "go-server-batch04-tests.json",
+        "tests_in_file": [
+          {
+            "Time": "2026-10-11T19:13:16.3601154+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestStory060ProvisioningWithPostgresIsScopedAndIdempotent",
+            "Elapsed": 0
+          }
+        ]
+      }
+    },
+    "services/api-gateway/internal/server/e2e_story060_roster_test.go": {
+      "review_status": "pending",
+      "review_scope": "仅原告警函数或参数调用上下文；全文件审读未完成",
+      "current_sha256": "0cc5ffd6b12e538f44a0a7b3e2da3778ee09ec87cf05edbb976f7ad5b3bbb16c",
+      "package_validation": {
+        "compiled_for_current_sha": true,
+        "evidence": "go-server-batch04-tests.json",
+        "tests_in_file": [
+          {
+            "Time": "2026-10-11T19:13:16.3606413+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestStory060RosterReconciliationAndAbsenceE2EWithPostgresTestDatabase",
+            "Elapsed": 0
+          },
+          {
+            "Time": "2026-10-11T19:13:16.3606413+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestExamRosterFreezeBlocksUpdateAndDirectMutationE2EWithPostgresTestDatabase",
+            "Elapsed": 0
+          },
+          {
+            "Time": "2026-10-11T19:13:16.3606413+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestStory060FiveHundredStudentRosterScaleE2EWithPostgresTestDatabase",
+            "Elapsed": 0
+          }
+        ]
+      }
+    },
+    "services/api-gateway/internal/server/e2e_story060_sheet_identity_test.go": {
+      "review_status": "annotated",
+      "review_scope": "已完整审读并核对本次维护边界",
+      "current_sha256": "998e63de0ba7b18da38cf920981fd6526935b7b788301a6a857a9949f8ff9d63",
+      "package_validation": {
+        "compiled_for_current_sha": true,
+        "evidence": "go-server-batch04-tests.json",
+        "tests_in_file": [
+          {
+            "Time": "2026-10-11T19:13:16.3606413+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestStory060MultiPageInsertionMissingPageAndPrintPackageE2EWithPostgresTestDatabase",
+            "Elapsed": 0
+          },
+          {
+            "Time": "2026-10-11T19:13:16.3606413+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestStory060StudentSheetIdentityE2EWithPostgresTestDatabase",
+            "Elapsed": 0
+          }
+        ]
+      }
+    },
+    "services/api-gateway/internal/server/e2e_story061_governance_test.go": {
+      "review_status": "annotated",
+      "review_scope": "已完整审读并核对本次维护边界",
+      "current_sha256": "895dd9d693a1eb2bdef1b7a49255c2e2028a1ca790ffd990b5ee7c189b75e68b",
+      "package_validation": {
+        "compiled_for_current_sha": true,
+        "evidence": "go-server-batch04-tests.json",
+        "tests_in_file": [
+          {
+            "Time": "2026-10-11T19:13:16.3612704+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestStory061GovernanceFoundationE2EWithPostgresTestDatabase",
+            "Elapsed": 0
+          }
+        ]
+      }
+    },
+    "services/api-gateway/internal/server/e2e_subjective_command_test.go": {
+      "review_status": "annotated",
+      "review_scope": "已完整审读并核对本次维护边界",
+      "current_sha256": "fb913d3f09ac5cc550dcbddf6cfeb03689e8aa701981fbf9bde6934e3f984a6f",
+      "package_validation": {
+        "compiled_for_current_sha": true,
+        "evidence": "go-server-batch04-tests.json",
+        "tests_in_file": [
+          {
+            "Time": "2026-10-11T19:13:16.3612704+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestSubjectiveCommandRecoveryWithPostgresTestDatabase",
+            "Elapsed": 0
+          }
+        ]
+      }
+    },
+    "services/api-gateway/internal/server/e2e_subjective_panel_test.go": {
+      "review_status": "annotated",
+      "review_scope": "已完整审读并核对本次维护边界",
+      "current_sha256": "309b55569bd209172366cc9a56b957a5f2eb87159fd4ac04dfbb906290f74e5f",
+      "package_validation": {
+        "compiled_for_current_sha": true,
+        "evidence": "go-server-batch04-tests.json",
+        "tests_in_file": [
+          {
+            "Time": "2026-10-11T19:13:16.3612704+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestPostgresSubjectivePanelAndEvaluationRoundTrip",
+            "Elapsed": 0
+          }
+        ]
+      }
+    },
+    "services/api-gateway/internal/server/e2e_worker_runtime_reliability_test.go": {
+      "review_status": "annotated",
+      "review_scope": "已完整审读并核对本次维护边界",
+      "current_sha256": "4ebed662d22232c5e8188410c705339c2a86bbebeed570571cc2dcd18baca912",
+      "package_validation": {
+        "compiled_for_current_sha": true,
+        "evidence": "go-server-batch04-tests.json",
+        "tests_in_file": [
+          {
+            "Time": "2026-10-11T19:13:16.3612704+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestWorkerRuntimeReliabilityWithPostgresTestDatabase",
+            "Elapsed": 0
+          }
+        ]
+      }
+    },
+    "services/api-gateway/internal/server/managed_config_postgres_test.go": {
+      "review_status": "annotated",
+      "review_scope": "已完整审读并核对本次维护边界",
+      "current_sha256": "71a5793a7b0670497c8b85329a6e7665dc7e96750c3fd5b0fe5ffcf54f187b50",
+      "package_validation": {
+        "compiled_for_current_sha": true,
+        "evidence": "go-server-batch04-tests.json",
+        "tests_in_file": [
+          {
+            "Time": "2026-10-11T19:13:16.5667851+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestPostgresManagedConfigProbeTimestamps",
+            "Elapsed": 0
+          }
+        ]
+      }
+    },
+    "services/api-gateway/internal/server/migration_upgrade_test.go": {
+      "review_status": "annotated",
+      "review_scope": "已完整审读并核对本次维护边界",
+      "current_sha256": "256090547f893d3209853c1744ea1787b47ade409ffb4598a3873aced023a63e",
+      "package_validation": {
+        "compiled_for_current_sha": true,
+        "evidence": "go-server-batch04-tests.json",
+        "tests_in_file": [
+          {
+            "Time": "2026-10-11T19:13:16.5944524+08:00",
+            "Action": "skip",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestPostgresMigrationUpgradeFrom000154",
+            "Elapsed": 0
+          }
+        ]
+      }
+    },
+    "services/api-gateway/internal/server/platform_schools_route_test.go": {
+      "review_status": "annotated",
+      "review_scope": "已完整审读并核对本次维护边界",
+      "current_sha256": "e4c8319995dab1d6b760ea521606f512d23590f6195cfbf0763dd4853e095932",
+      "package_validation": {
+        "compiled_for_current_sha": true,
+        "evidence": "go-server-batch04-tests.json",
+        "tests_in_file": [
+          {
+            "Time": "2026-10-11T19:13:16.8556559+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestPlatformSchoolRoutesRequirePlatformRoleAndTenantManage",
+            "Elapsed": 0.26
+          }
+        ]
+      }
+    },
+    "services/api-gateway/internal/server/readers_batch47_test.go": {
+      "review_status": "annotated",
+      "review_scope": "已完整审读并核对本次维护边界",
+      "current_sha256": "148b459927d7434409a6315577d4a516cbb10b5e2cccca60df7f42e1df62242c",
+      "package_validation": {
+        "compiled_for_current_sha": true,
+        "evidence": "go-server-batch04-tests.json",
+        "tests_in_file": [
+          {
+            "Time": "2026-10-11T19:13:16.8556559+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestBatch47OnboardingOrganizationFallbackPreservesScope",
+            "Elapsed": 0
+          },
+          {
+            "Time": "2026-10-11T19:13:16.8561704+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestBatch47OnboardingOrganizationFallbackRetainsPartialSummaryAndFirstError",
+            "Elapsed": 0
+          },
+          {
+            "Time": "2026-10-11T19:13:16.8561704+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestBatch47OnboardingOrganizationReadsClassesWithoutActiveGrade",
+            "Elapsed": 0
+          },
+          {
+            "Time": "2026-10-11T19:13:16.8561704+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestBatch47OnboardingOrganizationPrefersReadinessIncludingItsError",
+            "Elapsed": 0
+          },
+          {
+            "Time": "2026-10-11T19:13:16.8561704+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestBatch47ProductionStoreGraphPreservesOptionalQueueAndFirstMissingField",
+            "Elapsed": 0
+          }
+        ]
+      }
+    },
+    "services/api-gateway/internal/server/review_route_test.go": {
+      "review_status": "pending",
+      "review_scope": "仅原告警函数或参数调用上下文；全文件审读未完成",
+      "current_sha256": "d0f7dcbe8dba37803ce6e1d756b3210dd9f8f56118cb660f3f405b5e030b7772",
+      "package_validation": {
+        "compiled_for_current_sha": true,
+        "evidence": "go-server-batch04-tests.json",
+        "tests_in_file": [
+          {
+            "Time": "2026-10-11T19:13:17.7741343+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestReviewTaskRoutesCreateAssignSubmitAndAudit",
+            "Elapsed": 0.08
+          },
+          {
+            "Time": "2026-10-11T19:13:17.8507582+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestReviewSubmitRejectsInconsistentRubric",
+            "Elapsed": 0.08
+          },
+          {
+            "Time": "2026-10-11T19:13:17.9046291+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestReviewTaskRoutesRequirePermission",
+            "Elapsed": 0.05
+          },
+          {
+            "Time": "2026-10-11T19:13:17.9594614+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestQualityManagementRoutesDoNotExposeGoldOrSeedEvidenceToGraders",
+            "Elapsed": 0.05
+          },
+          {
+            "Time": "2026-10-11T19:13:18.1199652+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestReviewWorkPermissionIsScopedToAssignedTasks",
+            "Elapsed": 0.16
+          },
+          {
+            "Time": "2026-10-11T19:13:18.2199562+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestReviewWorkerCanReturnOnlyOwnActiveClaim",
+            "Elapsed": 0.1
+          },
+          {
+            "Time": "2026-10-11T19:13:18.2954288+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestReviewTaskClaimNextNeverImplicitlyAssignsPendingTask",
+            "Elapsed": 0.08
+          },
+          {
+            "Time": "2026-10-11T19:13:18.373966+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestReviewWorkbenchClaimDraftRefreshSubmitAndNext",
+            "Elapsed": 0.08
+          },
+          {
+            "Time": "2026-10-11T19:13:18.477604+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestReviewTaskReleaseKeepsAssignmentAndAllowsResume",
+            "Elapsed": 0.1
+          },
+          {
+            "Time": "2026-10-11T19:13:18.5285905+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestReviewTaskListFiltersByExam",
+            "Elapsed": 0.05
+          },
+          {
+            "Time": "2026-10-11T19:13:18.5815499+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestReviewTaskBatchAssignRoute",
+            "Elapsed": 0.05
+          },
+          {
+            "Time": "2026-10-11T19:13:18.6358111+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestReviewTaskAssignmentRequiresActiveGrader",
+            "Elapsed": 0.05
+          },
+          {
+            "Time": "2026-10-11T19:13:18.9443943+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestReviewOriginalImageRequiresAdministratorRole",
+            "Elapsed": 0.31
+          },
+          {
+            "Time": "2026-10-11T19:13:19.0504941+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestDoubleMarkSessionRequiresActiveSameTenantGraders",
+            "Elapsed": 0.11
+          },
+          {
+            "Time": "2026-10-11T19:13:19.1795999+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestArbitrationTaskCreateRequiresActiveSameTenantArbitrator",
+            "Elapsed": 0.13
+          },
+          {
+            "Time": "2026-10-11T19:13:19.5651317+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestArbitrationWorkPermissionIsScopedToAssignedTasks",
+            "Elapsed": 0.39
+          },
+          {
+            "Time": "2026-10-11T19:13:19.739039+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestDoubleMarkAndArbitrationRoutes",
+            "Elapsed": 0.17
+          }
+        ]
+      }
+    },
+    "services/api-gateway/internal/server/score_route_test.go": {
+      "review_status": "annotated",
+      "review_scope": "已完整审读并核对本次维护边界",
+      "current_sha256": "29326381599a687731a597de4296fceba5d778699c150cea7df2a895f8fa3de2",
+      "package_validation": {
+        "compiled_for_current_sha": true,
+        "evidence": "go-server-batch04-tests.json",
+        "tests_in_file": [
+          {
+            "Time": "2026-10-11T19:13:20.2628377+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestScoreRoutesFinalizeConfirmPublishStudentLookupAndExport",
+            "Elapsed": 0.05
+          },
+          {
+            "Time": "2026-10-11T19:13:20.3153552+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestScoreRoutesRequirePermission",
+            "Elapsed": 0.05
+          },
+          {
+            "Time": "2026-10-11T19:13:20.4193056+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestStudentGradeRouteEnforcesStudentScope",
+            "Elapsed": 0.1
+          },
+          {
+            "Time": "2026-10-11T19:13:20.4732685+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestRosterRoutesRequireAdministrativeRole",
+            "Elapsed": 0.05
+          },
+          {
+            "Time": "2026-10-11T19:13:20.5259522+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestRosterRoutesRejectMalformedIdentifiers",
+            "Elapsed": 0.05
+          }
+        ]
+      }
+    },
+    "services/api-gateway/internal/server/server_test.go": {
+      "review_status": "pending",
+      "review_scope": "仅原告警函数或参数调用上下文；全文件审读未完成",
+      "current_sha256": "763b99f5bd12dbe603521be3f231d264e3ceda2fc681063e11041720a015e084",
+      "package_validation": {
+        "compiled_for_current_sha": true,
+        "evidence": "go-server-batch04-tests.json",
+        "tests_in_file": [
+          {
+            "Time": "2026-10-11T19:13:20.5509242+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestHealth",
+            "Elapsed": 0.03
+          },
+          {
+            "Time": "2026-10-11T19:13:20.606279+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestModelGovernanceRoutesEnforceSeparateReadAndManagePermissions",
+            "Elapsed": 0.05
+          },
+          {
+            "Time": "2026-10-11T19:13:20.6589301+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestModelEvaluationManagePermissionAllowsMutationRoute",
+            "Elapsed": 0.05
+          },
+          {
+            "Time": "2026-10-11T19:13:20.6860279+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestRequestTraceHeadersAndAccessLog",
+            "Elapsed": 0.03
+          },
+          {
+            "Time": "2026-10-11T19:13:20.7384536+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestSystemInfo",
+            "Elapsed": 0.05
+          },
+          {
+            "Time": "2026-10-11T19:13:20.7904621+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestReadyHealthy",
+            "Elapsed": 0.05
+          },
+          {
+            "Time": "2026-10-11T19:13:20.8417003+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestReadyUnhealthy",
+            "Elapsed": 0.05
+          },
+          {
+            "Time": "2026-10-11T19:13:20.8677504+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestPublicHealthProbesAreAnonymousAndReadinessIsRedacted",
+            "Elapsed": 0.03
+          },
+          {
+            "Time": "2026-10-11T19:13:20.9198444+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestSystemStatusIncludesDependencyAndObservabilityState",
+            "Elapsed": 0.05
+          },
+          {
+            "Time": "2026-10-11T19:13:20.9763888+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestSystemStatusReportsIdleOCRWorkerAsOnline",
+            "Elapsed": 0.06
+          },
+          {
+            "Time": "2026-10-11T19:13:21.0305668+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestSystemStatusRequiresAuthenticationAndSystemRead",
+            "Elapsed": 0.05
+          },
+          {
+            "Time": "2026-10-11T19:13:21.3990367+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestOCRAvailabilityUsesScopedPermissionsAndResponse",
+            "Elapsed": 0.37
+          },
+          {
+            "Time": "2026-10-11T19:13:21.4527507+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestOCRAvailabilityRequiresAuthenticationAndConsumerPermission",
+            "Elapsed": 0.05
+          },
+          {
+            "Time": "2026-10-11T19:13:21.5065946+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestOCRConsumerStillCannotReadFullSystemStatus",
+            "Elapsed": 0.05
+          },
+          {
+            "Time": "2026-10-11T19:13:21.6106372+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestWorkerRuntimeSeparatesReadAndExecutePermissions",
+            "Elapsed": 0.1
+          },
+          {
+            "Time": "2026-10-11T19:13:21.6387371+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestCORSAllowlistAndBodyLimit",
+            "Elapsed": 0.03
+          },
+          {
+            "Time": "2026-10-11T19:13:21.6668817+08:00",
+            "Action": "pass",
+            "Package": "edugrade-enterprise/services/api-gateway/internal/server",
+            "Test": "TestNotFoundUsesUnifiedError",
+            "Elapsed": 0.03
+          }
+        ]
+      }
+    }
+  },
+  "validations": [
+    {
+      "kind": "gofmt",
+      "status": "passed",
+      "evidence": "go-server-format-atomic-execution.json"
+    },
+    {
+      "kind": "Go AST parse",
+      "status": "passed_for_current_sources",
+      "evidence": "go-server-structure-current.json",
+      "execution": "go-server-structure-execution.json",
+      "limit": "只有语法/估算；不证明类型、行为或 SonarQube 消警"
+    },
+    {
+      "kind": "Go compilation and existing tests",
+      "status": "passed_for_frozen_batch04",
+      "evidence": "go-server-batch04-tests.json",
+      "source_sha": "go-server-batch04-source-sha.json",
+      "pass": 188,
+      "skip": 62,
+      "limit": "条件 skip 不计数据库集成通过；逐 Test 原因在 events.jsonl",
+      "postgres_conditional_skips": 61,
+      "auxiliary_entry_conditional_skips": 1,
+      "skip_classification": "go-server-batch04-skip-classification.json"
+    },
+    {
+      "kind": "SonarQube",
+      "status": "pending_root_rescan",
+      "reason": "统一平台复扫归 root 负责"
+    }
+  ],
+  "summary": {
+    "implemented_needs_validation": 57,
+    "delegated_implemented_needs_validation": 5
+  },
+  "source_changed_original_issues": 62,
+  "failed_validation_attempts_preserved": [
+    "go-server-batch02-tests.json",
+    "go-server-batch03-tests.json"
+  ],
+  "current_dynamic_scope": {
+    "package_compiled": true,
+    "passed_tests": 188,
+    "conditional_skips": 62,
+    "postgres_business_test_pass_count": 0,
+    "source_sha_evidence": "go-server-batch04-source-sha.json",
+    "no_source_change_during_tests": true,
+    "no_database_environment_was_cleared": true,
+    "postgres_conditional_skips": 61,
+    "auxiliary_entry_conditional_skips": 1,
+    "skip_classification": "go-server-batch04-skip-classification.json"
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "files": [
+    {
+      "file": "services/api-gateway/internal/server/review_route_test.go",
+      "sha256": "1ec4c136aa1782888321adb0de5af2296454aaacda569edfee944c2616533dc7",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\review_route_test.go"
+    },
+    {
+      "file": "services/api-gateway/internal/server/review_route_test.go",
+      "sha256": "2b75d1397676f8620b80edf982489a678254f06ce93ca99efaafc06df487928d",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\review_route_test.go"
+    },
+    {
+      "file": "services/api-gateway/internal/server/review_route_test.go",
+      "sha256": "12347609286cc1ca480c37f6d2b00db39b762222a6cc8c8413ee3a8c909b256b",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\review_route_test.go"
+    },
+    {
+      "file": "services/api-gateway/internal/server/review_route_test.go",
+      "sha256": "e1d868fae5fc4efe1442490e0816596ac77e37a1f0fdb6a5ce085d74d9bab149",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\review_route_test.go"
+    }
+  ],
+  "issue_functions": [
+    {
+      "file": "services/api-gateway/internal/server/review_route_test.go",
+      "function": "TestReviewWorkPermissionIsScopedToAssignedTasks"
+    },
+    {
+      "file": "services/api-gateway/internal/server/review_route_test.go",
+      "function": "TestReviewWorkbenchClaimDraftRefreshSubmitAndNext"
+    },
+    {
+      "file": "services/api-gateway/internal/server/review_route_test.go",
+      "function": "TestArbitrationWorkPermissionIsScopedToAssignedTasks"
+    },
+    {
+      "file": "services/api-gateway/internal/server/review_route_test.go",
+      "function": "TestDoubleMarkAndArbitrationRoutes"
+    }
+  ],
+  "checkpoint_relation": "after checkpoint02; requires subsequent scan"
+}

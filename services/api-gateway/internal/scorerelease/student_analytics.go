@@ -25,7 +25,7 @@ func buildStudentReference(items []ReleaseItem, studentScore float64, policy Vis
 			scores = append(scores, item.TotalScore)
 		}
 	}
-	ref := &StudentReference{Scope: "grade", SampleSize: len(scores)}
+	ref := &StudentReference{Scope: "exam", SampleSize: len(scores)}
 	if len(scores) < privacyMinCohortSize {
 		ref.UnavailableReason = "small_cohort"
 		return ref
@@ -40,6 +40,12 @@ func buildStudentReference(items []ReleaseItem, studentScore float64, policy Vis
 		q1, q3, minScore, maxScore := quantile(scores, .25), quantile(scores, .75), scores[0], scores[len(scores)-1]
 		ref.Q1, ref.Q3, ref.MinScore, ref.MaxScore = &q1, &q3, &minScore, &maxScore
 	}
+	appendStudentPosition(ref, scores, studentScore, policy)
+	return ref
+}
+
+// 调用方已满足人数隐私门槛；分位沿用低于分数优先、近似同分其次的顺序，排名仍按严格大于比较。
+func appendStudentPosition(ref *StudentReference, scores []float64, studentScore float64, policy VisibilityPolicy) {
 	below, equal := 0, 0
 	for _, score := range scores {
 		switch {
@@ -62,7 +68,6 @@ func buildStudentReference(items []ReleaseItem, studentScore float64, policy Vis
 		}
 		ref.Rank = &rank
 	}
-	return ref
 }
 
 func studentQuestionView(question ReleaseQuestion, all []ReleaseQuestion, policy VisibilityPolicy) StudentQuestion {
@@ -72,6 +77,7 @@ func studentQuestionView(question ReleaseQuestion, all []ReleaseQuestion, policy
 		Score:        question.Score, MaxScore: question.MaxScore,
 		ScoreRate: scoreRate(question.Score, question.MaxScore),
 	}
+	view.CohortUnavailableReason = "not_public"
 	if policy.ShowQuestionStem {
 		view.Stem = question.Explanation.Stem
 	}
@@ -80,6 +86,10 @@ func studentQuestionView(question ReleaseQuestion, all []ReleaseQuestion, policy
 	}
 	if policy.ShowQuestionStatistics {
 		view.Cohort = buildQuestionReference(question.QuestionID, all)
+		view.CohortUnavailableReason = "small_cohort"
+		if view.Cohort != nil {
+			view.CohortUnavailableReason = ""
+		}
 	}
 	if policy.ShowAnswers {
 		view.CorrectAnswer = question.Explanation.CorrectAnswer
@@ -113,13 +123,13 @@ func buildQuestionReference(questionID string, all []ReleaseQuestion) *StudentQu
 	meanScore := mean(scores)
 	medianScore := quantile(scores, .5)
 	return &StudentQuestionReference{
-		SampleSize:      count,
-		MeanScoreRate:   math.Round(totalRate/float64(count)*1000) / 1000,
-		FullScoreRate:   math.Round(float64(full)/float64(count)*1000) / 1000,
-		ZeroScoreRate:   math.Round(float64(zero)/float64(count)*1000) / 1000,
-		ClassMeanScore:  &meanScore,
-		SchoolMeanScore: &meanScore,
-		MedianScore:     &medianScore,
+		SampleSize:             count,
+		MeanScoreRate:          math.Round(totalRate/float64(count)*1000) / 1000,
+		FullScoreRate:          math.Round(float64(full)/float64(count)*1000) / 1000,
+		ZeroScoreRate:          math.Round(float64(zero)/float64(count)*1000) / 1000,
+		ClassUnavailableReason: "scope_unavailable",
+		SchoolMeanScore:        &meanScore,
+		MedianScore:            &medianScore,
 	}
 }
 

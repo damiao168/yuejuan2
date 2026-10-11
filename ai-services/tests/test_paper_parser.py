@@ -170,8 +170,9 @@ def test_visual_page_checksum_is_verified_before_model_call():
     request["visual_pages"][0]["sha256"] = "0" * 64
     model = FakeStructuredModel(output("unknown"))
 
+    parser = PaperParser(model)
     with pytest.raises(AgentError) as raised:
-        PaperParser(model).parse(request)
+        parser.parse(request)
 
     assert raised.value.code == "invalid_request"
     assert model.calls == []
@@ -184,8 +185,9 @@ def test_visual_ref_requires_an_actual_supplied_page_when_source_has_many_pages(
     second["page_no"] = 2
     request["visual_pages"].append(second)
 
+    parser = PaperParser(FakeStructuredModel(output('answer', answers=[answer])))
     with pytest.raises(AgentError) as raised:
-        PaperParser(FakeStructuredModel(output("answer", answers=[answer]))).parse(request)
+        parser.parse(request)
 
     assert raised.value.code == "model_output_invalid"
 
@@ -383,26 +385,35 @@ def test_exam_markers_take_priority_over_unrelated_ui_words():
 
 
 def test_rejects_empty_document_collection():
-    with pytest.raises(AgentError): PaperParser(FakeStructuredModel(output("unknown"))).parse({"request_id": "job", "subject": "语文", "documents": []})
+    parser = PaperParser(FakeStructuredModel(output('unknown')))
+    with pytest.raises(AgentError):
+        parser.parse({'request_id': 'job', 'subject': '语文', 'documents': []})
 
 
 def test_rejects_duplicate_source_identity_or_document_order():
     request = payload()
     request["documents"].append({**request["documents"][0], "source_id": "source-2"})
+    parser = PaperParser(FakeStructuredModel(output('unknown')))
     with pytest.raises(AgentError) as raised:
-        PaperParser(FakeStructuredModel(output("unknown"))).parse(request)
+        parser.parse(request)
     assert raised.value.code == "invalid_request"
 
 
 def test_rejects_untrusted_provenance_from_model():
     answer = {"candidate_id": "a1", "question_no_hint": "1", "question_no_normalized": "1", "subquestion_no_hint": None, "standard_answer": "A", "equivalent_answers": [], "tolerance": None, "confidence": .95, "source_refs": [ref("invented")], "issues": []}
-    with pytest.raises(AgentError): PaperParser(FakeStructuredModel(output("answer", answers=[answer]))).parse(payload())
+    parser = PaperParser(FakeStructuredModel(output('answer', answers=[answer])))
+    request = payload()
+    with pytest.raises(AgentError):
+        parser.parse(request)
 
 
 def test_rejects_source_ref_with_fabricated_file_or_document_index():
     fabricated = {**ref(), "file_asset_id": "invented", "document_index": 9}
     answer = {"candidate_id": "a1", "question_no_hint": "1", "question_no_normalized": "1", "subquestion_no_hint": None, "standard_answer": "A", "equivalent_answers": [], "tolerance": None, "confidence": .95, "source_refs": [fabricated], "issues": []}
-    with pytest.raises(AgentError): PaperParser(FakeStructuredModel(output("answer", answers=[answer]))).parse(payload())
+    parser = PaperParser(FakeStructuredModel(output('answer', answers=[answer])))
+    request = payload()
+    with pytest.raises(AgentError):
+        parser.parse(request)
 
 
 def test_direct_text_discards_model_invented_ocr_metadata():
@@ -425,7 +436,10 @@ def test_direct_text_discards_model_invented_ocr_metadata():
 def test_rejects_duplicate_candidate_ids_across_candidate_kinds():
     answer = {"candidate_id": "same", "question_no_hint": "1", "question_no_normalized": "1", "subquestion_no_hint": None, "standard_answer": "A", "equivalent_answers": [], "tolerance": None, "confidence": .95, "source_refs": [ref()], "issues": []}
     solution = {"candidate_id": "same", "question_no_hint": "1", "question_no_normalized": "1", "subquestion_no_hint": None, "raw_text": "解析", "steps": [], "confidence": .8, "source_refs": [ref()], "issues": []}
-    with pytest.raises(AgentError): PaperParser(FakeStructuredModel(output("mixed", answers=[answer], solutions=[solution]))).parse(payload())
+    parser = PaperParser(FakeStructuredModel(output('mixed', answers=[answer], solutions=[solution])))
+    request = payload()
+    with pytest.raises(AgentError):
+        parser.parse(request)
 
 
 def test_rejects_ocr_ref_with_fabricated_confidence():
@@ -433,7 +447,9 @@ def test_rejects_ocr_ref_with_fabricated_confidence():
     answer = {"candidate_id": "a1", "question_no_hint": "1", "question_no_normalized": "1", "subquestion_no_hint": None, "standard_answer": "A", "equivalent_answers": [], "tolerance": None, "confidence": .95, "source_refs": [ocr_ref], "issues": []}
     request = payload()
     request["documents"][0]["blocks"] = [{"source_id": "source-1", "document_index": 0, "block_id": "b1", "page_no": 1, "text": "1.A", "bbox": [1, 2, 3, 4], "confidence": .82}]
-    with pytest.raises(AgentError): PaperParser(FakeStructuredModel(output("answer", answers=[answer]))).parse(request)
+    parser = PaperParser(FakeStructuredModel(output('answer', answers=[answer])))
+    with pytest.raises(AgentError):
+        parser.parse(request)
 
 
 def test_candidate_confidence_never_exceeds_its_grounded_ocr_confidence():
@@ -462,8 +478,10 @@ def test_solution_without_explicit_rubric_does_not_generate_one():
 
 def test_rejects_rubric_with_ungrounded_provenance():
     rubric = {"candidate_id": "r1", "question_no_hint": "1", "question_no_normalized": "1", "subquestion_no_hint": None, "max_score": 2, "points": [], "deductions": [], "examples": [], "confidence": .9, "source_refs": [ref("invented")], "issues": []}
+    parser = PaperParser(FakeStructuredModel(output('rubric', rubrics=[rubric])))
+    request = payload('评分标准')
     with pytest.raises(AgentError):
-        PaperParser(FakeStructuredModel(output("rubric", rubrics=[rubric]))).parse(payload("评分标准"))
+        parser.parse(request)
 
 
 def test_mixed_document_can_return_all_four_candidate_kinds():
@@ -477,5 +495,7 @@ def test_mixed_document_can_return_all_four_candidate_kinds():
 
 def test_rejects_negative_rubric_point_score():
     rubric = {"candidate_id": "r1", "question_no_hint": "1", "question_no_normalized": "1", "subquestion_no_hint": None, "max_score": 2, "points": [{"id": "p1", "description": "过程", "score": -1, "required": True, "evidence_requirements": []}], "deductions": [], "examples": [], "confidence": .9, "source_refs": [ref()], "issues": []}
+    parser = PaperParser(FakeStructuredModel(output('rubric', rubrics=[rubric])))
+    request = payload('评分标准')
     with pytest.raises(AgentError):
-        PaperParser(FakeStructuredModel(output("rubric", rubrics=[rubric]))).parse(payload("评分标准"))
+        parser.parse(request)

@@ -71,8 +71,8 @@ type Context struct {
 	ReferenceContext   *GradingReferenceContext
 }
 
-// GradingReferenceContext contains only the authored facts frozen at exam
-// confirmation. A nil value represents a legacy exam without an import snapshot.
+// GradingReferenceContext 只包含考试确认时冻结的编写事实。
+// nil 表示没有导入快照的旧版考试。
 type GradingReferenceContext struct {
 	Source            string               `json:"source"`
 	SnapshotHash      string               `json:"snapshot_hash"`
@@ -80,6 +80,12 @@ type GradingReferenceContext struct {
 	EquivalentAnswers []any                `json:"equivalent_answers"`
 	SolutionText      string               `json:"solution_text"`
 	SolutionSteps     []paper.SolutionStep `json:"solution_steps"`
+	AnswerParts       []GradingAnswerPart  `json:"answer_parts,omitempty"`
+}
+
+type GradingAnswerPart struct {
+	PartNo     int    `json:"part_no"`
+	AnswerText string `json:"answer_text"`
 }
 
 type AdapterInput struct {
@@ -96,14 +102,13 @@ type AdapterInput struct {
 	AssessmentSnapshot assessment.ExamQuestionSnapshot `json:"assessment_snapshot"`
 	ModelPolicy        ModelPolicy                     `json:"model_policy"`
 	PromptGuard        PromptGuard                     `json:"prompt_guard"`
-	// OutputConstraint is produced by the admission gate.  It travels with the
-	// request to every adapter so a provider cannot reinterpret an admitted
-	// call as authority to issue an independently final score.
+	// OutputConstraint 由准入门禁生成，随请求传给每个适配器，
+	// 避免供应商把获准调用重新解释为独立给出最终分数的授权。
 	OutputConstraint aieligibility.OutputConstraint `json:"output_constraint"`
 	MathEvidence     *MathEvidenceContext           `json:"math_evidence,omitempty"`
 	ReferenceContext *GradingReferenceContext       `json:"reference_context,omitempty"`
-	// ActiveCrop is verified locally and encoded only by the v2 adapter. It is
-	// never included by generic JSON serialization or persisted with a run.
+	// ActiveCrop 在本地核验，仅由 v2 适配器编码。
+	// 它绝不参与通用 JSON 序列化，也不随运行持久化。
 	ActiveCrop *ResolvedActiveCrop `json:"-"`
 }
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useReducer, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
+import { useCallback, useEffect, useMemo, useReducer, type Dispatch, type RefObject, type SetStateAction } from "react";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import type { AnswerSheetTemplate, TemplateLayout } from "../../../api/configuration";
 import type { PaperVersion, Question } from "../../../api/papers";
@@ -10,7 +10,7 @@ import type { PreviewState } from "./useTemplatePreview";
 
 export function useTemplateEditor({
   examId, canManage, selectedPaper, selectedTemplate, questions, setTemplates,
-  setSelectedTemplateId, loadData, onChanged, pdfRef, preview, pageNo, setPageNo
+  setSelectedTemplateId, onChanged, onActivate, pdfRef, preview, pageNo, setPageNo
 }: {
   examId: string;
   canManage: boolean;
@@ -19,9 +19,9 @@ export function useTemplateEditor({
   questions: Question[];
   setTemplates: Dispatch<SetStateAction<AnswerSheetTemplate[]>>;
   setSelectedTemplateId: Dispatch<SetStateAction<string>>;
-  loadData: () => Promise<void>;
   onChanged?: () => void;
-  pdfRef: MutableRefObject<PDFDocumentProxy | undefined>;
+  onActivate?: (template: AnswerSheetTemplate) => Promise<unknown>;
+  pdfRef: RefObject<PDFDocumentProxy | undefined>;
   preview: PreviewState;
   pageNo: number;
   setPageNo: Dispatch<SetStateAction<number>>;
@@ -30,16 +30,20 @@ export function useTemplateEditor({
   const setLayout = useCallback((value: SetStateAction<TemplateLayout>) => {
     dispatchLayout({ type: "set", value });
   }, []);
-  const readonly = !canManage || selectedTemplate?.status === "locked";
+  const templateReadonly = !canManage || selectedTemplate?.status === "locked";
+  const coveredQuestions = useMemo(() => new Set(layout.pages.flatMap((page) =>
+    page.question_regions.map((region) => region.question_id))), [layout]);
+  const lifecycle = useTemplateLifecycle({
+    examId, selectedPaper, selectedTemplate, questions, layout,
+    coveredQuestions, readonly: templateReadonly, setTemplates,
+    setSelectedTemplateId, onChanged, onActivate, preview
+  });
+  // 保存响应会用服务端模板重置编辑器；等待期间暂停输入，避免覆盖后续修改。
+  const readonly = templateReadonly || lifecycle.saving;
   const region = useRegionEditor({
     layout, dispatchLayout, pageNo, setPageNo, questions, selectedTemplate, readonly
   });
   const suggestion = useRegionSuggestion({ pdfRef, questions, readonly, dispatchLayout });
-  const lifecycle = useTemplateLifecycle({
-    examId, selectedPaper, selectedTemplate, questions, layout,
-    coveredQuestions: region.coveredQuestions, readonly, setTemplates,
-    setSelectedTemplateId, loadData, onChanged, preview
-  });
 
   useEffect(() => {
     if (!selectedTemplate) return;
@@ -48,8 +52,9 @@ export function useTemplateEditor({
     setPageNo(1);
   }, [selectedTemplate, setLayout, setPageNo]);
 
-  const setOMRProfile = (mode: "manual_only" | "template_difference") =>
-    dispatchLayout({ type: "setOMRProfile", mode });
+  const setOMRProfile = (mode: "manual_only" | "template_difference") => {
+    if (!readonly) dispatchLayout({ type: "setOMRProfile", mode });
+  };
 
   return {
     ...region, ...suggestion, ...lifecycle,

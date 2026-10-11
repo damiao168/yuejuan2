@@ -1,0 +1,43 @@
+{
+  "read_only_ram_argument_resolution_only": true,
+  "no_database_read": true,
+  "generic_default_dataset_size_only": true,
+  "records": [
+    {
+      "command": [
+        "D:\\tools\\audit-codeql-20261010\\codeql\\codeql.exe",
+        "resolve",
+        "ram",
+        "--ram=3072",
+        "--off-heap-ram=0",
+        "--format=json"
+      ],
+      "started_at_utc": "2026-10-11T07:59:07.350264+00:00",
+      "ended_at_utc": "2026-10-11T07:59:08.692956+00:00",
+      "exit_code": 0,
+      "output_log": "rust-fallback-generic-ram3072-offheap0.log",
+      "output_sha256": "b2d04674bf1f553ee360441f5fb9a27a69eb1c1f4e550ed7d8eac0fb29a15090",
+      "output_text": "[\r\n  \"-J-Xmx1964M\"\r\n]\r\n",
+      "dataset_argument_supplied": false,
+      "query_evaluator_or_scan_started": false
+    },
+    {
+      "command": [
+        "D:\\tools\\audit-codeql-20261010\\codeql\\codeql.exe",
+        "resolve",
+        "ram",
+        "--ram=3072",
+        "--off-heap-ram=256",
+        "--format=json"
+      ],
+      "started_at_utc": "2026-10-11T07:59:08.692956+00:00",
+      "ended_at_utc": "2026-10-11T07:59:10.233142+00:00",
+      "exit_code": 0,
+      "output_log": "rust-fallback-generic-ram3072-offheap256.log",
+      "output_sha256": "7e410e490dbc062dea3a458bbc413b01d1dfc4cbae6fd6ddf4e5828f9bee6c53",
+      "output_text": "WARNING: Ignoring --off-heap-ram=256 because that would leave too little space for the Java heap.\r\n[\r\n  \"-J-Xmx1964M\"\r\n]\r\n",
+      "dataset_argument_supplied": false,
+      "query_evaluator_or_scan_started": false
+    }
+  ]
+}

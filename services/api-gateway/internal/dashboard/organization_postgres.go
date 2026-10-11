@@ -9,6 +9,11 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/auth"
 )
 
+const (
+	classGradeScopeColumn  = "c.grade_id"
+	classSchoolScopeColumn = "c.school_id"
+)
+
 type PostgresOrganizationSummaryStore struct {
 	db *sql.DB
 }
@@ -28,10 +33,10 @@ func (s *PostgresOrganizationSummaryStore) DashboardOrganizationSummary(ctx cont
 		base   string
 		filter scopedColumns
 	}{
-		{&result.ActiveStudentCount, `SELECT COUNT(*) FROM student s JOIN school_class c ON c.tenant_id=s.tenant_id AND c.id=s.class_id WHERE s.tenant_id=$1::uuid AND s.deleted_at IS NULL AND s.status='active'`, scopedColumns{"s.school_id", "c.grade_id", "s.class_id"}},
+		{&result.ActiveStudentCount, `SELECT COUNT(*) FROM student s JOIN school_class c ON c.tenant_id=s.tenant_id AND c.id=s.class_id WHERE s.tenant_id=$1::uuid AND s.deleted_at IS NULL AND s.status='active'`, scopedColumns{"s.school_id", classGradeScopeColumn, "s.class_id"}},
 		{&result.GradeCount, `SELECT COUNT(DISTINCT g.id) FROM grade g LEFT JOIN school_class c ON c.tenant_id=g.tenant_id AND c.grade_id=g.id AND c.deleted_at IS NULL WHERE g.tenant_id=$1::uuid AND g.deleted_at IS NULL AND g.status='active'`, scopedColumns{"g.school_id", "g.id", "c.id"}},
-		{&result.ClassCount, `SELECT COUNT(*) FROM school_class c WHERE c.tenant_id=$1::uuid AND c.deleted_at IS NULL AND c.status='active'`, scopedColumns{"c.school_id", "c.grade_id", "c.id"}},
-		{&result.EmptyClassCount, `SELECT COUNT(*) FROM school_class c WHERE c.tenant_id=$1::uuid AND c.deleted_at IS NULL AND c.status='active' AND NOT EXISTS (SELECT 1 FROM student s WHERE s.tenant_id=c.tenant_id AND s.class_id=c.id AND s.deleted_at IS NULL AND s.status='active')`, scopedColumns{"c.school_id", "c.grade_id", "c.id"}},
+		{&result.ClassCount, `SELECT COUNT(*) FROM school_class c WHERE c.tenant_id=$1::uuid AND c.deleted_at IS NULL AND c.status='active'`, scopedColumns{classSchoolScopeColumn, classGradeScopeColumn, "c.id"}},
+		{&result.EmptyClassCount, `SELECT COUNT(*) FROM school_class c WHERE c.tenant_id=$1::uuid AND c.deleted_at IS NULL AND c.status='active' AND NOT EXISTS (SELECT 1 FROM student s WHERE s.tenant_id=c.tenant_id AND s.class_id=c.id AND s.deleted_at IS NULL AND s.status='active')`, scopedColumns{classSchoolScopeColumn, classGradeScopeColumn, "c.id"}},
 	}
 	for _, query := range queries {
 		statement, args := applyScope(query.base, tenantID, scope, query.filter)
@@ -97,7 +102,7 @@ func (s *PostgresOrganizationSummaryStore) countUsersWithRole(ctx context.Contex
 		base += ` AND NOT EXISTS (SELECT 1 FROM teacher_class utc WHERE utc.tenant_id=u.tenant_id AND utc.teacher_id=u.id AND utc.deleted_at IS NULL)`
 	}
 
-	classScope := scopedColumns{"c.school_id", "c.grade_id", "c.id"}
+	classScope := scopedColumns{classSchoolScopeColumn, classGradeScopeColumn, "c.id"}
 	if len(scope.GradeIDs) > 0 || len(scope.ClassIDs) > 0 {
 		inner, scopedArgs := appendScope(`SELECT 1 FROM teacher_class tc JOIN school_class c ON c.tenant_id=tc.tenant_id AND c.id=tc.class_id WHERE tc.tenant_id=u.tenant_id AND tc.teacher_id=u.id AND tc.deleted_at IS NULL AND c.deleted_at IS NULL`, scope, classScope, args)
 		args = scopedArgs

@@ -16,7 +16,7 @@ function formatTime(value?: string) {
   return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleString("zh-CN", { hour12: false });
 }
 
-export function AuditPanel({ canRead, logs }: { canRead: boolean; logs: AuditLog[] }) {
+export function AuditPanel({ canRead, logs }: Readonly<{ canRead: boolean; logs: AuditLog[] }>) {
   if (!canRead) {
     return <EmptyState title="无权查看操作记录" description="您的账号没有查看操作记录的权限。导出、确认、发布等操作仍会被系统记录。" />;
   }

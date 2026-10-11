@@ -18,8 +18,7 @@ type LoginAttempt struct {
 	TenantCode string
 	Identifier string
 	IPAddress  string
-	// AccountID is resolved by the server, never accepted from login JSON.
-	// It joins username, phone and employee-number aliases into one bucket.
+	// AccountID 由服务端解析，不接受登录 JSON 提供的值；它将用户名、手机号和工号别名归入同一个限流桶。
 	AccountID string
 }
 
@@ -109,8 +108,7 @@ func (l *LayeredLoginAttemptGuard) RegisterFailure(ctx context.Context, attempt 
 }
 
 func (l *LayeredLoginAttemptGuard) RegisterSuccess(ctx context.Context, attempt LoginAttempt) {
-	// A valid credential proves control of the account and pair. A successful
-	// login must not erase the source-IP history for every other account.
+	// 有效凭据证明调用方控制该账户及账户与来源 IP 的组合；登录成功不能清除同一来源 IP 下其他账户的历史。
 	if l.account != nil {
 		l.account.Clear(ctx, loginAttemptAccountKey(attempt))
 		if attempt.AccountID != "" {

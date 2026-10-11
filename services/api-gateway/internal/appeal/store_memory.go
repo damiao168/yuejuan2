@@ -125,24 +125,13 @@ func (s *MemoryStore) CreateAppeal(_ context.Context, tenantID string, actorID s
 	return s.withDetailsLocked(item), nil
 }
 
+// ListAppeals 在同一读锁内按租户与调用方收窄的条件取列表，再按严格游标分页。
 func (s *MemoryStore) ListAppeals(_ context.Context, tenantID string, filter ListFilter) ([]Appeal, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	out := []Appeal{}
 	for _, item := range s.appeals {
-		if item.TenantID != tenantID {
-			continue
-		}
-		if filter.ExamID != "" && item.ExamID != filter.ExamID {
-			continue
-		}
-		if filter.StudentID != "" && item.StudentID != filter.StudentID {
-			continue
-		}
-		if filter.Status != "" && item.Status != filter.Status {
-			continue
-		}
-		if filter.AssignedTo != "" && item.AssignedTo != filter.AssignedTo {
+		if !appealMatchesListFilter(item, tenantID, filter) {
 			continue
 		}
 		out = append(out, cloneAppeal(item))
@@ -157,8 +146,7 @@ func (s *MemoryStore) ListAppeals(_ context.Context, tenantID string, filter Lis
 		start := 0
 		for start < len(out) {
 			item := out[start]
-			if item.CreatedAt.Before(filter.CursorCreatedAt) ||
-				(item.CreatedAt.Equal(filter.CursorCreatedAt) && item.ID < filter.CursorID) {
+			if appealFollowsListCursor(item, filter) {
 				break
 			}
 			start++
@@ -169,6 +157,31 @@ func (s *MemoryStore) ListAppeals(_ context.Context, tenantID string, filter Lis
 		out = out[:filter.Limit]
 	}
 	return out, nil
+}
+
+func appealMatchesListFilter(item Appeal, tenantID string, filter ListFilter) bool {
+	if item.TenantID != tenantID {
+		return false
+	}
+	if filter.ExamID != "" && item.ExamID != filter.ExamID {
+		return false
+	}
+	if filter.StudentID != "" && item.StudentID != filter.StudentID {
+		return false
+	}
+	if filter.Status != "" && item.Status != filter.Status {
+		return false
+	}
+	if filter.AssignedTo != "" && item.AssignedTo != filter.AssignedTo {
+		return false
+	}
+	return true
+}
+
+func appealFollowsListCursor(item Appeal, filter ListFilter) bool {
+	// 列表按时间和 ID 降序；相同时间也必须严格越过游标 ID，不能重复上一页末项。
+	return item.CreatedAt.Before(filter.CursorCreatedAt) ||
+		(item.CreatedAt.Equal(filter.CursorCreatedAt) && item.ID < filter.CursorID)
 }
 
 func (s *MemoryStore) AssignAppeal(_ context.Context, tenantID string, id string, _ string, input AssignAppealInput) (Appeal, error) {
@@ -249,6 +262,7 @@ func (s *MemoryStore) GetAppeal(_ context.Context, tenantID string, id string) (
 	return s.withDetailsLocked(item), nil
 }
 
+// ReviewAppeal 沿用旧版可变成绩流程；终态与 revision 检查和所有调分写入使用同一把锁。
 func (s *MemoryStore) ReviewAppeal(_ context.Context, tenantID string, id string, actorID string, input ReviewAppealInput) (Appeal, *ScoreAdjustment, error) {
 	input = normalizeReviewInput(input)
 	if err := validateReviewInput(input); err != nil {
@@ -281,56 +295,65 @@ func (s *MemoryStore) ReviewAppeal(_ context.Context, tenantID string, id string
 	item.UpdatedAt = now
 	var adjustment *ScoreAdjustment
 	if input.Status == "score_adjusted" {
-		finalID := input.FinalGradeID
-		if finalID == "" {
-			finalID = item.FinalGradeID
+		var err error
+		adjustment, err = s.adjustReviewedScoreLocked(&item, tenantID, actorID, input, now)
+		if err != nil {
+			return Appeal{}, nil, err
 		}
-		if finalID == "" || input.AdjustedScore == nil {
-			return Appeal{}, nil, ErrInvalidInput
-		}
-		final, ok := s.finals[finalID]
-		if !ok || final.ExamID != item.ExamID || final.SubmissionID != item.SubmissionID {
-			return Appeal{}, nil, ErrInvalidInput
-		}
-		if *input.AdjustedScore < 0 || *input.AdjustedScore > final.MaxScore {
-			return Appeal{}, nil, ErrInvalidInput
-		}
-		previous := final.Score
-		final.Score = *input.AdjustedScore
-		final.Locked = true
-		final.Status = "locked"
-		s.finals[finalID] = final
-		submission := s.submissions[key(item.ExamID, item.StudentID)]
-		submission.TotalScore += final.Score - previous
-		submission.Locked = true
-		submission.Status = "published"
-		s.submissions[key(item.ExamID, item.StudentID)] = submission
-		created := ScoreAdjustment{
-			ID:                s.id("score-adjustment"),
-			TenantID:          tenantID,
-			AppealID:          item.ID,
-			ExamID:            item.ExamID,
-			SubmissionID:      item.SubmissionID,
-			SubmissionGradeID: item.SubmissionGradeID,
-			FinalGradeID:      finalID,
-			QuestionID:        final.QuestionID,
-			QuestionNo:        final.QuestionNo,
-			PreviousScore:     previous,
-			AdjustedScore:     final.Score,
-			Delta:             final.Score - previous,
-			Reason:            input.Reason,
-			AdjustedBy:        actorID,
-			CreatedAt:         now,
-		}
-		s.adjustments[item.ID] = append(s.adjustments[item.ID], created)
-		adjustment = &created
-		item.FinalGradeID = finalID
-		item.QuestionID = final.QuestionID
-		item.QuestionNo = final.QuestionNo
 	}
 	s.appeals[id] = item
 	out := s.withDetailsLocked(item)
 	return out, adjustment, nil
+}
+
+// 调用方持有 ReviewAppeal 的写锁；全部调分校验通过后才写成绩和历史，不重复加锁。
+func (s *MemoryStore) adjustReviewedScoreLocked(item *Appeal, tenantID string, actorID string, input ReviewAppealInput, now time.Time) (*ScoreAdjustment, error) {
+	finalID := input.FinalGradeID
+	if finalID == "" {
+		finalID = item.FinalGradeID
+	}
+	if finalID == "" || input.AdjustedScore == nil {
+		return nil, ErrInvalidInput
+	}
+	final, ok := s.finals[finalID]
+	if !ok || final.ExamID != item.ExamID || final.SubmissionID != item.SubmissionID {
+		return nil, ErrInvalidInput
+	}
+	if *input.AdjustedScore < 0 || *input.AdjustedScore > final.MaxScore {
+		return nil, ErrInvalidInput
+	}
+	previous := final.Score
+	final.Score = *input.AdjustedScore
+	final.Locked = true
+	final.Status = "locked"
+	s.finals[finalID] = final
+	submission := s.submissions[key(item.ExamID, item.StudentID)]
+	submission.TotalScore += final.Score - previous
+	submission.Locked = true
+	submission.Status = "published"
+	s.submissions[key(item.ExamID, item.StudentID)] = submission
+	created := ScoreAdjustment{
+		ID:                s.id("score-adjustment"),
+		TenantID:          tenantID,
+		AppealID:          item.ID,
+		ExamID:            item.ExamID,
+		SubmissionID:      item.SubmissionID,
+		SubmissionGradeID: item.SubmissionGradeID,
+		FinalGradeID:      finalID,
+		QuestionID:        final.QuestionID,
+		QuestionNo:        final.QuestionNo,
+		PreviousScore:     previous,
+		AdjustedScore:     final.Score,
+		Delta:             final.Score - previous,
+		Reason:            input.Reason,
+		AdjustedBy:        actorID,
+		CreatedAt:         now,
+	}
+	s.adjustments[item.ID] = append(s.adjustments[item.ID], created)
+	item.FinalGradeID = finalID
+	item.QuestionID = final.QuestionID
+	item.QuestionNo = final.QuestionNo
+	return &created, nil
 }
 
 func (s *MemoryStore) CloseAppeal(_ context.Context, tenantID string, id string, actorID string, input CloseAppealInput) (Appeal, error) {

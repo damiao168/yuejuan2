@@ -1,36 +1,25 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, App } from "antd";
-import { ApiClientError, getSafeUserText } from "../../../api/client";
-import { loadReviewDraftFallback, removeReviewDraftFallback, saveReviewDraftFallback } from "../../../auth/reviewDraftFallback";
+import { useQueryClient } from "@tanstack/react-query";
+import { App } from "antd";
+import { removeReviewDraftFallback, saveReviewDraftFallback } from "../../../auth/reviewDraftFallback";
 import {
   renewReviewTask,
-  saveReviewDraft,
   verifyEvidence
 } from "../../../api/review";
-import { EmptyState, ErrorState, LoadingState } from "../../../components/PageState";
-import { appQueryClient } from "../../../query/client";
-import { reviewTaskContextKeys } from "../../../query/reviewTaskContext";
+import { isReviewTaskContextScopeCurrent, reviewTaskContextKeys, useReviewTaskContextScope } from "../../../query/reviewTaskContext";
 import type { GoldPaperNominationCandidate } from "../../gold-papers";
 import {
   createDraftSnapshot,
   createInitialDraft,
-  fallbackSnapshot,
-  formatError,
-  latestGrade,
-  serverDraftSnapshot,
-  sourceDescriptions,
-  sourceLabels
+  formatError
 } from "./gradingWorkbench.model";
-import { loadTaskContext } from "./gradingTaskContext";
 import type { DraftConflictResolution } from "./draftConflict";
 import type {
   DraftSaveStatus,
   ScoreDraft,
   WorkbenchContext
 } from "./gradingWorkbench.types";
-import { AnswerEvidencePane } from "./components/AnswerEvidencePane";
-import { EvidenceInspector } from "./components/EvidenceInspector";
-import { ScoreEditor } from "./components/ScoreEditor";
+import { WorkbenchTaskContent } from "./components/WorkbenchTaskContent";
 import { TaskRail } from "./components/TaskRail";
 import { WorkbenchHeader } from "./components/WorkbenchHeader";
 import { WorkbenchOverlays } from "./components/WorkbenchOverlays";
@@ -46,8 +35,13 @@ import { useGradingScoreShortcuts } from "./hooks/useGradingScoreShortcuts";
 import { useGradingQueueActions } from "./hooks/useGradingQueueActions";
 import { useGradingReviewActions } from "./hooks/useGradingReviewActions";
 import { useGradingMathActions } from "./hooks/useGradingMathActions";
-import { mathEvidenceBinding, mathSuggestionState, type MathStepSelection } from "./mathWorkbenchEvidence";
+import type { MathStepSelection } from "./mathWorkbenchEvidence";
+import { commitWorkbenchDraft, readQueuedWorkbenchContext, restoreWorkbenchDraft } from "./workbenchDraftLifecycle";
+import { canAdoptWorkbenchGrade, reviewDraftState, selectWorkbenchGrade, visibleMathSelection } from "./workbenchReviewState";
 import { requiresExplicitSecondOpinion } from "./reviewContext";
+import { useUnsavedChangesGuard } from "../../../router/useUnsavedChangesGuard";
+import { AssignmentPreview } from "./components/AssignmentPreview";
+import type { ReviewTask } from "../../../api/review";
 
 export interface GradingWorkbenchProps {
   canWork: boolean;
@@ -62,8 +56,25 @@ export interface GradingWorkbenchProps {
   personalScope?: boolean;
 }
 
-export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage, canGrade, canVerifyEvidence, canReturn, currentUserId, currentTenantId, initialExamId = "", personalScope = false }: GradingWorkbenchProps) {
-  const { message } = App.useApp();
+function mathRequestDisabledReason(canGrade: boolean, canEditDraft: boolean) {
+  // 无评分权限时先解释身份限制，不能被当前任务只读的原因覆盖。
+  if (!canGrade) return "当前身份无重新生成数学建议的权限；请按冻结细则人工评分，需要重新生成时请联系管理员。";
+  if (!canEditDraft) return "当前任务只读；请先领取属于你的可编辑任务，再重新生成建议。";
+  return undefined;
+}
+
+export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage, canGrade, canVerifyEvidence, canReturn, currentUserId, currentTenantId, initialExamId = "", personalScope = false }: Readonly<GradingWorkbenchProps>) {
+  const { message, modal } = App.useApp();
+  const queryClient = useQueryClient();
+  const queryScope = useReviewTaskContextScope(initialExamId, canViewOriginalImage);
+  const activeQueryScope = useRef<typeof queryScope | null>(queryScope);
+  activeQueryScope.current = queryScope;
+  // 会话未变也可能切考试或查看权限；旧动作只能回填它发起时的工作台。
+  const isCurrentScope = useCallback(() => activeQueryScope.current === queryScope && isReviewTaskContextScopeCurrent(queryScope), [queryScope]);
+  useEffect(() => {
+    activeQueryScope.current = queryScope;
+    return () => { if (activeQueryScope.current === queryScope) activeQueryScope.current = null; };
+  }, [queryScope]);
   const hasSession = true;
   const reportNoNextTask = useCallback((text: string) => message.info(text), [message]);
   const queue = useGradingQueue({ canManageTasks, canWork, currentUserId, initialExamId, personalScope, onInfo: reportNoNextTask });
@@ -76,12 +87,14 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
     loadTasks, loadMoreTasks, refreshTaskAggregate, loadGraders, reset: resetQueue
   } = queue;
   const actionLock = useRef(false);
+  const actionGeneration = useRef(0);
   const [ctx, setCtx] = useState<WorkbenchContext | null>(null);
   const [contextLoading, setContextLoading] = useState(false);
   const [contextError, setContextError] = useState<string | null>(null);
   const [draft, setDraft] = useState<ScoreDraft>(() => createInitialDraft(null));
   const [quickSubmit, setQuickSubmit] = useState(false);
   const [actioning, setActioning] = useState<string | null>(null);
+  const [assignmentPreview, setAssignmentPreview] = useState<ReviewTask[] | null>(null);
   const [mathRequesting, setMathRequesting] = useState(false);
   const [mathRequestNotice, setMathRequestNotice] = useState("");
   const [mathSelection, setMathSelection] = useState<MathStepSelection | null>(null);
@@ -110,6 +123,7 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
   const subjectCode = ctx?.reviewContext.subject_tool_hints.subject_code ?? "";
   const math = useMathWorkbenchEvidence(ctx?.task.answer_segment_id ?? "", subjectCode, ctx?.reviewContext.question_snapshot.id ?? "");
   const { prefetchedTaskRef, prefetchedPreviewRef } = useGradingPrefetch({
+    queryScope,
     canWork,
     canViewOriginalImage,
     currentUserId,
@@ -138,21 +152,22 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
     onPointerDown,
     onPointerMove,
     onPointerUp,
+    onKeyDown: onViewerKeyDown,
     onImageLoad
   } = useAnswerViewer({ context: ctx, canViewOriginalImage, prefetchedPreviewRef, contentRevision: math.state.understanding?.artifact.input_hash });
-  const selectedGrade = useMemo(() => (subjectCode === "mathematics" ? latestGrade((ctx?.aiGrades ?? []).filter((grade) => mathSuggestionState(grade, math.state, math.dirty).current)) : undefined)
-    ?? latestGrade(ctx?.aiGrades ?? []), [ctx?.aiGrades, math.dirty, math.state, subjectCode]);
-  const canAdoptAiScore = Boolean(selectedGrade && selectedGrade.delivery_mode !== "shadow_only" && !mathRequesting
-    && !requiresExplicitSecondOpinion(ctx!.reviewContext) && (subjectCode !== "mathematics" || mathSuggestionState(selectedGrade, math.state, math.dirty).current));
-  const currentMathSelection = mathSelection && !math.dirty && !["conflict", "loading", "unavailable"].includes(math.state.phase)
-    && math.state.understanding && mathSelection.binding === mathEvidenceBinding(math.state.understanding) ? mathSelection : null;
+  const selectedGrade = useMemo(() => selectWorkbenchGrade(ctx?.aiGrades ?? [], subjectCode, math.state, math.dirty), [ctx?.aiGrades, math.dirty, math.state, subjectCode]);
+  const canAdoptAiScore = canAdoptWorkbenchGrade(selectedGrade, ctx, mathRequesting, subjectCode, math.state, math.dirty);
+  const currentMathSelection = visibleMathSelection(mathSelection, math.state, math.dirty);
   useEffect(() => { setMathRequestNotice(""); setMathSelection(null); setMathRequesting(false); }, [selectedTaskId]);
   const maxScore = ctx?.question?.score ?? selectedGrade?.max_score ?? 0;
   const rubricPoints = ctx?.question?.rubric?.points ?? [];
   const scoreShortcuts = useGradingScoreShortcuts({ draft, setDraft, rubricPoints, onInfo: (text) => message.info(text) });
-  const ownsSelectedTask = Boolean(ctx?.task.assigned_to && ctx.task.assigned_to === currentUserId);
-  const canEditDraft = canWork && hasSession && ownsSelectedTask && !resolvingConflict && !draftConflict && Boolean(ctx && ["assigned", "in_progress", "returned"].includes(ctx.task.status));
-  const canSubmit = canEditDraft && draftSaveStatus !== "conflict" && !actioning && draft.score !== null;
+  const { ownsSelectedTask, canEditDraft, unsyncedDraft, canSubmit } = reviewDraftState({
+    ctx, currentUserId, canWork, hasSession, resolvingConflict, hasConflict: Boolean(draftConflict),
+    hydrated: draftHydrated, saveStatus: draftSaveStatus, actioning,
+    snapshot: createDraftSnapshot(draft, viewerMode, scale, rotation, offset, autoFit), lastSavedSnapshot: lastSavedDraft.current
+  });
+  useUnsavedChangesGuard({ dirty: unsyncedDraft || math.dirty, busy: Boolean(actioning), description: "当前评分或证据修改尚未同步到服务端，离开后只能恢复已成功保存的版本。" });
   const canUndoScoreChange = scoreShortcuts.canUndo;
   const examScoring = useExamScoring({ initialExamId, currentUserId, currentTenantId, canGrade, onTasksChanged: loadTasks });
 
@@ -178,70 +193,38 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
     setDraftHydrated(false);
     prepareViewerContext();
     try {
-      // A return to the same task must observe its last in-flight save before
-      // hydrating the server revision and local fallback.
       const draftKey = JSON.stringify([currentUserId, taskId]);
-      const hadPendingSave = draftSaves.current.hasPending(draftKey);
-      await draftSaves.current.whenIdle(draftKey);
-      if (requestId !== contextRequestRef.current) return;
-      if (hadPendingSave || discardConflictingDraft) {
-        appQueryClient.removeQueries({ queryKey: reviewTaskContextKeys.detail(taskId) });
-        prefetchedTaskRef.current.delete(taskId);
-      }
-      const prefetched = prefetchedTaskRef.current.get(taskId);
-      prefetchedTaskRef.current.delete(taskId);
-      const next = prefetched
-        ? (await prefetched).context
-        : await loadTaskContext(taskId, canViewOriginalImage);
-      if (requestId !== contextRequestRef.current) return;
+      const next = await readQueuedWorkbenchContext({
+        queryClient, queryScope, taskId, draftKey, requestId, requestRef: contextRequestRef, saves: draftSaves.current,
+        prefetched: prefetchedTaskRef.current, discardConflictingDraft, canViewOriginalImage
+      });
+      if (!next || requestId !== contextRequestRef.current) return;
       if (initialExamId && next.task.exam_id !== initialExamId) {
         setSelectedTaskId("");
         setContextError("该阅卷任务不属于当前考试，已停止加载。");
         return;
       }
-      const reviewerOwnsTask = next.task.assigned_to === currentUserId;
-      // Blind quality samples use the ordinary workbench but deliberately do
-      // not participate in the review task's draft or lease endpoints.
-      const mayPersistDraft = reviewerOwnsTask && next.reviewContext.claim.can_renew;
-      const initial = createInitialDraft(next);
-      const draftResult = { draft: reviewerOwnsTask ? next.reviewContext.draft : null };
-      const server = serverDraftSnapshot(initial, draftResult.draft, canViewOriginalImage);
-      let restored = server.snapshot.draft;
-      let restoredViewer = server.snapshot.viewer;
-      const revision = server.revision;
-      const serverSnapshot = server.snapshot;
-      const localDraft = mayPersistDraft ? loadReviewDraftFallback<unknown>(currentUserId, taskId) : null;
-      const localSnapshot = localDraft ? fallbackSnapshot(localDraft.snapshot, initial) : null;
       const isConflicted = conflictedDrafts.current.has(draftKey) && !discardConflictingDraft;
-      const useLocalDraft = Boolean(localDraft && localSnapshot && (isConflicted || localDraft.updatedAt > server.updatedAt));
-      if (useLocalDraft && localSnapshot) {
-        restored = localSnapshot.draft;
-        restoredViewer = localSnapshot.viewer.mode === "original" && !canViewOriginalImage
-          ? { ...localSnapshot.viewer, mode: "segment" }
-          : localSnapshot.viewer;
-        setDraftSaveStatus(isConflicted ? "conflict" : "offline");
-      } else {
-        if (localDraft) removeReviewDraftFallback(currentUserId, taskId);
-        setDraftSaveStatus(isConflicted ? "conflict" : mayPersistDraft ? (draftResult.draft ? "saved" : "idle") : "readonly");
-      }
+      const { restored, status, server, mayPersistDraft } = restoreWorkbenchDraft(next, { taskId, currentUserId, canViewOriginalImage, isConflicted });
+      setDraftSaveStatus(status);
       if (discardConflictingDraft) {
         removeReviewDraftFallback(currentUserId, taskId);
         conflictedDrafts.current.delete(draftKey);
       }
-      setDraft(restored);
+      setDraft(restored.draft);
       scoreShortcuts.reset();
-      setDraftRevision(revision);
-      draftSaves.current.observeRevision(draftKey, revision);
-      restoreViewer(restoredViewer);
+      setDraftRevision(server.revision);
+      draftSaves.current.observeRevision(draftKey, server.revision);
+      restoreViewer(restored.viewer);
       setCtx(next);
-      lastSavedDraft.current = JSON.stringify(serverSnapshot);
+      lastSavedDraft.current = JSON.stringify(server.snapshot);
       setDraftHydrated(mayPersistDraft);
     } catch (currentError) {
-      if (requestId === contextRequestRef.current) setContextError(formatError(currentError));
+      if (requestId === contextRequestRef.current && isReviewTaskContextScopeCurrent(queryScope)) setContextError(formatError(currentError));
     } finally {
-      if (requestId === contextRequestRef.current) setContextLoading(false);
+      if (requestId === contextRequestRef.current && isReviewTaskContextScopeCurrent(queryScope)) setContextLoading(false);
     }
-  }, [canViewOriginalImage, currentUserId, hasSession, initialExamId, invalidateViewerContent, prepareViewerContext, restoreViewer]);
+  }, [canViewOriginalImage, currentUserId, hasSession, initialExamId, invalidateViewerContent, prepareViewerContext, restoreViewer, queryClient, queryScope]);
 
   useEffect(() => {
     const updateOnlineState = () => setOnline(navigator.onLine);
@@ -254,7 +237,7 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
   }, []);
 
   useEffect(() => {
-    if (!draftHydrated || !ctx || ctx.task.assigned_to !== currentUserId || ctx.task.status === "submitted") return;
+    if (!draftHydrated || ctx?.task.assigned_to !== currentUserId || ctx.task.status === "submitted") return;
     const snapshotValue = createDraftSnapshot(draft, viewerMode, scale, rotation, offset, autoFit);
     const snapshot = JSON.stringify(snapshotValue);
     if (snapshot === lastSavedDraft.current) return;
@@ -263,60 +246,26 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
     const taskId = ctx.task.id;
     const draftKey = JSON.stringify([currentUserId, taskId]);
     const generation = contextRequestRef.current;
-    const commit = async (leavingTask = false) => {
-      if ((!leavingTask && activeTask.current !== taskId) || conflictedDrafts.current.has(draftKey)) return;
-      if (!online) {
-        if (!leavingTask) setDraftSaveStatus("offline");
-        return;
-      }
-      if (!leavingTask) setDraftSaveStatus("saving");
-      try {
-        const savedRevision = await draftSaves.current.enqueue(draftKey, async (expectedRevision) => {
-          // A queued intermediate edit is superseded by the newest local copy.
-          const pending = loadReviewDraftFallback<unknown>(currentUserId, taskId);
-          if (!pending || JSON.stringify(pending.snapshot) !== snapshot || conflictedDrafts.current.has(draftKey)) return null;
-          const selections = Object.entries(draft.rubricSelections).filter(([, value]) => Number(value) > 0).map(([point_id, value]) => ({ point_id, score: Number(value) }));
-          const result = await saveReviewDraft(taskId, {
-            score: draft.score,
-            rubric_selections: selections,
-            comments: draft.comments,
-            private_note: draft.privateNote,
-            student_feedback: draft.studentFeedback,
-            viewer_state: { mode: viewerMode, scale, rotation, offset, fit: autoFit },
-            expected_revision: expectedRevision,
-            client_updated_at: new Date().toISOString()
-          });
-          appQueryClient.removeQueries({ queryKey: reviewTaskContextKeys.detail(taskId) });
-          prefetchedTaskRef.current.delete(taskId);
-          const latest = loadReviewDraftFallback<unknown>(currentUserId, taskId);
-          const stillCurrent = Boolean(latest && JSON.stringify(latest.snapshot) === snapshot);
-          if (stillCurrent) removeReviewDraftFallback(currentUserId, taskId);
-          return result.draft.revision;
-        });
-        if (savedRevision === null) return;
-        const latest = loadReviewDraftFallback<unknown>(currentUserId, taskId);
-        const stillCurrent = !latest || JSON.stringify(latest.snapshot) === snapshot;
-        if (generation === contextRequestRef.current && activeTask.current === taskId) {
-          lastSavedDraft.current = snapshot;
-          setDraftRevision(savedRevision);
-          setDraftSaveStatus(stillCurrent ? "saved" : "saving");
-        }
-      } catch (currentError) {
-        if (currentError instanceof ApiClientError && currentError.status === 409) conflictedDrafts.current.add(draftKey);
-        if (generation === contextRequestRef.current && activeTask.current === taskId) {
-          setDraftSaveStatus(currentError instanceof ApiClientError && currentError.status === 409 ? "conflict" : (!navigator.onLine ? "offline" : "error"));
-        }
-      }
-    };
+    const commit = (leavingTask = false) => commitWorkbenchDraft({
+      queryClient, queryScope, currentUserId, taskId, draftKey, generation, snapshot, snapshotValue, online,
+      activeTask, contextRequestRef, conflictedDrafts, draftSaves, prefetchedTaskRef,
+      lastSavedDraft, setDraftRevision, setDraftSaveStatus
+    }, leavingTask);
     const timer = window.setTimeout(() => { void commit(); }, 1200);
     return () => {
       window.clearTimeout(timer);
+      // 同账号切换题目时补存上一题；换账号不触发旧账号的离开保存。
       if (activeUserId.current === currentUserId && activeTask.current !== taskId) void commit(true);
     };
-  }, [autoFit, ctx, currentUserId, draft, draftHydrated, draftRevision, offset, online, rotation, scale, viewerMode]);
+  }, [autoFit, ctx, currentUserId, draft, draftHydrated, draftRevision, offset, online, rotation, scale, viewerMode, queryClient, queryScope]);
 
   useEffect(() => {
     resetQueue();
+    actionGeneration.current += 1;
+    actionLock.current = false;
+    mathActionLock.current = false;
+    setActioning(null);
+    setAssignmentPreview(null);
     contextRequestRef.current += 1;
     prefetchedTaskRef.current.clear();
     prefetchedPreviewRef.current.clear();
@@ -328,11 +277,13 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
     setDraftHydrated(false);
     setDraftSaveStatus("idle");
     lastSavedDraft.current = "";
-  }, [currentUserId, initialExamId, prepareViewerContext, resetQueue]);
+  }, [currentUserId, currentTenantId, initialExamId, prepareViewerContext, resetQueue, queryScope]);
 
   useEffect(() => {
+    // 同账号解锁会更新会话代次但不改变 loadTasks 的引用；清队列后仍需重新读取。
+    if (!isReviewTaskContextScopeCurrent(queryScope)) return;
     void loadTasks();
-  }, [loadTasks]);
+  }, [loadTasks, queryScope]);
 
   useEffect(() => {
     void loadGraders();
@@ -345,46 +296,56 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
   useEffect(() => {
     if (
       !selectedTaskId ||
-      !ctx ||
-      !ctx.reviewContext.claim.can_renew ||
+      !ctx?.reviewContext.claim.can_renew ||
       ctx.task.assigned_to !== currentUserId ||
       !["assigned", "in_progress", "returned"].includes(ctx.task.status)
     ) return;
-    const renew = () => void renewReviewTask(selectedTaskId).catch(() => setDraftSaveStatus("error"));
-    // Establish the lease as soon as an assigned task is opened. Waiting for
-    // the first interval leaves the task without a claim during the initial
-    // editing window and makes release/renew state inconsistent.
+    let active = true;
+    const renew = () => {
+      if (!active || !isCurrentScope() || activeTask.current !== selectedTaskId) return;
+      void renewReviewTask(selectedTaskId).catch(() => {
+        if (active && isCurrentScope() && activeTask.current === selectedTaskId) setDraftSaveStatus("error");
+      });
+    };
+    // 打开可续租且归属当前用户的任务时立即续租，之后每五分钟延续；只读质检不续租。
     renew();
     const timer = window.setInterval(renew, 5 * 60 * 1000);
-    return () => window.clearInterval(timer);
-  }, [ctx, currentUserId, selectedTaskId]);
+    return () => { active = false; window.clearInterval(timer); };
+  }, [ctx, currentUserId, selectedTaskId, isCurrentScope]);
 
   const refreshCurrent = async () => {
-    if (selectedTaskId) {
-      await appQueryClient.invalidateQueries({ queryKey: reviewTaskContextKeys.detail(selectedTaskId) });
+    if (selectedTaskId && isCurrentScope() && activeTask.current === selectedTaskId) {
+      await queryClient.invalidateQueries({ queryKey: reviewTaskContextKeys.task(queryScope, selectedTaskId) });
+      if (!isCurrentScope() || activeTask.current !== selectedTaskId) return;
       await loadContext(selectedTaskId);
+      if (!isCurrentScope() || activeTask.current !== selectedTaskId) return;
       await loadTasks();
-      if (!math.dirty) await math.refresh();
+      if (isCurrentScope() && activeTask.current === selectedTaskId && !math.dirty) await math.refresh();
     }
   };
 
   const runAction = async (key: string, action: () => Promise<void>, successText: string) => {
-    if (actionLock.current) return;
+    if (actionLock.current || !isCurrentScope()) return;
+    const generation = ++actionGeneration.current;
     actionLock.current = true;
     setActioning(key);
     try {
       await action();
-      message.success(successText);
+      if (generation === actionGeneration.current && isCurrentScope()) message.success(successText);
     } catch (currentError) {
-      message.error(formatError(currentError));
+      if (generation === actionGeneration.current && isCurrentScope()) message.error(formatError(currentError));
     } finally {
-      actionLock.current = false;
-      setActioning(null);
+      // 旧动作不能解开新会话的操作锁，也不能把新操作的提示清空。
+      if (generation === actionGeneration.current && isCurrentScope()) {
+        actionLock.current = false;
+        setActioning(null);
+      }
     }
   };
-  const { assignSelectedTasks, claimTask, goNext, releaseCurrentTask } = useGradingQueueActions({
+  const { assignPlannedTasks, claimTask, goNext, releaseCurrentTask } = useGradingQueueActions({
+    isCurrentScope,
     canManageTasks,
-    initialExamId,
+    initialExamId: queue.effectiveExamId,
     ctx,
     filteredTasks,
     assignableTasks,
@@ -418,6 +379,8 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
   });
 
   const reviewActions = useGradingReviewActions({
+    isCurrentScope,
+    queryScope,
     ctx, setCtx, draft, setDraft, draftConflict, canSubmit, canReturn, canEditDraft,
     canAdoptAiScore, canViewOriginalImage, canManageTasks, hasMoreTasks, currentUserId, selectedTaskId,
     nextTask, selectedGrade, subjectCode, maxScore, rubricPoints, viewerMode, scale, rotation, offset, autoFit,
@@ -433,8 +396,9 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
       error: (text) => message.error(text)
     }
   });
-  const { submitGrade, markDispute, adoptAiScore, openDraftConflict, applyDraftConflict, confirmReturnTask } = reviewActions;
+  const { submitGrade, markDispute, adoptAiScore, adoptAiFeedback, openDraftConflict, applyDraftConflict, confirmReturnTask } = reviewActions;
   const { refreshMath, selectMathEvidenceStep, requestMathSuggestion } = useGradingMathActions({
+    queryScope, isCurrentScope,
     ctx, canGrade, canEditDraft, viewerMode, math, activeTask, mathActionLock,
     setCtx, setMathRequesting, setMathRequestNotice, setMathSelection, changeViewerMode,
     notifyInfo: (text) => message.info(text)
@@ -459,6 +423,13 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
     onUndoScoreChange: scoreShortcuts.undo,
     onZoom: zoomViewer
   });
+
+  const changeQueueScope = (change: () => void) => {
+    if (actioning) { message.info("正在提交或分配，请等待结果后切换。"); return; }
+    if (!math.dirty) { change(); return; }
+    const taskId = selectedTaskId;
+    modal.confirm({ title: "放弃未保存的证据校正并切换？", content: "当前证据校正尚未保存。评分草稿以服务端或本机兜底保存状态为准。", okText: "放弃并切换", cancelText: "继续校正", onOk: () => { if (isCurrentScope() && activeTask.current === taskId) change(); } });
+  };
 
   return (
     <div className="grading-shell">
@@ -498,6 +469,12 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
 
       <section className="grading-workspace">
         <TaskRail
+          scope={queue}
+          fixedExam={Boolean(initialExamId)}
+          onExamChange={(id) => changeQueueScope(() => { queue.setExamFilter(id); queue.setQuestionFilter(""); })}
+          onSubjectChange={(subject) => changeQueueScope(() => { queue.setSubjectFilter(subject); queue.setExamFilter(""); queue.setQuestionFilter(""); })}
+          onQuestionChange={(id) => changeQueueScope(() => queue.setQuestionFilter(id))}
+          onUnassignedChange={(value) => changeQueueScope(() => queue.setUnassignedOnly(value))}
           canManageTasks={canManageTasks}
           canWork={canWork}
           queueScope={queueScope}
@@ -518,121 +495,57 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
           pageError={pageError}
           loadingMoreTasks={loadingMoreTasks}
           actioning={actioning}
-          onQueueScopeChange={setQueueScope}
-          onTaskFilterChange={setTaskFilter}
-          onKeywordChange={setKeyword}
+          onQueueScopeChange={(scope) => changeQueueScope(() => setQueueScope(scope))}
+          onTaskFilterChange={(filter) => changeQueueScope(() => setTaskFilter(filter))}
+          onKeywordChange={(text) => changeQueueScope(() => setKeyword(text))}
           onAssignmentUserChange={setAssignmentUserId}
           onSelectAllAssignments={(selected) => setAssignmentTaskIds(selected ? assignableTasks.map((task) => task.id) : [])}
           onToggleAssignment={(taskId, selected) => setAssignmentTaskIds((current) => selected ? [...new Set([...current, taskId])] : current.filter((id) => id !== taskId))}
-          onAssignSelected={assignSelectedTasks}
+          onPreviewAssignments={() => setAssignmentPreview(assignableTasks.filter((task) => assignmentTaskIds.includes(task.id)).map((task) => ({ ...task })))}
           onSelectTask={(taskId) => {
-            pendingNextRef.current = null;
-            suppressAutoSelectRef.current = false;
-            setSelectedTaskId(taskId);
+            changeQueueScope(() => { pendingNextRef.current = null; suppressAutoSelectRef.current = false; setSelectedTaskId(taskId); });
           }}
           onLoadTasks={loadTasks}
           onLoadMoreTasks={loadMoreTasks}
         />
 
-        {contextLoading ? (
-          <main className="grading-main-empty">
-            <LoadingState label="正在加载答卷" />
-          </main>
-        ) : contextError ? (
-          <main className="grading-main-empty">
-            <ErrorState message={contextError} onRetry={() => void loadContext(selectedTaskId)} />
-          </main>
-        ) : !ctx ? (
-          <main className="grading-main-empty">
-            <EmptyState
-              title="请选择一份答卷"
-              description={tasks.length > 0
-                ? canManageTasks ? "从左侧队列选择需要检查的答卷。" : "从左侧任务队列选择一份答卷开始阅卷。"
-                : canManageTasks ? "当前没有待处理任务。" : "当前没有已分配任务，请等待管理员分配。"}
-            />
-          </main>
-        ) : (
-          <main className="grading-main">
-            {ctx.warnings.length > 0 ? <Alert type="warning" showIcon message="AI 辅助不可用" description={ctx.warnings.map((warning) => getSafeUserText(warning, "智能辅助暂时不可用")).join("；")} /> : null}
-            <section className="grading-reason-banner"><div><span>为什么需要我处理？</span><strong>{sourceLabels[ctx.task.source] ?? "本题需要人工确认"}</strong><p>{ctx.warnings[0] ? getSafeUserText(ctx.warnings[0], "智能辅助暂时不可用，请人工确认。") : sourceDescriptions[ctx.task.source] ?? "请结合学生原始答案和评分细则完成确认。"}</p></div>{selectedGrade && !requiresExplicitSecondOpinion(ctx.reviewContext) ? <div><span>系统建议</span><strong>{subjectCode === "mathematics" && !canAdoptAiScore ? "待核对 / 已失效" : `${selectedGrade.suggested_score} / ${selectedGrade.max_score}`}</strong></div> : null}</section>
-
-            <section className="grading-panels">
-              <AnswerEvidencePane
-                context={ctx}
-                preview={preview}
-                previewLoading={previewLoading}
-                viewerMode={viewerMode}
-                scale={scale}
-                autoFit={autoFit}
-                imageSize={imageSize}
-                rotation={rotation}
-                offset={offset}
-                dragging={dragging}
-                viewportRef={viewportRef}
-                canViewOriginalImage={canViewOriginalImage}
-                canEditDraft={canEditDraft}
-                rubricPoints={rubricPoints}
-                onChangeViewerMode={changeViewerMode}
-                onZoom={zoomViewer}
-                onRotate={rotateViewer}
-                onFit={() => applyViewerFit(imageSize, true)}
-                onPointerDown={onPointerDown}
-                onPointerMove={onPointerMove}
-                onPointerUp={onPointerUp}
-                onImageLoad={onImageLoad}
-                mathSelection={currentMathSelection}
-              />
-
-              <aside className="grading-inspector">
-                <EvidenceInspector
-                  context={ctx}
-                  draft={draft}
-                  selectedGrade={selectedGrade}
-                  maxScore={maxScore}
-                  canEditDraft={canEditDraft}
-                  canVerifyEvidence={canVerifyEvidence}
-                  actioning={actioning}
-                  math={math}
-                  onRefreshMath={refreshMath}
-                  onSelectMathStep={selectMathEvidenceStep}
-                  canRequestMath={canGrade && canEditDraft && !requiresExplicitSecondOpinion(ctx.reviewContext)}
-                  requestingMath={mathRequesting}
-                  onRequestMath={() => void requestMathSuggestion()}
-                  mathRequestNotice={mathRequestNotice}
-                  onVerifyEvidence={() => runAction(
-                    "evidence",
-                    async () => {
-                      const result = await verifyEvidence(selectedGrade!.id);
-                      setCtx((current) => (current ? { ...current, evidenceJob: result.job } : current));
-                    },
-                    "证据校验完成"
-                  )}
-                />
-                <ScoreEditor
-                  context={ctx}
-                  draft={draft}
-                  setDraft={setDraft}
-                  quickSubmit={quickSubmit}
-                  onQuickSubmitChange={setQuickSubmit}
-                  maxScore={maxScore}
-                  rubricPoints={rubricPoints}
-                  selectedGrade={selectedGrade}
-                  canEditDraft={canEditDraft}
-                  canSubmit={canSubmit}
-                  canReturn={canReturn}
-                  canManageTasks={canManageTasks}
-                  actioning={actioning}
-                  onAdoptAiScore={() => void adoptAiScore()}
-                  canAdoptAiScore={canAdoptAiScore}
-                  onMarkDispute={markDispute}
-                  onSubmit={submitGrade}
-                />
-              </aside>
-            </section>
-
-          </main>
-        )}
+        <WorkbenchTaskContent
+          context={ctx} loading={contextLoading} error={contextError} hasTasks={tasks.length > 0}
+          canManageTasks={canManageTasks} onRetry={() => void loadContext(selectedTaskId)}
+          selectedGrade={selectedGrade} subjectCode={subjectCode} canAdoptAiScore={canAdoptAiScore}
+          answer={{
+            preview, previewLoading, viewerMode, scale, autoFit, imageSize, rotation, offset, dragging,
+            viewportRef, canViewOriginalImage, canEditDraft, rubricPoints,
+            onChangeViewerMode: changeViewerMode, onZoom: zoomViewer, onRotate: rotateViewer,
+            onFit: () => applyViewerFit(imageSize, true), onPointerDown, onPointerMove, onPointerUp,
+            onImageLoad, onKeyDown: onViewerKeyDown, mathSelection: currentMathSelection
+          }}
+          evidence={{
+            draft, selectedGrade, maxScore, canEditDraft, canVerifyEvidence, actioning, math,
+            onRefreshMath: refreshMath, onSelectMathStep: selectMathEvidenceStep,
+            canRequestMath: canGrade && canEditDraft && !requiresExplicitSecondOpinion(ctx!.reviewContext),
+            mathDisabledReason: mathRequestDisabledReason(canGrade, canEditDraft),
+            requestingMath: mathRequesting, onRequestMath: () => void requestMathSuggestion(), mathRequestNotice,
+            onVerifyEvidence: () => {
+              if (!ctx || !selectedGrade || !isCurrentScope()) return Promise.resolve();
+              const taskId = ctx.task.id;
+              const requestId = contextRequestRef.current;
+              return runAction("evidence", async () => {
+                const result = await verifyEvidence(selectedGrade.id);
+                // 同一会话内仍可换题或刷新版本；旧建议的校验结果不能写进新题的证据面板。
+                if (!isCurrentScope() || activeTask.current !== taskId || contextRequestRef.current !== requestId) return;
+                setCtx((current) => current?.task.id === taskId ? { ...current, evidenceJob: result.job } : current);
+              }, "证据校验完成");
+            }
+          }}
+          editor={{
+            draft, setDraft, quickSubmit, onQuickSubmitChange: setQuickSubmit, maxScore, rubricPoints,
+            selectedGrade, canEditDraft, canSubmit, canReturn, canManageTasks, actioning,
+            onAdoptAiScore: () => void adoptAiScore(), onAdoptAiFeedback: adoptAiFeedback, canAdoptAiScore, onMarkDispute: markDispute, onSubmit: submitGrade
+          }}
+        />
       </section>
+      {assignmentPreview ? <AssignmentPreview tasks={assignmentPreview} defaultGrader={assignmentUserId} options={graderOptions} unassignedCount={queue.unassignedCount} busy={actioning === "assign-tasks"} onCancel={() => setAssignmentPreview(null)} onConfirm={assignPlannedTasks} /> : null}
       <WorkbenchOverlays
         goldPaperManagerOpen={goldPaperManagerOpen}
         initialExamId={initialExamId}

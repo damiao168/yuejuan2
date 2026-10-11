@@ -18,11 +18,7 @@ func TestPlatformSchoolsOpenAPIContract(t *testing.T) {
 	}
 
 	paths := object(t, document, "paths")
-	operations := []struct {
-		path      string
-		operation string
-		responses []string
-	}{
+	operations := []platformSchoolOperationExpectation{
 		{"/api/v1/platform/schools", "listPlatformSchools", []string{"200", "400", "401", "403"}},
 		{"/api/v1/platform/schools/{tenant_id}", "getPlatformSchool", []string{"200", "401", "403", "404"}},
 		{"/api/v1/platform/schools/{tenant_id}/members", "listPlatformSchoolMembers", []string{"200", "400", "401", "403", "404"}},
@@ -32,20 +28,7 @@ func TestPlatformSchoolsOpenAPIContract(t *testing.T) {
 	}
 	seenOperationIDs := map[string]bool{}
 	for _, expected := range operations {
-		operation := object(t, object(t, paths, expected.path), "get")
-		if operation["operationId"] != expected.operation {
-			t.Fatalf("GET %s operationId = %#v, want %q", expected.path, operation["operationId"], expected.operation)
-		}
-		if seenOperationIDs[expected.operation] {
-			t.Fatalf("duplicate platform-school operationId %q", expected.operation)
-		}
-		seenOperationIDs[expected.operation] = true
-		responses := object(t, operation, "responses")
-		for _, status := range expected.responses {
-			if _, ok := responses[status]; !ok {
-				t.Errorf("GET %s is missing response %s", expected.path, status)
-			}
-		}
+		assertPlatformSchoolOperationContract(t, paths, seenOperationIDs, expected)
 	}
 
 	components := object(t, document, "components")
@@ -107,5 +90,28 @@ func TestPlatformSchoolRoutesAreOpenAPICovered(t *testing.T) {
 	}
 	for key := range want {
 		t.Errorf("route coverage is missing %s", key)
+	}
+}
+
+type platformSchoolOperationExpectation struct {
+	path, operation string
+	responses       []string
+}
+
+func assertPlatformSchoolOperationContract(t *testing.T, paths map[string]any, seenOperationIDs map[string]bool, expected platformSchoolOperationExpectation) {
+	t.Helper()
+	operation := object(t, object(t, paths, expected.path), "get")
+	if operation["operationId"] != expected.operation {
+		t.Fatalf("GET %s operationId = %#v, want %q", expected.path, operation["operationId"], expected.operation)
+	}
+	if seenOperationIDs[expected.operation] {
+		t.Fatalf("duplicate platform-school operationId %q", expected.operation)
+	}
+	seenOperationIDs[expected.operation] = true
+	responses := object(t, operation, "responses")
+	for _, status := range expected.responses {
+		if _, ok := responses[status]; !ok {
+			t.Errorf("GET %s is missing response %s", expected.path, status)
+		}
 	}
 }

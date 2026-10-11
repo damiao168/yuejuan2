@@ -1,0 +1,25 @@
+{
+  "files": [
+    {
+      "file": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+      "sha256": "bd1502a180a0a232298327814fcf7f8b0a8f4e4e5ce63a7978ffd5b8ea4dcf65",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_reliability_command_test.go"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+      "sha256": "7edf97740655428132aa074df4be9af936bf2f0bae9744d38aa34d7c11d37aeb",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_reliability_command_test.go"
+    }
+  ],
+  "issue_functions": [
+    {
+      "file": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+      "function": "e2eAssertCaptureCommandRecovery"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+      "function": "e2eAssertManualProjectionResolutionPreserved"
+    }
+  ],
+  "checkpoint_relation": "after checkpoint02; requires subsequent scan"
+}

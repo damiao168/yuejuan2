@@ -129,17 +129,9 @@ func (s *MemoryStore) GetOrCreateRun(_ context.Context, tenantID string, _ strin
 	if !validRunPanelRole(input.PanelID, input.AgentRole) {
 		return GradingRun{}, ErrInvalidInput
 	}
-	if input.PanelID != "" {
-		panel, ok := s.panels[key(tenantID, input.PanelID)]
-		if !ok || !panelRunSnapshotMatches(panel, input) {
-			return GradingRun{}, ErrIdempotencyConflict
-		}
-		for _, existing := range s.runs {
-			if existing.TenantID == tenantID && existing.PanelID == input.PanelID &&
-				existing.AgentRole == input.AgentRole && existing.RequestID != input.RequestID {
-				return GradingRun{}, ErrIdempotencyConflict
-			}
-		}
+	// 即使请求 ID 已存在，也先在同一锁内核对冻结面板与角色，不能借重放跳过绑定校验。
+	if err := s.validateRunPanelBindingLocked(tenantID, input); err != nil {
+		return GradingRun{}, err
 	}
 	runKey := key(tenantID, input.RequestID)
 	if existing, ok := s.runs[runKey]; ok {
@@ -163,6 +155,23 @@ func (s *MemoryStore) GetOrCreateRun(_ context.Context, tenantID string, _ strin
 		Status: status, AttemptCount: attemptCount, StartedAt: startedAt, CreatedAt: now, UpdatedAt: now}
 	s.runs[runKey] = run
 	return run, nil
+}
+
+func (s *MemoryStore) validateRunPanelBindingLocked(tenantID string, input CreateRunInput) error {
+	if input.PanelID == "" {
+		return nil
+	}
+	panel, ok := s.panels[key(tenantID, input.PanelID)]
+	if !ok || !panelRunSnapshotMatches(panel, input) {
+		return ErrIdempotencyConflict
+	}
+	for _, existing := range s.runs {
+		if existing.TenantID == tenantID && existing.PanelID == input.PanelID &&
+			existing.AgentRole == input.AgentRole && existing.RequestID != input.RequestID {
+			return ErrIdempotencyConflict
+		}
+	}
+	return nil
 }
 
 // 抢占在同一把锁内完成 queued 到 processing 的转换；未抢到时调用方必须复用已有结果或等待，不能重复调用模型。
@@ -218,30 +227,36 @@ func (s *MemoryStore) UpdateRun(_ context.Context, tenantID string, runID string
 		if input.Status != RunQueued && input.Status != RunProcessing && input.Status != RunSucceeded && input.Status != RunFailed && input.Status != RunConflict {
 			return GradingRun{}, ErrInvalidInput
 		}
-		run.Status = input.Status
-		if input.GradeID != "" {
-			run.GradeID = input.GradeID
-		}
-		if input.ErrorCode != "" {
-			run.ErrorCode = input.ErrorCode
-		}
-		if input.AttemptCount > 0 {
-			run.AttemptCount = input.AttemptCount
-		}
-		now := time.Now().UTC()
-		run.UpdatedAt = now
-		if input.Status == RunProcessing && run.StartedAt == nil {
-			run.StartedAt = &now
-		}
-		if input.Status == RunSucceeded || input.Status == RunFailed || input.Status == RunConflict {
-			run.CompletedAt = &now
-		} else {
-			run.CompletedAt = nil
-		}
+		run = applyMemoryRunUpdate(run, input)
 		s.runs[runKey] = run
 		return run, nil
 	}
 	return GradingRun{}, ErrNotFound
+}
+
+func applyMemoryRunUpdate(run GradingRun, input UpdateRunInput) GradingRun {
+	run.Status = input.Status
+	// 空关联字段和非正尝试次数表示本次不更新，不能清掉之前保存的运行事实。
+	if input.GradeID != "" {
+		run.GradeID = input.GradeID
+	}
+	if input.ErrorCode != "" {
+		run.ErrorCode = input.ErrorCode
+	}
+	if input.AttemptCount > 0 {
+		run.AttemptCount = input.AttemptCount
+	}
+	now := time.Now().UTC()
+	run.UpdatedAt = now
+	if input.Status == RunProcessing && run.StartedAt == nil {
+		run.StartedAt = &now
+	}
+	if input.Status == RunSucceeded || input.Status == RunFailed || input.Status == RunConflict {
+		run.CompletedAt = &now
+	} else {
+		run.CompletedAt = nil
+	}
+	return run
 }
 
 func (s *MemoryStore) CreateBatch(_ context.Context, tenantID string, actorID string, input CreateBatchInput) (GradingBatch, error) {
@@ -328,30 +343,8 @@ func (s *MemoryStore) RefreshBatch(_ context.Context, tenantID string, batchID s
 			batch.SegmentIDs = cloneStrings(batch.SegmentIDs)
 			return batch, nil
 		}
-		queued, processing, succeeded, failed := 0, 0, 0, 0
-		for _, run := range s.runs {
-			if run.TenantID != tenantID || run.BatchID != batchID {
-				continue
-			}
-			switch run.Status {
-			case RunQueued:
-				queued++
-			case RunProcessing:
-				processing++
-			case RunSucceeded:
-				succeeded++
-			case RunFailed, RunConflict:
-				failed++
-			}
-		}
-		status := "processing"
-		if succeeded+failed == batch.TotalCount {
-			if failed > 0 {
-				status = "failed"
-			} else {
-				status = "completed"
-			}
-		}
+		queued, processing, succeeded, failed := s.countBatchRunsLocked(tenantID, batchID)
+		status := batchStatusFromCounts(succeeded, failed, batch.TotalCount)
 		batch.Status, batch.QueuedCount, batch.ProcessingCount, batch.SucceededCount, batch.FailedCount = status, queued, processing, succeeded, failed
 		batch.UpdatedAt = time.Now().UTC()
 		s.batches[batchKey] = batch
@@ -359,6 +352,36 @@ func (s *MemoryStore) RefreshBatch(_ context.Context, tenantID string, batchID s
 		return batch, nil
 	}
 	return GradingBatch{}, ErrNotFound
+}
+
+func (s *MemoryStore) countBatchRunsLocked(tenantID, batchID string) (queued, processing, succeeded, failed int) {
+	for _, run := range s.runs {
+		if run.TenantID != tenantID || run.BatchID != batchID {
+			continue
+		}
+		switch run.Status {
+		case RunQueued:
+			queued++
+		case RunProcessing:
+			processing++
+		case RunSucceeded:
+			succeeded++
+		case RunFailed, RunConflict:
+			failed++
+		}
+	}
+	return queued, processing, succeeded, failed
+}
+
+func batchStatusFromCounts(succeeded, failed, total int) string {
+	// 冲突已经计入失败数；只有终态运行数等于批次总数时才能结束，不能凭部分成功提前完成。
+	if succeeded+failed != total {
+		return "processing"
+	}
+	if failed > 0 {
+		return "failed"
+	}
+	return "completed"
 }
 
 func (s *MemoryStore) UpdateBatch(_ context.Context, tenantID string, batchID string, input UpdateBatchInput) (GradingBatch, error) {

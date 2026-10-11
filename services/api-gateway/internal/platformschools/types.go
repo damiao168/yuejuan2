@@ -99,23 +99,26 @@ type ListResult struct {
 }
 
 type Member struct {
-	ID          string     `json:"id"`
-	Username    string     `json:"username"`
-	DisplayName string     `json:"display_name"`
-	PhoneMasked string     `json:"phone_masked,omitempty"`
-	EmployeeNo  string     `json:"employee_no,omitempty"`
-	Status      string     `json:"status"`
-	Roles       []string   `json:"roles"`
-	SchoolID    string     `json:"school_id,omitempty"`
-	CreatedAt   time.Time  `json:"created_at"`
-	ActivatedAt *time.Time `json:"activated_at,omitempty"`
-	LastLoginAt *time.Time `json:"last_login_at,omitempty"`
+	ID                  string     `json:"id"`
+	Username            string     `json:"username"`
+	DisplayName         string     `json:"display_name"`
+	PhoneMasked         string     `json:"phone_masked,omitempty"`
+	EmployeeNo          string     `json:"employee_no,omitempty"`
+	Status              string     `json:"status"`
+	Roles               []string   `json:"roles"`
+	SchoolID            string     `json:"school_id,omitempty"`
+	CreatedAt           time.Time  `json:"created_at"`
+	ActivatedAt         *time.Time `json:"activated_at,omitempty"`
+	ActivationExpiresAt *time.Time `json:"activation_expires_at,omitempty"`
+	LastLoginAt         *time.Time `json:"last_login_at,omitempty"`
 }
 
 type MemberSummary struct {
 	Total    int64 `json:"total"`
 	Active   int64 `json:"active"`
 	Disabled int64 `json:"disabled"`
+	Invited  int64 `json:"invited"`
+	Unknown  int64 `json:"unknown"`
 	Admins   int64 `json:"admins"`
 	Teachers int64 `json:"teachers"`
 	Graders  int64 `json:"graders"`

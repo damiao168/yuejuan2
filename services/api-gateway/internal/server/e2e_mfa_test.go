@@ -40,11 +40,36 @@ func TestTOTPManagementE2EWithPostgres(t *testing.T) {
 	}
 	token := session.Value
 	otherToken := e2eLoginWithTenant(t, router, "demo", "teacher", "ChangeMe123!")
+	fixture := e2eEnrollTOTPManagement(t, adminDB, scopedDB, router, mfaBrowserIdentity{Token: token, OtherToken: otherToken, Session: session})
+	newCodes := e2eRotateRecoveryWithNotificationRollback(t, adminDB, router, fixture)
+	e2eAssertMFATenantIsolation(t, scopedDB, fixture.TenantID)
+	challenge := e2eFinishTOTPRecoveryLifecycle(t, adminDB, router, fixture, newCodes)
+	e2eAssertMFAAuditSecretIsolation(t, adminDB, fixture, challenge, newCodes)
+	e2eAssertMFASecurityNotificationFacts(t, adminDB, fixture.TenantID, fixture.UserID, fixture.Secret, challenge, fixture.OldCodes[0].(string), newCodes[0].(string))
+	e2eAssertMFALogPublicationKeepsNotificationPending(t, scopedDB, fixture.TenantID)
+}
+
+type mfaBrowserIdentity struct {
+	Token, OtherToken string
+	Session           *http.Cookie
+}
+
+type mfaEnrollmentFixture struct {
+	Token, OtherToken, Secret, TenantID, UserID string
+	OldCodes                                    []any
+	Context                                     context.Context
+	Store                                       *auth.PostgresStore
+}
+
+// 先证明 cookie CSRF 与会话绑定，再启用凭据并检查数据库只保存密文。
+func e2eEnrollTOTPManagement(t *testing.T, adminDB, scopedDB *sql.DB, router http.Handler, browser mfaBrowserIdentity) mfaEnrollmentFixture {
+	t.Helper()
+	token, otherToken, session := browser.Token, browser.OtherToken, browser.Session
 	status := e2eGetJSON(t, router, "/api/v1/auth/mfa", token, http.StatusOK)
 	if status["available"] != true || status["enabled"] != false {
 		t.Fatal("pilot status incorrect")
 	}
-	// Global ambient-cookie CSRF protection must also cover new MFA endpoints.
+	// 全局针对环境 cookie 的 CSRF 防护也必须覆盖新的 MFA 端点。
 	request := httptest.NewRequest(http.MethodPost, "/api/v1/auth/mfa/totp/enroll", strings.NewReader(`{"password":"ChangeMe123!"}`))
 	request.Header.Set("Content-Type", "application/json")
 	request.AddCookie(session)
@@ -81,11 +106,19 @@ func TestTOTPManagementE2EWithPostgres(t *testing.T) {
 	if err != nil || record.EnabledAt == nil || record.RecoveryCodesRemaining != 10 || strings.Contains(string(record.Ciphertext), secret) {
 		t.Fatal("encrypted enabled credential not persisted")
 	}
+	return mfaEnrollmentFixture{Token: token, OtherToken: otherToken, Secret: secret, TenantID: tenantID, UserID: userID, OldCodes: oldCodes, Context: ctx, Store: store}
+}
+
+// 临时拒绝通知意图插入，恢复码和挑战均须回滚；移除故障后同一证明只允许成功一次。
+func e2eRotateRecoveryWithNotificationRollback(t *testing.T, adminDB *sql.DB, router http.Handler, fixture mfaEnrollmentFixture) []any {
+	t.Helper()
+	token, otherToken, secret, tenantID, userID := fixture.Token, fixture.OtherToken, fixture.Secret, fixture.TenantID, fixture.UserID
+	ctx, store := fixture.Context, fixture.Store
 	rotation := e2ePostJSON(t, router, http.MethodPost, "/api/v1/auth/step-up/start", token, `{"operation":"mfa.recovery.rotate","password":"ChangeMe123!"}`, http.StatusOK)
 	challenge := e2eString(t, rotation, "challenge_id")
 	command := `{"challenge_id":"` + challenge + `"}`
 	e2ePostJSON(t, router, http.MethodPost, "/api/v1/auth/mfa/recovery-codes/rotate", token, command, http.StatusUnauthorized)
-	code, err = totp.GenerateCode(secret, time.Now().UTC())
+	code, err := totp.GenerateCode(secret, time.Now().UTC())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -118,14 +151,21 @@ CREATE TRIGGER e2e_reject_mfa_notification_intent BEFORE INSERT ON auth_security
 	rotated := e2ePostJSON(t, router, http.MethodPost, "/api/v1/auth/mfa/recovery-codes/rotate", token, command, http.StatusOK)
 	e2ePostJSON(t, router, http.MethodPost, "/api/v1/auth/mfa/recovery-codes/rotate", token, command, http.StatusUnauthorized)
 	newCodes := rotated["recovery_codes"].([]any)
-	// No global assurance/risk promotion, even after a valid command proof.
+	// 即使命令证明有效，也不提升全局认证保证级别或风险级别。
 	live, err := store.FindUserBySession(ctx, auth.HashToken(token), time.Now().UTC())
 	if err != nil || live.CurrentAuthLevel != 1 {
 		t.Fatal("MFA command promoted whole session")
 	}
-	e2eAssertMFATenantIsolation(t, scopedDB, tenantID)
-	// Exercise transaction replay/concurrency without waiting for a time step.
-	record, err = store.FindTOTP(ctx, tenantID, userID)
+	return newCodes
+}
+
+// 并发证明只能有一个赢家；禁用后两份会话、凭据和可信设备绑定都必须失效。
+func e2eFinishTOTPRecoveryLifecycle(t *testing.T, adminDB *sql.DB, router http.Handler, fixture mfaEnrollmentFixture, newCodes []any) string {
+	t.Helper()
+	token, otherToken, tenantID, userID, oldCodes := fixture.Token, fixture.OtherToken, fixture.TenantID, fixture.UserID, fixture.OldCodes
+	ctx, store := fixture.Context, fixture.Store
+	// 无需等待时间步推进，即可测试事务重放与并发。
+	record, err := store.FindTOTP(ctx, tenantID, userID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -150,7 +190,7 @@ CREATE TRIGGER e2e_reject_mfa_notification_intent BEFORE INSERT ON auth_security
 	}
 	assertOneConcurrentCredentialWinner(t, auth.ErrMFAInvalid, func() error { return store.FinishMFACommand(ctx, proof, auth.MFAOperationRotateRecovery, hashes) })
 	disable := e2ePostJSON(t, router, http.MethodPost, "/api/v1/auth/step-up/start", token, `{"operation":"mfa.disable","password":"ChangeMe123!"}`, http.StatusOK)
-	challenge = e2eString(t, disable, "challenge_id")
+	challenge := e2eString(t, disable, "challenge_id")
 	e2ePostJSON(t, router, http.MethodPost, "/api/v1/auth/step-up/verify", token, `{"challenge_id":"`+challenge+`","method":"recovery_code","code":"`+oldCodes[0].(string)+`"}`, http.StatusUnauthorized)
 	e2ePostJSON(t, router, http.MethodPost, "/api/v1/auth/step-up/verify", token, `{"challenge_id":"`+challenge+`","method":"recovery_code","code":"`+newCodes[0].(string)+`"}`, http.StatusOK)
 	e2ePostJSON(t, router, http.MethodPost, "/api/v1/auth/mfa/totp/disable", token, `{"challenge_id":"`+challenge+`"}`, http.StatusOK)
@@ -166,7 +206,14 @@ CREATE TRIGGER e2e_reject_mfa_notification_intent BEFORE INSERT ON auth_security
 	if err = adminDB.QueryRow(`SELECT count(*) FROM auth_trusted_device WHERE tenant_id=$1::uuid AND user_id=$2::uuid AND revoked_at IS NULL`, tenantID, userID).Scan(&observed); err != nil || observed != 0 {
 		t.Fatal("disable left device bindings active")
 	}
-	// No secret, challenge plaintext, OTP or recovery code may enter audit JSON.
+	return challenge
+}
+
+// 审计逐条核对全部四种秘密，不能用数据库已加密替代审计载荷检查。
+func e2eAssertMFAAuditSecretIsolation(t *testing.T, adminDB *sql.DB, fixture mfaEnrollmentFixture, challenge string, newCodes []any) {
+	t.Helper()
+	tenantID, userID, secret, oldCodes := fixture.TenantID, fixture.UserID, fixture.Secret, fixture.OldCodes
+	// 秘密、挑战明文、OTP 或恢复码均不得进入审计 JSON。
 	rows, err := adminDB.Query(`SELECT COALESCE(before_value,'{}'::jsonb)::text,COALESCE(after_value,'{}'::jsonb)::text FROM audit_log WHERE tenant_id=$1::uuid AND actor_id=$2::uuid`, tenantID, userID)
 	if err != nil {
 		t.Fatal(err)
@@ -174,7 +221,7 @@ CREATE TRIGGER e2e_reject_mfa_notification_intent BEFORE INSERT ON auth_security
 	defer rows.Close()
 	for rows.Next() {
 		var before, after string
-		if err = rows.Scan(&before, &after); err != nil {
+		if err := rows.Scan(&before, &after); err != nil {
 			t.Fatal(err)
 		}
 		for _, sensitive := range []string{secret, challenge, oldCodes[0].(string), newCodes[0].(string)} {
@@ -183,11 +230,9 @@ CREATE TRIGGER e2e_reject_mfa_notification_intent BEFORE INSERT ON auth_security
 			}
 		}
 	}
-	if err = rows.Err(); err != nil {
+	if err := rows.Err(); err != nil {
 		t.Fatal(err)
 	}
-	e2eAssertMFASecurityNotificationFacts(t, adminDB, tenantID, userID, secret, challenge, oldCodes[0].(string), newCodes[0].(string))
-	e2eAssertMFALogPublicationKeepsNotificationPending(t, scopedDB, tenantID)
 }
 
 func e2eAssertMFASecurityNotificationFacts(t *testing.T, db *sql.DB, tenantID, userID string, sensitive ...string) {
@@ -231,16 +276,9 @@ ORDER BY o.occurred_at,o.id`, tenantID, userID)
 func e2eAssertMFATenantIsolation(t *testing.T, db *sql.DB, tenantID string) {
 	t.Helper()
 	for _, table := range []string{"auth_totp", "auth_mfa_recovery_code", "auth_mfa_challenge", "auth_security_notification_intent"} {
-		for _, scope := range []struct {
-			ctx     context.Context
-			visible bool
-		}{{context.Background(), false}, {database.WithTenant(context.Background(), uuid.NewString()), false}, {database.WithTenant(context.Background(), tenantID), true}} {
-			var count int
-			if err := db.QueryRowContext(scope.ctx, `SELECT count(*) FROM `+table).Scan(&count); err != nil || (count > 0) != scope.visible {
-				t.Fatalf("MFA RLS isolation failed for %s: count=%d err=%v", table, count, err)
-			}
-		}
+		e2eAssertMFACredentialTableScope(t, db, tenantID, table)
 	}
+
 	for _, scope := range []struct {
 		ctx     context.Context
 		visible bool
@@ -267,6 +305,20 @@ func e2eAssertMFATenantIsolation(t *testing.T, db *sql.DB, tenantID string) {
 	}
 	if affected, err := result.RowsAffected(); err != nil || affected == 0 {
 		t.Fatalf("maintenance dispatcher did not reach MFA facts: affected=%d err=%v", affected, err)
+	}
+}
+
+// 仅当前租户可见这四种 MFA 凭据或通知事实；没有租户与错误租户都必须读到空集。
+func e2eAssertMFACredentialTableScope(t *testing.T, db *sql.DB, tenantID, table string) {
+	t.Helper()
+	for _, scope := range []struct {
+		ctx     context.Context
+		visible bool
+	}{{context.Background(), false}, {database.WithTenant(context.Background(), uuid.NewString()), false}, {database.WithTenant(context.Background(), tenantID), true}} {
+		var count int
+		if err := db.QueryRowContext(scope.ctx, `SELECT count(*) FROM `+table).Scan(&count); err != nil || (count > 0) != scope.visible {
+			t.Fatalf("MFA RLS isolation failed for %s: count=%d err=%v", table, count, err)
+		}
 	}
 }
 

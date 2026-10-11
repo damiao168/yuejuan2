@@ -56,6 +56,9 @@ func (l *Logger) Error(ctx context.Context, message string, fields map[string]an
 }
 
 func (l *Logger) write(ctx context.Context, level string, message string, fields map[string]any) {
+	if !l.enabled(level) {
+		return
+	}
 	payload := map[string]any{
 		"ts":      time.Now().UTC().Format(time.RFC3339Nano),
 		"level":   level,
@@ -76,6 +79,22 @@ func (l *Logger) write(ctx context.Context, level string, message string, fields
 		return
 	}
 	_, _ = l.out.Write(append(encoded, '\n'))
+}
+
+// enabled 将配置级别作为最低输出级别；未知配置按 info 处理，避免配置拼写错误时静默丢失错误日志。
+func (l *Logger) enabled(level string) bool {
+	return logLevelRank(level) >= logLevelRank(l.level)
+}
+
+func logLevelRank(level string) int {
+	switch strings.ToLower(strings.TrimSpace(level)) {
+	case "error":
+		return 2
+	case "warn", "warning":
+		return 1
+	default:
+		return 0
+	}
 }
 
 // 脱敏依赖字段名，仅递归处理 map[string]any 和 []any；调用方不能把秘密藏在自由文本或自定义结构中。

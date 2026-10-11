@@ -35,8 +35,7 @@ func TestHTTPAdaptersObserveActualV1AndV2Calls(t *testing.T) {
 		t.Fatal("invalid v2 response unexpectedly accepted")
 	}
 
-	// A local validation failure never calls the agent and must not inflate
-	// the count used to decide whether a protocol still has live traffic.
+	// 本地校验失败不会调用 agent，不能夸大用于判断协议是否仍有实际流量的计数。
 	badInput := validHTTPAdapterInput()
 	badInput.GradeLevel = ""
 	if _, err := v1.Grade(context.Background(), badInput); err == nil {

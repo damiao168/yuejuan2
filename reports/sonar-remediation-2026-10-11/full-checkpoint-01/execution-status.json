@@ -1,0 +1,6 @@
+{
+  "status": "failed",
+  "current_results_valid": false,
+  "error": "Full checkpoint scanner failed or has no fresh receipt",
+  "failed_at": "2026-10-11T17:51:56.458841+08:00"
+}

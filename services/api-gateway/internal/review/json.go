@@ -5,12 +5,10 @@ import (
 	"fmt"
 )
 
-// decodeJSONB decodes a jsonb column value scanned from Postgres into dst.
-// Empty input is treated as "no value" and leaves dst untouched, preserving
-// the semantics of the previous len(raw) > 0 guards. These jsonb columns are
-// written exclusively by this application, so a decode failure means the
-// stored structure has drifted from the Go types; it must surface as an
-// explicit error instead of silently zeroing the destination.
+// decodeJSONB 将从 Postgres 扫描出的 jsonb 列值解码到 dst。
+// 空输入视为“无值”并保持 dst 不变，保留此前 len(raw) > 0 检查的语义。
+// 这些 jsonb 列仅由本应用写入，因此解码失败表示存储结构已与 Go 类型发生偏移；
+// 必须显式返回错误，不能静默把目标清零。
 func decodeJSONB(raw []byte, dst any, field string) error {
 	if len(raw) == 0 {
 		return nil

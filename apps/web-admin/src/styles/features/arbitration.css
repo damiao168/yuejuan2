@@ -3,7 +3,61 @@
   flex-direction: column;
   gap: 12px;
   min-width: 0;
+  container-type: inline-size;
 }
+
+/* 队列和证据同时可见；宽度不足时仅让任务列表限高，避免一整页队列压住裁决。 */
+.arbitration-body {
+  display: grid;
+  grid-template-columns: minmax(240px, 280px) minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+  min-width: 0;
+  container-type: inline-size;
+}
+
+.arbitration-task-rail {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  position: sticky;
+  top: 76px;
+}
+
+.arbitration-task-rail .arbitration-filterbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+
+.arbitration-task-rail .arbitration-filter-count {
+  text-align: left;
+}
+
+.arbitration-queue-head,
+.arbitration-task-first,
+.arbitration-task-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.arbitration-queue-head { margin-bottom: 10px; }
+.arbitration-queue-head h2 { margin: 0; font-size: var(--eg-font-reading); }
+.arbitration-queue-head span { color: var(--text-muted); font-size: var(--eg-font-caption); }
+.arbitration-task-list { max-height: calc(100svh - 330px); min-height: 160px; overflow: auto; scrollbar-gutter: stable; }
+.arbitration-task-list > div + div { border-top: 1px solid var(--border); }
+.arbitration-task-item { display: grid; gap: 7px; width: 100%; padding: 12px; border: 0; border-radius: 6px; background: transparent; color: var(--text); text-align: left; cursor: pointer; }
+.arbitration-task-item:hover,
+.arbitration-task-item.active { background: var(--hover-bg); }
+.arbitration-task-item.active { box-shadow: inset 3px 0 var(--primary); }
+.arbitration-task-item:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
+.arbitration-task-first strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.arbitration-task-first .ant-tag { flex: 0 0 auto; margin: 0; }
+.arbitration-task-meta { align-items: flex-start; flex-direction: column; color: var(--text-muted); font-size: var(--eg-font-caption); }
+.arbitration-task-diff { color: var(--warning); font-size: var(--eg-font-caption); font-weight: 600; }
+.arbitration-draft-note { margin: 0; padding: 9px 10px; border-left: 3px solid var(--warning); background: var(--surface-soft); color: var(--text-muted); line-height: 1.5; }
 
 .arbitration-filterbar,
 .arbitration-queue-panel,
@@ -96,12 +150,23 @@
   white-space: nowrap;
 }
 
-.arbitration-workspace {
+.arbitration-body .arbitration-workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 320px);
   gap: 12px;
   align-items: start;
   min-width: 0;
+}
+
+@container (max-width: 1100px) {
+  .arbitration-body .arbitration-workspace { grid-template-columns: minmax(0, 1fr); }
+  .arbitration-decision-panel { position: static; }
+}
+
+@container (max-width: 760px) {
+  .arbitration-body { grid-template-columns: minmax(0, 1fr); }
+  .arbitration-task-rail { position: static; }
+  .arbitration-task-list { max-height: 260px; min-height: 0; }
 }
 
 .arbitration-main,
@@ -169,7 +234,8 @@
   padding: 12px;
   overflow: auto;
   white-space: pre-wrap;
-  word-break: break-word;
+  overflow-wrap: anywhere;
+  word-break: normal;
   font-family: Consolas, "JetBrains Mono", monospace;
   font-size: var(--eg-font-body);
   line-height: 1.6;

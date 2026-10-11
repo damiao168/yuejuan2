@@ -5,7 +5,8 @@ import {
   createRubric,
   type Question,
   type RubricEvidenceRequirement,
-  type RubricPoint
+  type RubricPoint,
+  type RubricPayload
 } from "../../../api/papers";
 
 function jsonText(value: unknown, fallback: string) {
@@ -15,10 +16,10 @@ function jsonText(value: unknown, fallback: string) {
 function parseArrayJSON(value: string, label: string): unknown[] {
   try {
     const parsed = JSON.parse(value || "[]") as unknown;
-    if (!Array.isArray(parsed)) throw new Error(`${label}必须是 JSON 数组`);
+    if (!Array.isArray(parsed)) throw new Error(`${label}必须包含逐项内容`);
     return parsed;
   } catch {
-    throw new Error(`${label}解析失败，请检查 JSON 格式`);
+    throw new Error(`${label}暂时无法读取，请核对历史评分数据后再保存`);
   }
 }
 
@@ -29,11 +30,13 @@ export function rubricPointTotal(points: RubricPoint[]) {
 export function useRubricEditor({
   selectedQuestion,
   selectedExamId,
+  preserveUnsaved = false,
   loadConfig,
   onChanged
 }: {
   selectedQuestion: Question | null;
   selectedExamId: string;
+  preserveUnsaved?: boolean;
   loadConfig: (examId: string, options?: { silent?: boolean }) => Promise<void>;
   onChanged?: () => void;
 }) {
@@ -45,10 +48,11 @@ export function useRubricEditor({
   const [deductionsJson, setDeductionsJson] = useState("");
   const [examplesJson, setExamplesJson] = useState("");
   const loadedQuestionKey = useRef<string | null>(null);
+  const saveInFlight = useRef(false);
 
   useEffect(() => {
     const questionKey = selectedQuestion?.id ?? "create";
-    if (rubricDirty && loadedQuestionKey.current === questionKey) return;
+    if ((rubricDirty || preserveUnsaved) && loadedQuestionKey.current === questionKey) return;
     loadedQuestionKey.current = questionKey;
     setRubricDirty(false);
     if (selectedQuestion) {
@@ -62,7 +66,7 @@ export function useRubricEditor({
     setRubricPoints([{ id: "p1", description: "", score: 10, required: true }]);
     setDeductionsJson("");
     setExamplesJson("");
-  }, [rubricDirty, selectedQuestion]);
+  }, [rubricDirty, preserveUnsaved, selectedQuestion]);
 
   const updatePoint = (index: number, patch: Partial<RubricPoint>) => {
     setRubricDirty(true);
@@ -96,46 +100,34 @@ export function useRubricEditor({
     setRubricPoints((current) => [...current, { id: `p${current.length + 1}`, description: "", score: 0, required: false }]);
   };
 
-  const saveRubric = async () => {
-    if (!selectedQuestion || !selectedExamId) {
-      message.error("请先选择已保存的题目");
-      return false;
-    }
+  const prepareRubricSave = (score = selectedQuestion?.score): RubricPayload => {
     const total = rubricPointTotal(rubricPoints);
-    if (Math.abs(total - selectedQuestion.score) > 0.0001) {
-      message.error("评分细则采分点总分必须等于题目分值");
-      return false;
-    }
-    let deductions: unknown[];
-    let examples: unknown[];
+    if (!score || !Number.isFinite(score) || Math.abs(total - score) > 0.0001) throw new Error("评分细则采分点总分必须等于本次填写的题目分值");
+    if (rubricPoints.some(point => !Number.isFinite(Number(point.score)) || Number(point.score) < 0)) throw new Error("采分点分值必须为有限的非负数");
+    return { status: rubricStatus, max_score: score, points: structuredClone(rubricPoints), deductions: parseArrayJSON(deductionsJson, "扣分点"), examples: parseArrayJSON(examplesJson, "样例答案") };
+  };
+
+  const persistRubricSave = async (questionId: string, payload: RubricPayload, options: { refresh?: boolean; notify?: boolean; onAccepted?: (result: Awaited<ReturnType<typeof createRubric>>) => void } = {}) => {
+    if (saveInFlight.current) return false;
+    saveInFlight.current = true; setSavingRubric(true);
     try {
-      deductions = parseArrayJSON(deductionsJson, "扣分点");
-      examples = parseArrayJSON(examplesJson, "样例答案");
-    } catch (error) {
-      message.error(getUserErrorMessage(error, "操作失败，请稍后重试"));
-      return false;
-    }
-    setSavingRubric(true);
-    try {
-      // 保存会创建评分细则的新版本；当前题目满分始终作为该版本的总分。
-      await createRubric(selectedQuestion.id, {
-        status: rubricStatus,
-        max_score: selectedQuestion.score,
-        points: rubricPoints,
-        deductions,
-        examples
-      });
-      message.success(rubricStatus === "locked" ? "评分细则已锁定" : "评分细则新版本已提交");
-      await loadConfig(selectedExamId);
-      onChanged?.();
+      // 使用整体校验时的满分快照；题目刚更新时闭包中的旧满分不能写入新细则版本。
+      const result = await createRubric(questionId, payload);
+      // 接受回执和已保存快照先交给页面；随后读取失败不能抹掉写入已经成功的事实。
+      options.onAccepted?.(result);
       setRubricDirty(false);
+      if (options.notify !== false) message.success(payload.status === "locked" ? "评分细则已锁定" : "评分细则新版本已提交");
+      if (options.refresh !== false) { await loadConfig(selectedExamId); onChanged?.(); }
       return true;
-    } catch (error) {
-      message.error(getUserErrorMessage(error, "操作失败，请稍后重试"));
-      return false;
     } finally {
-      setSavingRubric(false);
+      saveInFlight.current = false; setSavingRubric(false);
     }
+  };
+  const saveRubric = async () => {
+    try {
+      if (!selectedQuestion || !selectedExamId) throw new Error("请先选择已保存的题目");
+      return await persistRubricSave(selectedQuestion.id, prepareRubricSave());
+    } catch (error) { message.error(getUserErrorMessage(error, "评分细则暂不可保存")); return false; }
   };
 
   const pointTotal = rubricPointTotal(rubricPoints);
@@ -144,6 +136,6 @@ export function useRubricEditor({
     setDeductionsJson: (value: string) => { setRubricDirty(true); setDeductionsJson(value); }, examplesJson, setExamplesJson: (value: string) => { setRubricDirty(true); setExamplesJson(value); }, pointTotal,
     scoreMismatch: Boolean(selectedQuestion && Math.abs(pointTotal - selectedQuestion.score) > 0.0001),
     updatePoint, addEvidenceRequirement, updateEvidenceRequirement,
-    removeEvidenceRequirement, removePoint, addPoint, saveRubric
+    removeEvidenceRequirement, removePoint, addPoint, saveRubric, prepareRubricSave, persistRubricSave
   };
 }

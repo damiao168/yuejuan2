@@ -1,0 +1,1 @@
+{"command": ["go", "test", "-json", "-p", "1", "-count=1", "-timeout=5m", "-overlay=D:\\project\\yuejuan\\reports\\sonar-remediation-2026-10-11\\root-go-baseline-overlay.json", "./tools/import-fujian-2024-math-simulation"], "started_at": "2026-10-11T17:35:31.600636+08:00", "exit_code": 0}

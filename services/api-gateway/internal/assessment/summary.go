@@ -11,10 +11,7 @@ type ExamAssessmentSummary struct {
 	Source                  string      `json:"source"`
 }
 
-// GetExamAssessmentSummary returns one authoritative, tenant-scoped aggregate
-// for workspace and release-gate consumers. Frozen snapshots take precedence
-// over mutable question configuration; callers must not infer risk from an
-// exam-level grading mode.
+// GetExamAssessmentSummary 为工作区和发布门禁返回租户范围内的权威聚合结果。冻结快照优先于可变题目配置；调用方不得从考试级评分模式推断风险。
 func (s *MemoryStore) GetExamAssessmentSummary(_ context.Context, tenantID string, examID string) (ExamAssessmentSummary, error) {
 	if tenantID == "" || examID == "" {
 		return ExamAssessmentSummary{}, ErrInvalidInput

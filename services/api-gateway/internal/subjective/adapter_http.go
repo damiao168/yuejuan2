@@ -251,9 +251,8 @@ func (a *HTTPAdapter) buildRequest(requestID string, input AdapterInput) (gradin
 	}, nil
 }
 
-// The grading-agent protocol uses the same canonical vocabulary as the
-// assessment domain. Legacy aliases are accepted only at this adapter boundary
-// so old callers cannot leak non-canonical values into the agent contract.
+// grading-agent 协议与评估领域使用相同的标准词汇。
+// 旧别名仅在此适配器边界接受，避免旧调用方将非标准值带入 agent 契约。
 func gradingAgentSubject(subject string) string {
 	switch strings.ToLower(strings.TrimSpace(subject)) {
 	case "math":
@@ -333,7 +332,8 @@ func (a *HTTPAdapter) request(ctx context.Context, requestID string, body []byte
 	return response, nil
 }
 
-func (a *HTTPAdapter) mapResponse(input AdapterInput, response gradingAgentResponse) (AdapterOutput, error) {
+// 先核对契约、交付方式和评分边界，再接受遥测与证据；长文本题仍只能进入影子评审。
+func (a *HTTPAdapter) validateResponseContract(input AdapterInput, response gradingAgentResponse) error {
 	if response.SchemaVersion != gradingAgentSchemaVersion ||
 		response.RequestID != input.RequestID ||
 		response.Status != "suggestion" ||
@@ -343,19 +343,26 @@ func (a *HTTPAdapter) mapResponse(input AdapterInput, response gradingAgentRespo
 		response.PromptVersion != a.policy.PromptVersion ||
 		response.RubricVersion != input.Rubric.Version ||
 		response.CapabilityProfile != a.capabilityProfile {
-		return AdapterOutput{}, &GradingAgentError{Code: "agent_response_contract_mismatch"}
+		return &GradingAgentError{Code: "agent_response_contract_mismatch"}
 	}
 	if response.Delivery != "teacher_suggestion" && response.Delivery != "shadow_only" {
-		return AdapterOutput{}, &GradingAgentError{Code: "agent_delivery_invalid"}
+		return &GradingAgentError{Code: "agent_delivery_invalid"}
 	}
 	if (input.Question.QuestionType == "essay" || input.Question.QuestionType == "discussion") && response.Delivery != "shadow_only" {
-		return AdapterOutput{}, &GradingAgentError{Code: "agent_delivery_invalid"}
+		return &GradingAgentError{Code: "agent_delivery_invalid"}
 	}
 	if len(response.Deductions) != 0 {
-		return AdapterOutput{}, &GradingAgentError{Code: "agent_deductions_not_allowed"}
+		return &GradingAgentError{Code: "agent_deductions_not_allowed"}
 	}
 	if response.SuggestedScore < 0 || response.SuggestedScore > input.Question.Score || !almostEqual(response.MaxScore, input.Question.Score) || response.Confidence != 0 {
-		return AdapterOutput{}, &GradingAgentError{Code: "agent_score_invalid"}
+		return &GradingAgentError{Code: "agent_score_invalid"}
+	}
+	return nil
+}
+
+func (a *HTTPAdapter) mapResponse(input AdapterInput, response gradingAgentResponse) (AdapterOutput, error) {
+	if err := a.validateResponseContract(input, response); err != nil {
+		return AdapterOutput{}, err
 	}
 	if response.Telemetry.Adapter != a.adapterType ||
 		response.Telemetry.Provider != a.providerKey ||

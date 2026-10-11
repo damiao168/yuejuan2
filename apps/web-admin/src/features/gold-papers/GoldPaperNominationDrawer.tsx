@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Alert, App, Button, Descriptions, Drawer, Input, InputNumber, List, Select, Space, Tag } from "antd";
 import { nominateGoldPaper } from "../../api/goldPapers";
 import { getUserErrorMessage } from "../../api/client";
+import { MathMarkdown } from "../../components/MathMarkdown";
 import type { GoldRubricPoint } from "./goldPaperPresentation";
 import { buildRubricEvidence } from "./goldPaperPresentation";
 
@@ -23,11 +24,11 @@ export function GoldPaperNominationDrawer({
   candidate,
   onClose,
   onCreated
-}: {
+}: Readonly<{
   candidate: GoldPaperNominationCandidate | null;
   onClose: () => void;
   onCreated?: () => void;
-}) {
+}>) {
   const { message } = App.useApp();
   const [score, setScore] = useState<number | null>(null);
   const [explanation, setExplanation] = useState("");
@@ -55,6 +56,7 @@ export function GoldPaperNominationDrawer({
     }
     setSubmitting(true);
     try {
+      // 提名沿用已提交评分的来源 ID 和冻结采分点证据，由后续审批决定是否成为标准卷。
       await nominateGoldPaper(candidate.examId, candidate.questionId, {
         submission_id: candidate.submissionId,
         reference_score: score,
@@ -99,7 +101,7 @@ export function GoldPaperNominationDrawer({
               dataSource={candidate.rubricPoints}
               renderItem={(point) => (
                 <List.Item extra={<Tag color={(rubricEvidence[point.id] ?? 0) > 0 ? "green" : "default"}>{rubricEvidence[point.id] ?? 0} / {point.score} 分</Tag>}>
-                  {point.description}
+                  <MathMarkdown promoteInlineMath={false}>{point.description}</MathMarkdown>
                 </List.Item>
               )}
             />

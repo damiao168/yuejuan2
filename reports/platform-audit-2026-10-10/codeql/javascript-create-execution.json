@@ -1,0 +1,21 @@
+{
+  "language": "javascript",
+  "stage": "create",
+  "started": "2026-10-11T12:00:39+08:00",
+  "command": [
+    "D:\\tools\\audit-codeql-20261010\\codeql\\codeql.exe",
+    "database",
+    "create",
+    "D:\\tools\\audit-codeql-20261010\\databases\\javascript-20261011-context",
+    "--language=javascript",
+    "--source-root=D:\\tools\\audit-codeql-20261010\\source-20261011",
+    "--threads=2",
+    "--ram=2048",
+    "--build-mode=none",
+    "--common-caches=D:\\tools\\audit-codeql-20261010\\common-caches"
+  ],
+  "log": "D:\\project\\yuejuan\\reports\\platform-audit-2026-10-10\\codeql\\javascript-create.log",
+  "exit_code": 0,
+  "finished": "2026-10-11T12:05:42+08:00",
+  "elapsed_seconds": 303.53
+}

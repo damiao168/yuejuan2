@@ -1,0 +1,15 @@
+{
+  "rust_components": [
+    "cargo-x86_64-pc-windows-msvc",
+    "clippy-x86_64-pc-windows-msvc",
+    "rust-docs-x86_64-pc-windows-msvc",
+    "rust-std-x86_64-pc-windows-msvc",
+    "rustc-x86_64-pc-windows-msvc",
+    "rustfmt-x86_64-pc-windows-msvc"
+  ],
+  "node": "v24.14.0",
+  "python": "Python 3.13.0",
+  "rustc": "rustc 1.97.1 (8bab26f4f 2026-07-14)",
+  "cargo": "cargo 1.97.1 (c980f4866 2026-06-30)",
+  "go": "go version go1.26.4 windows/amd64"
+}

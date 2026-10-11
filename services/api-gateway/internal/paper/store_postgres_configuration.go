@@ -263,9 +263,8 @@ func (s *PostgresStore) inheritApprovedOMRCalibrationForClone(ctx context.Contex
 		return err
 	}
 	defer tx.Rollback()
-	// The inherited approval remains bound to the source evidence hash and
-	// records that provenance explicitly. Runtime lookup also requires the
-	// clone's content/profile/reference hashes to remain identical.
+	// 继承的批准仍绑定来源证据哈希，并显式记录该来源。
+	// 运行时查询还要求副本的内容、配置和参考哈希保持相同。
 	if _, err = tx.ExecContext(ctx, `
 WITH copied_session AS (
   INSERT INTO omr_calibration_session (
@@ -337,31 +336,25 @@ ORDER BY confirmed_at DESC LIMIT 1
 	return result, nil
 }
 
-func (s *PostgresStore) ConfirmReadiness(ctx context.Context, tenantID string, examID string, userID string) (ReadinessResult, error) {
+func (s *PostgresStore) ConfirmReadiness(ctx context.Context, tenantID string, examID string, userID string, input ConfirmReadinessInput) (ReadinessResult, error) {
 	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
 	if err != nil {
 		return ReadinessResult{}, err
 	}
 	defer tx.Rollback()
-	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, examID); err != nil {
+	lockedStatus, err := lockReadinessExam(ctx, tx, tenantID, examID)
+	if err != nil {
 		return ReadinessResult{}, err
 	}
-	var lockedStatus string
-	if err := tx.QueryRowContext(ctx, `SELECT status FROM exam WHERE tenant_id=$1::uuid AND id=$2::uuid AND deleted_at IS NULL FOR UPDATE`, tenantID, examID).Scan(&lockedStatus); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return ReadinessResult{}, ErrNotFound
-		}
-		return ReadinessResult{}, err
-	}
-	if lockedStatus != "draft" && lockedStatus != "configured" && lockedStatus != "ready" {
-		return ReadinessResult{}, ErrNotReady
-	}
-	// Every paper-configuration write takes the same exam row lock. Read all
-	// readiness inputs only after that lock is held so the semantic snapshot,
-	// candidate freeze, and status transition describe one committed version.
+	// 全部试卷配置写入都取得同一考试行锁。
+	// 必须持锁后才读取全部准备度输入，使语义快照、考生冻结和状态转换描述同一个已提交版本。
 	result, status, candidateIDs, err := calculateReadiness(ctx, tx, tenantID, examID)
 	if err != nil {
 		return ReadinessResult{}, err
+	}
+	// 锁内重新计算的内容必须与管理员核对版本一致；冲突在冻结名册和写快照前返回，事务回滚。
+	if input.ExpectedConfigurationHash != "" && input.ExpectedConfigurationHash != result.ConfigurationHash {
+		return result, ErrReadinessChanged
 	}
 	if !result.Ready || lockedStatus != status {
 		return result, ErrNotReady
@@ -370,20 +363,13 @@ func (s *PostgresStore) ConfirmReadiness(ctx context.Context, tenantID string, e
 		if err := exam.RebuildCandidateSnapshot(ctx, tx, tenantID, examID); err != nil {
 			return ReadinessResult{}, err
 		}
-		var frozenCandidateIDsJSON []byte
-		if err := tx.QueryRowContext(ctx, `
-SELECT COALESCE(jsonb_agg(candidate.student_id::text ORDER BY candidate.student_id::text), '[]'::jsonb)
-FROM exam_candidate_snapshot candidate
-WHERE candidate.tenant_id=$1::uuid AND candidate.exam_id=$2::uuid
-`, tenantID, examID).Scan(&frozenCandidateIDsJSON); err != nil {
+		frozenCandidateClasses, err := loadReadinessCandidateClasses(ctx, tx, tenantID, examID, "ready")
+		if err != nil {
 			return ReadinessResult{}, err
 		}
-		var frozenCandidateIDs []string
-		if err := json.Unmarshal(frozenCandidateIDsJSON, &frozenCandidateIDs); err != nil {
-			return ReadinessResult{}, err
-		}
-		if !slices.Equal(frozenCandidateIDs, candidateIDs) {
-			return result, ErrConflict
+		// 组织侧转班没有考试锁；摘要计算到重建之间的学生或班级变化必须回滚，不能冻结未核对归属。
+		if !slices.Equal(readinessCandidateIDs(frozenCandidateClasses), candidateIDs) || !slices.Equal(frozenCandidateClasses, result.candidateClasses) {
+			return result, ErrReadinessChanged
 		}
 	}
 	checks, _ := json.Marshal(result.Checks)
@@ -405,14 +391,18 @@ WHERE tenant_id = $1::uuid AND exam_id = $2::uuid AND status = 'passed'
 	if count != 1 {
 		return result, ErrNotReady
 	}
-	// The ready transition freezes assessment facts in its database trigger.
-	// Bind those exact identities into the content companion before committing.
+	// 模板更新不取得考试锁；转入 ready 后必须核对触发器真正冻结的评估事实，变化则整笔回滚。
+	frozenAssessmentFacts, err := loadReadinessAssessmentFacts(ctx, tx, tenantID, examID, "ready")
+	if err != nil {
+		return ReadinessResult{}, err
+	}
+	if readinessAssessmentFactsHash(frozenAssessmentFacts) != result.assessmentFactsHash {
+		return result, ErrReadinessChanged
+	}
+	// 转入 ready 状态时，数据库触发器冻结评估事实。提交前将这些准确身份绑定到内容伴随快照中。
 	importSnapshot := newReadinessImportSnapshot(result.ConfigurationHash, questions)
-	for index := range importSnapshot.Questions {
-		question := &importSnapshot.Questions[index]
-		if err := tx.QueryRowContext(ctx, `SELECT id::text,content_hash FROM exam_question_snapshot WHERE tenant_id=$1::uuid AND exam_id=$2::uuid AND question_id=$3::uuid ORDER BY snapshot_version DESC LIMIT 1`, tenantID, examID, question.ID).Scan(&question.AssessmentSnapshotID, &question.AssessmentSnapshotHash); err != nil {
-			return ReadinessResult{}, err
-		}
+	if err := bindReadinessAssessmentSnapshots(ctx, tx, tenantID, examID, &importSnapshot); err != nil {
+		return ReadinessResult{}, err
 	}
 	importSnapshotJSON, err := json.Marshal(importSnapshot)
 	if err != nil {
@@ -437,6 +427,34 @@ WHERE tenant_id = $1::uuid AND exam_id = $2::uuid AND status = 'passed'
 	result.Confirmed, result.ConfirmedAt, result.ConfirmedBy = true, &now, userID
 	result.SnapshotID, result.ImportSnapshotAvailable = snapshotID, true
 	return result, nil
+}
+
+// 调用方持有事务；先取得考试互斥锁，再锁定考试行，后续确认步骤不得提前读取配置。
+func lockReadinessExam(ctx context.Context, tx *sql.Tx, tenantID, examID string) (string, error) {
+	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, examID); err != nil {
+		return "", err
+	}
+	var status string
+	if err := tx.QueryRowContext(ctx, `SELECT status FROM exam WHERE tenant_id=$1::uuid AND id=$2::uuid AND deleted_at IS NULL FOR UPDATE`, tenantID, examID).Scan(&status); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", ErrNotFound
+		}
+		return "", err
+	}
+	if status != "draft" && status != "configured" && status != "ready" {
+		return "", ErrNotReady
+	}
+	return status, nil
+}
+
+func bindReadinessAssessmentSnapshots(ctx context.Context, tx *sql.Tx, tenantID, examID string, snapshot *readinessImportSnapshot) error {
+	for index := range snapshot.Questions {
+		question := &snapshot.Questions[index]
+		if err := tx.QueryRowContext(ctx, `SELECT id::text,content_hash FROM exam_question_snapshot WHERE tenant_id=$1::uuid AND exam_id=$2::uuid AND question_id=$3::uuid ORDER BY snapshot_version DESC LIMIT 1`, tenantID, examID, question.ID).Scan(&question.AssessmentSnapshotID, &question.AssessmentSnapshotHash); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *PostgresStore) StartCollection(ctx context.Context, tenantID string, examID string, _ string) (ReadinessResult, error) {
@@ -557,7 +575,20 @@ WHERE e.tenant_id = $1::uuid AND e.id = $2::uuid AND e.deleted_at IS NULL
 	if err != nil {
 		return ReadinessResult{}, "", nil, err
 	}
-	return buildReadinessForScope(total, classIDs, candidateIDs, papers, questions, templates), status, candidateIDs, nil
+	result := buildReadinessForScope(total, classIDs, candidateIDs, papers, questions, templates)
+	var latest PaperImportJob
+	err = queryer.QueryRowContext(ctx, `SELECT id::text,current_generation,status,COALESCE(structure_confirmed_generation,0) FROM paper_import_job WHERE tenant_id=$1 AND exam_id=$2::uuid AND deleted_at IS NULL ORDER BY created_at DESC,id DESC LIMIT 1`, tenantID, examID).Scan(&latest.ID, &latest.Generation, &latest.Status, &latest.StructureConfirmedGeneration)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return ReadinessResult{}, "", nil, err
+	}
+	if err == nil {
+		result = withStructureReadiness(result, latest)
+	}
+	result, err = assessmentReadinessHash(ctx, queryer, tenantID, examID, status, result)
+	if err != nil {
+		return ReadinessResult{}, "", nil, err
+	}
+	return result, status, candidateIDs, nil
 }
 
 func (s *PostgresStore) templateWriteError(ctx context.Context, tenantID string, id string, expectedRevision int) error {

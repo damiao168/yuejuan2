@@ -18,8 +18,8 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/processing"
 )
 
-// Infrastructure owns process-level resources shared by application modules.
-// Domain stores, services, and handlers deliberately do not live here.
+// Infrastructure 管理应用模块共享的进程级资源。
+// 领域存储、服务和 handler 不放在这里。
 type Infrastructure struct {
 	Config         config.Config
 	Logger         *logger.Logger

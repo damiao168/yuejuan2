@@ -14,8 +14,7 @@ import (
 const mfaSecurityAggregate = "auth_mfa"
 const notificationAwaitingChannel = "awaiting_channel"
 
-// MFASecurityChange is a versioned fact, not an authentication grant. Its
-// allowlisted payload never accepts arbitrary audit maps or credential data.
+// MFASecurityChange 是版本化事实，不是认证授权；其白名单载荷不接受任意审计映射或凭据数据。
 type MFASecurityChange struct {
 	SchemaVersion        int       `json:"schema_version"`
 	EventID              string    `json:"event_id"`
@@ -82,8 +81,7 @@ func mfaSecurityAudit(ctx context.Context, change MFASecurityChange) AuditEvent 
 		IPAddress: metadata.IPAddress, UserAgent: metadata.UserAgent, RequestID: metadata.RequestID}
 }
 
-// Capture metadata for the existing audit only. Device/IP hints are untrusted
-// descriptions; they are deliberately excluded from the notification fact.
+// 只为已有审计采集元数据。设备和 IP 提示是未受信任的描述，刻意不纳入通知事实。
 func (h *Handler) mfaSecurityContext(ctx context.Context, ipAddress, userAgent string) context.Context {
 	return context.WithValue(ctx, mfaAuditMetadataKey{}, mfaAuditMetadata{
 		IPAddress: ipAddress, UserAgent: userAgent, RequestID: logger.RequestID(ctx),
@@ -119,7 +117,7 @@ type memorySecurityNotificationIntent struct {
 	Status string
 }
 
-// Caller holds s.mu; create/validate the change before mutating MFA state.
+// 调用方持有 s.mu；修改 MFA 状态前先创建并验证变更。
 func (s *MemoryStore) recordMFASecurityChange(ctx context.Context, change MFASecurityChange) {
 	s.mfaNotificationIntents = append(s.mfaNotificationIntents, memorySecurityNotificationIntent{Change: change, Status: notificationAwaitingChannel})
 	s.appendAudit(mfaSecurityAudit(ctx, change), change.OccurredAt)

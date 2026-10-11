@@ -1,0 +1,6 @@
+projectKey=yuejuan-local-workspace-20261010
+serverUrl=http://127.0.0.1:19000
+serverVersion=26.9.0.129388
+dashboardUrl=http://127.0.0.1:19000/dashboard?id=yuejuan-local-workspace-20261010
+ceTaskId=281bbb16-6db3-47c7-83fd-afc2821c6b77
+ceTaskUrl=http://127.0.0.1:19000/api/ce/task?id=281bbb16-6db3-47c7-83fd-afc2821c6b77

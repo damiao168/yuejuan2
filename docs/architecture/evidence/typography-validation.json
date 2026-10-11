@@ -1,0 +1,73 @@
+{
+  "checked_at_utc": "2026-10-11T07:56:26.897829+00:00",
+  "passed": true,
+  "errors": [],
+  "files": [
+    {
+      "file": "01-feature-tree.drawio",
+      "sha256": "ce9f45d4b2a5985e08efa91af8f5e4428a76f39ab066307d342adacffa213ee4",
+      "pages": 11
+    },
+    {
+      "file": "02-system-architecture.drawio",
+      "sha256": "566de960ea1a67208508a4718cc23e339cfcadd7f56de24d8449f8c618adf638",
+      "pages": 2
+    },
+    {
+      "file": "03-module-dependencies.drawio",
+      "sha256": "c4bd39130819b20b52fa998984e67ff49b2079adf638b60d2b6ad1c5c36fcaaf",
+      "pages": 4
+    },
+    {
+      "file": "04-database-er.drawio",
+      "sha256": "10a1c9947153aafeb9c8631dd780d75cc627a13b550769078c1a6c5143b1a646",
+      "pages": 29
+    },
+    {
+      "file": "05-business-workflow.drawio",
+      "sha256": "ffe29e56c656dac4844fff53e66f019e91c5662117bb4d649d54691e5441b09d",
+      "pages": 3
+    },
+    {
+      "file": "06-image-template-pipeline.drawio",
+      "sha256": "993fa46ff20c8598ae6cd7aee7f8cf6c1415c587ffa22023d552e0962b576a36",
+      "pages": 3
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "sha256": "a374e4fcd129dda00aaf8995d2d1239db38fc9a07b516d897e1e71914141b93d",
+      "pages": 4
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "sha256": "f457a8f14be1c5ea708b7f802455b653097628bb58360eb95bf9a1c725aef289",
+      "pages": 8
+    },
+    {
+      "file": "09-task-state-machine.drawio",
+      "sha256": "a9008613307501e9330406f517c2826cac447cb51b83c6eef7752781fa36f126",
+      "pages": 3
+    },
+    {
+      "file": "10-security-deployment.drawio",
+      "sha256": "76280f49d3ccda4a2fd508d6efb10fd94f346c3ef66190c93e0126e12391a2af",
+      "pages": 3
+    }
+  ],
+  "pages": 70,
+  "content_and_relations_preserved": true,
+  "font_sizes": {
+    "node_title_range": [
+      40,
+      72
+    ],
+    "entity_title": 34,
+    "body": 32,
+    "entity_fields": 26,
+    "edge_labels": 26,
+    "group_title": 36,
+    "legend": 24,
+    "page_title": 48
+  },
+  "source_audit": "保留原审计时点；本次仅显示文案/字号/紧框排版/预览缩放，不声明业务源码重新审计或运行验收"
+}

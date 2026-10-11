@@ -31,7 +31,7 @@ func TestRegradeFreezesPublishedReleaseAndRequiresNewReleasePlan(t *testing.T) {
 	if err != nil || summary.Job.Status != StatusAwaitingApproval || len(summary.Items) != 2 {
 		t.Fatalf("create = %#v, err=%v", summary, err)
 	}
-	// Retry is idempotent and does not make a second mutable score workflow.
+	// 重试保持幂等，不会创建第二条可变成绩流程。
 	again, err := service.Create(context.Background(), "tenant-a", "exam-a", "question-a", "manager-a", CreateInput{
 		SourceReleaseID: "release-v1", ReasonCode: ReasonAnswerKeyError, ReasonText: "answer key correction confirmed",
 		Strategy: StrategyHumanRecheck, SeverityDelta: &severity, AssigneeID: "reviewer-a", IdempotencyKey: "regrade-a19-test-key",
@@ -39,30 +39,7 @@ func TestRegradeFreezesPublishedReleaseAndRequiresNewReleasePlan(t *testing.T) {
 	if err != nil || again.Job.ID != summary.Job.ID || len(again.Items) != 2 {
 		t.Fatalf("idempotent create = %#v, err=%v", again, err)
 	}
-	if _, err = service.Approve(context.Background(), "tenant-a", summary.Job.ID, "approver-a"); err != nil {
-		t.Fatal(err)
-	}
-	if _, err = service.Start(context.Background(), "tenant-a", summary.Job.ID, "manager-a"); err != nil {
-		t.Fatal(err)
-	}
-	for _, original := range summary.Items {
-		item, err := service.Claim(context.Background(), "tenant-a", original.ID, "reviewer-a")
-		if err != nil {
-			t.Fatal(err)
-		}
-		candidate := 3.0
-		if item.SubmissionID == "submission-2" {
-			candidate = 2.0
-		}
-		item, err = service.RecordCandidate(context.Background(), "tenant-a", item.ID, "reviewer-a", CandidateInput{Score: candidate, ExpectedRevision: item.Revision, RequireManualReview: true})
-		if err != nil || item.Status != ItemAwaitingReview {
-			t.Fatalf("candidate = %#v, err=%v", item, err)
-		}
-		item, err = service.Review(context.Background(), "tenant-a", item.ID, "manager-a", ReviewInput{Decision: ReviewAccept, ExpectedRevision: item.Revision})
-		if err != nil || item.Status != ItemResolved || item.ReviewedScore == nil {
-			t.Fatalf("review = %#v, err=%v", item, err)
-		}
-	}
+	completeRegradeCandidateReview(t, service, summary)
 	if _, err = service.Finalize(context.Background(), "tenant-a", summary.Job.ID, "manager-a"); err != nil {
 		t.Fatal(err)
 	}
@@ -76,8 +53,7 @@ func TestRegradeFreezesPublishedReleaseAndRequiresNewReleasePlan(t *testing.T) {
 	if len(loaded.DiffHistogram) != 2 || len(loaded.SevereChanges) != 1 || loaded.SevereChanges[0].SubmissionID != "submission-2" {
 		t.Fatalf("diff detail = %#v", loaded)
 	}
-	// The immutable release source still has its old score; A19 only offers a
-	// ReleasePlan for A18 to materialise as a later version.
+	// 不可变的来源发布仍保留旧分数；A19 只提供 ReleasePlan，由 A18 实例化为后续版本。
 	source, err := store.SourceItems(context.Background(), "tenant-a", "exam-a", "question-a", "release-v1", Selector{})
 	if err != nil || source[0].OldScore != 2 || source[1].OldScore != 5 {
 		t.Fatalf("source release fact was changed: %#v, err=%v", source, err)
@@ -142,5 +118,34 @@ func TestRegradeExceptionBlocksFinalize(t *testing.T) {
 	}
 	if _, err = service.Finalize(context.Background(), "tenant-a", summary.Job.ID, "manager-a"); !errors.Is(err, ErrStateConflict) {
 		t.Fatalf("expected unresolved exception to block finalization, got %v", err)
+	}
+}
+
+// 幂等创建确认后才批准和启动；每份答卷先写候选分数，再人工确认原版本。
+func completeRegradeCandidateReview(t *testing.T, service *Service, summary Summary) {
+	t.Helper()
+	if _, err := service.Approve(context.Background(), "tenant-a", summary.Job.ID, "approver-a"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := service.Start(context.Background(), "tenant-a", summary.Job.ID, "manager-a"); err != nil {
+		t.Fatal(err)
+	}
+	for _, original := range summary.Items {
+		item, err := service.Claim(context.Background(), "tenant-a", original.ID, "reviewer-a")
+		if err != nil {
+			t.Fatal(err)
+		}
+		candidate := 3.0
+		if item.SubmissionID == "submission-2" {
+			candidate = 2.0
+		}
+		item, err = service.RecordCandidate(context.Background(), "tenant-a", item.ID, "reviewer-a", CandidateInput{Score: candidate, ExpectedRevision: item.Revision, RequireManualReview: true})
+		if err != nil || item.Status != ItemAwaitingReview {
+			t.Fatalf("candidate = %#v, err=%v", item, err)
+		}
+		item, err = service.Review(context.Background(), "tenant-a", item.ID, "manager-a", ReviewInput{Decision: ReviewAccept, ExpectedRevision: item.Revision})
+		if err != nil || item.Status != ItemResolved || item.ReviewedScore == nil {
+			t.Fatalf("review = %#v, err=%v", item, err)
+		}
 	}
 }

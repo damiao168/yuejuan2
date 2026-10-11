@@ -7,9 +7,8 @@ import (
 	"unicode/utf8"
 )
 
-// PublishedQuestionAppealService keeps all entry points on the immutable
-// release boundary.  In particular, it rejects client-supplied original
-// scores: those facts are re-read from score_release_question by the store.
+// PublishedQuestionAppealService 将所有入口限制在不可变发布边界内，尤其拒绝客户端提供的原始分数；
+// 存储层会从 score_release_question 重新读取这些事实。
 type PublishedQuestionAppealService struct {
 	store PublishedQuestionAppealStore
 }
@@ -89,9 +88,7 @@ func validPublishedQuestionAppealCreate(input CreatePublishedQuestionAppealInput
 		validPublishedQuestionAppealRegion(input.SelectedRegion)
 }
 
-// A selected region is deliberately canonical to the answer crop, rather
-// than a browser pixel position. This makes the evidence usable after display
-// scaling while preventing arbitrary JSON from becoming staff workflow data.
+// 所选区域采用相对答案裁剪图的规范坐标，不使用浏览器像素位置。这样显示缩放后证据仍可用，也避免将任意 JSON 转成教职工工作流数据。
 func validPublishedQuestionAppealRegion(region map[string]any) bool {
 	if region == nil {
 		return true

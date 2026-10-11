@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Alert, App, Button, Select, Space, Tag, type TableColumnsType } from "antd";
+import { Alert, App, Button, Segmented, Select, Space, Tag, type TableColumnsType } from "antd";
 import { Download, RefreshCw } from "lucide-react";
 import {
   Bar,
@@ -13,7 +13,7 @@ import {
   YAxis
 } from "recharts";
 import { ApiClientError, getUserErrorMessage } from "../api/client";
-import { listExams, type Exam } from "../api/exams";
+import { listAllExams, type Exam } from "../api/exams";
 import {
   exportLearningReport,
   getGradingQualityReport,
@@ -48,6 +48,16 @@ interface LearningReportsPageProps {
   initialExamId?: string;
 }
 
+type ClassMetric = "average" | "passRate";
+interface ClassComparisonChartEntry {
+  name: string;
+  average: number;
+  median: number;
+  passRate: number;
+  excellentRate: number;
+  studentCount: number;
+}
+
 const chartBlue = "#1677ff";
 const chartGreen = "#52c41a";
 const chartAmber = "#faad14";
@@ -80,14 +90,14 @@ function ChartPanel({
   emptyTitle,
   children,
   className = ""
-}: {
+}: Readonly<{
   title: string;
   description: string;
   empty: boolean;
   emptyTitle: string;
   children: ReactNode;
   className?: string;
-}) {
+}>) {
   return (
     <section className={`reports-panel ${className}`}>
       <div className="panel-head">
@@ -101,7 +111,36 @@ function ChartPanel({
   );
 }
 
-export function LearningReportsPage({ canRead, canExport, initialExamId = "" }: LearningReportsPageProps) {
+function renderClassComparisonChart(classMetric: ClassMetric, classComparisonData: ClassComparisonChartEntry[], setClassMetric: (metric: ClassMetric) => void) {
+  return <ChartPanel className="reports-view-classes" title="班级对比" description={classMetric === "average" ? "按平均分比较，使用同一分数刻度。" : "按及格率比较，使用同一百分比刻度。"} empty={classComparisonData.length === 0} emptyTitle="暂无班级对比">
+    <Segmented value={classMetric} options={[{ value: "average", label: "平均分" }, { value: "passRate", label: "及格率" }]} onChange={(next) => setClassMetric(next as ClassMetric)} />
+    <ResponsiveContainer width="100%" height={260}>
+      <BarChart data={classComparisonData}>
+        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+        <XAxis dataKey="name" />
+        <YAxis domain={classMetric === "passRate" ? [0, 100] : undefined} label={{ value: classMetric === "average" ? "分数" : "百分比", angle: -90, position: "insideLeft" }} />
+        <ChartTooltip />
+        <Bar dataKey={classMetric} name={classMetric === "average" ? "平均分" : "及格率%"} fill={classMetric === "average" ? chartBlue : chartGreen} radius={[4, 4, 0, 0]} />
+      </BarChart>
+    </ResponsiveContainer>
+  </ChartPanel>;
+}
+
+function LearningReportNotices({ canRead, error, empty, onRetry }: Readonly<{
+  canRead: boolean;
+  error: string | null;
+  empty: OverviewReport["empty"];
+  onRetry: () => Promise<void>;
+}>) {
+  // 权限、请求失败和空报告是独立提示；抽出展示后仍可同时出现，不改变父层请求与重试流程。
+  return <>
+    {!canRead ? <Alert type="error" showIcon message="无报告查看权限" description="当前账号没有查看学情报告的权限，请联系管理员开通。" /> : null}
+    {error ? <ErrorState message={error} onRetry={onRetry} /> : null}
+    {empty?.empty ? <Alert type="info" showIcon message="报告为空" description={emptyReason(empty.reason)} /> : null}
+  </>;
+}
+
+export function LearningReportsPage({ canRead, canExport, initialExamId = "" }: Readonly<LearningReportsPageProps>) {
   const { message, modal } = App.useApp();
   const [exams, setExams] = useState<Exam[]>([]);
   const [selectedExamId, setSelectedExamId] = useState(initialExamId);
@@ -114,6 +153,9 @@ export function LearningReportsPage({ canRead, canExport, initialExamId = "" }: 
   const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [lastExport, setLastExport] = useState<{ filename?: string; watermark?: string } | null>(null);
+  const [view, setView] = useState<"overview" | "questions" | "classes" | "quality">("overview");
+  const [classMetric, setClassMetric] = useState<ClassMetric>("average");
+  const [optionQuestionId, setOptionQuestionId] = useState("first-four");
   const reportRequestRef = useRef(0);
 
   const selectedExam = useMemo(() => exams.find((exam) => exam.id === selectedExamId), [exams, selectedExamId]);
@@ -159,15 +201,20 @@ export function LearningReportsPage({ canRead, canExport, initialExamId = "" }: 
         name: item.question_no,
         scoreRate: percentValue(item.score_rate),
         correctRate: percentValue(item.correct_rate),
-        difficulty: percentValue(item.difficulty),
-        discrimination: percentValue(item.discrimination)
+        discrimination: item.discrimination
       })),
     [questions]
   );
 
   const knowledgeData = useMemo(() => aggregateKnowledge(classReports), [classReports]);
   const errorRows = useMemo(() => flattenErrors(questions, classReports), [classReports, questions]);
-  const objectiveQuestions = useMemo(() => questions.filter((item) => (item.option_distribution?.length ?? 0) > 0).slice(0, 4), [questions]);
+  const allObjectiveQuestions = useMemo(() => questions.filter((item) => (item.option_distribution?.length ?? 0) > 0), [questions]);
+  const objectiveQuestions = useMemo(() => {
+    if (optionQuestionId === "all") return allObjectiveQuestions;
+    if (optionQuestionId === "first-four") return allObjectiveQuestions.slice(0, 4);
+    return allObjectiveQuestions.filter(item => item.question_id === optionQuestionId);
+  }, [allObjectiveQuestions, optionQuestionId]);
+  useEffect(() => { setOptionQuestionId("first-four"); }, [selectedExamId]);
 
   // 样本不足时隐藏该指标；缺少统计依据不能显示成真实的 0%，否则会误导学习判断。
   const qualityData = useMemo(() => {
@@ -195,8 +242,7 @@ export function LearningReportsPage({ canRead, canExport, initialExamId = "" }: 
         render: (value: string) => <span title={value}>{questionTypeLabels[value] ?? "其他题型"}</span>
       },
       { title: "得分率", dataIndex: "score_rate", width: 90, render: (value: number) => formatPercent(value) },
-      { title: "难度", dataIndex: "difficulty", width: 90, render: (value: number) => formatPercent(value) },
-      { title: "区分度", dataIndex: "discrimination", width: 90, render: (value: number) => formatPercent(value) },
+      { title: "区分度", dataIndex: "discrimination", width: 90, render: (value: number) => formatScore(value) },
       {
         title: "知识点",
         dataIndex: "knowledge_points",
@@ -233,7 +279,7 @@ export function LearningReportsPage({ canRead, canExport, initialExamId = "" }: 
     setLoadingExams(true);
     setError(null);
     try {
-      const result = await listExams();
+      const result = await listAllExams();
       setExams(result.exams);
       setSelectedExamId((current) => {
         if (initialExamId && result.exams.some((exam) => exam.id === initialExamId)) return initialExamId;
@@ -370,24 +416,23 @@ export function LearningReportsPage({ canRead, canExport, initialExamId = "" }: 
 
       {lastExport?.watermark ? <p className="muted reports-watermark-note">最近导出水印编号：{lastExport.watermark}</p> : null}
 
-      {!canRead ? <Alert type="error" showIcon message="无报告查看权限" description="当前账号没有查看学情报告的权限，请联系管理员开通。" /> : null}
-      {error ? <ErrorState message={error} onRetry={refresh} /> : null}
-      {overview?.empty?.empty ? <Alert type="info" showIcon message="报告为空" description={emptyReason(overview.empty.reason)} /> : null}
+      <LearningReportNotices canRead={canRead} error={error} empty={overview?.empty} onRetry={refresh} />
 
-      <section className="reports-kpi-strip">
+      <div className="reports-view-nav"><Segmented aria-label="报告视图" value={view} options={[{ value: "overview", label: "总览" }, { value: "questions", label: "题目" }, { value: "classes", label: "班级" }, { value: "quality", label: "阅卷质量" }]} onChange={(next) => setView(next as typeof view)} /></div>
+      {view === "overview" ? <section className="reports-kpi-strip">
         {kpis.map((item) => (
           <div key={item.label}>
             <span>{item.label}</span>
             <strong>{item.value}</strong>
           </div>
         ))}
-      </section>
+      </section> : null}
 
       {loadingReports ? (
         <LoadingState label="正在读取学情报告" />
       ) : (
-        <section className="reports-grid">
-          <ChartPanel className="reports-wide" title="分数分布" description={selectedExam ? selectedExam.name : "未选择考试"} empty={distributionData.length === 0} emptyTitle="暂无分数分布">
+        <section className="reports-grid" data-view={view}>
+          <ChartPanel className="reports-wide reports-view-overview" title="分数分布" description={selectedExam ? selectedExam.name : "未选择考试"} empty={distributionData.length === 0} emptyTitle="暂无分数分布">
             <ResponsiveContainer width="100%" height={260}>
               <BarChart data={distributionData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -399,21 +444,9 @@ export function LearningReportsPage({ canRead, canExport, initialExamId = "" }: 
             </ResponsiveContainer>
           </ChartPanel>
 
-          <ChartPanel title="班级对比" description="柱高分别对应左轴分数与右轴百分比" empty={classComparisonData.length === 0} emptyTitle="暂无班级对比">
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={classComparisonData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="name" />
-                <YAxis yAxisId="score" label={{ value: "分数", angle: -90, position: "insideLeft" }} />
-                <YAxis yAxisId="rate" orientation="right" domain={[0, 100]} label={{ value: "百分比", angle: 90, position: "insideRight" }} />
-                <ChartTooltip />
-                <Bar yAxisId="score" dataKey="average" name="平均分" fill={chartBlue} radius={[4, 4, 0, 0]} />
-                <Bar yAxisId="rate" dataKey="passRate" name="及格率%" fill={chartGreen} radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartPanel>
+          {renderClassComparisonChart(classMetric, classComparisonData, setClassMetric)}
 
-          <ChartPanel title="题目得分率" description="按题号展示得分率与正确率" empty={questionScoreData.length === 0} emptyTitle="暂无题目得分率">
+          <ChartPanel className="reports-view-overview reports-view-questions" title="题目得分率" description="得分率越高，整体作答越容易；正确率按获得该题满分的答卷统计。" empty={questionScoreData.length === 0} emptyTitle="暂无题目得分率">
             <ResponsiveContainer width="100%" height={260}>
               <LineChart data={questionScoreData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -426,7 +459,7 @@ export function LearningReportsPage({ canRead, canExport, initialExamId = "" }: 
             </ResponsiveContainer>
           </ChartPanel>
 
-          <ChartPanel title="知识点掌握率" description="各班薄弱知识点汇总，掌握率最低的排在前面。" empty={knowledgeData.length === 0} emptyTitle="暂无知识点数据">
+          <ChartPanel className="reports-view-overview" title="知识点掌握率" description="各班薄弱知识点汇总，掌握率最低的排在前面。" empty={knowledgeData.length === 0} emptyTitle="暂无知识点数据">
             <ResponsiveContainer width="100%" height={260}>
               <BarChart data={knowledgeData.map((item) => ({ name: item.knowledge_point, mastery: percentValue(item.mastery_rate), questions: item.question_count }))}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -438,7 +471,7 @@ export function LearningReportsPage({ canRead, canExport, initialExamId = "" }: 
             </ResponsiveContainer>
           </ChartPanel>
 
-          <section className="reports-panel reports-wide grading-quality-report-panel">
+          <section className="reports-panel reports-wide grading-quality-report-panel reports-view-quality">
             <div className="panel-head">
               <div>
                 <h2>阅卷质量分析</h2>
@@ -495,25 +528,25 @@ export function LearningReportsPage({ canRead, canExport, initialExamId = "" }: 
             )}
           </section>
 
-          <ChartPanel title="题目质量分析" description="难度越高表示题目越容易失分，区分度越高表示越能区分学生水平。" empty={questionScoreData.length === 0} emptyTitle="暂无题目质量">
+          <ChartPanel className="reports-view-questions" title="题目区分度" description="区分度为总分高低两组的本题得分率之差，范围 -1 至 1；负值表示低分组在本题得分率更高，需结合题目与样本复核。" empty={questionScoreData.length === 0} emptyTitle="暂无题目质量">
             <ResponsiveContainer width="100%" height={260}>
               <LineChart data={questionScoreData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="name" />
-                <YAxis domain={[0, 100]} />
+                <YAxis domain={[-1, 1]} />
                 <ChartTooltip />
-                <Line type="monotone" dataKey="difficulty" name="难度%" stroke={chartAmber} strokeWidth={2} dot={{ r: 3 }} />
-                <Line type="monotone" dataKey="discrimination" name="区分度%" stroke={chartRed} strokeWidth={2} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="discrimination" name="区分度" stroke={chartRed} strokeWidth={2} dot={{ r: 3 }} />
               </LineChart>
             </ResponsiveContainer>
           </ChartPanel>
 
-          <section className="reports-panel">
+          <section className="reports-panel reports-view-questions">
             <div className="panel-head">
               <div>
                 <h2>客观题选项分布</h2>
-                <p>统计每道客观题各选项的作答人数。</p>
+                <p>统计客观题各选项的作答人数。当前显示 {objectiveQuestions.length} / {allObjectiveQuestions.length} 题。</p>
               </div>
+              <Select aria-label="选项分布题目范围" showSearch optionFilterProp="label" style={{ minWidth: 220 }} value={optionQuestionId} onChange={setOptionQuestionId} options={[{ value: "first-four", label: "前 4 道客观题" }, { value: "all", label: `全部 ${allObjectiveQuestions.length} 道客观题` }, ...allObjectiveQuestions.map(item => ({ value: item.question_id, label: `第 ${item.question_no} 题` }))]} />
             </div>
             {objectiveQuestions.length === 0 ? (
               <EmptyState title="暂无选项分布" description="该考试没有客观题或选项作答数据。" />
@@ -543,7 +576,7 @@ export function LearningReportsPage({ canRead, canExport, initialExamId = "" }: 
             )}
           </section>
 
-          <section className="reports-panel reports-wide">
+          <section className="reports-panel reports-wide reports-view-questions">
             <div className="panel-head">
               <div>
                 <h2>题目明细</h2>
@@ -561,7 +594,7 @@ export function LearningReportsPage({ canRead, canExport, initialExamId = "" }: 
             />
           </section>
 
-          <section className="reports-panel">
+          <section className="reports-panel reports-view-classes">
             <div className="panel-head">
               <div>
                 <h2>班级明细</h2>
@@ -579,7 +612,7 @@ export function LearningReportsPage({ canRead, canExport, initialExamId = "" }: 
             />
           </section>
 
-          <section className="reports-panel">
+          <section className="reports-panel reports-view-overview">
             <div className="panel-head">
               <div>
                 <h2>高频错误</h2>

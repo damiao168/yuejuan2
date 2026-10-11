@@ -48,6 +48,24 @@ export function evaluateOperationalSlices(predictions, minimumRecords = 1) {
   return { dimensions: slices, disparities, insufficient_slices: insufficient };
 }
 
+function checkFairnessDisparities(fairness, gate, reasons) {
+  const disparities = fairness?.disparities && typeof fairness.disparities === "object" ? fairness.disparities : null;
+  if (disparities === null) reasons.push("fairness disparities are missing");
+  for (const dimension of ["subject", "question_type", "ocr_band", "answer_length_band"]) {
+    if (disparities !== null && !(dimension in disparities)) reasons.push(`${dimension} disparity is missing`);
+  }
+  for (const [dimension, disparity] of Object.entries(disparities ?? {})) {
+    // null 表示没有可比较的两组；缺失或非有限数值不能被当作零差距。
+    if (disparity?.normalized_mae_gap !== null && !Number.isFinite(disparity?.normalized_mae_gap)) {
+      reasons.push(`${dimension}.normalized_mae_gap is not finite`);
+      continue;
+    }
+    if (disparity.normalized_mae_gap !== null && disparity.normalized_mae_gap > gate.maximum_slice_nmae_gap) {
+      reasons.push(`${dimension}.normalized_mae_gap ${disparity.normalized_mae_gap} > ${gate.maximum_slice_nmae_gap}`);
+    }
+  }
+}
+
 export function checkCalibrationFairnessGate(calibration, fairness, level, config) {
   const gate = config[level];
   if (!gate) throw new Error(`Unknown calibration gate: ${level}`);
@@ -64,19 +82,6 @@ export function checkCalibrationFairnessGate(calibration, fairness, level, confi
   const insufficientSlices = Array.isArray(fairness?.insufficient_slices) ? fairness.insufficient_slices : null;
   if (insufficientSlices === null) reasons.push("fairness insufficient_slices is missing");
   else if (insufficientSlices.length) reasons.push(`${insufficientSlices.length} slices are below minimum_records_per_slice ${gate.minimum_records_per_slice}`);
-  const disparities = fairness?.disparities && typeof fairness.disparities === "object" ? fairness.disparities : null;
-  if (disparities === null) reasons.push("fairness disparities are missing");
-  for (const dimension of ["subject", "question_type", "ocr_band", "answer_length_band"]) {
-    if (disparities !== null && !(dimension in disparities)) reasons.push(`${dimension} disparity is missing`);
-  }
-  for (const [dimension, disparity] of Object.entries(disparities ?? {})) {
-    if (disparity?.normalized_mae_gap !== null && !Number.isFinite(disparity?.normalized_mae_gap)) {
-      reasons.push(`${dimension}.normalized_mae_gap is not finite`);
-      continue;
-    }
-    if (disparity.normalized_mae_gap !== null && disparity.normalized_mae_gap > gate.maximum_slice_nmae_gap) {
-      reasons.push(`${dimension}.normalized_mae_gap ${disparity.normalized_mae_gap} > ${gate.maximum_slice_nmae_gap}`);
-    }
-  }
+  checkFairnessDisparities(fairness, gate, reasons);
   return { level, passed: reasons.length === 0, reasons };
 }

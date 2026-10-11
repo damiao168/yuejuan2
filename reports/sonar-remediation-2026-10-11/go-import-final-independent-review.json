@@ -1,0 +1,129 @@
+{
+  "generated_at": "2026-10-11T19:43:10.186593+08:00",
+  "reviewer": "sonar_go_fix independent read-only",
+  "product_source_edits": false,
+  "new_test_executions": false,
+  "file": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+  "review_state": "original_and_current_fully_read; checkpoint03 final-two delta independently inspected",
+  "scope": {
+    "original_lines_read": "1–783",
+    "current_lines_read": "1–856",
+    "checkpoint03_source": "D:\\tools\\sonar-remediation-20261011\\root-go-final-02-baseline\\services\\api-gateway\\tools\\import-fujian-2024-math-simulation\\main_batch9_test.go",
+    "checkpoint03_delta_fully_read": true,
+    "last_two_keys": [
+      "6eb1de9a-c6f8-4662-9a79-01e20787127a",
+      "32ec19c6-7711-4694-b5dd-6577c7ecf0e9"
+    ],
+    "other_go_files_not_read_for_this_review": "pending; no whole-workspace review claim"
+  },
+  "source_identity": {
+    "original_sha256": "d29aab2f1ab8f1fe5e19958e98f9dcac35742c29f82b3fc98fc09bc3681162b5",
+    "checkpoint03_before_final_two_sha256": "2f62dba38f567106e5701c0ede4812b83a026f170a8658cf8248a3cd3e9db04f",
+    "current_sha256": "5ba735ccad0358c046add3e2b402634c55d6c3be30b492d675e8e7576c9c519c",
+    "current_matches_frontend_successful_test_sha256": true
+  },
+  "checks": [
+    {
+      "topic": "上传协议与首错顺序",
+      "original_lines": "168–209",
+      "current_lines": "198–245",
+      "conclusion": "原 callback 的 calls++ 仍先执行，随后同一 request 与 test.filename 传入 helper；Method/Path/Accept/Authorization 先检查，失败 Fatal 同一子测试，再消费 multipart。filename/content/字段映射断言和响应返回均保持原先后次序，空文件名的0调用断言未变。"
+    },
+    {
+      "topic": "故障输入与引用状态",
+      "original_lines": "623–667",
+      "current_lines": "665–714",
+      "conclusion": "prepare helper 用同一个 *testing.T 创建数据集，按原两独立 if 删除Q1/交换0与16题后返回 cfg/data。map与slice引用保持；sequence、HTTP fixture、SQL script 均在 helper 返回后创建，questions=data.Questions仍使用改序后的数组。"
+    },
+    {
+      "topic": "SQL与事务事实",
+      "original_lines": "242–367、623–714",
+      "current_lines": "278–404、665–782",
+      "conclusion": "SQL脚本、Query/Exec计数、begin/commit/rollback记录、ocr_task注入错误与24 exec/8 query/末尾rollback期望未变；只读解析的46份完整业务proof含实际 SQL 字符串、参数、HTTP/SQL sequence，与checkpoint03 overlay逐份完全相同。"
+    },
+    {
+      "topic": "失败诊断与断言",
+      "original_lines": "168–209、623–667",
+      "current_lines": "198–245、665–714",
+      "conclusion": "新增2 helper内仍用t.Helper，保留所有原Fatal条件/消息及短路。相对checkpoint03所有string/rune/raw literal多重集无差异；将两helper仅用于审查地反向内联后整文件Go token序列完全等于checkpoint03版本，辅助核对调用外部未变。"
+    },
+    {
+      "topic": "文件描述符与资源归属",
+      "original_lines": "211–240、362–367、481–508",
+      "current_lines": "247–276、398–404、523–549、703–714",
+      "conclusion": "本次2 helper未新增Open/Close/defer/事务，batch9DatasetFixture的同一子测试TempDir与WriteFile调用不变；openBatch9DB仍由原子测试t.Cleanup关闭，multipart读取同一原request.Body，响应仍原NopCloser。没有将cleanup绑定到新的子测试或提前关闭数据库/HTTP资源。"
+    },
+    {
+      "topic": "其他原始修复保留",
+      "original_lines": "1–783",
+      "current_lines": "1–856",
+      "conclusion": "完整阅读原始与当前文件，配置恢复defer、模板题序/几何、注册回滚/绑定、答题候选/客观评分、导入状态顺序及裁剪更新仍保留。正式核验仅聚焦最后2原项，不替root对其余6项作平台关闭结算。"
+    },
+    {
+      "topic": "中文维护注释",
+      "current_lines": "237、706",
+      "conclusion": "注释明确限定上传先认证后读表单、故障输入先于HTTP/SQL记录准备；与当前原判断和调用顺序一致，无生产事务/真实PostgreSQL保证的夸大表述。"
+    }
+  ],
+  "mechanical_support": {
+    "reverse_inline_full_file_token_identity_with_checkpoint03": true,
+    "checkpoint03_vs_current_string_rune_raw_literal_multisets_identical": true,
+    "note": "仅支持独立人工顺序/资源/状态审查，不以token或复杂度估值代替平台确认。"
+  },
+  "test_evidence": {
+    "executions": [
+      {
+        "execution_report": "root-go-final-02-baseline-execution.json",
+        "result_report": "root-go-final-02-baseline-result.json",
+        "event_log": "root-go-final-02-baseline-events.jsonl",
+        "actual_exit_code": 0,
+        "started_at": "2026-10-11T19:35:49.974469+08:00",
+        "completed_at": "2026-10-11T19:36:44.345733+08:00",
+        "counts_recounted_from_raw_jsonl": {
+          "pass": 58
+        },
+        "proof_count_recounted_from_raw_jsonl": 46,
+        "source_identity_count": 1034,
+        "source_identity_stable": true,
+        "current_target_sha_matches": true,
+        "baseline_overlay": "D:\\project\\yuejuan\\reports\\sonar-remediation-2026-10-11\\root-go-final-02-baseline-overlay.json",
+        "baseline_overlay_sha256": "2f62dba38f567106e5701c0ede4812b83a026f170a8658cf8248a3cd3e9db04f",
+        "database_environment_cleared": false,
+        "report_sha256": "4d85c19cf36c82fa7a06e9a39dfbc1959757fb6679445d15cc1c2758863f5b52",
+        "event_log_sha256": "d23039ec5726cbce9e3e19350445b58ce3190be58e8b75331d6fdf2f813a677b"
+      },
+      {
+        "execution_report": "root-go-final-02-current-execution.json",
+        "result_report": "root-go-final-02-current-result.json",
+        "event_log": "root-go-final-02-current-events.jsonl",
+        "actual_exit_code": 0,
+        "started_at": "2026-10-11T19:36:44.798158+08:00",
+        "completed_at": "2026-10-11T19:36:51.756877+08:00",
+        "counts_recounted_from_raw_jsonl": {
+          "pass": 58
+        },
+        "proof_count_recounted_from_raw_jsonl": 46,
+        "source_identity_count": 1034,
+        "source_identity_stable": true,
+        "current_target_sha_matches": true,
+        "baseline_overlay": null,
+        "baseline_overlay_sha256": null,
+        "database_environment_cleared": false,
+        "report_sha256": "469f2211b6ace952e0d7f16f5da6e18aed55fd4ff7d49b52f98d08b545740704",
+        "event_log_sha256": "250eb791fbd571f31b252d575593ec4a62eaa968578b6db279311740089f99bb"
+      }
+    ],
+    "same_test_identities_and_results": true,
+    "same_complete_business_proofs": true,
+    "business_proof_count": 46,
+    "current_counts": {
+      "pass": 58,
+      "fail": 0,
+      "skip": 0
+    },
+    "baseline_overlay_boundary": "覆盖的是最后两项提取前的checkpoint03文件，不是最初783行文件；其余工作区依赖为当前版本。",
+    "integration_boundary": "本工具包使用HTTP Transport/SQL driver测试夹具；58 pass不证明真实PostgreSQL或远端服务集成，未对外请求。"
+  },
+  "findings": [],
+  "sonar_state": "last two official states pending root full04 rescan; no local platform claim"
+}

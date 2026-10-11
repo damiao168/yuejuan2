@@ -54,7 +54,8 @@ func (r ProviderRegistry) ProbePolicy(providerKey string) string {
 	return ""
 }
 
-// 显式 provider 优先于模型名前缀；custom 必须带受 HTTPS 校验的地址，避免把未知模型误发到任意端点。
+// Resolve 中显式 provider 优先于模型名前缀；未知显式 provider 不能退回自动识别。
+// custom 在此要求地址非空，HTTPS 端点和密钥约束在配置规范化时继续校验。
 func (r ProviderRegistry) Resolve(modelName, providerKey, customBaseURL string) (ProviderDefinition, error) {
 	modelName = strings.ToLower(strings.TrimSpace(modelName))
 	providerKey = strings.ToLower(strings.TrimSpace(providerKey))
@@ -71,18 +72,31 @@ func (r ProviderRegistry) Resolve(modelName, providerKey, customBaseURL string) 
 		}
 		return ProviderDefinition{Key: "custom", DisplayName: "其他兼容接口", BaseURL: customBaseURL, AdapterType: "openai_compatible", Region: "custom"}, nil
 	}
+	if providerKey != "" {
+		return r.resolveProviderKey(providerKey)
+	}
 	for _, provider := range r.providers {
-		if providerKey != "" {
-			if provider.Key == providerKey {
-				return provider, nil
-			}
-			continue
-		}
-		for _, prefix := range provider.ModelPrefixes {
-			if strings.HasPrefix(modelName, prefix) {
-				return provider, nil
-			}
+		if providerMatchesModel(provider, modelName) {
+			return provider, nil
 		}
 	}
 	return ProviderDefinition{}, ErrManagedProviderUnknown
+}
+
+func (r ProviderRegistry) resolveProviderKey(providerKey string) (ProviderDefinition, error) {
+	for _, provider := range r.providers {
+		if provider.Key == providerKey {
+			return provider, nil
+		}
+	}
+	return ProviderDefinition{}, ErrManagedProviderUnknown
+}
+
+func providerMatchesModel(provider ProviderDefinition, modelName string) bool {
+	for _, prefix := range provider.ModelPrefixes {
+		if strings.HasPrefix(modelName, prefix) {
+			return true
+		}
+	}
+	return false
 }

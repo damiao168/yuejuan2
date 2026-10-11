@@ -6,7 +6,7 @@ interface CaptureSummary {
   failed: number;
 }
 
-export function SubmissionCaptureSummary({ summary }: { summary: CaptureSummary }) {
+export function SubmissionCaptureSummary({ summary }: Readonly<{ summary: CaptureSummary }>) {
   return (
       <section className="capture-summary-grid">
         <div className="metric-tile">

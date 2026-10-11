@@ -40,17 +40,18 @@ export interface Appeal {
   submission_grade_id: string;
   anonymous_code?: string;
   student_id: string;
-  target_type: "exam" | "question" | "deduction_point" | string;
+  // 响应保留服务端扩展值；提交建议时仍使用下方请求类型约束已支持的操作。
+  target_type: string;
   final_grade_id?: string;
   question_id?: string;
   question_no?: string;
   deduction_point_id?: string;
   reason: string;
   attachment?: Record<string, unknown>;
-  status: AppealStatus | string;
+  status: string;
   result_reason?: string;
   assigned_to?: string;
-  teacher_recommendation?: "accept" | "reject" | "adjust_score" | "need_more_info" | string;
+  teacher_recommendation?: string;
   teacher_recommendation_reason?: string;
   teacher_recommended_score?: number;
   teacher_recommendation_by?: string;

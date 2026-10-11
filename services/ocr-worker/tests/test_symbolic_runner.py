@@ -28,7 +28,8 @@ def contract():
 
 class Verifier:
     def verify_transition(self, previous, following):
-        assert previous == equation(2) and following == equation(3)
+        assert previous == equation(2)
+        assert following == equation(3)
         return {"status": "contradicted", "relation": "different_solution_set", "evidence": ["{2}", "{3}"],
                 "engine_version": "1.14.0", "ruleset_version": "v1"}
 
@@ -57,7 +58,7 @@ def test_symbolic_http_client_uses_restricted_ast_and_real_domain(monkeypatch):
         sent.append((req.full_url, json.loads(req.data), req.headers, timeout))
         return Response()
 
-    monkeypatch.setattr("ocr_worker.math_runner.request.urlopen", urlopen)
+    monkeypatch.setattr("ocr_worker.math_runner._open_request", urlopen)
     client = MathVerificationClient("http://math:8092", "token")
     client.normalize("x=2")
     client.verify_transition(equation(2), equation(3))
@@ -119,10 +120,10 @@ class API:
     def activate_task(self, task, worker):
         assert task is self.task
 
-    def heartbeat_task(self, *args, **kwargs):
+    def heartbeat_task(self, runtime_task_id, lease_token, worker_instance_id, lease_seconds, timeout_seconds, *, progress=None):
         pass
 
-    def get_math_verification_input(self, task, tenant):
+    def get_math_verification_input(self, task):
         if self.unavailable:
             raise APIError("unavailable")
         binding = dict(self.binding)
@@ -130,10 +131,10 @@ class API:
             binding["artifact_version"] += 1
         return {"task": binding, "contract": contract()}
 
-    def complete_math_verification_task(self, task, payload, tenant):
+    def complete_math_verification_task(self, task, payload):
         self.completed.append(payload)
 
-    def fail_math_verification_task(self, task, payload, tenant):
+    def fail_math_verification_task(self, task, payload):
         self.failed.append(payload)
 
 

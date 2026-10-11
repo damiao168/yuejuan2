@@ -1,0 +1,278 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxfile host="app.diagrams.net" agent="yuejuan architecture audit" version="24.7.17" type="device" compressed="false">
+  <diagram id="authorization" name="身份、权限、幂等与学校数据边界">
+    <mxGraphModel dx="2340" dy="1885" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2340" pageHeight="1885" math="0" shadow="0" background="#FFFFFF">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="__title" value="10 / 01  身份、权限、幂等与学校数据边界" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Microsoft YaHei;fontColor=#25364B;fontSize=48;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40" y="24" width="2260" height="64" />
+        </mxCell>
+        <mxCell id="__note" value="" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Microsoft YaHei;fontColor=#25364B;fontSize=26;fontColor=#617084;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40" y="96" width="2260" height="48" />
+        </mxCell>
+        <mxCell id="human" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;平台 / 租户 / 学校管理员&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;教师 / 阅卷员 / 仲裁员 / 审计员 / 学生&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/auth/role_policy.go:19" details="实际人类角色&#10;platform_admin / tenant_admin / school_admin&#10;teacher / grader / arbitrator / auditor / student&#10;数据范围：platform/tenant/school/class/exam_task/self" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="160" y="260" width="824" height="157" />
+        </mxCell>
+        <mxCell id="service" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;页面处理 / 主观评分 Worker&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;任务绑定 + 租约校验&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/auth/role_policy.go:28;services/api-gateway/internal/server/router_guards.go:295" details="实际服务身份&#10;page_processing_worker / subjective_grading_worker&#10;*_worker按服务角色策略识别&#10;服务账户仍须绑定任务与租约" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="1278" y="260" width="968" height="157" />
+        </mxCell>
+        <mxCell id="auth" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;认证 / 当前会话&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/auth/middleware.go:36;services/api-gateway/internal/auth/store_postgres.go:180" details="AuthMiddleware&#10;会话hash查询、expiry/revoke/epoch/locked校验&#10;解析当前角色、permissions、AccessScope&#10;cookie / Bearer；空scope只限特定自账户入口" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="104" y="679" width="532" height="111" />
+        </mxCell>
+        <mxCell id="idem" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;通用收据重放&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#FDECEF;strokeColor=#B64857;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/router_guards.go:98;services/api-gateway/internal/idempotency/middleware.go:144" details="requireAuth中的幂等收据&#10;缓存key含tenant+actor+route+指纹&#10;命中时直接返回旧响应&#10;P1：内层权限/资源检查未执行" implementationStatus="issue">
+          <mxGeometry as="geometry" x="948" y="679" width="456" height="111" />
+        </mxCell>
+        <mxCell id="resource" value="&lt;div style=&quot;font-size:61px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;资源范围 / 业务权限&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/auth/resource_scope.go:37;services/api-gateway/internal/server/router_guards.go:130" details="资源边界 + Permission&#10;学校、班级、考试、学生、分派任务&#10;平台角色仍受保留tenant校验&#10;新命令继续经过业务Store scope" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="1668" y="686" width="577" height="98" />
+        </mxCell>
+        <mxCell id="recent" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;关键操作&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;授权 → 近期认证 → 重放&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/router_guards.go:116;services/api-gateway/internal/server/recent_auth_test.go:67" details="受保护关键guard顺序&#10;auth → resource → permission → recentAuth&#10;→ idempotency → handler&#10;导出/关键命令会在缓存返回前再次检查" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="382" y="1085" width="380" height="157" />
+        </mxCell>
+        <mxCell id="task" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;Worker 能力 / 租约&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/router_guards.go:182;services/api-gateway/internal/server/router_guards.go:307" details="Worker作用域与能力&#10;TaskScope + source/payload/file校验&#10;owner/generation/lease限制结果提交&#10;服务声明不能自行扩大全租户范围" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="1422" y="1108" width="680" height="111" />
+        </mxCell>
+        <mxCell id="rls" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;SQL 范围 + 部分表 RLS&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/db/tenant_context.go:55;services/api-gateway/migrations/000139_high_risk_tenant_rls.sql" details="DB第二道防线&#10;每次query设置runtime role与tenant_id&#10;非superuser / 不可BYPASSRLS&#10;仅部分表FORCE RLS；学校细分仍靠应用&#10;maintenance是显式后台跨租户上下文" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="174" y="1504" width="796" height="111" />
+        </mxCell>
+        <mxCell id="boundary" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;旧键：同操作者有效新会话&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;收据命中可能跳过当前业务授权&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#FFF4D9;strokeColor=#AD7D24;strokeWidth=1.5;dashed=1;" vertex="1" parent="1" evidence="services/api-gateway/internal/auth/managed_access_store.go:154;docs/architecture/evidence/database-audit.md" details="审计边界&#10;身份仍始终校验；权限变更会废止旧会话&#10;同actor重新登录、scope仍有效后才可能旧键重放&#10;不表示重放会再次执行写操作&#10;DB复合租户FK与快照触发器缺口见审查报告" implementationStatus="partial">
+          <mxGeometry as="geometry" x="1318" y="1482" width="888" height="157" />
+        </mxCell>
+        <mxCell id="__e0" value="请求 / 当前会话" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="human" target="auth" evidence="" details="请求 / 当前会话">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e1" value="Bearer + task headers" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0.5;entryY=0;" edge="1" parent="1" source="service" target="task" evidence="" details="Bearer + task headers">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="2301" y="338" />
+              <mxPoint x="2301" y="975" />
+              <mxPoint x="1762" y="975" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e2" value="requireAuth路线" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="auth" target="idem" evidence="" details="requireAuth路线">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e3" value="只有新执行时" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="idem" target="resource" evidence="" details="只有新执行时">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e4" value="专用guard路线" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="auth" target="recent" evidence="" details="专用guard路线">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e5" value="Store SQL" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0.5;entryY=0;" edge="1" parent="1" source="resource" target="rls" evidence="" details="Store SQL">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="2275" y="748" />
+              <mxPoint x="2275" y="1352" />
+              <mxPoint x="572" y="1352" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e6" value="任务租户context" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" edge="1" parent="1" source="task" target="rls" evidence="" details="任务租户context">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="1144" y="1164" />
+              <mxPoint x="1144" y="1560" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__legend0" value="已实现" style="rounded=1;html=1;fillColor=#E9F6EE;strokeColor=#38835B;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40.0" y="1823" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend1" value="部分接入" style="rounded=1;html=1;fillColor=#FFF4D9;strokeColor=#AD7D24;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="416.6666666666667" y="1823" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend2" value="规划" style="rounded=1;html=1;fillColor=#F1F2F4;strokeColor=#969DA7;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="793.3333333333334" y="1823" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend3" value="问题" style="rounded=1;html=1;fillColor=#FDECEF;strokeColor=#B64857;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1170.0" y="1823" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend4" value="基础设施" style="rounded=1;html=1;fillColor=#EAF2FF;strokeColor=#5278B0;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1546.6666666666667" y="1823" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend5" value="待确认" style="rounded=1;html=1;fillColor=#F5F5F6;strokeColor=#8C94A0;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1923.3333333333335" y="1823" width="373.3333333333333" height="38" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="credential" name="凭据加密、使用与会话安全">
+    <mxGraphModel dx="2340" dy="1677" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2340" pageHeight="1677" math="0" shadow="0" background="#FFFFFF">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="__title" value="10 / 02  凭据加密、使用与会话安全" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Microsoft YaHei;fontColor=#25364B;fontSize=48;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40" y="24" width="2260" height="64" />
+        </mxCell>
+        <mxCell id="__note" value="" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Microsoft YaHei;fontColor=#25364B;fontSize=26;fontColor=#617084;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40" y="96" width="2260" height="48" />
+        </mxCell>
+        <mxCell id="admin" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;保存模型配置&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/router_guards.go:310;services/api-gateway/internal/modelgovernance/managed_config_store_postgres.go:34" details="平台模型配置操作&#10;API Key仅输入/掩码显示&#10;角色+模型配置权限+资源检查" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="130" y="263" width="456" height="111" />
+        </mxCell>
+        <mxCell id="cipher" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;AES-GCM&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;tenant / config AAD&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/modelgovernance/managed_config.go:208" details="CredentialCipher&#10;SHA-256(masterKey) → AES-256-GCM&#10;随机nonce；AAD绑定tenantID+configID&#10;解密失败返回配置不可用" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="972" y="253" width="370" height="157" />
+        </mxCell>
+        <mxCell id="store" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;PG 密文&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#EAF2FF;strokeColor=#5278B0;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/modelgovernance/managed_config_store_postgres.go:44" details="PostgreSQL托管配置&#10;只保存ciphertext + nonce&#10;状态/能力探测/更新版本&#10;主密钥来自部署环境；图中无真实值" implementationStatus="infra">
+          <mxGeometry as="geometry" x="1818" y="276" width="291" height="111" />
+        </mxCell>
+        <mxCell id="resolve" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;受控解密&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/modelgovernance/managed_config.go:183;services/api-gateway/internal/modelgovernance/managed_config_store_postgres.go:211" details="运行时解析 / 解密&#10;ResolveDefaultManagedAPI / role binding&#10;同租户、active、当前能力探测版本&#10;显式默认不可用时不静默换供应商" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="1001" y="731" width="312" height="111" />
+        </mxCell>
+        <mxCell id="go" value="&lt;div style=&quot;font-size:58px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;业务处理器 / Agent&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/application_modules.go:126;services/api-gateway/internal/modelgovernance/managed_agent_http.go" details="Go业务处理器 / 托管Agent&#10;试卷导入、评分Agent、学校助手&#10;将短期明文凭据用于本次HTTP调用" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="80" y="740" width="554" height="94" />
+        </mxCell>
+        <mxCell id="external" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;本地 / 外部模型&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#EAF2FF;strokeColor=#5278B0;strokeWidth=1.5;" vertex="1" parent="1" evidence="ai-services/grading_agent/provider_adapter.py;ai-services/grading_agent/model.py" details="本地或外部模型&#10;受控BaseURL + provider adapter&#10;认证header；timeouts / retries&#10;具体部署与密钥轮换未运行确认" implementationStatus="infra">
+          <mxGeometry as="geometry" x="1697" y="731" width="532" height="111" />
+        </mxCell>
+        <mxCell id="session" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;会话 Token Hash&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;密码 Argon2id&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/auth/password.go:36;services/api-gateway/internal/auth/token.go:11;services/api-gateway/internal/auth/managed_access_store.go:154" details="用户会话与密码&#10;密码Argon2id；兼容bcrypt并升级&#10;随机token，DB保存SHA-256 hash&#10;授权变更提升epoch并撤销会话" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="277" y="1254" width="617" height="157" />
+        </mxCell>
+        <mxCell id="protect" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;CSRF / 限流 / 审计&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/server.go:183;services/api-gateway/internal/server/infrastructure.go:84;services/api-gateway/internal/server/routes_auth.go" details="HTTP与审计控制&#10;CSRF、CORS、body limit、安全头&#10;Redis登录失败限流、MFA/step-up&#10;日志、指标、显式审计写入&#10;真实.env、口令、API Key未写入文档" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="1420" y="1277" width="645" height="111" />
+        </mxCell>
+        <mxCell id="__e0" value="写入凭据" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="admin" target="cipher" evidence="" details="写入凭据">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e1" value="密文存储" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="cipher" target="store" evidence="" details="密文存储">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e2" value="受限配置读取" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="store" target="resolve" evidence="" details="受限配置读取">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="1963" y="546" />
+              <mxPoint x="1157" y="546" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e3" value="解密后的运行配置" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="resolve" target="go" evidence="" details="解密后的运行配置">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e4" value="受控模型HTTP调用" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=1;" edge="1" parent="1" source="go" target="external" evidence="" details="受控模型HTTP调用">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="351" y="1040" />
+              <mxPoint x="1963" y="1040" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__legend0" value="已实现" style="rounded=1;html=1;fillColor=#E9F6EE;strokeColor=#38835B;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40.0" y="1615" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend1" value="部分接入" style="rounded=1;html=1;fillColor=#FFF4D9;strokeColor=#AD7D24;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="416.6666666666667" y="1615" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend2" value="规划" style="rounded=1;html=1;fillColor=#F1F2F4;strokeColor=#969DA7;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="793.3333333333334" y="1615" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend3" value="问题" style="rounded=1;html=1;fillColor=#FDECEF;strokeColor=#B64857;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1170.0" y="1615" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend4" value="基础设施" style="rounded=1;html=1;fillColor=#EAF2FF;strokeColor=#5278B0;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1546.6666666666667" y="1615" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend5" value="待确认" style="rounded=1;html=1;fillColor=#F5F5F6;strokeColor=#8C94A0;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1923.3333333333335" y="1615" width="373.3333333333333" height="38" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="deployment" name="物理部署：Compose定义与客户端宿主机">
+    <mxGraphModel dx="2340" dy="2028" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2340" pageHeight="2028" math="0" shadow="0" background="#FFFFFF">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="__title" value="10 / 03  物理部署：Compose定义与客户端宿主机" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Microsoft YaHei;fontColor=#25364B;fontSize=48;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40" y="24" width="2260" height="64" />
+        </mxCell>
+        <mxCell id="__note" value="" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Microsoft YaHei;fontColor=#25364B;fontSize=26;fontColor=#617084;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40" y="96" width="2260" height="48" />
+        </mxCell>
+        <mxCell id="client" value="&lt;div style=&quot;font-size:67px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;浏览器 / 桌面宿主&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#EAF2FF;strokeColor=#5278B0;strokeWidth=1.5;" vertex="1" parent="1" evidence="apps/student-portal/package.json;apps/desktop-client/src-tauri/tauri.conf.json" details="浏览器 / 桌面宿主机&#10;Web Admin；Student可独立构建&#10;桌面Tauri在客户端，不是Compose服务" implementationStatus="infra">
+          <mxGeometry as="geometry" x="82" y="266" width="565" height="105" />
+        </mxCell>
+        <mxCell id="nginx" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;Nginx 入口&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#EAF2FF;strokeColor=#5278B0;strokeWidth=1.5;" vertex="1" parent="1" evidence="infra/docker-compose/nginx/nginx.conf:45;infra/docker-compose/docker-compose.yml:753" details="nginx :80 → 宿主8088&#10;/api/* → api-gateway:8080&#10;/ → web-admin:80&#10;样例HTTP；外部TLS终止待环境确认" implementationStatus="infra">
+          <mxGeometry as="geometry" x="972" y="276" width="408" height="111" />
+        </mxCell>
+        <mxCell id="web" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;Web 静态容器&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#EAF2FF;strokeColor=#5278B0;strokeWidth=1.5;" vertex="1" parent="1" evidence="infra/docker-compose/docker-compose.yml:408;apps/web-admin/Dockerfile" details="web-admin Nginx容器&#10;Vite静态构建；默认主页管理端&#10;Compose没有独立student服务" implementationStatus="infra">
+          <mxGeometry as="geometry" x="1713" y="276" width="500" height="111" />
+        </mxCell>
+        <mxCell id="api" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;Go API 容器&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#EAF2FF;strokeColor=#5278B0;strokeWidth=1.5;" vertex="1" parent="1" evidence="infra/docker-compose/docker-compose.yml:264;infra/docker-compose/docker-compose.yml:314;infra/docker-compose/.env.example;services/api-gateway/cmd/api-gateway/main.go:62" details="api-gateway Go容器&#10;Postgres应用身份；Worker→API TLS可配置&#10;Compose样例API→grading-agent使用HTTPS与内部CA&#10;API宿主8080；health/live与health/ready" implementationStatus="infra">
+          <mxGeometry as="geometry" x="958" y="712" width="437" height="111" />
+        </mxCell>
+        <mxCell id="data" value="&lt;div style=&quot;font-size:40px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;PG / Redis / MinIO / Qdrant&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#EAF2FF;strokeColor=#5278B0;strokeWidth=1.5;" vertex="1" parent="1" evidence="infra/docker-compose/docker-compose.yml:10;infra/docker-compose/docker-compose.yml:817" details="持久数据服务容器&#10;PostgreSQL16、Redis7、MinIO&#10;Qdrant；独立Docker volumes&#10;数据服务默认宿主127.0.0.1绑定" implementationStatus="infra">
+          <mxGeometry as="geometry" x="70" y="1206" width="588" height="72" />
+        </mxCell>
+        <mxCell id="workers" value="&lt;div style=&quot;font-size:71px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;Python Worker&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;OCR → 数学验证：HTTPS&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#EAF2FF;strokeColor=#5278B0;strokeWidth=1.5;" vertex="1" parent="1" evidence="infra/docker-compose/docker-compose.yml:490;infra/docker-compose/docker-compose.yml:518;infra/docker-compose/docker-compose.yml:687;infra/docker-compose/docker-compose.yml:701" details="按profile启用Python Worker&#10;ocr / processing / quality / subjective-grading&#10;math-verification (math或ocr)&#10;OCR→数学验证默认HTTPS；CA/证书只读挂载&#10;服务账户与外部模型依赖仍需配置" implementationStatus="infra">
+          <mxGeometry as="geometry" x="1680" y="689" width="567" height="156" />
+        </mxCell>
+        <mxCell id="agent" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;grading-agent&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;内部 HTTPS / 证书&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#EAF2FF;strokeColor=#5278B0;strokeWidth=1.5;" vertex="1" parent="1" evidence="infra/docker-compose/docker-compose.yml:430;infra/docker-compose/docker-compose.yml:459;ai-services/grading_agent/server.py" details="grading-agent容器 :8100&#10;TLS证书成对校验；内部CA与证书只读挂载&#10;provider adapter向宿主/外部模型发送请求&#10;Compose样例服务链HTTPS，未做运行验收" implementationStatus="infra">
+          <mxGeometry as="geometry" x="902" y="1163" width="549" height="157" />
+        </mxCell>
+        <mxCell id="model" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;本地 / 外部模型&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#EAF2FF;strokeColor=#5278B0;strokeWidth=1.5;" vertex="1" parent="1" evidence="scripts/launch-local.ps1;infra/docker-compose/docker-compose.yml:443" details="宿主llama.cpp / 外部模型&#10;本地启动脚本支持Qwen运行时&#10;Compose external provider由环境决定" implementationStatus="infra">
+          <mxGeometry as="geometry" x="1697" y="1186" width="532" height="111" />
+        </mxCell>
+        <mxCell id="ops" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;迁移 / 备份 / 恢复&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#EAF2FF;strokeColor=#5278B0;strokeWidth=1.5;" vertex="1" parent="1" evidence="infra/docker-compose/docker-compose.yml:122;infra/docker-compose/scripts/restore-drill.ps1" details="部署工具与维护&#10;tools: db-migrate / minio-init&#10;SQL checksum + advisory lock + 每份迁移事务&#10;备份、校验、restore drill、文件巡检" implementationStatus="infra">
+          <mxGeometry as="geometry" x="288" y="1648" width="608" height="111" />
+        </mxCell>
+        <mxCell id="observe" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;Prometheus / Grafana&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;可选 profile&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#EAF2FF;strokeColor=#5278B0;strokeWidth=1.5;" vertex="1" parent="1" evidence="infra/docker-compose/docker-compose.yml:773;.github/workflows/ci.yml" details="observability可选profile&#10;Prometheus抓取API metrics → Grafana&#10;CI含静态/单测/race/PG/Worker/E2E门禁&#10;当前部署运行、告警投递与测试结果未全确认" implementationStatus="infra">
+          <mxGeometry as="geometry" x="1328" y="1624" width="827" height="157" />
+        </mxCell>
+        <mxCell id="__e0" value="HTTP入口" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="client" target="nginx" evidence="" details="HTTP入口">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e1" value="静态页面" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="nginx" target="web" evidence="" details="静态页面">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e2" value="/api/*" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="nginx" target="api" evidence="" details="/api/*">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e3" value="任务 HTTP" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="workers" target="api" evidence="" details="服务账户HTTP / claim / complete">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e4" value="SQL/对象/限流" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=0;exitY=0.5;entryX=0.5;entryY=0;" edge="1" parent="1" source="api" target="data" evidence="" details="SQL/对象/限流">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="793" y="949" />
+              <mxPoint x="364" y="949" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e5" value="模型调用 HTTPS" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="api" target="agent" evidence="infra/docker-compose/.env.example;infra/docker-compose/scripts/preflight.ps1" details="模型调用 HTTPS">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e6" value="provider HTTP" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="agent" target="model" evidence="" details="provider HTTP">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e7" value="metrics scrape" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;dashed=1;exitX=1;exitY=0.5;entryX=0.5;entryY=1;" edge="1" parent="1" source="observe" target="api" evidence="" details="metrics scrape">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="2301" y="1716" />
+              <mxPoint x="2301" y="1027" />
+              <mxPoint x="1176" y="1027" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__legend0" value="已实现" style="rounded=1;html=1;fillColor=#E9F6EE;strokeColor=#38835B;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40.0" y="1966" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend1" value="部分接入" style="rounded=1;html=1;fillColor=#FFF4D9;strokeColor=#AD7D24;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="416.6666666666667" y="1966" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend2" value="规划" style="rounded=1;html=1;fillColor=#F1F2F4;strokeColor=#969DA7;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="793.3333333333334" y="1966" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend3" value="问题" style="rounded=1;html=1;fillColor=#FDECEF;strokeColor=#B64857;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1170.0" y="1966" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend4" value="基础设施" style="rounded=1;html=1;fillColor=#EAF2FF;strokeColor=#5278B0;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1546.6666666666667" y="1966" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend5" value="待确认" style="rounded=1;html=1;fillColor=#F5F5F6;strokeColor=#8C94A0;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1923.3333333333335" y="1966" width="373.3333333333333" height="38" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

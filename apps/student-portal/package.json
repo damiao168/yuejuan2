@@ -12,6 +12,7 @@
   "dependencies": {
     "@edugrade/design-tokens": "0.1.0",
     "@edugrade/sdk": "0.1.0",
+    "katex": "^0.18.7",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

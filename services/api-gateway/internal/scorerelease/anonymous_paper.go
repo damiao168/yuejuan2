@@ -25,12 +25,16 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	anonymousPaperContentType = "image/png"
+)
+
 const anonymousRedactionVersion = "identity-regions-v1"
 const maxAnonymousSourceBytes int64 = 40 << 20
 const maxAnonymousPixels = 40_000_000
 
-// HighScorePaperManager is the only route from a published release to peer
-// page bytes. The manager stores a new PNG with its own object and asset ID.
+// HighScorePaperManager 是从已发布成绩访问同学页面字节的唯一入口。
+// 管理器存储新的 PNG，并使用独立对象和资源 ID。
 type HighScorePaperManager interface {
 	Prepare(context.Context, string, string, string) error
 	Revoke(context.Context, string, string, string) error
@@ -85,8 +89,7 @@ WHERE release.tenant_id=$1::uuid AND release.id=$2::uuid
 	if err != nil || len(pages) == 0 {
 		return ErrAnonymousPaperUnavailable
 	}
-	// Validate every page before writing even one derived asset. Missing or
-	// ambiguous identity configuration blocks the entire release.
+	// 写入任何派生资源前先校验每一页。身份配置缺失或不明确时阻断整个发布。
 	for _, page := range pages {
 		if !validAnonymousLayout(page) {
 			return ErrAnonymousPaperUnavailable
@@ -211,12 +214,12 @@ WHERE tenant_id=$1::uuid AND release_id=$2::uuid AND source_submission_page_id=$
 	}
 	pageID := uuid.NewString()
 	key := fmt.Sprintf("tenant/%s/score-release/%s/anonymous/%s.png", tenantID, releaseID, pageID)
-	if err := m.objects.Put(ctx, m.bucket, key, bytes.NewReader(anonymousBytes), int64(len(anonymousBytes)), "image/png"); err != nil {
+	if err := m.objects.Put(ctx, m.bucket, key, bytes.NewReader(anonymousBytes), int64(len(anonymousBytes)), anonymousPaperContentType); err != nil {
 		return err
 	}
 	asset, err := m.files.Create(ctx, files.CreateAssetInput{
 		TenantID: tenantID, ExamID: examID, OwnerType: "score_release_anonymous_page", OwnerID: pageID,
-		OriginalName: "anonymous-paper-page.png", ContentType: "image/png", SizeBytes: int64(len(anonymousBytes)),
+		OriginalName: "anonymous-paper-page.png", ContentType: anonymousPaperContentType, SizeBytes: int64(len(anonymousBytes)),
 		HashSHA256: sha256Hex(anonymousBytes), StorageBucket: m.bucket, StorageKey: key,
 		Visibility: "private", UploadedBy: actorID,
 	})
@@ -270,8 +273,7 @@ func redactAnonymousPNG(source []byte, page anonymousSourcePage) ([]byte, error)
 			continue
 		}
 		for _, region := range templatePage.IdentityRegions {
-			// Expand by four pixels to cover anti-aliasing and small registration
-			// differences at the configured boundary.
+			// 向外扩展四个像素，覆盖配置边界处的抗锯齿和小幅配准偏差。
 			x0 := max(0, int(math.Floor(region.X*float64(output.Bounds().Dx())))-4)
 			y0 := max(0, int(math.Floor(region.Y*float64(output.Bounds().Dy())))-4)
 			x1 := min(output.Bounds().Dx(), int(math.Ceil((region.X+region.Width)*float64(output.Bounds().Dx())))+4)
@@ -326,12 +328,12 @@ WHERE ap.tenant_id=$1::uuid AND ap.release_id=$2::uuid AND ap.id=$3::uuid AND ap
 	}
 	asset, err := m.files.Get(ctx, tenantID, assetID)
 	if err != nil || asset.OwnerType != "score_release_anonymous_page" || asset.OwnerID != pageID ||
-		asset.ContentType != "image/png" || asset.HashSHA256 != derivedHash || asset.Lifecycle != files.LifecycleActive ||
+		asset.ContentType != anonymousPaperContentType || asset.HashSHA256 != derivedHash || asset.Lifecycle != files.LifecycleActive ||
 		asset.DeletedAt != nil || !asset.LegalHold || asset.SizeBytes <= 0 {
 		return binaryresource.Resource{}, ErrAnonymousPaperUnavailable
 	}
 	return binaryresource.Resource{
-		ContentType: "image/png", Size: asset.SizeBytes,
+		ContentType: anonymousPaperContentType, Size: asset.SizeBytes,
 		Disposition:  mime.FormatMediaType("inline", map[string]string{"filename": "anonymous-paper-page.png"}),
 		CacheControl: "private, no-store",
 		Open: func(ctx context.Context) (io.ReadCloser, error) {

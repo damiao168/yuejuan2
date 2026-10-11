@@ -1,0 +1,29 @@
+{
+  "command": [
+    "rustup",
+    "run",
+    "1.98.1",
+    "cargo",
+    "check",
+    "--offline",
+    "--locked",
+    "--workspace",
+    "--all-features",
+    "--all-targets",
+    "--message-format=json",
+    "--target-dir",
+    "D:/tools/audit-codeql-20261010/databases/rust-20261011-toolchain-ready/working/target"
+  ],
+  "working_directory": "D:\\tools\\audit-codeql-20261010\\source-20261011\\apps\\desktop-client\\src-tauri",
+  "started": "2026-10-11T14:05:13+08:00",
+  "purpose": "定位 generate_context 宏的实际编译诊断；固定扫描副本，不执行测试或应用，不补入资产，不修改源码。",
+  "environment_overrides": {
+    "CARGO_NET_OFFLINE": "true",
+    "CARGO_BUILD_JOBS": "1",
+    "TEMP": "D:\\tools\\audit-codeql-20261010\\rust-context-probe-temp",
+    "TMP": "D:\\tools\\audit-codeql-20261010\\rust-context-probe-temp"
+  },
+  "exit_code": 101,
+  "finished": "2026-10-11T14:06:26+08:00",
+  "elapsed_seconds": 72.89
+}

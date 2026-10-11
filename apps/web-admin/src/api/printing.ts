@@ -69,3 +69,10 @@ export async function downloadStudentPrintPackage(printBatchId: string) {
     `/api/v1/answer-sheet-print-batches/${encodeURIComponent(printBatchId)}/package.pdf`
   );
 }
+
+export async function reprintStudentSheet(sheetSerial: string, reason: string, idempotencyKey: string) {
+  return apiClient.request<{ barcodes: IssuedStudentBarcodes }>(
+    `/api/v1/answer-sheet-print-sheets/${encodeURIComponent(sheetSerial)}/reprint`,
+    { method: "POST", body: JSON.stringify({ reason, idempotency_key: idempotencyKey }) }
+  );
+}

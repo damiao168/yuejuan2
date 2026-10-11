@@ -1,7 +1,7 @@
 import type { MathUnderstandingResponse } from "../../../api/mathUnderstanding";
 
-// The server owns correction projection. Legacy responses remain readable,
-// but clients never derive effective evidence from a bounded audit history.
+// 更正投影由服务端负责。旧版响应仍可读取，
+// 但客户端不会从有限的审计历史中推导有效证据。
 export function selectEffectiveMathArtifact(response: MathUnderstandingResponse) {
   return response.effective_artifact ?? response.artifact;
 }

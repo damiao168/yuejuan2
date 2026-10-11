@@ -1,0 +1,2184 @@
+{
+  "schema_version": "module-responsibilities-v1",
+  "module_count": 68,
+  "method": "人工抽读核心函数体与实际调用；导入扫描只用于找包，不用于推断职责。",
+  "review_scope": "仅支撑每包一句职责，选定范围之外与其他文件仍以 file-review.tsv 为准；本记录不提升全文件审读状态。",
+  "modules": [
+    {
+      "module": "aidisagreement",
+      "responsibility": "记录 AI 与人工评分差异，支持分类和后续处置。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/aidisagreement/service.go",
+        "line": 31
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/aidisagreement/service.go",
+          "sha256": "fb29cd2c21d1cca19813833711cdbe1e17a871879b78207e7c93d58cfff9f25a",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 31,
+              "end": 52
+            }
+          ],
+          "symbols": [
+            "func (s *Service) Capture(ctx context.Context, tenantID string, input CaptureInput) (item Disagreement, created bool, err error) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "aieligibility",
+      "responsibility": "根据题目风险、策略和质量证据决定 AI 准入。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/aieligibility/service.go",
+        "line": 40
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/aieligibility/service.go",
+          "sha256": "7fb0c10bd3f5366c2c96d1b3dca73f3f9a1c89175fbbaaf515422714cc387577",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 40,
+              "end": 89
+            }
+          ],
+          "symbols": [
+            "func (s *Service) Decide(ctx context.Context, tenantID string, input DecisionInput) (Decision, error) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "answergroup",
+      "responsibility": "按文本相似度将同题答案分组，供抽检和复核。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/answergroup/store_postgres.go",
+        "line": 31
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/answergroup/store_postgres.go",
+          "sha256": "5a41caf067519d6c1bc59446e7f8adc9248016208227ff8b1fc2d0f97874b839",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 31,
+              "end": 80
+            }
+          ],
+          "symbols": [
+            "func (s *PostgresStore) Build(ctx context.Context, tenantID, examID, questionID, actorID string, input BuildInput) ([]Group, error) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "appeal",
+      "responsibility": "接收成绩申诉，分派复核并记录处理结论。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/appeal/handlers.go",
+        "line": 30
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/appeal/handlers.go",
+          "sha256": "765087923ab21a8ec0cf7a637f178fbc9dabad7bd6ad0ef607a06ba9311ea3da",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 30,
+              "end": 58
+            }
+          ],
+          "symbols": [
+            "func (h *Handler) CreateAppeal(w http.ResponseWriter, r *http.Request) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "assessment",
+      "responsibility": "维护学科、题型、评分策略和考试题目快照。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/assessment/http.go",
+        "line": 67
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/assessment/http.go",
+          "sha256": "40449a9b47f6e2392136a8059139881a18abb4621639bd73372201482c462792",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 67,
+              "end": 86
+            }
+          ],
+          "symbols": [
+            "func (h *Handler) ConfigureQuestion(w http.ResponseWriter, r *http.Request) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "auth",
+      "responsibility": "认证会话，检查权限与数据范围。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/auth/middleware.go",
+        "line": 26
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/auth/middleware.go",
+          "sha256": "1be2b26d991c162c3be6d6336b5b3cc931c4905207cb44892655a0abeb1de3a0",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 26,
+              "end": 64
+            },
+            {
+              "start": 108,
+              "end": 124
+            },
+            {
+              "start": 65,
+              "end": 86
+            }
+          ],
+          "symbols": [
+            "func RequirePermission(permission string) func(http.Handler) http.Handler {",
+            "func authMiddleware(store Store, allowMissingDataScope bool, allowLocked bool, options ...HandlerOptions) func(http.Handler) http.Handler {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "backmark",
+      "responsibility": "按规则筛选已阅任务，创建换人回评批次。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/backmark/service.go",
+        "line": 59
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/backmark/service.go",
+          "sha256": "f159966945dfee49a961c22a2917bfee31ae0e2bb34066f8deba999383233f2e",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 59,
+              "end": 91
+            }
+          ],
+          "symbols": [
+            "func (s *Service) Create(ctx context.Context, tenantID, examID, questionID, actorID string, input CreateInput) (Summary, error) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "binaryresource",
+      "responsibility": "定义私有二进制资源的元信息、延迟读取和审计约定。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/binaryresource/resource.go",
+        "line": 1
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/binaryresource/resource.go",
+          "sha256": "fd151ef9112e66f35b45ee4a1f840281bc866e873573e14bcced68db02cc38a8",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 22
+            }
+          ],
+          "symbols": [
+            "type declarations"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "binaryresourcehttp",
+      "responsibility": "将已授权私有资源输出为 HTTP 下载或图像响应。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/binaryresourcehttp/serve.go",
+        "line": 15
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/binaryresourcehttp/serve.go",
+          "sha256": "856017c6dbb3e3fac73d79fc62d2bdc817161b8fb8bf719a10ac848358e54c5d",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 15,
+              "end": 56
+            }
+          ],
+          "symbols": [
+            "func Serve(w http.ResponseWriter, r *http.Request, resource binaryresource.Resource, audit auth.AuditRecorder) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "buildinfo",
+      "responsibility": "提供构建版本、提交和发布标识。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/buildinfo/buildinfo.go",
+        "line": 13
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/buildinfo/buildinfo.go",
+          "sha256": "673cfcbbe704d75d265399f5efdfc72f259e2e74cee6edd0ea3dad588987295d",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 18
+            },
+            {
+              "start": 13,
+              "end": 18
+            }
+          ],
+          "symbols": [
+            "func Public() map[string]string {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "calibration",
+      "responsibility": "以已批准标准卷组织试评，记录阅卷资格。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/calibration/service.go",
+        "line": 50
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/calibration/service.go",
+          "sha256": "6ca5b8cfbd0ccd7b938dd1ace1477cd1fe21625215092ab4d38f245d91ded67f",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 50,
+              "end": 73
+            }
+          ],
+          "symbols": [
+            "func (s *Service) CreateSession(ctx context.Context, tenantID, examID, questionID, graderID string) (Session, error) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "capture",
+      "responsibility": "管理采集批次、印发身份、页面配准和人工确认。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/capture/handlers.go",
+        "line": 687
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/capture/handlers.go",
+          "sha256": "2c34c825920a521304f18d300d83ebf6adf7e19351940a7a2e15ddb85ac9b6b2",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 39,
+              "end": 75
+            },
+            {
+              "start": 687,
+              "end": 700
+            },
+            {
+              "start": 91,
+              "end": 115
+            },
+            {
+              "start": 657,
+              "end": 665
+            },
+            {
+              "start": 726,
+              "end": 772
+            }
+          ],
+          "symbols": [
+            "func (h *Handler) CreateBatch(w http.ResponseWriter, r *http.Request) {",
+            "func (h *Handler) ConfirmRegistration(w http.ResponseWriter, r *http.Request) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "captureupload",
+      "responsibility": "接收答题卡分块上传，校验哈希并归并为文件资源。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/captureupload/service.go",
+        "line": 91
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/captureupload/service.go",
+          "sha256": "50af39b12448310e710c4b497cbcd457d4869e468a92b234e48eb9555c66b280",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 91,
+              "end": 140
+            }
+          ],
+          "symbols": [
+            "func (s *Service) Complete(ctx context.Context, tenantID, actorID, uploadID string, input CompleteInput) (Session, error) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "commandreceipt",
+      "responsibility": "在业务事务中保存命令回执，支持重试恢复。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/commandreceipt/receipt.go",
+        "line": 63
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/commandreceipt/receipt.go",
+          "sha256": "42d699e631b66f30e8ccb4ae069765e7f65d70e8b4441713b680b75779b323a4",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 63,
+              "end": 93
+            }
+          ],
+          "symbols": [
+            "func Load(ctx context.Context, tx *sql.Tx, identity Identity, input any, out any) (bool, error) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "config",
+      "responsibility": "加载环境配置并校验服务、依赖和安全参数。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/config/config.go",
+        "line": 170
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/config/config.go",
+          "sha256": "d15adabb8e1a0fa33dfbfc16305fca8097156ee8e08dfbf3289d2600ac4c812a",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 170,
+              "end": 219
+            }
+          ],
+          "symbols": [
+            "func Load(envFile string) (Config, error) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "csvsafe",
+      "responsibility": "转义 CSV 中的危险公式前缀。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/csvsafe/csvsafe.go",
+        "line": 6
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/csvsafe/csvsafe.go",
+          "sha256": "f5ad3796609fd5c6dd55cce2304a75fc929e44b93bc8576e6fff6ae853f2ca33",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 6,
+              "end": 18
+            }
+          ],
+          "symbols": [
+            "func Cell(value string) string {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "dashboard",
+      "responsibility": "汇总权限范围内的考试进度、待办和近期活动。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/dashboard/service.go",
+        "line": 42
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/dashboard/service.go",
+          "sha256": "e4e200d037c501549b2369906eb943b7a7a03ce8f589c01f010e09f7d7f77c79",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 42,
+              "end": 91
+            }
+          ],
+          "symbols": [
+            "func (s *Service) Summary(ctx context.Context, user auth.User, accessScope auth.AccessScope) (Summary, error) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "db",
+      "responsibility": "创建 PostgreSQL 连接池，按配置绑定租户上下文。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/db/postgres.go",
+        "line": 26
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/db/tenant_context.go",
+          "sha256": "eacdb801497dbe16b0bf9f4fc3d7acb35b04c5a2a88d0bdc0ca76ea01b32ea31",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 28,
+              "end": 32
+            },
+            {
+              "start": 74,
+              "end": 82
+            },
+            {
+              "start": 104,
+              "end": 122
+            }
+          ],
+          "symbols": [
+            "func TenantFromContext(ctx context.Context) (string, bool) {"
+          ]
+        },
+        {
+          "path": "services/api-gateway/internal/db/postgres.go",
+          "sha256": "0ee84bb8b6f6e277276e1744d6134febfa4e99e9d3e3ef42c216cd203839fabc",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 26,
+              "end": 67
+            }
+          ],
+          "symbols": [
+            "func OpenPostgres(cfg config.PostgresConfig, observers ...QueryObserver) (*sql.DB, func() error, error) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "deps",
+      "responsibility": "检查数据库、缓存、存储和 AI 服务依赖状态。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/deps/deps.go",
+        "line": 51
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/deps/deps.go",
+          "sha256": "ea87b8fa3628cc9e6dedcbaf4c24ba105f517a1bf5403feb142cf83be3e0f139",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 51,
+              "end": 63
+            }
+          ],
+          "symbols": [
+            "func (c *PostgresChecker) Check(ctx context.Context) error {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "evidence",
+      "responsibility": "核对 AI 分数和评分证据，给出人工复核标记。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/evidence/engine.go",
+        "line": 20
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/evidence/engine.go",
+          "sha256": "959411513e1af8ea4f47fbea12843aaad99154f6729d0ef0266ccc87361e8a28",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 20,
+              "end": 50
+            }
+          ],
+          "symbols": [
+            "func (e *Engine) Verify(ctx Context) VerificationResult {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "exam",
+      "responsibility": "管理考试场次、配置和状态。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/exam/handlers.go",
+        "line": 24
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/exam/handlers.go",
+          "sha256": "1f5f34a26214922c5e875103adacddb5e3985b9f5eb43de2692310c35d9d178f",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 24,
+              "end": 46
+            },
+            {
+              "start": 47,
+              "end": 91
+            },
+            {
+              "start": 165,
+              "end": 214
+            }
+          ],
+          "symbols": [
+            "func (h *Handler) CreateExam(w http.ResponseWriter, r *http.Request) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "files",
+      "responsibility": "管理文件资源、对象上传下载和存储对账。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/files/handlers.go",
+        "line": 52
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/files/handlers.go",
+          "sha256": "0647770af236774773acb43d9884f6a1ccaad5857b4148c826541c07c247a953",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 52,
+              "end": 101
+            }
+          ],
+          "symbols": [
+            "func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "goldpaper",
+      "responsibility": "管理标准卷的提名、版本、批准与停用。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/goldpaper/handlers.go",
+        "line": 40
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/goldpaper/handlers.go",
+          "sha256": "7aa9038f012f38b8249e99e9b83fd6b842cd3924d6696efbf480250cd6351b1d",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 40,
+              "end": 58
+            }
+          ],
+          "symbols": [
+            "func (h *Handler) Nominate(w http.ResponseWriter, r *http.Request) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "graderdrift",
+      "responsibility": "计算阅卷者质量滑窗，记录偏差事件并可暂停资格。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/graderdrift/service.go",
+        "line": 47
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/graderdrift/service.go",
+          "sha256": "db55553f57630dc2fbc4f5a288663bc14566a083f1edbcd99dc7263ea9a2fcc1",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 47,
+              "end": 79
+            }
+          ],
+          "symbols": [
+            "func (s *Service) Recompute(ctx context.Context, tenantID string, input RefreshInput) (RefreshResult, error) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "grading",
+      "responsibility": "按题型规则计算客观题分数。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/grading/engine.go",
+        "line": 23
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/grading/engine.go",
+          "sha256": "4ca81f39a2cdca867039488617979ff864e4a132222b920f5a46dff3614481b7",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 23,
+              "end": 41
+            },
+            {
+              "start": 72,
+              "end": 200
+            }
+          ],
+          "symbols": [
+            "func (e *Engine) Grade(ctx Context) (Grade, error) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "gradingdisagreement",
+      "responsibility": "比较两份评分的分差、评分点和证据冲突。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/gradingdisagreement/engine.go",
+        "line": 59
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/gradingdisagreement/engine.go",
+          "sha256": "a7486f2a8b95502f3b5a6d4710f13b7781e9ebc56a6b06d58bd5938117173d30",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 59,
+              "end": 96
+            }
+          ],
+          "symbols": [
+            "func Compare(left, right Observation) Result {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "gradingevaluation",
+      "responsibility": "管理离线评分评测，汇总误差和模型组指标。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/gradingevaluation/service.go",
+        "line": 52
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/gradingevaluation/service.go",
+          "sha256": "117c232254e507dc01d9261a5f4700662983d5439d4f42e8a8f2e0a2cf971e7f",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 52,
+              "end": 74
+            }
+          ],
+          "symbols": [
+            "func (s *Service) Complete(ctx context.Context, tenantID, runID string) (Run, error) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "handlers",
+      "responsibility": "提供健康、就绪及系统能力状态接口。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/handlers/handlers.go",
+        "line": 67
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/handlers/handlers.go",
+          "sha256": "38806b7b809c206df1c8a994f564f0edfce1c02a7d7eab611fd47da552164d0e",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 67,
+              "end": 91
+            }
+          ],
+          "symbols": [
+            "func (h *Handlers) ReadinessSummary(ctx context.Context) (ReadinessSummary, error) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "httpx",
+      "responsibility": "统一 JSON 成功响应和带追踪标识的错误响应。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/httpx/response.go",
+        "line": 34
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/httpx/response.go",
+          "sha256": "870c5e504705a63e57569c75c38014a673c97317d44780b21a5ffc0d901ec945",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 34,
+              "end": 44
+            }
+          ],
+          "symbols": [
+            "func Error(w http.ResponseWriter, r *http.Request, status int, code string, message string) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "idempotency",
+      "responsibility": "按请求身份和指纹缓存响应，拒绝同键不同请求。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/idempotency/middleware.go",
+        "line": 80
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/idempotency/middleware.go",
+          "sha256": "253afc85359c9ab8f160b869db6606b5365d9c0b4ee37a8d815339326f250193",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 80,
+              "end": 96
+            }
+          ],
+          "symbols": [
+            "func Middleware(store Store, options Options) func(http.Handler) http.Handler {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "imagequality",
+      "responsibility": "创建页面质检任务，接收结果并支持人工覆盖。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/imagequality/handlers.go",
+        "line": 80
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/imagequality/handlers.go",
+          "sha256": "260dd9167976196a394fb36ad27e4f12d41f5e0cdcc3d3171e6b6be09977a0c2",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 70,
+              "end": 77
+            },
+            {
+              "start": 80,
+              "end": 129
+            }
+          ],
+          "symbols": [
+            "func nilDependency(value any) bool {",
+            "func (h *Handler) RunQualityCheck(w http.ResponseWriter, r *http.Request) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "logger",
+      "responsibility": "输出带请求标识的结构化日志，并处理敏感字段。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/logger/logger.go",
+        "line": 58
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/logger/logger.go",
+          "sha256": "b006882c02968d7b8515cbb9503dadc36a40a00c1fe89a749cae553ca395df84",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 36,
+              "end": 40
+            },
+            {
+              "start": 58,
+              "end": 84
+            }
+          ],
+          "symbols": [
+            "func RequestID(ctx context.Context) string {",
+            "func (l *Logger) write(ctx context.Context, level string, message string, fields map[string]any) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "mathunderstanding",
+      "responsibility": "关联数学答案结构与冻结评分点，生成待教师确认的评分建议。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/mathunderstanding/scorer.go",
+        "line": 100
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/mathunderstanding/scorer.go",
+          "sha256": "7e1fc671f2427506d5ce017a466fb57f63adabd39baddc8d3bea3c1ba17592e6",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 100,
+              "end": 149
+            }
+          ],
+          "symbols": [
+            "func ScoreFrozenRubric(frozen FrozenRubric, effective EffectiveArtifact, candidates []CriterionCandidate) (RubricScore, error) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "middleware",
+      "responsibility": "统一处理安全头、CORS、CSRF、请求标识和异常恢复。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/middleware/middleware.go",
+        "line": 40
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/middleware/middleware.go",
+          "sha256": "7389555a2d26d8a8a53ef228291206b894a74b6bf05b5b02ebef545d187ecc34",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 40,
+              "end": 53
+            }
+          ],
+          "symbols": [
+            "func SecurityHeaders() Middleware {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "minioadapter",
+      "responsibility": "创建共享 TLS 信任配置的 MinIO 客户端。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/minioadapter/client.go",
+        "line": 16
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/minioadapter/client.go",
+          "sha256": "c72be7ea24666abf4654b906438dbbfdf5cf1ed1e053be57477290fa24fd7032",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 16,
+              "end": 53
+            }
+          ],
+          "symbols": [
+            "func NewClient(cfg config.MinIOConfig) (*minio.Client, error) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "modelcalibration",
+      "responsibility": "以完成的评分评测建立模型置信度校准，支持审批与失效。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/modelcalibration/service.go",
+        "line": 26
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/modelcalibration/service.go",
+          "sha256": "8f2bd7ea3fd210e628502e159a0bdfe9115d41383873d4650fd7e4b423c64e76",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 26,
+              "end": 41
+            }
+          ],
+          "symbols": [
+            "func (s *Service) Create(ctx context.Context, tenantID, actorID string, input CreateInput) (Calibration, error) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "modelgovernance",
+      "responsibility": "管理供应商、模型配置、租户使用策略及评测审批。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/modelgovernance/handlers.go",
+        "line": 289
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/modelgovernance/handlers.go",
+          "sha256": "4eae3f74f5a68c4b914a4ffb4d77d985a75d03c4109cdbc6d9730ae950eb92e7",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 49,
+              "end": 61
+            },
+            {
+              "start": 289,
+              "end": 326
+            },
+            {
+              "start": 75,
+              "end": 121
+            },
+            {
+              "start": 483,
+              "end": 517
+            },
+            {
+              "start": 626,
+              "end": 660
+            }
+          ],
+          "symbols": [
+            "func (h *Handler) GetCurrentPrompt(w http.ResponseWriter, r *http.Request) {",
+            "func (h *Handler) UpdatePolicy(w http.ResponseWriter, r *http.Request) {"
+          ]
+        },
+        {
+          "path": "services/api-gateway/internal/modelgovernance/managed_config_handlers.go",
+          "sha256": "60cecb28f902ff6b253e3ed584d1fafeaa74afad00dfe7ebc43ffba6ff4323f5",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 75,
+              "end": 122
+            }
+          ],
+          "symbols": []
+        }
+      ]
+    },
+    {
+      "module": "observability",
+      "responsibility": "采集请求、数据库与模型调用指标。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/observability/metrics.go",
+        "line": 81
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/observability/metrics.go",
+          "sha256": "2b7c431291f074bc2ed33392718717e9a6ea40d8d7a64835735fb1cac41d98b8",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 81,
+              "end": 95
+            }
+          ],
+          "symbols": [
+            "func (r *Registry) ObserveAIGradingRequest(version string, success bool) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "ocr",
+      "responsibility": "管理答卷 OCR 任务与识别结果。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/ocr/handlers.go",
+        "line": 37
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/ocr/handlers.go",
+          "sha256": "7eea0eb55c206c858800f6d45337d7af979c16f20e5bcfb3a2703b6f50c030ff",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 37,
+              "end": 86
+            }
+          ],
+          "symbols": [
+            "func (h *Handler) CreateTask(w http.ResponseWriter, r *http.Request) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "onboarding",
+      "responsibility": "汇总平台或学校管理员的初始化检查与下一步操作。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/onboarding/service.go",
+        "line": 56
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/onboarding/service.go",
+          "sha256": "8320208297101be3c99763098ebe4c9acaf46d42175761e94164c1af08c69313",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 56,
+              "end": 65
+            }
+          ],
+          "symbols": [
+            "func (s *Service) Readiness(ctx context.Context, actor Actor) (OnboardingReadiness, error) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "orchestrator",
+      "responsibility": "保存智能体运行与任务，处理任务状态和依赖。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/orchestrator/handlers.go",
+        "line": 24
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/orchestrator/handlers.go",
+          "sha256": "9231f788e1c88931c012cbf35e54f0f7c0998689238fa9d4acb4a21797c0c90c",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 24,
+              "end": 38
+            }
+          ],
+          "symbols": [
+            "func (h *Handler) CreateRun(w http.ResponseWriter, r *http.Request) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "org",
+      "responsibility": "管理租户、学校、年级、班级、学生及教师归属。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/org/handlers.go",
+        "line": 32
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/org/handlers.go",
+          "sha256": "23dad738f23efc35bda49a9daad0f3ac6d798a9a29dc34a24a3ee90cf287a903",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 32,
+              "end": 77
+            }
+          ],
+          "symbols": [
+            "func (h *Handler) CreateTenant(w http.ResponseWriter, r *http.Request) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "outbox",
+      "responsibility": "领取事务外发事件，投递并记录成功或重试。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/outbox/outbox.go",
+        "line": 74
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/outbox/outbox.go",
+          "sha256": "2ef2621170fb4555b24d3eb7c0040d5b35d541819abcc08a3eb8a7cf4b93d5f8",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 74,
+              "end": 95
+            }
+          ],
+          "symbols": [
+            "func (d *Dispatcher) RunOnce(ctx context.Context) (int, error) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "pagination",
+      "responsibility": "编解码分页游标并校验页大小。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/pagination/cursor.go",
+        "line": 25
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/pagination/cursor.go",
+          "sha256": "ab510f7295cf41d3dc5a35cfa3487052aa280102368ad5290e6b20e7ea5907cb",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 25,
+              "end": 44
+            }
+          ],
+          "symbols": [
+            "func Decode(value string) (Cursor, error) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "paper",
+      "responsibility": "管理试卷、题目和评分细则，组织考试资料解析。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/paper/handlers.go",
+        "line": 414
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/paper/handlers.go",
+          "sha256": "a2ce19f9a0840d826f20714631c3c555af30880197238c3a55a8c17e6d85162e",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 48,
+              "end": 71
+            },
+            {
+              "start": 414,
+              "end": 432
+            }
+          ],
+          "symbols": [
+            "func (h *Handler) CreatePaperImport(w http.ResponseWriter, r *http.Request) {",
+            "func (h *Handler) CreateQuestion(w http.ResponseWriter, r *http.Request) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "platformschools",
+      "responsibility": "为平台汇总学校成员、用量、模型健康和活动。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/platformschools/service.go",
+        "line": 24
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/platformschools/service.go",
+          "sha256": "380477cf7f51ccca7b6a5b08d0aea5256b2c7e8274eb90d72d0b1f43edfbc97e",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 24,
+              "end": 65
+            }
+          ],
+          "symbols": [
+            "func (s *Service) List(ctx context.Context, filter ListFilter) (ListResult, error) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "processing",
+      "responsibility": "汇总流水线进度与异常，支持分派、处置和重试。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/processing/service.go",
+        "line": 21
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/processing/service.go",
+          "sha256": "986b8492733b78217f6d4456f01ac8cd050acde849b2731010cbff05e8755279",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 21,
+              "end": 27
+            },
+            {
+              "start": 28,
+              "end": 85
+            }
+          ],
+          "symbols": [
+            "func (s *Service) Summary(ctx context.Context, tenantID, examID string) (Summary, error) {"
+          ]
+        },
+        {
+          "path": "services/api-gateway/internal/processing/store_postgres.go",
+          "sha256": "97ada29c843c7987a5c532e44689b1fcec1b4142056301618a9228c3d2fe9a6d",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 106,
+              "end": 176
+            }
+          ],
+          "symbols": []
+        }
+      ]
+    },
+    {
+      "module": "qualitydashboard",
+      "responsibility": "按题汇总标准卷、试评、盲投和偏差证据，形成质量门禁。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/qualitydashboard/service.go",
+        "line": 28
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/qualitydashboard/service.go",
+          "sha256": "8a8cb19d2fd52bfbb057bfc03410489a54bd8c115e88965ded6b0735c3acd662",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 28,
+              "end": 62
+            }
+          ],
+          "symbols": [
+            "func (s *Service) Get(ctx context.Context, tenantID, examID string) (Dashboard, error) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "questionbank",
+      "responsibility": "管理题库、题目版本、复核、模板及考试引用。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/questionbank/handlers.go",
+        "line": 233
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/questionbank/service.go",
+          "sha256": "9ef16bf199f4653dc78efce84bdf70acf86b159518f43cd8f70197ed2f24ecea",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 20,
+              "end": 20
+            }
+          ],
+          "symbols": [
+            "func validScope(s auth.AccessScope) bool { return s.TenantID != \"\" && s.ActorID != \"\" && !s.IsPlatform }"
+          ]
+        },
+        {
+          "path": "services/api-gateway/internal/questionbank/handlers.go",
+          "sha256": "fcf99c85763f13685da640c35d5e7a0828e33189f2c6e029e265d23fd968d223",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 233,
+              "end": 244
+            },
+            {
+              "start": 309,
+              "end": 328
+            },
+            {
+              "start": 329,
+              "end": 402
+            },
+            {
+              "start": 477,
+              "end": 489
+            }
+          ],
+          "symbols": [
+            "func (h *Handler) CreateBank(w http.ResponseWriter, r *http.Request) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "regrade",
+      "responsibility": "基于已发布版本创建独立重评，形成后继发布计划。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/regrade/service.go",
+        "line": 34
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/regrade/service.go",
+          "sha256": "89101d24199c1521cde62cf30279bc83149b0ba0369eeb79d0feb543bb80f4af",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 34,
+              "end": 62
+            }
+          ],
+          "symbols": [
+            "func (s *Service) Create(ctx context.Context, tenantID, examID, questionID, actorID string, input CreateInput) (Summary, error) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "regraderelease",
+      "responsibility": "将已复核重评计划转为新的成绩发布草稿。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/regraderelease/service.go",
+        "line": 33
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/regraderelease/service.go",
+          "sha256": "d25597744539f7c76db98ec560e10ea354bc0dc262e8b5f7b7d7ad072e7074e5",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 33,
+              "end": 57
+            }
+          ],
+          "symbols": [
+            "func (s *Service) Create(ctx context.Context, tenantID, jobID, actorID string, input Input) (scorerelease.Release, error) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "releasegate",
+      "responsibility": "评估成绩发布策略与质量证据，记录豁免审批。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/releasegate/service.go",
+        "line": 41
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/releasegate/service.go",
+          "sha256": "1a66121cfe3df61d7be016e0b85dc7a99a2c1991ec66531e77958127fd5ac05b",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 41,
+              "end": 161
+            }
+          ],
+          "symbols": [
+            "func (s *Service) Preview(ctx context.Context, tenantID, examID, releaseID, actorID string) (Evidence, error) {",
+            "func (s *Service) RecheckForPublish(ctx context.Context, tenantID, examID, releaseID, actorID string) (Evidence, error) {",
+            "func (s *Service) Inspect(ctx context.Context, tenantID, examID string) (Evaluation, error) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "report",
+      "responsibility": "生成学生、班级、题目和阅卷质量统计及导出。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/report/handlers.go",
+        "line": 50
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/report/handlers.go",
+          "sha256": "29f69576e162a9d931a6ee93ce886dc0b1bce935a6adb6707d587fc717f6961d",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 50,
+              "end": 60
+            }
+          ],
+          "symbols": [
+            "func (h *Handler) Overview(w http.ResponseWriter, r *http.Request) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "review",
+      "responsibility": "分派人工阅卷任务，处理单评、双评和仲裁结算。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/review/handlers.go",
+        "line": 235
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/review/handlers.go",
+          "sha256": "2d89f90df0a3af8e1972a3dac190fb34c1c45d8becc2b9241e92d6f780119351",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 235,
+              "end": 279
+            },
+            {
+              "start": 193,
+              "end": 279
+            },
+            {
+              "start": 706,
+              "end": 729
+            },
+            {
+              "start": 858,
+              "end": 877
+            }
+          ],
+          "symbols": [
+            "func (h *Handler) SubmitGrade(w http.ResponseWriter, r *http.Request) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "reviewannotation",
+      "responsibility": "管理阅卷批注、评语模板及学生可见内容。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/reviewannotation/handlers.go",
+        "line": 23
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/reviewannotation/handlers.go",
+          "sha256": "d1ef17dcc60cf56dc2765d7eed3169d86709b7bb73a7e9457a9975376b684d43",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 23,
+              "end": 37
+            }
+          ],
+          "symbols": [
+            "func (h *Handler) CreateAnnotation(w http.ResponseWriter, r *http.Request) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "schoolassistant",
+      "responsibility": "汇集授权的考试事实，流式返回学校业务查询结果。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/schoolassistant/service.go",
+        "line": 54
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/schoolassistant/service.go",
+          "sha256": "b418da1dc91932e30d6ab957f4d331cd1c61defe3868e6a154ea74e0359f6d5b",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 54,
+              "end": 91
+            }
+          ],
+          "symbols": [
+            "func (s *Service) queryPrepared(ctx context.Context, q preparedQuery, emit func(Event) error) (Result, error) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "score",
+      "responsibility": "汇总和确认成绩，保留旧发布与成绩查询接口。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/score/handlers.go",
+        "line": 26
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/score/handlers.go",
+          "sha256": "213741964b9c9b9409b4cd9d6a9d7cf5b5cbfaf3b17e9d0b67464526cf40f1d3",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 26,
+              "end": 36
+            }
+          ],
+          "symbols": [
+            "func (h *Handler) FinalizeExam(w http.ResponseWriter, r *http.Request) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "scorerelease",
+      "responsibility": "冻结成绩发布版本，管理发布、回滚和学生可见结果。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/scorerelease/service.go",
+        "line": 81
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/scorerelease/service.go",
+          "sha256": "bdbbaf3ee408f021e8539752eb15de93050d5072a2c0c00ebbc6acd6c07577f7",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 81,
+              "end": 107
+            },
+            {
+              "start": 1,
+              "end": 185
+            }
+          ],
+          "symbols": [
+            "func (s *Service) Publish(ctx context.Context, tenantID, id, actorID string) (Release, error) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "seedquality",
+      "responsibility": "向阅卷队列盲投标准卷，记录质量观察。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/seedquality/service.go",
+        "line": 82
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/seedquality/service.go",
+          "sha256": "3719dca61fb9437eafb2cc39148773ed737fc09ec3e215a106355a60630f75b0",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 82,
+              "end": 122
+            }
+          ],
+          "symbols": [
+            "func (s *Service) MaybeIssue(ctx context.Context, tenantID, examID, questionID, questionNo, graderID string) (Task, bool, error) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "segment",
+      "responsibility": "管理答案片段、坐标和受控图像读取。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/segment/handlers.go",
+        "line": 32
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/segment/handlers.go",
+          "sha256": "d4802c110fdee7e0a8462211f9993c941b71a16d20e7a8ea9980d68cfb3eb5b9",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 32,
+              "end": 81
+            }
+          ],
+          "symbols": [
+            "func (h *Handler) Generate(w http.ResponseWriter, r *http.Request) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "server",
+      "responsibility": "组装业务模块与存储，注册路由和入口守卫。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/server/application_modules.go",
+        "line": 52
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/server/application_modules.go",
+          "sha256": "aacbdebccefa416889f675e6760c93866e0d2734c33dca97b13ea943319e2aee",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 52,
+              "end": 101
+            }
+          ],
+          "symbols": [
+            "func newApplicationModules(dependencies ApplicationDependencies, stores ApplicationStores, transactional bool) (ApplicationModules, error) {"
+          ]
+        },
+        {
+          "path": "services/api-gateway/internal/server/router_guards.go",
+          "sha256": "239b49ea63862ebed4d2e65d090b465db4185037c8e0024ea9d1f1b5c1faba6f",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 135
+            }
+          ],
+          "symbols": []
+        }
+      ]
+    },
+    {
+      "module": "studentportal",
+      "responsibility": "为学生列出本人有当前成绩发布版本的考试。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/studentportal/service.go",
+        "line": 13
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/studentportal/service.go",
+          "sha256": "6b22dd8ba0f24d2f4cc179c677399cd5ff7fdecf8679005adebdaeceaaaa9275",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 13,
+              "end": 43
+            }
+          ],
+          "symbols": [
+            "func (s *Service) ListPublishedExams(ctx context.Context, tenantID, studentID string) ([]PublishedExam, error) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "subjective",
+      "responsibility": "组织主观题 AI 评分、确定性结算和人工复核。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/subjective/handlers_grade.go",
+        "line": 12
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/subjective/handlers_grade.go",
+          "sha256": "da8ae65624a1ce69a8ef24682fd41a044aff8adff3f83f780450299ae5a7d096",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 12,
+              "end": 61
+            },
+            {
+              "start": 1,
+              "end": 205
+            }
+          ],
+          "symbols": [
+            "func (h *Handler) Grade(w http.ResponseWriter, r *http.Request) {"
+          ]
+        },
+        {
+          "path": "services/api-gateway/internal/subjective/grade_settlement_pipeline.go",
+          "sha256": "004159ad3fb0c8cd73ed5b1075ed2c34ca642c52dd725476af8f471035578e01",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 76
+            }
+          ],
+          "symbols": []
+        }
+      ]
+    },
+    {
+      "module": "submission",
+      "responsibility": "管理考生答卷、页面和质量状态。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/submission/handlers.go",
+        "line": 27
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/submission/handlers.go",
+          "sha256": "612248bab1d63f7833cdeff1f5b2f99edf8df3f71bc3ccff30adcccb73188af7",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 27,
+              "end": 48
+            }
+          ],
+          "symbols": [
+            "func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "taskmaterials",
+      "responsibility": "按任务快照读取题干、参考答案、解析和评分细则。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/taskmaterials/question.go",
+        "line": 18
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/taskmaterials/question.go",
+          "sha256": "bf3095790b43a2a158d8541b9063b7ffec3243ec0826da009c6db4522a6cf622",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 18,
+              "end": 36
+            }
+          ],
+          "symbols": [
+            "func (s PostgresReader) QuestionForSnapshot(ctx context.Context, tenantID, examID, questionID, snapshotID string) (paper.Question, error) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "workerruntime",
+      "responsibility": "统一后台任务的领取、租约、完成、失败和重试。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/workerruntime/handlers.go",
+        "line": 51
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/workerruntime/handlers.go",
+          "sha256": "e4d7020c2dcf5e7ab1aa2c2f43d1923d0241b537868abf4baf70864842877ee8",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 51,
+              "end": 77
+            },
+            {
+              "start": 1,
+              "end": 174
+            }
+          ],
+          "symbols": [
+            "func (h *Handler) Claim(w http.ResponseWriter, r *http.Request) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "workflowactors",
+      "responsibility": "按考试学校与任务权限列出可分派人员。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/workflowactors/directory.go",
+        "line": 16
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/workflowactors/directory.go",
+          "sha256": "c6976042c2932e61853f77850ce4203593358b4636eb711b372a5feb1b2fac82",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 16,
+              "end": 37
+            }
+          ],
+          "symbols": [
+            "func List(ctx context.Context, db *sql.DB, tenantID, examID, permission string) ([]Actor, error) {"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "workspace",
+      "responsibility": "投影单场考试的准备、处理和阅卷进度，给出下一步操作。",
+      "primary_source": {
+        "path": "services/api-gateway/internal/workspace/service.go",
+        "line": 80
+      },
+      "sources": [
+        {
+          "path": "services/api-gateway/internal/workspace/service.go",
+          "sha256": "f6caeea0d659ff55c940a31b280c46598bc0af165854d4c0558ea11a87aa0a5c",
+          "read_status": "partial",
+          "full_file_review": false,
+          "ranges": [
+            {
+              "start": 1,
+              "end": 24
+            },
+            {
+              "start": 80,
+              "end": 129
+            }
+          ],
+          "symbols": [
+            "func (s *Service) Get(ctx context.Context, scope auth.AccessScope, examID string) (Projection, error) {"
+          ]
+        }
+      ]
+    }
+  ],
+  "supplemental_review": "14复杂包补核核心函数体；独立复核与主任务实际读取，仍为partial。",
+  "supplemental_checked_at_utc": "2026-10-11T03:27:10.050834+00:00"
+}

@@ -40,7 +40,7 @@ function securityEventLabel(type: string) {
   return labels[type] ?? "账户安全状态已更新";
 }
 
-export function SessionManagementPage({ onLoggedOut, accountLabel }: { onLoggedOut: () => void; accountLabel: string }) {
+export function SessionManagementPage({ onLoggedOut, accountLabel }: Readonly<{ onLoggedOut: () => void; accountLabel: string }>) {
   const { message } = App.useApp();
   const [form] = Form.useForm<PasswordFormValues>();
   const [sessions, setSessions] = useState<DeviceSession[]>([]);

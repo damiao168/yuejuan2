@@ -1,3 +1,4 @@
+import ipaddress
 import math
 import os
 from dataclasses import dataclass
@@ -28,9 +29,18 @@ def _float(name, default, minimum, maximum):
     return value
 
 
+def _boolean(name, default):
+    raw = os.getenv(name, "true" if default else "false")
+    if raw == "true":
+        return True
+    if raw == "false":
+        return False
+    raise ValueError(f"{name} must be true or false")
+
+
 @dataclass(frozen=True)
 class Settings:
-    environment: str = "development"
+    environment: str = "production"
     host: str = "0.0.0.0"
     port: int = 8100
     service_token: str = ""
@@ -60,11 +70,12 @@ class Settings:
     prompt_root: str = "/app/prompts"
     tls_cert_file: str = ""
     tls_key_file: str = ""
+    allow_insecure_loopback_http: bool = False
 
     @classmethod
     def from_env(cls):
         settings = cls(
-            environment=os.getenv("EDUGRADE_ENV", "development").strip().lower(),
+            environment=os.getenv("EDUGRADE_ENV", "production").strip().lower(),
             host=os.getenv("EDUGRADE_GRADING_AGENT_HOST", "0.0.0.0").strip(),
             port=_integer("EDUGRADE_GRADING_AGENT_PORT", 8100, 1, 65535),
             service_token=os.getenv("EDUGRADE_GRADING_AGENT_TOKEN", ""),
@@ -98,21 +109,51 @@ class Settings:
             prompt_root=os.getenv("EDUGRADE_GRADING_PROMPT_ROOT", "/app/prompts"),
             tls_cert_file=os.getenv("EDUGRADE_GRADING_AGENT_TLS_CERT_FILE", "").strip(),
             tls_key_file=os.getenv("EDUGRADE_GRADING_AGENT_TLS_KEY_FILE", "").strip(),
+            allow_insecure_loopback_http=_boolean(
+                "EDUGRADE_GRADING_AGENT_ALLOW_INSECURE_LOOPBACK_HTTP", False
+            ),
         )
+        settings._validate_credentials_and_listener()
+        model_url = settings._validate_model_url()
+        settings._validate_model_identity(model_url)
+        return settings
+
+    def _validate_credentials_and_listener(self):
         if (
-            len(settings.service_token) < 32
-            or settings.service_token != settings.service_token.strip()
-            or any(character.isspace() for character in settings.service_token)
+            len(self.service_token) < 32
+            or self.service_token != self.service_token.strip()
+            or any(character.isspace() for character in self.service_token)
         ):
             raise ValueError("EDUGRADE_GRADING_AGENT_TOKEN must contain at least 32 non-whitespace characters")
-        if not settings.host:
-            raise ValueError("EDUGRADE_GRADING_AGENT_HOST must not be empty")
-        if bool(settings.tls_cert_file) != bool(settings.tls_key_file):
+        if not isinstance(self.host, str) or not self.host:
+            raise ValueError("EDUGRADE_GRADING_AGENT_HOST must be a non-empty string")
+        if bool(self.tls_cert_file) != bool(self.tls_key_file):
             raise ValueError("grading-agent TLS certificate and key must be configured together")
-        if settings.environment not in {"", "local", "development", "dev", "test"} and not settings.tls_cert_file:
-            raise ValueError("grading-agent TLS certificate and key are required in production-like environments")
+        # 直接注入 Settings 时也只接受实际布尔值，不能用字符串或整数的真值开启明文监听。
+        if type(self.allow_insecure_loopback_http) is not bool:
+            raise ValueError("EDUGRADE_GRADING_AGENT_ALLOW_INSECURE_LOOPBACK_HTTP must be a boolean")
+        if self.tls_cert_file:
+            return
         try:
-            model_url = urlsplit(settings.model_base_url)
+            address = ipaddress.ip_address(self.host)
+        except ValueError:
+            address = None
+        # 明文仅用于显式开发环境、明确 opt-in 和 IPv4 字面回环地址；不解析 DNS，也不开放 IPv6。
+        if (
+            self.environment in {"local", "development", "dev", "test"}
+            and self.allow_insecure_loopback_http is True
+            and isinstance(address, ipaddress.IPv4Address)
+            and address.is_loopback
+        ):
+            return
+        raise ValueError(
+            "grading-agent TLS certificate and key are required unless explicit development "
+            "loopback HTTP is enabled"
+        )
+
+    def _validate_model_url(self):
+        try:
+            model_url = urlsplit(self.model_base_url)
             _ = model_url.port
         except ValueError as exc:
             raise ValueError("EDUGRADE_GRADING_MODEL_BASE_URL must be a valid HTTP(S) URL") from exc
@@ -125,13 +166,16 @@ class Settings:
             or model_url.fragment
         ):
             raise ValueError("EDUGRADE_GRADING_MODEL_BASE_URL must be a valid HTTP(S) URL")
-        validate_service_url("EDUGRADE_GRADING_MODEL_BASE_URL", settings.model_base_url, settings.environment)
+        validate_service_url("EDUGRADE_GRADING_MODEL_BASE_URL", self.model_base_url, self.environment)
+        return model_url
+
+    def _validate_model_identity(self, model_url):
         identity = {
-            "EDUGRADE_GRADING_PROVIDER_KEY": settings.provider_key,
-            "EDUGRADE_GRADING_DEPLOYMENT_KEY": settings.deployment_key,
-            "EDUGRADE_GRADING_ADAPTER_TYPE": settings.adapter_type,
-            "EDUGRADE_GRADING_DEPLOYMENT_REGION": settings.deployment_region,
-            "EDUGRADE_GRADING_CAPABILITY_PROFILE": settings.capability_profile,
+            "EDUGRADE_GRADING_PROVIDER_KEY": self.provider_key,
+            "EDUGRADE_GRADING_DEPLOYMENT_KEY": self.deployment_key,
+            "EDUGRADE_GRADING_ADAPTER_TYPE": self.adapter_type,
+            "EDUGRADE_GRADING_DEPLOYMENT_REGION": self.deployment_region,
+            "EDUGRADE_GRADING_CAPABILITY_PROFILE": self.capability_profile,
         }
         if any(
             not value
@@ -140,10 +184,10 @@ class Settings:
             for value in identity.values()
         ):
             raise ValueError("provider and deployment identity fields must be non-empty bounded identifiers")
-        if settings.adapter_type not in {"local_llama_cpp", "dashscope_native"}:
+        if self.adapter_type not in {"local_llama_cpp", "dashscope_native"}:
             raise ValueError("EDUGRADE_GRADING_ADAPTER_TYPE is not enabled in this build")
         # 原生协议仅允许固定供应商 HTTPS 根路径；兼容接口不应混用此适配器。
-        if settings.adapter_type == "dashscope_native":
+        if self.adapter_type == "dashscope_native":
             if model_url.scheme != "https" or model_url.hostname != "dashscope.aliyuncs.com":
                 raise ValueError(
                     "dashscope_native requires https://dashscope.aliyuncs.com/api/v1"
@@ -152,8 +196,7 @@ class Settings:
                 raise ValueError(
                     "dashscope_native requires https://dashscope.aliyuncs.com/api/v1"
                 )
-            if len(settings.model_api_key.strip()) < 16:
+            if len(self.model_api_key.strip()) < 16:
                 raise ValueError("dashscope_native requires EDUGRADE_GRADING_MODEL_API_KEY")
-        if not settings.model_name or not settings.model_version or not settings.prompt_version:
+        if not self.model_name or not self.model_version or not self.prompt_version:
             raise ValueError("model and prompt versions must be configured")
-        return settings

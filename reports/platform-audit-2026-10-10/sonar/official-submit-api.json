@@ -1,0 +1,40 @@
+{
+  "key": "submit",
+  "description": "Submits a scanner report to the queue. Report is processed asynchronously. Requires analysis permission. If the project does not exist, then the provisioning permission is also required.",
+  "since": "5.2",
+  "internal": true,
+  "post": true,
+  "hasResponseExample": true,
+  "changelog": [],
+  "params": [
+    {
+      "key": "characteristic",
+      "description": "Optional characteristic of the analysis. Can be repeated to define multiple characteristics.",
+      "since": "6.6",
+      "required": false,
+      "internal": false,
+      "exampleValue": "branchType=long"
+    },
+    {
+      "key": "projectKey",
+      "description": "Key of project",
+      "required": true,
+      "internal": false,
+      "exampleValue": "my_project",
+      "maximumLength": 400
+    },
+    {
+      "key": "projectName",
+      "description": "Optional name of the project, used only if the project does not exist yet. If name is longer than 500, it is abbreviated.",
+      "required": false,
+      "internal": false,
+      "exampleValue": "My Project"
+    },
+    {
+      "key": "report",
+      "description": "Report file. Format is not an API, it changes among SonarQube versions.",
+      "required": true,
+      "internal": false
+    }
+  ]
+}

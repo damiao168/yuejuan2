@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"net/http"
 	"os"
@@ -29,25 +30,7 @@ func TestStory060CaptureRecoveryE2EWithPostgresTestDatabase(t *testing.T) {
 	adminToken := e2eLoginWithTenant(t, router, "demo", "tenant_admin", "ChangeMe123!")
 	suffix := strings.ReplaceAll(time.Now().UTC().Format("20060102150405.000000000"), ".", "")
 	fixture := e2eCreateStory056AcceptanceFixture(t, db, router, adminToken, suffix)
-	var gradeID string
-	if err := db.QueryRow(`SELECT grade_id::text FROM school_class WHERE tenant_id=$1::uuid AND id=$2::uuid`, fixture.TenantID, fixture.ClassID).Scan(&gradeID); err != nil {
-		t.Fatalf("lookup command recovery grade: %v", err)
-	}
-	commandID := "exam-session-recovery-" + suffix
-	sessionInput := exam.CreateSessionInput{
-		SchoolID: fixture.SchoolID, GradeID: gradeID, Name: "稳定操作身份验收", ExamType: "unit_test",
-		GradingMode: "ai_assisted", PublishPolicy: "manual_after_confirmation", ClassIDs: []string{fixture.ClassID}, CommandID: commandID,
-		Subjects: []exam.SessionSubjectInput{{Subject: "math", TotalScore: 10, DurationMinutes: 30, Sections: []exam.BlueprintSectionInput{{Title: "全卷", QuestionType: "short_answer", QuestionCount: 1, ScorePerQuestion: 10}}}},
-	}
-	sessionStore := exam.NewPostgresStore(db)
-	firstSession, err := sessionStore.CreateExamSession(context.Background(), auth.AccessScope{TenantID: fixture.TenantID, TenantWide: true}, fixture.AdminID, sessionInput)
-	if err != nil {
-		t.Fatalf("create stable command session: %v", err)
-	}
-	secondSession, err := sessionStore.CreateExamSession(context.Background(), auth.AccessScope{TenantID: fixture.TenantID, TenantWide: true}, fixture.AdminID, sessionInput)
-	if err != nil || secondSession.ID != firstSession.ID || len(secondSession.Exams) != 1 || secondSession.Exams[0].ID != firstSession.Exams[0].ID {
-		t.Fatalf("lost-response retry duplicated exam session: first=%#v second=%#v err=%v", firstSession, secondSession, err)
-	}
+	e2eAssertStory060SessionCommandIdentity(t, db, fixture, suffix)
 
 	sourceAssetID := e2eUploadSyntheticPDF(
 		t,
@@ -123,6 +106,51 @@ WHERE f1.tenant_id=$1::uuid AND f1.id=$2::uuid
 			firstStatus, firstError, secondStatus, taskStatus, attemptCount, maxAttempts)
 	}
 
+	quality := e2eMaterializeStory060RecoveredQuality(t, db, fixture, suffix, story060RecoveredCaptureSource{AssetID: sourceAssetID, FileID: reuploadedID})
+	e2eAssertStory060QualityAtomicity(t, db, fixture, quality)
+	e2eAssertStory060ManualQualityRecovery(t, db, router, adminToken, fixture, quality.PageID)
+}
+
+// 丢失创建响应后沿用同一命令身份，场次及其唯一学科考试都不能重复创建。
+func e2eAssertStory060SessionCommandIdentity(t *testing.T, db *sql.DB, fixture story056AcceptanceFixture, suffix string) {
+	t.Helper()
+	var gradeID string
+	if err := db.QueryRow(`SELECT grade_id::text FROM school_class WHERE tenant_id=$1::uuid AND id=$2::uuid`, fixture.TenantID, fixture.ClassID).Scan(&gradeID); err != nil {
+		t.Fatalf("lookup command recovery grade: %v", err)
+	}
+	commandID := "exam-session-recovery-" + suffix
+	sessionInput := exam.CreateSessionInput{
+		SchoolID: fixture.SchoolID, GradeID: gradeID, Name: "稳定操作身份验收", ExamType: "unit_test",
+		GradingMode: "ai_assisted", PublishPolicy: "manual_after_confirmation", ClassIDs: []string{fixture.ClassID}, CommandID: commandID,
+		Subjects: []exam.SessionSubjectInput{{Subject: "math", TotalScore: 10, DurationMinutes: 30, Sections: []exam.BlueprintSectionInput{{Title: "全卷", QuestionType: "short_answer", QuestionCount: 1, ScorePerQuestion: 10}}}},
+	}
+	sessionStore := exam.NewPostgresStore(db)
+	firstSession, err := sessionStore.CreateExamSession(context.Background(), auth.AccessScope{TenantID: fixture.TenantID, TenantWide: true}, fixture.AdminID, sessionInput)
+	if err != nil {
+		t.Fatalf("create stable command session: %v", err)
+	}
+	secondSession, err := sessionStore.CreateExamSession(context.Background(), auth.AccessScope{TenantID: fixture.TenantID, TenantWide: true}, fixture.AdminID, sessionInput)
+	if err != nil || secondSession.ID != firstSession.ID || len(secondSession.Exams) != 1 || secondSession.Exams[0].ID != firstSession.Exams[0].ID {
+		t.Fatalf("lost-response retry duplicated exam session: first=%#v second=%#v err=%v", firstSession, secondSession, err)
+	}
+
+}
+
+type story060RecoveredCaptureSource struct {
+	AssetID, FileID string
+}
+
+type story060QualityRecovery struct {
+	PageID, RunID string
+	Store         *imagequality.PostgresStore
+	Task          workerruntime.Task
+	Input         imagequality.ResultInput
+}
+
+// 恢复采集页后再建立质量任务；Runtime 租约和质量源租约必须来自同一次领取。
+func e2eMaterializeStory060RecoveredQuality(t *testing.T, db *sql.DB, fixture story056AcceptanceFixture, suffix string, source story060RecoveredCaptureSource) story060QualityRecovery {
+	t.Helper()
+	sourceAssetID, reuploadedID := source.AssetID, source.FileID
 	var sourceHash string
 	if err := db.QueryRow(`SELECT hash_sha256 FROM file_asset WHERE tenant_id=$1::uuid AND id=$2::uuid`, fixture.TenantID, sourceAssetID).Scan(&sourceHash); err != nil {
 		t.Fatalf("lookup source hash: %v", err)
@@ -186,42 +214,54 @@ WHERE tenant_id=$1::uuid AND capture_file_id=$2::uuid AND deleted_at IS NULL
 		QualityIssues:          []imagequality.Issue{{Code: "blur", Severity: "error", Action: "manual_review"}},
 		NormalizationTransform: map[string]any{"rotation": 0}, ErrorDetail: map[string]any{},
 	}
-	if _, err = db.Exec(`UPDATE agent_worker_task SET lease_token='forced-runtime-mismatch' WHERE tenant_id=$1::uuid AND id=$2::uuid`, fixture.TenantID, qualityTask.ID); err != nil {
+	return story060QualityRecovery{PageID: submissionPageID, RunID: leasedRun.ID, Store: qualityStore, Task: qualityTask, Input: resultInput}
+}
+
+// 先破坏 Runtime 租约验证整笔回滚，再恢复原租约提交；页面、采集页和 Runtime 终态必须一起变化。
+func e2eAssertStory060QualityAtomicity(t *testing.T, db *sql.DB, fixture story056AcceptanceFixture, quality story060QualityRecovery) {
+	t.Helper()
+	qualityStore, qualityTask, resultInput := quality.Store, quality.Task, quality.Input
+	if _, err := db.Exec(`UPDATE agent_worker_task SET lease_token='forced-runtime-mismatch' WHERE tenant_id=$1::uuid AND id=$2::uuid`, fixture.TenantID, qualityTask.ID); err != nil {
 		t.Fatalf("inject runtime completion failure: %v", err)
 	}
-	if _, err = qualityStore.SubmitResultCommand(context.Background(), fixture.TenantID, fixture.AdminID, leasedRun.ID, resultInput); !errors.Is(err, workerruntime.ErrLeaseMismatch) {
+	if _, err := qualityStore.SubmitResultCommand(context.Background(), fixture.TenantID, fixture.AdminID, quality.RunID, resultInput); !errors.Is(err, workerruntime.ErrLeaseMismatch) {
 		t.Fatalf("injected runtime mismatch must roll back the command: %v", err)
 	}
 	var rolledBackRun, rolledBackPage, rolledBackCapture string
-	if err = db.QueryRow(`SELECT r.processing_status,sp.quality_status,cp.status
+	if err := db.QueryRow(`SELECT r.processing_status,sp.quality_status,cp.status
 	FROM submission_page_quality_run r
 	JOIN submission_page sp ON sp.tenant_id=r.tenant_id AND sp.id=r.submission_page_id
 	JOIN capture_page cp ON cp.tenant_id=sp.tenant_id AND cp.submission_page_id=sp.id
-	WHERE r.tenant_id=$1::uuid AND r.id=$2::uuid`, fixture.TenantID, leasedRun.ID).Scan(&rolledBackRun, &rolledBackPage, &rolledBackCapture); err != nil {
+	WHERE r.tenant_id=$1::uuid AND r.id=$2::uuid`, fixture.TenantID, quality.RunID).Scan(&rolledBackRun, &rolledBackPage, &rolledBackCapture); err != nil {
 		t.Fatalf("query rolled back quality state: %v", err)
 	}
 	if rolledBackRun != imagequality.ProcessingProcessing || rolledBackPage != imagequality.QualityUnchecked || rolledBackCapture == "quality_rejected" {
 		t.Fatalf("partial quality result escaped rollback: run=%s page=%s capture=%s", rolledBackRun, rolledBackPage, rolledBackCapture)
 	}
-	if _, err = db.Exec(`UPDATE agent_worker_task SET lease_token=$3 WHERE tenant_id=$1::uuid AND id=$2::uuid`, fixture.TenantID, qualityTask.ID, qualityTask.LeaseToken); err != nil {
+	if _, err := db.Exec(`UPDATE agent_worker_task SET lease_token=$3 WHERE tenant_id=$1::uuid AND id=$2::uuid`, fixture.TenantID, qualityTask.ID, qualityTask.LeaseToken); err != nil {
 		t.Fatalf("restore runtime lease after fault injection: %v", err)
 	}
-	if _, err = qualityStore.SubmitResultCommand(context.Background(), fixture.TenantID, fixture.AdminID, leasedRun.ID, resultInput); err != nil {
+	if _, err := qualityStore.SubmitResultCommand(context.Background(), fixture.TenantID, fixture.AdminID, quality.RunID, resultInput); err != nil {
 		t.Fatalf("commit coordinated quality result: %v", err)
 	}
 	var committedRun, committedPage, committedCapture, committedTask string
-	if err = db.QueryRow(`SELECT r.processing_status,sp.quality_status,cp.status,t.status
+	if err := db.QueryRow(`SELECT r.processing_status,sp.quality_status,cp.status,t.status
 	FROM submission_page_quality_run r
 	JOIN submission_page sp ON sp.tenant_id=r.tenant_id AND sp.id=r.submission_page_id
 	JOIN capture_page cp ON cp.tenant_id=sp.tenant_id AND cp.submission_page_id=sp.id
 	JOIN agent_worker_task t ON t.tenant_id=r.tenant_id AND t.source_type='image_quality_run' AND t.source_id=r.id
-	WHERE r.tenant_id=$1::uuid AND r.id=$2::uuid`, fixture.TenantID, leasedRun.ID).Scan(&committedRun, &committedPage, &committedCapture, &committedTask); err != nil {
+	WHERE r.tenant_id=$1::uuid AND r.id=$2::uuid`, fixture.TenantID, quality.RunID).Scan(&committedRun, &committedPage, &committedCapture, &committedTask); err != nil {
 		t.Fatalf("query committed quality state: %v", err)
 	}
 	if committedRun != imagequality.ProcessingCompleted || committedPage != imagequality.QualityFailed || committedCapture != "quality_rejected" || committedTask != workerruntime.StatusSucceeded {
 		t.Fatalf("quality command did not commit as one unit: run=%s page=%s capture=%s task=%s", committedRun, committedPage, committedCapture, committedTask)
 	}
 
+}
+
+// 人工放行保留原失败证据和操作者，并重新排队配准任务，不能只修改页面状态。
+func e2eAssertStory060ManualQualityRecovery(t *testing.T, db *sql.DB, router http.Handler, adminToken string, fixture story056AcceptanceFixture, submissionPageID string) {
+	t.Helper()
 	override := e2ePostJSON(t, router, http.MethodPost, "/api/v1/submission-pages/"+submissionPageID+"/quality-override", adminToken, story056JSON(t, map[string]any{
 		"reason": "人工核对页面清晰，倾斜与模糊程度不影响阅卷",
 	}), http.StatusOK)

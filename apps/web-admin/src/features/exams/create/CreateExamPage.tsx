@@ -21,14 +21,13 @@ function completionPath(mode: ExamCreationMode, examId?: string) {
   return mode === "materials" ? `/exams/${encodeURIComponent(examId)}/paper` : `/exams/${encodeURIComponent(examId)}/students`;
 }
 
-export function CreateExamPage({ user, onNavigate }: { user: SessionUser; onNavigate: (path: string) => void }) {
+export function CreateExamPage({ user, onNavigate }: Readonly<{ user: SessionUser; onNavigate: (path: string) => void }>) {
   const { message } = App.useApp();
   const [draft, setDraft] = useState<CreateExamDraft>(() => initialCreateExamDraft());
   const [schools, setSchools] = useState<School[]>([]);
   const [grades, setGrades] = useState<Grade[]>([]);
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [templates, setTemplates] = useState<ExamTemplate[]>([]);
-  const [savedAt, setSavedAt] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -91,7 +90,6 @@ export function CreateExamPage({ user, onNavigate }: { user: SessionUser; onNavi
     if (loading) return;
     const timer = window.setTimeout(() => {
       localStorage.setItem(draftKey, JSON.stringify(draft));
-      setSavedAt(new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" }));
     }, 450);
     return () => window.clearTimeout(timer);
   }, [draft, draftKey, loading]);
@@ -101,8 +99,8 @@ export function CreateExamPage({ user, onNavigate }: { user: SessionUser; onNavi
     try {
       persistExamCreateCommand(localStorage, commandStorageKey, command);
     } catch {
-      // The submit path remains the durability boundary and refuses to send
-      // when its synchronous persistence fails.
+      // 提交路径仍是持久化边界；
+      // 同步持久化失败时，拒绝发送请求。
     }
   }, [command, commandStorageKey]);
 
@@ -127,7 +125,7 @@ export function CreateExamPage({ user, onNavigate }: { user: SessionUser; onNavi
           if (next) persistExamCreateCommand(localStorage, commandStorageKey, next);
           else localStorage.removeItem(commandStorageKey);
         } catch {
-          // The in-memory result remains authoritative for this page lifetime.
+          // 本页面存续期间仍以内存中的结果为准。
         }
         return;
       }
@@ -137,8 +135,8 @@ export function CreateExamPage({ user, onNavigate }: { user: SessionUser; onNavi
       }
     }).catch((recoveryError: unknown) => {
       if (!active) return;
-      // A failed GET cannot reject the original write. It may still ask us
-      // to delay all further recovery traffic, including an explicit retry.
+      // GET 失败不能否定原始写入结果，但它仍可能要求
+      // 延后所有后续恢复请求，包括显式重试。
       const delayed = recoveryError instanceof ApiClientError && recoveryError.retryAfterSeconds
         ? { ...command, retryNotBefore: new Date(Date.now() + recoveryError.retryAfterSeconds * 1000).toISOString() }
         : command;
@@ -151,8 +149,8 @@ export function CreateExamPage({ user, onNavigate }: { user: SessionUser; onNavi
 
   const submit = async () => {
     if (!submissionGate.current.enter()) return;
-    // A completed command is retained only as a recovery receipt. Starting a
-    // genuinely new creation must take a fresh immutable command snapshot.
+    // 完成的命令只作为恢复回执保留。开始新的创建操作时，
+    // 必须建立新的不可变命令快照。
     const persisted = loadExamCreateCommand(localStorage, commandStorageKey);
     const pending = persisted && persisted.state !== "succeeded" ? persisted : command;
     const activeCommand = pending?.state === "succeeded" ? null : pending;
@@ -175,22 +173,23 @@ export function CreateExamPage({ user, onNavigate }: { user: SessionUser; onNavi
     }
     setSubmitting(true);
     const payload: ExamSessionPayload = activeCommand?.payload ?? {
+      creation_mode: draft.creationMode,
       school_id: draft.schoolId,
       grade_id: draft.gradeId,
-      template_id: draft.templateId === "custom" ? undefined : draft.templateId,
+      template_id: draft.creationMode!=="template" || draft.templateId === "custom" ? undefined : draft.templateId,
       name: draft.name.trim(),
       exam_type: draft.examType,
       grading_mode: draft.gradingMode,
       appeal_enabled: draft.appealEnabled,
       publish_policy: draft.publishPolicy,
       class_ids: draft.classIds,
-      subjects: draft.subjects.map((subject) => ({ subject: subject.subject, total_score: subject.totalScore, duration_minutes: subject.durationMinutes, candidate_rule: subject.candidateRule, class_ids: subject.candidateRule === "subject_selected_classes" ? subject.classIds : [], sections: subject.sections.map((section) => ({ title: section.title.trim(), question_type: section.questionType, question_count: section.questionCount, score_per_question: section.scorePerQuestion })) }))
+      subjects: draft.subjects.map((subject) => ({ subject: subject.subject, total_score: subject.totalScore, duration_minutes: subject.durationMinutes, candidate_rule: subject.candidateRule, class_ids: subject.candidateRule === "subject_selected_classes" ? subject.classIds : [], sections: draft.creationMode==="template"?subject.sections.map((section) => ({ title: section.title.trim(), question_type: section.questionType, question_count: section.questionCount, score_per_question: section.scorePerQuestion })):[] }))
     };
     const submitted = activeCommand ?? beginExamCreateCommand(payload, undefined, draft.creationMode);
     setCommand(submitted);
     try {
-      // Persist synchronously before the first network byte is sent. React state
-      // effects are intentionally not the durability boundary for this command.
+      // 发送任何网络数据前先同步持久化。React 状态
+      // 更新后的 effect 有意不作为此命令的持久化边界。
       persistExamCreateCommand(localStorage, commandStorageKey, submitted);
       const result = await createExamSession(submitted.payload, submitted.commandId);
       const completed = recordExamCreateSuccess(localStorage, commandStorageKey, draftKey, submitted, result.exam_session);
@@ -205,9 +204,9 @@ export function CreateExamPage({ user, onNavigate }: { user: SessionUser; onNavi
         if (next) persistExamCreateCommand(localStorage, commandStorageKey, next);
         else localStorage.removeItem(commandStorageKey);
       } catch {
-        // Storage can be unavailable (private mode/quota). The request is not
-        // sent until the first write succeeds, and the in-memory receipt still
-        // prevents an accidental command rotation during this page lifetime.
+        // 存储可能因隐私模式或配额不可用。首次写入成功前
+        // 不会发送请求；本页面存续期间，内存回执仍能
+        // 防止意外更换命令。
       }
       message.error(getUserErrorMessage(submitError, "考试创建失败"));
     } finally {
@@ -222,7 +221,7 @@ export function CreateExamPage({ user, onNavigate }: { user: SessionUser; onNavi
     <div className="create-exam-page">
       {command && command.state !== "succeeded" ? <Alert type={command.state === "conflict" ? "error" : "info"} showIcon message="正在恢复上一次考试创建命令" description="为避免重复创建，本次确认会继续使用首次提交时保存的内容和操作编号。" action={<Button loading={submitting} onClick={() => void submit()}>继续确认原操作</Button>} /> : null}
       {!grades.length ? <Alert type="warning" showIcon message="当前学校还没有可用年级" description="请先到成员管理建立年级和班级。" /> : null}
-      <CreateExamComposer draft={draft} schools={schools} grades={visibleGrades} classes={visibleClasses} templates={templates} savedAt={savedAt} submitting={submitting} issues={issues} onChange={(patch) => { setIssues([]); setDraft((current) => ({ ...current, ...patch })); }} onSubmit={() => void submit()} />
+      <CreateExamComposer draft={draft} schools={schools} grades={visibleGrades} classes={visibleClasses} templates={templates} submitting={submitting} issues={issues} onChange={(patch) => { setIssues([]); setDraft((current) => ({ ...current, ...patch })); }} onSubmit={() => void submit()} />
     </div>
   );
 }

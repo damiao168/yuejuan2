@@ -39,32 +39,7 @@ func TestSummaryUsesEveryTenantExamAndKeepsUnitsSeparate(t *testing.T) {
 	now := time.Date(2026, 8, 2, 8, 0, 0, 0, time.UTC)
 	tenantScope := auth.AccessScope{TenantID: tenantID, ActorID: "admin-1", TenantWide: true, SchoolIDs: []string{"school-1"}}
 
-	for index := 0; index < 12; index++ {
-		item, err := exams.CreateExam(context.Background(), tenantScope, "admin-1", exam.CreateInput{
-			SchoolID: "school-1", Name: fmt.Sprintf("考试 %02d", index+1), Subject: "math",
-			ExamType: "school_exam", TotalScore: 100, GradingMode: "human_review_required",
-			PublishPolicy: "manual",
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if _, err := submissions.Create(context.Background(), tenantID, item.ID, "admin-1", submission.CreateSubmissionInput{
-			SourceType: "scanner_upload", ExpectedPageCount: 1,
-		}); err != nil {
-			t.Fatal(err)
-		}
-	}
-	other, err := exams.CreateExam(context.Background(), auth.AccessScope{TenantID: "other-tenant", ActorID: "admin-2", TenantWide: true}, "admin-2", exam.CreateInput{
-		SchoolID: "other-school", Name: "其他租户考试", Subject: "math",
-		ExamType: "school_exam", TotalScore: 100, GradingMode: "human_review_required",
-		PublishPolicy: "manual",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := submissions.Create(context.Background(), "other-tenant", other.ID, "admin-2", submission.CreateSubmissionInput{SourceType: "scanner_upload"}); err != nil {
-		t.Fatal(err)
-	}
+	seedDashboardTenantExamSubmissions(t, exams, submissions, tenantScope)
 
 	organizationStatistics := OrganizationStatistics{ActiveStudentCount: 1326, GradeCount: 6, ClassCount: 32, TeacherCount: 86, GraderCount: 42}
 	service := NewService(Dependencies{Exams: exams, Submissions: submissions, Reviews: reviews, Audits: audits, Organizations: organizationSummaryStub{statistics: organizationStatistics}, Now: func() time.Time { return now }})
@@ -135,5 +110,36 @@ func TestSchoolScopedSummaryUsesKeyProgressProjection(t *testing.T) {
 	}
 	if len(summary.RecentActivities) != 1 || summary.RecentActivities[0].ID != want.ID {
 		t.Fatalf("expected projected key progress, got %#v", summary.RecentActivities)
+	}
+}
+
+// 先写满同租户十二场考试，再放入另一租户的干扰数据，避免聚合只读取首批记录。
+func seedDashboardTenantExamSubmissions(t *testing.T, exams *exam.MemoryStore, submissions *submission.MemoryStore, tenantScope auth.AccessScope) {
+	t.Helper()
+	for index := 0; index < 12; index++ {
+		item, err := exams.CreateExam(context.Background(), tenantScope, "admin-1", exam.CreateInput{
+			SchoolID: "school-1", Name: fmt.Sprintf("考试 %02d", index+1), Subject: "math",
+			ExamType: "school_exam", TotalScore: 100, GradingMode: "human_review_required",
+			PublishPolicy: "manual",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := submissions.Create(context.Background(), tenantScope.TenantID, item.ID, "admin-1", submission.CreateSubmissionInput{
+			SourceType: "scanner_upload", ExpectedPageCount: 1,
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	other, err := exams.CreateExam(context.Background(), auth.AccessScope{TenantID: "other-tenant", ActorID: "admin-2", TenantWide: true}, "admin-2", exam.CreateInput{
+		SchoolID: "other-school", Name: "其他租户考试", Subject: "math",
+		ExamType: "school_exam", TotalScore: 100, GradingMode: "human_review_required",
+		PublishPolicy: "manual",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := submissions.Create(context.Background(), "other-tenant", other.ID, "admin-2", submission.CreateSubmissionInput{SourceType: "scanner_upload"}); err != nil {
+		t.Fatal(err)
 	}
 }

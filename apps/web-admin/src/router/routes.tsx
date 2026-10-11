@@ -67,9 +67,9 @@ const productionRouteDefinitions: AppRoute[] = [
     experiences: { admin: { title: "工作台", group: "工作台" }, teacher: { title: "我的工作", group: "工作台" }, auditor: { title: "审计总览", group: "工作台" }, student: { title: "我的学习", group: "工作台" } }
   },
   {
-    key: "schoolAiChat", path: "/ai-chat", title: "AI 对话", group: "工作台", icon: <MessageCircle size={18} />, permissions: [],
+    key: "schoolAiChat", path: "/ai-chat", title: "学校 AI 助手", group: "工作台", icon: <MessageCircle size={18} />, permissions: [],
     allowedRoles: ["school_admin"], workspaces: ["school_admin"], mock: false, productionReady: true,
-    experiences: { admin: { title: "AI 对话", group: "工作台" } }
+    experiences: { admin: { title: "学校 AI 助手", group: "工作台" } }
   },
   {
     key: "sessions", path: "/account/sessions", title: "账户安全", group: "账号", icon: <LockKeyhole size={18} />, permissions: [],
@@ -149,10 +149,10 @@ const productionRouteDefinitions: AppRoute[] = [
     experiences: { admin: { title: "成绩分析", group: "阅卷与成绩" }, teacher: { title: "班级成绩", group: "教学工作" } }
   },
   {
-    key: "appeals", path: "/appeals", title: "申诉管理", group: "结果管理", icon: <Inbox size={18} />, permissions: ["appeal:read"], mock: false, productionReady: true,
+    key: "appeals", path: "/appeals", title: "成绩复核", group: "结果管理", icon: <Inbox size={18} />, permissions: ["appeal:read"], mock: false, productionReady: true,
     excludedRoles: ["platform_admin"],
     workspaces: ["tenant_admin", "school_admin", "exam_owner", "teacher"],
-    experiences: { admin: { title: "申诉处理", group: "阅卷与成绩" }, teacher: { title: "学生反馈", group: "教学工作" } }
+    experiences: { admin: { title: "成绩复核", group: "阅卷与成绩" }, teacher: { title: "成绩复核", group: "教学工作" } }
   },
   {
     key: "membersStudents", path: "/members/students", title: "学生管理", group: "学校管理", icon: <Users size={18} />, permissions: ["org:manage"], mock: false, productionReady: true,
@@ -165,9 +165,9 @@ const productionRouteDefinitions: AppRoute[] = [
     workspaces: ["tenant_admin", "school_admin"], experiences: { admin: { title: "年级与班级", group: "成员管理" } }
   },
   {
-    key: "membersTeachers", path: "/members/teachers", title: "阅卷教师", group: "学校管理", icon: <UserCog size={18} />, permissions: ["org:manage"], mock: false, productionReady: true,
+    key: "membersTeachers", path: "/members/teachers", title: "人员与权限", group: "学校管理", icon: <UserCog size={18} />, permissions: ["org:manage"], mock: false, productionReady: true,
     excludedRoles: ["platform_admin"],
-    workspaces: ["tenant_admin", "school_admin"], experiences: { admin: { title: "阅卷教师", group: "成员管理" } }
+    workspaces: ["tenant_admin", "school_admin"], experiences: { admin: { title: "人员与权限", group: "成员管理" } }
   },
   {
     key: "organization", path: "/organization/setup", title: "学校初始化", group: "学校管理", icon: <Settings size={18} />, permissions: ["org:manage"], navigation: false, mock: false, productionReady: true,
@@ -300,8 +300,8 @@ export function mockRoutesEnabled(): boolean {
   return includeMockRoutes;
 }
 
-// This is the runtime registry, not a visibility filter over every route.
-// Production mode therefore cannot resolve or navigate to mock-only pages.
+// 这是运行时注册表，不是对全部路由进行可见性筛选。
+// 因此生产模式无法解析或导航到仅供模拟的页面。
 export const routes = includeMockRoutes
   ? createRouteRegistry(true)
   : productionRouteDefinitions;
@@ -327,14 +327,27 @@ export function hasRouteAccess(user: SessionUser | null, route: AppRoute, experi
 
 export function routeFromPath(pathname: string, registry: readonly AppRoute[] = routes): AppRoute {
   const canonicalPath = canonicalPathFromPath(pathname);
+  if (managementExamFromPath(canonicalPath)) {
+    return registry.find((route) => route.path === "/exams") ?? notFoundRoute;
+  }
   if (examWorkspaceFromPath(canonicalPath)) {
     return examWorkspaceRoute;
   }
   return registry.find((route) => route.path === canonicalPath) ?? notFoundRoute;
 }
 
+export function managementExamFromPath(pathname: string): { kind: "session" | "standalone"; examId: string } | null {
+  const match = /^\/exams\/overview\/(session|standalone)\/([^/?]+)$/.exec(canonicalPathFromPath(pathname));
+  if (!match) return null;
+  try {
+    return { kind: match[1] as "session" | "standalone", examId: decodeURIComponent(match[2]) };
+  } catch {
+    return null;
+  }
+}
+
 export function examWorkspaceFromPath(pathname: string): { examId: string; section: string } | null {
-  const match = canonicalPathFromPath(pathname).match(/^\/exams\/([^/]+)\/([^/?]+)$/);
+  const match = /^\/exams\/([^/]+)\/([^/?]+)$/.exec(canonicalPathFromPath(pathname));
   if (!match) {
     return null;
   }
@@ -345,12 +358,19 @@ export function examWorkspaceFromPath(pathname: string): { examId: string; secti
   }
 }
 
-export function routeGroups(experience: ProductExperience) {
-  const groups = Array.from(new Set(visibleRoutes(experience).map((route) => routePresentation(route, experience).group)));
-  if (experience !== "admin") {
-    return groups;
+function preferredRouteGroupOrder(experience: ProductExperience, user: SessionUser | null | undefined, groups: string[]): string[] {
+  // 同一身份内的菜单位置固定；平台与学校处理的任务不同，不能共用一个分组顺序。
+  if (experience === "admin") {
+    if (user?.roles.includes("platform_admin")) return ["工作台", "平台管理", "系统管理", "设置"];
+    return ["工作台", "成员管理", "考试管理", "题库与组卷", "阅卷与成绩", "设置"];
   }
-  const preferredOrder = ["工作台", "成员管理", "考试管理", "阅卷与成绩", "设置"];
+  if (experience === "teacher") return ["工作台", "阅卷工作", "教学工作"];
+  return groups;
+}
+
+export function routeGroups(experience: ProductExperience, user?: SessionUser | null) {
+  const groups = Array.from(new Set(visibleRoutes(experience).map((route) => routePresentation(route, experience).group)));
+  const preferredOrder = preferredRouteGroupOrder(experience, user, groups);
   return [
     ...preferredOrder.filter((group) => groups.includes(group)),
     ...groups.filter((group) => !preferredOrder.includes(group))

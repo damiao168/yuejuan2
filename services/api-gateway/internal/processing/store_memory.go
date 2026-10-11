@@ -12,8 +12,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// MemoryStore is intentionally a projection-only test adapter. Production
-// composes PostgresStore, which reads the actual capture/OCR/quality facts.
+// MemoryStore 只用于投影测试。生产使用 PostgresStore，读取实际捕获、OCR 和质量事实。
 type MemoryStore struct {
 	mu          sync.RWMutex
 	states      map[string]PageState
@@ -27,8 +26,7 @@ func NewMemoryStore() *MemoryStore {
 
 func stateKey(tenantID, pageID string) string { return tenantID + ":" + pageID }
 
-// PutState is useful to isolate service/handler tests. It does not exist in
-// the Store interface because runtime production projection is source-driven.
+// PutState 用于隔离服务和 handler 测试。它不属于 Store 接口，因为生产运行时投影由来源驱动。
 func (s *MemoryStore) PutState(tenantID string, state PageState) {
 	// 写入状态同时维护对应异常的幂等投影；同一来源更新原异常，来源变化才新建记录。
 	s.mu.Lock()
@@ -127,7 +125,7 @@ func (s *MemoryStore) ListExceptions(_ context.Context, tenantID string, filter 
 	items := []Exception{}
 	for _, item := range s.exceptions {
 		state, ok := s.states[stateKey(tenantID, item.PageID)]
-		if !ok || (filter.ExamID != "" && item.ExamID != filter.ExamID) || (filter.Severity != "" && item.Severity != filter.Severity) || (filter.Status != "" && item.Status != filter.Status) || (filter.Stage != "" && state.CurrentStage != filter.Stage) {
+		if !ok || !exceptionMatchesFilter(item, state, filter) {
 			continue
 		}
 		items = append(items, cloneException(item))
@@ -142,14 +140,7 @@ func (s *MemoryStore) ListExceptions(_ context.Context, tenantID string, filter 
 		filter.Limit = 25
 	}
 	result := ListResult{Exceptions: items}
-	var latest time.Time
-	for key, projectedAt := range s.projectedAt {
-		if (filter.ExamID == "" && strings.HasPrefix(key, tenantID+":")) || key == tenantID+":"+filter.ExamID {
-			if projectedAt.After(latest) {
-				latest = projectedAt
-			}
-		}
-	}
+	latest := s.latestProjectionTimeLocked(tenantID, filter.ExamID)
 	if !latest.IsZero() {
 		value := latest
 		result.ProjectedAt = &value
@@ -163,6 +154,32 @@ func (s *MemoryStore) ListExceptions(_ context.Context, tenantID string, filter 
 		result.NextCursor = last.CreatedAt.Format(time.RFC3339Nano) + "|" + last.ID
 	}
 	return result, nil
+}
+
+func exceptionMatchesFilter(item Exception, state PageState, filter ExceptionFilter) bool {
+	if filter.ExamID != "" && item.ExamID != filter.ExamID {
+		return false
+	}
+	if filter.Severity != "" && item.Severity != filter.Severity {
+		return false
+	}
+	if filter.Status != "" && item.Status != filter.Status {
+		return false
+	}
+	return filter.Stage == "" || state.CurrentStage == filter.Stage
+}
+
+func (s *MemoryStore) latestProjectionTimeLocked(tenantID, examID string) time.Time {
+	// 调用方持有读锁；投影时间按租户/考试取最大值，不只看已筛出的异常。
+	var latest time.Time
+	for key, projectedAt := range s.projectedAt {
+		if (examID == "" && strings.HasPrefix(key, tenantID+":")) || key == tenantID+":"+examID {
+			if projectedAt.After(latest) {
+				latest = projectedAt
+			}
+		}
+	}
+	return latest
 }
 
 func (s *MemoryStore) GetException(_ context.Context, tenantID, exceptionID string) (Exception, error) {

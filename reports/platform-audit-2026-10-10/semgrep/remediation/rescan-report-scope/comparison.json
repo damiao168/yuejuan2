@@ -1,0 +1,635 @@
+{
+  "scan_kind": "report_scope_fixed_snapshot",
+  "full_repository_rescan": false,
+  "version": "1.179.0",
+  "engine": "OSS",
+  "loaded_rules": 735,
+  "rules_run": 421,
+  "elapsed_seconds": 21.875,
+  "exit_code": 0,
+  "targets_requested": 46,
+  "targets_scanned": 46,
+  "coverage_complete_for_scope": true,
+  "original_finding_files": 37,
+  "original_files_unscanned": [],
+  "findings_current": 65,
+  "original_findings": 105,
+  "rule_path_count_retained": 63,
+  "rule_path_count_disappeared": 42,
+  "rule_path_count_new_or_increased": 2,
+  "rule_counts": {
+    "python.lang.security.audit.httpsconnection-detected.httpsconnection-detected": 1,
+    "python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected": 9,
+    "python.lang.security.audit.dangerous-subprocess-use-tainted-env-args.dangerous-subprocess-use-tainted-env-args": 2,
+    "generic.nginx.security.header-redefinition.header-redefinition": 8,
+    "javascript.lang.security.audit.unknown-value-with-script-tag.unknown-value-with-script-tag": 3,
+    "python.lang.security.use-defused-xml.use-defused-xml": 1,
+    "python.lang.security.audit.exec-detected.exec-detected": 1,
+    "go.lang.security.audit.net.cookie-missing-secure.cookie-missing-secure": 9,
+    "go.lang.security.audit.net.cookie-missing-httponly.cookie-missing-httponly": 5,
+    "go.lang.security.audit.database.string-formatted-query.string-formatted-query": 21,
+    "go.lang.security.audit.crypto.missing-ssl-minversion.missing-ssl-minversion": 1,
+    "go.lang.security.audit.crypto.math_random.math-random-used": 1,
+    "python.lang.security.deserialization.pickle.avoid-pickle": 1,
+    "dockerfile.security.last-user-is-root.last-user-is-root": 1,
+    "python.lang.security.audit.hardcoded-password-default-argument.hardcoded-password-default-argument": 1
+  },
+  "files": [
+    {
+      "path": ".github/dependabot.yml",
+      "scanned": true,
+      "snapshot_sha256": "1594288669db667f11d55c2fd5ca331a6a8eaa5c81f4678a11922e477f48a82a",
+      "current_sha256": "1594288669db667f11d55c2fd5ca331a6a8eaa5c81f4678a11922e477f48a82a",
+      "snapshot_matches_current": true
+    },
+    {
+      "path": "ai-services/grading_agent/managed_model.py",
+      "scanned": true,
+      "snapshot_sha256": "0f922dd26e7987670a01eab18dba801ffce522b66048baa603438d7b59721ef3",
+      "current_sha256": "0f922dd26e7987670a01eab18dba801ffce522b66048baa603438d7b59721ef3",
+      "snapshot_matches_current": true
+    },
+    {
+      "path": "ai-services/grading_agent/model.py",
+      "scanned": true,
+      "snapshot_sha256": "6df8267f6d4201ad69ddbe692986b930cd0d57e0ab6b1785639151ed922abbb9",
+      "current_sha256": "6df8267f6d4201ad69ddbe692986b930cd0d57e0ab6b1785639151ed922abbb9",
+      "snapshot_matches_current": true
+    },
+    {
+      "path": "ai-services/tests/test_http.py",
+      "scanned": true,
+      "snapshot_sha256": "81d8a8d91ff9028f8649fd01ddd5e6e30e768d9e81d0539ba019fb47ab14104f",
+      "current_sha256": "81d8a8d91ff9028f8649fd01ddd5e6e30e768d9e81d0539ba019fb47ab14104f",
+      "snapshot_matches_current": true
+    },
+    {
+      "path": "ai-services/tests/test_math_v2_production.py",
+      "scanned": true,
+      "snapshot_sha256": "5d9d6fb21d993f660bd5060494424ed5069ba9a24b472a1f73b38bd7cc4c1cae",
+      "current_sha256": "5d9d6fb21d993f660bd5060494424ed5069ba9a24b472a1f73b38bd7cc4c1cae",
+      "snapshot_matches_current": true
+    },
+    {
+      "path": "ai-services/tests/test_model_transport_security.py",
+      "scanned": true,
+      "snapshot_sha256": "1ff9b10fc49238dc7c856803a1bfe991fc9a2297bf9ee247c8330f1fa2a78c43",
+      "current_sha256": "1ff9b10fc49238dc7c856803a1bfe991fc9a2297bf9ee247c8330f1fa2a78c43",
+      "snapshot_matches_current": true
+    },
+    {
+      "path": "apps/web-admin/nginx.conf",
+      "scanned": true,
+      "snapshot_sha256": "1c400e1102a523e7ab66666abd2c8bc6370c40567095f616d91d51b2157a4723",
+      "current_sha256": "1c400e1102a523e7ab66666abd2c8bc6370c40567095f616d91d51b2157a4723",
+      "snapshot_matches_current": true
+    },
+    {
+      "path": "apps/web-admin/src/auth/mfaFlow.test.ts",
+      "scanned": true,
+      "snapshot_sha256": "5908ab52a1faf03e63a00412d9e97efaee05b4a9742ac32f8ee0abb32d51ff8b",
+      "current_sha256": "5908ab52a1faf03e63a00412d9e97efaee05b4a9742ac32f8ee0abb32d51ff8b",
+      "snapshot_matches_current": true
+    },
+    {
+      "path": "docs/architecture/tools/build_diagrams.py",
+      "scanned": true,
+      "snapshot_sha256": "405abfecefb8d7c5f19971104c940adf399fc54cfc3dc67f839c32aa4d1b28af",
+      "current_sha256": "405abfecefb8d7c5f19971104c940adf399fc54cfc3dc67f839c32aa4d1b28af",
+      "snapshot_matches_current": true
+    },
+    {
+      "path": "docs/architecture/tools/requirements.txt",
+      "scanned": true,
+      "snapshot_sha256": "36f60fecd9c3546ad484e50324b4b2657649c51a8578ab8ca76a0ae8d9306a8a",
+      "current_sha256": "36f60fecd9c3546ad484e50324b4b2657649c51a8578ab8ca76a0ae8d9306a8a",
+      "snapshot_matches_current": true
+    },
+    {
+      "path": "docs/architecture/tools/test_xml_security.py",
+      "scanned": true,
+      "snapshot_sha256": "ca7b626aa5bf6ec29f9335ffe0fb92dd51bc89516da957cac1323981d8c95745",
+      "current_sha256": "ca7b626aa5bf6ec29f9335ffe0fb92dd51bc89516da957cac1323981d8c95745",
+      "snapshot_matches_current": true
+    },
+    {
+      "path": "docs/architecture/tools/verify_delivery.py",
+      "scanned": true,
+      "snapshot_sha256": "5c1478e9e91f541524eeda94605c16beaad14f477d615aaf1d68e253d0280792",
+      "current_sha256": "5c1478e9e91f541524eeda94605c16beaad14f477d615aaf1d68e253d0280792",
+      "snapshot_matches_current": true
+    },
+    {
+      "path": "infra/docker-compose/nginx/README.md",
+      "scanned": true,
+      "snapshot_sha256": "c10d7720b79772a3903e68c9768256113769438a9550b61e27454f6858c3e37f",
+      "current_sha256": "c10d7720b79772a3903e68c9768256113769438a9550b61e27454f6858c3e37f",
+      "snapshot_matches_current": true
+    },
+    {
+      "path": "infra/docker-compose/nginx/nginx.conf",
+      "scanned": true,
+      "snapshot_sha256": "7762b643a7fcc54ba82b3c69de702176c34ad516ab119dd013b666355b967c02",
+      "current_sha256": "7762b643a7fcc54ba82b3c69de702176c34ad516ab119dd013b666355b967c02",
+      "snapshot_matches_current": true
+    },
+    {
+      "path": "infra/docker-compose/nginx/story056-e2e.conf",
+      "scanned": true,
+      "snapshot_sha256": "5e9171dda9353247af01ab6fb11dc5e640e246e4c362ce14dee777004933860a",
+      "current_sha256": "5e9171dda9353247af01ab6fb11dc5e640e246e4c362ce14dee777004933860a",
+      "snapshot_matches_current": true
+    },
+    {
+      "path": "infra/docker-compose/nginx/story060-e2e.conf",
+      "scanned": true,
+      "snapshot_sha256": "f7e0521b4b91970ddfd0004e75dfc926c93b6bd2534e4f8732a3267f65c72c9a",
+      "current_sha256": "f7e0521b4b91970ddfd0004e75dfc926c93b6bd2534e4f8732a3267f65c72c9a",
+      "snapshot_matches_current": true
+    },
+    {
+      "path": "infra/docker-compose/nginx/tests/check_proxy_authority.py",
+      "scanned": true,
+      "snapshot_sha256": "06b851e297de66e94efe829ad3328056f46708535c13a26c0234c4a81c80bf2c",
+      "current_sha256": "06b851e297de66e94efe829ad3328056f46708535c13a26c0234c4a81c80bf2c",
+      "snapshot_matches_current": true
+    },
+    {
+      "path": "scripts/test_fujian_math_batch29.py",
+      "scanned": true,
+      "snapshot_sha256": "44b0529092a4de0ab516177de918c958d236049d62c1417ab71c0b776d95be13",
+      "current_sha256": "44b0529092a4de0ab516177de918c958d236049d62c1417ab71c0b776d95be13",
+      "snapshot_matches_current": true
+    },
+    {
+      "path": "services/api-gateway/internal/auth/cookies.go",
+      "scanned": true,
+      "snapshot_sha256": "e9115bf1d1e88a3678d4feab3cc1ce7dbd4b27a94c42437b1092fd98308d15b8",
+      "current_sha256": "e9115bf1d1e88a3678d4feab3cc1ce7dbd4b27a94c42437b1092fd98308d15b8",
+      "snapshot_matches_current": true
+    },
+    {
+      "path": "services/api-gateway/internal/auth/mfa_http_test.go",
+      "scanned": true,
+      "snapshot_sha256": "00cf41bef16b3f5eadcbbcb2183846e40c593e5179dfa9d248303fcc072475bc",
+      "current_sha256": "00cf41bef16b3f5eadcbbcb2183846e40c593e5179dfa9d248303fcc072475bc",
+      "snapshot_matches_current": true
+    },
+    {
+      "path": "services/api-gateway/internal/files/store_postgres.go",
+      "scanned": true,
+      "snapshot_sha256": "c05e1e7f479bec4a8b80f7cfd4be574c2be4ab76ec7876dcf31f884b851c4211",
+      "current_sha256": "c05e1e7f479bec4a8b80f7cfd4be574c2be4ab76ec7876dcf31f884b851c4211",
+      "snapshot_matches_current": true
+    },
+    {
+      "path": "services/api-gateway/internal/middleware/middleware_test.go",
+      "scanned": true,
+      "snapshot_sha256": "a13f68f27784c630e2465f5aa0832036a573357ab050ec1243bb011c5bd7e6bd",
+      "current_sha256": "a13f68f27784c630e2465f5aa0832036a573357ab050ec1243bb011c5bd7e6bd",
+      "snapshot_matches_current": true
+    },
+    {
+      "path": "services/api-gateway/internal/minioadapter/client_test.go",
+      "scanned": true,
+      "snapshot_sha256": "9e333c376e444762ff5e182af2571590c488054640dc8f77c7013b614fcb0282",
+      "current_sha256": "9e333c376e444762ff5e182af2571590c488054640dc8f77c7013b614fcb0282",
+      "snapshot_matches_current": true
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/managed_config_probe.go",
+      "scanned": true,
+      "snapshot_sha256": "adad77306802937f01e9d8808c9735259e05beb69b3fb70ca0e80ba6aeb88420",
+      "current_sha256": "adad77306802937f01e9d8808c9735259e05beb69b3fb70ca0e80ba6aeb88420",
+      "snapshot_matches_current": true
+    },
+    {
+      "path": "services/api-gateway/internal/score/store_postgres.go",
+      "scanned": true,
+      "snapshot_sha256": "822368ebcf902180406b529bec159b9001d6efeeeab0c3fffe574e87bd4cd748",
+      "current_sha256": "822368ebcf902180406b529bec159b9001d6efeeeab0c3fffe574e87bd4cd748",
+      "snapshot_matches_current": true
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_business_command_test.go",
+      "scanned": true,
+      "snapshot_sha256": "704dfeb9bdee1b96f4c59900f06966a2d738f48b261aeaf6bbceb045b032fc61",
+      "current_sha256": "704dfeb9bdee1b96f4c59900f06966a2d738f48b261aeaf6bbceb045b032fc61",
+      "snapshot_matches_current": true
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_compose_bootstrap_test.go",
+      "scanned": true,
+      "snapshot_sha256": "87947d4eec3131e1a8c99637719641cc9537b51be7c9f36f6356215c43a07ec6",
+      "current_sha256": "87947d4eec3131e1a8c99637719641cc9537b51be7c9f36f6356215c43a07ec6",
+      "snapshot_matches_current": true
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_mfa_test.go",
+      "scanned": true,
+      "snapshot_sha256": "baef7b00789aa9b30bc285357fdc645175dd34bdf446cc33b64aef51a4455f60",
+      "current_sha256": "baef7b00789aa9b30bc285357fdc645175dd34bdf446cc33b64aef51a4455f60",
+      "snapshot_matches_current": true
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+      "scanned": true,
+      "snapshot_sha256": "9e64cc5888db987c913d01baf93e784fdf1f465aab406b9542950732f5a2b916",
+      "current_sha256": "9e64cc5888db987c913d01baf93e784fdf1f465aab406b9542950732f5a2b916",
+      "snapshot_matches_current": true
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_question_bank_import_test.go",
+      "scanned": true,
+      "snapshot_sha256": "dd90a2dd55eede5c0ad9f1c955e5897aab85d6afa6f07f26af7fe62f570bb6ba",
+      "current_sha256": "dd90a2dd55eede5c0ad9f1c955e5897aab85d6afa6f07f26af7fe62f570bb6ba",
+      "snapshot_matches_current": true
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_question_bank_test.go",
+      "scanned": true,
+      "snapshot_sha256": "69d9c04bca67a84cc90b4ca948fd91a3b392e75e3a0eac9df6d2f4a23e8308eb",
+      "current_sha256": "69d9c04bca67a84cc90b4ca948fd91a3b392e75e3a0eac9df6d2f4a23e8308eb",
+      "snapshot_matches_current": true
+    },
+    {
+      "path": "services/api-gateway/tools/story056-postgres-e2e/Dockerfile",
+      "scanned": true,
+      "snapshot_sha256": "20c9fbae828ab0c478929582e614253844e1f5ad5deb0a003af7962d99e8485e",
+      "current_sha256": "20c9fbae828ab0c478929582e614253844e1f5ad5deb0a003af7962d99e8485e",
+      "snapshot_matches_current": true
+    },
+    {
+      "path": "services/api-gateway/tools/story056-real-worker-e2e/Dockerfile",
+      "scanned": true,
+      "snapshot_sha256": "fb6454601dc33c9f06effcf2fb932a67bb9a06a30dfbafb9261f2e8601bc9024",
+      "current_sha256": "fb6454601dc33c9f06effcf2fb932a67bb9a06a30dfbafb9261f2e8601bc9024",
+      "snapshot_matches_current": true
+    },
+    {
+      "path": "services/image-quality-worker/image_quality/api.py",
+      "scanned": true,
+      "snapshot_sha256": "c631091a0c3c202cce1db46e3ad22d843d12f4e3552640e3f43fb9b196cf419b",
+      "current_sha256": "c631091a0c3c202cce1db46e3ad22d843d12f4e3552640e3f43fb9b196cf419b",
+      "snapshot_matches_current": true
+    },
+    {
+      "path": "services/image-quality-worker/tests/test_redirect_boundaries_semgrep.py",
+      "scanned": true,
+      "snapshot_sha256": "c8251415ed6a2411fd1890266c01b1fcfc1f92afb245e929cf4bbe97f366c28c",
+      "current_sha256": "c8251415ed6a2411fd1890266c01b1fcfc1f92afb245e929cf4bbe97f366c28c",
+      "snapshot_matches_current": true
+    },
+    {
+      "path": "services/math-verification-worker/tests/test_timeout.py",
+      "scanned": true,
+      "snapshot_sha256": "bcd059ac6de82165eb902c887869a4face8e137c0a24e98582bee499e458e65d",
+      "current_sha256": "bcd059ac6de82165eb902c887869a4face8e137c0a24e98582bee499e458e65d",
+      "snapshot_matches_current": true
+    },
+    {
+      "path": "services/ocr-worker/Dockerfile",
+      "scanned": true,
+      "snapshot_sha256": "2005a51cb0db33fc42e9fe36d38c14d8f28f98229b0a1286692d4cbb9a0e0ad8",
+      "current_sha256": "2005a51cb0db33fc42e9fe36d38c14d8f28f98229b0a1286692d4cbb9a0e0ad8",
+      "snapshot_matches_current": true
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/api.py",
+      "scanned": true,
+      "snapshot_sha256": "86249bc03cc04645534caf4f2ba4c678878b4058507c00bc0bb22b986ba1d58a",
+      "current_sha256": "86249bc03cc04645534caf4f2ba4c678878b4058507c00bc0bb22b986ba1d58a",
+      "snapshot_matches_current": true
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/math_runner.py",
+      "scanned": true,
+      "snapshot_sha256": "77877944371829b157259687f03a2f4fc85adeb94d74d3e8c801310425371b7f",
+      "current_sha256": "77877944371829b157259687f03a2f4fc85adeb94d74d3e8c801310425371b7f",
+      "snapshot_matches_current": true
+    },
+    {
+      "path": "services/ocr-worker/tests/test_redirect_boundaries_semgrep.py",
+      "scanned": true,
+      "snapshot_sha256": "74828e7ab4b69767bef7e5599ac068c1a6590870df07c5fed6591eab3cc8150b",
+      "current_sha256": "74828e7ab4b69767bef7e5599ac068c1a6590870df07c5fed6591eab3cc8150b",
+      "snapshot_matches_current": true
+    },
+    {
+      "path": "services/page-processing-worker/page_processing/api.py",
+      "scanned": true,
+      "snapshot_sha256": "892b247716993e5ff653950746a43e7fc9f9432a7fae19a6f0d7e10e691f750d",
+      "current_sha256": "892b247716993e5ff653950746a43e7fc9f9432a7fae19a6f0d7e10e691f750d",
+      "snapshot_matches_current": true
+    },
+    {
+      "path": "services/page-processing-worker/tests/test_main.py",
+      "scanned": true,
+      "snapshot_sha256": "56f964b4de901c3b84701ed0fa98ad0ed7c72987d0e1f274243d15116a039100",
+      "current_sha256": "56f964b4de901c3b84701ed0fa98ad0ed7c72987d0e1f274243d15116a039100",
+      "snapshot_matches_current": true
+    },
+    {
+      "path": "services/page-processing-worker/tests/test_redirect_boundaries_semgrep.py",
+      "scanned": true,
+      "snapshot_sha256": "10c20ebf8c98a461729e5391c65539a0bbe003eb5c2e4270b72fcc52a63cd8de",
+      "current_sha256": "10c20ebf8c98a461729e5391c65539a0bbe003eb5c2e4270b72fcc52a63cd8de",
+      "snapshot_matches_current": true
+    },
+    {
+      "path": "services/subjective-grading-worker/subjective_grading_worker/api.py",
+      "scanned": true,
+      "snapshot_sha256": "1679343a46b5af65466717cda9385220f91b1a9f1141fcab6370748c5ddd4564",
+      "current_sha256": "1679343a46b5af65466717cda9385220f91b1a9f1141fcab6370748c5ddd4564",
+      "snapshot_matches_current": true
+    },
+    {
+      "path": "services/subjective-grading-worker/tests/test_redirect_boundaries_semgrep.py",
+      "scanned": true,
+      "snapshot_sha256": "9e2cc6061800265dc8e399a68e80729ef7430ecb673235a2380c7378dfce073b",
+      "current_sha256": "9e2cc6061800265dc8e399a68e80729ef7430ecb673235a2380c7378dfce073b",
+      "snapshot_matches_current": true
+    },
+    {
+      "path": "tests/e2e/story060_grading_agent.py",
+      "scanned": true,
+      "snapshot_sha256": "afa9da5df5a52e13ebc131fe1d7c01cd3d99569d3ebbb9366e5da699eb55bb3f",
+      "current_sha256": "afa9da5df5a52e13ebc131fe1d7c01cd3d99569d3ebbb9366e5da699eb55bb3f",
+      "snapshot_matches_current": true
+    }
+  ],
+  "disappeared_rule_path_counts": [
+    {
+      "rule": "package_managers.dependabot.dependabot-missing-cooldown.dependabot-missing-cooldown",
+      "path": ".github/dependabot.yml",
+      "count_difference": 11,
+      "original_ids": [
+        "SG-001",
+        "SG-002",
+        "SG-003",
+        "SG-004",
+        "SG-005",
+        "SG-006",
+        "SG-007",
+        "SG-008",
+        "SG-009",
+        "SG-010",
+        "SG-011"
+      ]
+    },
+    {
+      "rule": "python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected",
+      "path": "ai-services/grading_agent/model.py",
+      "count_difference": 3,
+      "original_ids": [
+        "SG-013",
+        "SG-014",
+        "SG-015"
+      ]
+    },
+    {
+      "rule": "python.lang.security.use-defused-xml-parse.use-defused-xml-parse",
+      "path": "docs/architecture/tools/build_diagrams.py",
+      "count_difference": 1,
+      "original_ids": [
+        "SG-035"
+      ]
+    },
+    {
+      "rule": "python.lang.security.use-defused-xml.use-defused-xml",
+      "path": "docs/architecture/tools/verify_delivery.py",
+      "count_difference": 1,
+      "original_ids": [
+        "SG-036"
+      ]
+    },
+    {
+      "rule": "python.lang.security.use-defused-xml-parse.use-defused-xml-parse",
+      "path": "docs/architecture/tools/verify_delivery.py",
+      "count_difference": 1,
+      "original_ids": [
+        "SG-037"
+      ]
+    },
+    {
+      "rule": "generic.nginx.security.header-redefinition.header-redefinition",
+      "path": "infra/docker-compose/nginx/nginx.conf",
+      "count_difference": 6,
+      "original_ids": [
+        "SG-038",
+        "SG-039",
+        "SG-040",
+        "SG-041",
+        "SG-042",
+        "SG-043"
+      ]
+    },
+    {
+      "rule": "generic.nginx.security.request-host-used.request-host-used",
+      "path": "infra/docker-compose/nginx/nginx.conf",
+      "count_difference": 2,
+      "original_ids": [
+        "SG-044",
+        "SG-045"
+      ]
+    },
+    {
+      "rule": "generic.nginx.security.request-host-used.request-host-used",
+      "path": "infra/docker-compose/nginx/story056-e2e.conf",
+      "count_difference": 2,
+      "original_ids": [
+        "SG-047",
+        "SG-048"
+      ]
+    },
+    {
+      "rule": "generic.nginx.security.request-host-used.request-host-used",
+      "path": "infra/docker-compose/nginx/story060-e2e.conf",
+      "count_difference": 2,
+      "original_ids": [
+        "SG-050",
+        "SG-051"
+      ]
+    },
+    {
+      "rule": "dockerfile.security.missing-user.missing-user",
+      "path": "services/api-gateway/tools/story056-postgres-e2e/Dockerfile",
+      "count_difference": 1,
+      "original_ids": [
+        "SG-090"
+      ]
+    },
+    {
+      "rule": "dockerfile.security.missing-user-entrypoint.missing-user-entrypoint",
+      "path": "services/api-gateway/tools/story056-real-worker-e2e/Dockerfile",
+      "count_difference": 1,
+      "original_ids": [
+        "SG-091"
+      ]
+    },
+    {
+      "rule": "python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected",
+      "path": "services/image-quality-worker/image_quality/api.py",
+      "count_difference": 3,
+      "original_ids": [
+        "SG-092",
+        "SG-093",
+        "SG-094"
+      ]
+    },
+    {
+      "rule": "python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected",
+      "path": "services/ocr-worker/ocr_worker/api.py",
+      "count_difference": 2,
+      "original_ids": [
+        "SG-097",
+        "SG-098"
+      ]
+    },
+    {
+      "rule": "python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected",
+      "path": "services/ocr-worker/ocr_worker/math_runner.py",
+      "count_difference": 1,
+      "original_ids": [
+        "SG-099"
+      ]
+    },
+    {
+      "rule": "python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected",
+      "path": "services/page-processing-worker/page_processing/api.py",
+      "count_difference": 3,
+      "original_ids": [
+        "SG-100",
+        "SG-101",
+        "SG-102"
+      ]
+    },
+    {
+      "rule": "python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected",
+      "path": "services/subjective-grading-worker/subjective_grading_worker/api.py",
+      "count_difference": 1,
+      "original_ids": [
+        "SG-104"
+      ]
+    },
+    {
+      "rule": "python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected",
+      "path": "tests/e2e/story060_grading_agent.py",
+      "count_difference": 1,
+      "original_ids": [
+        "SG-105"
+      ]
+    }
+  ],
+  "new_rule_path_counts": [
+    {
+      "rule": "python.lang.security.audit.dangerous-subprocess-use-tainted-env-args.dangerous-subprocess-use-tainted-env-args",
+      "path": "ai-services/tests/test_model_transport_security.py",
+      "count_difference": 1,
+      "lines": [
+        100
+      ],
+      "triage": "trusted_local_test_tool",
+      "notes": "OpenSSL 可执行文件仅来自本地测试环境变量或 shutil.which，要求绝对路径并 strict resolve。测试用固定 req 参数创建随机临时证书，使用参数数组且不启用 shell；未见生产 API 用户输入。"
+    },
+    {
+      "rule": "python.lang.security.audit.dangerous-subprocess-use-tainted-env-args.dangerous-subprocess-use-tainted-env-args",
+      "path": "infra/docker-compose/nginx/tests/check_proxy_authority.py",
+      "count_difference": 1,
+      "lines": [
+        143
+      ],
+      "triage": "trusted_local_test_tool",
+      "notes": "Nginx 可执行文件来自测试者显式 --nginx 本地路径并 resolve；规则命中固定 -v 版本查询。subprocess 参数为数组且不启用 shell；这是运行测试者主动选择的本地工具，未见生产 API 用户输入。"
+    }
+  ],
+  "diagnostic_count": 3,
+  "diagnostics": [
+    {
+      "path": "services/api-gateway/tools/story056-postgres-e2e/Dockerfile",
+      "type": [
+        "PartialParsing",
+        [
+          {
+            "path": "services\\api-gateway\\tools\\story056-postgres-e2e\\Dockerfile",
+            "start": {
+              "line": 24,
+              "col": 9,
+              "offset": 0
+            },
+            "end": {
+              "line": 30,
+              "col": 11,
+              "offset": 194
+            }
+          },
+          {
+            "path": "services\\api-gateway\\tools\\story056-postgres-e2e\\Dockerfile",
+            "start": {
+              "line": 33,
+              "col": 5,
+              "offset": 0
+            },
+            "end": {
+              "line": 56,
+              "col": 58,
+              "offset": 1445
+            }
+          }
+        ]
+      ],
+      "message": "Syntax error at line services\\api-gateway\\tools\\story056-postgres-e2e\\Dockerfile:24:\n `=/usr/local/go/bin:${PATH} \\\r\n    GOTOOLCHAIN=local \\\r\n    HOME=/home/e2e \\\r\n    GOPATH=/home/e2e/go \\\r\n    GOMODCACHE=/home/e2e/go/pkg/mod \\\r\n    GOCACHE=/home/e2e/.cache/go-build \\\r\n    TMPDIR` was unexpected"
+    },
+    {
+      "path": "services/api-gateway/tools/story056-real-worker-e2e/Dockerfile",
+      "type": [
+        "PartialParsing",
+        [
+          {
+            "path": "services\\api-gateway\\tools\\story056-real-worker-e2e\\Dockerfile",
+            "start": {
+              "line": 18,
+              "col": 5,
+              "offset": 0
+            },
+            "end": {
+              "line": 25,
+              "col": 40,
+              "offset": 383
+            }
+          }
+        ]
+      ],
+      "message": "Syntax error at line services\\api-gateway\\tools\\story056-real-worker-e2e\\Dockerfile:18:\n `&& adduser -S -D -H -u 10001 -G e2e -h /home/e2e e2e \\\r\n    && mkdir -p /home/e2e \\\r\n    && chown 10001:10001 /home/e2e\r\nENV HOME=/home/e2e\r\nCOPY --from=builder /out/story056-real-worker-e2e /usr/local/bin/story056-real-worker-e2e\r\n# 客户端结果写 stdout，由宿主 runner 收集；只有 HOME 和 /tmp 需要可写。\r\nUSER 10001:10001\r\nENTRYPOINT [\"story056-real-worker-e2e\"]` was unexpected"
+    },
+    {
+      "path": "services/ocr-worker/Dockerfile",
+      "type": [
+        "PartialParsing",
+        [
+          {
+            "path": "services\\ocr-worker\\Dockerfile",
+            "start": {
+              "line": 29,
+              "col": 9,
+              "offset": 0
+            },
+            "end": {
+              "line": 76,
+              "col": 35,
+              "offset": 2262
+            }
+          }
+        ]
+      ],
+      "message": "Syntax error at line services\\ocr-worker\\Dockerfile:29:\n `paddlex --install hpi-cpu; \\\r\n      fi; \\\r\n    fi \\\r\n    && python -m pip install --index-url \"$PIP_INDEX_URL\" \"ftfy==6.3.1\" \"matplotlib>=3.9,<4\"\r\n\n# 系统库的变化频率远低于应用源码。把此步骤\n# 放在源码 COPY 前，避免修改 OCR 工作进程时使 apt 层缓存失效，\n# 从而重复下载相同的 Debian 软件包。\nRUN sed -i \\\n      -e \"s|http://deb.debian.org/debian-security|$DEBIAN_SECURITY_MIRROR|g\" \\\n      -e \"s|http://deb.debian.org/debian|$DEBIAN_MIRROR|g\" \\\n      /etc/apt/sources.list.d/debian.sources \\\n    && apt-get update \\\n    && apt-get install -y --no-install-recommends libgomp1 libgl1 libglib2.0-0 \\\n    && rm -rf /var/lib/apt/lists/*\n\n# 在大型 Paddle 和操作系统依赖层之后，\n# 再复制经常变化的共享代码和运行时代码。常规工作进程代码修改\n# 就能复用这些依赖层，无需再次下载相同的软件包。\nCOPY packages/worker-runtime-python /tmp/worker-runtime-python\nCOPY services/ocr-worker/pyproject.toml ./pyproject.toml\nCOPY services/ocr-worker/ocr_worker ./ocr_worker\n# 上方已固定 setuptools 版本，避免每次源码重建时创建两个\n# 隔离构建环境，并重复下载 setuptools。\nRUN python -m pip install --no-cache-dir --no-deps --no-build-isolation /tmp/worker-runtime-python . \\\r\n    && install -d -o nobody -g nogroup \\\r\n      /home/ocr-worker/.paddlex \\\n      /home/ocr-worker/.modelscope \\\n      /home/ocr-worker/.cache \\\n      /home/ocr-worker/.cache/huggingface \\\n      /home/ocr-worker/.config \\\n      /home/ocr-worker/.config/matplotlib\n\r\n# PaddleX 在导入 PaddleOCR 时初始化缓存。运行时用户\r\n# 有意使用非 root 账号，因此要提供稳定且可写的缓存目录。\r\n# 这些仅供运行时使用的变量放在依赖安装后，避免修改变量时\r\n# 使大型 Paddle 镜像层缓存失效。\r\nENV HOME=/home/ocr-worker\nENV PADDLE_PDX_CACHE_HOME=/home/ocr-worker/.paddlex\nENV MPLCONFIGDIR=/home/ocr-worker/.config/matplotlib\n\nUSER nobody\n\n# 在镜像中一次性生成字体索引。运行... (truncated 231 more characters)"
+    }
+  ],
+  "interpretation_limits": [
+    "规则命中计数不是漏洞数量，也不是修复数量；rule/path 对比不声称每个旧行号已一对一映射",
+    "两个 E2E Dockerfile 有 PartialParsing；SG-091 警告区域覆盖最终 USER，消失不能作为运行身份保证",
+    "生产 Nginx 六条 header-redefinition 消失，但原重复响应头保留，属于匹配差异，不能计为六处漏洞修复",
+    "OCR Dockerfile PartialParsing 与 root 告警仍在；最终 USER nobody 需源代码和运行测试分别核验",
+    "Windows 定向扫描覆盖全部46目标，但不代表跨平台解析一致或全仓覆盖"
+  ]
+}

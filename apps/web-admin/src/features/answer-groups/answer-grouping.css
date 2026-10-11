@@ -1,0 +1,5 @@
+.answer-group-choice-item.ant-list-item { padding: 0; }
+.answer-group-choice { display: grid; gap: var(--eg-space-2); width: 100%; padding: var(--eg-space-3) var(--eg-space-4); border: 0; background: transparent; color: var(--eg-color-text); text-align: left; cursor: pointer; font: inherit; }
+.answer-group-choice[aria-pressed="true"] { background: var(--eg-color-action-soft); }
+.answer-group-choice-title { display: flex; align-items: center; gap: var(--eg-space-2); }
+.answer-group-choice-description { color: var(--eg-color-muted); }

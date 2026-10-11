@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"net/http"
 	"os"
@@ -15,8 +16,8 @@ import (
 	"github.com/google/uuid"
 )
 
-// Exercises the new stores against every migration with synthetic data only.
-// Model calls and production score publication are intentionally absent.
+// 只用合成数据，在全部迁移上测试新存储。
+// 此处不调用模型，也不发布生产成绩。
 func TestPostgresSubjectivePanelAndEvaluationRoundTrip(t *testing.T) {
 	dsn := strings.TrimSpace(os.Getenv("EDUGRADE_E2E_DATABASE_URL"))
 	if dsn == "" {
@@ -48,6 +49,47 @@ WHERE sub.exam_id=$1::uuid ORDER BY seg.created_at DESC LIMIT 1`, fixture.ExamID
 		AnswerSegmentID: segmentID, AnswerVersion: answerVersion, QuestionID: questionID,
 		RubricVersion: "rubric-v1", MaxScore: 1, DecisionConfig: subjective.PanelDecisionConfig{PolicyVersion: "panel-e2e-v1"},
 	}
+	scenario := subjectivePanelScenario{Context: ctx, DB: db, Router: router, PlatformToken: platformToken,
+		Acceptance: fixture, Suffix: suffix, Panels: panels, Create: create, AnswerVersion: answerVersion,
+		SegmentID: segmentID, QuestionID: questionID}
+	scenario.Panel, scenario.RunInput, scenario.PrimaryA = e2eCreateAndClaimPrimaryPanelRole(t, scenario)
+	e2eAssertPanelFrozenRoleBoundaries(t, scenario)
+	scenario.PrimaryB = e2eClaimSecondaryPanelRole(t, scenario)
+	e2eCompletePrimaryPanelGrades(t, scenario)
+	scenario.Score = e2eResolveAndReplayPanel(t, scenario)
+	e2eAssertPanelHumanFallbackVersions(t, scenario)
+	scenario.Evaluations, scenario.Evaluation = e2ePersistSinglePanelEvaluation(t, scenario)
+	scenario.PolicyService, scenario.PolicyVersion = e2eAssertPanelInsufficientEvidenceClosed(t, scenario)
+	scenario.ReadyEvaluation = e2eCreateReadyPanelEvidence(t, scenario)
+	e2eApproveAndRetirePanelPolicy(t, scenario)
+	scenario.ModelConfigs = e2eSeedIndependentPanelCredentials(t, scenario)
+	e2eAssertPanelGovernedBindingsAndActor(t, scenario)
+}
+
+type subjectivePanelScenario struct {
+	Context                              context.Context
+	DB                                   *sql.DB
+	Router                               http.Handler
+	PlatformToken, Suffix                string
+	Acceptance                           story056AcceptanceFixture
+	Panels                               *subjective.PostgresStore
+	Create                               subjective.CreatePanelInput
+	AnswerVersion, SegmentID, QuestionID string
+	Panel                                subjective.GradingPanel
+	RunInput                             subjective.CreateRunInput
+	PrimaryA, PrimaryB                   subjective.GradingRun
+	Score                                float64
+	Evaluations                          *gradingevaluation.PostgresStore
+	Evaluation, ReadyEvaluation          gradingevaluation.Run
+	PolicyService                        *subjective.PanelPolicyService
+	PolicyVersion                        string
+	ModelConfigs                         []string
+}
+
+// 同一答案版本只创建一个面板，角色 A 的运行保持绑定且只能领取一次。
+func e2eCreateAndClaimPrimaryPanelRole(t *testing.T, scenario subjectivePanelScenario) (subjective.GradingPanel, subjective.CreateRunInput, subjective.GradingRun) {
+	t.Helper()
+	ctx, fixture, panels, create, answerVersion, segmentID, questionID := scenario.Context, scenario.Acceptance, scenario.Panels, scenario.Create, scenario.AnswerVersion, scenario.SegmentID, scenario.QuestionID
 	panel, err := panels.GetOrCreatePanel(ctx, fixture.TenantID, fixture.AdminID, create)
 	if err != nil {
 		t.Fatal(err)
@@ -77,6 +119,13 @@ WHERE sub.exam_id=$1::uuid ORDER BY seg.created_at DESC LIMIT 1`, fixture.ExamID
 	if _, owner, err := panels.ClaimPanelRun(ctx, fixture.TenantID, run.ID); err != nil || owner {
 		t.Fatalf("panel role was claimed twice: owner=%v err=%v", owner, err)
 	}
+	return panel, runInput, run
+}
+
+// 角色槽位、冻结答案版本和每角色唯一运行同时受存储及数据库约束保护。
+func e2eAssertPanelFrozenRoleBoundaries(t *testing.T, scenario subjectivePanelScenario) {
+	t.Helper()
+	ctx, db, fixture, suffix, panels, create, answerVersion, segmentID, questionID, panel, runInput, run := scenario.Context, scenario.DB, scenario.Acceptance, scenario.Suffix, scenario.Panels, scenario.Create, scenario.AnswerVersion, scenario.SegmentID, scenario.QuestionID, scenario.Panel, scenario.RunInput, scenario.PrimaryA
 	if _, err := panels.UpdatePanel(ctx, fixture.TenantID, panel.ID, subjective.UpdatePanelInput{
 		Status: subjective.PanelComparing, PrimaryBRunID: run.ID,
 	}); err != subjective.ErrIdempotencyConflict {
@@ -107,7 +156,7 @@ INSERT INTO subjective_grading_run(
 		fixture.TenantID, run.ID); err == nil {
 		t.Fatal("linked panel run could detach from its frozen panel")
 	}
-	if _, err = panels.GetOrCreateRun(ctx, fixture.TenantID, fixture.AdminID, subjective.CreateRunInput{
+	if _, err := panels.GetOrCreateRun(ctx, fixture.TenantID, fixture.AdminID, subjective.CreateRunInput{
 		AnswerSegmentID: segmentID, AnswerVersion: answerVersion, QuestionID: questionID,
 		RubricVersion: create.RubricVersion, ModelVersion: "panel-model-a", PromptVersion: "panel-prompt-v1",
 		MinConfidence: .8, RequestID: "invalid-panel-role-" + suffix, PanelID: panel.ID,
@@ -115,6 +164,12 @@ INSERT INTO subjective_grading_run(
 	}); err != subjective.ErrInvalidInput {
 		t.Fatalf("panel accepted single-agent role: %v", err)
 	}
+}
+
+// 角色 B 使用独立模型与请求；两份角色尚未完成时不能进入比较状态。
+func e2eClaimSecondaryPanelRole(t *testing.T, scenario subjectivePanelScenario) subjective.GradingRun {
+	t.Helper()
+	ctx, fixture, panels, panel, runInput, run := scenario.Context, scenario.Acceptance, scenario.Panels, scenario.Panel, scenario.RunInput, scenario.PrimaryA
 	bInput := runInput
 	bInput.AgentRole, bInput.RequestID, bInput.ModelVersion = subjective.AgentRolePrimaryB, "panel:"+panel.ID+":primary_b", "panel-model-b"
 	bRun, err := panels.GetOrCreateRun(ctx, fixture.TenantID, fixture.AdminID, bInput)
@@ -129,6 +184,13 @@ INSERT INTO subjective_grading_run(
 	}); err != subjective.ErrIdempotencyConflict {
 		t.Fatalf("panel compared incomplete primary roles: %v", err)
 	}
+	return bRun
+}
+
+// 依次保存 A、B 的影子建议并完成原角色运行；此处仍不写生产成绩。
+func e2eCompletePrimaryPanelGrades(t *testing.T, scenario subjectivePanelScenario) {
+	t.Helper()
+	ctx, fixture, panels, create, answerVersion, segmentID, questionID, run, bRun := scenario.Context, scenario.Acceptance, scenario.Panels, scenario.Create, scenario.AnswerVersion, scenario.SegmentID, scenario.QuestionID, scenario.PrimaryA, scenario.PrimaryB
 	completeRole := func(roleRun subjective.GradingRun) {
 		grade, createErr := panels.CreateGrade(ctx, fixture.TenantID, fixture.AdminID, subjective.Grade{
 			AnswerSegmentID: segmentID, QuestionID: questionID, QuestionNo: "Q1", QuestionType: "short_answer",
@@ -148,6 +210,12 @@ INSERT INTO subjective_grading_run(
 	}
 	completeRole(run)
 	completeRole(bRun)
+}
+
+// 两份主角色完成后才解析结果；终态不能回退，原答案重放及满分身份保持冻结。
+func e2eResolveAndReplayPanel(t *testing.T, scenario subjectivePanelScenario) float64 {
+	t.Helper()
+	ctx, fixture, panels, create, panel, run, bRun := scenario.Context, scenario.Acceptance, scenario.Panels, scenario.Create, scenario.Panel, scenario.PrimaryA, scenario.PrimaryB
 	gap, score := .0, 1.0
 	if _, err := panels.UpdatePanel(ctx, fixture.TenantID, panel.ID, subjective.UpdatePanelInput{
 		Status: subjective.PanelComparing, PrimaryARunID: run.ID, PrimaryBRunID: bRun.ID,
@@ -176,6 +244,13 @@ INSERT INTO subjective_grading_run(
 	if _, err := panels.GetOrCreatePanel(ctx, fixture.TenantID, fixture.AdminID, changedScore); err != subjective.ErrIdempotencyConflict {
 		t.Fatalf("changed max score was accepted under an existing panel identity: %v", err)
 	}
+	return score
+}
+
+// 同一面板的人工作业幂等，更新答案版本必须产生新的面板和复核任务。
+func e2eAssertPanelHumanFallbackVersions(t *testing.T, scenario subjectivePanelScenario) {
+	t.Helper()
+	ctx, fixture, panels, create, answerVersion, panel := scenario.Context, scenario.Acceptance, scenario.Panels, scenario.Create, scenario.AnswerVersion, scenario.Panel
 	humanInput := create
 	humanInput.AnswerVersion = "second-" + answerVersion
 	humanPanel, err := panels.GetOrCreatePanel(ctx, fixture.TenantID, fixture.AdminID, humanInput)
@@ -214,6 +289,12 @@ INSERT INTO subjective_grading_run(
 		t.Fatalf("new answer version reused an older panel review task: old=%s new=%s err=%v", taskID, newerTaskID, err)
 	}
 
+}
+
+// 评测观测、指标和完成事实来自同一持久化运行，保留独立人工参考的证据。
+func e2ePersistSinglePanelEvaluation(t *testing.T, scenario subjectivePanelScenario) (*gradingevaluation.PostgresStore, gradingevaluation.Run) {
+	t.Helper()
+	ctx, db, fixture, suffix, score := scenario.Context, scenario.DB, scenario.Acceptance, scenario.Suffix, scenario.Score
 	evaluations := gradingevaluation.NewPostgresStore(db)
 	evalRun, err := evaluations.CreateRun(ctx, fixture.TenantID, fixture.AdminID, gradingevaluation.CreateRunInput{
 		Key: "panel-e2e-" + suffix, DisplayName: "Synthetic panel E2E", ModelReference: e2ePanelModelSetReference(),
@@ -244,6 +325,13 @@ INSERT INTO subjective_grading_run(
 	if err != nil || completedEvaluation.Status != gradingevaluation.RunCompleted || completedEvaluation.ObservationCount != 1 {
 		t.Fatalf("panel evaluation did not complete immutably: %#v err=%v", completedEvaluation, err)
 	}
+	return evaluations, evalRun
+}
+
+// 样本与仲裁证据不足时策略保留影子状态，不能批准真实评分策略。
+func e2eAssertPanelInsufficientEvidenceClosed(t *testing.T, scenario subjectivePanelScenario) (*subjective.PanelPolicyService, string) {
+	t.Helper()
+	ctx, fixture, suffix, panels, evaluations, evalRun := scenario.Context, scenario.Acceptance, scenario.Suffix, scenario.Panels, scenario.Evaluations, scenario.Evaluation
 	policyVersion := "panel-physics-e2e-" + strings.ReplaceAll(suffix, ".", "")
 	policyService := subjective.NewPanelPolicyService(panels, evaluations)
 	panelPolicy, err := policyService.Create(ctx, fixture.TenantID, fixture.AdminID, e2ePanelPolicyInput(policyVersion, 2, 1))
@@ -254,6 +342,13 @@ INSERT INTO subjective_grading_run(
 		t.Fatalf("insufficient real shadow evidence did not fail closed: report=%#v err=%v", report, err)
 	}
 
+	return policyService, policyVersion
+}
+
+// 按原顺序写入共识与仲裁样本，再冻结完成的评测运行。
+func e2eCreateReadyPanelEvidence(t *testing.T, scenario subjectivePanelScenario) gradingevaluation.Run {
+	t.Helper()
+	ctx, fixture, suffix, evaluations := scenario.Context, scenario.Acceptance, scenario.Suffix, scenario.Evaluations
 	readyRun, err := evaluations.CreateRun(ctx, fixture.TenantID, fixture.AdminID, gradingevaluation.CreateRunInput{
 		Key: "panel-ready-e2e-" + suffix, DisplayName: "Synthetic ready panel E2E", ModelReference: e2ePanelModelSetReference(),
 		PromptVersion: "panel-prompt-v1", RubricVersion: "rubric-v1", DatasetReference: "synthetic-ready",
@@ -284,6 +379,13 @@ INSERT INTO subjective_grading_run(
 	if _, _, err := gradingevaluation.NewService(evaluations).CompletePanel(ctx, fixture.TenantID, readyRun.ID); err != nil {
 		t.Fatal(err)
 	}
+	return readyRun
+}
+
+// 批准冻结模型集合及评测依据；先退役策略才能作废其已引用评测。
+func e2eApproveAndRetirePanelPolicy(t *testing.T, scenario subjectivePanelScenario) {
+	t.Helper()
+	ctx, db, fixture, evaluations, policyService, policyVersion, readyRun := scenario.Context, scenario.DB, scenario.Acceptance, scenario.Evaluations, scenario.PolicyService, scenario.PolicyVersion, scenario.ReadyEvaluation
 	readyPolicyVersion := policyVersion + "-ready"
 	readyPolicy, err := policyService.Create(ctx, fixture.TenantID, fixture.AdminID, e2ePanelPolicyInput(readyPolicyVersion, 4, 2))
 	if err != nil {
@@ -306,6 +408,12 @@ WHERE tenant_id=$1::uuid AND id=$2::uuid`, fixture.TenantID, approvedPolicy.ID, 
 	if invalidatedRun, err := evaluations.InvalidateRun(ctx, fixture.TenantID, readyRun.ID, "replacement calibration", time.Now().UTC()); err != nil || invalidatedRun.Status != gradingevaluation.RunInvalid {
 		t.Fatalf("evaluation did not invalidate after policy retirement: %#v err=%v", invalidatedRun, err)
 	}
+}
+
+// 同学校同供应商同模型可以保存独立密文凭据；三个评分角色仍使用独立配置。
+func e2eSeedIndependentPanelCredentials(t *testing.T, scenario subjectivePanelScenario) []string {
+	t.Helper()
+	ctx, db, fixture, suffix := scenario.Context, scenario.DB, scenario.Acceptance, scenario.Suffix
 	modelConfigs := []string{uuid.NewString(), uuid.NewString(), uuid.NewString()}
 	sharedProvider := "panel-e2e-" + strings.ReplaceAll(suffix, ".", "")
 	for index, id := range modelConfigs {
@@ -337,11 +445,18 @@ FROM managed_model_api_config WHERE tenant_id=$1::uuid AND provider_key=$2 AND m
 		fixture.TenantID, sharedProvider).Scan(&configCount, &credentialCount); err != nil || configCount != 2 || credentialCount != 2 {
 		t.Fatalf("independent model credentials did not round-trip: configs=%d credentials=%d err=%v", configCount, credentialCount, err)
 	}
+	return modelConfigs
+}
+
+// 角色强度与配置保持原绑定，跨学校平台操作保留平台操作者归属。
+func e2eAssertPanelGovernedBindingsAndActor(t *testing.T, scenario subjectivePanelScenario) {
+	t.Helper()
+	ctx, db, router, platformToken, fixture, modelConfigs := scenario.Context, scenario.DB, scenario.Router, scenario.PlatformToken, scenario.Acceptance, scenario.ModelConfigs
 	roleStore := modelgovernance.NewPostgresStore(db, nil)
 	for index, role := range []string{modelgovernance.ModelRolePrimaryA, modelgovernance.ModelRolePrimaryB, modelgovernance.ModelRoleArbiter} {
 		_, err := roleStore.SaveModelRoleBinding(ctx, fixture.TenantID, fixture.AdminID, modelgovernance.SaveModelRoleBindingInput{
 			EducationStage: "senior", SubjectCode: "physics", ArchetypeCode: "short_constructed",
-			AgentRole: role, ManagedModelAPIConfigID: modelConfigs[index], PromptVersion: "panel-prompt-v1",
+			ExpectedRevision: modelgovernance.ModelRoleBindingAbsent, AgentRole: role, ManagedModelAPIConfigID: modelConfigs[index], PromptVersion: "panel-prompt-v1",
 			StrengthRank: 1 + index/2,
 		})
 		if err != nil {
@@ -353,7 +468,7 @@ FROM managed_model_api_config WHERE tenant_id=$1::uuid AND provider_key=$2 AND m
 		t.Fatalf("governed role binding did not round-trip: %#v err=%v", bindings, err)
 	}
 	assigned := e2ePostJSON(t, router, http.MethodPut, "/api/v1/platform/panel-model-bindings", platformToken,
-		`{"tenant_id":"`+fixture.TenantID+`","education_stage":"senior","subject_code":"chemistry","archetype_code":"*","agent_role":"primary_a","managed_model_api_config_id":"`+modelConfigs[0]+`","prompt_version":"panel-prompt-v1","strength_rank":1,"status":"active"}`,
+		`{"tenant_id":"`+fixture.TenantID+`","education_stage":"senior","subject_code":"chemistry","archetype_code":"*","agent_role":"primary_a","expected_revision":"absent","managed_model_api_config_id":"`+modelConfigs[0]+`","prompt_version":"panel-prompt-v1","strength_rank":1,"status":"active"}`,
 		http.StatusOK)["binding"].(map[string]any)
 	if assigned["managed_model_api_config_id"] != modelConfigs[0] {
 		t.Fatalf("platform administrator could not bind a school-scoped grading model: %#v", assigned)
@@ -368,6 +483,7 @@ FROM managed_model_api_config WHERE tenant_id=$1::uuid AND provider_key=$2 AND m
 	if len(listed["bindings"].([]any)) != 1 {
 		t.Fatalf("platform role binding was not listed: %#v", listed)
 	}
+
 }
 
 func e2ePanelPolicyInput(version string, minSamples, minArbitrations int) subjective.CreatePanelPolicyInput {

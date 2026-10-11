@@ -1,0 +1,27 @@
+{
+  "checked_utc": "2026-10-11T03:25:45.247004+00:00",
+  "files_checked": 3196,
+  "changed_or_missing": [
+    ".dockerignore",
+    ".github/workflows/ci.yml",
+    "ai-services/README.md",
+    "ai-services/grading_agent/config.py",
+    "ai-services/grading_agent/server.py",
+    "ai-services/tests/test_config.py",
+    "ai-services/tests/test_server_tls.py",
+    "docs/architecture/evidence/audit-coverage.json",
+    "docs/architecture/evidence/workspace-preservation.json",
+    "infra/docker-compose/.env.example",
+    "infra/docker-compose/README.md",
+    "infra/docker-compose/docker-compose.story060-e2e.yml",
+    "infra/docker-compose/docker-compose.yml",
+    "infra/docker-compose/scripts/preflight.ps1",
+    "services/api-gateway/tools/story056-postgres-e2e/Dockerfile",
+    "services/math-verification-worker/Dockerfile",
+    "services/math-verification-worker/math_verification_worker/server.py",
+    "services/math-verification-worker/tests/test_server.py",
+    "services/ocr-worker/ocr_worker/config.py",
+    "services/ocr-worker/tests/test_config.py",
+    "tests/e2e/story060_grading_agent.py"
+  ]
+}

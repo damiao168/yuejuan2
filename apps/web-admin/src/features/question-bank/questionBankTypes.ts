@@ -1,4 +1,8 @@
-import type { CreateQuestionBankItemRequest } from "@edugrade/sdk";
+import type { CreateQuestionBankItemRequest, UpdateQuestionBankACLBinding } from "@edugrade/sdk";
+
+export function isEditableACLRole(preset: string): preset is UpdateQuestionBankACLBinding["preset"] {
+	return ["Viewer", "Author", "Reviewer", "Publisher", "Manager"].includes(preset);
+}
 
 export type SearchFilters = {
 	q: string;
@@ -14,19 +18,19 @@ export type SearchFilters = {
 export type ACLFormValues = {
 	bindings?: Array<{
 		user_id: string;
-		preset: "Viewer" | "Author" | "Reviewer" | "Publisher" | "Manager";
+		preset: UpdateQuestionBankACLBinding["preset"];
 	}>;
 	groups?: Array<{
 		id?: string;
 		name: string;
-		preset: "Viewer" | "Author" | "Reviewer" | "Publisher" | "Manager";
-		members?: string;
+		preset: UpdateQuestionBankACLBinding["preset"];
+		members?: string[] | string;
 	}>;
 };
 
 export type MetadataSchemaFormValues = {
 	fields?: Array<Record<string, unknown> & { options_text?: string }>;
-	taxonomies?: Array<{ id: string; label: string; terms_text?: string }>;
+	taxonomies?: Array<{ id: string; label: string; terms_text?: string; terms?: Array<{id:string;label:string;active:boolean}> }>;
 };
 
 export const emptySearch: SearchFilters = { q: "", mode: "default" };

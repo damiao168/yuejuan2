@@ -1,0 +1,322 @@
+{
+  "task": "infra_hardening",
+  "date": "2026-10-11",
+  "timezone": "Asia/Shanghai",
+  "finding_ids": [
+    "SG-001",
+    "SG-002",
+    "SG-003",
+    "SG-004",
+    "SG-005",
+    "SG-006",
+    "SG-007",
+    "SG-008",
+    "SG-009",
+    "SG-010",
+    "SG-011",
+    "SG-044",
+    "SG-045",
+    "SG-047",
+    "SG-048",
+    "SG-050",
+    "SG-051",
+    "SG-090",
+    "SG-091"
+  ],
+  "findings": [
+    {
+      "id": "SG-001",
+      "status": "fixed",
+      "files": [
+        ".github/dependabot.yml"
+      ],
+      "change": "显式普通版本 cooldown 7 天；GitHub 安全更新豁免",
+      "validation": "11 项 YAML 真实解析检查通过"
+    },
+    {
+      "id": "SG-002",
+      "status": "fixed",
+      "files": [
+        ".github/dependabot.yml"
+      ],
+      "change": "显式普通版本 cooldown 7 天；GitHub 安全更新豁免",
+      "validation": "11 项 YAML 真实解析检查通过"
+    },
+    {
+      "id": "SG-003",
+      "status": "fixed",
+      "files": [
+        ".github/dependabot.yml"
+      ],
+      "change": "显式普通版本 cooldown 7 天；GitHub 安全更新豁免",
+      "validation": "11 项 YAML 真实解析检查通过"
+    },
+    {
+      "id": "SG-004",
+      "status": "fixed",
+      "files": [
+        ".github/dependabot.yml"
+      ],
+      "change": "显式普通版本 cooldown 7 天；GitHub 安全更新豁免",
+      "validation": "11 项 YAML 真实解析检查通过"
+    },
+    {
+      "id": "SG-005",
+      "status": "fixed",
+      "files": [
+        ".github/dependabot.yml"
+      ],
+      "change": "显式普通版本 cooldown 7 天；GitHub 安全更新豁免",
+      "validation": "11 项 YAML 真实解析检查通过"
+    },
+    {
+      "id": "SG-006",
+      "status": "fixed",
+      "files": [
+        ".github/dependabot.yml"
+      ],
+      "change": "显式普通版本 cooldown 7 天；GitHub 安全更新豁免",
+      "validation": "11 项 YAML 真实解析检查通过"
+    },
+    {
+      "id": "SG-007",
+      "status": "fixed",
+      "files": [
+        ".github/dependabot.yml"
+      ],
+      "change": "显式普通版本 cooldown 7 天；GitHub 安全更新豁免",
+      "validation": "11 项 YAML 真实解析检查通过"
+    },
+    {
+      "id": "SG-008",
+      "status": "fixed",
+      "files": [
+        ".github/dependabot.yml"
+      ],
+      "change": "显式普通版本 cooldown 7 天；GitHub 安全更新豁免",
+      "validation": "11 项 YAML 真实解析检查通过"
+    },
+    {
+      "id": "SG-009",
+      "status": "fixed",
+      "files": [
+        ".github/dependabot.yml"
+      ],
+      "change": "显式普通版本 cooldown 7 天；GitHub 安全更新豁免",
+      "validation": "11 项 YAML 真实解析检查通过"
+    },
+    {
+      "id": "SG-010",
+      "status": "fixed",
+      "files": [
+        ".github/dependabot.yml"
+      ],
+      "change": "显式普通版本 cooldown 7 天；GitHub 安全更新豁免",
+      "validation": "11 项 YAML 真实解析检查通过"
+    },
+    {
+      "id": "SG-011",
+      "status": "fixed",
+      "files": [
+        ".github/dependabot.yml"
+      ],
+      "change": "显式普通版本 cooldown 7 天；GitHub 安全更新豁免",
+      "validation": "11 项 YAML 真实解析检查通过"
+    },
+    {
+      "id": "SG-044",
+      "status": "fixed",
+      "files": [
+        "infra/docker-compose/nginx/nginx.conf"
+      ],
+      "change": "固定 upstream Host $proxy_host，删除外部 Forwarded/X-Forwarded-Host",
+      "validation": "nginx/1.29.0 原代理指令回环集成验收，三 conf 合计 48 case",
+      "limits": "listener/upstream 适配为回环；不证明 Docker DNS 或真实部署入口已验证"
+    },
+    {
+      "id": "SG-045",
+      "status": "fixed",
+      "files": [
+        "infra/docker-compose/nginx/nginx.conf"
+      ],
+      "change": "固定 upstream Host $proxy_host，删除外部 Forwarded/X-Forwarded-Host",
+      "validation": "nginx/1.29.0 原代理指令回环集成验收，三 conf 合计 48 case",
+      "limits": "listener/upstream 适配为回环；不证明 Docker DNS 或真实部署入口已验证"
+    },
+    {
+      "id": "SG-047",
+      "status": "fixed",
+      "files": [
+        "infra/docker-compose/nginx/story056-e2e.conf"
+      ],
+      "change": "固定 upstream Host $proxy_host，删除外部 Forwarded/X-Forwarded-Host",
+      "validation": "nginx/1.29.0 原代理指令回环集成验收，三 conf 合计 48 case",
+      "limits": "listener/upstream 适配为回环；不证明 Docker DNS 或真实部署入口已验证"
+    },
+    {
+      "id": "SG-048",
+      "status": "fixed",
+      "files": [
+        "infra/docker-compose/nginx/story056-e2e.conf"
+      ],
+      "change": "固定 upstream Host $proxy_host，删除外部 Forwarded/X-Forwarded-Host",
+      "validation": "nginx/1.29.0 原代理指令回环集成验收，三 conf 合计 48 case",
+      "limits": "listener/upstream 适配为回环；不证明 Docker DNS 或真实部署入口已验证"
+    },
+    {
+      "id": "SG-050",
+      "status": "fixed",
+      "files": [
+        "infra/docker-compose/nginx/story060-e2e.conf"
+      ],
+      "change": "固定 upstream Host $proxy_host，删除外部 Forwarded/X-Forwarded-Host",
+      "validation": "nginx/1.29.0 原代理指令回环集成验收，三 conf 合计 48 case",
+      "limits": "listener/upstream 适配为回环；不证明 Docker DNS 或真实部署入口已验证"
+    },
+    {
+      "id": "SG-051",
+      "status": "fixed",
+      "files": [
+        "infra/docker-compose/nginx/story060-e2e.conf"
+      ],
+      "change": "固定 upstream Host $proxy_host，删除外部 Forwarded/X-Forwarded-Host",
+      "validation": "nginx/1.29.0 原代理指令回环集成验收，三 conf 合计 48 case",
+      "limits": "listener/upstream 适配为回环；不证明 Docker DNS 或真实部署入口已验证"
+    },
+    {
+      "id": "SG-090",
+      "status": "already_fixed_verified",
+      "files": [
+        "services/api-gateway/tools/story056-postgres-e2e/Dockerfile"
+      ],
+      "change": "保留既有 USER 10001:10001；与本次 baseline 完全一致",
+      "validation": "逐字节与 SHA-256 核对",
+      "limits": "Docker runtime 未验证"
+    },
+    {
+      "id": "SG-091",
+      "status": "fixed",
+      "files": [
+        "services/api-gateway/tools/story056-real-worker-e2e/Dockerfile"
+      ],
+      "change": "最终 USER 10001:10001 和可写 HOME；stdout 输出不需挂载改权",
+      "validation": "Dockerfile 静态身份/目录检查 + Go 客户端包测试通过",
+      "limits": "Docker build/runtime 未验证"
+    }
+  ],
+  "files": [
+    {
+      "path": ".github/dependabot.yml",
+      "review_status": "annotated",
+      "current_sha256": "1594288669db667f11d55c2fd5ca331a6a8eaa5c81f4678a11922e477f48a82a",
+      "baseline_sha256": "fcd0654993bd5710669e881621b8ac583f3cd1c16b94f1ab0ab0a75dce26d746",
+      "changed_in_this_task": true
+    },
+    {
+      "path": "infra/docker-compose/nginx/nginx.conf",
+      "review_status": "annotated",
+      "current_sha256": "7762b643a7fcc54ba82b3c69de702176c34ad516ab119dd013b666355b967c02",
+      "baseline_sha256": "531c5f024f66944a7a4e40e9f23eced6231a324b13f60e315c9aca539e22699f",
+      "changed_in_this_task": true
+    },
+    {
+      "path": "infra/docker-compose/nginx/story056-e2e.conf",
+      "review_status": "annotated",
+      "current_sha256": "5e9171dda9353247af01ab6fb11dc5e640e246e4c362ce14dee777004933860a",
+      "baseline_sha256": "4f017e8fbb95408b36f5699bb2fba5a61b0f7a699380e73b5e0858812ba8a1a6",
+      "changed_in_this_task": true
+    },
+    {
+      "path": "infra/docker-compose/nginx/story060-e2e.conf",
+      "review_status": "annotated",
+      "current_sha256": "f7e0521b4b91970ddfd0004e75dfc926c93b6bd2534e4f8732a3267f65c72c9a",
+      "baseline_sha256": "6c7c78e5f7a4238c5c927b130aa75effc0d81849a82ab67210a20e3189ec6be0",
+      "changed_in_this_task": true
+    },
+    {
+      "path": "services/api-gateway/tools/story056-real-worker-e2e/Dockerfile",
+      "review_status": "annotated",
+      "current_sha256": "fb6454601dc33c9f06effcf2fb932a67bb9a06a30dfbafb9261f2e8601bc9024",
+      "baseline_sha256": "4ceef89609710d6fff5879e722e27605dcd4c446e91468eafcc175026ff1c073",
+      "changed_in_this_task": true
+    },
+    {
+      "path": "services/api-gateway/tools/story056-postgres-e2e/Dockerfile",
+      "review_status": "existing_sufficient",
+      "current_sha256": "20c9fbae828ab0c478929582e614253844e1f5ad5deb0a003af7962d99e8485e",
+      "baseline_sha256": "20c9fbae828ab0c478929582e614253844e1f5ad5deb0a003af7962d99e8485e",
+      "changed_in_this_task": false
+    },
+    {
+      "path": "infra/docker-compose/nginx/README.md",
+      "review_status": "documentation",
+      "current_sha256": "c10d7720b79772a3903e68c9768256113769438a9550b61e27454f6858c3e37f",
+      "baseline_sha256": null,
+      "changed_in_this_task": true
+    },
+    {
+      "path": "infra/docker-compose/nginx/tests/check_proxy_authority.py",
+      "review_status": "annotated",
+      "current_sha256": "06b851e297de66e94efe829ad3328056f46708535c13a26c0234c4a81c80bf2c",
+      "baseline_sha256": null,
+      "changed_in_this_task": true
+    }
+  ],
+  "validation": [
+    {
+      "name": "dependabot_yaml",
+      "status": "passed",
+      "update_count": 11,
+      "cooldown_days": 7
+    },
+    {
+      "name": "nginx_native_loopback",
+      "status": "passed",
+      "case_count": 48,
+      "version": "nginx version: nginx/1.29.0",
+      "evidence": "nginx-authority-runtime.json"
+    },
+    {
+      "name": "go_client_tests",
+      "status": "passed",
+      "command": "go test ./tools/story056-real-worker-e2e",
+      "cwd": "services/api-gateway",
+      "output": "ok edugrade-enterprise/services/api-gateway/tools/story056-real-worker-e2e 2.348s"
+    },
+    {
+      "name": "SG-090_preservation",
+      "status": "passed",
+      "sha256": "20c9fbae828ab0c478929582e614253844e1f5ad5deb0a003af7962d99e8485e"
+    },
+    {
+      "name": "SG-091_static_final_user_home",
+      "status": "passed"
+    },
+    {
+      "name": "python_compile_and_git_diff_check",
+      "status": "passed"
+    },
+    {
+      "name": "docker_runtime",
+      "status": "not_run",
+      "reason": "desktop-linux Docker version 15 秒超时；未重启或停止引擎"
+    }
+  ],
+  "limitations": [
+    "Nginx 回环验收替换 listener/upstream 端点，不是 Docker DNS 或 Linux 容器验证",
+    "未执行完整浏览器 E2E；源码未发现生产 Host 消费点或 WebSocket 入口",
+    "server_name _ 继续接收未知域名，收敛的是上游 authority，不声称已验证公网 allowlist/TLS",
+    "客户端镜像 build/runtime UID 和宿主挂载未验收；当前 Compose 客户端没有输出目录挂载"
+  ],
+  "sources": [
+    "https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference#cooldown",
+    "https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_set_header"
+  ],
+  "test_runtime_download": {
+    "url": "https://nginx.org/download/nginx-1.29.0.zip",
+    "sha256": "fed5551ac776a9001eb26d43134695403d6703e9c3c85759c592aea4d223ef09",
+    "purpose": "官方便携版仅用于 isolated native loopback nginx 验证",
+    "cleanup_status": "自动审批策略拒绝 Remove-Item 清理；文件保留在 reports 下，测试进程已退出",
+    "path": "reports/platform-audit-2026-10-10/semgrep/remediation/test-runtime/nginx-1.29.0"
+  }
+}

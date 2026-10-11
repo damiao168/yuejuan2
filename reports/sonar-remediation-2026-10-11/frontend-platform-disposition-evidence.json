@@ -1,0 +1,94 @@
+{
+  "count": 6,
+  "issues": [
+    {
+      "key": "53d83cb5-de5b-4947-afec-13d86cc28adc",
+      "rule": "typescript:S8980",
+      "severity": "MINOR",
+      "file": "apps/student-portal/src/App.releaseConsistency.test.tsx",
+      "original_line": 129,
+      "status": "needs_platform_disposition",
+      "reason": "外层 act 合并同一事件批次，用于测试同步 ref 在 disabled 重绘前阻止提交或退出。拆为各自 fireEvent 的 act 会提前刷新 UI，失去该时序保证。",
+      "source_sha256": "95c238c303b005740b70f697455bcbad2f83005f05f6486b7b47bca613e23469",
+      "evidence": [
+        "apps/student-portal/src/App.tsx",
+        "frontend-types-execution.json"
+      ]
+    },
+    {
+      "key": "e523e830-fd7b-4360-a4f2-b2d6260bf960",
+      "rule": "typescript:S8980",
+      "severity": "MINOR",
+      "file": "apps/student-portal/src/App.submissionReceipt.test.tsx",
+      "original_line": 318,
+      "status": "needs_platform_disposition",
+      "reason": "外层 act 合并同一事件批次，用于测试同步 ref 在 disabled 重绘前阻止提交或退出。拆为各自 fireEvent 的 act 会提前刷新 UI，失去该时序保证。",
+      "source_sha256": "0e42cd9b976a1fd22fb236fa0df96962abbc5214b221a36b19cf361b2c6c5de3",
+      "evidence": [
+        "apps/student-portal/src/App.tsx",
+        "frontend-types-execution.json"
+      ]
+    },
+    {
+      "key": "ab84da33-c3ed-4e22-8690-fe7c1b35cc99",
+      "rule": "typescript:S8980",
+      "severity": "MINOR",
+      "file": "apps/student-portal/src/App.submissionReceipt.test.tsx",
+      "original_line": 355,
+      "status": "needs_platform_disposition",
+      "reason": "外层 act 合并同一事件批次，用于测试同步 ref 在 disabled 重绘前阻止提交或退出。拆为各自 fireEvent 的 act 会提前刷新 UI，失去该时序保证。",
+      "source_sha256": "0e42cd9b976a1fd22fb236fa0df96962abbc5214b221a36b19cf361b2c6c5de3",
+      "evidence": [
+        "apps/student-portal/src/App.tsx",
+        "frontend-types-execution.json"
+      ]
+    },
+    {
+      "key": "3ea8c773-5a14-4880-bc36-8b0adf2fda7f",
+      "rule": "typescript:S6822",
+      "severity": "MAJOR",
+      "file": "apps/web-admin/src/pages/ArbitrationTaskRail.tsx",
+      "original_line": 31,
+      "status": "needs_platform_disposition",
+      "reason": "listStyle:none 时 Safari 会从可访问性树移除原生列表；显式 role=list 保留列表语义，已有中文维护注释与 MDN 依据。",
+      "source_sha256": "205bf807531e5ace73d596bdd071f4761ad7ab18e9cb3bd4282eef8eb59ce4ba",
+      "evidence": [
+        "https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/list-style#accessibility",
+        "apps/web-admin/src/pages/ArbitrationTaskRail.tsx"
+      ]
+    },
+    {
+      "key": "75ac3d77-53f0-47a5-9335-dc49df53ed13",
+      "rule": "javascript:S905",
+      "severity": "MAJOR",
+      "file": "docs/architecture/tools/capture_preview_qa.js",
+      "original_line": 2,
+      "status": "needs_platform_disposition",
+      "reason": "playwright-cli run-code 接收整个文件中的函数表达式，由工具传入真实 page 并执行；不能改成无人调用的模块导出或自行执行脚本。",
+      "source_sha256": "0606fe358d6e5a275781c02942c3207afb845616b21bf5f1d42dfbb419527eb1",
+      "evidence": [
+        "docs/architecture/DIAGRAM_MAINTENANCE.md",
+        "docs/architecture/evidence/acceptance-report.md",
+        "scripts/ci/architecture-audit-tools.test.mjs",
+        "frontend-scripts-0.log"
+      ]
+    },
+    {
+      "key": "e50a781b-1426-49d6-aa49-aa91cee217ae",
+      "rule": "javascript:S905",
+      "severity": "MAJOR",
+      "file": "docs/architecture/tools/render_native.js",
+      "original_line": 2,
+      "status": "needs_platform_disposition",
+      "reason": "playwright-cli run-code 接收整个文件中的函数表达式，由工具传入真实 page 并执行；不能改成无人调用的模块导出或自行执行脚本。",
+      "source_sha256": "0be6b4dbde9ebc8d7150140d5ae66a3aa755bd3376b43ed51ea13524dc43668a",
+      "evidence": [
+        "docs/architecture/DIAGRAM_MAINTENANCE.md",
+        "docs/architecture/evidence/acceptance-report.md",
+        "scripts/ci/architecture-audit-tools.test.mjs",
+        "frontend-scripts-0.log"
+      ]
+    }
+  ],
+  "state": "awaiting_platform_review"
+}

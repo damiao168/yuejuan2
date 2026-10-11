@@ -152,8 +152,8 @@ func (h *parseTaskHeartbeat) close() error {
 	return h.err
 }
 
-// ParseExecutionError keeps operational correlation data without exposing the
-// lease token. Unwrap preserves the domain error used by retry decisions/tests.
+// ParseExecutionError 保留运维关联数据，但不暴露租约令牌。
+// Unwrap 保留重试判断与测试所用的领域错误。
 type ParseExecutionError struct {
 	Err             error
 	ImportID        string
@@ -233,32 +233,12 @@ func NewParseTaskExecutor(service *DocumentImportService, runtime workerruntime.
 	return executor, nil
 }
 
+// RunOnce 优先处理过期修复和来源派发；本轮没有这些工作时才领取解析任务。
+// 领取到任务后即返回 worked=true，解析或落库失败也不能被当成没有工作。
 func (e *ParseTaskExecutor) RunOnce(ctx context.Context) (bool, error) {
 	if e.dispatches != nil {
-		if repaired, err := e.dispatches.ReconcileExpiredPaperImportTask(ctx); repaired || err != nil {
-			return repaired, err
-		}
-		owner := e.instanceID + ":" + uuid.NewString()
-		job, ok, claimErr := e.dispatches.ClaimPendingPaperImportDispatch(ctx, owner, time.Duration(e.leaseSeconds)*time.Second)
-		if claimErr != nil {
-			return false, claimErr
-		}
-		if ok {
-			executionCtx, cancelExecution := e.executionContext(ctx)
-			_, dispatchErr := e.service.processSources(executionCtx, job.TenantID, job.CreatedBy, job)
-			cancelExecution()
-			if dispatchErr != nil {
-				finalizeCtx, cancelFinalize := finalizationContext(ctx)
-				persistenceErr := e.dispatches.FailPendingPaperImportDispatch(finalizeCtx, job, owner, dispatchErr.Error())
-				cancelFinalize()
-				if persistenceErr != nil {
-					dispatchErr = errors.Join(dispatchErr, fmt.Errorf("persist dispatch failure: %w", persistenceErr))
-				}
-			}
-			if dispatchErr != nil {
-				return true, &ParseExecutionError{Err: dispatchErr, ImportID: job.ID, RunID: job.RunID, Generation: job.Generation, ErrorCode: "paper_import_dispatch_failed"}
-			}
-			return true, nil
+		if worked, err := e.runPendingDispatch(ctx); worked || err != nil {
+			return worked, err
 		}
 	}
 	tasks, err := e.runtime.ClaimAcrossTenants(ctx, "", workerruntime.ClaimInput{
@@ -268,19 +248,23 @@ func (e *ParseTaskExecutor) RunOnce(ctx context.Context) (bool, error) {
 	if err != nil || len(tasks) == 0 {
 		return false, err
 	}
-	task := tasks[0]
+	return true, e.executeParseTask(ctx, tasks[0])
+}
+
+// 已领取任务的心跳和解析共用执行 context，收尾仍使用独立 context 完成成功或失败落库。
+func (e *ParseTaskExecutor) executeParseTask(ctx context.Context, task workerruntime.Task) error {
 	started := time.Now()
 	if task.TaskType != "paper_parse" || task.SourceType != "paper_import_parse" {
 		_, failErr := e.runtime.Fail(ctx, task.TenantID, task.ID, workerruntime.FailInput{
 			LeaseToken: task.LeaseToken, Retryable: false, ErrorCode: "invalid_paper_parse_task",
 		})
-		return true, failErr
+		return failErr
 	}
 	executionCtx, cancelExecution := e.executionContext(ctx)
 	heartbeat := newParseTaskHeartbeat(e.runtime, task, e.instanceID, e.leaseSeconds, e.heartbeatInterval, cancelExecution)
-	if err = heartbeat.setProgress(executionCtx, "preparing", 0, 0, "", "正在读取本次识别结果"); err != nil {
+	if err := heartbeat.setProgress(executionCtx, "preparing", 0, 0, "", "正在读取本次识别结果"); err != nil {
 		cancelExecution()
-		return true, executionError(err, task, PaperImportRunBinding{}, parseCommitErrorCode(err), "rejected")
+		return executionError(err, task, PaperImportRunBinding{}, parseCommitErrorCode(err), "rejected")
 	}
 	heartbeat.start(executionCtx)
 	binding, err := e.inputs.LoadPaperImportParseRunInput(executionCtx, task.TenantID, task.SourceID)
@@ -311,9 +295,9 @@ func (e *ParseTaskExecutor) RunOnce(ctx context.Context) (bool, error) {
 		failErr := e.committer.FailPaperImportRuntime(finalizeCtx, task.TenantID, binding.ImportID, PaperImportRuntimeFailure{TaskID: task.ID, LeaseToken: task.LeaseToken, Retryable: retryable, ErrorCode: "paper_parse_failed", ErrorDetail: map[string]any{"message": err.Error()}, DurationMS: duration})
 		cancelFinalize()
 		if failErr != nil {
-			return true, executionError(failErr, task, binding, "paper_import_failure_commit_failed", "accepted")
+			return executionError(failErr, task, binding, "paper_import_failure_commit_failed", "accepted")
 		}
-		return true, executionError(err, task, binding, "paper_parse_failed", "accepted")
+		return executionError(err, task, binding, "paper_parse_failed", "accepted")
 	}
 	finalizeCtx, cancelFinalize := finalizationContext(ctx)
 	_, err = e.committer.CompletePaperImportParseTask(finalizeCtx, task.TenantID, task.ID, task.LeaseToken, binding, parsed, duration)
@@ -322,7 +306,37 @@ func (e *ParseTaskExecutor) RunOnce(ctx context.Context) (bool, error) {
 	if errors.Is(err, workerruntime.ErrLeaseExpired) || errors.Is(err, workerruntime.ErrLeaseMismatch) {
 		leaseValidation = "rejected"
 	}
-	return true, executionError(err, task, binding, parseCommitErrorCode(err), leaseValidation)
+	return executionError(err, task, binding, parseCommitErrorCode(err), leaseValidation)
+}
+
+// 调用方已确认 dispatches 可用；派发失败先保留执行错误，再合并独立收尾的持久化错误。
+func (e *ParseTaskExecutor) runPendingDispatch(ctx context.Context) (bool, error) {
+	if repaired, err := e.dispatches.ReconcileExpiredPaperImportTask(ctx); repaired || err != nil {
+		return repaired, err
+	}
+	owner := e.instanceID + ":" + uuid.NewString()
+	job, ok, claimErr := e.dispatches.ClaimPendingPaperImportDispatch(ctx, owner, time.Duration(e.leaseSeconds)*time.Second)
+	if claimErr != nil {
+		return false, claimErr
+	}
+	if !ok {
+		return false, nil
+	}
+	executionCtx, cancelExecution := e.executionContext(ctx)
+	_, dispatchErr := e.service.processSources(executionCtx, job.TenantID, job.CreatedBy, job)
+	cancelExecution()
+	if dispatchErr != nil {
+		finalizeCtx, cancelFinalize := finalizationContext(ctx)
+		persistenceErr := e.dispatches.FailPendingPaperImportDispatch(finalizeCtx, job, owner, dispatchErr.Error())
+		cancelFinalize()
+		if persistenceErr != nil {
+			dispatchErr = errors.Join(dispatchErr, fmt.Errorf("persist dispatch failure: %w", persistenceErr))
+		}
+	}
+	if dispatchErr != nil {
+		return true, &ParseExecutionError{Err: dispatchErr, ImportID: job.ID, RunID: job.RunID, Generation: job.Generation, ErrorCode: "paper_import_dispatch_failed"}
+	}
+	return true, nil
 }
 
 func normalizedParseProgress(progress map[string]any) (phase string, completed, total int, route string) {

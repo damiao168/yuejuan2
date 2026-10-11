@@ -1,7 +1,7 @@
 import type { PlatformSchoolSummary } from "../../../api/platformSchools";
 import { fullDate, numberText, relativeTime, tokenText } from "./schoolPresentation";
 
-export function SchoolOverviewTab({ school, focus }: { school: PlatformSchoolSummary; focus: "created" | "status" | null }) {
+export function SchoolOverviewTab({ school, focus }: Readonly<{ school: PlatformSchoolSummary; focus: "created" | "status" | null }>) {
   return <div className="platform-school-detail-sections">
     <section><h3>基本信息</h3><dl className="platform-school-facts">
       <div><dt>学校名称</dt><dd>{school.name}</dd></div>

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, Button, Descriptions, Space, Tag, Tooltip, type TableColumnsType } from "antd";
 import { Activity, Database, RefreshCw, ScanText, ShieldCheck, Signal } from "lucide-react";
 import { ApiClientError, getUserErrorMessage } from "../api/client";
-import { getSystemStatus, type DependencyStatus, type SystemStatus } from "../api/system";
+import { getSystemStatus, type DependencyStatus, type SystemStatus, type WorkerServiceStatus } from "../api/system";
 import { ErrorState, LoadingState } from "../components/PageState";
 import { ResponsiveTable } from "../components/ResponsiveTable";
 
@@ -106,6 +106,33 @@ export function SystemStatusPage() {
     [status?.worker_services]
   );
 
+  return (
+    <div className="system-status-shell">
+      <section className="page-heading system-status-topbar">
+        <div>
+          <h1>系统状态</h1>
+          <p>查看平台服务运行状态、各项依赖是否连通，以及日志记录说明。</p>
+        </div>
+        <Button icon={<RefreshCw size={16} />} loading={loading} onClick={() => void load()}>
+          刷新
+        </Button>
+      </section>
+
+      {loading && !status ? <LoadingState label="读取系统状态" /> : null}
+      {error ? <ErrorState message={error} onRetry={() => void load()} /> : null}
+      {status ? <SystemStatusDetails status={status} frontendRelease={frontendRelease} dependencySummary={dependencySummary} ocrWorker={ocrWorker} /> : null}
+    </div>
+  );
+}
+
+// 刷新失败时仍展示上次状态；展示组件不重新请求，也不清空父页面已保存的结果。
+function SystemStatusDetails({ status, frontendRelease, dependencySummary, ocrWorker }: Readonly<{
+  status: SystemStatus;
+  frontendRelease: string;
+  dependencySummary: { total: number; ok: number; warning: number; error: number };
+  ocrWorker: WorkerServiceStatus | undefined;
+}>) {
+
   const columns: TableColumnsType<DependencyStatus> = [
     {
       title: "服务",
@@ -142,22 +169,7 @@ export function SystemStatusPage() {
   ];
 
   return (
-    <div className="system-status-shell">
-      <section className="page-heading system-status-topbar">
-        <div>
-          <h1>系统状态</h1>
-          <p>查看平台服务运行状态、各项依赖是否连通，以及日志记录说明。</p>
-        </div>
-        <Button icon={<RefreshCw size={16} />} loading={loading} onClick={() => void load()}>
-          刷新
-        </Button>
-      </section>
-
-      {loading && !status ? <LoadingState label="读取系统状态" /> : null}
-      {error ? <ErrorState message={error} onRetry={() => void load()} /> : null}
-
-      {status ? (
-        <>
+    <>
           <section className="system-status-summary">
             <div>
               <span>整体状态</span>
@@ -189,41 +201,7 @@ export function SystemStatusPage() {
             />
           ) : null}
 
-          {ocrWorker ? (
-            <section className={`system-worker-status ${ocrWorker.availability}`}>
-              <div className="system-worker-heading">
-                <div>
-                  <Space>
-                    <ScanText size={18} />
-                    <h2>文字识别服务</h2>
-                  </Space>
-                  <Tooltip title={`服务：${ocrWorker.worker_service} · 队列：${ocrWorker.queue_name}`}>
-                    <p>负责自动识别答卷内容；超过 {ocrWorker.stale_after_sec} 秒没有心跳即判定为失联</p>
-                  </Tooltip>
-                </div>
-                <Tag color={ocrWorker.automation_available ? "success" : ocrWorker.availability === "not_configured" ? "default" : ocrWorker.availability === "stale" ? "warning" : "error"}>
-                  {ocrWorker.automation_available ? "在线" : ocrWorker.availability === "not_configured" ? "未启用" : ocrWorker.availability === "stale" ? "心跳失联" : "不可用"}
-                </Tag>
-              </div>
-              <div className="system-worker-metrics">
-                <span>在线实例<strong>{ocrWorker.fresh_instances}</strong></span>
-                <span>失联实例<strong>{ocrWorker.stale_instances}</strong></span>
-                <span>待处理<strong>{ocrWorker.queued_tasks}</strong></span>
-                <span>处理中<strong>{ocrWorker.in_flight_tasks}</strong></span>
-                <span>近一小时失败<strong>{ocrWorker.failed_last_hour}</strong></span>
-                <Tooltip title="重试多次仍失败、需人工介入的任务数"><span>多次失败已搁置<strong>{ocrWorker.dead_letter_tasks}</strong></span></Tooltip>
-              </div>
-              <Alert
-                type={ocrWorker.automation_available ? "success" : ocrWorker.availability === "not_configured" ? "info" : ocrWorker.availability === "stale" ? "warning" : "error"}
-                showIcon
-                message={ocrWorker.impact}
-                description={`处理建议：${ocrWorker.action}${ocrWorker.last_seen_at ? ` 最近心跳：${formatTime(ocrWorker.last_seen_at)}` : ""}`}
-                action={!ocrWorker.automation_available && ocrWorker.availability !== "not_configured" ? <Button size="small" href="#/capture">进入答卷处理</Button> : undefined}
-              />
-            </section>
-          ) : (
-            <Alert type="warning" showIcon message="暂未获取到文字识别服务状态" description="识别服务可能未部署或未连通，请联系平台技术支持处理。" />
-          )}
+          <WorkerStatusPanel worker={ocrWorker} />
 
           <section className="system-status-grid">
             <div className="system-status-panel">
@@ -238,7 +216,7 @@ export function SystemStatusPage() {
                   </p>
                 </div>
               </div>
-              <ResponsiveTable rowKey="name" columns={columns} dataSource={status.dependencies} pagination={false} />
+              <ResponsiveTable rowKey="name" columns={columns} dataSource={status.dependencies} pagination={false} mobilePrimaryKeys={["name", "status", "detail"]} scroll={{ x: 900 }} />
             </div>
 
             <div className="system-status-panel">
@@ -270,8 +248,45 @@ export function SystemStatusPage() {
             message="日志隐私边界"
             description={status.observability.sensitive_log_policy}
           />
-        </>
-      ) : null}
-    </div>
+    </>
+  );
+}
+
+function workerPresentation(worker: WorkerServiceStatus) {
+  // 自动处理能力优先于可用性标签，保持网关返回组合状态时的既有展示顺序。
+  if (worker.automation_available) return { tone: "success", alertType: "success", text: "在线" } as const;
+  if (worker.availability === "not_configured") return { tone: "default", alertType: "info", text: "未启用" } as const;
+  if (worker.availability === "stale") return { tone: "warning", alertType: "warning", text: "心跳失联" } as const;
+  return { tone: "error", alertType: "error", text: "不可用" } as const;
+}
+
+function WorkerStatusPanel({ worker }: Readonly<{ worker: WorkerServiceStatus | undefined }>) {
+  if (!worker) return <Alert type="warning" showIcon message="暂未获取到文字识别服务状态" description="识别服务可能未部署或未连通，请联系平台技术支持处理。" />;
+  const presentation = workerPresentation(worker);
+  const lastHeartbeat = worker.last_seen_at ? " 最近心跳：" + formatTime(worker.last_seen_at) : "";
+  return (
+    <section className={`system-worker-status ${worker.availability}`}>
+      <div className="system-worker-heading">
+        <div>
+          <Space>
+            <ScanText size={18} />
+            <h2>文字识别服务</h2>
+          </Space>
+          <Tooltip title={`服务：${worker.worker_service} · 队列：${worker.queue_name}`}>
+            <p>负责自动识别答卷内容；超过 {worker.stale_after_sec} 秒没有心跳即判定为失联</p>
+          </Tooltip>
+        </div>
+        <Tag color={presentation.tone}>{presentation.text}</Tag>
+      </div>
+      <div className="system-worker-metrics">
+        <span>在线实例<strong>{worker.fresh_instances}</strong></span>
+        <span>失联实例<strong>{worker.stale_instances}</strong></span>
+        <span>待处理<strong>{worker.queued_tasks}</strong></span>
+        <span>处理中<strong>{worker.in_flight_tasks}</strong></span>
+        <span>近一小时失败<strong>{worker.failed_last_hour}</strong></span>
+        <Tooltip title="重试多次仍失败、需人工介入的任务数"><span>多次失败已搁置<strong>{worker.dead_letter_tasks}</strong></span></Tooltip>
+      </div>
+      <Alert type={presentation.alertType} showIcon message={worker.impact} description={`处理建议：${worker.action}${lastHeartbeat}`} />
+    </section>
   );
 }

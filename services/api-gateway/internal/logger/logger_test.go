@@ -42,3 +42,19 @@ func TestLoggerAddsCorrelationIDsAndRedactsSensitiveFields(t *testing.T) {
 		t.Fatalf("non-sensitive status should be preserved: %#v", payload)
 	}
 }
+
+func TestLoggerHonorsConfiguredMinimumLevel(t *testing.T) {
+	var out bytes.Buffer
+	logg := New(&out, "error")
+
+	logg.Info(context.Background(), "ignored info", nil)
+	logg.Warn(context.Background(), "ignored warning", nil)
+	if out.Len() != 0 {
+		t.Fatalf("configured error level must suppress lower levels: %s", out.String())
+	}
+
+	logg.Error(context.Background(), "kept error", nil)
+	if !bytes.Contains(out.Bytes(), []byte(`"message":"kept error"`)) {
+		t.Fatalf("configured error level must keep errors: %s", out.String())
+	}
+}

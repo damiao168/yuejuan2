@@ -80,8 +80,7 @@ func TestRecomputeDetectsGradualBiasAndOnlySuspendsQuestionQualification(t *test
 	if !seenCriticalBias || len(pause.calls) == 0 || pause.calls[0] != "exam-a:question-a:grader-a:grader_bias_high" {
 		t.Fatalf("critical bias / narrow suspension missing: incidents=%+v pauses=%v", result.CreatedIncidents, pause.calls)
 	}
-	// Repeating a deterministic refresh may update windows but must not open
-	// duplicate incidents or repeatedly suspend the qualification.
+	// 重复执行确定性刷新可以更新窗口，但不得重复创建事件或反复暂停资格。
 	again, err := service.Recompute(context.Background(), "tenant-a", RefreshInput{ExamID: "exam-a", QuestionID: "question-a", GraderID: "grader-a"})
 	if err != nil || len(again.CreatedIncidents) != 0 || len(pause.calls) != 1 {
 		t.Fatalf("recompute must be idempotent: result=%+v err=%v pauses=%v", again, err, pause.calls)

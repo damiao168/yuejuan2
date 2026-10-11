@@ -9,64 +9,114 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/workerruntime"
 )
 
+// 一次完成命令绑定冻结输入、核验结果和租约元数据；跨后端传递时不能拆换其中某一版本。
+type verifiedRuntimeCompletion struct {
+	Task               workerruntime.Task
+	Parent             Artifact
+	CorrectionRevision int64
+	Contract           CreateArtifactInput
+	Quality            map[string]any
+	LeaseToken         string
+	DurationMS         int
+}
+
 // 激活验证结果与完成 worker 租约必须一起成功。
 // 验证期间新增了教师修订或识别版本时，过期任务只记录已完成，不把结果设为当前证据。
-func (h *Handler) completeVerifiedRuntime(ctx context.Context, task workerruntime.Task, parent Artifact, revision int64, input CreateArtifactInput, quality map[string]any, lease string, duration int) (Artifact, bool, error) {
+func (h *Handler) completeVerifiedRuntime(ctx context.Context, completion verifiedRuntimeCompletion) (Artifact, bool, error) {
 	switch store := h.artifacts.(type) {
 	case *PostgresStore:
-		return store.completeVerifiedRuntime(ctx, task, parent, revision, input, quality, lease, duration)
+		return store.completeVerifiedRuntime(ctx, completion)
 	case *MemoryStore:
 		runtime, runtimeOK := h.runtime.(*workerruntime.MemoryStore)
 		corrections, correctionOK := h.corrections.(*MemoryCorrectionStore)
 		if !runtimeOK || !correctionOK || corrections.artifacts != store {
 			return Artifact{}, false, ErrInvalidInput
 		}
-		store.mu.Lock()
-		defer store.mu.Unlock()
-		corrections.mu.RLock()
-		defer corrections.mu.RUnlock()
-		items := corrections.items[task.TenantID+":"+parent.ID]
-		latestRevision := int64(len(items))
-		storedParent, ok := store.artifacts[task.TenantID+":"+parent.ID]
-		if !ok {
-			return Artifact{}, false, ErrNotFound
-		}
-		var existing Artifact
-		for _, item := range store.artifacts {
-			if item.TenantID == task.TenantID && item.ParentArtifactID == parent.ID && item.CorrectionRevision == revision {
-				existing = item
-			}
-		}
-		superseded := latestRevision != revision || (!storedParent.IsCurrent && existing.ID == "")
-		previousCurrent, previousNext := store.current[task.TenantID+":"+parent.AnswerSegmentID], store.next
-		var derived Artifact
-		err := runtime.RunAtomic(func(tx *workerruntime.MemoryTx) error {
-			if !superseded {
-				var err error
-				derived, err = store.createDerivedArtifactLocked(task.TenantID, parent.ID, revision, input, quality)
-				if err != nil {
-					return err
-				}
-				if !sameDerivedResult(derived, input, quality) {
-					return workerruntime.ErrConflict
-				}
-			}
-			_, err := tx.Complete(ctx, task.TenantID, task.ID, verificationCompleteInput(parent, derived, revision, superseded, lease, duration))
-			return err
-		})
-		if err != nil && existing.ID == "" && derived.ID != "" {
-			delete(store.artifacts, task.TenantID+":"+derived.ID)
-			store.artifacts[task.TenantID+":"+parent.ID] = storedParent
-			store.current[task.TenantID+":"+parent.AnswerSegmentID] = previousCurrent
-			store.next = previousNext
-		}
-		return cloneArtifact(derived), superseded, err
+		return store.completeVerifiedRuntime(ctx, runtime, corrections, completion)
 	default:
 		return Artifact{}, false, ErrInvalidInput
 	}
 }
 
-func (s *PostgresStore) completeVerifiedRuntime(ctx context.Context, task workerruntime.Task, parent Artifact, revision int64, input CreateArtifactInput, quality map[string]any, lease string, duration int) (Artifact, bool, error) {
+type memoryVerificationActivation struct {
+	storedParent    Artifact
+	existing        Artifact
+	previousCurrent Artifact
+	previousNext    int64
+	superseded      bool
+}
+
+func (s *MemoryStore) completeVerifiedRuntime(ctx context.Context, runtime *workerruntime.MemoryStore, corrections *MemoryCorrectionStore, completion verifiedRuntimeCompletion) (Artifact, bool, error) {
+	// 保持证据写锁、修订读锁、运行时原子锁的顺序，失败恢复也在前两把锁内。
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	corrections.mu.RLock()
+	defer corrections.mu.RUnlock()
+	activation, err := s.memoryVerificationActivationLocked(corrections, completion)
+	if err != nil {
+		return Artifact{}, false, err
+	}
+	var derived Artifact
+	err = runtime.RunAtomic(func(tx *workerruntime.MemoryTx) error {
+		var activationErr error
+		derived, activationErr = s.activateMemoryVerificationLocked(completion, activation.superseded)
+		if activationErr != nil {
+			return activationErr
+		}
+		_, err := tx.Complete(ctx, completion.Task.TenantID, completion.Task.ID, verificationCompleteInput(completion.Parent, derived, completion.CorrectionRevision, activation.superseded, completion.LeaseToken, completion.DurationMS))
+		return err
+	})
+	s.restoreMemoryVerificationActivationLocked(completion, activation, derived, err)
+	return cloneArtifact(derived), activation.superseded, err
+}
+
+func (s *MemoryStore) memoryVerificationActivationLocked(corrections *MemoryCorrectionStore, completion verifiedRuntimeCompletion) (memoryVerificationActivation, error) {
+	items := corrections.items[completion.Task.TenantID+":"+completion.Parent.ID]
+	latestRevision := int64(len(items))
+	storedParent, ok := s.artifacts[completion.Task.TenantID+":"+completion.Parent.ID]
+	if !ok {
+		return memoryVerificationActivation{}, ErrNotFound
+	}
+	var existing Artifact
+	for _, item := range s.artifacts {
+		if item.TenantID == completion.Task.TenantID && item.ParentArtifactID == completion.Parent.ID && item.CorrectionRevision == completion.CorrectionRevision {
+			existing = item
+		}
+	}
+	superseded := latestRevision != completion.CorrectionRevision || (!storedParent.IsCurrent && existing.ID == "")
+	return memoryVerificationActivation{
+		storedParent: storedParent, existing: existing, superseded: superseded,
+		previousCurrent: s.current[completion.Task.TenantID+":"+completion.Parent.AnswerSegmentID], previousNext: s.next,
+	}, nil
+}
+
+func (s *MemoryStore) activateMemoryVerificationLocked(completion verifiedRuntimeCompletion, superseded bool) (Artifact, error) {
+	if superseded {
+		return Artifact{}, nil
+	}
+	derived, err := s.createDerivedArtifactLocked(completion.Task.TenantID, completion.Parent.ID, completion.CorrectionRevision, completion.Contract, completion.Quality)
+	if err != nil {
+		return derived, err
+	}
+	if !sameDerivedResult(derived, completion.Contract, completion.Quality) {
+		return derived, workerruntime.ErrConflict
+	}
+	return derived, nil
+}
+
+func (s *MemoryStore) restoreMemoryVerificationActivationLocked(completion verifiedRuntimeCompletion, activation memoryVerificationActivation, derived Artifact, err error) {
+	// 仅撤销本次新建结果；失败重试不能删除之前已接受的派生证据，也不能消耗版本计数。
+	if err != nil && activation.existing.ID == "" && derived.ID != "" {
+		delete(s.artifacts, completion.Task.TenantID+":"+derived.ID)
+		s.artifacts[completion.Task.TenantID+":"+completion.Parent.ID] = activation.storedParent
+		s.current[completion.Task.TenantID+":"+completion.Parent.AnswerSegmentID] = activation.previousCurrent
+		s.next = activation.previousNext
+	}
+}
+
+func (s *PostgresStore) completeVerifiedRuntime(ctx context.Context, completion verifiedRuntimeCompletion) (Artifact, bool, error) {
+	task, parent, revision := completion.Task, completion.Parent, completion.CorrectionRevision
+	input, quality, lease, duration := completion.Contract, completion.Quality, completion.LeaseToken, completion.DurationMS
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return Artifact{}, false, err

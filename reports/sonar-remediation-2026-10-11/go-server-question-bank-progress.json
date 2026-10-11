@@ -1,0 +1,194 @@
+{
+  "updated_at": "2026-10-11T19:15:32.064968+08:00",
+  "ownership": "root正式移交server题库5原项；frontend其余server及既有S107处理不计入本账。",
+  "count": 5,
+  "source_changed": 5,
+  "dynamically_validated": 0,
+  "platform_verified_resolved": 0,
+  "issue_states": [
+    {
+      "key": "7cb650e1-5588-44da-a10b-b257e3c7552f",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_question_bank_acl_ux_test.go",
+      "original_line": 17,
+      "state": "changed_awaiting_sonar",
+      "sonar_rescan": "pending",
+      "test_validation": "compiled_and_package_regression_passed",
+      "pg_scenario_result": {
+        "test": "TestE2EPostgresUXHistoricalACLAndActualMemberResponsibilities",
+        "result": "conditionally_skipped",
+        "reason": "e2e_question_bank_acl_ux_test.go:20: requires isolated PostgreSQL",
+        "source_sha256": "0802da4ac27b59f666bce1ef0b4f0e9e88f59c6a1a65a8e3b76fe00d318d9baf"
+      }
+    },
+    {
+      "key": "5964a35d-7fae-423d-a1ed-a4a30ede5062",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_question_bank_import_test.go",
+      "original_line": 20,
+      "state": "changed_awaiting_sonar",
+      "sonar_rescan": "pending",
+      "test_validation": "compiled_and_package_regression_passed",
+      "pg_scenario_result": {
+        "test": "TestE2EPostgresQuestionBankFrozenImport",
+        "result": "conditionally_skipped",
+        "reason": "e2e_question_bank_import_test.go:23: EDUGRADE_E2E_DATABASE_URL is required for real PostgreSQL evidence",
+        "source_sha256": "39f803060f73dd922286cb3f6073f7ea4f324b9c4d72c0bb9ae04c85b6fe9c18"
+      }
+    },
+    {
+      "key": "401d2b22-9756-477e-bc8b-3e8ec7e98bd4",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_question_bank_metadata_acl_search_test.go",
+      "original_line": 16,
+      "state": "changed_awaiting_sonar",
+      "sonar_rescan": "pending",
+      "test_validation": "compiled_and_package_regression_passed",
+      "pg_scenario_result": {
+        "test": "TestE2EPostgresQuestionBankMetadataACLSearch",
+        "result": "conditionally_skipped",
+        "reason": "e2e_question_bank_metadata_acl_search_test.go:19: requires isolated PostgreSQL",
+        "source_sha256": "5a2fca9a8cad75c2e184334d89aa1ba89f8207edf57910ca4db62f0c7a90d3ba"
+      }
+    },
+    {
+      "key": "d3266c6c-bdb5-4c2f-b29f-bb05a0814c28",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_question_bank_publication_test.go",
+      "original_line": 19,
+      "state": "changed_awaiting_sonar",
+      "sonar_rescan": "pending",
+      "test_validation": "compiled_and_package_regression_passed",
+      "pg_scenario_result": {
+        "test": "TestE2EPostgresQuestionBankPublication",
+        "result": "conditionally_skipped",
+        "reason": "e2e_question_bank_publication_test.go:22: requires isolated PostgreSQL",
+        "source_sha256": "20cb4b16c6c0683e64c0db35b2ca9efac0ae81424653aaaaf11dcf9bccdc8d2a"
+      }
+    },
+    {
+      "key": "b4fa2740-1843-412d-9e61-3213f6e47909",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_question_bank_test.go",
+      "original_line": 23,
+      "state": "changed_awaiting_sonar",
+      "sonar_rescan": "pending",
+      "test_validation": "compiled_and_package_regression_passed",
+      "pg_scenario_result": {
+        "test": "TestE2EPostgresQuestionBank",
+        "result": "conditionally_skipped",
+        "reason": "e2e_question_bank_test.go:26: EDUGRADE_E2E_DATABASE_URL is required for real PostgreSQL evidence",
+        "source_sha256": "bbebcb159909d201f1b1a304c0a28526403d68b73a7c55843f3fd99fa027b117"
+      }
+    }
+  ],
+  "files": [
+    {
+      "path": "services/api-gateway/internal/server/e2e_question_bank_acl_ux_test.go",
+      "review_state": "read_and_refactored",
+      "handoff_source_sha256": "a8525c7dce00f699091b6117e2612c51a4ec72edba3a25efc395fb66497c1729",
+      "source_sha256": "0802da4ac27b59f666bce1ef0b4f0e9e88f59c6a1a65a8e3b76fe00d318d9baf",
+      "maintenance_points": "按历史ACL保留/幂等更新、目录与RBAC交集、学校范围、失活成员边界分阶段；保留更新顺序与原断言。",
+      "validation_state": "compiled_and_package_regression_passed",
+      "pg_scenario_result": {
+        "test": "TestE2EPostgresUXHistoricalACLAndActualMemberResponsibilities",
+        "result": "conditionally_skipped",
+        "reason": "e2e_question_bank_acl_ux_test.go:20: requires isolated PostgreSQL",
+        "source_sha256": "0802da4ac27b59f666bce1ef0b4f0e9e88f59c6a1a65a8e3b76fe00d318d9baf"
+      }
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_question_bank_import_test.go",
+      "review_state": "read_and_refactored",
+      "handoff_source_sha256": "dd90a2dd55eede5c0ad9f1c955e5897aab85d6afa6f07f26af7fe62f570bb6ba",
+      "source_sha256": "39f803060f73dd922286cb3f6073f7ea4f324b9c4d72c0bb9ae04c85b6fe9c18",
+      "maintenance_points": "按冻结来源、回执与来源追踪、去重、部分失败恢复、发布复用、撤权重放分阶段；保留原SQL、命令和原断言。",
+      "validation_state": "compiled_and_package_regression_passed",
+      "pg_scenario_result": {
+        "test": "TestE2EPostgresQuestionBankFrozenImport",
+        "result": "conditionally_skipped",
+        "reason": "e2e_question_bank_import_test.go:23: EDUGRADE_E2E_DATABASE_URL is required for real PostgreSQL evidence",
+        "source_sha256": "39f803060f73dd922286cb3f6073f7ea4f324b9c4d72c0bb9ae04c85b6fe9c18"
+      }
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_question_bank_metadata_acl_search_test.go",
+      "review_state": "read_and_refactored",
+      "handoff_source_sha256": "5f07c7dbe1bb2ff64bda6eec72efa5eb62e4bbf2c00fbcf977cfe0175a08d23e",
+      "source_sha256": "5a2fca9a8cad75c2e184334d89aa1ba89f8207edf57910ca4db62f0c7a90d3ba",
+      "maintenance_points": "按元数据定义、版本与ACL、搜索与素材、撤权、停用与历史保护分阶段；范围和版本顺序不变。",
+      "validation_state": "compiled_and_package_regression_passed",
+      "pg_scenario_result": {
+        "test": "TestE2EPostgresQuestionBankMetadataACLSearch",
+        "result": "conditionally_skipped",
+        "reason": "e2e_question_bank_metadata_acl_search_test.go:19: requires isolated PostgreSQL",
+        "source_sha256": "5a2fca9a8cad75c2e184334d89aa1ba89f8207edf57910ca4db62f0c7a90d3ba"
+      }
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_question_bank_publication_test.go",
+      "review_state": "read_and_refactored",
+      "handoff_source_sha256": "1e1b3a8e5dc5d9e3435d582a7e320a5de42692b665945c3d100f9891226b35aa",
+      "source_sha256": "20cb4b16c6c0683e64c0db35b2ca9efac0ae81424653aaaaf11dcf9bccdc8d2a",
+      "maintenance_points": "共享版本指针保留原子场景状态；独立审批和发布各保留并发Wait、结果收集及错误分类；保留复制失败恢复和快照保护。",
+      "validation_state": "compiled_and_package_regression_passed",
+      "pg_scenario_result": {
+        "test": "TestE2EPostgresQuestionBankPublication",
+        "result": "conditionally_skipped",
+        "reason": "e2e_question_bank_publication_test.go:22: requires isolated PostgreSQL",
+        "source_sha256": "20cb4b16c6c0683e64c0db35b2ca9efac0ae81424653aaaaf11dcf9bccdc8d2a"
+      }
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_question_bank_test.go",
+      "review_state": "read_and_refactored",
+      "handoff_source_sha256": "69d9c04bca67a84cc90b4ca948fd91a3b392e75e3a0eac9df6d2f4a23e8308eb",
+      "source_sha256": "bbebcb159909d201f1b1a304c0a28526403d68b73a7c55843f3fd99fa027b117",
+      "maintenance_points": "按并发版本、乐观更新、复合身份、归档、回滚恢复、租户RLS、运行权限、撤权分解真实子场景；保留此前qbRequest参数结构和调用。",
+      "validation_state": "compiled_and_package_regression_passed",
+      "pg_scenario_result": {
+        "test": "TestE2EPostgresQuestionBank",
+        "result": "conditionally_skipped",
+        "reason": "e2e_question_bank_test.go:26: EDUGRADE_E2E_DATABASE_URL is required for real PostgreSQL evidence",
+        "source_sha256": "bbebcb159909d201f1b1a304c0a28526403d68b73a7c55843f3fd99fa027b117"
+      }
+    }
+  ],
+  "verification_evidence": {
+    "structure": "go-server-question-bank-structure-execution.json",
+    "static": "go-server-question-bank-static-review.json",
+    "dynamic": "go-server-batch04-tests.json",
+    "sonar": "pending root formal rescan",
+    "event_log": "go-server-batch04-events.jsonl",
+    "source_sha": "go-server-batch04-source-sha.json"
+  },
+  "source_frozen_for_server_validation": true,
+  "package_regression_validated": 5,
+  "pg_scenarios_passed": 0,
+  "pg_scenarios_conditionally_skipped": 5,
+  "package_validation": {
+    "command": [
+      "D:/tools/go/bin/go.exe",
+      "test",
+      "-json",
+      "-p",
+      "1",
+      "-count=1",
+      "-timeout=5m",
+      "./internal/server"
+    ],
+    "actual_exit_code": 0,
+    "test_result_counts": {
+      "pass": 188,
+      "skip": 62
+    },
+    "source_changed_during_test": [],
+    "cleared_environment_names": [],
+    "note": "server包实际回归188 pass/62条件skip；题库5已编译，真实PG场景因缺少隔离数据库条件全部skip，不计动态PG通过。"
+  }
+}

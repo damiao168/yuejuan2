@@ -6,17 +6,96 @@ import { fileURLToPath } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url));
 export const DEFAULT_SOURCE_REGISTRY = join(here, "../../config/dataset-sources.json");
 
+// 扫描只报告是否命中；标签值验证保留最小前缀长度，不需要消费剩余内容。
 const PII_DETECTORS = Object.freeze([
-  { id: "email", pattern: /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i },
-  { id: "cn_mobile", pattern: /(?<!\d)1[3-9]\d{9}(?!\d)/ },
-  { id: "cn_id_card", pattern: /(?<!\d)\d{17}[0-9Xx](?!\d)/ },
-  { id: "student_number_label", pattern: /(?:学号|student\s*(?:id|number))\s*[:：]?\s*[A-Z0-9-]{4,}/i },
-  { id: "name_label", pattern: /(?:\u59d3\u540d|\u5b66\u751f\u59d3\u540d)\s*[:\uff1a]\s*[\p{Script=Han}\u00b7]{2,8}|(?:^|[\r\n{,])\s*name\s*:\s*[A-Z][\p{L}'-]*(?:\s+[A-Z][\p{L}'-]*){0,3}\s*(?=$|[\r\n,;}])/imu },
-  { id: "phone_label", pattern: /(?:电话|手机号|phone|mobile)\s*[:：]?\s*[+\d][\d\s-]{6,}/i }
+  { id: "email", matches: (text) => /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i.test(text) },
+  { id: "cn_mobile", matches: (text) => /(?<!\d)1[3-9]\d{9}(?!\d)/.test(text) },
+  { id: "cn_id_card", matches: (text) => /(?<!\d)\d{17}[0-9Xx](?!\d)/.test(text) },
+  { id: "student_number_label", matches: (text) => matchesLabeledValue(text, /学号|student\s*(?:id|number)/gi, /[A-Z0-9-]{4}/iy) },
+  { id: "name_label", matches: matchesNameLabel },
+  { id: "phone_label", matches: (text) => matchesLabeledValue(text, /电话|手机号|phone|mobile/gi, /[+\d][\d\s-]{6}/y) }
 ]);
+
+function skipWhitespace(text, index) {
+  while (index < text.length && /\s/u.test(text[index])) index += 1;
+  return index;
+}
+
+// 标签后的空白只消费一次；冒号可选时也不会在同一段空白上反复回溯。
+function matchesLabeledValue(text, labels, valuePattern, colonRequired = false) {
+  for (const match of text.matchAll(labels)) {
+    let index = skipWhitespace(text, match.index + match[0].length);
+    if (text[index] === ":" || text[index] === "：") index = skipWhitespace(text, index + 1);
+    else if (colonRequired) continue;
+    // y 标记只在该标签值起点验证，不能跳到后面的无关文本。
+    valuePattern.lastIndex = index;
+    if (valuePattern.test(text)) return true;
+  }
+  return false;
+}
+
+function isNameLabelBoundary(text, index) {
+  while (index > 0) {
+    const previous = text[index - 1];
+    if (/[\r\n\u2028\u2029{,]/u.test(previous)) return true;
+    if (!/\s/u.test(previous)) return false;
+    index -= 1;
+  }
+  return true;
+}
+
+function isNameValueEnd(text, index) {
+  return index === text.length || /[\r\n\u2028\u2029,;}]/u.test(text[index]);
+}
+
+function matchesEnglishNameValue(text, index) {
+  const wordPattern = /[A-Z][\p{L}'-]*/iuy;
+  let cursor = skipWhitespace(text, index);
+  for (let words = 0; words < 4; words += 1) {
+    wordPattern.lastIndex = cursor;
+    const word = wordPattern.exec(text);
+    if (!word) return false;
+    cursor += word[0].length;
+    const separatorStart = cursor;
+    while (cursor < text.length && /\s/u.test(text[cursor])) {
+      if (isNameValueEnd(text, cursor)) return true;
+      cursor += 1;
+    }
+    if (isNameValueEnd(text, cursor)) return true;
+    if (cursor === separatorStart) return false;
+  }
+  return false;
+}
+
+function matchesNameLabel(text) {
+  if (matchesLabeledValue(text, /姓名/gu, /[\p{Script=Han}\u00b7]{2}/uy, true)) return true;
+  // 英文 name 须处于行首或 {、, 后；行尾和字段分隔符保留原匹配边界。
+  for (const match of text.matchAll(/name\s*:/giu)) {
+    if (isNameLabelBoundary(text, match.index) && matchesEnglishNameValue(text, match.index + match[0].length)) return true;
+  }
+  return false;
+}
 
 export function loadDatasetSourceRegistry(path = DEFAULT_SOURCE_REGISTRY) {
   return JSON.parse(readFileSync(path, "utf8"));
+}
+
+// 注册表一次返回所有字段错误；保留累计顺序，方便调用方定位同一条来源记录。
+function validateDatasetSourceFields(source, label, errors) {
+  const homepage = String(source.homepage ?? "");
+  if (!homepage.startsWith("https://") && !homepage.startsWith("lab/")) {
+    errors.push(`${label}.homepage must be https or lab-local`);
+  }
+  if (!["approved", "review_required", "prohibited"].includes(source.license_status)) {
+    errors.push(`${label}.license_status is unsupported`);
+  }
+  if (!Array.isArray(source.allowed_uses)) errors.push(`${label}.allowed_uses must be an array`);
+  if (source.license_status === "approved" && !["synthetic_development", "external_real_benchmark", "pilot_in_domain_gold"].includes(source.evidence_scope)) {
+    errors.push(`${label}.evidence_scope is required for approved sources`);
+  }
+  if (source.license_status !== "approved" && source.allowed_uses?.length > 0) {
+    errors.push(`${label} cannot allow use before license approval`);
+  }
 }
 
 export function validateDatasetSourceRegistry(registry) {
@@ -33,19 +112,7 @@ export function validateDatasetSourceRegistry(registry) {
     if (!source.source_id) errors.push(`${label}.source_id is required`);
     if (ids.has(source.source_id)) errors.push(`duplicate source_id: ${source.source_id}`);
     ids.add(source.source_id);
-    if (!/^https:\/\//.test(source.homepage ?? "") && !String(source.homepage ?? "").startsWith("lab/")) {
-      errors.push(`${label}.homepage must be https or lab-local`);
-    }
-    if (!["approved", "review_required", "prohibited"].includes(source.license_status)) {
-      errors.push(`${label}.license_status is unsupported`);
-    }
-    if (!Array.isArray(source.allowed_uses)) errors.push(`${label}.allowed_uses must be an array`);
-    if (source.license_status === "approved" && !["synthetic_development", "external_real_benchmark", "pilot_in_domain_gold"].includes(source.evidence_scope)) {
-      errors.push(`${label}.evidence_scope is required for approved sources`);
-    }
-    if (source.license_status !== "approved" && source.allowed_uses?.length > 0) {
-      errors.push(`${label} cannot allow use before license approval`);
-    }
+    validateDatasetSourceFields(source, label, errors);
   }
   return { valid: errors.length === 0, errors };
 }
@@ -62,7 +129,7 @@ export function getApprovedDatasetSource(sourceId, intendedUse, registry = loadD
 
 export function scanSensitiveText(value) {
   const text = String(value ?? "");
-  return PII_DETECTORS.filter((detector) => detector.pattern.test(text)).map((detector) => detector.id);
+  return PII_DETECTORS.filter((detector) => detector.matches(text)).map((detector) => detector.id);
 }
 
 function collectSensitiveFindings(sample) {
@@ -156,6 +223,12 @@ export function splitByQuestionGroup(samples, options = {}) {
   return { seed, ratios, group_count: groupCount, split_group_counts: { train: trainCount, validation: validationCount, test: testCount }, splits };
 }
 
+function compareQuestionGroupKeys(left, right) {
+  if (left < right) return -1;
+  if (left > right) return 1;
+  return 0;
+}
+
 export function auditSplitLeakage(splits) {
   const owners = new Map();
   const leaked = new Set();
@@ -166,7 +239,8 @@ export function auditSplitLeakage(splits) {
       owners.set(key, split);
     }
   }
-  return { passed: leaked.size === 0, leaked_groups: [...leaked].sort(), unique_groups: owners.size };
+  // 组键保持默认字符串排序的 UTF-16 码元词序，不受运行环境语言设置影响。
+  return { passed: leaked.size === 0, leaked_groups: [...leaked].sort(compareQuestionGroupKeys), unique_groups: owners.size };
 }
 
 export function sha256Text(text) {

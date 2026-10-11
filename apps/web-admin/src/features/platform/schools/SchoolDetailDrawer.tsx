@@ -17,7 +17,7 @@ interface Props {
   onClose: () => void;
 }
 
-export function SchoolDetailDrawer({ school, activeTab, overviewFocus, membersFocus, onTabChange, onClose }: Props) {
+export function SchoolDetailDrawer({ school, activeTab, overviewFocus, membersFocus, onTabChange, onClose }: Readonly<Props>) {
   return <Drawer className="platform-school-drawer" open={Boolean(school)} onClose={onClose} width="min(940px, 96vw)" destroyOnHidden title={school ? <div className="platform-school-drawer-heading">
     <div><h2>{school.name}</h2><span className="mono">{school.code}</span></div>
     <span className={`platform-school-status ${school.status}`}>{school.status === "active" ? "使用中" : "已停用"}</span>

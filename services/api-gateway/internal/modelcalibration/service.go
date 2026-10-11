@@ -38,9 +38,7 @@ func (s *Service) Create(ctx context.Context, tenantID, actorID string, input Cr
 	return s.store.Create(ctx, tenantID, actorID, input)
 }
 
-// AddEvidence accepts a confidence value only after the corresponding opaque
-// response is found in a completed A16 run. Correctness and severe-error facts
-// are derived from the aligned scores, never supplied by the caller.
+// AddEvidence 仅在已完成 A16 运行中找到对应不透明响应后，才接受置信度值。正确性及严重错误事实从对齐分数派生，不由调用方提供。
 func (s *Service) AddEvidence(ctx context.Context, tenantID, calibrationID string, input AddEvidenceInput) (CalibrationEvidence, error) {
 	if s.store == nil || s.evaluations == nil || strings.TrimSpace(tenantID) == "" || strings.TrimSpace(calibrationID) == "" || !validEvidenceInput(input) {
 		return CalibrationEvidence{}, ErrInvalidInput
@@ -107,11 +105,10 @@ func (s *Service) Complete(ctx context.Context, tenantID, calibrationID string) 
 	}
 	digest := sha256.Sum256(raw)
 	return s.store.Complete(ctx, tenantID, calibrationID, len(evidence), artifact,
-		"database://model-calibration/"+calibrationID, hex.EncodeToString(digest[:]), s.now().UTC())
+		ArtifactReference{URI: "database://model-calibration/" + calibrationID, SHA256: hex.EncodeToString(digest[:])}, s.now().UTC())
 }
 
-// Approval is explicit. Completing a curve does not change model eligibility;
-// an authorized operator must review and approve the immutable artifact.
+// 批准须显式执行；完成曲线不改变模型资格，获授权操作员必须复核并批准不可变产物。
 func (s *Service) Approve(ctx context.Context, tenantID, calibrationID, actorID string) (Calibration, error) {
 	if s.store == nil || strings.TrimSpace(tenantID) == "" || strings.TrimSpace(calibrationID) == "" || strings.TrimSpace(actorID) == "" {
 		return Calibration{}, ErrInvalidInput
@@ -150,9 +147,7 @@ func (s *Service) ListEvidence(ctx context.Context, tenantID, calibrationID stri
 	return s.store.ListEvidence(ctx, tenantID, calibrationID)
 }
 
-// Approved returns the narrow, opaque evidence projection consumed by A14.
-// It deliberately ignores drafts, completed-but-unapproved artifacts, and an
-// artifact whose exact model/prompt/rubric axis does not match the request.
+// Approved 返回 A14 使用的有限、不透明证据投影，忽略草稿、已完成但未批准的产物，以及模型、提示词和评分细则维度与请求不精确匹配的产物。
 func (s *Service) Approved(ctx context.Context, tenantID string, axis Axis) (ApprovedEvidence, error) {
 	if s.store == nil || s.evaluations == nil || strings.TrimSpace(tenantID) == "" || !validAxis(axis) {
 		return ApprovedEvidence{}, ErrInvalidInput
@@ -164,9 +159,7 @@ func (s *Service) Approved(ctx context.Context, tenantID string, axis Axis) (App
 	if err != nil {
 		return ApprovedEvidence{}, err
 	}
-	// An A16 run may later be invalidated. Approval never lets a calibration
-	// outlive its source evidence, and this check makes the gate fail closed
-	// until an operator produces a replacement artifact.
+	// A16 运行后续可能失效。批准不能使校准超出来源证据的有效期；此检查使门禁拒绝放行，直到操作员生成替代产物。
 	run, err := s.evaluations.GetRun(ctx, tenantID, calibration.EvaluationRunID)
 	if err != nil {
 		return ApprovedEvidence{Available: false}, nil
@@ -185,9 +178,7 @@ func (s *Service) Approved(ctx context.Context, tenantID string, axis Axis) (App
 		CalibrationN: calibration.CalibrationN, EvaluationRunID: calibration.EvaluationRunID, SevereErrorRate: severeRate}, nil
 }
 
-// RecordCandidate leaves an immutable trace of raw confidence, calibrated
-// confidence and any abstention. It never handles a score, so it cannot be
-// mistaken for a grading result.
+// RecordCandidate 留下原始置信度、校准置信度和任何弃权的不可变记录，不处理分数，避免被误认为评分结果。
 func (s *Service) RecordCandidate(ctx context.Context, tenantID string, input RecordCandidateInput) (Candidate, error) {
 	if s.store == nil || s.evaluations == nil || strings.TrimSpace(tenantID) == "" || !validCandidate(input) {
 		return Candidate{}, ErrInvalidInput
@@ -272,7 +263,7 @@ func isotonicBins(items []CalibrationEvidence) []Bin {
 			groups[index].correct++
 		}
 	}
-	// Pool-adjacent-violators yields a non-decreasing empirical mapping.
+	// 相邻违例合并算法生成不递减的实证映射。
 	for index := 0; index+1 < len(groups); {
 		left, right := groups[index], groups[index+1]
 		if float64(left.correct)/float64(left.n) <= float64(right.correct)/float64(right.n)+epsilon {
@@ -293,8 +284,7 @@ func isotonicBins(items []CalibrationEvidence) []Bin {
 }
 
 func logisticBins(items []CalibrationEvidence) []Bin {
-	// A small deterministic logistic fit avoids a dependency on a statistical
-	// runtime. Inputs are clamped only for logit calculation, never persisted.
+	// 小规模确定性逻辑回归拟合避免依赖统计运行环境。输入只在计算 logit 时限制范围，限制后的值不持久化。
 	mean := 0.0
 	for _, item := range items {
 		if item.Correct {
@@ -320,8 +310,7 @@ func logisticBins(items []CalibrationEvidence) []Bin {
 		intercept -= rate * gi / float64(len(items))
 		slope -= rate * gs / float64(len(items))
 	}
-	// Preserve exact raw-confidence groups for audit and give each the fitted
-	// probability. This makes a later mapping exact and reproducible.
+	// 保留精确的原始置信度分组供审计，并为每组赋予拟合概率，使后续映射精确且可复现。
 	groups := map[float64]Bin{}
 	for _, item := range items {
 		bin := groups[item.RawConfidence]
@@ -343,8 +332,7 @@ func logisticBins(items []CalibrationEvidence) []Bin {
 }
 
 func conformalBins(items []CalibrationEvidence) []Bin {
-	// The Wilson lower bound is a conservative selective-prediction confidence
-	// estimate. It is intentionally less optimistic than raw empirical rates.
+	// Wilson 下界是保守的选择性预测置信度估计，比原始实证比率更谨慎。
 	type tally struct{ n, correct int }
 	groups := [10]tally{}
 	for _, item := range items {
@@ -450,8 +438,7 @@ func mapConfidence(bins []Bin, raw float64) float64 {
 			return bin.CalibratedConfidence
 		}
 	}
-	// A value absent from the held-out curve maps to the nearest measured bin.
-	// This does not extrapolate an unjustified higher confidence.
+	// 留出曲线中不存在的值映射到最近的实测分箱，不外推缺乏依据的更高置信度。
 	best := bins[0]
 	bestDistance := math.Abs(raw - midpoint(best))
 	for _, bin := range bins[1:] {

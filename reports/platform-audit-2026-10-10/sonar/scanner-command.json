@@ -1,0 +1,21 @@
+{
+  "command": [
+    "cmd.exe",
+    "/d",
+    "/c",
+    "D:\\tools\\sonarqube-yuejuan\\20261010\\sonar-scanner-8.1.0.6389\\bin\\sonar-scanner.bat",
+    "-Dproject.settings=D:\\project\\yuejuan\\reports\\platform-audit-2026-10-10\\sonar\\effective-scan.properties",
+    "-Dsonar.projectBaseDir=D:\\project\\yuejuan",
+    "-Dsonar.working.directory=D:\\tools\\sonarqube-yuejuan\\20261010\\scanner-work",
+    "-Dsonar.nodejs.executable=D:/node.js/node.exe",
+    "-Dsonar.python.analysis.parallel=false",
+    "-Dsonar.javascript.node.maxspace=2048",
+    "-Dsonar.typescript.tsconfigPaths=apps/desktop-client/tsconfig.json,apps/student-portal/tsconfig.json,apps/web-admin/tsconfig.json,packages/sdk/tsconfig.json",
+    "-Dsonar.scanner.metadataFilePath=D:\\project\\yuejuan\\reports\\platform-audit-2026-10-10\\sonar\\report-task.txt"
+  ],
+  "secret_delivery": "Short-lived SONAR_TOKEN inherited from process environment, value omitted and revoked at completion",
+  "network": "Scanner exclusively targets 127.0.0.1; JRE provisioning disabled; existing service global settings unchanged",
+  "source_mode": "native read; all caches/work/output redirected outside business files",
+  "scan_started_at": "2026-10-11T11:41:41.118535+08:00",
+  "server_mode": "existing localhost SonarQube with unique new audit project; existing projects unchanged"
+}

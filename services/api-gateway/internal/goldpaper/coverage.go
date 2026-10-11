@@ -16,20 +16,7 @@ func buildCoverage(examID, questionID, subjectCode, archetypeCode, riskTier stri
 				continue
 			}
 			result.ActiveApprovedCount++
-			switch {
-			case version.ReferenceScore == 0:
-				bands["zero"]++
-			case version.ReferenceScore == maxScore:
-				bands["full"]++
-			default:
-				bands["middle"]++
-			}
-			for key, value := range version.TraitScores {
-				traitSet[fmt.Sprintf("%s=%v", key, value)] = struct{}{}
-			}
-			for _, tag := range version.ErrorTags {
-				tagSet[tag] = struct{}{}
-			}
+			recordGoldCoverageVersion(version, maxScore, bands, traitSet, tagSet)
 		}
 	}
 	result.ScoreBands = []ScoreBandCoverage{{Band: "zero", Count: bands["zero"]}, {Band: "middle", Count: bands["middle"]}, {Band: "full", Count: bands["full"]}}
@@ -41,6 +28,30 @@ func buildCoverage(examID, questionID, subjectCode, archetypeCode, riskTier stri
 	}
 	sort.Strings(result.TraitPatterns)
 	sort.Strings(result.ErrorTags)
+	appendGoldCoverageGaps(&result, bands, tagSet, maxScore)
+	result.Ready = result.ActiveApprovedCount > 0 && len(result.Gaps) == 0
+	return result
+}
+
+func recordGoldCoverageVersion(version Version, maxScore float64, bands map[string]int, traits, tags map[string]struct{}) {
+	switch {
+	case version.ReferenceScore == 0:
+		bands["zero"]++
+	case version.ReferenceScore == maxScore:
+		bands["full"]++
+	default:
+		bands["middle"]++
+	}
+	for key, value := range version.TraitScores {
+		traits[fmt.Sprintf("%s=%v", key, value)] = struct{}{}
+	}
+	for _, tag := range version.ErrorTags {
+		tags[tag] = struct{}{}
+	}
+}
+
+// 缺口顺序用于解释未就绪原因；满分不足两分不要求中间分，学科模式仍按原列表逐项检查。
+func appendGoldCoverageGaps(result *Coverage, bands map[string]int, tagSet map[string]struct{}, maxScore float64) {
 	if bands["zero"] == 0 {
 		result.Gaps = append(result.Gaps, "missing_zero_score")
 	}
@@ -53,16 +64,14 @@ func buildCoverage(examID, questionID, subjectCode, archetypeCode, riskTier stri
 	if len(result.ErrorTags) == 0 {
 		result.Gaps = append(result.Gaps, "missing_typical_error")
 	}
-	if archetypeCode == "extended_response" && len(result.TraitPatterns) < 2 {
+	if result.ArchetypeCode == "extended_response" && len(result.TraitPatterns) < 2 {
 		result.Gaps = append(result.Gaps, "insufficient_trait_boundaries")
 	}
-	for _, tag := range requiredCoverageTags(subjectCode, archetypeCode) {
+	for _, tag := range requiredCoverageTags(result.SubjectCode, result.ArchetypeCode) {
 		if _, ok := tagSet[tag]; !ok {
 			result.Gaps = append(result.Gaps, "missing_pattern:"+tag)
 		}
 	}
-	result.Ready = result.ActiveApprovedCount > 0 && len(result.Gaps) == 0
-	return result
 }
 
 func requiredCoverageTags(subjectCode, archetypeCode string) []string {

@@ -159,10 +159,10 @@ describe("resumable capture upload", () => {
   });
 
   it("recovers page 173 of a 500-page durable fixture without replaying confirmed chunks or registering twice", async () => {
-    // The native store owns the actual 500-item recovery state (covered by
-    // durable_store.rs).  This fixture drives the web/API side of the same
-    // recovery point: page 173 was killed after offset 3 was confirmed, then
-    // a 5xx is returned after finalization.  A later init is authoritative.
+    // 原生存储负责实际的 500 项恢复状态（由
+    // durable_store.rs 覆盖）。此测试数据驱动同一恢复点的网页和 API 侧：
+    // 第 173 页在偏移 3 被确认后进程终止，随后
+    // 完成上传后返回 5xx；以后续初始化结果为准。
     const pages = Array.from({ length: 500 }, (_, index) => ({
       pageNo: index + 1,
       status: index < 172 ? "succeeded" : "pending"
@@ -172,8 +172,8 @@ describe("resumable capture upload", () => {
     expect(interruptedPage).toEqual({ pageNo: 173, status: "pending" });
 
     const fetchMock = vi.fn<typeof fetch>()
-      // First runtime: init, confirm bytes [0, 3), then the connection dies
-      // before bytes [3, 6) can be accepted.
+      // 首次运行：初始化并确认字节 [0, 3)，随后连接中断，
+      // 字节 [3, 6) 尚未被接收。
       .mockResolvedValueOnce(response({
         remote_upload_id: "upload-page-173",
         chunk_size: 3,
@@ -183,9 +183,9 @@ describe("resumable capture upload", () => {
       }))
       .mockResolvedValueOnce(response({ remote_upload_id: "upload-page-173", confirmed_offset: 3, status: "uploading" }))
       .mockRejectedValueOnce(new TypeError("network disconnected"))
-      // After process restart, server-confirmed offset 3 skips the first
-      // chunk.  A 5xx after complete is treated as an unknown result; the
-      // subsequent init reports the server's already-created capture file.
+      // 进程重启后，服务端确认的偏移 3 会跳过首个分块。
+      // 完成上传后返回的 5xx 视为结果未知；
+      // 后续初始化会返回服务端已经创建的采集文件。
       .mockResolvedValueOnce(response({
         remote_upload_id: "upload-page-173",
         chunk_size: 3,
@@ -237,8 +237,8 @@ describe("resumable capture upload", () => {
     const chunkOffsets = fetchMock.mock.calls
       .filter(([url]) => String(url).endsWith("/chunks"))
       .map(([, init]) => new Headers(init?.headers).get("Upload-Offset"));
-    // Offset 0 is sent once only.  Offset 3 is the failed, unconfirmed
-    // request and is correctly retried after recovery.
+    // 偏移 0 只发送一次。偏移 3 的请求失败且未经确认，
+    // 恢复后应重新发送。
     expect(chunkOffsets).toEqual(["0", "3", "3", "6", "9"]);
     expect(fetchMock.mock.calls.filter(([url]) => String(url).endsWith("/complete"))).toHaveLength(1);
     expect(fetchMock.mock.calls).toHaveLength(9);

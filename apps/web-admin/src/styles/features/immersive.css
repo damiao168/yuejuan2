@@ -1,4 +1,4 @@
-/* Immersive grading keeps the answer, scoring basis and next action in one viewport. */
+/* 沉浸式阅卷让答案、评分依据和下一步操作保持在同一个视口中。 */
 .immersive-frame {
   height: 100svh;
   min-height: 0;
@@ -44,7 +44,7 @@
 
 
 
-/* Short desktop viewports use document flow so every grading action remains reachable. */
+/* 高度较小的桌面视口使用文档流，让所有阅卷操作仍可访问。 */
 @media (min-width: 1100px) and (max-height: 820px) {
   .immersive-frame,
   .immersive-frame > .ant-layout {
@@ -122,8 +122,8 @@
 }
 
 @media (max-width: 760px) {
-  /* Keep the immersive shell compact instead of inheriting the ordinary
-     document header's stacked mobile layout. */
+  /* 沉浸式外壳保持紧凑，不继承普通文档页头
+     在移动端的纵向堆叠布局。 */
   .immersive-frame .immersive-topbar {
     height: 48px;
     min-height: 48px;

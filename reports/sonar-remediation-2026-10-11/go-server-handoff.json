@@ -1,0 +1,897 @@
+{
+  "recorded_at": "2026-10-11T17:08:51.499768+08:00",
+  "owner_handoff": "sonar_frontend_fix after frontend verification, root coordinates",
+  "state": "all server files untouched by sonar_go_fix",
+  "count": 62,
+  "critical": 55,
+  "major": 7,
+  "issues": [
+    {
+      "key": "02db44b6-53aa-4785-af59-1940189d2f8e",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/appeal_route_test.go",
+      "original_line": 83,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "5441f7bd-8bb6-4bd4-a3a2-19298d33ba97",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_anonymous_paper_test.go",
+      "original_line": 20,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "27058d46-50e2-4abb-affd-7b15e33e2596",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_auth_security_test.go",
+      "original_line": 20,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "355d2730-b341-4d05-938e-d0649b88200a",
+      "rule": "go:S107",
+      "severity": "MAJOR",
+      "path": "services/api-gateway/internal/server/e2e_business_command_test.go",
+      "original_line": 117,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "8dde4c3c-a554-44bd-a3f9-81cd925db6b1",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_business_command_test.go",
+      "original_line": 117,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "e0fed87e-570f-419a-ad8a-18c9d0f5ce53",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_business_command_test.go",
+      "original_line": 372,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "592ae856-9652-4d38-af48-fd5cb6ca8c0f",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_business_command_test.go",
+      "original_line": 507,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "fe2b3df2-0c82-40fb-9577-bb24b401bda7",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_core_workflow_test.go",
+      "original_line": 59,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "edeebb35-5655-438a-a67e-cbee771171f0",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_exam_archive_commands_test.go",
+      "original_line": 21,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "002bfb82-d88d-4a6a-bcd0-51c4dc63f978",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_exam_management_test.go",
+      "original_line": 18,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "1dafed1d-6648-4754-a97d-c8cdae4b8e23",
+      "rule": "go:S107",
+      "severity": "MAJOR",
+      "path": "services/api-gateway/internal/server/e2e_file_reconciliation_test.go",
+      "original_line": 82,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "821d2b73-3871-4798-aa29-29aa365ec2ef",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_idempotency_test.go",
+      "original_line": 16,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "d41bddc7-6de0-443d-9e8c-9d64dc7eb662",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_math_effective_evidence_test.go",
+      "original_line": 17,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "28ea3104-b4ca-4dee-b958-5f3f1ba48a2c",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_math_grading_binding_test.go",
+      "original_line": 19,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "fc9744fc-12f7-49b2-b3a8-96189981129b",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_math_rubric_score_test.go",
+      "original_line": 27,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "5f3837d7-51e2-4452-94a8-6d1e56eb7ea1",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_math_verification_runtime_test.go",
+      "original_line": 21,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "77deafaa-c4d0-42b5-b5be-ee17beb415fc",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_mfa_test.go",
+      "original_line": 25,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "eddd2f8f-ec04-42a6-a250-267378faaea9",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_mfa_test.go",
+      "original_line": 231,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "ad33caf4-951a-4590-8477-d2f83c3c410e",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_paper_import_reconciliation_test.go",
+      "original_line": 22,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "806f255e-a3f3-4b1f-a544-00c400209b3f",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+      "original_line": 34,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "0d76ce3f-6815-4c1a-a644-1176be68e60d",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+      "original_line": 319,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "34f43eef-3fbd-4f67-a180-c0d8211b6a67",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+      "original_line": 791,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "7cb650e1-5588-44da-a10b-b257e3c7552f",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_question_bank_acl_ux_test.go",
+      "original_line": 17,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "5964a35d-7fae-423d-a1ed-a4a30ede5062",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_question_bank_import_test.go",
+      "original_line": 20,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "401d2b22-9756-477e-bc8b-3e8ec7e98bd4",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_question_bank_metadata_acl_search_test.go",
+      "original_line": 16,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "d3266c6c-bdb5-4c2f-b29f-bb05a0814c28",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_question_bank_publication_test.go",
+      "original_line": 19,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "b4fa2740-1843-412d-9e61-3213f6e47909",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_question_bank_test.go",
+      "original_line": 23,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "da632cfa-2302-4f56-a2cc-1c1444d42d90",
+      "rule": "go:S107",
+      "severity": "MAJOR",
+      "path": "services/api-gateway/internal/server/e2e_question_bank_test.go",
+      "original_line": 325,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "26b49389-9514-4bfe-9e24-2bb14261d028",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+      "original_line": 41,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "a6992c8c-5bbc-4e9f-9495-0cfc1d40e920",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+      "original_line": 1050,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "30e4b54c-5d74-4a65-bf28-ec0a763d255d",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_review_recovery_test.go",
+      "original_line": 38,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "f6df961e-375a-4caf-a5ba-bca9114d86e6",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_review_repairs_test.go",
+      "original_line": 126,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "e90f8bbb-686d-4c42-87a4-b4ac8aaf8e1c",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_review_repairs_test.go",
+      "original_line": 288,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "0e7c8bdf-2083-4d43-a53f-a95331adf40b",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_scoring_command_test.go",
+      "original_line": 18,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "bceb0567-6074-4e2a-8c99-b499a852fffc",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_scoring_double_mark_test.go",
+      "original_line": 15,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "881f81cd-b61d-4b03-9da7-11487f0f166b",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_story056_calibration_test.go",
+      "original_line": 21,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "052382f9-98c1-4502-9cf3-9263babc38e4",
+      "rule": "go:S107",
+      "severity": "MAJOR",
+      "path": "services/api-gateway/internal/server/e2e_story056_calibration_test.go",
+      "original_line": 530,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "251a544a-6153-4d96-8f79-f1ed602751a6",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_story056_lease_test.go",
+      "original_line": 195,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "73fcb99f-02f2-4712-887e-9acfa90be764",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+      "original_line": 45,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "bb21233c-220c-4011-81fa-8dedcffb59e1",
+      "rule": "go:S107",
+      "severity": "MAJOR",
+      "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+      "original_line": 327,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "9083f1fb-3e73-4298-bf44-65bc2044707e",
+      "rule": "go:S107",
+      "severity": "MAJOR",
+      "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+      "original_line": 586,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "04c5b6da-0eef-44ca-a0b6-480f47e9ac4f",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+      "original_line": 621,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "cc1eb7ba-ff20-4ed5-85ae-92bba3f44970",
+      "rule": "go:S107",
+      "severity": "MAJOR",
+      "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+      "original_line": 621,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "763787f5-4d25-40ca-9b20-fb122a3fd435",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_story060_capture_recovery_test.go",
+      "original_line": 20,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "04978ae6-aa72-4e5c-a103-0bb516c471c9",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_story060_provision_test.go",
+      "original_line": 12,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "6d045e4b-df38-4860-87ba-f84850349c5e",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_story060_roster_test.go",
+      "original_line": 174,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "79778945-8950-4b10-8307-a448be94bc2f",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_story060_sheet_identity_test.go",
+      "original_line": 17,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "0c53b85c-266b-4035-810d-2b58c3dde6e9",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_story060_sheet_identity_test.go",
+      "original_line": 403,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "94a4df0b-6f1f-42eb-bf1f-3eacf27e5fef",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_story061_governance_test.go",
+      "original_line": 16,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "b7686be2-e360-4b3d-aba9-bf296853b0e3",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_subjective_command_test.go",
+      "original_line": 14,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "f2c7125d-8fb0-4bbc-99df-d9c74fa345bb",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_subjective_panel_test.go",
+      "original_line": 20,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "f567e83e-3a26-4547-ada0-fc2bae8372bb",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/e2e_worker_runtime_reliability_test.go",
+      "original_line": 19,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "1a328436-93ef-4b77-8df6-b8e1119ab616",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/managed_config_postgres_test.go",
+      "original_line": 15,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "afa3f400-7f5b-4eb4-be08-9d156b00c0b6",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/migration_upgrade_test.go",
+      "original_line": 21,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "19cce2dd-88da-4961-af92-bd088c13d52e",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/platform_schools_route_test.go",
+      "original_line": 18,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "ac333da4-2bf8-46c5-a9c2-04f01449da9f",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/readers_batch47_test.go",
+      "original_line": 65,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "f6b0eecd-060b-4283-932b-32b824ffdfae",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/review_route_test.go",
+      "original_line": 183,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "c037921b-d14c-412c-911c-03dcedb4ea28",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/review_route_test.go",
+      "original_line": 465,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "2786080b-a181-42ff-beb4-d5e03ef163df",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/review_route_test.go",
+      "original_line": 821,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "1d3ffd34-4a5a-407d-9cbc-ccacd95c6f4c",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/review_route_test.go",
+      "original_line": 987,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "8a691a5b-d705-476a-bbb0-4e4cd57dd5f0",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/score_route_test.go",
+      "original_line": 18,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    },
+    {
+      "key": "c2c48cf9-df54-421c-95b3-8c5dc882b906",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/server/server_test.go",
+      "original_line": 443,
+      "state": "pending",
+      "batch": null,
+      "change": null
+    }
+  ],
+  "files": [
+    {
+      "path": "services/api-gateway/internal/server/appeal_route_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_anonymous_paper_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_auth_security_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_business_command_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_core_workflow_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_exam_archive_commands_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_exam_management_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_file_reconciliation_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_idempotency_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_math_effective_evidence_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_math_grading_binding_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_math_rubric_score_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_math_verification_runtime_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_mfa_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_paper_import_reconciliation_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_question_bank_acl_ux_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_question_bank_import_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_question_bank_metadata_acl_search_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_question_bank_publication_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_question_bank_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_review_recovery_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_review_repairs_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_scoring_command_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_scoring_double_mark_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_story056_calibration_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_story056_lease_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_story060_capture_recovery_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_story060_provision_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_story060_roster_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_story060_sheet_identity_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_story061_governance_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_subjective_command_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_subjective_panel_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_worker_runtime_reliability_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/managed_config_postgres_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/migration_upgrade_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/platform_schools_route_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/readers_batch47_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/review_route_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/score_route_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/server_test.go",
+      "review_state": "pending",
+      "source_sha256": null,
+      "maintenance_points": null
+    }
+  ],
+  "expectations": "Read current file and fixtures/calls, preserve root baseline changes, split fixture/execute/assertion or domain workflow stages. No NOSONAR/exclusion/rule relaxation. Each original key status explicit, unreviewed whole files remain pending. Avoid reducing complexity via generic hidden bool guard. Test existing whole package, report PostgreSQL environment skips separately. Write own go-server-progress.json/md; root merges final. Local AST go-structure-check.go estimates are triage only, actual Sonar rescan final."
+}

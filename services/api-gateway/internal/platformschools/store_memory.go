@@ -5,8 +5,8 @@ import (
 	"sync"
 )
 
-// MemoryStore keeps the same read model available to the synthetic router.
-// Tests may seed its exported Put helpers without inventing cross-tenant auth.
+// MemoryStore 向合成数据路由提供相同读模型。
+// 测试可通过导出的 Put 辅助方法预置数据，无需虚构跨租户授权。
 type MemoryStore struct {
 	mu         sync.RWMutex
 	schools    map[string]PlatformSchoolSummary

@@ -1,0 +1,156 @@
+[
+  {
+    "file": "04-database-er.drawio",
+    "page": "global",
+    "edge": 3,
+    "source": "exam",
+    "target": "score_release"
+  },
+  {
+    "file": "04-database-er.drawio",
+    "page": "global",
+    "edge": 9,
+    "source": "question",
+    "target": "rubric_version"
+  },
+  {
+    "file": "04-database-er.drawio",
+    "page": "global",
+    "edge": 10,
+    "source": "answer_segment",
+    "target": "question_grade"
+  },
+  {
+    "file": "04-database-er.drawio",
+    "page": "global",
+    "edge": 15,
+    "source": "final_grade",
+    "target": "score_release_question"
+  },
+  {
+    "file": "04-database-er.drawio",
+    "page": "global",
+    "edge": 17,
+    "source": "score_release",
+    "target": "score_release_question"
+  },
+  {
+    "file": "04-database-er.drawio",
+    "page": "sqlite",
+    "edge": 0,
+    "source": "local_asset",
+    "target": "upload_session"
+  },
+  {
+    "file": "04-database-er.drawio",
+    "page": "sqlite",
+    "edge": 3,
+    "source": "local_asset",
+    "target": "local_asset_chunk"
+  },
+  {
+    "file": "04-database-er.drawio",
+    "page": "sqlite",
+    "edge": 4,
+    "source": "local_asset",
+    "target": "sync_event"
+  },
+  {
+    "file": "05-business-workflow.drawio",
+    "page": "grading_release",
+    "edge": 8,
+    "source": "ai_assist",
+    "target": "review"
+  },
+  {
+    "file": "05-business-workflow.drawio",
+    "page": "grading_release",
+    "edge": 4,
+    "source": "mode",
+    "target": "ai_assist"
+  },
+  {
+    "file": "06-image-template-pipeline.drawio",
+    "page": "template_routing",
+    "edge": 9,
+    "source": "score",
+    "target": "unknown"
+  },
+  {
+    "file": "06-image-template-pipeline.drawio",
+    "page": "template_routing",
+    "edge": 6,
+    "source": "controlled",
+    "target": "candidates"
+  },
+  {
+    "file": "07-ai-grading.drawio",
+    "page": "panel_kernel",
+    "edge": 5,
+    "source": "derive",
+    "target": "compare"
+  },
+  {
+    "file": "07-ai-grading.drawio",
+    "page": "failure_cost",
+    "edge": 5,
+    "source": "retry",
+    "target": "usage"
+  },
+  {
+    "file": "07-ai-grading.drawio",
+    "page": "multimodal_math",
+    "edge": 5,
+    "source": "messages",
+    "target": "native"
+  },
+  {
+    "file": "07-ai-grading.drawio",
+    "page": "multimodal_math",
+    "edge": 6,
+    "source": "app",
+    "target": "candidate"
+  },
+  {
+    "file": "09-task-state-machine.drawio",
+    "page": "runtime",
+    "edge": 3,
+    "source": "running",
+    "target": "retry"
+  },
+  {
+    "file": "09-task-state-machine.drawio",
+    "page": "runtime",
+    "edge": 12,
+    "source": "failed",
+    "target": "manual"
+  },
+  {
+    "file": "09-task-state-machine.drawio",
+    "page": "runtime",
+    "edge": 7,
+    "source": "retry",
+    "target": "dead"
+  },
+  {
+    "file": "09-task-state-machine.drawio",
+    "page": "business_states",
+    "edge": 10,
+    "source": "diff",
+    "target": "auto"
+  },
+  {
+    "file": "09-task-state-machine.drawio",
+    "page": "business_states",
+    "edge": 3,
+    "source": "processing",
+    "target": "failed"
+  },
+  {
+    "file": "09-task-state-machine.drawio",
+    "page": "business_states",
+    "edge": 5,
+    "source": "processing",
+    "target": "cancelling"
+  }
+]

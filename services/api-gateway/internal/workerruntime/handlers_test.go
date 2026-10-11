@@ -147,44 +147,14 @@ func TestHandlerRejectsSensitivePayload(t *testing.T) {
 }
 
 func TestHandlerRequiresSourceAdapterForManagedCompletion(t *testing.T) {
-	for _, source := range []struct {
-		name       string
-		taskType   string
-		queueName  string
-		sourceType string
-	}{
+	for _, source := range []managedWorkerSourceCase{
 		{name: "ocr", taskType: "ocr", queueName: "ocr", sourceType: "ocr_task"},
 		{name: "omr", taskType: "omr_extract", queueName: "page-processing", sourceType: "omr_run"},
 		{name: "subjective", taskType: "ai_grade", queueName: "subjective-grading", sourceType: "subjective_grading_run"},
 		{name: "math-verification", taskType: "evidence_verify", queueName: "math-verification", sourceType: "math_understanding_artifact"},
 	} {
 		t.Run(source.name, func(t *testing.T) {
-			store := workerruntime.NewMemoryStore()
-			handler := workerruntime.NewHandler(store, auth.NewMemoryStore())
-			task, err := store.CreateTask(t.Context(), runtimeTenantID, "actor-1", workerruntime.CreateTaskInput{
-				TaskType: source.taskType, QueueName: source.queueName, SourceType: source.sourceType, SourceID: source.name + "-task-1",
-				IdempotencyKey: source.name + ":1", PayloadSchemaVersion: "v1", MaxAttempts: 3, RetryBackoffSeconds: 1,
-			})
-			if err != nil {
-				t.Fatalf("create task: %v", err)
-			}
-			claimed, err := store.Claim(t.Context(), runtimeTenantID, workerruntime.ClaimInput{
-				QueueName: source.queueName, WorkerService: source.name + "-worker", WorkerInstanceID: "worker-a", Limit: 1, LeaseSeconds: 300,
-			})
-			if err != nil || len(claimed) != 1 {
-				t.Fatalf("claim task: %v %#v", err, claimed)
-			}
-			req := requestWithUser(http.MethodPost, "/api/v1/internal/worker/tasks/"+task.ID+"/complete", `{"lease_token":"`+claimed[0].LeaseToken+`","result_schema_version":"v1","result":{"ok":true},"duration_ms":1}`)
-			req.SetPathValue("taskId", task.ID)
-			rec := httptest.NewRecorder()
-			handler.Complete(rec, req)
-			if rec.Code != http.StatusConflict || !bytes.Contains(rec.Body.Bytes(), []byte("worker_source_activation_required")) {
-				t.Fatalf("source task generic complete expected 409, got %d %s", rec.Code, rec.Body.String())
-			}
-			stored, err := store.Get(t.Context(), runtimeTenantID, task.ID)
-			if err != nil || stored.Status != workerruntime.StatusLeased {
-				t.Fatalf("generic completion must leave managed task leased: %v %#v", err, stored)
-			}
+			assertManagedWorkerRequiresSourceCompletion(t, source)
 		})
 	}
 }
@@ -193,4 +163,41 @@ func requestWithUser(method string, path string, body string) *http.Request {
 	req := httptest.NewRequest(method, path, bytes.NewBufferString(body))
 	user := auth.User{ID: "actor-1", TenantID: runtimeTenantID}
 	return req.WithContext(auth.WithUser(req.Context(), user))
+}
+
+type managedWorkerSourceCase struct {
+	name       string
+	taskType   string
+	queueName  string
+	sourceType string
+}
+
+func assertManagedWorkerRequiresSourceCompletion(t *testing.T, source managedWorkerSourceCase) {
+	t.Helper()
+	store := workerruntime.NewMemoryStore()
+	handler := workerruntime.NewHandler(store, auth.NewMemoryStore())
+	task, err := store.CreateTask(t.Context(), runtimeTenantID, "actor-1", workerruntime.CreateTaskInput{
+		TaskType: source.taskType, QueueName: source.queueName, SourceType: source.sourceType, SourceID: source.name + "-task-1",
+		IdempotencyKey: source.name + ":1", PayloadSchemaVersion: "v1", MaxAttempts: 3, RetryBackoffSeconds: 1,
+	})
+	if err != nil {
+		t.Fatalf("create task: %v", err)
+	}
+	claimed, err := store.Claim(t.Context(), runtimeTenantID, workerruntime.ClaimInput{
+		QueueName: source.queueName, WorkerService: source.name + "-worker", WorkerInstanceID: "worker-a", Limit: 1, LeaseSeconds: 300,
+	})
+	if err != nil || len(claimed) != 1 {
+		t.Fatalf("claim task: %v %#v", err, claimed)
+	}
+	req := requestWithUser(http.MethodPost, "/api/v1/internal/worker/tasks/"+task.ID+"/complete", `{"lease_token":"`+claimed[0].LeaseToken+`","result_schema_version":"v1","result":{"ok":true},"duration_ms":1}`)
+	req.SetPathValue("taskId", task.ID)
+	rec := httptest.NewRecorder()
+	handler.Complete(rec, req)
+	if rec.Code != http.StatusConflict || !bytes.Contains(rec.Body.Bytes(), []byte("worker_source_activation_required")) {
+		t.Fatalf("source task generic complete expected 409, got %d %s", rec.Code, rec.Body.String())
+	}
+	stored, err := store.Get(t.Context(), runtimeTenantID, task.ID)
+	if err != nil || stored.Status != workerruntime.StatusLeased {
+		t.Fatalf("generic completion must leave managed task leased: %v %#v", err, stored)
+	}
 }

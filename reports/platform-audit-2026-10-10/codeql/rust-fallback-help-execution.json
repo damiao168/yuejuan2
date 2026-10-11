@@ -1,0 +1,110 @@
+{
+  "read_only_help_only": true,
+  "records": [
+    {
+      "command": [
+        "D:\\tools\\audit-codeql-20261010\\codeql\\codeql.exe",
+        "resolve",
+        "ram",
+        "--help",
+        "-v"
+      ],
+      "started_at_utc": "2026-10-11T07:55:48.690911+00:00",
+      "ended_at_utc": "2026-10-11T07:55:49.991593+00:00",
+      "exit_code": 0,
+      "log": "rust-fallback-resolve-ram-help.log",
+      "bytes": 3686,
+      "sha256": "fc0ab6730f9dcc793bb0bac5309d88f785fe6f0095db2d47a09fac329a64a070"
+    },
+    {
+      "command": [
+        "D:\\tools\\audit-codeql-20261010\\codeql\\codeql.exe",
+        "query",
+        "run",
+        "--help",
+        "-v"
+      ],
+      "started_at_utc": "2026-10-11T07:55:49.991593+00:00",
+      "ended_at_utc": "2026-10-11T07:55:51.015098+00:00",
+      "exit_code": 0,
+      "log": "rust-fallback-query-run-help.log",
+      "bytes": 19537,
+      "sha256": "05e5d4769d312688c4596fc40b3c9876784fd807d678e33025456605ec4b8a4f"
+    },
+    {
+      "command": [
+        "D:\\tools\\audit-codeql-20261010\\codeql\\codeql.exe",
+        "database",
+        "interpret-results",
+        "--help",
+        "-v"
+      ],
+      "started_at_utc": "2026-10-11T07:55:51.015098+00:00",
+      "ended_at_utc": "2026-10-11T07:55:52.497636+00:00",
+      "exit_code": 0,
+      "log": "rust-fallback-interpret-results-help.log",
+      "bytes": 17144,
+      "sha256": "955847def29503a53557bc942cd79984a0b99f6a3a69de8a3929a41356ca534c"
+    },
+    {
+      "command": [
+        "D:\\tools\\audit-codeql-20261010\\codeql\\codeql.exe",
+        "execute",
+        "queries",
+        "--help",
+        "-vv"
+      ],
+      "started_at_utc": "2026-10-11T07:56:31.637890+00:00",
+      "ended_at_utc": "2026-10-11T07:56:33.205876+00:00",
+      "exit_code": 0,
+      "log": "rust-fallback-execute-queries-help-full.log",
+      "bytes": 31871,
+      "sha256": "0ae8e514694a9e1a1f4ccc231887484a7b23670adf42e1eefab9a46a3c10ba20"
+    },
+    {
+      "command": [
+        "D:\\tools\\audit-codeql-20261010\\codeql\\codeql.exe",
+        "database",
+        "run-queries",
+        "--help",
+        "-vv"
+      ],
+      "started_at_utc": "2026-10-11T07:56:33.206387+00:00",
+      "ended_at_utc": "2026-10-11T07:56:34.704173+00:00",
+      "exit_code": 0,
+      "log": "rust-fallback-run-queries-help-full.log",
+      "bytes": 33429,
+      "sha256": "852aa053253726edf3c0b3f75e01fc450877f261d6dac4d05f7579f35d813db6"
+    },
+    {
+      "command": [
+        "D:\\tools\\audit-codeql-20261010\\codeql\\codeql.exe",
+        "execute",
+        "query-server",
+        "--help",
+        "-vv"
+      ],
+      "started_at_utc": "2026-10-11T07:56:34.704173+00:00",
+      "ended_at_utc": "2026-10-11T07:56:36.058695+00:00",
+      "exit_code": 0,
+      "log": "rust-fallback-query-server-help-full.log",
+      "bytes": 2589,
+      "sha256": "8b8e129403473283ddb881fb018439a3021ddb260dc8253476cca8cdfe4563ed"
+    },
+    {
+      "command": [
+        "D:\\tools\\audit-codeql-20261010\\codeql\\codeql.exe",
+        "resolve",
+        "ram",
+        "--help",
+        "-vv"
+      ],
+      "started_at_utc": "2026-10-11T07:58:26.061620+00:00",
+      "ended_at_utc": "2026-10-11T07:58:27.048103+00:00",
+      "exit_code": 0,
+      "log": "rust-fallback-resolve-ram-help-full.log",
+      "bytes": 4607,
+      "sha256": "a84a567a9f044310d79544d793fd2103b518393df014c9913678fa9c0732e66d"
+    }
+  ]
+}

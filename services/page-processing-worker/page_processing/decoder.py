@@ -6,7 +6,7 @@ import warnings
 from dataclasses import dataclass
 
 import pypdfium2 as pdfium
-from PIL import Image, ImageOps, ImageSequence, UnidentifiedImageError
+from PIL import Image, ImageOps, ImageSequence
 
 
 class DecodeError(RuntimeError):
@@ -57,8 +57,8 @@ def decode_document(
                 image.close()
                 source_image.close()
     finally:
-        # Closing an already closed Pillow image is harmless and ensures pages
-        # not reached after a limit/encoding failure do not retain buffers.
+        # 重复关闭 Pillow 图像不会造成问题，并能避免
+        # 因限制或编码失败而未处理的页面继续保留缓冲区。
         for source_image in images:
             source_image.close()
     if not pages:
@@ -140,33 +140,46 @@ def _decode_image(
         with warnings.catch_warnings():
             warnings.simplefilter("error", UserWarning)
             source = Image.open(io.BytesIO(data))
-    except (UnidentifiedImageError, OSError, Image.DecompressionBombError, UserWarning) as exc:
+    except (OSError, Image.DecompressionBombError, UserWarning) as exc:
         raise DecodeError("invalid_tiff" if tiff_expected else "unsupported_or_invalid_image") from exc
     try:
         frame_count = getattr(source, "n_frames", 1)
         if frame_count <= 0 or frame_count > max_pages:
             raise DecodeError("image_frame_limit_exceeded")
         is_tiff = (source.format or "").upper() == "TIFF"
-        images: list[Image.Image] = []
-        total_pixels = 0
-        try:
-            for frame in ImageSequence.Iterator(source):
-                pixels = frame.width * frame.height
-                total_pixels += pixels
-                if pixels <= 0 or pixels > max_page_pixels:
-                    raise DecodeError("page_pixel_limit_exceeded")
-                if total_pixels > max_total_pixels:
-                    raise DecodeError("document_pixel_limit_exceeded")
-                images.append(frame.copy())
-        except DecodeError:
-            for image in images:
-                image.close()
-            raise
-        except (OSError, ValueError, Image.DecompressionBombError) as exc:
-            for image in images:
-                image.close()
-            raise DecodeError("invalid_tiff" if is_tiff or tiff_expected else "unsupported_or_invalid_image") from exc
+        images = _copy_image_frames(source, max_page_pixels, max_total_pixels, is_tiff, tiff_expected)
         detected = "image/tiff" if is_tiff else Image.MIME.get(source.format or "", "image/unknown")
         return images, detected
     finally:
+        # 成功返回的是副本，源图像在此关闭；副本由 decode_document 编码后关闭。
         source.close()
+
+
+def _copy_image_frames(
+    source: Image.Image,
+    max_page_pixels: int,
+    max_total_pixels: int,
+    is_tiff: bool,
+    tiff_expected: bool,
+) -> list[Image.Image]:
+    images: list[Image.Image] = []
+    total_pixels = 0
+    try:
+        for frame in ImageSequence.Iterator(source):
+            pixels = frame.width * frame.height
+            total_pixels += pixels
+            # 先限制每帧和累计像素再复制；以下两个已知异常分支会关闭此前已复制的帧。
+            if pixels <= 0 or pixels > max_page_pixels:
+                raise DecodeError("page_pixel_limit_exceeded")
+            if total_pixels > max_total_pixels:
+                raise DecodeError("document_pixel_limit_exceeded")
+            images.append(frame.copy())
+    except DecodeError:
+        for image in images:
+            image.close()
+        raise
+    except (OSError, ValueError, Image.DecompressionBombError) as exc:
+        for image in images:
+            image.close()
+        raise DecodeError("invalid_tiff" if is_tiff or tiff_expected else "unsupported_or_invalid_image") from exc
+    return images

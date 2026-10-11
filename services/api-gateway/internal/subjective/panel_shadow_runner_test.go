@@ -184,30 +184,35 @@ func TestPanelShadowRunnerDoesNotCountIncompletePrimaryFailure(t *testing.T) {
 func TestPanelShadowRunnerRecordsBlindArbitrationAndHumanEscalation(t *testing.T) {
 	for _, unresolved := range []bool{false, true} {
 		t.Run(map[bool]string{false: "arbiter", true: "human"}[unresolved], func(t *testing.T) {
-			runner, store, _, sample, runID := shadowRunnerFixture(t)
-			b := runner.panel.agents.PrimaryB.Adapter.(*panelTestAdapter)
-			c := runner.panel.agents.Arbiter.Adapter.(*panelTestAdapter)
-			b.supported = map[string]bool{"p2": true}
-			if unresolved {
-				c.confidence = .5
-			}
-			sample.ArbiterCostMicros = 20
-			config := PanelDecisionConfig{PolicyVersion: "shadow-v1", ArbiterAgreementThreshold: .5}
-			items, err := runner.RunBatch(context.Background(), "tenant-1", "actor-1", runID, config, []PanelShadowSample{sample})
-			if err != nil || len(items) != 1 || !items[0].ArbitrationTriggered || items[0].ScoreC == nil {
-				t.Fatalf("arbitration was not captured: %#v %v", items, err)
-			}
-			if unresolved {
-				if !items[0].HumanEscalated || items[0].ResolutionSource != ResolutionHuman || items[0].ResolvedScore != nil {
-					t.Fatalf("unresolved C became a final candidate: %#v", items[0])
-				}
-			} else if items[0].HumanEscalated || items[0].ResolutionSource != ResolutionArbiter || items[0].ResolvedScore == nil {
-				t.Fatalf("independently resolved C was not recorded: %#v", items[0])
-			}
-			metrics, err := gradingevaluation.CalculateStoredPanelMetrics(context.Background(), store, "tenant-1", runID)
-			if err != nil || metrics.Arbiter.SampleCount != 1 || metrics.ArbitrationTriggerRate != 1 {
-				t.Fatalf("saved arbitration could not be evaluated: %#v %v", metrics, err)
-			}
+			assertPanelShadowArbitrationAndEscalation(t, unresolved)
 		})
+	}
+}
+
+func assertPanelShadowArbitrationAndEscalation(t *testing.T, unresolved bool) {
+	t.Helper()
+	runner, store, _, sample, runID := shadowRunnerFixture(t)
+	b := runner.panel.agents.PrimaryB.Adapter.(*panelTestAdapter)
+	c := runner.panel.agents.Arbiter.Adapter.(*panelTestAdapter)
+	b.supported = map[string]bool{"p2": true}
+	if unresolved {
+		c.confidence = .5
+	}
+	sample.ArbiterCostMicros = 20
+	config := PanelDecisionConfig{PolicyVersion: "shadow-v1", ArbiterAgreementThreshold: .5}
+	items, err := runner.RunBatch(context.Background(), "tenant-1", "actor-1", runID, config, []PanelShadowSample{sample})
+	if err != nil || len(items) != 1 || !items[0].ArbitrationTriggered || items[0].ScoreC == nil {
+		t.Fatalf("arbitration was not captured: %#v %v", items, err)
+	}
+	if unresolved {
+		if !items[0].HumanEscalated || items[0].ResolutionSource != ResolutionHuman || items[0].ResolvedScore != nil {
+			t.Fatalf("unresolved C became a final candidate: %#v", items[0])
+		}
+	} else if items[0].HumanEscalated || items[0].ResolutionSource != ResolutionArbiter || items[0].ResolvedScore == nil {
+		t.Fatalf("independently resolved C was not recorded: %#v", items[0])
+	}
+	metrics, err := gradingevaluation.CalculateStoredPanelMetrics(context.Background(), store, "tenant-1", runID)
+	if err != nil || metrics.Arbiter.SampleCount != 1 || metrics.ArbitrationTriggerRate != 1 {
+		t.Fatalf("saved arbitration could not be evaluated: %#v %v", metrics, err)
 	}
 }

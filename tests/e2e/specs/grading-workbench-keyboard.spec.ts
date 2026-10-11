@@ -8,6 +8,8 @@ import {
 test("阅卷教师先理解异常原因，再用键盘连续完成 20 份跨学科任务", async ({ page }) => {
   test.setTimeout(120_000);
   const state = createGradingWorkbenchMockState(20);
+  // 队列按考试/学科组织连续任务；每学科内维持服务端顺序，不再交替更换评分依据。
+  const taskOrder = subjectFixtures.flatMap((subject) => state.tasks.filter((task) => task.subject.code === subject.code));
   state.tasks[0].source = "ai_low_confidence";
   await installGradingWorkbenchMocks(page, state);
   await page.goto("/#/teacher/grading", { waitUntil: "domcontentloaded" });
@@ -23,34 +25,34 @@ test("阅卷教师先理解异常原因，再用键盘连续完成 20 份跨学�
   await page.getByRole("button", { name: "开始处理" }).click();
   await expect.poll(() => state.claims).toEqual(["review-task-01"]);
 
-  // A focused input must retain its own keyboard semantics: neither a digit
-  // nor Enter may trigger the workbench's global score/submit shortcuts.
+  // 聚焦的输入框必须保留自身键盘语义：数字键和 Enter
+  // 都不能触发工作台的全局评分或提交快捷键。
   await score.focus();
   await page.keyboard.press("1");
   await page.keyboard.press("Enter");
   await expect.poll(() => state.submissions).toHaveLength(0);
   await score.evaluate((element) => (element as HTMLInputElement).blur());
-  await expect(page.locator(".draft-save-status")).toHaveText("草稿已保存", { timeout: 8_000 });
+  await expect(page.locator(".draft-save-status")).toHaveText("已保存到服务端", { timeout: 8_000 });
   await expect.poll(() => state.draftWrites).toEqual(["review-task-01"]);
 
   await page.getByRole("button", { name: "刷新" }).click();
   await expect(score).toHaveValue("1.0");
 
-  for (let index = 0; index < state.tasks.length; index += 1) {
-    const task = state.tasks[index];
-    const expectedTool = subjectFixtures[index % subjectFixtures.length].tool;
+  for (let index = 0; index < taskOrder.length; index += 1) {
+    const task = taskOrder[index];
+    const expectedTool = task.subject.tool;
     await expect(page.locator(".answer-panel")).toContainText(task.anonymous_code);
     await expect(page.locator(".subject-tool-panel h2")).toHaveText(expectedTool);
 
-    // Refresh leaves focus outside form inputs. The score and submit are then
-    // exclusively driven by the documented keyboard shortcuts.
+    // 刷新后焦点位于表单输入框之外，此时评分和提交
+    // 完全通过已说明的键盘快捷键驱动。
     await page.keyboard.press("1");
     await expect(submit).toBeEnabled();
     await page.keyboard.press("Control+Enter");
     await expect.poll(() => state.submissions).toHaveLength(index + 1);
 
-    if (index + 1 < state.tasks.length) {
-      await expect(page.locator(".answer-panel")).toContainText(state.tasks[index + 1].anonymous_code);
+    if (index + 1 < taskOrder.length) {
+      await expect(page.locator(".answer-panel")).toContainText(taskOrder[index + 1].anonymous_code);
     }
   }
 
@@ -81,7 +83,7 @@ test("两个浏览器窗口保存同一草稿时，后写窗口收到 revision c
     ]);
 
     await firstScore.fill("5");
-    await expect(first.locator(".draft-save-status")).toHaveText("草稿已保存", { timeout: 8_000 });
+    await expect(first.locator(".draft-save-status")).toHaveText("已保存到服务端", { timeout: 8_000 });
     await expect.poll(() => state.drafts.get("review-task-01")?.revision).toBe(1);
 
     await secondScore.fill("6");
@@ -91,4 +93,36 @@ test("两个浏览器窗口保存同一草稿时，后写窗口收到 revision c
   } finally {
     await Promise.all([firstContext.close(), secondContext.close()]);
   }
+});
+
+test("教师核对完整冻结资料后分别审读采纳建议分和学生反馈", async ({ page }) => {
+  test.setTimeout(90_000);
+  const state = createGradingWorkbenchMockState(1);
+  state.fastConfirmTaskIds.add(state.tasks[0].id);
+  await installGradingWorkbenchMocks(page, state);
+  await page.goto("/#/teacher/grading", { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("spinbutton", { name: "最终得分" })).toBeVisible({ timeout: 30_000 });
+  const reference = page.getByRole("region", { name: "本任务题目与完整评分依据" });
+  await expect(reference).toContainText("连续阅卷测试考试");
+  await expect(reference).toContainText("冻结参考答案");
+  await expect(reference).toContainText("冻结解答全文");
+  await expect(reference).toContainText("冻结解答步骤");
+  await reference.getByRole("tab", { name: "完整评分依据" }).click();
+  await expect(reference).toContainText("单位遗漏");
+  await expect(reference).toContainText("冻结评分样例");
+  await page.getByRole("button", { name: "采纳 AI 建议分" }).click();
+  await expect(page.getByRole("dialog")).toContainText("学生反馈和内部备注保持原文");
+  await page.getByRole("button", { name: "填入评分草稿" }).click();
+  await expect(page.getByRole("spinbutton", { name: "最终得分" })).toHaveValue("7.0");
+  const feedback = page.locator("#grading-student-feedback-input");
+  await expect(feedback).toHaveValue("");
+  await page.getByRole("button", { name: "审读 AI 反馈" }).click();
+  await expect(page.getByRole("dialog")).toContainText("AI 学生反馈草稿");
+  await expect(page.getByRole("dialog")).toContainText("AI 内部备注草稿");
+  await page.getByRole("button", { name: "采用并展开编辑" }).click();
+  await expect(feedback).toBeVisible();
+  await expect(feedback).toHaveValue("AI 学生反馈草稿");
+  await expect(page.locator("#grading-private-note-input")).toHaveValue("AI 内部备注草稿");
+  await expect(page.getByRole("spinbutton", { name: "最终得分" })).toHaveValue("7.0");
+  expect(state.submissions).toHaveLength(0);
 });

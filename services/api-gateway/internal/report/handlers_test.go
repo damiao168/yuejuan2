@@ -8,9 +8,8 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/auth"
 )
 
-// tenantOnlyScope reproduces the data_scope that CreateManagedUser writes for
-// every account created through POST /api/v1/users: a role-keyed object with no
-// student_id at any nesting level, so ScopedStudentID cannot resolve a student.
+// tenantOnlyScope 复现 CreateManagedUser 为每个通过 POST /api/v1/users 创建的账户写入的 data_scope：
+// 这是按角色分键的对象，任何嵌套层级都没有 student_id，因此 ScopedStudentID 无法解析出学生。
 func tenantOnlyScope() map[string]any {
 	return map[string]any{"student": map[string]any{"scope": "tenant"}}
 }

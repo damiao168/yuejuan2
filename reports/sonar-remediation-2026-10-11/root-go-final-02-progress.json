@@ -1,0 +1,338 @@
+{
+  "original_issue_count": 2,
+  "issue_states": [
+    {
+      "key": "6eb1de9a-c6f8-4662-9a79-01e20787127a",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+      "checkpoint03_line": 198,
+      "checkpoint03_cognitive_complexity": 21,
+      "checkpoint03_flows": [
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+              "textRange": {
+                "startLine": 210,
+                "endLine": 210,
+                "startOffset": 1,
+                "endOffset": 4
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+              "textRange": {
+                "startLine": 215,
+                "endLine": 215,
+                "startOffset": 4,
+                "endOffset": 6
+              },
+              "msg": "+4 (incl 3 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+              "textRange": {
+                "startLine": 215,
+                "endLine": 215,
+                "startOffset": 41,
+                "endOffset": 43
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+              "textRange": {
+                "startLine": 219,
+                "endLine": 219,
+                "startOffset": 4,
+                "endOffset": 6
+              },
+              "msg": "+4 (incl 3 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+              "textRange": {
+                "startLine": 219,
+                "endLine": 219,
+                "startOffset": 48,
+                "endOffset": 50
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+              "textRange": {
+                "startLine": 227,
+                "endLine": 227,
+                "startOffset": 3,
+                "endOffset": 5
+              },
+              "msg": "+3 (incl 2 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+              "textRange": {
+                "startLine": 230,
+                "endLine": 230,
+                "startOffset": 3,
+                "endOffset": 5
+              },
+              "msg": "+3 (incl 2 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+              "textRange": {
+                "startLine": 233,
+                "endLine": 233,
+                "startOffset": 3,
+                "endOffset": 5
+              },
+              "msg": "+3 (incl 2 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+              "textRange": {
+                "startLine": 233,
+                "endLine": 233,
+                "startOffset": 27,
+                "endOffset": 29
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        }
+      ],
+      "function": "TestBatch9UploadProtocol",
+      "named_helper": "assertBatch9UploadRequest",
+      "current_structure_estimate": 11,
+      "helper_structure_estimate": 4,
+      "state": "validated_source_fix_pending_platform_rescan",
+      "current_sha256": "5ba735ccad0358c046add3e2b402634c55d6c3be30b492d675e8e7576c9c519c",
+      "evidence": [
+        "root-go-final-02-equivalence.json",
+        "root-go-final-02-structure.json",
+        "root-go-final-02-current-execution.json"
+      ]
+    },
+    {
+      "key": "32ec19c6-7711-4694-b5dd-6577c7ecf0e9",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+      "checkpoint03_line": 659,
+      "checkpoint03_cognitive_complexity": 19,
+      "checkpoint03_flows": [
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+              "textRange": {
+                "startLine": 670,
+                "endLine": 670,
+                "startOffset": 1,
+                "endOffset": 4
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+              "textRange": {
+                "startLine": 673,
+                "endLine": 673,
+                "startOffset": 3,
+                "endOffset": 5
+              },
+              "msg": "+3 (incl 2 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+              "textRange": {
+                "startLine": 676,
+                "endLine": 676,
+                "startOffset": 3,
+                "endOffset": 5
+              },
+              "msg": "+3 (incl 2 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+              "textRange": {
+                "startLine": 687,
+                "endLine": 687,
+                "startOffset": 3,
+                "endOffset": 5
+              },
+              "msg": "+3 (incl 2 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+              "textRange": {
+                "startLine": 692,
+                "endLine": 692,
+                "startOffset": 3,
+                "endOffset": 5
+              },
+              "msg": "+3 (incl 2 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+              "textRange": {
+                "startLine": 692,
+                "endLine": 692,
+                "startOffset": 34,
+                "endOffset": 36
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+              "textRange": {
+                "startLine": 694,
+                "endLine": 694,
+                "startOffset": 4,
+                "endOffset": 6
+              },
+              "msg": "+4 (incl 3 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+              "textRange": {
+                "startLine": 694,
+                "endLine": 694,
+                "startOffset": 30,
+                "endOffset": 32
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        }
+      ],
+      "function": "TestBatch9ImportStageOrderAndFailureResult",
+      "named_helper": "prepareBatch9ImportFailureDataset",
+      "current_structure_estimate": 13,
+      "helper_structure_estimate": 2,
+      "state": "validated_source_fix_pending_platform_rescan",
+      "current_sha256": "5ba735ccad0358c046add3e2b402634c55d6c3be30b492d675e8e7576c9c519c",
+      "evidence": [
+        "root-go-final-02-equivalence.json",
+        "root-go-final-02-structure.json",
+        "root-go-final-02-current-execution.json"
+      ]
+    }
+  ],
+  "files": {
+    "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go": {
+      "all_string_rune_raw_literals_retained": true,
+      "literal_removed": [],
+      "literal_added": [],
+      "guard_counts_before": 51,
+      "guard_counts_after": 51,
+      "subtest_calls_before": 8,
+      "subtest_calls_after": 8,
+      "comment_standard_read": "docs/engineering/commenting-standard.md",
+      "original_baseline_read": "D:/tools/sonar-remediation-20261011/baseline/services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+      "checkpoint03_owner_changes_preserved": true,
+      "review_status": "annotated",
+      "review_scope": "完整审读当前与原始文件，包括配置恢复、模板几何、HTTP表单、SQL驱动、注册事务、故障导入及裁剪修复；本次只提取上传协议校验和故障输入准备。"
+    }
+  },
+  "validation": {
+    "same_test_counts": true,
+    "same_test_identities_and_results": true,
+    "same_complete_business_proofs": true,
+    "proof_count": 46,
+    "test_counts": {
+      "pass": 58
+    },
+    "baseline_overlay_only": true,
+    "original_diagnostics_and_business_inputs_retained": true,
+    "source_sha256": "5ba735ccad0358c046add3e2b402634c55d6c3be30b492d675e8e7576c9c519c",
+    "evidence": [
+      "root-go-final-02-baseline-result.json",
+      "root-go-final-02-current-result.json",
+      "root-go-final-02-static-review.json"
+    ],
+    "sonar_confirmation": "pending root checkpoint04"
+  },
+  "source_frozen": true,
+  "no_rule_or_scan_scope_change": true
+}

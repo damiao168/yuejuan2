@@ -6,9 +6,8 @@ import (
 	"errors"
 )
 
-// ReconcileExpiredPaperImportTask completes a final abandoned attempt together
-// with its owning business run. Generic runtime claim cannot do this safely
-// because it locks task before job; this path always locks job/run first.
+// ReconcileExpiredPaperImportTask 将最后一次被放弃的尝试与所属业务运行一同结束。
+// 通用运行时领取先锁任务后锁作业，无法安全执行此操作；此路径始终先锁作业和运行。
 func (s *PostgresStore) ReconcileExpiredPaperImportTask(ctx context.Context) (bool, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -78,10 +77,9 @@ WHERE tenant_id=$1 AND task_id=$2::uuid AND attempt_no=$3 AND completed_at IS NU
 	return true, nil
 }
 
-// reconcileExpiredPaperImportDispatch covers the preparation phase before an
-// agent_worker_task exists. A crashed process cannot call the normal failure
-// path, so an expired dispatch lease must either schedule a bounded retry or
-// atomically fail the current business run after the final attempt.
+// reconcileExpiredPaperImportDispatch 处理 agent_worker_task 尚未创建的准备阶段。
+// 崩溃进程无法调用正常失败路径，因此分发租约过期后必须安排有限重试，
+// 或在最后一次尝试后原子地将当前业务运行标记为失败。
 func reconcileExpiredPaperImportDispatch(ctx context.Context, tx *sql.Tx) (bool, error) {
 	var tenantID, importID, runID string
 	var generation int64

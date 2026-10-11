@@ -1,15 +1,10 @@
 import { EduGradeApi } from "@edugrade/sdk";
-import type {
-  CreateMathCorrectionRequest,
-  MathCorrectionResponse,
-  MathRubricScoreResponse,
-  MathUnderstandingResponse
-} from "@edugrade/sdk";
+import type { CreateMathCorrectionRequest } from "@edugrade/sdk";
 import { apiClient } from "./client";
 
 const mathApi = new EduGradeApi(apiClient);
 
-export type { CreateMathCorrectionRequest, MathCorrectionResponse, MathRubricScoreResponse, MathUnderstandingResponse };
+export type { CreateMathCorrectionRequest, MathCorrectionResponse, MathRubricScoreResponse, MathUnderstandingResponse } from "@edugrade/sdk";
 
 export function getMathRubricScore(segmentId: string, signal?: AbortSignal) {
   return mathApi.getMathRubricScore({ path: { segmentId }, signal });

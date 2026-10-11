@@ -1,5 +1,73 @@
 // Generated from services/api-gateway/openapi/edugrade-api.openapi.json. DO NOT EDIT.
 
+export type TaskMaterialQuestion = ({ "id": string; "exam_id": string; "question_no": string; "question_type": string; "score": number; "stem"?: string; "knowledge_points"?: Array<string>; "options"?: Array<string>; "answer_key"?: ReviewFrozenAnswerKey; "solution"?: ReviewFrozenSolution; "rubric"?: FrozenReviewRubric; } & Record<string, unknown>);
+
+export type RegradeReviewContext = { "item": RegradeItem; "context": RegradeGraderContext; };
+
+export type RegradeReviewContextResponse = { "regrade_review_context": RegradeReviewContext; };
+
+export type AnswerGroupMemberContext = { "group_id": string; "member": AnswerGroupMember; "expected_revision": number; "question": TaskMaterialQuestion; "answer_text": string; "segment_image_url": string; "manual_review"?: { "task_id": string; "status": string; "assigned": boolean; }; };
+
+export type AnswerGroupMemberContextResponse = { "member_context": AnswerGroupMemberContext; };
+
+export type WorkflowActor = { "id": string; "username": string; "display_name": string; };
+
+export type WorkflowActorsResponse = { "actors": Array<WorkflowActor>; };
+
+export type ProcessingExceptionContext = { "exception": ProcessingException; "submission_id": string; "candidate_no": string; "page_no": number; "capture_batch_id"?: string; "capture_page_id"?: string; "image_url": string; };
+
+export type ProcessingExceptionContextResponse = { "exception_context": ProcessingExceptionContext; };
+
+export type CaptureObjectTarget = { "batch_id": string; "submission_id": string; "page_id": string; "candidate_no": string; };
+
+export type CaptureObjectTargetsResponse = { "targets": Array<CaptureObjectTarget>; };
+
+export type SchoolAssistantIntent = "exam_progress" | "publish_diagnosis";
+
+export type SchoolAssistantResultStatus = "completed" | "partial" | "needs_clarification" | "failed" | "cancelled";
+
+export type SchoolAssistantContextHint = { "exam_id"?: string; "class_ids"?: Array<string>; "origin_module"?: string; "origin_section"?: string; "revision"?: number; "release_channel"?: "student_portal"; };
+
+export type SchoolAssistantQueryRequest = { "request_id": string; "question": string; "preset_intent": SchoolAssistantIntent; "context_hint": SchoolAssistantContextHint; "previous_scope_hint"?: SchoolAssistantContextHint; };
+
+export type SchoolAssistantCapability = { "intent": SchoolAssistantIntent; "label": string; "available": boolean; "required_permission": string; "reason"?: string; };
+
+export type SchoolAssistantCapabilities = { "mode": "school_business"; "model_required": false; "intents": Array<SchoolAssistantCapability>; };
+
+export type SchoolConversationContext = { "exam_id"?: string; "origin_module"?: string; "origin_section"?: string; };
+
+export type SchoolConversationRequest = { "messages": Array<ManagedChatMessage>; "context"?: SchoolConversationContext; };
+
+export type SchoolConversationEvent = { "type": "model"; "request_id": string; "seq": number; "model": ManagedChatModelStatus; } | { "type": "tool_started"; "request_id": string; "seq": number; "call_id": string; "tool_name": string; "label": string; } | { "type": "tool_finished"; "request_id": string; "seq": number; "call_id": string; "tool_name": string; "label": string; "status": "completed" | "failed"; "message"?: string; } | { "type": "delta"; "request_id": string; "seq": number; "channel": "content" | "reasoning"; "delta": string; } | { "type": "sources"; "request_id": string; "seq": number; "sources": Array<SchoolAssistantSource>; "actions": Array<SchoolAssistantAction>; "scope"?: SchoolAssistantScope; } | { "type": "done"; "request_id": string; "seq": number; "completion": ManagedChatCompletion; } | { "type": "error"; "request_id": string; "seq": number; "code": string; "message": string; };
+
+export type SchoolAssistantScope = { "exam_id"?: string; "exam_name"?: string; "subject"?: string; "class_ids": Array<string>; "release_channel"?: "student_portal"; "data_basis": "workspace_live" | "exam_live"; "scope_label": string; };
+
+export type SchoolAssistantSource = { "id": string; "kind": "workspace" | "release_gate" | "current_release" | "exam_search"; "status": "available" | "partial" | "empty" | "unavailable" | "forbidden"; "label": string; "read_at": string; "revision"?: string; "release_id"?: string; "release_version"?: number; "consistency": "source_local"; "scope_label": string; "note"?: string; };
+
+export type SchoolAssistantFact = { "id": string; "source_id": string; "metric_key": string; "label": string; "available": boolean; "value": number | null; "unit": "count"; "definition_id": string; "reason"?: string; };
+
+export type SchoolAssistantIssue = { "code": string; "label": string; "message": string; "severity": "blocker" | "warning" | "info"; "count"?: number; "unit"?: string; "source_id": string; "action_id"?: string; };
+
+export type SchoolAssistantBlock = { "type": "summary" | "issues" | "notice" | "table"; "title"?: string; "text"?: string; "rows"?: Array<SchoolAssistantIssue>; };
+
+export type SchoolAssistantNavigationTarget = { "kind": "exam_section"; "exam_id": string; "section": string; };
+
+export type SchoolAssistantAction = { "id": string; "label": string; "target": SchoolAssistantNavigationTarget; };
+
+export type SchoolAssistantResult = { "request_id": string; "intent": SchoolAssistantIntent; "status": SchoolAssistantResultStatus; "scope": SchoolAssistantScope; "facts": Array<SchoolAssistantFact>; "blocks": Array<SchoolAssistantBlock>; "sources": Array<SchoolAssistantSource>; "actions": Array<SchoolAssistantAction>; "limitations": Array<string>; };
+
+export type SchoolAssistantEvent = { "type": "scope_resolved"; "request_id": string; "seq": number; "scope": SchoolAssistantScope; } | { "type": "source_started"; "request_id": string; "seq": number; "source_id": string; "label": string; } | { "type": "source_finished"; "request_id": string; "seq": number; "source": SchoolAssistantSource; "duration_ms"?: number; } | { "type": "result"; "request_id": string; "seq": number; "result": SchoolAssistantResult; } | { "type": "done"; "request_id": string; "seq": number; "status": SchoolAssistantResultStatus; "duration_ms"?: number; } | { "type": "error"; "request_id": string; "seq": number; "code": string; "message": string; "retryable"?: boolean; };
+
+export type PaperStructureChange = { "question_no": string; "question_id"?: string; "previous_type"?: string; "question_type"?: string; "reason"?: string; "action": "add" | "remove" | "update" | "keep" | "conflict"; "previous_score"?: number; "score"?: number; };
+
+export type PaperStructurePreview = { "import_id": string; "preview_hash": string; "generation": number; "current_count": number; "recognized_count": number; "expected_total": number; "recognized_total": number; "missing_scores": Array<string>; "blocked_reasons": Array<string>; "changes": Array<PaperStructureChange>; "paper_detected": boolean; "confirmed": boolean; };
+
+export type AdoptPaperStructureRequest = { "expected_generation": number; "preview_hash": string; "complete_paper_confirmed": boolean; };
+
+export type FillPaperImportContentRequest = { "expected_generation": number; };
+
+export type PaperImportContentResult = { "filled_questions": Array<string>; "missing_answers": Array<string>; "skipped": Array<{ "question_no": string; "reason": string; }>; };
+
 export type RecordSegmentAnswerInput = { "answer_text"?: string; "answer_payload"?: Record<string, unknown>; "source"?: "manual_entry" | "ocr_text" | "imported_answer"; "confidence"?: number; };
 
 export type SegmentAnswer = { "id": string; "tenant_id": string; "answer_segment_id": string; "answer_text": string; "answer_payload": Record<string, unknown>; "source": string; "confidence"?: number; "recorded_by": string; "created_at": string; };
@@ -26,9 +94,9 @@ export type PlatformSchoolListResponse = { "schools": Array<PlatformSchoolSummar
 
 export type PlatformSchoolResponse = { "school": PlatformSchoolSummary; };
 
-export type PlatformSchoolMember = { "id": string; "username": string; "display_name": string; "phone_masked"?: string; "employee_no"?: string; "status": string; "roles": Array<string>; "school_id"?: string; "created_at": string; "activated_at"?: string; "last_login_at"?: string; };
+export type PlatformSchoolMember = { "id": string; "username": string; "display_name": string; "phone_masked"?: string; "employee_no"?: string; "status": string; "roles": Array<string>; "school_id"?: string; "created_at": string; "activated_at"?: string; "last_login_at"?: string; "activation_expires_at"?: string; };
 
-export type PlatformSchoolMembersResponse = { "members": Array<PlatformSchoolMember>; "summary": { "total": number; "active": number; "disabled": number; "admins": number; "teachers": number; "graders": number; }; };
+export type PlatformSchoolMembersResponse = { "members": Array<PlatformSchoolMember>; "summary": { "total": number; "active": number; "disabled": number; "admins": number; "teachers": number; "graders": number; "invited"?: number; "unknown"?: number; }; };
 
 export type PlatformSchoolUsageResponse = { "summary": PlatformSchoolUsageSummary; "trend": Array<{ "date": string; "total_tokens": number; "input_tokens": number; "output_tokens": number; "requests": number; }>; "by_feature": Array<PlatformSchoolUsageBreakdown>; "by_model": Array<PlatformSchoolUsageBreakdown>; "start_date": string; "end_date": string; };
 
@@ -38,9 +106,9 @@ export type PlatformSchoolModelHealthResponse = { "default_model": PlatformSchoo
 
 export type PlatformSchoolActivityResponse = { "activities": Array<{ "id": string; "event_type": string; "severity": string; "title": string; "summary": string; "actor_name"?: string; "happened_at": string; }>; "security": { "active_admins": number; "mfa_enabled": number; "active_sessions": number; "last_login_at"?: string; }; };
 
-export type PanelModelRoleBindingInput = { "tenant_id": string; "education_stage": "junior" | "senior"; "subject_code": "chinese" | "mathematics" | "english" | "physics" | "chemistry" | "biology" | "history" | "geography" | "ethics_politics"; "archetype_code": string; "agent_role": "primary_a" | "primary_b" | "arbiter"; "managed_model_api_config_id": string; "prompt_version": string; "strength_rank": number; "status": "active" | "disabled"; };
+export type PanelModelRoleBindingInput = { "tenant_id": string; "education_stage": "junior" | "senior"; "subject_code": "chinese" | "mathematics" | "english" | "physics" | "chemistry" | "biology" | "history" | "geography" | "ethics_politics"; "archetype_code": string; "agent_role": "primary_a" | "primary_b" | "arbiter"; "managed_model_api_config_id": string; "prompt_version": string; "strength_rank": number; "status": "active" | "disabled"; "expected_revision": string; };
 
-export type PanelModelRoleBinding = { "id": string; "tenant_id": string; "education_stage": "junior" | "senior"; "subject_code": "chinese" | "mathematics" | "english" | "physics" | "chemistry" | "biology" | "history" | "geography" | "ethics_politics"; "archetype_code": string; "agent_role": "primary_a" | "primary_b" | "arbiter"; "managed_model_api_config_id": string; "prompt_version": string; "strength_rank": number; "status": "active" | "disabled"; "created_by": string; "created_at": string; "updated_at": string; };
+export type PanelModelRoleBinding = { "id": string; "tenant_id": string; "education_stage": "junior" | "senior"; "subject_code": "chinese" | "mathematics" | "english" | "physics" | "chemistry" | "biology" | "history" | "geography" | "ethics_politics"; "archetype_code": string; "agent_role": "primary_a" | "primary_b" | "arbiter"; "managed_model_api_config_id": string; "prompt_version": string; "strength_rank": number; "status": "active" | "disabled"; "created_by": string; "created_at": string; "updated_at": string; "revision": string; };
 
 export type PanelModelRoleBindingList = { "bindings": Array<PanelModelRoleBinding>; };
 
@@ -240,7 +308,7 @@ export type ExamWorkspaceSubjectSummary = { "code": string; "label": string; "to
 
 export type ExamWorkspaceSubjectExam = { "exam_id": string; "subject": string; "total_score": number; };
 
-export type ExamWorkspaceProjection = { "exam_id": string; "exam_name": string; "exam_session_name"?: string; "subject_exams"?: Array<ExamWorkspaceSubjectExam>; "exam_status": string; "revision": number; "stage": string; "stages": Array<ExamWorkspaceStage>; "stage_progress": Array<ExamWorkspaceStageProgress>; "blockers": Array<ExamWorkspaceNotice>; "warnings": Array<ExamWorkspaceNotice>; "counts": ExamWorkspaceCounts; "next_actions": Array<ExamWorkspaceNextAction>; "risk_tier": "R1" | "R2" | "R3" | "unknown"; "subject_summary": ExamWorkspaceSubjectSummary; "updated_at": string; };
+export type ExamWorkspaceProjection = { "exam_id": string; "exam_name": string; "exam_session_name"?: string; "subject_exams"?: Array<ExamWorkspaceSubjectExam>; "exam_status": string; "revision": number; "stage": string; "stages": Array<ExamWorkspaceStage>; "stage_progress": Array<ExamWorkspaceStageProgress>; "blockers": Array<ExamWorkspaceNotice>; "warnings": Array<ExamWorkspaceNotice>; "counts": ExamWorkspaceCounts; "next_actions": Array<ExamWorkspaceNextAction>; "risk_tier": "R1" | "R2" | "R3" | "unknown"; "subject_summary": ExamWorkspaceSubjectSummary; "updated_at": string; "read_only"?: boolean; "exam_session_id"?: string; };
 
 export type ExamWorkspaceResponse = { "workspace": ExamWorkspaceProjection; };
 
@@ -252,7 +320,7 @@ export type ExamPage = (unknown) & (CursorPageMeta) & ({ "exams": Array<({ "id":
 
 export type SubmissionPage = (unknown) & (CursorPageMeta) & ({ "submissions": Array<({ "id": string; "exam_id": string; "status": string; } & Record<string, unknown>)>; });
 
-export type ReviewTask = { "id": string; "tenant_id": string; "exam_id": string; "question_id": string; "question_no": string; "answer_segment_id": string; "submission_id": string; "anonymous_code": string; "source": string; "status": string; "priority": number; "assigned_to"?: string; "return_reason"?: string; "grade_round": string; "due_at"?: string; "revision": number; "created_by": string; "created_at": string; "updated_at": string; };
+export type ReviewTask = { "id": string; "tenant_id": string; "exam_id": string; "question_id": string; "question_no": string; "answer_segment_id": string; "submission_id": string; "anonymous_code": string; "source": string; "status": string; "priority": number; "assigned_to"?: string; "return_reason"?: string; "grade_round": string; "due_at"?: string; "revision": number; "created_by": string; "created_at": string; "updated_at": string; "exam_name"?: string; "subject"?: string; };
 
 export type ReviewTaskAggregate = { "total_count": number; "completed_count": number; "remaining_count": number; "status_counts": (Record<string, never> & Record<string, number>); "reviewers": Array<ReviewerTaskAggregate>; };
 
@@ -260,7 +328,7 @@ export type ReviewerTaskAggregate = { "reviewer_id": string; "total_count": numb
 
 export type ReviewTaskPage = (unknown) & (CursorPageMeta) & ({ "tasks": Array<ReviewTask>; "aggregate"?: ReviewTaskAggregate; });
 
-export type ReviewQuestion = ({ "id": string; "exam_id": string; "question_no": string; "question_type": string; "score": number; "stem"?: string; "knowledge_points"?: Array<string>; } & Record<string, unknown>);
+export type ReviewQuestion = ({ "id": string; "exam_id": string; "question_no": string; "question_type": string; "score": number; "stem"?: string; "knowledge_points"?: Array<string>; "options"?: Array<string>; "answer_key"?: ReviewFrozenAnswerKey; "solution"?: ReviewFrozenSolution; } & Record<string, unknown>);
 
 export type FrozenReviewRubric = ({ "id": string; "question_id": string; "version": string; "status": string; "max_score": number; "points": Array<Record<string, unknown>>; "deductions"?: Array<Record<string, unknown>>; "examples"?: Array<Record<string, unknown>>; } & Record<string, unknown>);
 
@@ -382,7 +450,7 @@ export type PutCalibrationPolicyRequest = { "archetype_code": string; "max_score
 
 export type CalibrationPolicyResponse = { "policy": CalibrationPolicy; };
 
-export type CalibrationGoldSample = { "gold_paper_id": string; "gold_version": number; "submission_id": string; "answer_image_url"?: string; "max_score": number; "rubric_snapshot": Record<string, unknown>; };
+export type CalibrationGoldSample = { "gold_paper_id": string; "gold_version": number; "submission_id": string; "answer_image_url"?: string; "max_score": number; "rubric_snapshot": Record<string, unknown>; "question"?: TaskMaterialQuestion; };
 
 export type CalibrationMetrics = { "sample_count": number; "criterion_sample_count": number; "mae": number; "exact_agreement": number; "within_one_agreement": number; "criterion_agreement"?: number; "severe_disagreement_rate": number; };
 
@@ -622,11 +690,21 @@ export type ScoreReleaseGateResponse = { "release_gate": ScoreReleaseGate; };
 
 export type ScoreReleaseDiffResponse = { "diff": ScoreReleaseDiff; };
 
-export type StudentPublishedResult = { "exam_id": string; "release_id": string; "release_version": number; "total_score": number; "max_score": number; "questions": Array<StudentPublishedQuestion>; "appeal_window": StudentScoreAppealWindow; };
+export type StudentSessionSummary = { "published_count": number; "expected_count": number; "subjects": Array<StudentSessionSubject>; };
 
-export type StudentPublishedQuestion = { "question_id": string; "question_no": string; "score": number; "max_score": number; "feedback"?: string; "rubric_summary"?: Array<string>; };
+export type StudentSessionSubject = { "exam_id": string; "subject": string; "name": string; "status": "published" | "unpublished"; "score"?: number; "max_score"?: number; "published_at"?: string; "statistics_available": boolean; "statistics_reason"?: string; "mean_score_rate"?: number; "sample_size"?: number; };
 
-export type StudentScoreAppealWindow = { "open": boolean; "closes_at"?: string | null; "allowed_reason_codes"?: Array<string>; };
+export type StudentPaperPage = { "page_no": number; "question_id": string; "submission_page_id"?: string; };
+
+export type StudentPaperScoreMark = { "question_id": string; "question_no": string; "score": number; "max_score": number; "page_no": number; "answer_geometry"?: { "x": number; "y": number; "width": number; "height": number; }; };
+
+export type StudentHighScorePaper = { "available": boolean; "total_score"?: number; "max_score"?: number; "pages"?: Array<StudentPaperPage>; "score_marks"?: Array<StudentPaperScoreMark>; };
+
+export type StudentPublishedResult = { "exam_id": string; "release_id": string; "release_version": number; "total_score": number; "max_score": number; "questions": Array<StudentPublishedQuestion>; "appeal_window": StudentScoreAppealWindow; "exam"?: { "name": string; "subject": string; "exam_type": string; "published_at": string; }; "overall_total_score"?: number; "overall_max_score"?: number; "score_rate"?: number; "reference"?: StudentScorePreviewReference; "rankings"?: { "class_rank": number; "class_size": number; "grade_rank": number; "grade_size": number; "class_unavailable_reason"?: string; "grade_unavailable_reason"?: string; }; "session_summary"?: StudentSessionSummary; "subject_balance"?: Array<{ "subject": string; "student_score_rate": number; "school_mean_score_rate": number; "sample_size": number; }>; "paper_pages"?: Array<StudentPaperPage>; "high_score_paper"?: StudentHighScorePaper; };
+
+export type StudentPublishedQuestion = { "question_id": string; "question_no": string; "score": number; "max_score": number; "feedback"?: string; "rubric_summary"?: Array<string>; "subject"?: string; "question_type"?: string; "stem"?: string; "score_rate"?: number; "knowledge_points"?: Array<string>; "cohort"?: StudentScorePreviewQuestionReference; "correct_answer"?: string; "actual_answer"?: string; "page_no"?: number; "submission_page_id"?: string; "answer_geometry"?: { "x": number; "y": number; "width": number; "height": number; }; "cohort_unavailable_reason"?: string; };
+
+export type StudentScoreAppealWindow = { "open": boolean; "closes_at"?: string | null; "allowed_reason_codes"?: Array<string>; "state"?: "disabled" | "upcoming" | "open" | "closed"; "opens_at"?: string; };
 
 export type StudentPublishedResultResponse = { "result": StudentPublishedResult; };
 
@@ -648,7 +726,7 @@ export type RegradeItem = { "id": string; "job_id": string; "submission_id": str
 
 export type RegradeWorkItem = { "id": string; "job_id": string; "status": string; "max_score": number; "revision": number; "created_at": string; };
 
-export type RegradeGraderQuestion = { "id": string; "question_no": string; "question_type": string; "score": number; "stem"?: string; "knowledge_points"?: Array<string>; };
+export type RegradeGraderQuestion = { "id": string; "question_no": string; "question_type": string; "score": number; "stem"?: string; "knowledge_points"?: Array<string>; "options"?: Array<string>; "answer_key"?: ReviewFrozenAnswerKey; "solution"?: ReviewFrozenSolution; };
 
 export type RegradeGraderAnswer = { "raw_answer"?: string; "ocr_text"?: string; "segment_status": string; "segment_image_url": string; };
 
@@ -720,9 +798,9 @@ export type StudentPublishedExam = { "exam_id": string; "name": string; "subject
 
 export type StudentPublishedExamListResponse = { "exams": Array<StudentPublishedExam>; };
 
-export type PublishedQuestionAppeal = { "id": string; "tenant_id": string; "exam_id": string; "student_id"?: string; "submission_id": string; "source_release_id": string; "source_release_version": number; "question_id": string; "question_no": string; "source_score": number; "source_max_score": number; "reason_code": string; "reason": string; "selected_region"?: Record<string, unknown>; "status": string; "assigned_to"?: string; "decision"?: string; "public_response"?: string; "regrade_job_id"?: string; "new_release_id"?: string; "created_by"?: string; "decided_by"?: string; "decided_at"?: string | null; "created_at": string; "updated_at": string; "revision": number; };
+export type PublishedQuestionAppeal = { "id": string; "tenant_id": string; "exam_id": string; "student_id"?: string; "submission_id": string; "source_release_id": string; "source_release_version": number; "question_id": string; "question_no": string; "source_score": number; "source_max_score": number; "reason_code": string; "reason": string; "selected_region"?: Record<string, unknown>; "status": string; "assigned_to"?: string; "decision"?: string; "public_response"?: string; "regrade_job_id"?: string; "new_release_id"?: string; "created_by"?: string; "decided_by"?: string; "decided_at"?: string | null; "created_at": string; "updated_at": string; "revision": number; "review_opinion"?: QuestionAppealReviewOpinion; "exam_name"?: string; "exam_subject"?: string; };
 
-export type StudentPublishedQuestionAppeal = { "id": string; "exam_id": string; "source_release_id": string; "source_release_version": number; "question_id": string; "question_no": string; "source_score": number; "source_max_score": number; "reason_code": string; "reason": string; "selected_region"?: Record<string, unknown>; "status": string; "decision"?: string; "public_response"?: string; "new_release_id"?: string; "created_at": string; "updated_at": string; };
+export type StudentPublishedQuestionAppeal = { "id": string; "exam_id": string; "source_release_id": string; "source_release_version": number; "question_id": string; "question_no": string; "source_score": number; "source_max_score": number; "reason_code": string; "reason": string; "selected_region"?: Record<string, unknown>; "status": string; "decision"?: string; "public_response"?: string; "new_release_id"?: string; "created_at": string; "updated_at": string; "new_release_version"?: number; "reviewed_score"?: number; "reviewed_max_score"?: number; };
 
 export type PublishedQuestionAppealEvent = { "id": string; "appeal_id": string; "type": string; "actor_id"?: string; "payload"?: Record<string, unknown>; "created_at": string; };
 
@@ -812,7 +890,7 @@ export type BackmarkGraderItemResponse = { "backmark_item": BackmarkGraderItem; 
 
 export type BackmarkGraderItemListResponse = { "backmark_items": Array<BackmarkGraderItem>; "next_cursor": string; "has_more": boolean; };
 
-export type BackmarkQuestion = { "id": string; "question_no": string; "question_type": string; "score": number; "stem"?: string; "knowledge_points"?: Array<string>; };
+export type BackmarkQuestion = { "id": string; "question_no": string; "question_type": string; "score": number; "stem"?: string; "knowledge_points"?: Array<string>; "options"?: Array<string>; "answer_key"?: ReviewFrozenAnswerKey; "solution"?: ReviewFrozenSolution; };
 
 export type BackmarkAnswer = { "raw_answer"?: string; "ocr_text"?: string; "segment_status": string; "segment_image_url": string; };
 
@@ -844,7 +922,7 @@ export type ProcessingSummary = { "exam_id": string; "total_pages": number; "rea
 
 export type ProcessingSummaryResponse = { "summary": ProcessingSummary; };
 
-export type ProcessingException = { "id": string; "exam_id": string; "page_id": string; "source_type": string; "source_id": string; "code": ProcessingIssueCode; "severity": ProcessingExceptionSeverity; "blocking": boolean; "status": ProcessingExceptionStatus; "assigned_to"?: string; "details": Record<string, unknown>; "created_at": string; "updated_at": string; "resolved_at"?: string | null; "resolution"?: string; "retry_source_type"?: string; "retry_source_id"?: string; };
+export type ProcessingException = { "id": string; "exam_id": string; "page_id": string; "source_type": string; "source_id": string; "code": ProcessingIssueCode; "severity": ProcessingExceptionSeverity; "blocking": boolean; "status": ProcessingExceptionStatus; "assigned_to"?: string; "details": Record<string, unknown>; "created_at": string; "updated_at": string; "resolved_at"?: string | null; "resolution"?: string; "retry_source_type"?: string; "retry_source_id"?: string; "assigned_to_name"?: string; "assigned_to_username"?: string; "candidate_no"?: string; "page_no"?: number; };
 
 export type ProcessingExceptionListResponse = { "exceptions": Array<ProcessingException>; "next_cursor"?: string; "has_more": boolean; "projected_at"?: string; };
 
@@ -862,7 +940,7 @@ export type ExamSessionBlueprintSectionRequest = { "title": string; "question_ty
 
 export type ExamSessionSubjectRequest = { "subject": string; "total_score": number; "duration_minutes": number; "candidate_rule"?: string; "class_ids"?: Array<string>; "sections": Array<ExamSessionBlueprintSectionRequest>; };
 
-export type CreateExamSessionRequest = { "school_id": string; "grade_id": string; "template_id"?: string; "name": string; "exam_type": string; "grading_mode": string; "appeal_enabled"?: boolean; "publish_policy": string; "class_ids"?: Array<string>; "subjects": Array<ExamSessionSubjectRequest>; "command_id": string; };
+export type CreateExamSessionRequest = { "school_id": string; "grade_id": string; "template_id"?: string; "name": string; "exam_type": string; "grading_mode": string; "appeal_enabled"?: boolean; "publish_policy": string; "class_ids"?: Array<string>; "subjects": Array<ExamSessionSubjectRequest>; "command_id": string; "creation_mode"?: "materials" | "quick" | "template"; };
 
 export type ExamSessionChild = { "id": string; "tenant_id": string; "school_id": string; "exam_session_id"?: string; "exam_session_name"?: string; "exam_session_grade_id"?: string; "name": string; "subject": string; "exam_type": string; "total_score": number; "status": string; "grading_mode": string; "appeal_enabled": boolean; "publish_policy": string; "created_by": string; "class_ids": Array<string>; "revision": number; "created_at": string; "updated_at": string; };
 
@@ -924,11 +1002,11 @@ export type MathRubricDraftResponse = { "suggested_rubric_candidates": Array<Mat
 
 export type PaperImportDraftQuestion = { "candidate_id"?: string; "answer_candidate_id"?: string; "solution_candidate_id"?: string; "rubric_candidate_id"?: string; "source_refs": Array<PaperImportSourceRef>; "question_no": string; "question_type": string; "assessment_archetype"?: "selected_response" | "exact_text" | "numeric_expression" | "structured_steps" | "short_constructed" | "extended_response" | "diagram_graph" | "table_experiment"; "score": number; "stem": string; "knowledge_points": Array<string>; "answer_key"?: PaperImportAnswerKeyInput; "solution"?: PaperImportSolutionInput; "rubric"?: PaperImportRubricInput; "confidence": number; "issues": Array<string>; "matched_question_id"?: string; "match_status"?: "create" | "matched" | "matched_by_order" | "mismatch" | "extra" | "ambiguous"; "completeness_status"?: "complete" | "needs_review"; "human_confirmed_fields"?: Array<string>; "parent_question_no"?: string; "subquestion_no"?: string; "options"?: Array<string>; "score_source"?: "material" | "missing" | "blueprint" | "human"; "score_resolution"?: "use_blueprint" | "use_material"; "question_type_resolution"?: "use_blueprint" | "use_material"; };
 
-export type ReviewPaperImportRequest = { "expected_generation": number; "questions": Array<PaperImportDraftQuestion>; };
+export type ReviewPaperImportRequest = { "expected_generation": number; "questions": Array<PaperImportDraftQuestion>; "expected_updated_at": string; };
 
 export type PaperImportRuntimeProgress = { "task_type": string; "task_status": string; "stage"?: string; "phase"?: string; "completed"?: number; "total"?: number; "unit"?: string; "page_no"?: number; "page_total"?: number; "batch_no"?: number; "batch_total"?: number; "batch_size"?: number; "event_seq"?: number; "cold_start"?: boolean; "model"?: string; "runtime_mode"?: "resident" | "per_job"; "runtime_plan_source"?: "explicit" | "measured_profile" | "compatibility_default"; "runtime_batch_size"?: number; "parse_route"?: "pending" | "unrelated_guard" | "anchored" | "full_model" | "compact_model"; "message"?: string; "progress_changed_at"?: string; "started_at"?: string; "updated_at": string; };
 
-export type PaperImportJob = { "id": string; "tenant_id": string; "exam_id": string; "exam_paper_id": string; "paper_file_asset_id": string; "answer_file_asset_id": string; "status": "processing" | "review_required" | "failed" | "cancelled" | "applied"; "generation": number; "run_id": string; "source_revision": string; "result_generation"?: number; "subject": string; "authoritative_subject_code"?: string; "recognition_policy_version"?: string; "recognition_policy_hash"?: string; "formula_status"?: "pending" | "running" | "succeeded" | "review_required" | "failed"; "formula_region_count"?: number; "formula_review_count"?: number; "runtime_progress"?: PaperImportRuntimeProgress; "model_usage"?: { "input_tokens"?: number; "cached_input_tokens"?: number; "output_tokens"?: number; "reasoning_tokens"?: number; "total_tokens"?: number; }; "sources": Array<PaperImportSource>; "question_candidates": Array<PaperImportQuestionCandidate>; "answer_candidates": Array<PaperImportAnswerCandidate>; "solution_candidates": Array<PaperImportSolutionCandidate>; "rubric_candidates": Array<PaperImportRubricCandidate>; "structured_issues": Array<PaperImportIssue>; "questions": Array<PaperImportDraftQuestion>; "issues": Array<string>; "error_code"?: string; "created_by": string; "created_at": string; "updated_at": string; "applied_at"?: string; };
+export type PaperImportJob = { "id": string; "tenant_id": string; "exam_id": string; "exam_paper_id": string; "paper_file_asset_id": string; "answer_file_asset_id": string; "status": "processing" | "review_required" | "failed" | "cancelled" | "applied"; "generation": number; "run_id": string; "source_revision": string; "result_generation"?: number; "subject": string; "authoritative_subject_code"?: string; "recognition_policy_version"?: string; "recognition_policy_hash"?: string; "formula_status"?: "pending" | "running" | "succeeded" | "review_required" | "failed"; "formula_region_count"?: number; "formula_review_count"?: number; "runtime_progress"?: PaperImportRuntimeProgress; "model_usage"?: { "input_tokens"?: number; "cached_input_tokens"?: number; "output_tokens"?: number; "reasoning_tokens"?: number; "total_tokens"?: number; }; "sources": Array<PaperImportSource>; "question_candidates": Array<PaperImportQuestionCandidate>; "answer_candidates": Array<PaperImportAnswerCandidate>; "solution_candidates": Array<PaperImportSolutionCandidate>; "rubric_candidates": Array<PaperImportRubricCandidate>; "structured_issues": Array<PaperImportIssue>; "questions": Array<PaperImportDraftQuestion>; "issues": Array<string>; "error_code"?: string; "created_by": string; "created_at": string; "updated_at": string; "applied_at"?: string; "structure_confirmed_generation"?: number; };
 
 export type PaperImportResponse = { "import": PaperImportJob; };
 
@@ -1018,7 +1096,7 @@ export type ReviewCommandFinalGrade = { "id": string; "tenant_id": string; "exam
 
 export type ReviewCommandArbitrationTask = { "id": string; "tenant_id": string; "double_mark_session_id": string; "exam_id": string; "question_id": string; "question_no": string; "answer_segment_id": string; "submission_id": string; "anonymous_code": string; "first_reviewer_id": string; "second_reviewer_id": string; "first_score": number; "second_score": number; "score_difference": number; "difference_reason": string; "status": string; "assigned_to"?: string; "final_score"?: number; "reason"?: string; "student_feedback"?: string; "allow_same_arbitrator": boolean; "context": ReviewCommandReviewContext; "revision": number; "created_by": string; "created_at": string; "updated_at": string; };
 
-export type ReviewCommandReviewContext = { "raw_answer"?: string; "ocr_text"?: string; "ai_suggestion"?: Record<string, unknown>; };
+export type ReviewCommandReviewContext = { "question"?: ReviewQuestion; "rubric"?: FrozenReviewRubric; "raw_answer"?: string; "ocr_text"?: string; "ai_suggestion"?: Record<string, unknown>; };
 
 export type ReviewCommandSubmitGradeInput = { "score": number; "rubric_selections": Array<ReviewCommandRubricSelection> | null; "comments": string; "private_note": string; "student_feedback": string; "reason": string; "expected_revision": number; };
 
@@ -1132,13 +1210,17 @@ export type QuestionBankMetadataValidationResult = { "valid": boolean; "field_er
 
 export type QuestionBankACLBinding = { "user_id": string; "preset": "Viewer" | "Author" | "Reviewer" | "Publisher" | "Manager" | "Custom"; "actions": Array<"read" | "create" | "edit" | "review" | "publish" | "retire" | "statistics" | "manage">; };
 
-export type QuestionBankACLGroup = { "id": string; "name": string; "preset": "Viewer" | "Author" | "Reviewer" | "Publisher" | "Manager"; "actions": Array<"read" | "create" | "edit" | "review" | "publish" | "retire" | "statistics" | "manage">; "member_user_ids": Array<string>; };
+export type QuestionBankACLGroup = { "id": string; "name": string; "preset": "Viewer" | "Author" | "Reviewer" | "Publisher" | "Manager" | "Custom"; "actions": Array<"read" | "create" | "edit" | "review" | "publish" | "retire" | "statistics" | "manage">; "member_user_ids": Array<string>; };
 
 export type UpdateQuestionBankACLBinding = { "user_id": string; "preset": "Viewer" | "Author" | "Reviewer" | "Publisher" | "Manager"; };
 
 export type UpdateQuestionBankACLGroup = { "id"?: string; "name": string; "preset": "Viewer" | "Author" | "Reviewer" | "Publisher" | "Manager"; "member_user_ids": Array<string>; };
 
 export type QuestionBankACL = { "bank_id": string; "revision": number; "bindings": Array<QuestionBankACLBinding>; "groups": Array<QuestionBankACLGroup>; };
+
+export type QuestionBankMember = { "user_id": string; "display_name": string; "actions": Array<string>; "username"?: string; };
+
+export type QuestionBankMembersResponse = { "members": Array<QuestionBankMember>; };
 
 export type QuestionBankACLResponse = { "acl": QuestionBankACL; };
 
@@ -1184,8 +1266,116 @@ export type QuestionBankBatchImportResultItem = { "question_id": string; "comman
 
 export type QuestionBankBatchImportResult = { "items": Array<QuestionBankBatchImportResultItem>; };
 
+export type ManagementProgress = { "status": "draft" | "configured" | "ready" | "collecting" | "grading" | "reviewing" | "finalized" | "published" | "partially_published" | "ongoing" | "unavailable" | "archived"; "label": string; "total_count": number; "ready_count": number; "published_count": number; "counts": (Record<string, never> & Record<string, number>); "facts_available": boolean; };
+
+export type ManagementArchiveBlocker = { "code": string; "message": string; "exam_id"?: string; "subject"?: string; };
+
+export type ManagementExam = { "id": string; "school_id": string; "grade_id": string; "name": string; "exam_type": string; "created_by": string; "kind": "session" | "standalone"; "revision": number; "created_at": string; "updated_at": string; "class_ids": Array<string>; "default_class_ids": Array<string>; "inherited_subject_ids": Array<string>; "archived_subject_ids": Array<string>; "exams": Array<ExamSessionChild>; "progress": ManagementProgress; "scope_complete": boolean; "can_manage": boolean; "can_edit": boolean; "can_archive": boolean; "can_restore": boolean; "legacy_archived": boolean; "archived_at"?: string; "archived_by"?: string; "archive_reason"?: string; "archive_blockers"?: Array<ManagementArchiveBlocker>; };
+
+export type ManagementExamResponse = { "exam": ManagementExam; };
+
+export type ManagementExamPage = { "exams": Array<ManagementExam>; "next_cursor": string; "has_more": boolean; };
+
+export type ManagementUpdateRequest = { "name"?: string; "exam_type"?: string; "class_ids"?: Array<string>; "expected_revision": number; "expected_subject_revisions"?: (Record<string, never> & Record<string, number>); };
+
+export type ManagementArchiveRequest = { "expected_revision": number; "expected_subject_revisions"?: (Record<string, never> & Record<string, number>); "command_id": string; "reason"?: string; };
+
+export type ManagementArchiveCheck = { "allowed": boolean; "blockers": Array<ManagementArchiveBlocker>; };
+
+export type ManagementArchiveCheckResponse = { "check": ManagementArchiveCheck; };
+
+export type ManagementArchiveCommandResult = { "command_id": string; "status": "succeeded" | "not_accepted"; "exam"?: ManagementExam; };
+
+export type ManagementArchiveCommandResponse = { "command": ManagementArchiveCommandResult; };
+
+export type ManagedOrganizationUser = { "id": string; "username": string; "display_name": string; "status": string; "roles": Array<string>; "class_ids": Array<string>; "school_id"?: string; "phone_masked"?: string; "employee_no"?: string; "created_at"?: string; "activated_at"?: string; "last_login_at"?: string; };
+
+export type ManagedOrganizationUserResponse = { "user": ManagedOrganizationUser; };
+
+export type ManagedOrganizationUserPage = { "users": Array<ManagedOrganizationUser>; "next_cursor": string; "has_more": boolean; };
+
+export type CreateManagedOrganizationUserRequest = { "username"?: string; "phone"?: string; "employee_no"?: string; "display_name": string; "password"?: string; "role_code"?: string; "role_codes"?: Array<string>; "school_id"?: string; "class_ids"?: Array<string>; };
+
+export type CreateManagedOrganizationUserResponse = { "user": ManagedOrganizationUser; "activation"?: CreatedManagedUserActivation; };
+
+export type UpdateManagedUserAccessRequest = { "role_codes": Array<string>; "class_ids": Array<string>; "expected_roles": Array<string>; "expected_class_ids": Array<string>; "reason": string; };
+
+export type ReviewFrozenAnswerKey = { "id": string; "question_id": string; "answer_version": string; "standard_answer": unknown; "equivalent_answers": Array<unknown>; "tolerance": unknown; "paper_import_id"?: string; "paper_import_candidate_id"?: string; "paper_import_source_refs"?: Array<PaperImportSourceRef>; };
+
+export type ReviewFrozenSolution = { "id": string; "question_id": string; "solution_version": string; "raw_text": string; "steps": Array<{ "step_no": number; "content": string; }>; "source_refs": Array<PaperImportSourceRef>; "verification_status": string; "paper_import_id"?: string; };
+
+export type StudentScorePreviewReference = { "scope": string; "sample_size": number; "statistics_available": boolean; "unavailable_reason"?: string; "mean_score"?: number; "median_score"?: number; "q1"?: number; "q3"?: number; "min_score"?: number; "max_score"?: number; "percentile"?: number; "rank"?: number; };
+
+export type StudentScorePreviewQuestionReference = { "sample_size": number; "mean_score_rate": number; "full_score_rate": number; "zero_score_rate": number; "class_mean_score"?: number; "school_mean_score"?: number; "median_score"?: number; "class_unavailable_reason"?: string; };
+
+export type StudentScorePreviewResult = { "exam_id": string; "release_id": string; "release_version": number; "total_score": number; "max_score": number; "overall_total_score": number; "overall_max_score": number; "score_rate": number; "reference"?: StudentScorePreviewReference; "questions"?: Array<StudentPublishedQuestion>; "appeal_window": StudentScoreAppealWindow; };
+
+export type StudentScorePreviewResponse = { "result": StudentScorePreviewResult; };
+
+export type CreatedManagedUserActivation = { "token": string; "path": string; "expires_at": string; };
+
+export type ConfirmExamReadinessRequest = { "expected_configuration_hash"?: string; };
+
+export type ExamConfigurationReadinessCheck = { "code": string; "label": string; "passed": boolean; "severity": "blocker" | "warning"; "message": string; "section": string; };
+
+export type ExamConfigurationReadinessAdvisoryQuestion = { "question_id": string; "question_no": string; "question_type": string; "score": number; };
+
+export type ExamConfigurationReadinessAdvisory = { "code": string; "label": string; "severity": "warning" | "info"; "message": string; "section": string; "score": number; "questions": Array<ExamConfigurationReadinessAdvisoryQuestion>; };
+
+export type ExamConfigurationReadiness = { "ready": boolean; "confirmed": boolean; "configuration_hash": string; "snapshot_id"?: string; "import_snapshot_available": boolean; "checks": Array<ExamConfigurationReadinessCheck> | null; "advisories": Array<ExamConfigurationReadinessAdvisory> | null; "confirmed_at"?: string; "confirmed_by"?: string; };
+
+export type ExamReadinessConfirmationResponse = { "readiness": ExamConfigurationReadiness; };
+
+export type ExamReadinessConfirmationConflict = { "error": { "code": string; "message": string; }; "readiness"?: ExamConfigurationReadiness; };
+
+export type QuestionAppealReviewOpinion = { "opinion": "support_adjustment" | "do_not_support" | "needs_evidence"; "suggested_score"?: number; "explanation": string; "submitted_at": string; };
+
+export type QuestionAppealReviewOpinionRequest = { "opinion": "support_adjustment" | "do_not_support" | "needs_evidence"; "suggested_score"?: number; "explanation": string; "expected_revision": number; };
+
+export type CaptureScanTemplateRegion = { "id": string; "label"?: string; "x": number; "y": number; "width": number; "height": number; };
+
+export type CaptureScanTemplatePage = { "page_no": number; "width": number; "height": number; "registration_marks": Array<CaptureScanTemplateRegion>; "identity_regions": Array<CaptureScanTemplateRegion>; "question_regions": Array<CaptureScanTemplateRegion>; };
+
+export type CaptureScanTemplate = { "id": string; "name": string; "version_no": number; "page_count": number; "content_hash": string; "binding_revision": number; "layout": { "pages": Array<CaptureScanTemplatePage>; }; };
+
+export type CaptureScanContextResponse = { "batch": CaptureBatch; "exam": { "id": string; "name": string; "subject": string; }; "template_status": "ready" | "missing" | "invalid"; "template_issue"?: string; "template"?: CaptureScanTemplate; };
+
 export interface components {
   schemas: {
+    "TaskMaterialQuestion": TaskMaterialQuestion;
+    "RegradeReviewContext": RegradeReviewContext;
+    "RegradeReviewContextResponse": RegradeReviewContextResponse;
+    "AnswerGroupMemberContext": AnswerGroupMemberContext;
+    "AnswerGroupMemberContextResponse": AnswerGroupMemberContextResponse;
+    "WorkflowActor": WorkflowActor;
+    "WorkflowActorsResponse": WorkflowActorsResponse;
+    "ProcessingExceptionContext": ProcessingExceptionContext;
+    "ProcessingExceptionContextResponse": ProcessingExceptionContextResponse;
+    "CaptureObjectTarget": CaptureObjectTarget;
+    "CaptureObjectTargetsResponse": CaptureObjectTargetsResponse;
+    "SchoolAssistantIntent": SchoolAssistantIntent;
+    "SchoolAssistantResultStatus": SchoolAssistantResultStatus;
+    "SchoolAssistantContextHint": SchoolAssistantContextHint;
+    "SchoolAssistantQueryRequest": SchoolAssistantQueryRequest;
+    "SchoolAssistantCapability": SchoolAssistantCapability;
+    "SchoolAssistantCapabilities": SchoolAssistantCapabilities;
+    "SchoolConversationContext": SchoolConversationContext;
+    "SchoolConversationRequest": SchoolConversationRequest;
+    "SchoolConversationEvent": SchoolConversationEvent;
+    "SchoolAssistantScope": SchoolAssistantScope;
+    "SchoolAssistantSource": SchoolAssistantSource;
+    "SchoolAssistantFact": SchoolAssistantFact;
+    "SchoolAssistantIssue": SchoolAssistantIssue;
+    "SchoolAssistantBlock": SchoolAssistantBlock;
+    "SchoolAssistantNavigationTarget": SchoolAssistantNavigationTarget;
+    "SchoolAssistantAction": SchoolAssistantAction;
+    "SchoolAssistantResult": SchoolAssistantResult;
+    "SchoolAssistantEvent": SchoolAssistantEvent;
+    "PaperStructureChange": PaperStructureChange;
+    "PaperStructurePreview": PaperStructurePreview;
+    "AdoptPaperStructureRequest": AdoptPaperStructureRequest;
+    "FillPaperImportContentRequest": FillPaperImportContentRequest;
+    "PaperImportContentResult": PaperImportContentResult;
     "RecordSegmentAnswerInput": RecordSegmentAnswerInput;
     "SegmentAnswer": SegmentAnswer;
     "ObjectiveGrade": ObjectiveGrade;
@@ -1497,6 +1687,11 @@ export interface components {
     "ScoreReleaseListResponse": ScoreReleaseListResponse;
     "ScoreReleaseGateResponse": ScoreReleaseGateResponse;
     "ScoreReleaseDiffResponse": ScoreReleaseDiffResponse;
+    "StudentSessionSummary": StudentSessionSummary;
+    "StudentSessionSubject": StudentSessionSubject;
+    "StudentPaperPage": StudentPaperPage;
+    "StudentPaperScoreMark": StudentPaperScoreMark;
+    "StudentHighScorePaper": StudentHighScorePaper;
     "StudentPublishedResult": StudentPublishedResult;
     "StudentPublishedQuestion": StudentPublishedQuestion;
     "StudentScoreAppealWindow": StudentScoreAppealWindow;
@@ -1756,6 +1951,8 @@ export interface components {
     "UpdateQuestionBankACLBinding": UpdateQuestionBankACLBinding;
     "UpdateQuestionBankACLGroup": UpdateQuestionBankACLGroup;
     "QuestionBankACL": QuestionBankACL;
+    "QuestionBankMember": QuestionBankMember;
+    "QuestionBankMembersResponse": QuestionBankMembersResponse;
     "QuestionBankACLResponse": QuestionBankACLResponse;
     "UpdateQuestionBankACLRequest": UpdateQuestionBankACLRequest;
     "RetireQuestionBankItemRequest": RetireQuestionBankItemRequest;
@@ -1778,5 +1975,42 @@ export interface components {
     "QuestionBankBatchImportRequest": QuestionBankBatchImportRequest;
     "QuestionBankBatchImportResultItem": QuestionBankBatchImportResultItem;
     "QuestionBankBatchImportResult": QuestionBankBatchImportResult;
+    "ManagementProgress": ManagementProgress;
+    "ManagementArchiveBlocker": ManagementArchiveBlocker;
+    "ManagementExam": ManagementExam;
+    "ManagementExamResponse": ManagementExamResponse;
+    "ManagementExamPage": ManagementExamPage;
+    "ManagementUpdateRequest": ManagementUpdateRequest;
+    "ManagementArchiveRequest": ManagementArchiveRequest;
+    "ManagementArchiveCheck": ManagementArchiveCheck;
+    "ManagementArchiveCheckResponse": ManagementArchiveCheckResponse;
+    "ManagementArchiveCommandResult": ManagementArchiveCommandResult;
+    "ManagementArchiveCommandResponse": ManagementArchiveCommandResponse;
+    "ManagedOrganizationUser": ManagedOrganizationUser;
+    "ManagedOrganizationUserResponse": ManagedOrganizationUserResponse;
+    "ManagedOrganizationUserPage": ManagedOrganizationUserPage;
+    "CreateManagedOrganizationUserRequest": CreateManagedOrganizationUserRequest;
+    "CreateManagedOrganizationUserResponse": CreateManagedOrganizationUserResponse;
+    "UpdateManagedUserAccessRequest": UpdateManagedUserAccessRequest;
+    "ReviewFrozenAnswerKey": ReviewFrozenAnswerKey;
+    "ReviewFrozenSolution": ReviewFrozenSolution;
+    "StudentScorePreviewReference": StudentScorePreviewReference;
+    "StudentScorePreviewQuestionReference": StudentScorePreviewQuestionReference;
+    "StudentScorePreviewResult": StudentScorePreviewResult;
+    "StudentScorePreviewResponse": StudentScorePreviewResponse;
+    "CreatedManagedUserActivation": CreatedManagedUserActivation;
+    "ConfirmExamReadinessRequest": ConfirmExamReadinessRequest;
+    "ExamConfigurationReadinessCheck": ExamConfigurationReadinessCheck;
+    "ExamConfigurationReadinessAdvisoryQuestion": ExamConfigurationReadinessAdvisoryQuestion;
+    "ExamConfigurationReadinessAdvisory": ExamConfigurationReadinessAdvisory;
+    "ExamConfigurationReadiness": ExamConfigurationReadiness;
+    "ExamReadinessConfirmationResponse": ExamReadinessConfirmationResponse;
+    "ExamReadinessConfirmationConflict": ExamReadinessConfirmationConflict;
+    "QuestionAppealReviewOpinion": QuestionAppealReviewOpinion;
+    "QuestionAppealReviewOpinionRequest": QuestionAppealReviewOpinionRequest;
+    "CaptureScanTemplateRegion": CaptureScanTemplateRegion;
+    "CaptureScanTemplatePage": CaptureScanTemplatePage;
+    "CaptureScanTemplate": CaptureScanTemplate;
+    "CaptureScanContextResponse": CaptureScanContextResponse;
   };
 }

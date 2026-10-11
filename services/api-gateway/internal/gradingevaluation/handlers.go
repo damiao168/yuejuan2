@@ -11,9 +11,7 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/httpx"
 )
 
-// RegisterRoutes is intentionally not called by server.go yet. A composition
-// root should connect it behind the model-evaluation management permission;
-// this package cannot make a production model eligible by itself.
+// RegisterRoutes 尚未由 server.go 调用。组装入口应将其接在模型评测管理权限之后；本包不能自行让生产模型获得资格。
 // 评估运行、观测和失效操作统一要求管理权限；结果读取也沿用同一受控服务边界。
 func RegisterRoutes(mux *http.ServeMux, handler *Handler, requireManage func(http.HandlerFunc) http.Handler) {
 	mux.Handle("POST /api/v1/grading-evaluations", requireManage(handler.CreateRun))

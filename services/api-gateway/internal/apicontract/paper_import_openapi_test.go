@@ -25,6 +25,7 @@ func TestPaperImportOpenAPIContract(t *testing.T) {
 		{"/api/v1/paper-imports/{id}/sources", "put", "replacePaperImportSources"},
 		{"/api/v1/paper-imports/{id}/review", "put", "savePaperImportReview"},
 		{"/api/v1/paper-imports/{id}/apply", "post", "applyPaperImport"},
+		{"/api/v1/paper-imports/{id}/fill-content", "post", "fillPaperImportContent"},
 		{"/api/v1/paper-imports/{id}/cancel", "post", "cancelPaperImport"},
 	}
 	for _, expected := range operations {
@@ -57,7 +58,9 @@ func TestPaperImportOpenAPIContract(t *testing.T) {
 	assertRequired(t, object(t, schemas, "PaperImportRubricCandidate"), []string{"candidate_id", "points", "source_refs", "confidence"})
 	assertPropertyRef(t, object(t, schemas, "PaperImportRubricCandidatePoint"), "evidence_requirements", "#/components/schemas/PaperImportRubricEvidenceRequirement")
 	assertProperty(t, object(t, schemas, "PaperImportDraftQuestion"), "rubric_candidate_id")
-	assertRequired(t, object(t, schemas, "ReviewPaperImportRequest"), []string{"expected_generation", "questions"})
+	assertRequired(t, object(t, schemas, "ReviewPaperImportRequest"), []string{"expected_generation", "expected_updated_at", "questions"})
+	assertRequired(t, object(t, schemas, "FillPaperImportContentRequest"), []string{"expected_generation"})
+	assertRequired(t, object(t, schemas, "PaperImportContentResult"), []string{"filled_questions", "missing_answers", "skipped"})
 	job := object(t, schemas, "PaperImportJob")
 	assertRequired(t, job, []string{"sources", "question_candidates", "answer_candidates", "solution_candidates", "rubric_candidates", "structured_issues", "questions"})
 	assertPropertyRef(t, job, "rubric_candidates", "#/components/schemas/PaperImportRubricCandidate")

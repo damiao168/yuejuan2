@@ -3,14 +3,8 @@ import type {
   CreateRegradeJobRequest,
   CreateRegradePreviewRequest,
   CreateRegradeScoreReleaseRequest,
-  RegradeItem,
   CreateScoreReleaseRequest,
-  RegradeJob,
-  RegradePreview,
-  RegradeSummary,
   ReviewRegradeItemRequest,
-  ScoreRelease,
-  ScoreReleaseGate
 } from "@edugrade/sdk";
 import { apiClient } from "./client";
 
@@ -27,11 +21,25 @@ export type {
   RegradeSummary,
   ReviewRegradeItemRequest,
   ScoreRelease,
-  ScoreReleaseGate
-};
+  ScoreReleaseGate,
+  ScoreReleaseDetail,
+  StudentScorePreviewResult
+} from "@edugrade/sdk";
 
 export function listScoreReleases(examId: string, signal?: AbortSignal) {
   return releaseApi.listScoreReleases({ path: { examId }, signal });
+}
+
+export function getScoreReleaseDetail(id: string, signal?: AbortSignal) {
+  return releaseApi.getScoreRelease({ path: { id }, signal });
+}
+
+export function getScoreReleaseStudentPreview(id: string, studentId: string, signal?: AbortSignal) {
+  return releaseApi.getScoreReleaseStudentPreview({ path: { id }, query: { student_id: studentId }, signal });
+}
+
+export function getCurrentPublishedScoreRelease(examId: string, signal?: AbortSignal) {
+  return releaseApi.getCurrentPublishedScoreRelease({ path: { examId }, signal });
 }
 
 export function getScoreReleaseGate(examId: string, signal?: AbortSignal) {

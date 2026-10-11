@@ -1,0 +1,15 @@
+{
+  "command": [
+    "D:/node.js/node.exe",
+    "--test",
+    "scripts/ci/generated-files-race.test.mjs",
+    "scripts/ci/openapi-sdk.batch20.test.mjs",
+    "scripts/ci/architecture-audit-tools.test.mjs"
+  ],
+  "exit_code": 0,
+  "source_sha256": {
+    "scripts/lib/openapi-sdk.mjs": "03efa215affe487b342451730d7aca1d8214f6359209019b142f84ccd0c71170",
+    "scripts/ci/check-generated-contracts.mjs": "35fef0a11c6d6b35c07b321eed2c7ef27d2471f244899aec03d8c0002ab4d5aa"
+  },
+  "sources_unchanged": true
+}

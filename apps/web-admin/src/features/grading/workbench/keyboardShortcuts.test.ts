@@ -64,4 +64,13 @@ describe("grading workbench keyboard shortcuts", () => {
     expect(gradingShortcutIntent(allowed({ key: "9", maxScore: 8 }))).toBeNull();
     expect(gradingShortcutIntent(allowed({ key: "4", rubricPointCount: 3, maxScore: 3 }))).toBeNull();
   });
+
+  it("respects a consumed event and a disabled single-character preference", () => {
+    expect(gradingShortcutIntent(allowed({ key: "Enter", ctrlKey: true, defaultPrevented: true }))).toBeNull();
+    for (const key of ["1", "A", "F", "R", "Z", "+", "-"]) {
+      expect(gradingShortcutIntent(allowed({ key, singleKeyShortcutsEnabled: false }))).toBeNull();
+    }
+    expect(gradingShortcutIntent(allowed({ key: "Enter", ctrlKey: true, singleKeyShortcutsEnabled: false }))).toEqual({ type: "submit" });
+    expect(gradingShortcutIntent(allowed({ key: "Enter", quickSubmit: true, singleKeyShortcutsEnabled: false }))).toEqual({ type: "submit" });
+  });
 });

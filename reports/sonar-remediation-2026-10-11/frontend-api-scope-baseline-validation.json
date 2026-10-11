@@ -1,0 +1,26 @@
+{
+  "mode": "baseline",
+  "source": "D:\\tools\\sonar-remediation-20261011\\root-new-findings-baseline\\docs\\architecture\\tools\\frontend-api-scan.mjs",
+  "source_sha256": "f08007d500592a59efb3f4cb3ecc7d94bd067316155e8a55c1b9b8113a54a9c3",
+  "frozen_input": "D:/tools/sonar-remediation-20261011/full-checkpoint-02/workspace",
+  "only_write_captured_in_memory": "D:\\tools\\sonar-remediation-20261011\\full-checkpoint-02\\workspace\\docs\\architecture\\evidence\\api-catalog.json",
+  "bytes": 1176650,
+  "output_sha256": "0a04017214ddbaf6d9cc3da6f02ea6b10cec84c87baf3949d6fa2d324ff97627",
+  "summary": {
+    "frontend_source_inventory": 854,
+    "non_test_ts_source_files": 485,
+    "production_frontend_routes": 24,
+    "mock_frontend_routes": 4,
+    "registered_backend_routes": 536,
+    "registered_with_openapi": 288,
+    "registered_exception_routes": 248,
+    "openapi_operations": 298,
+    "openapi_parameter_name_aliases": 10,
+    "generated_sdk_unique_used_operations": 139,
+    "frontend_call_sites": 405,
+    "frontend_matched_unique_registered_routes": 376,
+    "frontend_matched_openapi_routes": 217,
+    "frontend_matched_exception_routes": 159,
+    "unresolved_static_call_sites": 1
+  }
+}

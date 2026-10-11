@@ -15,7 +15,7 @@ func registerReleaseRoutes(mux *http.ServeMux, ctx routerContext) {
 	mux.Handle("GET /api/v1/exams/{examId}/roster", ctx.guards.requireRosterManage(ctx.guards.withScopedExam(ctx.modules.Release.ScoreHandler.ListRoster)))
 	mux.Handle("PUT /api/v1/exams/{examId}/roster/{studentId}/attendance", ctx.guards.requireRosterManage(ctx.guards.withScopedExam(ctx.modules.Release.ScoreHandler.SetAttendance)))
 	mux.Handle("POST /api/v1/exams/{examId}/confirm-grades", ctx.guards.requireScoreManage(ctx.guards.withScopedExam(ctx.modules.Release.ScoreHandler.ConfirmGrades)))
-	mux.Handle("POST /api/v1/exams/{examId}/publish", ctx.guards.requireRecentPermission("score:manage", ctx.guards.withScopedExam(ctx.modules.Release.ScoreHandler.PublishGrades)))
+	mux.Handle("POST /api/v1/exams/{examId}/publish", ctx.guards.requireRecentPermission(permissionScoreManage, ctx.guards.withScopedExam(ctx.modules.Release.ScoreHandler.PublishGrades)))
 	scoreReleaseExamManage := func(handler http.HandlerFunc) http.Handler {
 		return ctx.guards.requireScoreManage(ctx.guards.withScopedExam(handler))
 	}
@@ -23,10 +23,10 @@ func registerReleaseRoutes(mux *http.ServeMux, ctx routerContext) {
 		return ctx.guards.requireScoreManage(handler)
 	}
 	criticalScoreReleaseExam := func(handler http.HandlerFunc) http.Handler {
-		return ctx.guards.requireRecentPermission("score:manage", ctx.guards.withScopedExam(handler))
+		return ctx.guards.requireRecentPermission(permissionScoreManage, ctx.guards.withScopedExam(handler))
 	}
 	criticalScoreRelease := func(handler http.HandlerFunc) http.Handler {
-		return ctx.guards.requireRecentPermission("score:manage", handler)
+		return ctx.guards.requireRecentPermission(permissionScoreManage, handler)
 	}
 	scorerelease.RegisterRoutes(mux, ctx.modules.Release.ScoreReleaseHandler, scorerelease.RouteGuards{
 		ExamManage:      scoreReleaseExamManage,
@@ -54,6 +54,7 @@ func registerReleaseRoutes(mux *http.ServeMux, ctx routerContext) {
 	mux.Handle("GET /api/v1/question-appeals/{id}/context", ctx.guards.requireQuestionAppealRead(ctx.modules.Release.PublishedQuestionAppealHandler.Context))
 	mux.Handle("GET /api/v1/question-appeals/{id}/answer-image", ctx.guards.requireQuestionAppealRead(ctx.modules.Release.PublishedQuestionAppealHandler.AnswerImage))
 	mux.Handle("POST /api/v1/question-appeals/{id}/start-review", ctx.guards.requireAppealManage(ctx.modules.Release.PublishedQuestionAppealHandler.StartReview))
+	mux.Handle("POST /api/v1/question-appeals/{id}/review-opinion", ctx.guards.requireQuestionAppealRead(ctx.modules.Release.PublishedQuestionAppealHandler.SubmitReviewOpinion))
 	mux.Handle("POST /api/v1/question-appeals/{id}/decide", ctx.guards.requireQuestionAppealRead(ctx.modules.Release.PublishedQuestionAppealHandler.Decide))
 	mux.Handle("POST /api/v1/question-appeals/{id}/resolve", ctx.guards.requireQuestionAppealRead(ctx.modules.Release.PublishedQuestionAppealHandler.Resolve))
 	mux.Handle("GET /api/v1/question-appeals/{id}/events", ctx.guards.requireQuestionAppealRead(ctx.modules.Release.PublishedQuestionAppealHandler.Events))

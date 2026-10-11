@@ -1,0 +1,63 @@
+{
+  "synthetic": true,
+  "method": "Current actual regex and furniture function; local isolated synthetic blocks; no service calls.",
+  "results": [
+    {
+      "synthetic": true,
+      "internal_whitespace_chars": 512,
+      "regex_seconds": 3.0499999411404133e-05,
+      "furniture_seconds": 0.0005356000037863851,
+      "matched": false,
+      "excluded_as_furniture": false
+    },
+    {
+      "synthetic": true,
+      "internal_whitespace_chars": 1024,
+      "regex_seconds": 1.6000005416572094e-05,
+      "furniture_seconds": 0.00010659999679774046,
+      "matched": false,
+      "excluded_as_furniture": false
+    },
+    {
+      "synthetic": true,
+      "internal_whitespace_chars": 2048,
+      "regex_seconds": 2.6999987312592566e-05,
+      "furniture_seconds": 0.00016039999900385737,
+      "matched": false,
+      "excluded_as_furniture": false
+    },
+    {
+      "synthetic": true,
+      "internal_whitespace_chars": 4096,
+      "regex_seconds": 5.089999467600137e-05,
+      "furniture_seconds": 0.00016540000797249377,
+      "matched": false,
+      "excluded_as_furniture": false
+    },
+    {
+      "synthetic": true,
+      "internal_whitespace_chars": 8192,
+      "regex_seconds": 4.159999662078917e-05,
+      "furniture_seconds": 0.00024139999004546553,
+      "matched": false,
+      "excluded_as_furniture": false
+    },
+    {
+      "synthetic": true,
+      "internal_whitespace_chars": 100000,
+      "regex_seconds": 0.0004960000078426674,
+      "furniture_seconds": 0.002957300006528385,
+      "matched": false,
+      "excluded_as_furniture": false
+    },
+    {
+      "synthetic": true,
+      "internal_whitespace_chars": 700000,
+      "regex_seconds": 0.0034989999985555187,
+      "furniture_seconds": 0.021959999998216517,
+      "matched": false,
+      "excluded_as_furniture": false
+    }
+  ],
+  "limitations": "Single local timings are not deployment benchmarks or end-to-end load tests."
+}

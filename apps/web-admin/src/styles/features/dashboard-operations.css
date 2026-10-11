@@ -1,4 +1,4 @@
-/* School operations dashboard: three equal, full-width business sections. */
+/* 学校运营仪表盘：三个等宽且占满可用宽度的业务区块。 */
 .school-dashboard { gap: 16px; font-variant-numeric: tabular-nums; }
 .school-dashboard .dashboard-heading { min-height: 48px; padding: 0; }
 .school-dashboard .dashboard-heading h1 { margin: 0; font-size: 1.25rem; font-weight: 600; line-height: 28px; }

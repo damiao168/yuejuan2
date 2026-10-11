@@ -15,6 +15,24 @@ from edugrade_worker_runtime import (
 )
 
 
+class _RejectRedirects(request.HTTPRedirectHandler):
+    def http_error_302(self, req, fp, code, msg, headers):
+        # 初始目标校验不覆盖跳转；同源跳转也拒绝，避免令牌、租约或登录正文被再次转发。
+        # 尚未进入调用方的 with；先释放原连接，避免异常链长期保留响应套接字。
+        fp.close()
+        raise error.HTTPError(req.full_url, code, "redirects are not allowed", headers, None)
+
+    http_error_301 = http_error_302
+    http_error_303 = http_error_302
+    http_error_307 = http_error_302
+    http_error_308 = http_error_302
+
+
+def _open_request(req: request.Request, *, timeout: float) -> Any:
+    # 独立 opener 不修改进程全局设置；HTTPS 仍使用标准库的默认证书验证。
+    return request.build_opener(_RejectRedirects()).open(req, timeout=timeout)
+
+
 class APIError(RuntimeError):
     def __init__(self, message: str, *, status_code: int | None = None) -> None:
         super().__init__(message)
@@ -91,7 +109,7 @@ class EduGradeImageQualityClient:
     def download(self, url: str) -> bytes:
         req = self._build_request("GET", url, None)
         try:
-            with request.urlopen(req, timeout=60) as response:
+            with _open_request(req, timeout=60) as response:
                 return read_bounded(response, MAX_IMAGE_RESPONSE_BYTES)
         except error.HTTPError as exc:
             if exc.code == 401:
@@ -118,7 +136,7 @@ class EduGradeImageQualityClient:
         req.add_header("Content-Type", f"multipart/form-data; boundary={boundary}")
         req.add_header("Content-Length", str(len(body)))
         try:
-            with request.urlopen(req, timeout=120) as response:
+            with _open_request(req, timeout=120) as response:
                 raw = read_json_response(response)
         except error.HTTPError as exc:
             raise APIError(f"normalized upload failed: {exc.code}") from exc
@@ -142,7 +160,7 @@ class EduGradeImageQualityClient:
     def _request(self, method: str, path: str, payload: dict[str, Any] | None = None, require_auth: bool = True, timeout: float = 60) -> dict[str, Any]:
         req = self._build_request(method, path, payload if method != "GET" else None, require_auth=require_auth)
         try:
-            with request.urlopen(req, timeout=timeout) as response:
+            with _open_request(req, timeout=timeout) as response:
                 raw = read_json_response(response)
         except error.HTTPError as exc:
             if exc.code == 401:

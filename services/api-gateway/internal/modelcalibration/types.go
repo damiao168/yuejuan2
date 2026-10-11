@@ -1,7 +1,5 @@
-// Package modelcalibration turns a model's reported confidence into a
-// version-scoped empirical estimate. It is deliberately evidence-only: a
-// calibration artifact can make a candidate abstain, but can never publish a
-// score or grant a model final-score authority.
+// Package modelcalibration 将模型报告的置信度转换为受版本范围限制的实证估计。
+// 它只提供证据：校准产物可使候选项弃权，但不能发布分数或授予模型最终评分权。
 package modelcalibration
 
 import (
@@ -41,18 +39,14 @@ const (
 	StatusInvalidated Status = "invalidated"
 )
 
-// Axis is intentionally complete. In particular, prompt and rubric versions
-// are part of the identity: a later model, prompt, or rubric cannot inherit
-// calibration evidence from an earlier deployment.
+// Axis 刻意包含完整维度，尤其将提示词和评分细则版本纳入身份；后续模型、提示词或评分细则不能继承早期部署的校准证据。
 type Axis struct {
 	ModelReference string `json:"model_reference"`
 	PromptVersion  string `json:"prompt_version"`
 	RubricVersion  string `json:"rubric_version"`
 	Subject        string `json:"subject"`
 	Archetype      string `json:"archetype"`
-	// SliceKey is all, score_band:{zero|partial|full}, or
-	// ocr_quality:{high|medium|low|unknown}. It leaves a reproducible record
-	// of whether a more narrow safety slice was used.
+	// SliceKey 的值为 all、score_band:{zero|partial|full} 或 ocr_quality:{high|medium|low|unknown}，用于可复现地记录是否使用了更细的安全切片。
 	SliceKey string `json:"slice_key"`
 }
 
@@ -78,9 +72,8 @@ type Calibration struct {
 	InvalidationReason string     `json:"invalidation_reason,omitempty"`
 }
 
-// CalibrationEvidence is a legal, aligned A16 observation decorated with the
-// confidence emitted by the exact governed model/prompt being calibrated.
-// It contains no answer body, image, OCR text or Gold rationale.
+// CalibrationEvidence 是有效且对齐的 A16 观察，附带被校准的精确受治理模型、提示词输出的置信度；
+// 它不含答案正文、图片、OCR 文本或 Gold 理由。
 type CalibrationEvidence struct {
 	ID              string    `json:"id"`
 	CalibrationID   string    `json:"calibration_id"`
@@ -102,8 +95,7 @@ type Bin struct {
 	CorrectCount         int     `json:"correct_count"`
 }
 
-// RiskCoveragePoint is empirical and comes only from the aligned observations
-// stored for this artifact. Coverage is not a promise of automatic scoring.
+// RiskCoveragePoint 基于实证，仅来自为此产物保存的对齐观察；覆盖率不承诺自动评分。
 type RiskCoveragePoint struct {
 	Threshold       float64 `json:"threshold"`
 	Coverage        float64 `json:"coverage"`
@@ -128,6 +120,12 @@ type Artifact struct {
 	RiskCoverageCurve []RiskCoveragePoint `json:"risk_coverage_curve"`
 }
 
+// ArtifactReference 把同一不可变校准产物的存储位置与内容摘要绑定，不包含执行依赖或校准算法输入。
+type ArtifactReference struct {
+	URI    string
+	SHA256 string
+}
+
 type CreateInput struct {
 	Key             string `json:"key"`
 	EvaluationRunID string `json:"evaluation_run_id"`
@@ -140,9 +138,7 @@ type AddEvidenceInput struct {
 	RawConfidence float64 `json:"raw_confidence"`
 }
 
-// Candidate is an immutable confidence decision for an opaque scoring
-// candidate. SuggestedScore is intentionally absent: this table is not a
-// grade fact and cannot be used as one.
+// Candidate 是不透明评分候选项的不可变置信度决策。刻意不包含 SuggestedScore；此表不是成绩事实，也不能当作成绩使用。
 type Candidate struct {
 	ID                   string    `json:"id"`
 	TenantID             string    `json:"tenant_id,omitempty"`
@@ -160,29 +156,22 @@ type RecordCandidateInput struct {
 	CandidateKey  string  `json:"candidate_key"`
 	Axis          Axis    `json:"axis"`
 	RawConfidence float64 `json:"raw_confidence"`
-	// TargetRisk is a maximum observed severe-error rate. When it is provided,
-	// the candidate abstains unless its calibrated confidence reaches a
-	// threshold whose empirical severe risk meets this target.
+	// TargetRisk 是已观察严重错误率的上限。提供此值时，只有校准置信度达到实证严重风险满足目标的阈值，候选项才不弃权。
 	TargetRisk *float64 `json:"target_risk,omitempty"`
 }
 
-// ApprovedEvidence is intentionally a small projection for the A14 gate.
-// Callers get an artifact reference, not its training observations.
+// ApprovedEvidence 是供 A14 门禁使用的小型投影；调用方只取得产物引用，不取得训练观察。
 type ApprovedEvidence struct {
 	Available       bool   `json:"available"`
 	CalibrationID   string `json:"calibration_id,omitempty"`
 	CalibrationRef  string `json:"calibration_ref,omitempty"`
 	CalibrationN    int    `json:"calibration_n,omitempty"`
 	EvaluationRunID string `json:"evaluation_run_id,omitempty"`
-	// SevereErrorRate is the threshold-0 empirical rate from the immutable
-	// artifact. It is supplied so A14 can use the same evidence rather than
-	// manufacture a separate overall metric from unrelated slices.
+	// SevereErrorRate 是不可变产物在阈值 0 下的实证比率，供 A14 复用同一证据，避免从无关切片构造另一项总体指标。
 	SevereErrorRate float64 `json:"severe_error_rate,omitempty"`
 }
 
-// EvaluationReader is implemented by gradingevaluation.Service. Keeping the
-// interface here avoids duplicate access paths and ensures this package can
-// never manufacture alignment data on its own.
+// EvaluationReader 由 gradingevaluation.Service 实现。接口保留在此处，避免重复访问路径，使本包不能自行制造对齐数据。
 type EvaluationReader interface {
 	GetRun(context.Context, string, string) (EvaluationRun, error)
 	ListObservations(context.Context, string, string) ([]EvaluationObservation, error)
@@ -213,7 +202,7 @@ type Store interface {
 	List(context.Context, string, Axis, int) ([]Calibration, error)
 	AddEvidence(context.Context, string, string, CalibrationEvidence) (CalibrationEvidence, error)
 	ListEvidence(context.Context, string, string) ([]CalibrationEvidence, error)
-	Complete(context.Context, string, string, int, Artifact, string, string, time.Time) (Calibration, error)
+	Complete(context.Context, string, string, int, Artifact, ArtifactReference, time.Time) (Calibration, error)
 	Approve(context.Context, string, string, string, time.Time) (Calibration, error)
 	Invalidate(context.Context, string, string, string, string, time.Time) (Calibration, error)
 	FindApproved(context.Context, string, Axis) (Calibration, error)

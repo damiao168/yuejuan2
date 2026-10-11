@@ -12,6 +12,11 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/workerruntime"
 )
 
+const (
+	omrCalibrationStoreRequired = "OMR calibration requires the production grading store"
+	scoringRecoveryUnavailable  = "scoring recovery is unavailable"
+)
+
 type Handler struct {
 	store   Store
 	engine  *Engine
@@ -131,7 +136,7 @@ func (h *Handler) CreateOMRCalibration(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
 	store, ok := h.omrCalibrationStore()
 	if !ok {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "omr_calibration_unavailable", "OMR calibration requires the production grading store")
+		httpx.Error(w, r, http.StatusServiceUnavailable, "omr_calibration_unavailable", omrCalibrationStoreRequired)
 		return
 	}
 	var input CreateOMRCalibrationInput
@@ -151,7 +156,7 @@ func (h *Handler) ListOMRCalibrations(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
 	store, ok := h.omrCalibrationStore()
 	if !ok {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "omr_calibration_unavailable", "OMR calibration requires the production grading store")
+		httpx.Error(w, r, http.StatusServiceUnavailable, "omr_calibration_unavailable", omrCalibrationStoreRequired)
 		return
 	}
 	items, err := store.ListOMRCalibrations(r.Context(), user.TenantID, r.PathValue("id"))
@@ -166,7 +171,7 @@ func (h *Handler) GetOMRCalibration(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
 	store, ok := h.omrCalibrationStore()
 	if !ok {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "omr_calibration_unavailable", "OMR calibration requires the production grading store")
+		httpx.Error(w, r, http.StatusServiceUnavailable, "omr_calibration_unavailable", omrCalibrationStoreRequired)
 		return
 	}
 	detail, err := store.GetOMRCalibration(r.Context(), user.TenantID, r.PathValue("id"))
@@ -181,7 +186,7 @@ func (h *Handler) LabelOMRCalibrationCase(w http.ResponseWriter, r *http.Request
 	user := mustUser(r)
 	store, ok := h.omrCalibrationStore()
 	if !ok {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "omr_calibration_unavailable", "OMR calibration requires the production grading store")
+		httpx.Error(w, r, http.StatusServiceUnavailable, "omr_calibration_unavailable", omrCalibrationStoreRequired)
 		return
 	}
 	var input LabelOMRCalibrationCaseInput
@@ -201,7 +206,7 @@ func (h *Handler) ApproveOMRCalibration(w http.ResponseWriter, r *http.Request) 
 	user := mustUser(r)
 	store, ok := h.omrCalibrationStore()
 	if !ok {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "omr_calibration_unavailable", "OMR calibration requires the production grading store")
+		httpx.Error(w, r, http.StatusServiceUnavailable, "omr_calibration_unavailable", omrCalibrationStoreRequired)
 		return
 	}
 	var input ApproveOMRCalibrationInput
@@ -221,7 +226,7 @@ func (h *Handler) RevokeOMRCalibration(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
 	store, ok := h.omrCalibrationStore()
 	if !ok {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "omr_calibration_unavailable", "OMR calibration requires the production grading store")
+		httpx.Error(w, r, http.StatusServiceUnavailable, "omr_calibration_unavailable", omrCalibrationStoreRequired)
 		return
 	}
 	var input RevokeOMRCalibrationInput
@@ -241,7 +246,7 @@ func (h *Handler) DiscardOMRCalibration(w http.ResponseWriter, r *http.Request) 
 	user := mustUser(r)
 	store, ok := h.omrCalibrationStore()
 	if !ok {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "omr_calibration_unavailable", "OMR calibration requires the production grading store")
+		httpx.Error(w, r, http.StatusServiceUnavailable, "omr_calibration_unavailable", omrCalibrationStoreRequired)
 		return
 	}
 	var input DiscardOMRCalibrationInput
@@ -329,7 +334,7 @@ func (h *Handler) GetScoringRun(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
 	store, ok := h.scoringRecoveryStore()
 	if !ok {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "scoring_recovery_unavailable", "scoring recovery is unavailable")
+		httpx.Error(w, r, http.StatusServiceUnavailable, "scoring_recovery_unavailable", scoringRecoveryUnavailable)
 		return
 	}
 	detail, err := store.GetScoringRunDetail(r.Context(), user.TenantID, r.PathValue("runId"))
@@ -343,12 +348,12 @@ func (h *Handler) GetScoringRun(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) CancelScoringRun(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
 	if h.runtime == nil {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "scoring_recovery_unavailable", "scoring recovery is unavailable")
+		httpx.Error(w, r, http.StatusServiceUnavailable, "scoring_recovery_unavailable", scoringRecoveryUnavailable)
 		return
 	}
 	store, ok := h.scoringRecoveryStore()
 	if !ok {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "scoring_recovery_unavailable", "scoring recovery is unavailable")
+		httpx.Error(w, r, http.StatusServiceUnavailable, "scoring_recovery_unavailable", scoringRecoveryUnavailable)
 		return
 	}
 	run, taskIDs, err := store.BeginScoringRunCancellation(r.Context(), user.TenantID, r.PathValue("runId"))
@@ -383,12 +388,12 @@ func (h *Handler) CancelScoringRun(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) RetryFailedScoringRun(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
 	if h.runtime == nil {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "scoring_recovery_unavailable", "scoring recovery is unavailable")
+		httpx.Error(w, r, http.StatusServiceUnavailable, "scoring_recovery_unavailable", scoringRecoveryUnavailable)
 		return
 	}
 	store, ok := h.scoringRecoveryStore()
 	if !ok {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "scoring_recovery_unavailable", "scoring recovery is unavailable")
+		httpx.Error(w, r, http.StatusServiceUnavailable, "scoring_recovery_unavailable", scoringRecoveryUnavailable)
 		return
 	}
 	runID := r.PathValue("runId")
@@ -426,7 +431,7 @@ func (h *Handler) ReprocessSegmentScore(w http.ResponseWriter, r *http.Request) 
 	user := mustUser(r)
 	store, ok := h.scoringRecoveryStore()
 	if !ok {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "scoring_recovery_unavailable", "scoring recovery is unavailable")
+		httpx.Error(w, r, http.StatusServiceUnavailable, "scoring_recovery_unavailable", scoringRecoveryUnavailable)
 		return
 	}
 	var input StartScoringRunInput
@@ -601,9 +606,7 @@ func decorateOMRCalibrationDetail(detail OMRCalibrationDetail) OMRCalibrationDet
 	for index := range detail.Cases {
 		detail.Cases[index].SegmentImageURL = "/api/v1/answer-segments/" + detail.Cases[index].AnswerSegmentID + "/image"
 		if detail.Cases[index].Matches == nil {
-			// Blind labels must not be influenceable through browser devtools or
-			// a direct API call. Reveal the immutable worker snapshot only after
-			// this case has received its one-time human label.
+			// 浏览器开发者工具或直接 API 调用不得影响盲标注。本案例取得一次性人工标签后，才展示不可变工作器快照。
 			detail.Cases[index].ObservedDecision = ""
 			detail.Cases[index].ObservedOptions = nil
 			detail.Cases[index].ObservedConfidence = 0

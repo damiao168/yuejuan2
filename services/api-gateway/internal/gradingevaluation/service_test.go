@@ -43,28 +43,7 @@ func TestCompleteComputesEvidenceBackedSlicesAndDifficulty(t *testing.T) {
 	if _, err = service.AddObservation(ctx, "tenant-a", run.ID, inputs[0]); err != ErrStateConflict {
 		t.Fatalf("expected closed run to reject observations, got %v", err)
 	}
-	slices, err := service.ListSliceMetrics(ctx, "tenant-a", run.ID)
-	if err != nil {
-		t.Fatalf("list slices: %v", err)
-	}
-	if len(slices) != 16 {
-		t.Fatalf("slice count=%d, want 16 across the seven required dimensions", len(slices))
-	}
-	var partial *SliceMetric
-	for index := range slices {
-		if slices[index].Dimension == SliceScoreBand && slices[index].Value == "partial" {
-			partial = &slices[index]
-		}
-	}
-	if partial == nil {
-		t.Fatal("missing partial-score slice")
-	}
-	if partial.Metrics.SampleCount != 1 || partial.Metrics.FalseZeroRate != 1 || partial.Metrics.SevereErrorRate != 1 {
-		t.Fatalf("incorrect partial metrics: %+v", partial.Metrics)
-	}
-	if partial.Metrics.QWKAvailable {
-		t.Fatal("single observation must not claim QWK")
-	}
+	assertCompletedPartialScoreSlice(t, ctx, service, run.ID)
 	difficulty, err := service.ListResponseDifficulty(ctx, "tenant-a", run.ID)
 	if err != nil {
 		t.Fatalf("list difficulty: %v", err)
@@ -160,5 +139,32 @@ func TestAdmissionEvidenceUsesOnlyTheExactSubjectArchetypeIntersection(t *testin
 	missing, err := service.AdmissionEvidenceFor(ctx, "tenant-a", "model-v1", "prompt-v1", "rubric-v1", assessment.SubjectMathematics, "extended_response")
 	if err != nil || missing.Approved || missing.SampleCount != 0 {
 		t.Fatalf("unmatched axis must fail closed: %#v err=%v", missing, err)
+	}
+}
+
+// 单样本切片可以报告错误率，但不能声称具备 QWK；保留对切片维度总数的要求。
+func assertCompletedPartialScoreSlice(t *testing.T, ctx context.Context, service *Service, runID string) {
+	t.Helper()
+	slices, err := service.ListSliceMetrics(ctx, "tenant-a", runID)
+	if err != nil {
+		t.Fatalf("list slices: %v", err)
+	}
+	if len(slices) != 16 {
+		t.Fatalf("slice count=%d, want 16 across the seven required dimensions", len(slices))
+	}
+	var partial *SliceMetric
+	for index := range slices {
+		if slices[index].Dimension == SliceScoreBand && slices[index].Value == "partial" {
+			partial = &slices[index]
+		}
+	}
+	if partial == nil {
+		t.Fatal("missing partial-score slice")
+	}
+	if partial.Metrics.SampleCount != 1 || partial.Metrics.FalseZeroRate != 1 || partial.Metrics.SevereErrorRate != 1 {
+		t.Fatalf("incorrect partial metrics: %+v", partial.Metrics)
+	}
+	if partial.Metrics.QWKAvailable {
+		t.Fatal("single observation must not claim QWK")
 	}
 }

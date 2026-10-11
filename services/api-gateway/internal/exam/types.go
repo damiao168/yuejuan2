@@ -9,14 +9,15 @@ import (
 )
 
 var (
-	ErrNotFound          = errors.New("exam not found")
-	ErrInvalidTransition = errors.New("invalid exam status transition")
-	ErrLocked            = errors.New("exam is locked")
-	ErrInvalidInput      = errors.New("invalid exam input")
-	ErrRevisionConflict  = errors.New("exam revision conflict")
-	ErrScopeForbidden    = errors.New("exam access scope forbidden")
-	ErrCandidatesFrozen  = errors.New("exam candidates are frozen")
-	ErrCommandConflict   = errors.New("exam session command was reused with different input")
+	ErrNotFound                  = errors.New("exam not found")
+	ErrInvalidTransition         = errors.New("invalid exam status transition")
+	ErrLocked                    = errors.New("exam is locked")
+	ErrInvalidInput              = errors.New("invalid exam input")
+	ErrRevisionConflict          = errors.New("exam revision conflict")
+	ErrScopeForbidden            = errors.New("exam access scope forbidden")
+	ErrCandidatesFrozen          = errors.New("exam candidates are frozen")
+	ErrCommandConflict           = errors.New("exam session command was reused with different input")
+	ErrManagementArchiveRequired = errors.New("exam archive must use whole-exam management")
 )
 
 type Exam struct {
@@ -41,8 +42,7 @@ type Exam struct {
 	UpdatedAt      time.Time `json:"updated_at"`
 }
 
-// ExamSession is the grade-level parent of one or more subject exams. Existing
-// grading workflows continue to operate on the child Exam IDs.
+// ExamSession 是一个或多个学科考试的年级级父对象；现有评分工作流继续使用子 Exam ID。
 type ExamSession struct {
 	ID              string    `json:"id"`
 	TenantID        string    `json:"tenant_id"`
@@ -81,6 +81,7 @@ type SessionSubjectInput struct {
 }
 
 type CreateSessionInput struct {
+	CreationMode  string                `json:"creation_mode,omitempty"`
 	SchoolID      string                `json:"school_id"`
 	GradeID       string                `json:"grade_id"`
 	TemplateID    string                `json:"template_id,omitempty"`
@@ -143,8 +144,7 @@ type ListFilter struct {
 	CursorID string
 }
 
-// CandidateRefreshResult describes how the editable exam roster changed when
-// it was rebuilt from the currently active class enrollments.
+// CandidateRefreshResult 描述从当前启用的班级入学记录重建可编辑考生名单时，名单发生的变化。
 type CandidateRefreshResult struct {
 	BeforeCount  int `json:"before_count"`
 	AfterCount   int `json:"after_count"`

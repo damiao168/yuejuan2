@@ -11,6 +11,23 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/workerruntime"
 )
 
+const (
+	questionGradeEvidenceColumn = "question_grade.evidence"
+)
+
+// scoringReviewCause 同时记录复核队列来源和具体原因，二者共同决定这项人工工作的含义。
+type scoringReviewCause struct {
+	source string
+	reason string
+}
+
+// confirmedOMRAnswer 关联本次回调刚写入的候选和答案，不能改成按时间查找最新答案。
+type confirmedOMRAnswer struct {
+	segmentID   string
+	candidateID string
+	answerID    string
+}
+
 func (s *PostgresStore) GetOMRRun(ctx context.Context, tenantID, id string) (OMRRun, error) {
 	row := s.db.QueryRowContext(ctx, `SELECT o.id::text,o.tenant_id::text,o.scoring_run_id::text,o.answer_segment_id::text,s.exam_id::text,COALESCE(o.runtime_task_id::text,''),o.status,COALESCE(o.decision,''),o.confidence,o.measurements,o.selected_options,COALESCE(o.overlay_file_asset_id::text,''),o.crop_sha256,COALESCE(o.reference_file_asset_id::text,''),COALESCE(o.reference_sha256,''),COALESCE(o.calibration_session_id::text,''),COALESCE(o.calibration_evidence_hash,''),o.profile_version,o.profile_hash,o.auto_confirm_min_confidence,o.auto_confirm_eligible,o.auto_confirm_reason FROM omr_run o JOIN scoring_run s ON s.tenant_id=o.tenant_id AND s.id=o.scoring_run_id WHERE o.tenant_id=$1::uuid AND o.id=$2::uuid AND o.deleted_at IS NULL`, tenantID, id)
 	var out OMRRun
@@ -39,19 +56,9 @@ func (s *PostgresStore) GetOMRRun(ctx context.Context, tenantID, id string) (OMR
 // ApplyOMRResult 在一个事务中提交 Worker 结果、OMR 事实，以及自动成绩或人工复核任务。
 // Worker 回调不能在没有持久化下一步评分动作时单独落库。
 func (s *PostgresStore) ApplyOMRResult(ctx context.Context, tenantID, id, actorID string, input OMRResultInput, engine *Engine) (OMRRun, *QuestionGrade, error) {
-	if input.Decision != "selected" && input.Decision != "blank" && input.Decision != "multiple" && input.Decision != "ambiguous" {
-		return OMRRun{}, nil, ErrInvalidInput
-	}
-	if input.Confidence < 0 || input.Confidence > 1 || input.ResultVersion == "" || strings.TrimSpace(input.ProfileVersion) == "" || strings.TrimSpace(input.ProfileHash) == "" {
-		return OMRRun{}, nil, ErrInvalidInput
-	}
-	measurements, err := json.Marshal(input.Measurements)
+	measurements, selected, err := encodeOMRResultInput(input)
 	if err != nil {
-		return OMRRun{}, nil, ErrInvalidInput
-	}
-	selected, err := json.Marshal(input.Selected)
-	if err != nil {
-		return OMRRun{}, nil, ErrInvalidInput
+		return OMRRun{}, nil, err
 	}
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -78,12 +85,9 @@ func (s *PostgresStore) ApplyOMRResult(ctx context.Context, tenantID, id, actorI
 			return OMRRun{}, nil, err
 		}
 	}
-	task, err := workerruntime.CompleteTaskInTx(ctx, tx, tenantID, input.TaskID, workerruntime.CompleteInput{LeaseToken: input.LeaseToken, ResultSchemaVersion: "omr-result-v1", Result: omrRuntimeResult(id, input), DurationMS: input.DurationMS})
+	task, err := completeOMRRuntimeTaskTx(ctx, tx, tenantID, id, input)
 	if err != nil {
 		return OMRRun{}, nil, err
-	}
-	if task.SourceType != "omr_run" || task.SourceID != id {
-		return OMRRun{}, nil, ErrInvalidTransition
 	}
 	if currentStatus == "completed" {
 		if currentVersion != input.ResultVersion {
@@ -151,28 +155,10 @@ RETURNING o.answer_segment_id::text,o.scoring_run_id::text`, tenantID, id, input
 	}
 	var questionGrade *QuestionGrade
 	if decision != "confirmed" {
-		err = s.insertScoringReviewTaskTx(ctx, tx, tenantID, segmentID, scoringRunID, actorID, "omr_ambiguous", omrReviewReason(input, autoConfirmEligible, autoConfirmReason, autoConfirmMinimumConfidence))
-	} else if engine == nil {
-		err = s.insertScoringReviewTaskTx(ctx, tx, tenantID, segmentID, scoringRunID, actorID, "grading_failure", "auto_grade_engine_unavailable")
+		err = s.insertScoringReviewTaskTx(ctx, tx, tenantID, segmentID, scoringRunID, actorID, scoringReviewCause{source: "omr_ambiguous", reason: omrReviewReason(input, autoConfirmEligible, autoConfirmReason, autoConfirmMinimumConfidence)})
 	} else {
-		gradingContext, contextErr := s.loadContextForAnswerTx(ctx, tx, tenantID, segmentID, answerID)
-		if contextErr != nil {
-			err = s.insertScoringReviewTaskTx(ctx, tx, tenantID, segmentID, scoringRunID, actorID, "grading_failure", "auto_grade_context_failed")
-		} else {
-			evaluation, gradeErr := engine.Grade(gradingContext)
-			if gradeErr != nil {
-				err = s.insertScoringReviewTaskTx(ctx, tx, tenantID, segmentID, scoringRunID, actorID, "grading_failure", "auto_grade_execution_failed")
-			} else if !evaluation.AutoPass || evaluation.NeedsHumanReview {
-				err = s.insertScoringReviewTaskTx(ctx, tx, tenantID, segmentID, scoringRunID, actorID, "rule_review_required", "rule_not_auto_confirmed")
-			} else {
-				confirmed, confirmErr := s.confirmRuleGradeForCandidateTx(ctx, tx, tenantID, segmentID, candidateID, actorID, evaluation)
-				if confirmErr != nil {
-					err = s.insertScoringReviewTaskTx(ctx, tx, tenantID, segmentID, scoringRunID, actorID, "grading_failure", "auto_grade_confirmation_failed")
-				} else {
-					questionGrade = &confirmed
-				}
-			}
-		}
+		answer := confirmedOMRAnswer{segmentID: segmentID, candidateID: candidateID, answerID: answerID}
+		questionGrade, err = s.gradeConfirmedOMRAnswerTx(ctx, tx, tenantID, scoringRunID, actorID, answer, engine)
 	}
 	if err != nil {
 		return OMRRun{}, nil, err
@@ -187,9 +173,63 @@ RETURNING o.answer_segment_id::text,o.scoring_run_id::text`, tenantID, id, input
 	return out, questionGrade, getErr
 }
 
-// omrRuntimeResult is the exact semantic payload used by Worker Runtime's
-// idempotency hash. Keeping every persisted OMR decision input here prevents a
-// replay with the same result version from silently changing the durable facts.
+// encodeOMRResultInput 在开启事务前完成输入检查和编码，避免无效结果取得运行锁。
+func encodeOMRResultInput(input OMRResultInput) ([]byte, []byte, error) {
+	if input.Decision != "selected" && input.Decision != "blank" && input.Decision != "multiple" && input.Decision != "ambiguous" {
+		return nil, nil, ErrInvalidInput
+	}
+	if input.Confidence < 0 || input.Confidence > 1 || input.ResultVersion == "" || strings.TrimSpace(input.ProfileVersion) == "" || strings.TrimSpace(input.ProfileHash) == "" {
+		return nil, nil, ErrInvalidInput
+	}
+	measurements, err := json.Marshal(input.Measurements)
+	if err != nil {
+		return nil, nil, ErrInvalidInput
+	}
+	selected, err := json.Marshal(input.Selected)
+	if err != nil {
+		return nil, nil, ErrInvalidInput
+	}
+	return measurements, selected, nil
+}
+
+// completeOMRRuntimeTaskTx 仍在 OMR 行与资格校验之后执行；已完成结果重放也必须通过租约和精确结果哈希校验。
+func completeOMRRuntimeTaskTx(ctx context.Context, tx *sql.Tx, tenantID, id string, input OMRResultInput) (workerruntime.Task, error) {
+	task, err := workerruntime.CompleteTaskInTx(ctx, tx, tenantID, input.TaskID, workerruntime.CompleteInput{LeaseToken: input.LeaseToken, ResultSchemaVersion: "omr-result-v1", Result: omrRuntimeResult(id, input), DurationMS: input.DurationMS})
+	if err != nil {
+		return workerruntime.Task{}, err
+	}
+	if task.SourceType != "omr_run" || task.SourceID != id {
+		return workerruntime.Task{}, ErrInvalidTransition
+	}
+	return task, nil
+}
+
+// gradeConfirmedOMRAnswerTx 只处理本次已确认答案；自动评分失败后必须写入对应人工任务。
+// 人工任务写入失败仍返回存储错误，由外层回滚整个回调，不单独提交 Worker 或 OMR 事实。
+func (s *PostgresStore) gradeConfirmedOMRAnswerTx(ctx context.Context, tx *sql.Tx, tenantID, scoringRunID, actorID string, answer confirmedOMRAnswer, engine *Engine) (*QuestionGrade, error) {
+	if engine == nil {
+		return nil, s.insertScoringReviewTaskTx(ctx, tx, tenantID, answer.segmentID, scoringRunID, actorID, scoringReviewCause{source: "grading_failure", reason: "auto_grade_engine_unavailable"})
+	}
+	gradingContext, contextErr := s.loadContextForAnswerTx(ctx, tx, tenantID, answer.segmentID, answer.answerID)
+	if contextErr != nil {
+		return nil, s.insertScoringReviewTaskTx(ctx, tx, tenantID, answer.segmentID, scoringRunID, actorID, scoringReviewCause{source: "grading_failure", reason: "auto_grade_context_failed"})
+	}
+	evaluation, gradeErr := engine.Grade(gradingContext)
+	if gradeErr != nil {
+		return nil, s.insertScoringReviewTaskTx(ctx, tx, tenantID, answer.segmentID, scoringRunID, actorID, scoringReviewCause{source: "grading_failure", reason: "auto_grade_execution_failed"})
+	}
+	if !evaluation.AutoPass || evaluation.NeedsHumanReview {
+		return nil, s.insertScoringReviewTaskTx(ctx, tx, tenantID, answer.segmentID, scoringRunID, actorID, scoringReviewCause{source: "rule_review_required", reason: "rule_not_auto_confirmed"})
+	}
+	confirmed, confirmErr := s.confirmRuleGradeForCandidateTx(ctx, tx, tenantID, answer.segmentID, answer.candidateID, actorID, evaluation)
+	if confirmErr != nil {
+		return nil, s.insertScoringReviewTaskTx(ctx, tx, tenantID, answer.segmentID, scoringRunID, actorID, scoringReviewCause{source: "grading_failure", reason: "auto_grade_confirmation_failed"})
+	}
+	return &confirmed, nil
+}
+
+// omrRuntimeResult 是 Worker Runtime 幂等哈希使用的精确语义载荷。
+// 全部持久化 OMR 决策输入都放在此处，防止同一结果版本的重放静默改变持久化事实。
 func omrRuntimeResult(id string, input OMRResultInput) map[string]any {
 	return map[string]any{
 		"omr_run_id":            id,
@@ -220,7 +260,8 @@ func omrReviewReason(input OMRResultInput, autoConfirmEligible bool, autoConfirm
 	return "omr_" + input.Decision
 }
 
-func (s *PostgresStore) insertScoringReviewTaskTx(ctx context.Context, tx *sql.Tx, tenantID, segmentID, scoringRunID, actorID, source, reason string) error {
+func (s *PostgresStore) insertScoringReviewTaskTx(ctx context.Context, tx *sql.Tx, tenantID, segmentID, scoringRunID, actorID string, cause scoringReviewCause) error {
+	source, reason := cause.source, cause.reason
 	_, err := tx.ExecContext(ctx, `
 INSERT INTO review_task(tenant_id,exam_id,question_id,question_no,answer_segment_id,submission_id,anonymous_code,source,status,priority,grade_round,reason_code,scoring_run_id,created_by)
 SELECT seg.tenant_id,sub.exam_id,q.id,q.question_no,seg.id,sub.id,COALESCE(NULLIF(sub.candidate_no,''),seg.id::text),$3,'pending',80,'single',$4,$5::uuid,$6::uuid
@@ -233,8 +274,7 @@ ON CONFLICT (tenant_id,answer_segment_id,source,grade_round) WHERE status IN ('p
 	return err
 }
 
-// loadContextForAnswerTx binds automatic grading to the answer row inserted by
-// this OMR callback, rather than whichever answer happens to be latest.
+// loadContextForAnswerTx 将自动评分绑定到本次 OMR 回调插入的答案记录，而非碰巧最新的答案。
 func (s *PostgresStore) loadContextForAnswerTx(ctx context.Context, tx *sql.Tx, tenantID, segmentID, answerID string) (Context, error) {
 	row := tx.QueryRowContext(ctx, `
 SELECT
@@ -330,7 +370,7 @@ FOR UPDATE OF seg,ac`, tenantID, segmentID, candidateID).Scan(&examID, &submissi
 	var existingEvidence []byte
 	err = tx.QueryRowContext(ctx, `SELECT id::text,answer_segment_id::text,question_id::text,score::float8,max_score::float8,source,version,evidence,created_at FROM question_grade WHERE tenant_id=$1::uuid AND answer_segment_id=$2::uuid AND answer_candidate_id=$3::uuid AND scoring_rule_id=$4::uuid AND is_current AND deleted_at IS NULL`, tenantID, segmentID, candidateID, ruleID).Scan(&existing.ID, &existing.AnswerSegmentID, &existing.QuestionID, &existing.Score, &existing.MaxScore, &existing.Source, &existing.Version, &existingEvidence, &existing.CreatedAt)
 	if err == nil {
-		if decodeErr := decodeJSONB(existingEvidence, &existing.Evidence, "question_grade.evidence"); decodeErr != nil {
+		if decodeErr := decodeJSONB(existingEvidence, &existing.Evidence, questionGradeEvidenceColumn); decodeErr != nil {
 			return QuestionGrade{}, decodeErr
 		}
 		return existing, nil
@@ -357,7 +397,7 @@ RETURNING id::text,answer_segment_id::text,question_id::text,score::float8,max_s
 	if err = row.Scan(&out.ID, &out.AnswerSegmentID, &out.QuestionID, &out.Score, &out.MaxScore, &out.Source, &out.Version, &evidenceRaw, &out.CreatedAt); err != nil {
 		return QuestionGrade{}, err
 	}
-	if err = decodeJSONB(evidenceRaw, &out.Evidence, "question_grade.evidence"); err != nil {
+	if err = decodeJSONB(evidenceRaw, &out.Evidence, questionGradeEvidenceColumn); err != nil {
 		return QuestionGrade{}, err
 	}
 	return out, nil
@@ -449,7 +489,7 @@ FOR UPDATE OF seg`, tenantID, segmentID).Scan(&examID, &submissionID, &questionI
 	var existingEvidence []byte
 	err = tx.QueryRowContext(ctx, `SELECT id::text,answer_segment_id::text,question_id::text,score::float8,max_score::float8,source,version,evidence,created_at FROM question_grade WHERE tenant_id=$1::uuid AND answer_segment_id=$2::uuid AND answer_candidate_id=$3::uuid AND scoring_rule_id=$4::uuid AND is_current AND deleted_at IS NULL`, tenantID, segmentID, candidateID, ruleID).Scan(&existing.ID, &existing.AnswerSegmentID, &existing.QuestionID, &existing.Score, &existing.MaxScore, &existing.Source, &existing.Version, &existingEvidence, &existing.CreatedAt)
 	if err == nil {
-		if decodeErr := decodeJSONB(existingEvidence, &existing.Evidence, "question_grade.evidence"); decodeErr != nil {
+		if decodeErr := decodeJSONB(existingEvidence, &existing.Evidence, questionGradeEvidenceColumn); decodeErr != nil {
 			return QuestionGrade{}, decodeErr
 		}
 		return existing, tx.Commit()
@@ -474,7 +514,7 @@ RETURNING id::text,answer_segment_id::text,question_id::text,score::float8,max_s
 	if err = row.Scan(&out.ID, &out.AnswerSegmentID, &out.QuestionID, &out.Score, &out.MaxScore, &out.Source, &out.Version, &evidenceRaw, &out.CreatedAt); err != nil {
 		return out, err
 	}
-	if err = decodeJSONB(evidenceRaw, &out.Evidence, "question_grade.evidence"); err != nil {
+	if err = decodeJSONB(evidenceRaw, &out.Evidence, questionGradeEvidenceColumn); err != nil {
 		return out, err
 	}
 	if runID != "" {

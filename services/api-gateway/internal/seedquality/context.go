@@ -19,15 +19,13 @@ import (
 
 var ErrContextUnavailable = errors.New("seed grader context is unavailable")
 
-// ContextSource is intentionally narrower than assessment.Store. Both the
-// in-memory and PostgreSQL assessment stores already implement it.
+// ContextSource 的范围小于 assessment.Store。内存和 PostgreSQL 评估存储均已实现该接口。
 type ContextSource interface {
 	GetQuestionSnapshot(context.Context, string, string, string) (assessment.ExamQuestionSnapshot, error)
 }
 
-// ReviewHook is the complete, small interception surface for ordinary review
-// routes. The handler tries these methods first, then falls through to its
-// normal store only when handled/issued is false.
+// ReviewHook 是普通复核路由所用的完整、小型拦截接口。
+// handler 先尝试这些方法，仅在 handled/issued 为 false 时才转入正常存储。
 type ReviewHook interface {
 	RecoverCommand(context.Context, string, string, string) (commandreceipt.Receipt, error)
 	MaybeIssue(context.Context, string, string, string, string, string) (Task, bool, error)
@@ -38,8 +36,7 @@ type ReviewHook interface {
 
 var _ ReviewHook = (*Service)(nil)
 
-// GraderTask mirrors the fields consumed by the existing ReviewTask UI but all
-// identifiers that would expose the Gold submission are synthetic.
+// GraderTask 对应既有 ReviewTask UI 使用的字段，但所有可能暴露 Gold 提交的标识都改为合成值。
 type GraderTask struct {
 	ID              string     `json:"id"`
 	TenantID        string     `json:"tenant_id"`
@@ -84,9 +81,8 @@ type GraderSubjectToolHints struct {
 	ResponseSchema       map[string]any            `json:"response_schema"`
 }
 
-// GraderTaskContext serializes to the same projection used by
-// GET /review-tasks/{id}/context. There are deliberately no Gold IDs,
-// reference scores, source submissions, raw AI material or original-page URL.
+// GraderTaskContext 序列化为与 GET /review-tasks/{id}/context 相同的投影。
+// 它不包含 Gold ID、参考分数、来源提交、原始 AI 材料或原始页面 URL。
 type GraderTaskContext struct {
 	Task             GraderTask                      `json:"task"`
 	ExpectedRevision int64                           `json:"expected_revision"`
@@ -101,9 +97,8 @@ type GraderTaskContext struct {
 	SubjectToolHints GraderSubjectToolHints          `json:"subject_tool_hints"`
 }
 
-// GraderImageSource is server-only. The normal segment-image handler may use
-// SourceURL to proxy its existing authenticated answer-segment image response;
-// it must never serialize this value to the grader.
+// GraderImageSource 仅供服务器使用。普通分段图像 handler 可使用 SourceURL 代理既有的已认证答案分段图像响应；
+// 绝不能将此值序列化给阅卷人员。
 type GraderImageSource struct {
 	SourceURL       string `json:"-"`
 	AnswerSegmentID string `json:"-"`
@@ -137,9 +132,8 @@ func (s *Service) GetGraderTaskContext(ctx context.Context, tenantID, taskID, gr
 		Task: graderTask, ExpectedRevision: task.Revision, QuestionSnapshot: safeSnapshot(snapshot), Question: question,
 		AnswerArtifact: GraderAnswerArtifact{AnswerSegmentID: answerSegmentID, Source: "answer_image", Status: "ready", SegmentImageURL: task.AnswerImageURL},
 		FrozenRubric:   rubric, AICandidates: []any{}, ScoringEvidence: []assessment.ScoringEvidence{},
-		// Seed tasks are intentionally not part of the ordinary claim lease or
-		// draft APIs. The normal workbench therefore must not attempt to renew
-		// or autosave this synthetic task through the review store.
+		// Seed 任务不属于普通领取租约或草稿 API。
+		// 因此正常工作台不能尝试通过 review 存储为这个合成任务续租或自动保存。
 		Claim: GraderClaim{OwnerID: task.AssignedTo, State: "claimed", CanRenew: false}, Draft: nil,
 		SubjectToolHints: GraderSubjectToolHints{SubjectCode: snapshot.SubjectCode, ArchetypeCode: snapshot.ArchetypeCode,
 			AllowedEvidenceTypes: append([]assessment.EvidenceType(nil), snapshot.AllowedEvidenceTypes...),
@@ -149,8 +143,7 @@ func (s *Service) GetGraderTaskContext(ctx context.Context, tenantID, taskID, gr
 	}, true, nil
 }
 
-// PublicTask gives the existing review client the normal task shape while
-// replacing every link to the Gold source with deterministic opaque IDs.
+// PublicTask 为既有复核客户端提供正常任务结构，同时把全部 Gold 来源链接替换为确定的不透明 ID。
 func PublicTask(task Task, tenantID string) GraderTask {
 	return GraderTask{ID: task.ID, TenantID: tenantID, ExamID: task.ExamID, QuestionID: task.QuestionID,
 		QuestionNo: task.QuestionNo, AnswerSegmentID: opaqueID(task.ID, "answer-artifact"), SubmissionID: opaqueID(task.ID, "submission"),

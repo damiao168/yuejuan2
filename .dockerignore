@@ -4,8 +4,8 @@
 .claude
 .cache
 
-# Never send local credentials or private keys to BuildKit. Runtime
-# configuration is injected by Compose and does not belong in image contexts.
+# 不要将本地凭据或私钥发送到 BuildKit。运行时配置
+# 由 Compose 注入，不应包含在镜像构建上下文中。
 .env
 .env.*
 **/.env
@@ -35,3 +35,6 @@ infra/docker-compose/backups
 *.dump
 *.test
 *.exe
+
+# 全包 PostgreSQL 测试读取此已入库模板，其余 .env 文件仍由上面的规则排除。
+!infra/docker-compose/.env.example

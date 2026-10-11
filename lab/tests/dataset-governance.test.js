@@ -38,6 +38,48 @@ test("malformed source registry entry returns validation errors instead of throw
   assert.match(result.errors.join("\n"), /must be an object/);
 });
 
+test("source registry accumulates malformed entries and field errors in order", () => {
+  const result = validateDatasetSourceRegistry({
+    schema_version: "unsupported",
+    sources: [
+      null,
+      { source_id: "same", homepage: "http://example.invalid", license_status: "approved", allowed_uses: "evaluation", evidence_scope: "unreviewed" },
+      { source_id: "same", homepage: null, license_status: "unsupported", allowed_uses: ["evaluation"] },
+      { homepage: "https://example.invalid", license_status: "review_required", allowed_uses: ["evaluation"] }
+    ]
+  });
+  assert.deepEqual(result, {
+    valid: false,
+    errors: [
+      "unsupported source registry schema_version",
+      "sources[0] must be an object",
+      "sources[1].homepage must be https or lab-local",
+      "sources[1].allowed_uses must be an array",
+      "sources[1].evidence_scope is required for approved sources",
+      "duplicate source_id: same",
+      "sources[2].homepage must be https or lab-local",
+      "sources[2].license_status is unsupported",
+      "sources[2] cannot allow use before license approval",
+      "sources[3].source_id is required",
+      "sources[3] cannot allow use before license approval"
+    ]
+  });
+});
+
+test("source homepage keeps case-sensitive https and lab-local prefixes", () => {
+  for (const [homepage, valid] of [
+    ["https://example.invalid", true], ["lab/fixtures", true],
+    ["HTTPS://example.invalid", false], ["https:/example.invalid", false],
+    ["lab", false], [null, false], [42, false]
+  ]) {
+    const result = validateDatasetSourceRegistry({
+      schema_version: "dataset-source-registry-v1",
+      sources: [{ source_id: "fixture", homepage, license_status: "review_required", allowed_uses: [] }]
+    });
+    assert.equal(result.valid, valid, String(homepage));
+  }
+});
+
 test("privacy scanner detects common direct identifiers", () => {
   assert.deepEqual(scanSensitiveText("student email is learner@example.com"), ["email"]);
   assert.ok(scanSensitiveText("手机号：13812345678").includes("cn_mobile"));
@@ -45,6 +87,45 @@ test("privacy scanner detects common direct identifiers", () => {
   assert.ok(scanSensitiveText("Name: Alice Smith\n").includes("name_label"));
   assert.equal(scanSensitiveText("They should have a descriptive name: it explains the test.").includes("name_label"), false);
   assert.equal(scanSensitiveText("* Name: the JSON field naming convention.").includes("name_label"), false);
+});
+
+test("privacy labels retain optional colons and minimum value lengths", () => {
+  for (const [text, detector, detected] of [
+    ["学号 AB-1", "student_number_label", true],
+    ["student\tID： abc9", "student_number_label", true],
+    ["STUDENT \n NUMBER : ----", "student_number_label", true],
+    ["student id: !!; 学号: ABCD", "student_number_label", true],
+    ["student id: A12", "student_number_label", false],
+    ["学号： A_B1", "student_number_label", false],
+    [`student id${" ".repeat(256)}!`, "student_number_label", false],
+    ["phone: +12- 34", "phone_label", true],
+    ["电话 1234567", "phone_label", true],
+    ["MOBILE： +1\t2-34", "phone_label", true],
+    ["phone: +      ", "phone_label", true],
+    ["phone: !!; mobile: 1234567", "phone_label", true],
+    ["phone:123456", "phone_label", false],
+    ["mobile: x1234567", "phone_label", false],
+    [`phone${" ".repeat(256)}!`, "phone_label", false]
+  ]) {
+    assert.equal(scanSensitiveText(text).includes(detector), detected, text);
+  }
+});
+
+test("privacy names retain field boundaries, unicode letters and word limits", () => {
+  // 多行模式会把姓名后的换行视为结束；下一行的普通说明不能取消已发现的姓名。
+  for (const [text, detected] of [
+    ["姓名：张·三", true], ["学生姓名：\u{20000}\u{20001}", true],
+    ["姓名：一二三四五六七八九", true],
+    ["{ name: alice smith; }", true], [", \tNAME: Alice-Marie O'Neil }", true],
+    ["Name:\nAlice\nordinary explanation.", true],
+    ["Name: Alice Bob Carol David,", true], ["\u2028Name: \u212Aelly \u017Fmith\u2029", true],
+    ["prefix name: Alice", false], ["* Name: Alice", false], ["; Name: Alice", false],
+    ["Name：Alice", false], ["Name: Alice Bob Carol David Eve", false],
+    ["Name: \u00C9lodie", false], ["Name: Alice2", false], ["Name: Alice.", false],
+    ["姓名：张", false], ["姓名 张三", false], [`${" \n".repeat(128)}Name: !`, false]
+  ]) {
+    assert.equal(scanSensitiveText(text).includes("name_label"), detected, text);
+  }
 });
 
 test("governance rejects duplicate ids and sensitive text", () => {
@@ -67,6 +148,15 @@ test("grouped split never leaks a question and rubric across splits", () => {
   assert.ok(result.splits.train.length > 0);
   assert.ok(result.splits.validation.length > 0);
   assert.ok(result.splits.test.length > 0);
+});
+
+test("leakage audit preserves UTF-16 string ordering for reported group keys", () => {
+  const records = ["q-z", "\uFF3A", "q-2", "\u{21551}", "q-Z", "q-10"].map((questionId, index) => sample(`s-${index}`, questionId));
+  assert.deepEqual(auditSplitLeakage({ train: records, test: [...records].reverse() }), {
+    passed: false,
+    leaked_groups: ["q-10::rubric-v1", "q-2::rubric-v1", "q-Z::rubric-v1", "q-z::rubric-v1", "\u{21551}::rubric-v1", "\uFF3A::rubric-v1"],
+    unique_groups: records.length
+  });
 });
 
 test("grouped split is deterministic", () => {

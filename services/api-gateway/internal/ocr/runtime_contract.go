@@ -4,8 +4,8 @@ import "edugrade-enterprise/services/api-gateway/internal/workerruntime"
 
 const RuntimeResultSchema = "ocr-result.v1"
 
-// RuntimeResult is the canonical source result mirrored into Worker Runtime.
-// Keep this small and source-derived so retry comparisons remain deterministic.
+// RuntimeResult 是映射到 Worker Runtime 的标准来源结果。
+// 保持结构精简且由来源事实生成，使重试比较保持确定性。
 func RuntimeResult(task Task) map[string]any {
 	return map[string]any{
 		"ocr_task_id":   task.ID,

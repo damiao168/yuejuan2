@@ -50,9 +50,8 @@ func paperRecognitionPolicy(subject string) (PaperRecognitionPolicy, bool) {
 		policy.MinDetectorScore = 0.30
 		policy.AcceptDetectorScore = 0.65
 		policy.MaxEdgeInkRatio = 0.08
-		// Throughput settings belong to a measured deployment profile, not to
-		// the immutable semantic recognition policy. Older v3 tasks retain
-		// their snapshotted numeric batch size for reproducibility.
+		// 吞吐量设置属于经过测量的部署配置，不属于不可变的语义识别策略。
+		// 旧 v3 任务保留快照中的数值批大小，便于复现。
 		policy.FormulaBatchMode = "deployment_profile"
 		policy.ValidationVersion = "latex-structure-render-v2"
 		policy.RenderSimilarityThreshold = 0.34

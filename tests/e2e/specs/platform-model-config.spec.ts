@@ -36,6 +36,13 @@ test("切换学校后忽略过期配置响应，并保留新学校的配置", as
   await expect.poll(() => finishedA).toBe(true);
   await expect(page.getByText("甲校模型", { exact: true })).toHaveCount(0);
   await expect(page.getByText("乙校模型", { exact: true })).toBeVisible();
+  await page.getByText("三智能体配置", { exact: true }).click();
+  await expect(page).toHaveURL(/tenant_id=school-b/);
+  await expect(page).toHaveURL(/tab=bindings/);
+  await page.reload();
+  await expect(page.locator(".platform-model-school-select .ant-select-selection-item")).toHaveText("乙学校 · B");
+  await page.getByText("学校模型", { exact: true }).click();
+  await expect(page.getByText("乙校模型", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "添加模型" }).click();
   await expect(page.getByRole("combobox", { name: "配置学校" })).toBeDisabled();
   await page.getByRole("button", { name: "检测连接并保存", exact: true }).click();
@@ -93,7 +100,7 @@ test("只填供应商和 API Key 即可零 Token 获取模型并保存", async (
   await page.goto("/#/platform/model-config");
   await page.getByRole("button", { name: "添加模型" }).click();
   await page.getByLabel("供应商").click();
-  await page.locator(".ant-select-dropdown:visible .ant-select-item-option-content", { hasText: "DeepSeek" }).click({ force: true });
+  await page.locator(".ant-select-dropdown:visible .ant-select-item-option-content", { hasText: "DeepSeek" }).click();
   await page.getByLabel("API Key").fill("deepseek-secret-at-least-16");
   await page.getByRole("button", { name: "获取可用模型" }).click();
   const modelDropdown = page.locator(".ant-select-dropdown:visible");
@@ -312,7 +319,7 @@ test("关闭新建侧边栏后两分钟内恢复未保存内容且不写入浏�
   await page.getByLabel("API Key").fill("draft-secret-at-least-16");
   await page.getByLabel("API 地址").fill("https://models.example.test/v1");
   await page.getByLabel("模型名称").fill("draft-model");
-  await page.getByRole("button", { name: "关闭", exact: true }).click({ force: true });
+  await page.getByRole("button", { name: "关闭", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
 
   const browserStorage = await page.evaluate(() => `${JSON.stringify(localStorage)}${JSON.stringify(sessionStorage)}`);
@@ -380,7 +387,7 @@ test("新建草稿按学校隔离且页面重新加载后清除密钥", async ({
   await page.getByRole("button", { name: "添加模型" }).click();
   await expect(page.getByLabel("API Key")).toHaveValue("school-a-draft-secret-at-least-16");
   await expect(page.getByLabel("模型名称")).toHaveValue("school-a-draft-model");
-  await page.getByRole("button", { name: "关闭", exact: true }).click({ force: true });
+  await page.getByRole("button", { name: "关闭", exact: true }).click();
 
   await page.reload();
   await page.getByRole("button", { name: "添加模型" }).click();
@@ -418,16 +425,21 @@ test("同 Key 草稿可恢复且保存成功后立即清除", async ({ page }) =
   });
 
   await page.goto("/#/platform/model-config");
-  await page.getByRole("button", { name: "同 Key 模型" }).click();
+  // 保存后会增加同厂商模型行，始终从原模型打开菜单，才能验证原密钥草稿已经清除。
+  const sourceRow = page.getByRole("row").filter({ hasText: "deepseek-flash" });
+  await sourceRow.getByRole("button", { name: "DeepSeek更多操作" }).click();
+  await page.getByRole("menuitem", { name: "添加同 Key 模型" }).click();
   await expect(page.getByLabel("API Key")).toHaveCount(0);
   await page.getByLabel("模型名称").fill("deepseek-reasoner");
   await page.getByRole("button", { name: "关闭", exact: true }).click();
-  await page.getByRole("button", { name: "同 Key 模型" }).click();
+  await sourceRow.getByRole("button", { name: "DeepSeek更多操作" }).click();
+  await page.getByRole("menuitem", { name: "添加同 Key 模型" }).click();
   await expect(page.getByLabel("模型名称")).toHaveValue("deepseek-reasoner");
   await expect(page.getByText("已恢复 2 分钟内未保存的模型配置", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "检测连接并保存", exact: true }).click();
 
-  await page.getByRole("button", { name: "同 Key 模型" }).first().click();
+  await sourceRow.getByRole("button", { name: "DeepSeek更多操作" }).click();
+  await page.getByRole("menuitem", { name: "添加同 Key 模型" }).click();
   await expect(page.getByLabel("模型名称")).toHaveValue("");
 });
 

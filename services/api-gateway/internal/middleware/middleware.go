@@ -15,6 +15,11 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/logger"
 )
 
+const (
+	requestIDHeaderName = "X-Request-ID"
+	traceIDHeaderName   = "X-Trace-ID"
+)
+
 type Middleware func(http.Handler) http.Handler
 
 const CSRFHeaderName = "X-EduGrade-CSRF"
@@ -67,7 +72,7 @@ func BodyLimit(maxBytes int64, skip func(*http.Request) bool) Middleware {
 func CORS(allowedOrigins []string, allowedMethods []string, allowedHeaders []string) Middleware {
 	origins := normalizedSet(allowedOrigins)
 	methods := strings.Join(nonEmptyOrDefault(allowedMethods, []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}), ", ")
-	headerValues := nonEmptyOrDefault(allowedHeaders, []string{"Authorization", "Content-Type", "X-Request-ID", "X-Trace-ID", "Idempotency-Key", CSRFHeaderName})
+	headerValues := nonEmptyOrDefault(allowedHeaders, []string{"Authorization", "Content-Type", requestIDHeaderName, traceIDHeaderName, "Idempotency-Key", CSRFHeaderName})
 	if !containsFold(headerValues, CSRFHeaderName) {
 		headerValues = append(headerValues, CSRFHeaderName)
 	}
@@ -105,16 +110,13 @@ func CORS(allowedOrigins []string, allowedMethods []string, allowedHeaders []str
 	}
 }
 
-// BrowserCSRF requires a non-simple request header for browser-originated
-// mutations. Cross-origin pages cannot attach this header unless their CORS
-// preflight is explicitly allowed, while bearer-authenticated workers and
-// non-browser API clients remain unaffected.
+// BrowserCSRF 要求浏览器发起的修改携带非简单请求头。跨来源页面只有在 CORS 预检被显式允许时才能携带此头；
+// 使用 bearer 认证的工作器和非浏览器 API 客户端不受影响。
 func BrowserCSRF(sessionCookieName string) Middleware {
 	sessionCookieName = strings.TrimSpace(sessionCookieName)
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Match auth's bearer parser. An invalid Authorization header may
-			// fall back to ambient cookies and must not exempt that request.
+			// 与 auth 的 bearer 解析器保持一致。无效 Authorization 请求头可能回退到自动携带的 Cookie，不能使请求豁免检查。
 			parts := strings.SplitN(r.Header.Get("Authorization"), " ", 2)
 			hasBearer := len(parts) == 2 && strings.EqualFold(parts[0], "Bearer") && strings.TrimSpace(parts[1]) != ""
 			if !requestMayHaveBody(r.Method) || r.URL.Path == "/api/v1/auth/token" || hasBearer {
@@ -140,19 +142,19 @@ func BrowserCSRF(sessionCookieName string) Middleware {
 func RequestID() Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			requestID := strings.TrimSpace(r.Header.Get("X-Request-ID"))
+			requestID := strings.TrimSpace(r.Header.Get(requestIDHeaderName))
 			if !requestIDPattern.MatchString(requestID) {
 				requestID = newRequestID()
 			}
-			traceID := strings.TrimSpace(r.Header.Get("X-Trace-ID"))
+			traceID := strings.TrimSpace(r.Header.Get(traceIDHeaderName))
 			if !validTraceID(traceID) {
 				traceID = traceIDFromTraceparent(r.Header.Get("Traceparent"))
 			}
 			if traceID == "" {
 				traceID = newRequestID()
 			}
-			w.Header().Set("X-Request-ID", requestID)
-			w.Header().Set("X-Trace-ID", traceID)
+			w.Header().Set(requestIDHeaderName, requestID)
+			w.Header().Set(traceIDHeaderName, traceID)
 			ctx := logger.WithTraceID(logger.WithRequestID(r.Context(), requestID), traceID)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
@@ -211,38 +213,45 @@ func AccessLog(logg *logger.Logger, slowThresholds ...time.Duration) Middleware 
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
 			rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
+			// defer 覆盖正常返回和 Recover 转换出的 500，避免异常请求没有访问记录。
+			defer func() {
+				logAccess(logg, r, rec, start, slowThreshold)
+			}()
 			next.ServeHTTP(rec, r)
-			duration := time.Since(start)
-			fields := map[string]any{
-				"event":       "api_request",
-				"log_stream":  "system",
-				"method":      r.Method,
-				"path":        r.URL.Path,
-				"status":      rec.status,
-				"duration_ms": duration.Milliseconds(),
-				"remote_addr": r.RemoteAddr,
-			}
-			if errorCode := rec.Header().Get(httpx.ErrorCodeHeader); errorCode != "" {
-				fields["error_code"] = errorCode
-			}
-			if outcome := rec.Header().Get(httpx.OperationOutcomeHeader); outcome != "" {
-				fields["operation_outcome"] = outcome
-			}
-			if commandID := rec.Header().Get(httpx.CommandIDHeader); commandID != "" {
-				fields["command_id"] = commandID
-			}
-			logg.Info(r.Context(), "http request", fields)
-			if slowThreshold > 0 && duration >= slowThreshold {
-				logg.Warn(r.Context(), "slow request observed", map[string]any{
-					"event":        "slow_request",
-					"log_stream":   "system",
-					"method":       r.Method,
-					"path":         r.URL.Path,
-					"status":       rec.status,
-					"duration_ms":  duration.Milliseconds(),
-					"threshold_ms": slowThreshold.Milliseconds(),
-				})
-			}
+		})
+	}
+}
+
+func logAccess(logg *logger.Logger, r *http.Request, rec *statusRecorder, start time.Time, slowThreshold time.Duration) {
+	duration := time.Since(start)
+	fields := map[string]any{
+		"event":       "api_request",
+		"log_stream":  "system",
+		"method":      r.Method,
+		"path":        r.URL.Path,
+		"status":      rec.status,
+		"duration_ms": duration.Milliseconds(),
+		"remote_addr": r.RemoteAddr,
+	}
+	if errorCode := rec.Header().Get(httpx.ErrorCodeHeader); errorCode != "" {
+		fields["error_code"] = errorCode
+	}
+	if outcome := rec.Header().Get(httpx.OperationOutcomeHeader); outcome != "" {
+		fields["operation_outcome"] = outcome
+	}
+	if commandID := rec.Header().Get(httpx.CommandIDHeader); commandID != "" {
+		fields["command_id"] = commandID
+	}
+	logg.Info(r.Context(), "http request", fields)
+	if slowThreshold > 0 && duration >= slowThreshold {
+		logg.Warn(r.Context(), "slow request observed", map[string]any{
+			"event":        "slow_request",
+			"log_stream":   "system",
+			"method":       r.Method,
+			"path":         r.URL.Path,
+			"status":       rec.status,
+			"duration_ms":  duration.Milliseconds(),
+			"threshold_ms": slowThreshold.Milliseconds(),
 		})
 	}
 }

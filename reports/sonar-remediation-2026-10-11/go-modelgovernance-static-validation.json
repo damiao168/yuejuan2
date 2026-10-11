@@ -1,0 +1,73 @@
+{
+  "checked_at_utc": "2026-10-11T10:09:08.163556+00:00",
+  "passed": true,
+  "files": [
+    {
+      "file": "services/api-gateway/internal/modelgovernance/governance_routing_state_refactor_test.go",
+      "baseline_sha256": "9638351127bf13c6ff46f6a8b6b97b0cd46f65e32de74f9723915756981c9775",
+      "current_sha256": "a806847943e490918e3b01850779ee74d78ec9ed0f8f3f97122682f3bf62a4a9",
+      "handoff_matches_saved_baseline": true,
+      "test_identities_preserved": true,
+      "failure_and_log_calls_preserved": true,
+      "all_go_literal_occurrences_preserved": true,
+      "test_function_count": 11,
+      "failure_and_log_call_count": 31
+    },
+    {
+      "file": "services/api-gateway/internal/modelgovernance/managed_agent_http_test.go",
+      "baseline_sha256": "e118d8951e4a67860ff841b12839cc94e182391baeb591ef6ca179e81c5d276c",
+      "current_sha256": "e2fd0b0f0db78f74723375a86e6306ea7131d52ccf58e6261f7a844a64b4df22",
+      "handoff_matches_saved_baseline": true,
+      "test_identities_preserved": true,
+      "failure_and_log_calls_preserved": true,
+      "all_go_literal_occurrences_preserved": true,
+      "test_function_count": 10,
+      "failure_and_log_call_count": 37
+    },
+    {
+      "file": "services/api-gateway/internal/modelgovernance/managed_chat_test.go",
+      "baseline_sha256": "ce530ef8f35ef8a1713b32836d2e3b182dd6963d87947e4146b79f0cc6fafa7c",
+      "current_sha256": "473cb0e5b1eb52518229d15da87b5ff949880088785223231c315d5b5f70f3f1",
+      "handoff_matches_saved_baseline": true,
+      "test_identities_preserved": true,
+      "failure_and_log_calls_preserved": true,
+      "all_go_literal_occurrences_preserved": true,
+      "test_function_count": 4,
+      "failure_and_log_call_count": 19
+    },
+    {
+      "file": "services/api-gateway/internal/modelgovernance/managed_config_probe_http_test.go",
+      "baseline_sha256": "9b70a95056ad98ba69e35f536fb2dd1c12231eb57844440410ee87932ce113c9",
+      "current_sha256": "f9b4eb670a87ffa0c5b11049900cd73b8df99780313956cb0d354a1da20259aa",
+      "handoff_matches_saved_baseline": true,
+      "test_identities_preserved": true,
+      "failure_and_log_calls_preserved": true,
+      "all_go_literal_occurrences_preserved": true,
+      "test_function_count": 16,
+      "failure_and_log_call_count": 45
+    },
+    {
+      "file": "services/api-gateway/internal/modelgovernance/managed_governance_refactor_test.go",
+      "baseline_sha256": "6e3bd6be19c04450c0f0870b04f6c78d8a82c2a9e99fc5467ffc72d19bab31d8",
+      "current_sha256": "cdbd51253074184ebb1d02f26de099a11a4046312b5472a9ffef821c84e0f562",
+      "handoff_matches_saved_baseline": true,
+      "test_identities_preserved": true,
+      "failure_and_log_calls_preserved": true,
+      "all_go_literal_occurrences_preserved": true,
+      "test_function_count": 11,
+      "failure_and_log_call_count": 42
+    },
+    {
+      "file": "services/api-gateway/internal/modelgovernance/role_binding_test.go",
+      "baseline_sha256": "3a28b6d0c8995e1c4458df30f36b455898cf37d0745929d99f3bbd184bb2f1b2",
+      "current_sha256": "b099d73089c5f6fa2cc2073e2a6743838b83043efea0e7b8b4ed89cfea1e2242",
+      "handoff_matches_saved_baseline": true,
+      "test_identities_preserved": true,
+      "failure_and_log_calls_preserved": true,
+      "all_go_literal_occurrences_preserved": true,
+      "test_function_count": 6,
+      "failure_and_log_call_count": 16
+    }
+  ],
+  "scope": "Go原测试身份、所有文字字面量与失败/日志调用保真；gofmt语法解析成功。具体执行顺序由审读核对，真实测试与平台复扫仍待运行。"
+}

@@ -75,33 +75,11 @@ def _focus_report(gray: np.ndarray) -> dict[str, Any]:
         for column in range(columns):
             left, right = column * width // columns, (column + 1) * width // columns
             patch = focus_gray[top:bottom, left:right]
-            if patch.size == 0:
+            measurements, ink_count = _focus_patch_measurements(patch)
+            # 稀疏墨迹不生成清晰度框，但仍计入空白页判断使用的总墨迹。
+            all_ink += ink_count
+            if measurements is None:
                 continue
-            background = float(np.percentile(patch, 88))
-            if background < 160.0:
-                continue
-            ink_mask = patch < min(215.0, background - 16.0)
-            ink_ratio = float(ink_mask.mean())
-            all_ink += int(ink_mask.sum())
-            if ink_ratio < 0.0025:
-                continue
-            laplacian = cv2.Laplacian(patch, cv2.CV_64F, ksize=3)
-            gx = cv2.Sobel(patch, cv2.CV_64F, 1, 0, ksize=3)
-            gy = cv2.Sobel(patch, cv2.CV_64F, 0, 1, ksize=3)
-            gradient_squared = gx * gx + gy * gy
-            laplacian_variance = float(laplacian.var())
-            tenengrad = float(np.sqrt(gradient_squared).mean())
-            gradient_energy = float(gradient_squared.mean())
-            horizontal_energy = float((gx * gx).mean())
-            vertical_energy = float((gy * gy).mean())
-            gradient_anisotropy = abs(horizontal_energy - vertical_energy) / max(
-                horizontal_energy + vertical_energy, 1.0
-            )
-            focus_score = _clamp(
-                0.5 * laplacian_variance / 260.0
-                + 0.3 * tenengrad / 36.0
-                + 0.2 * gradient_energy / 3600.0
-            )
             # 局部清晰度框使用相对宽高的归一化坐标，数值不是原图像素。
             patches.append(
                 {
@@ -111,17 +89,7 @@ def _focus_report(gray: np.ndarray) -> dict[str, Any]:
                     "y": round(top / height, 5),
                     "width": round((right - left) / width, 5),
                     "height": round((bottom - top) / height, 5),
-                    "ink_ratio": round(ink_ratio, 5),
-                    "laplacian_variance": round(laplacian_variance, 4),
-                    "tenengrad": round(tenengrad, 4),
-                    "gradient_energy": round(gradient_energy, 4),
-                    "gradient_anisotropy": round(gradient_anisotropy, 4),
-                    "focus_score": round(focus_score, 4),
-                    "status": "bad"
-                    if focus_score < 0.35
-                    else "warning"
-                    if focus_score < 0.55
-                    else "good",
+                    **measurements,
                 }
             )
     scores = np.asarray(
@@ -148,13 +116,7 @@ def _focus_report(gray: np.ndarray) -> dict[str, Any]:
         0.55 * float(np.percentile(scores, 20)) + 0.45 * float(np.median(scores))
     )
     median_anisotropy = float(np.median(anisotropies))
-    blur_pattern = (
-        "directional_suspected"
-        if sharpness_score < 0.45 and median_anisotropy > 0.55
-        else "defocus_or_mixed"
-        if sharpness_score < 0.45
-        else "not_detected"
-    )
+    blur_pattern = _blur_pattern(sharpness_score, median_anisotropy)
     return {
         "grid": {"rows": rows, "columns": columns},
         "ink_patch_count": len(patches),
@@ -176,6 +138,61 @@ def _focus_report(gray: np.ndarray) -> dict[str, Any]:
     }
 
 
+def _focus_patch_measurements(patch: np.ndarray) -> tuple[dict[str, Any] | None, int]:
+    if patch.size == 0:
+        return None, 0
+    background = float(np.percentile(patch, 88))
+    if background < 160.0:
+        return None, 0
+    ink_mask = patch < min(215.0, background - 16.0)
+    ink_ratio = float(ink_mask.mean())
+    ink_count = int(ink_mask.sum())
+    if ink_ratio < 0.0025:
+        return None, ink_count
+    laplacian = cv2.Laplacian(patch, cv2.CV_64F, ksize=3)
+    gx = cv2.Sobel(patch, cv2.CV_64F, 1, 0, ksize=3)
+    gy = cv2.Sobel(patch, cv2.CV_64F, 0, 1, ksize=3)
+    gradient_squared = gx * gx + gy * gy
+    laplacian_variance = float(laplacian.var())
+    tenengrad = float(np.sqrt(gradient_squared).mean())
+    gradient_energy = float(gradient_squared.mean())
+    horizontal_energy = float((gx * gx).mean())
+    vertical_energy = float((gy * gy).mean())
+    gradient_anisotropy = abs(horizontal_energy - vertical_energy) / max(
+        horizontal_energy + vertical_energy, 1.0
+    )
+    focus_score = _clamp(
+        0.5 * laplacian_variance / 260.0
+        + 0.3 * tenengrad / 36.0
+        + 0.2 * gradient_energy / 3600.0
+    )
+    return {
+        "ink_ratio": round(ink_ratio, 5),
+        "laplacian_variance": round(laplacian_variance, 4),
+        "tenengrad": round(tenengrad, 4),
+        "gradient_energy": round(gradient_energy, 4),
+        "gradient_anisotropy": round(gradient_anisotropy, 4),
+        "focus_score": round(focus_score, 4),
+        "status": _focus_patch_status(focus_score),
+    }, ink_count
+
+
+def _focus_patch_status(focus_score: float) -> str:
+    if focus_score < 0.35:
+        return "bad"
+    if focus_score < 0.55:
+        return "warning"
+    return "good"
+
+
+def _blur_pattern(sharpness_score: float, median_anisotropy: float) -> str:
+    if sharpness_score < 0.45 and median_anisotropy > 0.55:
+        return "directional_suspected"
+    if sharpness_score < 0.45:
+        return "defocus_or_mixed"
+    return "not_detected"
+
+
 def _focus_image(gray: np.ndarray) -> np.ndarray:
     height, width = gray.shape
     short_edge = min(height, width)
@@ -190,25 +207,8 @@ def _focus_image(gray: np.ndarray) -> np.ndarray:
 
 
 def _illumination_report(gray: np.ndarray) -> dict[str, float]:
-    height, width = gray.shape
-    rows, columns = 12, 8
-    backgrounds: list[float] = []
-    local_contrasts: list[float] = []
-    for row in range(rows):
-        top, bottom = row * height // rows, (row + 1) * height // rows
-        for column in range(columns):
-            left, right = column * width // columns, (column + 1) * width // columns
-            patch = gray[top:bottom, left:right]
-            if not patch.size:
-                continue
-            background = float(np.percentile(patch, 88))
-            if background < 160.0:
-                continue
-            backgrounds.append(background)
-            ink_values = patch[patch < min(215.0, background - 20.0)]
-            if ink_values.size / patch.size >= 0.0025:
-                foreground = float(np.percentile(ink_values, 50))
-                local_contrasts.append(_clamp((background - foreground) / 140.0))
+    backgrounds, local_contrasts = _illumination_patch_samples(gray)
+    # 没有可用的纸面块时回退到整图均值，不能凭空生成局部对比度证据。
     background_values = np.asarray(
         backgrounds or [float(gray.mean())], dtype=np.float64
     )
@@ -247,6 +247,29 @@ def _illumination_report(gray: np.ndarray) -> dict[str, float]:
         "low_contrast_area_ratio": round(float(np.mean(contrast_values < 0.32)), 4),
         "exposure_quality_score": round(exposure_quality, 4),
     }
+
+
+def _illumination_patch_samples(gray: np.ndarray) -> tuple[list[float], list[float]]:
+    height, width = gray.shape
+    rows, columns = 12, 8
+    backgrounds: list[float] = []
+    local_contrasts: list[float] = []
+    for row in range(rows):
+        top, bottom = row * height // rows, (row + 1) * height // rows
+        for column in range(columns):
+            left, right = column * width // columns, (column + 1) * width // columns
+            patch = gray[top:bottom, left:right]
+            if not patch.size:
+                continue
+            background = float(np.percentile(patch, 88))
+            if background < 160.0:
+                continue
+            backgrounds.append(background)
+            ink_values = patch[patch < min(215.0, background - 20.0)]
+            if ink_values.size / patch.size >= 0.0025:
+                foreground = float(np.percentile(ink_values, 50))
+                local_contrasts.append(_clamp((background - foreground) / 140.0))
+    return backgrounds, local_contrasts
 
 
 def _occlusion_report(gray: np.ndarray) -> dict[str, float | str]:

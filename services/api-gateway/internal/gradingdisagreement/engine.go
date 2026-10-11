@@ -1,6 +1,5 @@
-// Package gradingdisagreement computes immutable disagreement facts between
-// any two rubric-aligned grading observations. Routing policy stays with the
-// caller, allowing the same engine to support AI-human and AI-A/AI-B checks.
+// Package gradingdisagreement 计算任意两份按评分细则对齐的评分观察之间的不可变分歧事实。
+// 路由策略由调用方负责，使同一引擎支持 AI 与人工及 AI-A/AI-B 比较。
 package gradingdisagreement
 
 import (
@@ -77,40 +76,49 @@ func Compare(left, right Observation) Result {
 	for _, id := range ordered {
 		leftCriterion, leftOK := left.Criteria[id]
 		rightCriterion, rightOK := right.Criteria[id]
-		weight := math.Max(leftCriterion.Weight, rightCriterion.Weight)
-		required := leftCriterion.Required || rightCriterion.Required
-		statusConflict := !leftOK || !rightOK || leftCriterion.Status != rightCriterion.Status
-		scoreConflict := !leftOK || !rightOK || math.Abs(leftCriterion.Score-rightCriterion.Score) > epsilon
-		// 只有双方都声称支持该评分点时才比较证据，状态分歧另行记录。
-		evidenceConflict := leftOK && rightOK && leftCriterion.Status == "supported" && rightCriterion.Status == "supported" &&
-			!overlaps(leftCriterion.EvidenceFingerprints, rightCriterion.EvidenceFingerprints)
-		if !statusConflict && !scoreConflict && !evidenceConflict {
+		conflict := compareCriterion(id, leftCriterion, rightCriterion, leftOK, rightOK)
+		if !conflict.StatusConflict && !conflict.ScoreConflict && !conflict.EvidenceConflict {
 			continue
 		}
-		if statusConflict || scoreConflict {
-			conflictingWeight += weight
-			result.RequiredPointConflict = result.RequiredPointConflict || required
+		if conflict.StatusConflict || conflict.ScoreConflict {
+			conflictingWeight += conflict.Weight
+			result.RequiredPointConflict = result.RequiredPointConflict || conflict.Required
 		}
-		result.EvidenceConflict = result.EvidenceConflict || evidenceConflict
-		result.CriterionConflicts = append(result.CriterionConflicts, CriterionConflict{
-			CriterionID: id, Weight: weight, Required: required, StatusConflict: statusConflict,
-			ScoreConflict: scoreConflict, EvidenceConflict: evidenceConflict,
-		})
+		result.EvidenceConflict = result.EvidenceConflict || conflict.EvidenceConflict
+		result.CriterionConflicts = append(result.CriterionConflicts, conflict)
 	}
 	if maxScore > 0 {
 		result.NormalizedCriterionGap = rounded(math.Min(1, conflictingWeight/maxScore))
 	}
+	result.RiskCodes = combinedRiskCodes(left.RiskCodes, right.RiskCodes)
+	return result
+}
+
+func compareCriterion(id string, left, right CriterionObservation, leftOK, rightOK bool) CriterionConflict {
+	// 只有双方都声称支持该评分点时才比较证据，状态分歧另行记录。
+	evidenceConflict := leftOK && rightOK && left.Status == "supported" && right.Status == "supported" &&
+		!overlaps(left.EvidenceFingerprints, right.EvidenceFingerprints)
+	return CriterionConflict{
+		CriterionID: id, Weight: math.Max(left.Weight, right.Weight), Required: left.Required || right.Required,
+		StatusConflict:   !leftOK || !rightOK || left.Status != right.Status,
+		ScoreConflict:    !leftOK || !rightOK || math.Abs(left.Score-right.Score) > epsilon,
+		EvidenceConflict: evidenceConflict,
+	}
+}
+
+func combinedRiskCodes(left, right []string) []string {
 	riskSet := map[string]bool{}
-	for _, code := range append(append([]string{}, left.RiskCodes...), right.RiskCodes...) {
+	for _, code := range append(append([]string{}, left...), right...) {
 		if code != "" {
 			riskSet[code] = true
 		}
 	}
+	var codes []string
 	for code := range riskSet {
-		result.RiskCodes = append(result.RiskCodes, code)
+		codes = append(codes, code)
 	}
-	sort.Strings(result.RiskCodes)
-	return result
+	sort.Strings(codes)
+	return codes
 }
 
 func overlaps(left, right []string) bool {

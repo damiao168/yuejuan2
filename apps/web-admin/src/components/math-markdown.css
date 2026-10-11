@@ -1,0 +1,63 @@
+.math-markdown { min-width: 0; max-width: 100%; overflow-wrap: anywhere; font-size: 15px; line-height: 1.85; white-space: normal; }
+.math-markdown > :first-child { margin-top: 0; }
+.math-markdown > :last-child { margin-bottom: 0; }
+.math-markdown p { margin: 0 0 .75em; }
+.math-markdown h1, .math-markdown h2, .math-markdown h3, .math-markdown h4, .math-markdown h5, .math-markdown h6 { margin: 1.25em 0 .55em; font-weight: 650; line-height: 1.4; color: inherit; }
+.math-markdown h1 { font-size: 1.6em; }
+.math-markdown h2 { font-size: 1.4em; }
+.math-markdown h3 { font-size: 1.2em; }
+.math-markdown h4, .math-markdown h5, .math-markdown h6 { font-size: 1em; }
+.math-markdown ul, .math-markdown ol { margin: .4em 0 .85em; padding-left: 1.6em; }
+.math-markdown li { margin: .25em 0; }
+.math-markdown li > p { margin: .4em 0; }
+.math-markdown li > ul, .math-markdown li > ol { margin: .3em 0; }
+.math-markdown blockquote { margin: 1em 0; padding: .3em .9em; border-left: 3px solid #a7bdd9; color: #526174; background: #f8fafc; }
+.math-markdown blockquote > :last-child { margin-bottom: 0; }
+.math-markdown hr { margin: 1.25em 0; border: 0; border-top: 1px solid var(--border, #e2e8f0); }
+.math-markdown :not(pre) > code { padding: .15em .35em; border-radius: 4px; background: #f1f5f9; color: #334155; font-size: .9em; }
+.math-markdown code { font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace; }
+.math-markdown-code-block { min-width: 0; max-width: 100%; margin: .8em 0; overflow: hidden; border: 1px solid #dce3ec; border-radius: 7px; background: #f8fafc; }
+.math-markdown-code-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 12px; border-bottom: 1px solid #dce3ec; color: #64748b; font-size: 12px; line-height: 1.5; }
+.math-markdown-code-header button { padding: 3px 6px; border: 0; border-radius: 4px; color: #526174; background: transparent; font: inherit; cursor: pointer; }
+.math-markdown-code-header button:hover { background: #e8eef5; color: #1d4ed8; }
+.math-markdown-code-header button:focus-visible, .math-markdown-table-controls button:focus-visible { outline: 2px solid #397acb; outline-offset: -2px; }
+.math-markdown pre { max-width: 100%; margin: 0; padding: 12px 14px; overflow: auto; background: transparent; line-height: 1.6; white-space: pre; scrollbar-width: thin; }
+.math-markdown pre code { display: block; padding: 0; background: transparent; color: #243247; font-size: 13px; overflow-wrap: normal; word-break: normal; }
+.math-markdown .hljs-comment, .math-markdown .hljs-quote { color: #64748b; font-style: italic; }
+.math-markdown .hljs-keyword, .math-markdown .hljs-selector-tag, .math-markdown .hljs-literal { color: #7c3aed; }
+.math-markdown .hljs-string, .math-markdown .hljs-regexp, .math-markdown .hljs-addition { color: #047857; }
+.math-markdown .hljs-number, .math-markdown .hljs-symbol, .math-markdown .hljs-bullet { color: #b45309; }
+.math-markdown .hljs-title, .math-markdown .hljs-section, .math-markdown .hljs-attribute, .math-markdown .hljs-type { color: #1d4ed8; }
+.math-markdown .hljs-variable, .math-markdown .hljs-template-variable, .math-markdown .hljs-deletion { color: #b42318; }
+.math-markdown .hljs-meta, .math-markdown .hljs-built_in { color: #0e7490; }
+.math-markdown .math-markdown-table-region { min-width: 0; max-width: 100%; margin: 1em 0; }
+.math-markdown-table-controls { display: flex; justify-content: flex-end; gap: 4px; margin-bottom: 4px; }
+.math-markdown-table-controls button { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 32px; width: 32px; height: 32px; padding: 0; border: 1px solid #dce3ec; border-radius: 4px; background: #fff; color: #526174; cursor: pointer; }
+.math-markdown-table-controls button:hover { background: #e8eef5; color: #1d4ed8; }
+.math-markdown .math-markdown-table-scroll { max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; scrollbar-width: thin; }
+.math-markdown table { width: max-content; min-width: 100%; border-collapse: collapse; font-size: .94em; }
+.math-markdown th, .math-markdown td { padding: 8px 12px; border: 1px solid #dce3ec; vertical-align: top; }
+.math-markdown th { background: #f1f5f9; font-weight: 600; }
+.math-markdown td { background: #fff; }
+.math-markdown td > :last-child, .math-markdown th > :last-child { margin-bottom: 0; }
+.math-markdown .contains-task-list { list-style: none; padding-left: .2em; }
+.math-markdown .task-list-item > input { width: 14px; height: 14px; margin: 0 .5em 0 0; vertical-align: -.1em; accent-color: #397acb; }
+.math-markdown .math-markdown-link { color: inherit; }
+.math-markdown .math-markdown-copy-reference { margin-inline: 6px; border: 1px solid currentColor; border-radius: 4px; background: transparent; color: #3168b2; cursor: pointer; font: inherit; font-size: .85em; }
+.math-markdown .math-markdown-reference-address { margin-inline-end: 6px; overflow-wrap: anywhere; color: #667085; font-size: .85em; user-select: all; }
+.math-markdown .math-markdown-image-label { color: #64748b; font-style: italic; }
+.math-markdown .footnotes { margin-top: 1.2em; padding-top: .65em; border-top: 1px solid #dce3ec; color: #64748b; font-size: .88em; }
+.math-markdown .footnotes ol { padding-left: 1.5em; }
+.math-markdown a[data-footnote-ref], .math-markdown .footnotes a, .math-markdown sup a { color: #3168b2; text-decoration: none; }
+.math-markdown .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.math-markdown .katex { max-width: 100%; overflow-wrap: normal; word-break: normal; white-space: nowrap; }
+.math-markdown p > .katex { display: inline-block; max-width: 100%; margin: .12em .05em; padding: .25em 0 .32em; overflow-x: auto; overflow-y: hidden; line-height: normal; vertical-align: -.3em; scrollbar-width: thin; }
+/* KaTeX 用自身的坐标排版；只滚动外层，不强行换行内部的分数、矩阵和对齐列。 */
+.math-markdown .katex-display { display: block; max-width: 100%; margin: .8em 0; padding: .4em 0 .55em; overflow-x: auto; overflow-y: hidden; overscroll-behavior-inline: contain; scrollbar-width: thin; text-align: left; }
+.math-markdown .katex-display > .katex { display: block; width: max-content; min-width: 100%; max-width: none; margin: 0; padding: 0 .1em; text-align: left; white-space: nowrap; }
+.math-markdown .katex-error { padding: .2em .4em; color: #b42318; background: #fff1f0; font-family: ui-monospace, Consolas, monospace; white-space: pre-wrap; }
+@media print {
+  .math-markdown .katex-display, .math-markdown .math-markdown-table-scroll { overflow: visible; break-inside: avoid; }
+  .math-markdown-code-header button, .math-markdown-table-controls { display: none; }
+  .math-markdown pre { white-space: pre-wrap; }
+}

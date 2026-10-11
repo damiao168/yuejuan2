@@ -4,15 +4,15 @@ import { apiClient } from "./client";
 export type MFAOperation = MFAChallengeStartResponse["operation"];
 export type MFAMethod = MFAChallengeStartResponse["methods"][number];
 
-// Deliberately not a query-cache API: provisioning secrets, proofs and recovery
-// codes must not survive in shared caches, storage or idempotency receipts.
+// 此接口有意不使用查询缓存：注册密钥、验证凭证和恢复码
+// 不能保留在共享缓存、存储或幂等回执中。
 async function request<T>(path: string, init: RequestInit, signal?: AbortSignal) {
   const transport = new AbortController();
   const abort = () => transport.abort();
   if (signal?.aborted) abort();
   else signal?.addEventListener("abort", abort, { once: true });
-  // An abort is not a rollback. The flow must reconcile state, never retry a
-  // secret-bearing mutation just because this bounded browser wait timed out.
+  // 中止请求不等于回滚。流程必须核对状态，不能仅因浏览器
+  // 等待超时，就重试包含密钥的变更操作。
   const timeout = setTimeout(abort, 30_000);
   try {
     return await apiClient.request<T>(path, { ...init, cache: "no-store", signal: transport.signal });

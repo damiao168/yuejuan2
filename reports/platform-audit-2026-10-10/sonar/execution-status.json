@@ -1,0 +1,8 @@
+{
+  "status": "complete_via_official_local_report_recovery",
+  "completed_at": "2026-10-11T12:21:23.786944+08:00",
+  "current_results_valid": true,
+  "compute_engine_status": "SUCCESS",
+  "original_scanner_standard_publish_success": false,
+  "submission_method": "completed official Scanner report directory zipped and submitted through official local /api/ce/submit"
+}

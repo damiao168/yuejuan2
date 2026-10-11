@@ -1,0 +1,1682 @@
+[
+  {
+    "id": "SG-001",
+    "path": ".github/dependabot.yml",
+    "line": 4,
+    "end_line": 11,
+    "rule": "audit.package_managers.dependabot.dependabot-missing-cooldown.dependabot-missing-cooldown",
+    "severity": "MEDIUM",
+    "confidence": "HIGH",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "This Dependabot configuration does not set a cooldown period. Newly published packages can be malicious or unstable. Add a `cooldown` block with `default-days: 7` to each `package-ecosystem` entry under `updates` to wait 7 days before proposing updates to newly published package versions. Reference: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file#cooldown",
+    "human_status": "hardening",
+    "human_severity": "low",
+    "human_notes": "11 个 Dependabot 更新项确实没有 cooldown；已有每周检查和人工 PR 流程。属于依赖更新缓冲策略建议，不是已确认依赖漏洞或代码执行。可评估为新版本设置缓冲期；不应延迟必要的安全更新。"
+  },
+  {
+    "id": "SG-002",
+    "path": ".github/dependabot.yml",
+    "line": 13,
+    "end_line": 20,
+    "rule": "audit.package_managers.dependabot.dependabot-missing-cooldown.dependabot-missing-cooldown",
+    "severity": "MEDIUM",
+    "confidence": "HIGH",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "This Dependabot configuration does not set a cooldown period. Newly published packages can be malicious or unstable. Add a `cooldown` block with `default-days: 7` to each `package-ecosystem` entry under `updates` to wait 7 days before proposing updates to newly published package versions. Reference: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file#cooldown",
+    "human_status": "hardening",
+    "human_severity": "low",
+    "human_notes": "11 个 Dependabot 更新项确实没有 cooldown；已有每周检查和人工 PR 流程。属于依赖更新缓冲策略建议，不是已确认依赖漏洞或代码执行。可评估为新版本设置缓冲期；不应延迟必要的安全更新。"
+  },
+  {
+    "id": "SG-003",
+    "path": ".github/dependabot.yml",
+    "line": 22,
+    "end_line": 29,
+    "rule": "audit.package_managers.dependabot.dependabot-missing-cooldown.dependabot-missing-cooldown",
+    "severity": "MEDIUM",
+    "confidence": "HIGH",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "This Dependabot configuration does not set a cooldown period. Newly published packages can be malicious or unstable. Add a `cooldown` block with `default-days: 7` to each `package-ecosystem` entry under `updates` to wait 7 days before proposing updates to newly published package versions. Reference: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file#cooldown",
+    "human_status": "hardening",
+    "human_severity": "low",
+    "human_notes": "11 个 Dependabot 更新项确实没有 cooldown；已有每周检查和人工 PR 流程。属于依赖更新缓冲策略建议，不是已确认依赖漏洞或代码执行。可评估为新版本设置缓冲期；不应延迟必要的安全更新。"
+  },
+  {
+    "id": "SG-004",
+    "path": ".github/dependabot.yml",
+    "line": 31,
+    "end_line": 38,
+    "rule": "audit.package_managers.dependabot.dependabot-missing-cooldown.dependabot-missing-cooldown",
+    "severity": "MEDIUM",
+    "confidence": "HIGH",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "This Dependabot configuration does not set a cooldown period. Newly published packages can be malicious or unstable. Add a `cooldown` block with `default-days: 7` to each `package-ecosystem` entry under `updates` to wait 7 days before proposing updates to newly published package versions. Reference: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file#cooldown",
+    "human_status": "hardening",
+    "human_severity": "low",
+    "human_notes": "11 个 Dependabot 更新项确实没有 cooldown；已有每周检查和人工 PR 流程。属于依赖更新缓冲策略建议，不是已确认依赖漏洞或代码执行。可评估为新版本设置缓冲期；不应延迟必要的安全更新。"
+  },
+  {
+    "id": "SG-005",
+    "path": ".github/dependabot.yml",
+    "line": 40,
+    "end_line": 47,
+    "rule": "audit.package_managers.dependabot.dependabot-missing-cooldown.dependabot-missing-cooldown",
+    "severity": "MEDIUM",
+    "confidence": "HIGH",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "This Dependabot configuration does not set a cooldown period. Newly published packages can be malicious or unstable. Add a `cooldown` block with `default-days: 7` to each `package-ecosystem` entry under `updates` to wait 7 days before proposing updates to newly published package versions. Reference: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file#cooldown",
+    "human_status": "hardening",
+    "human_severity": "low",
+    "human_notes": "11 个 Dependabot 更新项确实没有 cooldown；已有每周检查和人工 PR 流程。属于依赖更新缓冲策略建议，不是已确认依赖漏洞或代码执行。可评估为新版本设置缓冲期；不应延迟必要的安全更新。"
+  },
+  {
+    "id": "SG-006",
+    "path": ".github/dependabot.yml",
+    "line": 49,
+    "end_line": 56,
+    "rule": "audit.package_managers.dependabot.dependabot-missing-cooldown.dependabot-missing-cooldown",
+    "severity": "MEDIUM",
+    "confidence": "HIGH",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "This Dependabot configuration does not set a cooldown period. Newly published packages can be malicious or unstable. Add a `cooldown` block with `default-days: 7` to each `package-ecosystem` entry under `updates` to wait 7 days before proposing updates to newly published package versions. Reference: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file#cooldown",
+    "human_status": "hardening",
+    "human_severity": "low",
+    "human_notes": "11 个 Dependabot 更新项确实没有 cooldown；已有每周检查和人工 PR 流程。属于依赖更新缓冲策略建议，不是已确认依赖漏洞或代码执行。可评估为新版本设置缓冲期；不应延迟必要的安全更新。"
+  },
+  {
+    "id": "SG-007",
+    "path": ".github/dependabot.yml",
+    "line": 58,
+    "end_line": 65,
+    "rule": "audit.package_managers.dependabot.dependabot-missing-cooldown.dependabot-missing-cooldown",
+    "severity": "MEDIUM",
+    "confidence": "HIGH",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "This Dependabot configuration does not set a cooldown period. Newly published packages can be malicious or unstable. Add a `cooldown` block with `default-days: 7` to each `package-ecosystem` entry under `updates` to wait 7 days before proposing updates to newly published package versions. Reference: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file#cooldown",
+    "human_status": "hardening",
+    "human_severity": "low",
+    "human_notes": "11 个 Dependabot 更新项确实没有 cooldown；已有每周检查和人工 PR 流程。属于依赖更新缓冲策略建议，不是已确认依赖漏洞或代码执行。可评估为新版本设置缓冲期；不应延迟必要的安全更新。"
+  },
+  {
+    "id": "SG-008",
+    "path": ".github/dependabot.yml",
+    "line": 67,
+    "end_line": 74,
+    "rule": "audit.package_managers.dependabot.dependabot-missing-cooldown.dependabot-missing-cooldown",
+    "severity": "MEDIUM",
+    "confidence": "HIGH",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "This Dependabot configuration does not set a cooldown period. Newly published packages can be malicious or unstable. Add a `cooldown` block with `default-days: 7` to each `package-ecosystem` entry under `updates` to wait 7 days before proposing updates to newly published package versions. Reference: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file#cooldown",
+    "human_status": "hardening",
+    "human_severity": "low",
+    "human_notes": "11 个 Dependabot 更新项确实没有 cooldown；已有每周检查和人工 PR 流程。属于依赖更新缓冲策略建议，不是已确认依赖漏洞或代码执行。可评估为新版本设置缓冲期；不应延迟必要的安全更新。"
+  },
+  {
+    "id": "SG-009",
+    "path": ".github/dependabot.yml",
+    "line": 76,
+    "end_line": 83,
+    "rule": "audit.package_managers.dependabot.dependabot-missing-cooldown.dependabot-missing-cooldown",
+    "severity": "MEDIUM",
+    "confidence": "HIGH",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "This Dependabot configuration does not set a cooldown period. Newly published packages can be malicious or unstable. Add a `cooldown` block with `default-days: 7` to each `package-ecosystem` entry under `updates` to wait 7 days before proposing updates to newly published package versions. Reference: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file#cooldown",
+    "human_status": "hardening",
+    "human_severity": "low",
+    "human_notes": "11 个 Dependabot 更新项确实没有 cooldown；已有每周检查和人工 PR 流程。属于依赖更新缓冲策略建议，不是已确认依赖漏洞或代码执行。可评估为新版本设置缓冲期；不应延迟必要的安全更新。"
+  },
+  {
+    "id": "SG-010",
+    "path": ".github/dependabot.yml",
+    "line": 85,
+    "end_line": 92,
+    "rule": "audit.package_managers.dependabot.dependabot-missing-cooldown.dependabot-missing-cooldown",
+    "severity": "MEDIUM",
+    "confidence": "HIGH",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "This Dependabot configuration does not set a cooldown period. Newly published packages can be malicious or unstable. Add a `cooldown` block with `default-days: 7` to each `package-ecosystem` entry under `updates` to wait 7 days before proposing updates to newly published package versions. Reference: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file#cooldown",
+    "human_status": "hardening",
+    "human_severity": "low",
+    "human_notes": "11 个 Dependabot 更新项确实没有 cooldown；已有每周检查和人工 PR 流程。属于依赖更新缓冲策略建议，不是已确认依赖漏洞或代码执行。可评估为新版本设置缓冲期；不应延迟必要的安全更新。"
+  },
+  {
+    "id": "SG-011",
+    "path": ".github/dependabot.yml",
+    "line": 94,
+    "end_line": 98,
+    "rule": "audit.package_managers.dependabot.dependabot-missing-cooldown.dependabot-missing-cooldown",
+    "severity": "MEDIUM",
+    "confidence": "HIGH",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "This Dependabot configuration does not set a cooldown period. Newly published packages can be malicious or unstable. Add a `cooldown` block with `default-days: 7` to each `package-ecosystem` entry under `updates` to wait 7 days before proposing updates to newly published package versions. Reference: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file#cooldown",
+    "human_status": "hardening",
+    "human_severity": "low",
+    "human_notes": "11 个 Dependabot 更新项确实没有 cooldown；已有每周检查和人工 PR 流程。属于依赖更新缓冲策略建议，不是已确认依赖漏洞或代码执行。可评估为新版本设置缓冲期；不应延迟必要的安全更新。"
+  },
+  {
+    "id": "SG-012",
+    "path": "ai-services/grading_agent/managed_model.py",
+    "line": 62,
+    "end_line": 67,
+    "rule": "audit.python.lang.security.audit.httpsconnection-detected.httpsconnection-detected",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "The HTTPSConnection API has changed frequently with minor releases of Python. Ensure you are using the API for your version of Python securely. For example, Python 3 versions prior to 3.4.3 will not verify SSL certificates by default. See https://docs.python.org/3/library/http.client.html#http.client.HTTPSConnection for more information.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "managed_model.public_json_transport 先限制 HTTPS，拒绝任何非公网 DNS 结果，再固定已校验 IP；HTTPSConnection 保留原 hostname 进行 SNI、证书链和主机名验证，响应有 4MB 上限并关闭连接。未发现由此调用直接引入的 SSRF/TLS 绕过；未来 Python 升级需关注 _create_connection 私有接口兼容性。"
+  },
+  {
+    "id": "SG-013",
+    "path": "ai-services/grading_agent/model.py",
+    "line": 456,
+    "end_line": 456,
+    "rule": "audit.python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "Detected a dynamic value being used with urllib. urllib supports 'file://' schemes, so a dynamic value controlled by a malicious actor may allow them to read arbitrary files. Audit uses of urllib calls to ensure user data cannot control the URLs, or consider using the 'requests' library instead.",
+    "human_status": "needs_review",
+    "human_severity": "medium",
+    "human_notes": "模型 URL 来自受信部署配置，native adapter 还限定固定供应商 HTTPS 主机与路径，学校请求模型使用另一个固定公网地址且不自动跟随跳转的 transport。此处 urllib 默认允许自动重定向，合成无网络核验证明跨域跳转保留 Authorization；需供应商或配置的服务返回攻击者可控制的重定向才能触发，当前未证明存在此路径。建议带凭据客户端拒绝重定向，或逐跳校验同源并剥离敏感头。"
+  },
+  {
+    "id": "SG-014",
+    "path": "ai-services/grading_agent/model.py",
+    "line": 604,
+    "end_line": 606,
+    "rule": "audit.python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "Detected a dynamic value being used with urllib. urllib supports 'file://' schemes, so a dynamic value controlled by a malicious actor may allow them to read arbitrary files. Audit uses of urllib calls to ensure user data cannot control the URLs, or consider using the 'requests' library instead.",
+    "human_status": "needs_review",
+    "human_severity": "medium",
+    "human_notes": "模型 URL 来自受信部署配置，native adapter 还限定固定供应商 HTTPS 主机与路径，学校请求模型使用另一个固定公网地址且不自动跟随跳转的 transport。此处 urllib 默认允许自动重定向，合成无网络核验证明跨域跳转保留 Authorization；需供应商或配置的服务返回攻击者可控制的重定向才能触发，当前未证明存在此路径。建议带凭据客户端拒绝重定向，或逐跳校验同源并剥离敏感头。"
+  },
+  {
+    "id": "SG-015",
+    "path": "ai-services/grading_agent/model.py",
+    "line": 733,
+    "end_line": 733,
+    "rule": "audit.python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "Detected a dynamic value being used with urllib. urllib supports 'file://' schemes, so a dynamic value controlled by a malicious actor may allow them to read arbitrary files. Audit uses of urllib calls to ensure user data cannot control the URLs, or consider using the 'requests' library instead.",
+    "human_status": "needs_review",
+    "human_severity": "medium",
+    "human_notes": "模型 URL 来自受信部署配置，native adapter 还限定固定供应商 HTTPS 主机与路径，学校请求模型使用另一个固定公网地址且不自动跟随跳转的 transport。此处 urllib 默认允许自动重定向，合成无网络核验证明跨域跳转保留 Authorization；需供应商或配置的服务返回攻击者可控制的重定向才能触发，当前未证明存在此路径。建议带凭据客户端拒绝重定向，或逐跳校验同源并剥离敏感头。"
+  },
+  {
+    "id": "SG-016",
+    "path": "ai-services/tests/test_http.py",
+    "line": 29,
+    "end_line": 29,
+    "rule": "audit.python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "Detected a dynamic value being used with urllib. urllib supports 'file://' schemes, so a dynamic value controlled by a malicious actor may allow them to read arbitrary files. Audit uses of urllib calls to ensure user data cannot control the URLs, or consider using the 'requests' library instead.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "测试在 127.0.0.1 随机端口启动测试 HTTP 服务，URL 由 server_port 拼出，调用设置 timeout=2；测试覆盖认证、幂等和解析结果，未使用普通用户提供的目标 URL。此告警不代表生产 SSRF。"
+  },
+  {
+    "id": "SG-017",
+    "path": "ai-services/tests/test_http.py",
+    "line": 31,
+    "end_line": 31,
+    "rule": "audit.python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "Detected a dynamic value being used with urllib. urllib supports 'file://' schemes, so a dynamic value controlled by a malicious actor may allow them to read arbitrary files. Audit uses of urllib calls to ensure user data cannot control the URLs, or consider using the 'requests' library instead.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "测试在 127.0.0.1 随机端口启动测试 HTTP 服务，URL 由 server_port 拼出，调用设置 timeout=2；测试覆盖认证、幂等和解析结果，未使用普通用户提供的目标 URL。此告警不代表生产 SSRF。"
+  },
+  {
+    "id": "SG-018",
+    "path": "ai-services/tests/test_http.py",
+    "line": 36,
+    "end_line": 36,
+    "rule": "audit.python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "Detected a dynamic value being used with urllib. urllib supports 'file://' schemes, so a dynamic value controlled by a malicious actor may allow them to read arbitrary files. Audit uses of urllib calls to ensure user data cannot control the URLs, or consider using the 'requests' library instead.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "测试在 127.0.0.1 随机端口启动测试 HTTP 服务，URL 由 server_port 拼出，调用设置 timeout=2；测试覆盖认证、幂等和解析结果，未使用普通用户提供的目标 URL。此告警不代表生产 SSRF。"
+  },
+  {
+    "id": "SG-019",
+    "path": "ai-services/tests/test_http.py",
+    "line": 50,
+    "end_line": 50,
+    "rule": "audit.python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "Detected a dynamic value being used with urllib. urllib supports 'file://' schemes, so a dynamic value controlled by a malicious actor may allow them to read arbitrary files. Audit uses of urllib calls to ensure user data cannot control the URLs, or consider using the 'requests' library instead.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "测试在 127.0.0.1 随机端口启动测试 HTTP 服务，URL 由 server_port 拼出，调用设置 timeout=2；测试覆盖认证、幂等和解析结果，未使用普通用户提供的目标 URL。此告警不代表生产 SSRF。"
+  },
+  {
+    "id": "SG-020",
+    "path": "ai-services/tests/test_http.py",
+    "line": 64,
+    "end_line": 64,
+    "rule": "audit.python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "Detected a dynamic value being used with urllib. urllib supports 'file://' schemes, so a dynamic value controlled by a malicious actor may allow them to read arbitrary files. Audit uses of urllib calls to ensure user data cannot control the URLs, or consider using the 'requests' library instead.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "测试在 127.0.0.1 随机端口启动测试 HTTP 服务，URL 由 server_port 拼出，调用设置 timeout=2；测试覆盖认证、幂等和解析结果，未使用普通用户提供的目标 URL。此告警不代表生产 SSRF。"
+  },
+  {
+    "id": "SG-021",
+    "path": "ai-services/tests/test_http.py",
+    "line": 75,
+    "end_line": 75,
+    "rule": "audit.python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "Detected a dynamic value being used with urllib. urllib supports 'file://' schemes, so a dynamic value controlled by a malicious actor may allow them to read arbitrary files. Audit uses of urllib calls to ensure user data cannot control the URLs, or consider using the 'requests' library instead.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "测试在 127.0.0.1 随机端口启动测试 HTTP 服务，URL 由 server_port 拼出，调用设置 timeout=2；测试覆盖认证、幂等和解析结果，未使用普通用户提供的目标 URL。此告警不代表生产 SSRF。"
+  },
+  {
+    "id": "SG-022",
+    "path": "ai-services/tests/test_http.py",
+    "line": 117,
+    "end_line": 117,
+    "rule": "audit.python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "Detected a dynamic value being used with urllib. urllib supports 'file://' schemes, so a dynamic value controlled by a malicious actor may allow them to read arbitrary files. Audit uses of urllib calls to ensure user data cannot control the URLs, or consider using the 'requests' library instead.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "测试在 127.0.0.1 随机端口启动测试 HTTP 服务，URL 由 server_port 拼出，调用设置 timeout=2；测试覆盖认证、幂等和解析结果，未使用普通用户提供的目标 URL。此告警不代表生产 SSRF。"
+  },
+  {
+    "id": "SG-023",
+    "path": "ai-services/tests/test_http.py",
+    "line": 151,
+    "end_line": 151,
+    "rule": "audit.python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "Detected a dynamic value being used with urllib. urllib supports 'file://' schemes, so a dynamic value controlled by a malicious actor may allow them to read arbitrary files. Audit uses of urllib calls to ensure user data cannot control the URLs, or consider using the 'requests' library instead.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "测试在 127.0.0.1 随机端口启动测试 HTTP 服务，URL 由 server_port 拼出，调用设置 timeout=2；测试覆盖认证、幂等和解析结果，未使用普通用户提供的目标 URL。此告警不代表生产 SSRF。"
+  },
+  {
+    "id": "SG-024",
+    "path": "ai-services/tests/test_math_v2_production.py",
+    "line": 164,
+    "end_line": 164,
+    "rule": "audit.python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "Detected a dynamic value being used with urllib. urllib supports 'file://' schemes, so a dynamic value controlled by a malicious actor may allow them to read arbitrary files. Audit uses of urllib calls to ensure user data cannot control the URLs, or consider using the 'requests' library instead.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "测试在 127.0.0.1 随机端口启动测试 HTTP 服务，URL 由 server_port 拼出，调用设置 timeout=2；测试覆盖认证、幂等和解析结果，未使用普通用户提供的目标 URL。此告警不代表生产 SSRF。"
+  },
+  {
+    "id": "SG-025",
+    "path": "apps/web-admin/nginx.conf",
+    "line": 17,
+    "end_line": 17,
+    "rule": "audit.generic.nginx.security.header-redefinition.header-redefinition",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "The 'add_header' directive is called in a 'location' block after headers have been set at the server block. Calling 'add_header' in the location block will actually overwrite the headers defined in the server block, no matter which headers are set. To fix this, explicitly set all headers or set all headers in the server block.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "apps/web-admin/nginx.conf:14-24 的 /health location 已显式重复所有 server 安全头；17 行 Content-Type 并未造成 CSP、X-Frame-Options 等丢失。19-23 行正是修复继承边界的防护代码。"
+  },
+  {
+    "id": "SG-026",
+    "path": "apps/web-admin/nginx.conf",
+    "line": 19,
+    "end_line": 19,
+    "rule": "audit.generic.nginx.security.header-redefinition.header-redefinition",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "The 'add_header' directive is called in a 'location' block after headers have been set at the server block. Calling 'add_header' in the location block will actually overwrite the headers defined in the server block, no matter which headers are set. To fix this, explicitly set all headers or set all headers in the server block.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "apps/web-admin/nginx.conf:14-24 的 /health location 已显式重复所有 server 安全头；17 行 Content-Type 并未造成 CSP、X-Frame-Options 等丢失。19-23 行正是修复继承边界的防护代码。"
+  },
+  {
+    "id": "SG-027",
+    "path": "apps/web-admin/nginx.conf",
+    "line": 20,
+    "end_line": 20,
+    "rule": "audit.generic.nginx.security.header-redefinition.header-redefinition",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "The 'add_header' directive is called in a 'location' block after headers have been set at the server block. Calling 'add_header' in the location block will actually overwrite the headers defined in the server block, no matter which headers are set. To fix this, explicitly set all headers or set all headers in the server block.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "apps/web-admin/nginx.conf:14-24 的 /health location 已显式重复所有 server 安全头；17 行 Content-Type 并未造成 CSP、X-Frame-Options 等丢失。19-23 行正是修复继承边界的防护代码。"
+  },
+  {
+    "id": "SG-028",
+    "path": "apps/web-admin/nginx.conf",
+    "line": 21,
+    "end_line": 21,
+    "rule": "audit.generic.nginx.security.header-redefinition.header-redefinition",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "The 'add_header' directive is called in a 'location' block after headers have been set at the server block. Calling 'add_header' in the location block will actually overwrite the headers defined in the server block, no matter which headers are set. To fix this, explicitly set all headers or set all headers in the server block.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "apps/web-admin/nginx.conf:14-24 的 /health location 已显式重复所有 server 安全头；17 行 Content-Type 并未造成 CSP、X-Frame-Options 等丢失。19-23 行正是修复继承边界的防护代码。"
+  },
+  {
+    "id": "SG-029",
+    "path": "apps/web-admin/nginx.conf",
+    "line": 22,
+    "end_line": 22,
+    "rule": "audit.generic.nginx.security.header-redefinition.header-redefinition",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "The 'add_header' directive is called in a 'location' block after headers have been set at the server block. Calling 'add_header' in the location block will actually overwrite the headers defined in the server block, no matter which headers are set. To fix this, explicitly set all headers or set all headers in the server block.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "apps/web-admin/nginx.conf:14-24 的 /health location 已显式重复所有 server 安全头；17 行 Content-Type 并未造成 CSP、X-Frame-Options 等丢失。19-23 行正是修复继承边界的防护代码。"
+  },
+  {
+    "id": "SG-030",
+    "path": "apps/web-admin/nginx.conf",
+    "line": 23,
+    "end_line": 23,
+    "rule": "audit.generic.nginx.security.header-redefinition.header-redefinition",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "The 'add_header' directive is called in a 'location' block after headers have been set at the server block. Calling 'add_header' in the location block will actually overwrite the headers defined in the server block, no matter which headers are set. To fix this, explicitly set all headers or set all headers in the server block.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "apps/web-admin/nginx.conf:14-24 的 /health location 已显式重复所有 server 安全头；17 行 Content-Type 并未造成 CSP、X-Frame-Options 等丢失。19-23 行正是修复继承边界的防护代码。"
+  },
+  {
+    "id": "SG-031",
+    "path": "apps/web-admin/src/auth/mfaFlow.test.ts",
+    "line": 196,
+    "end_line": 196,
+    "rule": "audit.javascript.lang.security.audit.unknown-value-with-script-tag.unknown-value-with-script-tag",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "Cannot determine what 'codes' is and it is used with a '<script>' tag. This could be susceptible to cross-site scripting (XSS). Ensure 'codes' is not externally controlled, or sanitize this data.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "mfaFlow.test.ts:194-199 向 mock response 注入固定 <script> 字符串，断言 confirm 返回 uncertain 且流程关闭；这里不是脚本模板插值或 DOM 执行。同一行的三条命中属于同一负向测试。"
+  },
+  {
+    "id": "SG-032",
+    "path": "apps/web-admin/src/auth/mfaFlow.test.ts",
+    "line": 196,
+    "end_line": 196,
+    "rule": "audit.javascript.lang.security.audit.unknown-value-with-script-tag.unknown-value-with-script-tag",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "Cannot determine what 'codes' is and it is used with a '<script>' tag. This could be susceptible to cross-site scripting (XSS). Ensure 'codes' is not externally controlled, or sanitize this data.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "mfaFlow.test.ts:194-199 向 mock response 注入固定 <script> 字符串，断言 confirm 返回 uncertain 且流程关闭；这里不是脚本模板插值或 DOM 执行。同一行的三条命中属于同一负向测试。"
+  },
+  {
+    "id": "SG-033",
+    "path": "apps/web-admin/src/auth/mfaFlow.test.ts",
+    "line": 196,
+    "end_line": 196,
+    "rule": "audit.javascript.lang.security.audit.unknown-value-with-script-tag.unknown-value-with-script-tag",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "Cannot determine what 'codes' is and it is used with a '<script>' tag. This could be susceptible to cross-site scripting (XSS). Ensure 'codes' is not externally controlled, or sanitize this data.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "mfaFlow.test.ts:194-199 向 mock response 注入固定 <script> 字符串，断言 confirm 返回 uncertain 且流程关闭；这里不是脚本模板插值或 DOM 执行。同一行的三条命中属于同一负向测试。"
+  },
+  {
+    "id": "SG-034",
+    "path": "docs/architecture/tools/build_diagrams.py",
+    "line": 7,
+    "end_line": 7,
+    "rule": "audit.python.lang.security.use-defused-xml.use-defused-xml",
+    "severity": "ERROR",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "The Python documentation recommends using `defusedxml` instead of `xml` because the native Python `xml` library is vulnerable to XML External Entity (XXE) attacks. These attacks can leak confidential data and \"XML bombs\" can cause denial of service.",
+    "human_status": "context_limited",
+    "human_severity": "low",
+    "human_notes": "build_diagrams.py:132 自行生成固定本地 drawio，134 行立即回读验证；未发现不可信上传 XML 进入此路径。不是已确认生产 XXE。若将来接受外部 XML，应限制解析资源并使用安全解析器。"
+  },
+  {
+    "id": "SG-035",
+    "path": "docs/architecture/tools/build_diagrams.py",
+    "line": 134,
+    "end_line": 134,
+    "rule": "audit.python.lang.security.use-defused-xml-parse.use-defused-xml-parse",
+    "severity": "ERROR",
+    "confidence": "MEDIUM",
+    "subcategory": [
+      "vuln"
+    ],
+    "message": "The native Python `xml` library is vulnerable to XML External Entity (XXE) attacks.  These attacks can leak confidential data and \"XML bombs\" can cause denial of service. Do not use this library to parse untrusted input. Instead  the Python documentation recommends using `defusedxml`.",
+    "human_status": "context_limited",
+    "human_severity": "low",
+    "human_notes": "build_diagrams.py:132 自行生成固定本地 drawio，134 行立即回读验证；未发现不可信上传 XML 进入此路径。不是已确认生产 XXE。若将来接受外部 XML，应限制解析资源并使用安全解析器。"
+  },
+  {
+    "id": "SG-036",
+    "path": "docs/architecture/tools/verify_delivery.py",
+    "line": 7,
+    "end_line": 7,
+    "rule": "audit.python.lang.security.use-defused-xml.use-defused-xml",
+    "severity": "ERROR",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "The Python documentation recommends using `defusedxml` instead of `xml` because the native Python `xml` library is vulnerable to XML External Entity (XXE) attacks. These attacks can leak confidential data and \"XML bombs\" can cause denial of service.",
+    "human_status": "context_limited",
+    "human_severity": "low",
+    "human_notes": "verify_delivery.py:26-31 读取 EXPECTED 固定列表中的本地架构图，不接受网络请求或任意用户路径。维护者若主动导入不可信图纸仍有解析资源风险；本次没有证明生产接口存在 XXE。"
+  },
+  {
+    "id": "SG-037",
+    "path": "docs/architecture/tools/verify_delivery.py",
+    "line": 31,
+    "end_line": 31,
+    "rule": "audit.python.lang.security.use-defused-xml-parse.use-defused-xml-parse",
+    "severity": "ERROR",
+    "confidence": "MEDIUM",
+    "subcategory": [
+      "vuln"
+    ],
+    "message": "The native Python `xml` library is vulnerable to XML External Entity (XXE) attacks.  These attacks can leak confidential data and \"XML bombs\" can cause denial of service. Do not use this library to parse untrusted input. Instead  the Python documentation recommends using `defusedxml`.",
+    "human_status": "context_limited",
+    "human_severity": "low",
+    "human_notes": "verify_delivery.py:26-31 读取 EXPECTED 固定列表中的本地架构图，不接受网络请求或任意用户路径。维护者若主动导入不可信图纸仍有解析资源风险；本次没有证明生产接口存在 XXE。"
+  },
+  {
+    "id": "SG-038",
+    "path": "infra/docker-compose/nginx/nginx.conf",
+    "line": 35,
+    "end_line": 35,
+    "rule": "audit.generic.nginx.security.header-redefinition.header-redefinition",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "The 'add_header' directive is called in a 'location' block after headers have been set at the server block. Calling 'add_header' in the location block will actually overwrite the headers defined in the server block, no matter which headers are set. To fix this, explicitly set all headers or set all headers in the server block.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "infra/docker-compose/nginx/nginx.conf:30-40 在 /health 中显式重复 server 层全部五个安全头，注释也解释 add_header 的继承边界。规则报告的是存在 add_header，而不是遗漏防护。"
+  },
+  {
+    "id": "SG-039",
+    "path": "infra/docker-compose/nginx/nginx.conf",
+    "line": 36,
+    "end_line": 36,
+    "rule": "audit.generic.nginx.security.header-redefinition.header-redefinition",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "The 'add_header' directive is called in a 'location' block after headers have been set at the server block. Calling 'add_header' in the location block will actually overwrite the headers defined in the server block, no matter which headers are set. To fix this, explicitly set all headers or set all headers in the server block.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "infra/docker-compose/nginx/nginx.conf:30-40 在 /health 中显式重复 server 层全部五个安全头，注释也解释 add_header 的继承边界。规则报告的是存在 add_header，而不是遗漏防护。"
+  },
+  {
+    "id": "SG-040",
+    "path": "infra/docker-compose/nginx/nginx.conf",
+    "line": 37,
+    "end_line": 37,
+    "rule": "audit.generic.nginx.security.header-redefinition.header-redefinition",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "The 'add_header' directive is called in a 'location' block after headers have been set at the server block. Calling 'add_header' in the location block will actually overwrite the headers defined in the server block, no matter which headers are set. To fix this, explicitly set all headers or set all headers in the server block.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "infra/docker-compose/nginx/nginx.conf:30-40 在 /health 中显式重复 server 层全部五个安全头，注释也解释 add_header 的继承边界。规则报告的是存在 add_header，而不是遗漏防护。"
+  },
+  {
+    "id": "SG-041",
+    "path": "infra/docker-compose/nginx/nginx.conf",
+    "line": 38,
+    "end_line": 38,
+    "rule": "audit.generic.nginx.security.header-redefinition.header-redefinition",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "The 'add_header' directive is called in a 'location' block after headers have been set at the server block. Calling 'add_header' in the location block will actually overwrite the headers defined in the server block, no matter which headers are set. To fix this, explicitly set all headers or set all headers in the server block.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "infra/docker-compose/nginx/nginx.conf:30-40 在 /health 中显式重复 server 层全部五个安全头，注释也解释 add_header 的继承边界。规则报告的是存在 add_header，而不是遗漏防护。"
+  },
+  {
+    "id": "SG-042",
+    "path": "infra/docker-compose/nginx/nginx.conf",
+    "line": 39,
+    "end_line": 39,
+    "rule": "audit.generic.nginx.security.header-redefinition.header-redefinition",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "The 'add_header' directive is called in a 'location' block after headers have been set at the server block. Calling 'add_header' in the location block will actually overwrite the headers defined in the server block, no matter which headers are set. To fix this, explicitly set all headers or set all headers in the server block.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "infra/docker-compose/nginx/nginx.conf:30-40 在 /health 中显式重复 server 层全部五个安全头，注释也解释 add_header 的继承边界。规则报告的是存在 add_header，而不是遗漏防护。"
+  },
+  {
+    "id": "SG-043",
+    "path": "infra/docker-compose/nginx/nginx.conf",
+    "line": 40,
+    "end_line": 40,
+    "rule": "audit.generic.nginx.security.header-redefinition.header-redefinition",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "The 'add_header' directive is called in a 'location' block after headers have been set at the server block. Calling 'add_header' in the location block will actually overwrite the headers defined in the server block, no matter which headers are set. To fix this, explicitly set all headers or set all headers in the server block.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "infra/docker-compose/nginx/nginx.conf:30-40 在 /health 中显式重复 server 层全部五个安全头，注释也解释 add_header 的继承边界。规则报告的是存在 add_header，而不是遗漏防护。"
+  },
+  {
+    "id": "SG-044",
+    "path": "infra/docker-compose/nginx/nginx.conf",
+    "line": 59,
+    "end_line": 59,
+    "rule": "audit.generic.nginx.security.request-host-used.request-host-used",
+    "severity": "WARNING",
+    "confidence": "MEDIUM",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "'$http_host' and '$host' variables may contain a malicious value from attacker controlled 'Host' request header. Use an explicitly configured host value or a allow list for validation.",
+    "human_status": "needs_deployment_review",
+    "human_severity": "low",
+    "human_notes": "生产 Nginx 确实把请求 $host 转给固定上游；代理目的地不是由 Host 决定。未在当前网关非测试 Go 源码中找到使用请求 Host 构造重置链接/跳转的证据。公网允许域名与入口网关配置未在本次运行验证，建议结合部署评审，不标成已确认 Host 注入漏洞。"
+  },
+  {
+    "id": "SG-045",
+    "path": "infra/docker-compose/nginx/nginx.conf",
+    "line": 76,
+    "end_line": 76,
+    "rule": "audit.generic.nginx.security.request-host-used.request-host-used",
+    "severity": "WARNING",
+    "confidence": "MEDIUM",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "'$http_host' and '$host' variables may contain a malicious value from attacker controlled 'Host' request header. Use an explicitly configured host value or a allow list for validation.",
+    "human_status": "needs_deployment_review",
+    "human_severity": "low",
+    "human_notes": "生产 Nginx 确实把请求 $host 转给固定上游；代理目的地不是由 Host 决定。未在当前网关非测试 Go 源码中找到使用请求 Host 构造重置链接/跳转的证据。公网允许域名与入口网关配置未在本次运行验证，建议结合部署评审，不标成已确认 Host 注入漏洞。"
+  },
+  {
+    "id": "SG-046",
+    "path": "infra/docker-compose/nginx/story056-e2e.conf",
+    "line": 16,
+    "end_line": 16,
+    "rule": "audit.generic.nginx.security.header-redefinition.header-redefinition",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "The 'add_header' directive is called in a 'location' block after headers have been set at the server block. Calling 'add_header' in the location block will actually overwrite the headers defined in the server block, no matter which headers are set. To fix this, explicitly set all headers or set all headers in the server block.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "对应 story056/story060 E2E Nginx 的 server 块没有 add_header 安全头，/health 中只有 Content-Type，不存在规则所称覆盖上级安全头。此配置仅用于 E2E。"
+  },
+  {
+    "id": "SG-047",
+    "path": "infra/docker-compose/nginx/story056-e2e.conf",
+    "line": 22,
+    "end_line": 22,
+    "rule": "audit.generic.nginx.security.request-host-used.request-host-used",
+    "severity": "WARNING",
+    "confidence": "MEDIUM",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "'$http_host' and '$host' variables may contain a malicious value from attacker controlled 'Host' request header. Use an explicitly configured host value or a allow list for validation.",
+    "human_status": "test_only",
+    "human_severity": "low",
+    "human_notes": "这些 $host 转发位于 story056/story060 E2E 配置，目的地为固定测试上游；未证实生产利用链。若复用为公网配置，需另审允许域名和 Host 消费方。"
+  },
+  {
+    "id": "SG-048",
+    "path": "infra/docker-compose/nginx/story056-e2e.conf",
+    "line": 31,
+    "end_line": 31,
+    "rule": "audit.generic.nginx.security.request-host-used.request-host-used",
+    "severity": "WARNING",
+    "confidence": "MEDIUM",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "'$http_host' and '$host' variables may contain a malicious value from attacker controlled 'Host' request header. Use an explicitly configured host value or a allow list for validation.",
+    "human_status": "test_only",
+    "human_severity": "low",
+    "human_notes": "这些 $host 转发位于 story056/story060 E2E 配置，目的地为固定测试上游；未证实生产利用链。若复用为公网配置，需另审允许域名和 Host 消费方。"
+  },
+  {
+    "id": "SG-049",
+    "path": "infra/docker-compose/nginx/story060-e2e.conf",
+    "line": 16,
+    "end_line": 16,
+    "rule": "audit.generic.nginx.security.header-redefinition.header-redefinition",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "The 'add_header' directive is called in a 'location' block after headers have been set at the server block. Calling 'add_header' in the location block will actually overwrite the headers defined in the server block, no matter which headers are set. To fix this, explicitly set all headers or set all headers in the server block.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "对应 story056/story060 E2E Nginx 的 server 块没有 add_header 安全头，/health 中只有 Content-Type，不存在规则所称覆盖上级安全头。此配置仅用于 E2E。"
+  },
+  {
+    "id": "SG-050",
+    "path": "infra/docker-compose/nginx/story060-e2e.conf",
+    "line": 25,
+    "end_line": 25,
+    "rule": "audit.generic.nginx.security.request-host-used.request-host-used",
+    "severity": "WARNING",
+    "confidence": "MEDIUM",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "'$http_host' and '$host' variables may contain a malicious value from attacker controlled 'Host' request header. Use an explicitly configured host value or a allow list for validation.",
+    "human_status": "test_only",
+    "human_severity": "low",
+    "human_notes": "这些 $host 转发位于 story056/story060 E2E 配置，目的地为固定测试上游；未证实生产利用链。若复用为公网配置，需另审允许域名和 Host 消费方。"
+  },
+  {
+    "id": "SG-051",
+    "path": "infra/docker-compose/nginx/story060-e2e.conf",
+    "line": 34,
+    "end_line": 34,
+    "rule": "audit.generic.nginx.security.request-host-used.request-host-used",
+    "severity": "WARNING",
+    "confidence": "MEDIUM",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "'$http_host' and '$host' variables may contain a malicious value from attacker controlled 'Host' request header. Use an explicitly configured host value or a allow list for validation.",
+    "human_status": "test_only",
+    "human_severity": "low",
+    "human_notes": "这些 $host 转发位于 story056/story060 E2E 配置，目的地为固定测试上游；未证实生产利用链。若复用为公网配置，需另审允许域名和 Host 消费方。"
+  },
+  {
+    "id": "SG-052",
+    "path": "scripts/test_fujian_math_batch29.py",
+    "line": 25,
+    "end_line": 25,
+    "rule": "audit.python.lang.security.audit.exec-detected.exec-detected",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "Detected the use of exec(). exec() can be dangerous if used to evaluate dynamic content. If this content can be input from outside the program, this may be a code injection vulnerability. Ensure evaluated content is not definable by external sources.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "测试从固定同目录脚本读取 AST，只编译白名单函数定义，用合成输入检查生成逻辑。exec 输入是仓库维护代码，不来自 API、上传文件或不可信模型输出；可改为可导入辅助模块减少动态执行，但未证实命令注入入口。"
+  },
+  {
+    "id": "SG-053",
+    "path": "services/api-gateway/internal/auth/cookies.go",
+    "line": 10,
+    "end_line": 17,
+    "rule": "audit.go.lang.security.audit.net.cookie-missing-secure.cookie-missing-secure",
+    "severity": "WARNING",
+    "confidence": "MEDIUM",
+    "subcategory": [
+      "vuln"
+    ],
+    "message": "A session cookie was detected without setting the 'Secure' flag. The 'secure' flag for cookies prevents the client from transmitting the cookie over insecure channels such as HTTP. Set the 'Secure' flag by setting 'Secure' to 'true' in the Options struct.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "Cookie 已显式设置 Secure: h.cookieSecure、HttpOnly:true、SameSiteLax。配置默认按环境开启 Secure，productionSecurityProblems 在生产类似环境拒绝 SessionCookieSecure=false（config.go:497）；规则未解析动态布尔值，不应误判为缺少 Secure。"
+  },
+  {
+    "id": "SG-054",
+    "path": "services/api-gateway/internal/auth/cookies.go",
+    "line": 27,
+    "end_line": 36,
+    "rule": "audit.go.lang.security.audit.net.cookie-missing-secure.cookie-missing-secure",
+    "severity": "WARNING",
+    "confidence": "MEDIUM",
+    "subcategory": [
+      "vuln"
+    ],
+    "message": "A session cookie was detected without setting the 'Secure' flag. The 'secure' flag for cookies prevents the client from transmitting the cookie over insecure channels such as HTTP. Set the 'Secure' flag by setting 'Secure' to 'true' in the Options struct.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "Cookie 已显式设置 Secure: h.cookieSecure、HttpOnly:true、SameSiteLax。配置默认按环境开启 Secure，productionSecurityProblems 在生产类似环境拒绝 SessionCookieSecure=false（config.go:497）；规则未解析动态布尔值，不应误判为缺少 Secure。"
+  },
+  {
+    "id": "SG-055",
+    "path": "services/api-gateway/internal/auth/cookies.go",
+    "line": 54,
+    "end_line": 58,
+    "rule": "audit.go.lang.security.audit.net.cookie-missing-secure.cookie-missing-secure",
+    "severity": "WARNING",
+    "confidence": "MEDIUM",
+    "subcategory": [
+      "vuln"
+    ],
+    "message": "A session cookie was detected without setting the 'Secure' flag. The 'secure' flag for cookies prevents the client from transmitting the cookie over insecure channels such as HTTP. Set the 'Secure' flag by setting 'Secure' to 'true' in the Options struct.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "Cookie 已显式设置 Secure: h.cookieSecure、HttpOnly:true、SameSiteLax。配置默认按环境开启 Secure，productionSecurityProblems 在生产类似环境拒绝 SessionCookieSecure=false（config.go:497）；规则未解析动态布尔值，不应误判为缺少 Secure。"
+  },
+  {
+    "id": "SG-056",
+    "path": "services/api-gateway/internal/auth/cookies.go",
+    "line": 62,
+    "end_line": 66,
+    "rule": "audit.go.lang.security.audit.net.cookie-missing-secure.cookie-missing-secure",
+    "severity": "WARNING",
+    "confidence": "MEDIUM",
+    "subcategory": [
+      "vuln"
+    ],
+    "message": "A session cookie was detected without setting the 'Secure' flag. The 'secure' flag for cookies prevents the client from transmitting the cookie over insecure channels such as HTTP. Set the 'Secure' flag by setting 'Secure' to 'true' in the Options struct.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "Cookie 已显式设置 Secure: h.cookieSecure、HttpOnly:true、SameSiteLax。配置默认按环境开启 Secure，productionSecurityProblems 在生产类似环境拒绝 SessionCookieSecure=false（config.go:497）；规则未解析动态布尔值，不应误判为缺少 Secure。"
+  },
+  {
+    "id": "SG-057",
+    "path": "services/api-gateway/internal/auth/mfa_http_test.go",
+    "line": 36,
+    "end_line": 36,
+    "rule": "audit.go.lang.security.audit.net.cookie-missing-httponly.cookie-missing-httponly",
+    "severity": "WARNING",
+    "confidence": "MEDIUM",
+    "subcategory": [
+      "vuln"
+    ],
+    "message": "A session cookie was detected without setting the 'HttpOnly' flag. The 'HttpOnly' flag for cookies instructs the browser to forbid client-side scripts from reading the cookie which mitigates XSS attacks. Set the 'HttpOnly' flag by setting 'HttpOnly' to 'true' in the Cookie.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "命中的是 httptest 请求侧 AddCookie 构造器；HttpOnly/Secure 是 Set-Cookie 响应属性，浏览器发送 Cookie 请求头不携带这些属性。测试用来验证 CSRF 与无效 Authorization 回退，未改变真实服务设置 Cookie 的安全属性。"
+  },
+  {
+    "id": "SG-058",
+    "path": "services/api-gateway/internal/auth/mfa_http_test.go",
+    "line": 36,
+    "end_line": 36,
+    "rule": "audit.go.lang.security.audit.net.cookie-missing-secure.cookie-missing-secure",
+    "severity": "WARNING",
+    "confidence": "MEDIUM",
+    "subcategory": [
+      "vuln"
+    ],
+    "message": "A session cookie was detected without setting the 'Secure' flag. The 'secure' flag for cookies prevents the client from transmitting the cookie over insecure channels such as HTTP. Set the 'Secure' flag by setting 'Secure' to 'true' in the Options struct.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "命中的是 httptest 请求侧 AddCookie 构造器；HttpOnly/Secure 是 Set-Cookie 响应属性，浏览器发送 Cookie 请求头不携带这些属性。测试用来验证 CSRF 与无效 Authorization 回退，未改变真实服务设置 Cookie 的安全属性。"
+  },
+  {
+    "id": "SG-059",
+    "path": "services/api-gateway/internal/files/store_postgres.go",
+    "line": 221,
+    "end_line": 229,
+    "rule": "audit.go.lang.security.audit.database.string-formatted-query.string-formatted-query",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "String-formatted SQL query detected. This could lead to SQL injection if the string is not sanitized properly. Audit this call to ensure the SQL is not manipulable by external data.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "files.transition 只拼接程序生成的 $7、$8 等占位符与固定 assetColumns，tenant、id、revision、状态和错误详情通过 args... 绑定。来源状态来自代码常量；未将外部内容拼入 SQL 语法。"
+  },
+  {
+    "id": "SG-060",
+    "path": "services/api-gateway/internal/middleware/middleware_test.go",
+    "line": 64,
+    "end_line": 64,
+    "rule": "audit.go.lang.security.audit.net.cookie-missing-httponly.cookie-missing-httponly",
+    "severity": "WARNING",
+    "confidence": "MEDIUM",
+    "subcategory": [
+      "vuln"
+    ],
+    "message": "A session cookie was detected without setting the 'HttpOnly' flag. The 'HttpOnly' flag for cookies instructs the browser to forbid client-side scripts from reading the cookie which mitigates XSS attacks. Set the 'HttpOnly' flag by setting 'HttpOnly' to 'true' in the Cookie.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "命中的是 httptest 请求侧 AddCookie 构造器；HttpOnly/Secure 是 Set-Cookie 响应属性，浏览器发送 Cookie 请求头不携带这些属性。测试用来验证 CSRF 与无效 Authorization 回退，未改变真实服务设置 Cookie 的安全属性。"
+  },
+  {
+    "id": "SG-061",
+    "path": "services/api-gateway/internal/middleware/middleware_test.go",
+    "line": 64,
+    "end_line": 64,
+    "rule": "audit.go.lang.security.audit.net.cookie-missing-secure.cookie-missing-secure",
+    "severity": "WARNING",
+    "confidence": "MEDIUM",
+    "subcategory": [
+      "vuln"
+    ],
+    "message": "A session cookie was detected without setting the 'Secure' flag. The 'secure' flag for cookies prevents the client from transmitting the cookie over insecure channels such as HTTP. Set the 'Secure' flag by setting 'Secure' to 'true' in the Options struct.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "命中的是 httptest 请求侧 AddCookie 构造器；HttpOnly/Secure 是 Set-Cookie 响应属性，浏览器发送 Cookie 请求头不携带这些属性。测试用来验证 CSRF 与无效 Authorization 回退，未改变真实服务设置 Cookie 的安全属性。"
+  },
+  {
+    "id": "SG-062",
+    "path": "services/api-gateway/internal/middleware/middleware_test.go",
+    "line": 78,
+    "end_line": 78,
+    "rule": "audit.go.lang.security.audit.net.cookie-missing-httponly.cookie-missing-httponly",
+    "severity": "WARNING",
+    "confidence": "MEDIUM",
+    "subcategory": [
+      "vuln"
+    ],
+    "message": "A session cookie was detected without setting the 'HttpOnly' flag. The 'HttpOnly' flag for cookies instructs the browser to forbid client-side scripts from reading the cookie which mitigates XSS attacks. Set the 'HttpOnly' flag by setting 'HttpOnly' to 'true' in the Cookie.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "命中的是 httptest 请求侧 AddCookie 构造器；HttpOnly/Secure 是 Set-Cookie 响应属性，浏览器发送 Cookie 请求头不携带这些属性。测试用来验证 CSRF 与无效 Authorization 回退，未改变真实服务设置 Cookie 的安全属性。"
+  },
+  {
+    "id": "SG-063",
+    "path": "services/api-gateway/internal/middleware/middleware_test.go",
+    "line": 78,
+    "end_line": 78,
+    "rule": "audit.go.lang.security.audit.net.cookie-missing-secure.cookie-missing-secure",
+    "severity": "WARNING",
+    "confidence": "MEDIUM",
+    "subcategory": [
+      "vuln"
+    ],
+    "message": "A session cookie was detected without setting the 'Secure' flag. The 'secure' flag for cookies prevents the client from transmitting the cookie over insecure channels such as HTTP. Set the 'Secure' flag by setting 'Secure' to 'true' in the Options struct.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "命中的是 httptest 请求侧 AddCookie 构造器；HttpOnly/Secure 是 Set-Cookie 响应属性，浏览器发送 Cookie 请求头不携带这些属性。测试用来验证 CSRF 与无效 Authorization 回退，未改变真实服务设置 Cookie 的安全属性。"
+  },
+  {
+    "id": "SG-064",
+    "path": "services/api-gateway/internal/middleware/middleware_test.go",
+    "line": 93,
+    "end_line": 93,
+    "rule": "audit.go.lang.security.audit.net.cookie-missing-httponly.cookie-missing-httponly",
+    "severity": "WARNING",
+    "confidence": "MEDIUM",
+    "subcategory": [
+      "vuln"
+    ],
+    "message": "A session cookie was detected without setting the 'HttpOnly' flag. The 'HttpOnly' flag for cookies instructs the browser to forbid client-side scripts from reading the cookie which mitigates XSS attacks. Set the 'HttpOnly' flag by setting 'HttpOnly' to 'true' in the Cookie.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "命中的是 httptest 请求侧 AddCookie 构造器；HttpOnly/Secure 是 Set-Cookie 响应属性，浏览器发送 Cookie 请求头不携带这些属性。测试用来验证 CSRF 与无效 Authorization 回退，未改变真实服务设置 Cookie 的安全属性。"
+  },
+  {
+    "id": "SG-065",
+    "path": "services/api-gateway/internal/middleware/middleware_test.go",
+    "line": 93,
+    "end_line": 93,
+    "rule": "audit.go.lang.security.audit.net.cookie-missing-secure.cookie-missing-secure",
+    "severity": "WARNING",
+    "confidence": "MEDIUM",
+    "subcategory": [
+      "vuln"
+    ],
+    "message": "A session cookie was detected without setting the 'Secure' flag. The 'secure' flag for cookies prevents the client from transmitting the cookie over insecure channels such as HTTP. Set the 'Secure' flag by setting 'Secure' to 'true' in the Options struct.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "命中的是 httptest 请求侧 AddCookie 构造器；HttpOnly/Secure 是 Set-Cookie 响应属性，浏览器发送 Cookie 请求头不携带这些属性。测试用来验证 CSRF 与无效 Authorization 回退，未改变真实服务设置 Cookie 的安全属性。"
+  },
+  {
+    "id": "SG-066",
+    "path": "services/api-gateway/internal/middleware/middleware_test.go",
+    "line": 132,
+    "end_line": 132,
+    "rule": "audit.go.lang.security.audit.net.cookie-missing-httponly.cookie-missing-httponly",
+    "severity": "WARNING",
+    "confidence": "MEDIUM",
+    "subcategory": [
+      "vuln"
+    ],
+    "message": "A session cookie was detected without setting the 'HttpOnly' flag. The 'HttpOnly' flag for cookies instructs the browser to forbid client-side scripts from reading the cookie which mitigates XSS attacks. Set the 'HttpOnly' flag by setting 'HttpOnly' to 'true' in the Cookie.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "命中的是 httptest 请求侧 AddCookie 构造器；HttpOnly/Secure 是 Set-Cookie 响应属性，浏览器发送 Cookie 请求头不携带这些属性。测试用来验证 CSRF 与无效 Authorization 回退，未改变真实服务设置 Cookie 的安全属性。"
+  },
+  {
+    "id": "SG-067",
+    "path": "services/api-gateway/internal/middleware/middleware_test.go",
+    "line": 132,
+    "end_line": 132,
+    "rule": "audit.go.lang.security.audit.net.cookie-missing-secure.cookie-missing-secure",
+    "severity": "WARNING",
+    "confidence": "MEDIUM",
+    "subcategory": [
+      "vuln"
+    ],
+    "message": "A session cookie was detected without setting the 'Secure' flag. The 'secure' flag for cookies prevents the client from transmitting the cookie over insecure channels such as HTTP. Set the 'Secure' flag by setting 'Secure' to 'true' in the Options struct.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "命中的是 httptest 请求侧 AddCookie 构造器；HttpOnly/Secure 是 Set-Cookie 响应属性，浏览器发送 Cookie 请求头不携带这些属性。测试用来验证 CSRF 与无效 Authorization 回退，未改变真实服务设置 Cookie 的安全属性。"
+  },
+  {
+    "id": "SG-068",
+    "path": "services/api-gateway/internal/minioadapter/client_test.go",
+    "line": 72,
+    "end_line": 72,
+    "rule": "audit.go.lang.security.audit.crypto.missing-ssl-minversion.missing-ssl-minversion",
+    "severity": "WARNING",
+    "confidence": "HIGH",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "`MinVersion` is missing from this TLS configuration.  By default, as of Go 1.22, TLS 1.2 is currently used as the minimum. General purpose web applications should default to TLS 1.3 with all other protocols disabled.  Only where it is known that a web server must support legacy clients with unsupported an insecure browsers (such as Internet Explorer 10), it may be necessary to enable TLS 1.0 to provide support. Add `MinVersion: tls.VersionTLS13' to the TLS configuration to bump the minimum version to TLS 1.3.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "TestNewClientRejectsTLSBeforeVersion12 故意建立 MaxVersion=TLS1.1 的测试端点，断言真实 MinIO 客户端拒绝该连接。命中代码是负向测试条件，不能建议把它改成 TLS1.2 使测试失去覆盖。"
+  },
+  {
+    "id": "SG-069",
+    "path": "services/api-gateway/internal/modelgovernance/managed_config_probe.go",
+    "line": 14,
+    "end_line": 14,
+    "rule": "audit.go.lang.security.audit.crypto.math_random.math-random-used",
+    "severity": "WARNING",
+    "confidence": "MEDIUM",
+    "subcategory": [
+      "vuln"
+    ],
+    "message": "Do not use `math/rand`. Use `crypto/rand` instead.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "math/rand 仅用于 retryManagedReadOnlyRequest 的毫秒级重试抖动（managed_config_probe.go:330），未用于令牌、密码、加密密钥或租约随机值。非密码学调度随机性允许使用该包。"
+  },
+  {
+    "id": "SG-070",
+    "path": "services/api-gateway/internal/score/store_postgres.go",
+    "line": 100,
+    "end_line": 105,
+    "rule": "audit.go.lang.security.audit.database.string-formatted-query.string-formatted-query",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "String-formatted SQL query detected. This could lead to SQL injection if the string is not sanitized properly. Audit this call to ensure the SQL is not manipulable by external data.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "score.ListExamGrades 拼接固定 WHERE 片段和由 len(args) 生成的占位符；Status、Query、Cursor、Limit 均单独绑定，tenant/exam 也在 WHERE 和 JOIN 中。未发现动态查询文本来自用户输入的 SQL 注入。"
+  },
+  {
+    "id": "SG-071",
+    "path": "services/api-gateway/internal/server/e2e_business_command_test.go",
+    "line": 333,
+    "end_line": 337,
+    "rule": "audit.go.lang.security.audit.database.string-formatted-query.string-formatted-query",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "String-formatted SQL query detected. This could lead to SQL injection if the string is not sanitized properly. Audit this call to ensure the SQL is not manipulable by external data.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "E2E 数据库测试使用固定表名白名单或本地 UUID 生成的隔离数据库、角色、触发器名，数据库/角色标识通过 pgx.Identifier.Sanitize 引用；故障触发条件拼入的命令 ID/题目 ID 来自测试固定字符串或 UUID fixture。不是生产 API 查询，也未找到可由外部输入控制的拼接值。"
+  },
+  {
+    "id": "SG-072",
+    "path": "services/api-gateway/internal/server/e2e_business_command_test.go",
+    "line": 341,
+    "end_line": 341,
+    "rule": "audit.go.lang.security.audit.database.string-formatted-query.string-formatted-query",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "String-formatted SQL query detected. This could lead to SQL injection if the string is not sanitized properly. Audit this call to ensure the SQL is not manipulable by external data.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "E2E 数据库测试使用固定表名白名单或本地 UUID 生成的隔离数据库、角色、触发器名，数据库/角色标识通过 pgx.Identifier.Sanitize 引用；故障触发条件拼入的命令 ID/题目 ID 来自测试固定字符串或 UUID fixture。不是生产 API 查询，也未找到可由外部输入控制的拼接值。"
+  },
+  {
+    "id": "SG-073",
+    "path": "services/api-gateway/internal/server/e2e_business_command_test.go",
+    "line": 342,
+    "end_line": 342,
+    "rule": "audit.go.lang.security.audit.database.string-formatted-query.string-formatted-query",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "String-formatted SQL query detected. This could lead to SQL injection if the string is not sanitized properly. Audit this call to ensure the SQL is not manipulable by external data.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "E2E 数据库测试使用固定表名白名单或本地 UUID 生成的隔离数据库、角色、触发器名，数据库/角色标识通过 pgx.Identifier.Sanitize 引用；故障触发条件拼入的命令 ID/题目 ID 来自测试固定字符串或 UUID fixture。不是生产 API 查询，也未找到可由外部输入控制的拼接值。"
+  },
+  {
+    "id": "SG-074",
+    "path": "services/api-gateway/internal/server/e2e_business_command_test.go",
+    "line": 344,
+    "end_line": 345,
+    "rule": "audit.go.lang.security.audit.database.string-formatted-query.string-formatted-query",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "String-formatted SQL query detected. This could lead to SQL injection if the string is not sanitized properly. Audit this call to ensure the SQL is not manipulable by external data.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "E2E 数据库测试使用固定表名白名单或本地 UUID 生成的隔离数据库、角色、触发器名，数据库/角色标识通过 pgx.Identifier.Sanitize 引用；故障触发条件拼入的命令 ID/题目 ID 来自测试固定字符串或 UUID fixture。不是生产 API 查询，也未找到可由外部输入控制的拼接值。"
+  },
+  {
+    "id": "SG-075",
+    "path": "services/api-gateway/internal/server/e2e_compose_bootstrap_test.go",
+    "line": 49,
+    "end_line": 49,
+    "rule": "audit.go.lang.security.audit.database.string-formatted-query.string-formatted-query",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "String-formatted SQL query detected. This could lead to SQL injection if the string is not sanitized properly. Audit this call to ensure the SQL is not manipulable by external data.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "E2E 数据库测试使用固定表名白名单或本地 UUID 生成的隔离数据库、角色、触发器名，数据库/角色标识通过 pgx.Identifier.Sanitize 引用；故障触发条件拼入的命令 ID/题目 ID 来自测试固定字符串或 UUID fixture。不是生产 API 查询，也未找到可由外部输入控制的拼接值。"
+  },
+  {
+    "id": "SG-076",
+    "path": "services/api-gateway/internal/server/e2e_compose_bootstrap_test.go",
+    "line": 53,
+    "end_line": 53,
+    "rule": "audit.go.lang.security.audit.database.string-formatted-query.string-formatted-query",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "String-formatted SQL query detected. This could lead to SQL injection if the string is not sanitized properly. Audit this call to ensure the SQL is not manipulable by external data.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "E2E 数据库测试使用固定表名白名单或本地 UUID 生成的隔离数据库、角色、触发器名，数据库/角色标识通过 pgx.Identifier.Sanitize 引用；故障触发条件拼入的命令 ID/题目 ID 来自测试固定字符串或 UUID fixture。不是生产 API 查询，也未找到可由外部输入控制的拼接值。"
+  },
+  {
+    "id": "SG-077",
+    "path": "services/api-gateway/internal/server/e2e_compose_bootstrap_test.go",
+    "line": 57,
+    "end_line": 57,
+    "rule": "audit.go.lang.security.audit.database.string-formatted-query.string-formatted-query",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "String-formatted SQL query detected. This could lead to SQL injection if the string is not sanitized properly. Audit this call to ensure the SQL is not manipulable by external data.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "E2E 数据库测试使用固定表名白名单或本地 UUID 生成的隔离数据库、角色、触发器名，数据库/角色标识通过 pgx.Identifier.Sanitize 引用；故障触发条件拼入的命令 ID/题目 ID 来自测试固定字符串或 UUID fixture。不是生产 API 查询，也未找到可由外部输入控制的拼接值。"
+  },
+  {
+    "id": "SG-078",
+    "path": "services/api-gateway/internal/server/e2e_mfa_test.go",
+    "line": 239,
+    "end_line": 239,
+    "rule": "audit.go.lang.security.audit.database.string-formatted-query.string-formatted-query",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "String-formatted SQL query detected. This could lead to SQL injection if the string is not sanitized properly. Audit this call to ensure the SQL is not manipulable by external data.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "E2E 数据库测试使用固定表名白名单或本地 UUID 生成的隔离数据库、角色、触发器名，数据库/角色标识通过 pgx.Identifier.Sanitize 引用；故障触发条件拼入的命令 ID/题目 ID 来自测试固定字符串或 UUID fixture。不是生产 API 查询，也未找到可由外部输入控制的拼接值。"
+  },
+  {
+    "id": "SG-079",
+    "path": "services/api-gateway/internal/server/e2e_mfa_test.go",
+    "line": 308,
+    "end_line": 308,
+    "rule": "audit.go.lang.security.audit.database.string-formatted-query.string-formatted-query",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "String-formatted SQL query detected. This could lead to SQL injection if the string is not sanitized properly. Audit this call to ensure the SQL is not manipulable by external data.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "E2E 数据库测试使用固定表名白名单或本地 UUID 生成的隔离数据库、角色、触发器名，数据库/角色标识通过 pgx.Identifier.Sanitize 引用；故障触发条件拼入的命令 ID/题目 ID 来自测试固定字符串或 UUID fixture。不是生产 API 查询，也未找到可由外部输入控制的拼接值。"
+  },
+  {
+    "id": "SG-080",
+    "path": "services/api-gateway/internal/server/e2e_mfa_test.go",
+    "line": 312,
+    "end_line": 312,
+    "rule": "audit.go.lang.security.audit.database.string-formatted-query.string-formatted-query",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "String-formatted SQL query detected. This could lead to SQL injection if the string is not sanitized properly. Audit this call to ensure the SQL is not manipulable by external data.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "E2E 数据库测试使用固定表名白名单或本地 UUID 生成的隔离数据库、角色、触发器名，数据库/角色标识通过 pgx.Identifier.Sanitize 引用；故障触发条件拼入的命令 ID/题目 ID 来自测试固定字符串或 UUID fixture。不是生产 API 查询，也未找到可由外部输入控制的拼接值。"
+  },
+  {
+    "id": "SG-081",
+    "path": "services/api-gateway/internal/server/e2e_mfa_test.go",
+    "line": 316,
+    "end_line": 316,
+    "rule": "audit.go.lang.security.audit.database.string-formatted-query.string-formatted-query",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "String-formatted SQL query detected. This could lead to SQL injection if the string is not sanitized properly. Audit this call to ensure the SQL is not manipulable by external data.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "E2E 数据库测试使用固定表名白名单或本地 UUID 生成的隔离数据库、角色、触发器名，数据库/角色标识通过 pgx.Identifier.Sanitize 引用；故障触发条件拼入的命令 ID/题目 ID 来自测试固定字符串或 UUID fixture。不是生产 API 查询，也未找到可由外部输入控制的拼接值。"
+  },
+  {
+    "id": "SG-082",
+    "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+    "line": 354,
+    "end_line": 354,
+    "rule": "audit.go.lang.security.audit.database.string-formatted-query.string-formatted-query",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "String-formatted SQL query detected. This could lead to SQL injection if the string is not sanitized properly. Audit this call to ensure the SQL is not manipulable by external data.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "E2E 数据库测试使用固定表名白名单或本地 UUID 生成的隔离数据库、角色、触发器名，数据库/角色标识通过 pgx.Identifier.Sanitize 引用；故障触发条件拼入的命令 ID/题目 ID 来自测试固定字符串或 UUID fixture。不是生产 API 查询，也未找到可由外部输入控制的拼接值。"
+  },
+  {
+    "id": "SG-083",
+    "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+    "line": 357,
+    "end_line": 357,
+    "rule": "audit.go.lang.security.audit.database.string-formatted-query.string-formatted-query",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "String-formatted SQL query detected. This could lead to SQL injection if the string is not sanitized properly. Audit this call to ensure the SQL is not manipulable by external data.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "E2E 数据库测试使用固定表名白名单或本地 UUID 生成的隔离数据库、角色、触发器名，数据库/角色标识通过 pgx.Identifier.Sanitize 引用；故障触发条件拼入的命令 ID/题目 ID 来自测试固定字符串或 UUID fixture。不是生产 API 查询，也未找到可由外部输入控制的拼接值。"
+  },
+  {
+    "id": "SG-084",
+    "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+    "line": 361,
+    "end_line": 361,
+    "rule": "audit.go.lang.security.audit.database.string-formatted-query.string-formatted-query",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "String-formatted SQL query detected. This could lead to SQL injection if the string is not sanitized properly. Audit this call to ensure the SQL is not manipulable by external data.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "E2E 数据库测试使用固定表名白名单或本地 UUID 生成的隔离数据库、角色、触发器名，数据库/角色标识通过 pgx.Identifier.Sanitize 引用；故障触发条件拼入的命令 ID/题目 ID 来自测试固定字符串或 UUID fixture。不是生产 API 查询，也未找到可由外部输入控制的拼接值。"
+  },
+  {
+    "id": "SG-085",
+    "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+    "line": 711,
+    "end_line": 711,
+    "rule": "audit.go.lang.security.audit.database.string-formatted-query.string-formatted-query",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "String-formatted SQL query detected. This could lead to SQL injection if the string is not sanitized properly. Audit this call to ensure the SQL is not manipulable by external data.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "E2E 数据库测试使用固定表名白名单或本地 UUID 生成的隔离数据库、角色、触发器名，数据库/角色标识通过 pgx.Identifier.Sanitize 引用；故障触发条件拼入的命令 ID/题目 ID 来自测试固定字符串或 UUID fixture。不是生产 API 查询，也未找到可由外部输入控制的拼接值。"
+  },
+  {
+    "id": "SG-086",
+    "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+    "line": 722,
+    "end_line": 722,
+    "rule": "audit.go.lang.security.audit.database.string-formatted-query.string-formatted-query",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "String-formatted SQL query detected. This could lead to SQL injection if the string is not sanitized properly. Audit this call to ensure the SQL is not manipulable by external data.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "E2E 数据库测试使用固定表名白名单或本地 UUID 生成的隔离数据库、角色、触发器名，数据库/角色标识通过 pgx.Identifier.Sanitize 引用；故障触发条件拼入的命令 ID/题目 ID 来自测试固定字符串或 UUID fixture。不是生产 API 查询，也未找到可由外部输入控制的拼接值。"
+  },
+  {
+    "id": "SG-087",
+    "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+    "line": 730,
+    "end_line": 730,
+    "rule": "audit.go.lang.security.audit.database.string-formatted-query.string-formatted-query",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "String-formatted SQL query detected. This could lead to SQL injection if the string is not sanitized properly. Audit this call to ensure the SQL is not manipulable by external data.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "E2E 数据库测试使用固定表名白名单或本地 UUID 生成的隔离数据库、角色、触发器名，数据库/角色标识通过 pgx.Identifier.Sanitize 引用；故障触发条件拼入的命令 ID/题目 ID 来自测试固定字符串或 UUID fixture。不是生产 API 查询，也未找到可由外部输入控制的拼接值。"
+  },
+  {
+    "id": "SG-088",
+    "path": "services/api-gateway/internal/server/e2e_question_bank_import_test.go",
+    "line": 166,
+    "end_line": 166,
+    "rule": "audit.go.lang.security.audit.database.string-formatted-query.string-formatted-query",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "String-formatted SQL query detected. This could lead to SQL injection if the string is not sanitized properly. Audit this call to ensure the SQL is not manipulable by external data.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "E2E 数据库测试使用固定表名白名单或本地 UUID 生成的隔离数据库、角色、触发器名，数据库/角色标识通过 pgx.Identifier.Sanitize 引用；故障触发条件拼入的命令 ID/题目 ID 来自测试固定字符串或 UUID fixture。不是生产 API 查询，也未找到可由外部输入控制的拼接值。"
+  },
+  {
+    "id": "SG-089",
+    "path": "services/api-gateway/internal/server/e2e_question_bank_test.go",
+    "line": 350,
+    "end_line": 350,
+    "rule": "audit.go.lang.security.audit.database.string-formatted-query.string-formatted-query",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "String-formatted SQL query detected. This could lead to SQL injection if the string is not sanitized properly. Audit this call to ensure the SQL is not manipulable by external data.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "E2E 数据库测试使用固定表名白名单或本地 UUID 生成的隔离数据库、角色、触发器名，数据库/角色标识通过 pgx.Identifier.Sanitize 引用；故障触发条件拼入的命令 ID/题目 ID 来自测试固定字符串或 UUID fixture。不是生产 API 查询，也未找到可由外部输入控制的拼接值。"
+  },
+  {
+    "id": "SG-090",
+    "path": "services/api-gateway/tools/story056-postgres-e2e/Dockerfile",
+    "line": 9,
+    "end_line": 9,
+    "rule": "audit.dockerfile.security.missing-user.missing-user",
+    "severity": "ERROR",
+    "confidence": "MEDIUM",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "By not specifying a USER, a program in the container may run as 'root'. This is a security hazard. If an attacker can control a process running as root, they may have control over the container. Ensure that the last USER in a Dockerfile is a USER other than 'root'.",
+    "human_status": "test_only",
+    "human_severity": "low",
+    "human_notes": "原扫描快照是单阶段 E2E Go 测试镜像，最终确实没有 USER，属于低风险测试工具加固项。扫描后的当前工作区已改为多阶段并设置 USER 10001:10001，已解决运行身份问题；不能把扫描后修复反标成原扫描误报。快照/当前哈希差异见 snapshot-current-check.json，未由本次审计修改。"
+  },
+  {
+    "id": "SG-091",
+    "path": "services/api-gateway/tools/story056-real-worker-e2e/Dockerfile",
+    "line": 18,
+    "end_line": 18,
+    "rule": "audit.dockerfile.security.missing-user-entrypoint.missing-user-entrypoint",
+    "severity": "ERROR",
+    "confidence": "MEDIUM",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "By not specifying a USER, a program in the container may run as 'root'. This is a security hazard. If an attacker can control a process running as root, they may have control over the container. Ensure that the last USER in a Dockerfile is a USER other than 'root'.",
+    "human_status": "test_only",
+    "human_severity": "low",
+    "human_notes": "独立 story056-real-worker-e2e 测试客户端镜像最终没有 USER，使用 alpine 默认 root；Compose 仅在 e2e profile 启动它，没有公网服务入口。这是确实存在的测试镜像加固项，建议独立非 root 用户；不是已确认生产越权漏洞。"
+  },
+  {
+    "id": "SG-092",
+    "path": "services/image-quality-worker/image_quality/api.py",
+    "line": 94,
+    "end_line": 94,
+    "rule": "audit.python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "Detected a dynamic value being used with urllib. urllib supports 'file://' schemes, so a dynamic value controlled by a malicious actor may allow them to read arbitrary files. Audit uses of urllib calls to ensure user data cannot control the URLs, or consider using the 'requests' library instead.",
+    "human_status": "needs_review",
+    "human_severity": "medium",
+    "human_notes": "初始 URL 通过 _trusted_service_url/_trusted_url 限制配置 API 同源，具备 timeout 和受限响应读取。但 request.urlopen 使用默认重定向处理器，跳转后不重新执行同源校验；合成无网络验证显示 Authorization 与 Worker Lease 头会保留至跨域 GET 跳转。风险前提是 API/反向代理返回攻击者可控重定向，未在本次静态检查中证明普通用户能触发。建议凭据请求禁止自动跳转，或逐跳校验 origin 且去掉敏感头。"
+  },
+  {
+    "id": "SG-093",
+    "path": "services/image-quality-worker/image_quality/api.py",
+    "line": 121,
+    "end_line": 121,
+    "rule": "audit.python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "Detected a dynamic value being used with urllib. urllib supports 'file://' schemes, so a dynamic value controlled by a malicious actor may allow them to read arbitrary files. Audit uses of urllib calls to ensure user data cannot control the URLs, or consider using the 'requests' library instead.",
+    "human_status": "needs_review",
+    "human_severity": "medium",
+    "human_notes": "初始 URL 通过 _trusted_service_url/_trusted_url 限制配置 API 同源，具备 timeout 和受限响应读取。但 request.urlopen 使用默认重定向处理器，跳转后不重新执行同源校验；合成无网络验证显示 Authorization 与 Worker Lease 头会保留至跨域 GET 跳转。风险前提是 API/反向代理返回攻击者可控重定向，未在本次静态检查中证明普通用户能触发。建议凭据请求禁止自动跳转，或逐跳校验 origin 且去掉敏感头。"
+  },
+  {
+    "id": "SG-094",
+    "path": "services/image-quality-worker/image_quality/api.py",
+    "line": 145,
+    "end_line": 145,
+    "rule": "audit.python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "Detected a dynamic value being used with urllib. urllib supports 'file://' schemes, so a dynamic value controlled by a malicious actor may allow them to read arbitrary files. Audit uses of urllib calls to ensure user data cannot control the URLs, or consider using the 'requests' library instead.",
+    "human_status": "needs_review",
+    "human_severity": "medium",
+    "human_notes": "初始 URL 通过 _trusted_service_url/_trusted_url 限制配置 API 同源，具备 timeout 和受限响应读取。但 request.urlopen 使用默认重定向处理器，跳转后不重新执行同源校验；合成无网络验证显示 Authorization 与 Worker Lease 头会保留至跨域 GET 跳转。风险前提是 API/反向代理返回攻击者可控重定向，未在本次静态检查中证明普通用户能触发。建议凭据请求禁止自动跳转，或逐跳校验 origin 且去掉敏感头。"
+  },
+  {
+    "id": "SG-095",
+    "path": "services/math-verification-worker/tests/test_timeout.py",
+    "line": 34,
+    "end_line": 34,
+    "rule": "audit.python.lang.security.deserialization.pickle.avoid-pickle",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "Avoid using `pickle`, which is known to lead to code execution vulnerabilities. When unpickling, the serialized data could be manipulated to run arbitrary code. Instead, consider serializing the relevant data as JSON or a similar text-based serialization format.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "这里只调用 pickle.dumps 对可信测试内存对象序列化，验证 multiprocessing 管道大结果场景；没有 pickle.loads/load 读取用户数据。序列化大小断言本身不是不安全反序列化。"
+  },
+  {
+    "id": "SG-096",
+    "path": "services/ocr-worker/Dockerfile",
+    "line": 6,
+    "end_line": 6,
+    "rule": "audit.dockerfile.security.last-user-is-root.last-user-is-root",
+    "severity": "ERROR",
+    "confidence": "MEDIUM",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "The last user in the container is 'root'. This is a security hazard because if an attacker gains control of the container they will have root access. Switch back to another user after running commands as 'root'.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "OCR Dockerfile:6 的 USER root 只用于安装依赖；文件末尾已切换 USER nobody，之后 CMD python -m ocr_worker。Semgrep 同时报告此 Dockerfile 的部分解析错误，不能把解析到的最后 root 当作真实最终用户。"
+  },
+  {
+    "id": "SG-097",
+    "path": "services/ocr-worker/ocr_worker/api.py",
+    "line": 266,
+    "end_line": 266,
+    "rule": "audit.python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "Detected a dynamic value being used with urllib. urllib supports 'file://' schemes, so a dynamic value controlled by a malicious actor may allow them to read arbitrary files. Audit uses of urllib calls to ensure user data cannot control the URLs, or consider using the 'requests' library instead.",
+    "human_status": "needs_review",
+    "human_severity": "medium",
+    "human_notes": "初始 URL 通过 _trusted_service_url/_trusted_url 限制配置 API 同源，具备 timeout 和受限响应读取。但 request.urlopen 使用默认重定向处理器，跳转后不重新执行同源校验；合成无网络验证显示 Authorization 与 Worker Lease 头会保留至跨域 GET 跳转。风险前提是 API/反向代理返回攻击者可控重定向，未在本次静态检查中证明普通用户能触发。建议凭据请求禁止自动跳转，或逐跳校验 origin 且去掉敏感头。"
+  },
+  {
+    "id": "SG-098",
+    "path": "services/ocr-worker/ocr_worker/api.py",
+    "line": 290,
+    "end_line": 290,
+    "rule": "audit.python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "Detected a dynamic value being used with urllib. urllib supports 'file://' schemes, so a dynamic value controlled by a malicious actor may allow them to read arbitrary files. Audit uses of urllib calls to ensure user data cannot control the URLs, or consider using the 'requests' library instead.",
+    "human_status": "needs_review",
+    "human_severity": "medium",
+    "human_notes": "初始 URL 通过 _trusted_service_url/_trusted_url 限制配置 API 同源，具备 timeout 和受限响应读取。但 request.urlopen 使用默认重定向处理器，跳转后不重新执行同源校验；合成无网络验证显示 Authorization 与 Worker Lease 头会保留至跨域 GET 跳转。风险前提是 API/反向代理返回攻击者可控重定向，未在本次静态检查中证明普通用户能触发。建议凭据请求禁止自动跳转，或逐跳校验 origin 且去掉敏感头。"
+  },
+  {
+    "id": "SG-099",
+    "path": "services/ocr-worker/ocr_worker/math_runner.py",
+    "line": 41,
+    "end_line": 41,
+    "rule": "audit.python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "Detected a dynamic value being used with urllib. urllib supports 'file://' schemes, so a dynamic value controlled by a malicious actor may allow them to read arbitrary files. Audit uses of urllib calls to ensure user data cannot control the URLs, or consider using the 'requests' library instead.",
+    "human_status": "needs_review",
+    "human_severity": "medium",
+    "human_notes": "数学验证目标来自受信服务配置，操作名是内部固定调用，设置 timeout 与 JSON 大小上限，未见直接用户 URL 输入。仍使用默认 urllib 重定向，X-EduGrade-Internal-Token 等自定义凭据头不会自动清除；需服务返回不可信重定向才会触发，当前缺少可利用路径证据。建议禁用凭据请求重定向。"
+  },
+  {
+    "id": "SG-100",
+    "path": "services/page-processing-worker/page_processing/api.py",
+    "line": 71,
+    "end_line": 71,
+    "rule": "audit.python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "Detected a dynamic value being used with urllib. urllib supports 'file://' schemes, so a dynamic value controlled by a malicious actor may allow them to read arbitrary files. Audit uses of urllib calls to ensure user data cannot control the URLs, or consider using the 'requests' library instead.",
+    "human_status": "needs_review",
+    "human_severity": "medium",
+    "human_notes": "初始 URL 通过 _trusted_service_url/_trusted_url 限制配置 API 同源，具备 timeout 和受限响应读取。但 request.urlopen 使用默认重定向处理器，跳转后不重新执行同源校验；合成无网络验证显示 Authorization 与 Worker Lease 头会保留至跨域 GET 跳转。风险前提是 API/反向代理返回攻击者可控重定向，未在本次静态检查中证明普通用户能触发。建议凭据请求禁止自动跳转，或逐跳校验 origin 且去掉敏感头。"
+  },
+  {
+    "id": "SG-101",
+    "path": "services/page-processing-worker/page_processing/api.py",
+    "line": 102,
+    "end_line": 102,
+    "rule": "audit.python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "Detected a dynamic value being used with urllib. urllib supports 'file://' schemes, so a dynamic value controlled by a malicious actor may allow them to read arbitrary files. Audit uses of urllib calls to ensure user data cannot control the URLs, or consider using the 'requests' library instead.",
+    "human_status": "needs_review",
+    "human_severity": "medium",
+    "human_notes": "初始 URL 通过 _trusted_service_url/_trusted_url 限制配置 API 同源，具备 timeout 和受限响应读取。但 request.urlopen 使用默认重定向处理器，跳转后不重新执行同源校验；合成无网络验证显示 Authorization 与 Worker Lease 头会保留至跨域 GET 跳转。风险前提是 API/反向代理返回攻击者可控重定向，未在本次静态检查中证明普通用户能触发。建议凭据请求禁止自动跳转，或逐跳校验 origin 且去掉敏感头。"
+  },
+  {
+    "id": "SG-102",
+    "path": "services/page-processing-worker/page_processing/api.py",
+    "line": 160,
+    "end_line": 160,
+    "rule": "audit.python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "Detected a dynamic value being used with urllib. urllib supports 'file://' schemes, so a dynamic value controlled by a malicious actor may allow them to read arbitrary files. Audit uses of urllib calls to ensure user data cannot control the URLs, or consider using the 'requests' library instead.",
+    "human_status": "needs_review",
+    "human_severity": "medium",
+    "human_notes": "初始 URL 通过 _trusted_service_url/_trusted_url 限制配置 API 同源，具备 timeout 和受限响应读取。但 request.urlopen 使用默认重定向处理器，跳转后不重新执行同源校验；合成无网络验证显示 Authorization 与 Worker Lease 头会保留至跨域 GET 跳转。风险前提是 API/反向代理返回攻击者可控重定向，未在本次静态检查中证明普通用户能触发。建议凭据请求禁止自动跳转，或逐跳校验 origin 且去掉敏感头。"
+  },
+  {
+    "id": "SG-103",
+    "path": "services/page-processing-worker/tests/test_main.py",
+    "line": 47,
+    "end_line": 48,
+    "rule": "audit.python.lang.security.audit.hardcoded-password-default-argument.hardcoded-password-default-argument",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "Hardcoded password is used as a default argument to '_config'. This could be dangerous if a real password is not supplied.",
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "_config 位于 tests/test_main.py，固定测试字符串只传给 FakeClient/FakeRunner 与 monkeypatch，用来覆盖登录和配置边界，未用作真实 Worker 生产默认密码。报告不复述此合成值。"
+  },
+  {
+    "id": "SG-104",
+    "path": "services/subjective-grading-worker/subjective_grading_worker/api.py",
+    "line": 94,
+    "end_line": 94,
+    "rule": "audit.python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "Detected a dynamic value being used with urllib. urllib supports 'file://' schemes, so a dynamic value controlled by a malicious actor may allow them to read arbitrary files. Audit uses of urllib calls to ensure user data cannot control the URLs, or consider using the 'requests' library instead.",
+    "human_status": "needs_review",
+    "human_severity": "medium",
+    "human_notes": "初始 URL 通过 _trusted_service_url/_trusted_url 限制配置 API 同源，具备 timeout 和受限响应读取。但 request.urlopen 使用默认重定向处理器，跳转后不重新执行同源校验；合成无网络验证显示 Authorization 与 Worker Lease 头会保留至跨域 GET 跳转。风险前提是 API/反向代理返回攻击者可控重定向，未在本次静态检查中证明普通用户能触发。建议凭据请求禁止自动跳转，或逐跳校验 origin 且去掉敏感头。"
+  },
+  {
+    "id": "SG-105",
+    "path": "tests/e2e/story060_grading_agent.py",
+    "line": 19,
+    "end_line": 19,
+    "rule": "audit.python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected",
+    "severity": "WARNING",
+    "confidence": "LOW",
+    "subcategory": [
+      "audit"
+    ],
+    "message": "Detected a dynamic value being used with urllib. urllib supports 'file://' schemes, so a dynamic value controlled by a malicious actor may allow them to read arbitrary files. Audit uses of urllib calls to ensure user data cannot control the URLs, or consider using the 'requests' library instead.",
+    "human_status": "test_only",
+    "human_severity": "low",
+    "human_notes": "E2E 脚本目标来自测试环境变量，默认 Compose 内部固定服务名，不接受生产 API 用户 URL。通用 urlopen 规则只发现动态地址；测试工具可同样采用拒绝重定向与受限响应读取，但当前不构成已确认生产 SSRF。"
+  }
+]

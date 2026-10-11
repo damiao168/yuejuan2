@@ -36,11 +36,24 @@ SELECT
   COALESCE(qr.status, ''), COALESCE(qr.max_score::float8, 0), COALESCE(qr.points, '[]'::jsonb),
   COALESCE(qr.deductions, '[]'::jsonb), COALESCE(qr.examples, '[]'::jsonb),
   COALESCE(ans.answer_text, ''), COALESCE(ans.source, ''),
-  COALESCE(ag.ai_suggestion, 'null'::jsonb)
+  COALESCE(ag.ai_suggestion, 'null'::jsonb),
+  q.options, to_jsonb(reference_key), to_jsonb(reference_solution)
 FROM answer_segment seg
 JOIN submission sub ON sub.tenant_id = seg.tenant_id AND sub.id = seg.submission_id
 JOIN question q ON q.tenant_id = seg.tenant_id AND q.id = seg.question_id
 JOIN exam_question_snapshot eqs ON eqs.tenant_id = q.tenant_id AND eqs.exam_id = q.exam_id AND eqs.question_id = q.id
+LEFT JOIN LATERAL (
+  SELECT id,question_id,answer_version,standard_answer,equivalent_answers,tolerance
+  FROM question_answer_key
+  WHERE tenant_id=q.tenant_id AND question_id=q.id AND deleted_at IS NULL AND created_at<=eqs.created_at
+  ORDER BY created_at DESC,id DESC LIMIT 1
+) reference_key ON true
+LEFT JOIN LATERAL (
+  SELECT id,question_id,solution_version,raw_text,steps,source_refs,verification_status
+  FROM question_solution
+  WHERE tenant_id=q.tenant_id AND question_id=q.id AND deleted_at IS NULL AND created_at<=eqs.created_at
+  ORDER BY created_at DESC,id DESC LIMIT 1
+) reference_solution ON true
 LEFT JOIN LATERAL (
   SELECT id, question_id, status, max_score, points, deductions, examples, rubric_version_id
   FROM question_rubric
@@ -112,6 +125,7 @@ WHERE seg.tenant_id = $1 AND seg.id::text = $2 AND seg.deleted_at IS NULL AND su
 	var pointsRaw, deductionsRaw, examplesRaw []byte
 	var answerSource string
 	var aiSuggestionRaw []byte
+	var optionsRaw, referenceKeyRaw, referenceSolutionRaw []byte
 	if err := row.Scan(
 		&out.ExamID,
 		&out.SubmissionID,
@@ -141,6 +155,7 @@ WHERE seg.tenant_id = $1 AND seg.id::text = $2 AND seg.deleted_at IS NULL AND su
 		&out.RawAnswer,
 		&answerSource,
 		&aiSuggestionRaw,
+		&optionsRaw, &referenceKeyRaw, &referenceSolutionRaw,
 	); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return Context{}, ErrNotFound
@@ -156,6 +171,17 @@ WHERE seg.tenant_id = $1 AND seg.id::text = $2 AND seg.deleted_at IS NULL AND su
 	if err := decodeJSONB(areaRaw, &question.AnswerArea, "question.answer_area"); err != nil {
 		return Context{}, err
 	}
+	// 题干和选项来自 ready 后不可编辑的考试题目；参考答案和解析只取快照形成前的历史版本。
+	// 后续更正生成的新资料不能悄悄替换当前任务的阅卷依据；旧资料缺失时如实返回空值。
+	if err := decodeJSONB(optionsRaw, &question.Options, "question.options"); err != nil {
+		return Context{}, err
+	}
+	if err := decodeJSONB(referenceKeyRaw, &question.AnswerKey, "question.answer_key"); err != nil {
+		return Context{}, err
+	}
+	if err := decodeJSONB(referenceSolutionRaw, &question.Solution, "question.solution"); err != nil {
+		return Context{}, err
+	}
 	if err := decodeJSONB(pointsRaw, &rubric.Points, "rubric.points"); err != nil {
 		return Context{}, err
 	}
@@ -165,10 +191,8 @@ WHERE seg.tenant_id = $1 AND seg.id::text = $2 AND seg.deleted_at IS NULL AND su
 	if err := decodeJSONB(examplesRaw, &rubric.Examples, "rubric.examples"); err != nil {
 		return Context{}, err
 	}
-	// 优先用考试快照中的评分细则；快照无法还原细则时，保留前面查到的当前细则。
-	if frozen, ok := frozenRubric(out.AssessmentSnapshot.RubricSnapshot, question.ID); ok {
-		rubric = frozen
-	}
+	// 当前题库细则不是历史阅卷依据；快照缺失时明确返回缺失，不能偷偷换成后来修改的细则。
+	rubric = taskFrozenRubric(out.AssessmentSnapshot.RubricSnapshot, question.ID, question.Score)
 	if answerSource == "ocr_text" {
 		out.OCRText = out.RawAnswer
 	}
@@ -199,6 +223,13 @@ func frozenRubric(snapshot map[string]any, questionID string) (paper.Rubric, boo
 	}
 	rubric.QuestionID = questionID
 	return rubric, rubric.ID != "" || rubric.Version != "" || len(rubric.Points) > 0
+}
+
+func taskFrozenRubric(snapshot map[string]any, questionID string, maxScore float64) paper.Rubric {
+	if rubric, ok := frozenRubric(snapshot, questionID); ok {
+		return rubric
+	}
+	return paper.Rubric{QuestionID: questionID, Status: "missing", MaxScore: maxScore, Points: []paper.RubricPoint{}, Deductions: []any{}, Examples: []any{}}
 }
 
 // 这里汇集当前识别候选、标准答案、已发布规则和当前成绩，供异常复核展示；不是一份历史评分快照。

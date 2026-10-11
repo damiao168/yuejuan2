@@ -14,26 +14,7 @@ func (s *MemoryStore) ClaimNextTask(_ context.Context, tenantID, reviewerID stri
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	assigned := make([]ReviewTask, 0)
-	unassigned := make([]ReviewTask, 0)
-	for _, task := range s.tasks {
-		if task.TenantID != tenantID || !matchesNextTaskFilter(task, input) {
-			continue
-		}
-		if task.AssignedTo == reviewerID && isClaimableAssignedStatus(task.Status) {
-			assigned = append(assigned, task)
-			continue
-		}
-		if options.AllowUnassigned && task.AssignedTo == "" && task.Status == "pending" {
-			unassigned = append(unassigned, task)
-		}
-	}
-
-	// 本人已分配的任务优先；内存实现的候补池只含未分配任务，不接管别人的过期租约。
-	candidates := assigned
-	if len(candidates) == 0 {
-		candidates = unassigned
-	}
+	candidates := s.claimableTaskCandidatesLocked(tenantID, reviewerID, input, options)
 	if len(candidates) == 0 {
 		return ReviewTask{}, ErrNotFound
 	}
@@ -58,6 +39,29 @@ func (s *MemoryStore) ClaimNextTask(_ context.Context, tenantID, reviewerID stri
 	s.tasks[key(tenantID, task.ID)] = task
 	s.claims[key(tenantID, task.ID)] = memoryTaskClaim{OwnerID: reviewerID, ClaimedAt: now, ExpiresAt: now.Add(memoryTaskClaimTTL)}
 	return cloneTask(task), nil
+}
+
+// claimableTaskCandidatesLocked 由持有 s.mu 的调用方使用，筛选和领取写入共用同一次锁。
+func (s *MemoryStore) claimableTaskCandidatesLocked(tenantID, reviewerID string, input NextTaskInput, options ClaimTaskOptions) []ReviewTask {
+	assigned := make([]ReviewTask, 0)
+	unassigned := make([]ReviewTask, 0)
+	for _, task := range s.tasks {
+		if task.TenantID != tenantID || !matchesNextTaskFilter(task, input) {
+			continue
+		}
+		if task.AssignedTo == reviewerID && isClaimableAssignedStatus(task.Status) {
+			assigned = append(assigned, task)
+			continue
+		}
+		if options.AllowUnassigned && task.AssignedTo == "" && task.Status == "pending" {
+			unassigned = append(unassigned, task)
+		}
+	}
+	// 本人已分配的任务优先；内存实现的候补池只含未分配任务，不接管别人的过期租约。
+	if len(assigned) > 0 {
+		return assigned
+	}
+	return unassigned
 }
 
 func (s *MemoryStore) GetWorkspace(_ context.Context, tenantID, taskID string) (Workspace, error) {
@@ -101,8 +105,7 @@ func (s *MemoryStore) RenewTaskClaim(_ context.Context, tenantID, taskID, review
 	return nil
 }
 
-// ReleaseTaskClaim ends the browser session while retaining the manager's
-// durable assignment and the task's business status.
+// ReleaseTaskClaim 结束浏览器会话，同时保留管理员的持久分配和任务业务状态。
 func (s *MemoryStore) ReleaseTaskClaim(_ context.Context, tenantID, taskID, reviewerID string) (ReviewTask, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

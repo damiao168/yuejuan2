@@ -1,0 +1,50 @@
+{
+  "reviewed_at": "2026-10-11T18:38:21.597013+08:00",
+  "records": [
+    {
+      "key": "7f939914-9bb6-4005-80a0-4c2efe12eedb",
+      "rule": "python:S5332",
+      "file": "ai-services/grading_agent/server.py",
+      "source_sha256": "62c2b234657f1f29d444968d8ce815647f820b1b8c7b3eb7d6a6db6d617c637e",
+      "transition": "falsepositive",
+      "reason": "告警命中 ThreadingHTTPServer 构造/继承，但该监听 socket 在处理请求前由服务端 TLS 上下文包装。调用链中的默认拒绝策略和真实握手负例已验证。 生产/缺省/未知环境在绑定前要求成对证书，最低TLS1.2；开发HTTP仅明确环境、真实bool授权和字面IPv4回环。",
+      "manual_review_scope": "serve入口、监听策略、TLS包装顺序和真实握手测试；逐项源码证据见 python-tls-platform-evidence.json",
+      "evidence_note": "当前源码SHA与完整复扫checkpoint02一致；真实TLS握手测试exit0，无skip；不修改生产监听行为。"
+    },
+    {
+      "key": "0cb24e71-bce5-4ed4-b2c5-ca9aac275754",
+      "rule": "python:S5332",
+      "file": "services/math-verification-worker/math_verification_worker/server.py",
+      "source_sha256": "d9d6a02c89cea615738f507e3462e185e4c9992537acdb6b93ce28427f9a4f1f",
+      "transition": "falsepositive",
+      "reason": "告警命中 ThreadingHTTPServer 构造/继承，但该监听 socket 在处理请求前由服务端 TLS 上下文包装。调用链中的默认拒绝策略和真实握手负例已验证。 生产/缺省/未知环境在绑定前要求成对证书，最低TLS1.2；开发HTTP仅明确环境、真实bool授权和字面IPv4回环。",
+      "manual_review_scope": "serve入口、监听策略、TLS包装顺序和真实握手测试；逐项源码证据见 python-tls-platform-evidence.json",
+      "evidence_note": "当前源码SHA与完整复扫checkpoint02一致；真实TLS握手测试exit0，无skip；不修改生产监听行为。"
+    },
+    {
+      "key": "ae9bde8c-38e1-458d-9216-cdd5998fc7d5",
+      "rule": "javascript:S7721",
+      "file": "docs/architecture/tools/render_native.js",
+      "source_sha256": "85e0b8d9604713f3506c56758a3af02977ef66e35bc66ff7d3136e129eefac65",
+      "transition": "falsepositive",
+      "reason": "几何判定函数处于 page.evaluate 的浏览器回调内。Playwright 将该回调序列化到浏览器执行，外部Node闭包不会一并序列化；提升到文件或外部循环作用域会令浏览器缺少这两个函数。当前位置已是该浏览器执行单元内可用的最高作用域。",
+      "manual_review_scope": "完整render_native.js函数输入、page.evaluate传入回调及几何helper调用；未将Node桩测试描述为真实浏览器执行",
+      "evidence_note": "保留作用域边界，未转成箭头函数躲避规则、未禁用S7721、未排除文件。"
+    },
+    {
+      "key": "90763f53-5107-4902-9ea6-e4c6b6d7607e",
+      "rule": "javascript:S7721",
+      "file": "docs/architecture/tools/render_native.js",
+      "source_sha256": "85e0b8d9604713f3506c56758a3af02977ef66e35bc66ff7d3136e129eefac65",
+      "transition": "falsepositive",
+      "reason": "几何判定函数处于 page.evaluate 的浏览器回调内。Playwright 将该回调序列化到浏览器执行，外部Node闭包不会一并序列化；提升到文件或外部循环作用域会令浏览器缺少这两个函数。当前位置已是该浏览器执行单元内可用的最高作用域。",
+      "manual_review_scope": "完整render_native.js函数输入、page.evaluate传入回调及几何helper调用；未将Node桩测试描述为真实浏览器执行",
+      "evidence_note": "保留作用域边界，未转成箭头函数躲避规则、未禁用S7721、未排除文件。"
+    }
+  ],
+  "supporting_public_documentation": {
+    "url": "https://playwright.dev/docs/evaluating",
+    "verified_at": "2026-10-11",
+    "supports": "page.evaluate浏览器执行环境与Node测试环境隔离，外部变量必须显式传参。"
+  }
+}

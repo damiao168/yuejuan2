@@ -1,0 +1,16 @@
+{
+  "files": [
+    {
+      "file": "services/api-gateway/internal/server/e2e_scoring_double_mark_test.go",
+      "sha256": "48852d28834a02c5eb4536dfe1028d54e6328edb78f863d59138833f17d3f64b",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_scoring_double_mark_test.go"
+    }
+  ],
+  "issue_functions": [
+    {
+      "file": "services/api-gateway/internal/server/e2e_scoring_double_mark_test.go",
+      "function": "TestScoringDoubleMarkLifecycleWithPostgresTestDatabase"
+    }
+  ],
+  "checkpoint_relation": "after checkpoint02; requires subsequent scan"
+}

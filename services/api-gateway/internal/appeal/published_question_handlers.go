@@ -12,13 +12,17 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/segment"
 )
 
-// PublishedQuestionAppealHandler exposes separate student and staff shapes.
-// It does not reuse the legacy mutable-grade appeal handler because its source
-// and visibility boundary are materially different.
+// PublishedQuestionAppealHandler 分别提供学生端和教职工端的数据结构。其来源与可见性边界不同，因此不复用旧的可变成绩申诉处理器。
 type PublishedQuestionAppealHandler struct {
 	service      *PublishedQuestionAppealService
 	audit        auth.AuditRecorder
 	segmentImage segment.CropImageReader
+	examSummary  QuestionAppealExamSummaryReader
+}
+
+func (h *PublishedQuestionAppealHandler) WithExamSummaryReader(reader QuestionAppealExamSummaryReader) *PublishedQuestionAppealHandler {
+	h.examSummary = reader
+	return h
 }
 
 func (h *PublishedQuestionAppealHandler) WithSegmentImage(reader segment.CropImageReader) *PublishedQuestionAppealHandler {
@@ -37,13 +41,11 @@ func (h *PublishedQuestionAppealHandler) Context(w http.ResponseWriter, r *http.
 		writePublishedQuestionAppealError(w, r, err)
 		return
 	}
-	// Never serialize answer_segment_id. The browser gets a staff-gated image
-	// route instead, so it cannot turn one appeal into an arbitrary crop URL.
+	// 不得序列化 answer_segment_id。浏览器只取得受教职工权限保护的图片路由，不能将一条申诉变成任意裁剪图 URL。
 	context.AnswerSegmentID = ""
-	if hasPermission(user, "appeal:work") && !hasPermission(user, "appeal:manage") {
-		// A reviewer needs the frozen scoring evidence, but not the student's
-		// identity, internal submission/regrade identifiers, or another staff
-		// member's identity.
+	context.Appeal = h.withStaffExamSummary(r, context.Appeal, nil)
+	if hasPermission(user, appealWorkPermission) && !hasPermission(user, appealManagePermission) {
+		// 复核者需要冻结的评分证据，不需要学生身份、内部提交或重评标识，也不需要其他教职工的身份。
 		context = workerQuestionAppealContextView(context)
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"context": context})
@@ -107,10 +109,9 @@ func (h *PublishedQuestionAppealHandler) List(w http.ResponseWriter, r *http.Req
 	user := mustUser(r)
 	filter := QuestionAppealFilter{ExamID: r.URL.Query().Get("exam_id"), Status: r.URL.Query().Get("status")}
 	studentView := false
-	if hasPermission(user, "appeal:manage") {
-		// School administrators may see the staff workflow, including the
-		// immutable source context and private decision note.
-	} else if hasPermission(user, "appeal:work") {
+	if hasPermission(user, appealManagePermission) {
+		// 学校管理员可查看教职工工作流，包括不可变的来源上下文和私有裁决备注。
+	} else if hasPermission(user, appealWorkPermission) {
 		filter.AssignedTo = user.ID
 	} else {
 		studentID, ok := scopedStudentID(user)
@@ -133,7 +134,12 @@ func (h *PublishedQuestionAppealHandler) List(w http.ResponseWriter, r *http.Req
 		httpx.JSON(w, http.StatusOK, map[string]any{"appeals": views})
 		return
 	}
-	if hasPermission(user, "appeal:work") && !hasPermission(user, "appeal:manage") {
+	// 一次列表刷新中相同考试只读取一次；缓存限于本请求，重读时仍可恢复先前失败的名称。
+	summaries := make(map[string]QuestionAppealExamSummary)
+	for index := range items {
+		items[index] = h.withStaffExamSummary(r, items[index], summaries)
+	}
+	if hasPermission(user, appealWorkPermission) && !hasPermission(user, appealManagePermission) {
 		for index := range items {
 			items[index] = workerQuestionAppealView(items[index])
 		}
@@ -148,15 +154,17 @@ func (h *PublishedQuestionAppealHandler) Get(w http.ResponseWriter, r *http.Requ
 		writePublishedQuestionAppealError(w, r, err)
 		return
 	}
-	if hasPermission(user, "appeal:manage") {
+	if hasPermission(user, appealManagePermission) {
+		item = h.withStaffExamSummary(r, item, nil)
 		httpx.JSON(w, http.StatusOK, map[string]any{"appeal": item})
 		return
 	}
-	if hasPermission(user, "appeal:work") {
+	if hasPermission(user, appealWorkPermission) {
 		if item.AssignedTo != user.ID {
 			httpx.Error(w, r, http.StatusForbidden, "appeal_assignment_scope_violation", "worker can only view assigned appeals")
 			return
 		}
+		item = h.withStaffExamSummary(r, item, nil)
 		httpx.JSON(w, http.StatusOK, map[string]any{"appeal": workerQuestionAppealView(item)})
 		return
 	}
@@ -170,7 +178,7 @@ func (h *PublishedQuestionAppealHandler) Get(w http.ResponseWriter, r *http.Requ
 
 func (h *PublishedQuestionAppealHandler) StartReview(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
-	if !hasPermission(user, "appeal:manage") {
+	if !hasPermission(user, appealManagePermission) {
 		httpx.Error(w, r, http.StatusForbidden, "appeal_action_forbidden", "appeal manager permission is required")
 		return
 	}
@@ -184,11 +192,17 @@ func (h *PublishedQuestionAppealHandler) StartReview(w http.ResponseWriter, r *h
 		return
 	}
 	h.auditAction(r, "question_appeal.review_started", "question_appeal", item.ID, "appeal assigned for review")
+	item = h.withStaffExamSummary(r, item, nil)
 	httpx.JSON(w, http.StatusOK, map[string]any{"appeal": item})
 }
 
 func (h *PublishedQuestionAppealHandler) Decide(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
+	// 独立教师的意见交给管理员裁决，工作权限不能通过旧 decide 入口直接结案。
+	if !hasPermission(user, appealManagePermission) {
+		writePublishedQuestionAppealError(w, r, ErrForbidden)
+		return
+	}
 	item, err := h.authorizedStaffAppeal(r)
 	if err != nil {
 		writePublishedQuestionAppealError(w, r, err)
@@ -205,7 +219,8 @@ func (h *PublishedQuestionAppealHandler) Decide(w http.ResponseWriter, r *http.R
 		return
 	}
 	h.auditAction(r, "question_appeal.decided", "question_appeal", updated.ID, "appeal decision recorded")
-	if hasPermission(user, "appeal:work") && !hasPermission(user, "appeal:manage") {
+	updated = h.withStaffExamSummary(r, updated, nil)
+	if hasPermission(user, appealWorkPermission) && !hasPermission(user, appealManagePermission) {
 		httpx.JSON(w, http.StatusOK, map[string]any{"appeal": workerQuestionAppealView(updated)})
 		return
 	}
@@ -214,6 +229,10 @@ func (h *PublishedQuestionAppealHandler) Decide(w http.ResponseWriter, r *http.R
 
 func (h *PublishedQuestionAppealHandler) Resolve(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
+	if !hasPermission(user, appealManagePermission) {
+		writePublishedQuestionAppealError(w, r, ErrForbidden)
+		return
+	}
 	if _, err := h.authorizedStaffAppeal(r); err != nil {
 		writePublishedQuestionAppealError(w, r, err)
 		return
@@ -228,7 +247,8 @@ func (h *PublishedQuestionAppealHandler) Resolve(w http.ResponseWriter, r *http.
 		return
 	}
 	h.auditAction(r, "question_appeal.resolved", "question_appeal", item.ID, "successor score release linked")
-	if hasPermission(user, "appeal:work") && !hasPermission(user, "appeal:manage") {
+	item = h.withStaffExamSummary(r, item, nil)
+	if hasPermission(user, appealWorkPermission) && !hasPermission(user, appealManagePermission) {
 		httpx.JSON(w, http.StatusOK, map[string]any{"appeal": workerQuestionAppealView(item)})
 		return
 	}
@@ -246,12 +266,40 @@ func (h *PublishedQuestionAppealHandler) Events(w http.ResponseWriter, r *http.R
 		writePublishedQuestionAppealError(w, r, err)
 		return
 	}
-	if hasPermission(user, "appeal:work") && !hasPermission(user, "appeal:manage") {
+	if hasPermission(user, appealWorkPermission) && !hasPermission(user, appealManagePermission) {
 		for index := range events {
 			events[index].ActorID = ""
 		}
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"events": events})
+}
+
+func (h *PublishedQuestionAppealHandler) SubmitReviewOpinion(w http.ResponseWriter, r *http.Request) {
+	user := mustUser(r)
+	item, err := h.authorizedStaffAppeal(r)
+	if err != nil {
+		writePublishedQuestionAppealError(w, r, err)
+		return
+	}
+	if !hasPermission(user, appealWorkPermission) || item.AssignedTo != user.ID {
+		writePublishedQuestionAppealError(w, r, ErrForbidden)
+		return
+	}
+	var input SubmitQuestionAppealReviewOpinionInput
+	if !decodePublishedQuestionAppealJSON(w, r, &input) {
+		return
+	}
+	updated, err := h.service.SubmitReviewOpinion(r.Context(), user.TenantID, item.ID, user.ID, input)
+	if err != nil {
+		writePublishedQuestionAppealError(w, r, err)
+		return
+	}
+	h.auditAction(r, "question_appeal.review_opinion_submitted", "question_appeal", updated.ID, "independent review opinion handed to school administrator")
+	updated = h.withStaffExamSummary(r, updated, nil)
+	if !hasPermission(user, appealManagePermission) {
+		updated = workerQuestionAppealView(updated)
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"appeal": updated})
 }
 
 func (h *PublishedQuestionAppealHandler) authorizedStaffAppeal(r *http.Request) (PublishedQuestionAppeal, error) {
@@ -260,10 +308,36 @@ func (h *PublishedQuestionAppealHandler) authorizedStaffAppeal(r *http.Request) 
 	if err != nil {
 		return PublishedQuestionAppeal{}, err
 	}
-	if hasPermission(user, "appeal:manage") || (hasPermission(user, "appeal:work") && item.AssignedTo == user.ID) {
+	if hasPermission(user, appealManagePermission) || (hasPermission(user, appealWorkPermission) && item.AssignedTo == user.ID) {
 		return item, nil
 	}
 	return PublishedQuestionAppeal{}, ErrForbidden
+}
+
+func (h *PublishedQuestionAppealHandler) withStaffExamSummary(r *http.Request, item PublishedQuestionAppeal, summaries map[string]QuestionAppealExamSummary) PublishedQuestionAppeal {
+	user := mustUser(r)
+	if item.TenantID != user.TenantID || item.ExamID == "" ||
+		(!hasPermission(user, appealManagePermission) && !(hasPermission(user, appealWorkPermission) && item.AssignedTo == user.ID)) {
+		return item
+	}
+	item.ExamName, item.ExamSubject = "", ""
+	if h.examSummary == nil {
+		return item
+	}
+	summary, found := summaries[item.ExamID]
+	if !found {
+		// 授权来自这条申请，只读其精确考试摘要；失败不隐藏仍可复核的冻结证据，前端显示重读入口。
+		var err error
+		summary, err = h.examSummary.ReadQuestionAppealExamSummary(r.Context(), user.TenantID, item.ExamID)
+		if err != nil {
+			summary = QuestionAppealExamSummary{}
+		}
+		if summaries != nil {
+			summaries[item.ExamID] = summary
+		}
+	}
+	item.ExamName, item.ExamSubject = summary.Name, summary.Subject
+	return item
 }
 
 func decodePublishedQuestionAppealJSON(w http.ResponseWriter, r *http.Request, target any) bool {

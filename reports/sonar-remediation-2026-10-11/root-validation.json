@@ -1,0 +1,51 @@
+{
+  "verified_at": "2026-10-11T17:25:47.669500+08:00",
+  "generated_preview_reverses_to_workspace_baseline_exactly": true,
+  "font_declarations_fixed": 1645,
+  "native_svg_pages_unchanged_except_embedded_font_stack": 70,
+  "standalone_report_reverses_to_workspace_baseline_exactly": 3,
+  "metadata_chip_contrast_ratio": 8.071853162644365,
+  "cdn_distribution_and_integrity_verified": true,
+  "browser": {
+    "cli_session": "sonar-remediation-preview",
+    "pages_and_options": 70,
+    "picker_accessible_name": "选择架构图纸",
+    "next_page_hash": "p1",
+    "last_page_deep_link": "p69",
+    "last_page_150_percent": {
+      "width": 3466.5,
+      "height": 3031.5
+    },
+    "console": "Only favicon.ico404 observed in preview session",
+    "font_note": "浏览器当前会话跨同URL锚点导航没有重新请求HTML；字体修复按当前生成HTML与基线字节校验，浏览器重新加载验证待执行。",
+    "standalone_reports": "pending browser validation",
+    "owned_browser_and_http_server_closed": true
+  },
+  "platform_rescan": "pending",
+  "targeted_html_scan_02": {
+    "status": "SUCCESS",
+    "files": 4,
+    "original_rules_absent": 1652,
+    "additional_js_findings": 2,
+    "evidence": "html-validation-02/issues.json",
+    "original_project_issue_keys": "pending full repository rescan"
+  },
+  "files": [
+    {
+      "path": "docs/architecture/previews/index.html",
+      "sha256": "a5bed1603bd82f54b653a12cad939475d914b108d0d986485bb85116117f02d6"
+    },
+    {
+      "path": "frontend-review-report/前端UI优化方案-对标成熟产品.html",
+      "sha256": "97360676595203db31a3135233e0276082334225f28e200fe9ca0737e1fb208a"
+    },
+    {
+      "path": "frontend-review-report/前端UI设计分析.html",
+      "sha256": "dc8e69da9207e2d40604096f02f736d020f92487dd6313c5534e0a49d238c078"
+    },
+    {
+      "path": "frontend-review-report/前端代码审查报告.html",
+      "sha256": "df32d279b41f80027b049f564763253f61fc3067de6ee5917b49a056a631f553"
+    }
+  ]
+}

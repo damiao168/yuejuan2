@@ -11,6 +11,10 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/logger"
 )
 
+const (
+	invalidWorkerTaskInput = "worker task input is invalid"
+)
+
 type Handler struct {
 	store              Store
 	audit              auth.AuditRecorder
@@ -195,13 +199,13 @@ func (h *Handler) Metrics(w http.ResponseWriter, r *http.Request) {
 
 func decodeRuntimeJSON(w http.ResponseWriter, r *http.Request, target any) bool {
 	if r.Body == nil {
-		httpx.Error(w, r, http.StatusBadRequest, "invalid_worker_task_input", "worker task input is invalid")
+		httpx.Error(w, r, http.StatusBadRequest, "invalid_worker_task_input", invalidWorkerTaskInput)
 		return false
 	}
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(target); err != nil {
-		httpx.Error(w, r, http.StatusBadRequest, "invalid_worker_task_input", "worker task input is invalid")
+		httpx.Error(w, r, http.StatusBadRequest, "invalid_worker_task_input", invalidWorkerTaskInput)
 		return false
 	}
 	return true
@@ -212,7 +216,7 @@ func writeRuntimeError(w http.ResponseWriter, r *http.Request, err error) {
 	case errors.Is(err, ErrNotFound):
 		httpx.Error(w, r, http.StatusNotFound, "worker_task_not_found", "worker task not found")
 	case errors.Is(err, ErrInvalidInput):
-		httpx.Error(w, r, http.StatusBadRequest, "invalid_worker_task_input", "worker task input is invalid")
+		httpx.Error(w, r, http.StatusBadRequest, "invalid_worker_task_input", invalidWorkerTaskInput)
 	case errors.Is(err, ErrLeaseExpired):
 		httpx.Error(w, r, http.StatusConflict, "worker_task_lease_expired", "worker task lease expired")
 	case errors.Is(err, ErrLeaseMismatch):

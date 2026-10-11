@@ -1,8 +1,19 @@
 import { describe, expect, it } from "vitest";
 import type { ReviewTask } from "../../../api/review";
-import { appendTaskPage, followingVisibleActionableTask } from "./taskPaging";
+import { appendTaskPage, followingVisibleActionableTask, visibleTasks } from "./taskPaging";
 
 describe("review task paging", () => {
+  it("uses the server literal cross-field search with omitted labels, separators and percent signs", () => {
+    const task = { id: "task-A", anonymous_code: "A001", question_no: "1", source: "human", exam_name: "期中", subject: "mathematics", exam_id: "exam", question_id: "q1", status: "assigned" } as ReviewTask;
+    const options = { canManageTasks: true, initialExamId: "", taskFilter: "active", keyword: "期中 mathematics" };
+    expect(visibleTasks([task], options)).toEqual([task]);
+    expect(visibleTasks([task], { ...options, keyword: "  HUMAN 期中  " })).toEqual([task]);
+    expect(visibleTasks([task], { ...options, keyword: "%" })).toEqual([]);
+    expect(visibleTasks([{ ...task, exam_name: "期中%" }], { ...options, keyword: "%" })).toHaveLength(1);
+    // Go 空字符串字段会被 omitempty 省略，但 SQL 拼接仍保留名称与学科之间的空分隔。
+    expect(visibleTasks([{ ...task, exam_name: undefined }], { ...options, keyword: "human  mathematics" })).toHaveLength(1);
+    expect(visibleTasks([task], { ...options, keyword: "期中  mathematics" })).toEqual([]);
+  });
   it("combines three pages into the complete 120 task queue", () => {
     const task = (id: number) => ({ id: `task-${id}` }) as ReviewTask;
     let tasks: ReviewTask[] = [];
@@ -38,8 +49,8 @@ describe("review task paging", () => {
     expect(followingVisibleActionableTask(twoPages, "task-49", options, false)?.id).toBe("task-50");
     expect(followingVisibleActionableTask(all, "task-50", options, false)?.id).toBe("task-119");
     expect(followingVisibleActionableTask(all, "task-119", options, true)?.id).toBe("task-50");
-    // The submitted anchor is hidden by the active filter, yet its position
-    // still determines where paging resumes.
+    // 已提交的定位条目虽然被当前筛选隐藏，
+    // 它的位置仍决定分页从哪里继续。
     expect(followingVisibleActionableTask(all, "task-49", options, false)?.id).toBe("task-50");
   });
 });

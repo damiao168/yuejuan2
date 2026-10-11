@@ -154,17 +154,17 @@ pub(crate) fn decrypt_bytes(
 
 #[cfg(windows)]
 pub(crate) fn master_key(root: &Path) -> Result<[u8; 32], String> {
-    // Each v2 account scope has its own Credential Manager secret. This keeps
-    // account ciphertext cryptographically separated and never overwrites the
-    // legacy v1 credential needed to recover quarantined data.
+    // 每个 v2 账号作用域都有独立的凭据管理器密钥，使账号密文
+    // 在加密层面彼此隔离，同时不会覆盖
+    // 恢复隔离数据所需的旧版 v1 凭据。
     let account = durable_credential_account(root)?;
     match read_key_for_account(&account)? {
         Some(key) => Ok(key),
         None => {
-            // Never replace a missing credential with a fresh key when a
-            // previous station store exists.  Doing so would make queued
-            // scans look recoverable until a later decrypt fails, and could
-            // tempt an operator to discard the only encrypted source copy.
+            // 站点已有存储时，不能用新密钥替代丢失的凭据。
+            // 否则队列中的扫描件会看似可恢复，
+            // 直到后续解密失败才暴露问题，还可能让操作人员
+            // 误删唯一的加密原件副本。
             if durable_data_exists(root)? {
                 return Err("durable master key is missing while encrypted local data exists; recovery requires the original Windows Credential Manager entry and the client will not create a replacement key".into());
             }

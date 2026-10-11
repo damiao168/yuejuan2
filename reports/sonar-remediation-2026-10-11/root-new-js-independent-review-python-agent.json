@@ -1,0 +1,73 @@
+{
+  "reviewed_at_utc": "2026-10-11T10:36:01.374585+00:00",
+  "reviewer": "/root/sonar_python_fix",
+  "source_writes_performed": false,
+  "baseline": "D:\\tools\\sonar-remediation-20261011\\root-new-findings-baseline",
+  "files": [
+    {
+      "file": "scripts/lib/openapi-sdk.mjs",
+      "baseline_sha256": "5b0d95558e5074f0d4686995d7819851d949ec1e60d5a8ab8a4ddf99f77d620a",
+      "current_sha256": "03efa215affe487b342451730d7aca1d8214f6359209019b142f84ccd0c71170",
+      "full_current_source_reviewed": true,
+      "baseline_scope": "verifyArtifactPath 与完整原 writeIfChanged 段",
+      "verdict": "no_actionable_regression_found",
+      "checks": [
+        "EEXIST 重试仍为 attempt=0/1/2；第三次争用直接抛 createError，不额外打开或截断文件。",
+        "O_RDWR 失败仅 EACCES/EPERM 进入 O_RDONLY；只读非普通文件抛原权限错误，内容不同在 close 后抛原错误。",
+        "只读内容相同先验证 dev/ino 身份再返回 false；stat/读取异常保留原发生顺序，描述符均由 readonly helper 的 finally 关闭。",
+        "写入成功返回的 descriptor 只交给 writeIfChanged 的 try/finally 关闭；null 表示只读 helper 已完成关闭，避免重复 close。",
+        "fstat、FD 读取、位置 0 短写补齐、ftruncate、最后路径身份校验和 close 的顺序不变。",
+        "创建空文件返回 true，已有内容相同返回 false，原创建/更新与错误语义保留。"
+      ],
+      "existing_dynamic_evidence": {
+        "report": "root-new-js-tests-01.json",
+        "log": "root-new-js-tests-01.tap",
+        "exit_code": 0,
+        "passed": 18,
+        "skipped": 0,
+        "current_sha_bound": true
+      },
+      "test_scope_reviewed": [
+        "scripts/ci/generated-files-race.test.mjs",
+        "scripts/ci/openapi-sdk.batch20.test.mjs",
+        "scripts/ci/architecture-audit-tools.test.mjs"
+      ]
+    },
+    {
+      "file": "docs/architecture/tools/frontend-api-scan.mjs",
+      "baseline_sha256": "f08007d500592a59efb3f4cb3ecc7d94bd067316155e8a55c1b9b8113a54a9c3",
+      "current_sha256": "11fcb6c8245c78186be7e49661773805d99d6ecc8d5e42e9b9373f1221169dc7",
+      "full_current_source_reviewed": true,
+      "full_baseline_source_reviewed": true,
+      "verdict": "one_runtime_regression_reported_and_current_correction_verified",
+      "checks": [
+        "每个 sourceMap 文件迭代都新建 functions/constants Map 与 sdkNames Set，显式 context 不保留上个文件的符号。",
+        "collect 和 visit 的递归 child 回调都传同一 context；字符串/模板/加法/返回值/调用展开深度和遍历次序保留。",
+        "全局 calls/imports 仍只聚合带来源文件的输出，不承载文件局部符号。",
+        "路由文字解析、导入图、页面可达性和后端映射的剩余代码与基线相同；未扩大可达性为运行保证。"
+      ],
+      "dynamic_scan_verification_by_this_reviewer": false,
+      "dynamic_scan_validation_owner": "root frozen-input output equivalence",
+      "reported_findings": [
+        {
+          "priority": 1,
+          "line": 96,
+          "problem": "Identifier 递归曾错误访问 context.constantsconstants 且漏传 context。",
+          "trigger": "某 API 调用的路径参数是 collect 已收集的常量标识符。",
+          "impact": "TypeError 中止整次盘点；即使只改字段名，错误递归参数仍无法正常展开。",
+          "expected": "pathValue(context, context.constants.get(node.text), depth + 1)",
+          "current_source_correction_verified": true,
+          "status": "corrected_by_root"
+        },
+        {
+          "priority": 3,
+          "line": 143,
+          "problem": "isDirectTransport 的 context 参数未使用。",
+          "impact": "引入不必要的参数；可删除签名/调用的首参以避免新增维护或未使用参数告警。",
+          "runtime_behavior_affected": false,
+          "status": "corrected_by_root"
+        }
+      ]
+    }
+  ]
+}

@@ -36,6 +36,7 @@ jobs:
       - run: npm ci
       - name: Verify generated SDK, registered route coverage, and schema compatibility
         run: npm run ci:contracts
+      - run: npm run check:test-user-facing-copy
       - run: npm run lint
       - run: npm run typecheck
 
@@ -72,7 +73,20 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      - run: npm --workspace apps/web-admin run test:production-contracts
       - run: npm --workspace apps/web-admin run check:production-routes
+      - run: npm --workspace apps/web-admin run check:bundle -- --out ../../output/build-performance/web-admin.json
+      - name: Preserve Web Admin build performance
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: web-admin-build-performance
+          path: |
+            output/build-performance/web-admin.json
+            apps/web-admin/dist/.vite/manifest.json
+          if-no-files-found: error
+          # manifest 位于 .vite 目录；上传时必须显式包含隐藏文件。
+          include-hidden-files: true
       - run: npm --workspace apps/desktop-client run check:security-config
 
   node-security:
@@ -259,12 +273,21 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 24
-      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+      - id: coverage-go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
         with:
           go-version: '1.26.6'
+          architecture: x64
           cache-dependency-path: services/api-gateway/go.sum
       - run: npm run test:go-coverage
+      - run: node --test scripts/ci/trusted-executable.test.mjs scripts/ci/lint-workflows.test.mjs
       - run: npm run check:go-coverage
+        env:
+          # 固定 setup-go 的实际版本输出与 runner 缓存根交由脚本校验，不从 npm PATH 反查。
+          EDUGRADE_GO_TOOL_CACHE: ${{ runner.tool_cache }}
+          EDUGRADE_GO_VERSION: ${{ steps.coverage-go.outputs.go-version }}
+          EDUGRADE_GO_ARCH: x64
+          GOTOOLCHAIN: local
 
   go-security:
     runs-on: ubuntu-latest
@@ -288,7 +311,9 @@ jobs:
         env:
           POSTGRES_DB: edugrade_e2e
           POSTGRES_USER: edugrade
-          POSTGRES_PASSWORD: edugrade
+          # 此数据库是临时的 GitHub 托管服务，只绑定到
+          # 当前作业运行器；使用 trust 认证可避免在 URL 中放入可复用密码。
+          POSTGRES_HOST_AUTH_METHOD: trust
         ports:
           - 5432:5432
         options: >-
@@ -313,21 +338,21 @@ jobs:
           cache-dependency-path: services/api-gateway/go.sum
       - name: PostgreSQL workflows
         env:
-          EDUGRADE_E2E_DATABASE_URL: postgres://edugrade:edugrade@127.0.0.1:5432/edugrade_e2e?sslmode=disable
+          EDUGRADE_E2E_DATABASE_URL: postgres://edugrade@127.0.0.1:5432/edugrade_e2e?sslmode=disable
         run: |
           test -n "${EDUGRADE_E2E_DATABASE_URL}"
           go test ./internal/server -count=1 -timeout 20m -v
 
       - name: Authorization contract against migrated PostgreSQL
         env:
-          EDUGRADE_E2E_DATABASE_URL: postgres://edugrade:edugrade@127.0.0.1:5432/edugrade_e2e?sslmode=disable
+          EDUGRADE_E2E_DATABASE_URL: postgres://edugrade@127.0.0.1:5432/edugrade_e2e?sslmode=disable
         run: go test ./internal/auth -run '^TestAuthorizationContractPostgres$' -count=1 -v
 
       - name: Recovery bucket remapping against PostgreSQL
         shell: pwsh
         working-directory: .
         env:
-          EDUGRADE_RECOVERY_TEST_DATABASE_URL: postgres://edugrade:edugrade@127.0.0.1:5432/edugrade_e2e?sslmode=disable
+          EDUGRADE_RECOVERY_TEST_DATABASE_URL: postgres://edugrade@127.0.0.1:5432/edugrade_e2e?sslmode=disable
         run: ./infra/docker-compose/scripts/tests/recovery-postgres.tests.ps1 -PostgresTestURL $env:EDUGRADE_RECOVERY_TEST_DATABASE_URL
 
       - name: Validate actual handler responses in both clients
@@ -480,14 +505,23 @@ jobs:
           --profile math
           --profile observability
           config -q
+      - name: Generate STORY-056 disposable credentials
+        run: |
+          echo "EDUGRADE_STORY056_POSTGRES_PASSWORD=ci-story056-postgres-$RANDOM-$RANDOM" >> "$GITHUB_ENV"
+          echo "EDUGRADE_STORY056_MINIO_SECRET=ci-story056-minio-$RANDOM-$RANDOM" >> "$GITHUB_ENV"
       - name: Validate STORY-056 isolated Compose
         env:
           EDUGRADE_E2E_ADMIN_PASSWORD: ci-story056-admin
           EDUGRADE_E2E_WORKER_PASSWORD: ci-story056-worker
           EDUGRADE_E2E_UNPRIVILEGED_PASSWORD: ci-story056-unprivileged
         run: docker compose -f infra/docker-compose/docker-compose.story056-e2e.yml --profile e2e config -q
+      - name: Generate STORY-060 disposable credentials
+        run: |
+          echo "EDUGRADE_STORY060_POSTGRES_PASSWORD=ci-story060-postgres-$RANDOM-$RANDOM" >> "$GITHUB_ENV"
+          echo "EDUGRADE_STORY060_MINIO_SECRET=ci-story060-minio-$RANDOM-$RANDOM" >> "$GITHUB_ENV"
       - name: Validate STORY-060 isolated Compose
         env:
+          EDUGRADE_E2E_TLS_DIR: /tmp/story060-config-only-tls
           EDUGRADE_E2E_ADMIN_PASSWORD: ci-story060-admin
           EDUGRADE_E2E_SCHOOL_ADMIN_PASSWORD: ci-story060-school-admin
           EDUGRADE_E2E_SUBJECTIVE_WORKER_PASSWORD: ci-story060-subjective-worker
@@ -587,6 +621,15 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
+      - name: Generate disposable database and object-store credentials
+        run: |
+          echo "EDUGRADE_STORY060_POSTGRES_PASSWORD=$(openssl rand -hex 24)" >> "$GITHUB_ENV"
+          echo "EDUGRADE_STORY060_MINIO_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+      - name: Generate disposable grading TLS certificates
+        run: |
+          tls_dir="${RUNNER_TEMP}/story060-tls-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          python3 infra/docker-compose/scripts/generate-internal-test-certificates.py --environment test --output-dir "$tls_dir"
+          echo "EDUGRADE_E2E_TLS_DIR=$tls_dir" >> "$GITHUB_ENV"
       - name: Preflight real E2E infrastructure images
         run: |
           set -euo pipefail
@@ -633,6 +676,13 @@ jobs:
       - name: Remove isolated E2E project
         if: always()
         run: docker compose -f infra/docker-compose/docker-compose.story060-e2e.yml down --volumes --remove-orphans
+      - name: Remove disposable TLS keys
+        if: ${{ always() && env.EDUGRADE_E2E_TLS_DIR != '' }}
+        run: |
+          expected="${RUNNER_TEMP}/story060-tls-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          test "$EDUGRADE_E2E_TLS_DIR" = "$expected"
+          chmod -R u+w "$expected"
+          rm -rf -- "$expected"
 
   # 即使依赖失败或跳过也执行汇总，只有每个必需任务都成功才放行。
   ci-gate:

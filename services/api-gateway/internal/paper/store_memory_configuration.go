@@ -159,10 +159,14 @@ func (s *MemoryStore) Readiness(_ context.Context, tenantID string, examID strin
 	return s.readinessLocked(tenantID, examID), nil
 }
 
-func (s *MemoryStore) ConfirmReadiness(_ context.Context, tenantID string, examID string, userID string) (ReadinessResult, error) {
+func (s *MemoryStore) ConfirmReadiness(_ context.Context, tenantID string, examID string, userID string, input ConfirmReadinessInput) (ReadinessResult, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	result := s.readinessLocked(tenantID, examID)
+	// 比较和状态变更在同一把锁内；核对后被修改的配置不能被旧确认冻结。
+	if input.ExpectedConfigurationHash != "" && input.ExpectedConfigurationHash != result.ConfigurationHash {
+		return result, ErrReadinessChanged
+	}
 	if !result.Ready {
 		return result, ErrNotReady
 	}
@@ -193,13 +197,32 @@ func (s *MemoryStore) StartCollection(_ context.Context, tenantID string, examID
 func (s *MemoryStore) readinessLocked(tenantID string, examID string) ReadinessResult {
 	state := s.examState[examID]
 	papers := []Paper{}
-	questions := []Question{}
 	templates := []AnswerSheetTemplate{}
 	for _, item := range s.papers {
 		if item.TenantID == tenantID && item.ExamID == examID {
 			papers = append(papers, item)
 		}
 	}
+	questions := s.readinessQuestionsLocked(tenantID, examID)
+	for _, item := range s.templates {
+		if item.TenantID == tenantID && item.ExamID == examID {
+			templates = append(templates, item)
+		}
+	}
+	// 内存夹具只保存班级和学生数量；真实人员身份与冻结名册由 PostgreSQL 路径验证。
+	result := buildReadiness(state.Total, state.ClassCount, state.StudentCount, papers, questions, templates)
+	latest := s.latestReadinessImportLocked(tenantID, examID)
+	if latest.ID != "" {
+		result = withStructureReadiness(result, latest)
+	}
+	if confirmed, ok := s.readiness[examID]; ok && confirmed.ConfigurationHash == result.ConfigurationHash {
+		result.Confirmed, result.ConfirmedAt, result.ConfirmedBy = true, confirmed.ConfirmedAt, confirmed.ConfirmedBy
+	}
+	return result
+}
+
+func (s *MemoryStore) readinessQuestionsLocked(tenantID, examID string) []Question {
+	questions := []Question{}
 	for _, item := range s.questions {
 		if item.TenantID == tenantID && item.ExamID == examID && item.Status != "deleted" {
 			if versions := s.rubrics[item.ID]; len(versions) > 0 {
@@ -209,17 +232,17 @@ func (s *MemoryStore) readinessLocked(tenantID string, examID string) ReadinessR
 			questions = append(questions, item)
 		}
 	}
-	for _, item := range s.templates {
-		if item.TenantID == tenantID && item.ExamID == examID {
-			templates = append(templates, item)
+	return questions
+}
+
+func (s *MemoryStore) latestReadinessImportLocked(tenantID, examID string) PaperImportJob {
+	var latest PaperImportJob
+	for _, job := range s.imports {
+		if job.TenantID == tenantID && job.ExamID == examID && (latest.ID == "" || job.CreatedAt.After(latest.CreatedAt)) {
+			latest = job
 		}
 	}
-	// 内存夹具只保存班级和学生数量；真实人员身份与冻结名册由 PostgreSQL 路径验证。
-	result := buildReadiness(state.Total, state.ClassCount, state.StudentCount, papers, questions, templates)
-	if confirmed, ok := s.readiness[examID]; ok && confirmed.ConfigurationHash == result.ConfigurationHash {
-		result.Confirmed, result.ConfirmedAt, result.ConfirmedBy = true, confirmed.ConfirmedAt, confirmed.ConfirmedBy
-	}
-	return result
+	return latest
 }
 
 func (s *MemoryStore) paperBelongsToExam(tenantID string, examID string, paperID string) bool {

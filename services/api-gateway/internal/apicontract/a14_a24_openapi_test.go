@@ -7,10 +7,7 @@ import (
 	"testing"
 )
 
-// These routes are deliberately listed from the wired handlers, not from a
-// planning document. Keeping this compact inventory alongside the spec makes
-// it much harder for an implemented safety boundary to silently disappear
-// from the generated SDK.
+// 这些路由依据已接入的处理器列出。将这份简短清单与规范放在一起，防止已实现的安全边界在生成 SDK 时悄然遗漏。
 func TestStoryA14ToA26OpenAPIContract(t *testing.T) {
 	raw, err := os.ReadFile(filepath.Join("..", "..", "openapi", "edugrade-api.openapi.json"))
 	if err != nil {
@@ -47,17 +44,7 @@ func TestStoryA14ToA26OpenAPIContract(t *testing.T) {
 		{"/api/v1/processing/exceptions/{id}/resolve", "post", "resolveProcessingException"},
 	}
 	for _, expected := range operations {
-		operation := object(t, object(t, paths, expected.path), expected.method)
-		if operation["operationId"] != expected.id {
-			t.Fatalf("%s %s operationId = %#v, want %q", expected.method, expected.path, operation["operationId"], expected.id)
-		}
-		responses := object(t, operation, "responses")
-		if _, ok := responses["401"]; !ok {
-			t.Fatalf("%s %s must contract authentication", expected.method, expected.path)
-		}
-		if _, ok := responses["403"]; !ok {
-			t.Fatalf("%s %s must contract authorization", expected.method, expected.path)
-		}
+		assertAuthenticatedOperationContract(t, paths, expected.path, expected.method, expected.id)
 	}
 
 	schemas := object(t, object(t, document, "components"), "schemas")
@@ -110,4 +97,20 @@ func hasParameter(values []any, location, name string) bool {
 		}
 	}
 	return false
+}
+
+// 已实现路由必须同时声明身份和授权失败，避免生成客户端只包含正常返回。
+func assertAuthenticatedOperationContract(t *testing.T, paths map[string]any, path, method, id string) {
+	t.Helper()
+	operation := object(t, object(t, paths, path), method)
+	if operation["operationId"] != id {
+		t.Fatalf("%s %s operationId = %#v, want %q", method, path, operation["operationId"], id)
+	}
+	responses := object(t, operation, "responses")
+	if _, ok := responses["401"]; !ok {
+		t.Fatalf("%s %s must contract authentication", method, path)
+	}
+	if _, ok := responses["403"]; !ok {
+		t.Fatalf("%s %s must contract authorization", method, path)
+	}
 }

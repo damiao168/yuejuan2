@@ -1,0 +1,21 @@
+{
+  "task": {
+    "id": "3439b906-4e4d-4f18-992a-a5a9cfc04182",
+    "type": "REPORT",
+    "componentId": "2bb938e2-4c1a-469c-89c9-bf89d9d2cbbf",
+    "componentKey": "yuejuan-local-workspace-20261010",
+    "componentName": "yuejuan current local workspace 2026-10-10",
+    "componentQualifier": "TRK",
+    "analysisId": "5686bdb3-be93-4c4f-b4e6-79c47031022d",
+    "status": "SUCCESS",
+    "submittedAt": "2026-10-11T18:10:35+0800",
+    "submitterLogin": "admin",
+    "startedAt": "2026-10-11T18:10:36+0800",
+    "executedAt": "2026-10-11T18:13:35+0800",
+    "executionTimeMs": 178960,
+    "hasScannerContext": true,
+    "warningCount": 0,
+    "warnings": [],
+    "infoMessages": []
+  }
+}

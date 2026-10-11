@@ -48,6 +48,48 @@ func RegisterRoutes(mux *http.ServeMux, h *Handler, requireManage, requireWork f
 	mux.Handle("GET /api/v1/regrade-items/{itemId}/segment-image", requireWork(h.GetSegmentImage))
 	mux.Handle("POST /api/v1/regrade-items/{itemId}/candidate", requireWork(h.RecordCandidate))
 	mux.Handle("POST /api/v1/regrade-items/{itemId}/review", requireManage(h.Review))
+	mux.Handle("GET /api/v1/regrade-items/{itemId}/review-context", requireManage(h.GetReviewContext))
+	mux.Handle("GET /api/v1/regrade-items/{itemId}/review-segment-image", requireManage(h.GetReviewSegmentImage))
+}
+
+func (h *Handler) GetReviewContext(w http.ResponseWriter, r *http.Request) {
+	user, ok := currentUser(w, r)
+	if !ok {
+		return
+	}
+	source, ok := h.service.store.(ReviewContextSource)
+	if !ok {
+		writeError(w, r, ErrNotFound)
+		return
+	}
+	value, err := source.GetReviewContext(r.Context(), user.TenantID, r.PathValue("itemId"))
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"regrade_review_context": value})
+}
+func (h *Handler) GetReviewSegmentImage(w http.ResponseWriter, r *http.Request) {
+	user, ok := currentUser(w, r)
+	if !ok {
+		return
+	}
+	source, ok := h.service.store.(ReviewContextSource)
+	if !ok || h.segmentImage == nil {
+		writeError(w, r, ErrNotFound)
+		return
+	}
+	id, err := source.GetReviewSegmentID(r.Context(), user.TenantID, r.PathValue("itemId"))
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	resource, err := h.segmentImage.ReadCropImage(r.Context(), user.TenantID, id)
+	if err != nil {
+		segment.WriteImageError(w, r, err)
+		return
+	}
+	binaryresourcehttp.Serve(w, r, resource, h.audit)
 }
 
 func (h *Handler) Preview(w http.ResponseWriter, r *http.Request) {
@@ -159,8 +201,7 @@ func (h *Handler) ListMine(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, err)
 		return
 	}
-	// Service.ListAssigned already maps the store's Item rows to WorkItem, so
-	// the response cannot disclose a source release's old score or grade ID.
+	// Service.ListAssigned 已将存储的 Item 行映射为 WorkItem，因此响应不会泄漏来源发布的旧分数或成绩 ID。
 	httpx.JSON(w, http.StatusOK, map[string]any{"regrade_items": items})
 }
 func (h *Handler) GetContext(w http.ResponseWriter, r *http.Request) {

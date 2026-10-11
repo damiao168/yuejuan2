@@ -3,6 +3,7 @@ package review
 import (
 	"context"
 	"edugrade-enterprise/services/api-gateway/internal/commandreceipt"
+	"encoding/json"
 	"fmt"
 	"math"
 	"sort"
@@ -70,29 +71,7 @@ func (s *MemoryStore) ListTasks(_ context.Context, tenantID string, filter ListF
 	defer s.mu.RUnlock()
 	out := []ReviewTask{}
 	for _, task := range s.tasks {
-		if task.TenantID != tenantID {
-			continue
-		}
-		if filter.Status != "" && task.Status != filter.Status {
-			continue
-		}
-		if filter.AssignedTo != "" && task.AssignedTo != filter.AssignedTo {
-			continue
-		}
-		if filter.ExamID != "" && task.ExamID != filter.ExamID {
-			continue
-		}
-		mode := filter.ScopeMode
-		if mode == "" {
-			mode = "tenant"
-		}
-		if mode == "none" {
-			continue
-		}
-		if mode == "assigned" && filter.AssignedTo == "" && task.AssignedTo != filter.ScopeActorID && !containsString(filter.ScopeTaskIDs, task.ID) {
-			continue
-		}
-		if (mode == "class" || mode == "school") && len(filter.ScopeExamIDs) > 0 && !containsString(filter.ScopeExamIDs, task.ExamID) {
+		if !reviewTaskMatchesFilter(task, tenantID, filter) || !memoryTaskScopeAllows(task.ID, task.ExamID, task.AssignedTo, filter) {
 			continue
 		}
 		out = append(out, cloneTask(task))
@@ -106,13 +85,66 @@ func (s *MemoryStore) ListTasks(_ context.Context, tenantID string, filter ListF
 		}
 		return out[i].Priority > out[j].Priority
 	})
+	return paginateReviewTasks(out, filter), nil
+}
+
+func reviewTaskMatchesFilter(task ReviewTask, tenantID string, filter ListFilter) bool {
+	if task.TenantID != tenantID {
+		return false
+	}
+	if filter.Status == "active" && !containsString([]string{"pending", "assigned", "in_progress", "returned"}, task.Status) {
+		return false
+	}
+	if filter.Status != "" && filter.Status != "active" && task.Status != filter.Status {
+		return false
+	}
+	if filter.AssignedTo != "" && task.AssignedTo != filter.AssignedTo {
+		return false
+	}
+	if filter.QuestionID != "" && task.QuestionID != filter.QuestionID {
+		return false
+	}
+	if filter.Subject != "" && task.Subject != filter.Subject {
+		return false
+	}
+	if filter.Unassigned && task.AssignedTo != "" {
+		return false
+	}
+	if !reviewTaskMatchesSearch(task, filter.Q) {
+		return false
+	}
+	return filter.ExamID == "" || task.ExamID == filter.ExamID
+}
+
+// 关键词按字面文本匹配，百分号等字符不是通配符；空关键词不缩小队列。
+func reviewTaskMatchesSearch(task ReviewTask, query string) bool {
+	return query == "" || strings.Contains(strings.ToLower(strings.Join([]string{task.ID, task.SubmissionID, task.AnonymousCode, task.QuestionNo, task.Source, task.ExamName, task.Subject}, " ")), strings.ToLower(strings.TrimSpace(query)))
+}
+
+// Scope 由调用方填充；显式 AssignedTo 与空班级/学校考试列表沿用原筛选边界。
+func memoryTaskScopeAllows(taskID string, examID string, assignedTo string, filter ListFilter) bool {
+	mode := filter.ScopeMode
+	if mode == "" {
+		mode = "tenant"
+	}
+	if mode == "none" {
+		return false
+	}
+	if mode == "assigned" && filter.AssignedTo == "" && assignedTo != filter.ScopeActorID && !containsString(filter.ScopeTaskIDs, taskID) {
+		return false
+	}
+	if (mode == "class" || mode == "school") && len(filter.ScopeExamIDs) > 0 && !containsString(filter.ScopeExamIDs, examID) {
+		return false
+	}
+	return true
+}
+
+// 队列先按优先级降序、时间和 ID 升序排序；游标之后再截取 Limit，不能先分页再筛选。
+func paginateReviewTasks(out []ReviewTask, filter ListFilter) []ReviewTask {
 	if filter.CursorID != "" {
 		start := 0
 		for start < len(out) {
-			item := out[start]
-			if item.Priority < filter.CursorPriority ||
-				(item.Priority == filter.CursorPriority && item.CreatedAt.After(filter.CursorCreatedAt)) ||
-				(item.Priority == filter.CursorPriority && item.CreatedAt.Equal(filter.CursorCreatedAt) && item.ID > filter.CursorID) {
+			if reviewTaskAfterCursor(out[start], filter) {
 				break
 			}
 			start++
@@ -122,7 +154,17 @@ func (s *MemoryStore) ListTasks(_ context.Context, tenantID string, filter ListF
 	if filter.Limit > 0 && len(out) > filter.Limit {
 		out = out[:filter.Limit]
 	}
-	return out, nil
+	return out
+}
+
+func reviewTaskAfterCursor(task ReviewTask, filter ListFilter) bool {
+	if task.Priority != filter.CursorPriority {
+		return task.Priority < filter.CursorPriority
+	}
+	if !task.CreatedAt.Equal(filter.CursorCreatedAt) {
+		return task.CreatedAt.After(filter.CursorCreatedAt)
+	}
+	return task.ID > filter.CursorID
 }
 
 func (s *MemoryStore) AggregateTasks(ctx context.Context, tenantID string, filter ListFilter) (TaskAggregate, error) {
@@ -558,7 +600,7 @@ func (s *MemoryStore) CreateArbitrationTask(_ context.Context, tenantID string, 
 		return ArbitrationTask{}, ErrInvalidTransition
 	}
 	policy, _ := s.effectivePolicyLocked(tenantID, session.ExamID, session.QuestionID)
-	task, err := s.createArbitrationTaskLocked(tenantID, actorID, session, first, second, input.DifferenceReason, input.AssignedTo, policy.AllowSameArbitrator)
+	task, err := s.createArbitrationTaskLocked(tenantID, actorID, session, first, second, input, policy.AllowSameArbitrator)
 	if err != nil {
 		return ArbitrationTask{}, err
 	}
@@ -574,33 +616,9 @@ func (s *MemoryStore) ListArbitrationTasks(_ context.Context, tenantID string, f
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	out := []ArbitrationTask{}
+	scopeFilter := ListFilter{AssignedTo: filter.AssignedTo, ScopeMode: filter.ScopeMode, ScopeActorID: filter.ScopeActorID, ScopeTaskIDs: filter.ScopeTaskIDs, ScopeExamIDs: filter.ScopeExamIDs}
 	for _, task := range s.arbitrations {
-		if task.TenantID != tenantID {
-			continue
-		}
-		if filter.Status == "active" && task.Status != "pending" && task.Status != "assigned" {
-			continue
-		}
-		if filter.Status != "" && filter.Status != "active" && task.Status != filter.Status {
-			continue
-		}
-		if filter.AssignedTo != "" && task.AssignedTo != filter.AssignedTo {
-			continue
-		}
-		if filter.ExamID != "" && task.ExamID != filter.ExamID {
-			continue
-		}
-		mode := filter.ScopeMode
-		if mode == "" {
-			mode = "tenant"
-		}
-		if mode == "none" {
-			continue
-		}
-		if mode == "assigned" && filter.AssignedTo == "" && task.AssignedTo != filter.ScopeActorID && !containsString(filter.ScopeTaskIDs, task.ID) {
-			continue
-		}
-		if (mode == "class" || mode == "school") && len(filter.ScopeExamIDs) > 0 && !containsString(filter.ScopeExamIDs, task.ExamID) {
+		if !arbitrationTaskMatchesFilter(task, tenantID, filter) || !memoryTaskScopeAllows(task.ID, task.ExamID, task.AssignedTo, scopeFilter) {
 			continue
 		}
 		out = append(out, cloneArbitration(task))
@@ -611,6 +629,27 @@ func (s *MemoryStore) ListArbitrationTasks(_ context.Context, tenantID string, f
 		}
 		return out[i].CreatedAt.After(out[j].CreatedAt)
 	})
+	return paginateArbitrationTasks(out, filter), nil
+}
+
+func arbitrationTaskMatchesFilter(task ArbitrationTask, tenantID string, filter ArbitrationFilter) bool {
+	if task.TenantID != tenantID {
+		return false
+	}
+	if filter.Status == "active" && task.Status != "pending" && task.Status != "assigned" {
+		return false
+	}
+	if filter.Status != "" && filter.Status != "active" && task.Status != filter.Status {
+		return false
+	}
+	if filter.AssignedTo != "" && task.AssignedTo != filter.AssignedTo {
+		return false
+	}
+	return filter.ExamID == "" || task.ExamID == filter.ExamID
+}
+
+// 仲裁队列按时间和 ID 降序排列；游标取更早记录，方向与普通阅卷队列不同。
+func paginateArbitrationTasks(out []ArbitrationTask, filter ArbitrationFilter) []ArbitrationTask {
 	if filter.CursorID != "" {
 		start := 0
 		for start < len(out) {
@@ -626,7 +665,7 @@ func (s *MemoryStore) ListArbitrationTasks(_ context.Context, tenantID string, f
 	if filter.Limit > 0 && len(out) > filter.Limit {
 		out = out[:filter.Limit]
 	}
-	return out, nil
+	return out
 }
 
 func (s *MemoryStore) GetArbitrationTask(_ context.Context, tenantID string, id string) (ArbitrationTask, error) {
@@ -635,6 +674,18 @@ func (s *MemoryStore) GetArbitrationTask(_ context.Context, tenantID string, id 
 	task, ok := s.arbitrations[key(tenantID, id)]
 	if !ok {
 		return ArbitrationTask{}, ErrNotFound
+	}
+	if task.Context.Question == nil || task.Context.Rubric == nil {
+		if frozen, exists := s.contexts[key(tenantID, task.AnswerSegmentID)]; exists {
+			// 旧仲裁记录没有存标准；补齐同一答题片段的冻结材料，保留当时存下的作答和建议。
+			materials := contextForArbitration(frozen)
+			if task.Context.Question == nil {
+				task.Context.Question = materials.Question
+			}
+			if task.Context.Rubric == nil {
+				task.Context.Rubric = materials.Rubric
+			}
+		}
 	}
 	return cloneArbitration(task), nil
 }
@@ -835,7 +886,7 @@ func (s *MemoryStore) resolveDoubleMarkAfterGradeLocked(tenantID string, actorID
 	}
 	policy, _ := s.effectivePolicyLocked(tenantID, session.ExamID, session.QuestionID)
 	reason := fmt.Sprintf("score difference %.2f exceeds threshold %.2f", diff, session.Threshold)
-	arbitrationTask, err := s.createArbitrationTaskLocked(tenantID, actorID, session, first, second, reason, "", policy.AllowSameArbitrator)
+	arbitrationTask, err := s.createArbitrationTaskLocked(tenantID, actorID, session, first, second, CreateArbitrationTaskInput{DifferenceReason: reason}, policy.AllowSameArbitrator)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -846,10 +897,11 @@ func (s *MemoryStore) resolveDoubleMarkAfterGradeLocked(tenantID string, actorID
 	return &session, nil, &arbitrationTask, nil
 }
 
-func (s *MemoryStore) createArbitrationTaskLocked(tenantID string, actorID string, session DoubleMarkSession, first HumanGrade, second HumanGrade, reason string, assignedTo string, allowSame bool) (ArbitrationTask, error) {
-	if assignedTo != "" {
+func (s *MemoryStore) createArbitrationTaskLocked(tenantID string, actorID string, session DoubleMarkSession, first HumanGrade, second HumanGrade, input CreateArbitrationTaskInput, allowSame bool) (ArbitrationTask, error) {
+	// 已指定仲裁人时先检查阅卷人冲突，再读取答题上下文；保持原来的拒绝顺序。
+	if input.AssignedTo != "" {
 		candidate := ArbitrationTask{FirstReviewerID: session.FirstReviewerID, SecondReviewerID: session.SecondReviewerID, AllowSameArbitrator: allowSame}
-		if !arbitratorAllowed(candidate, assignedTo) {
+		if !arbitratorAllowed(candidate, input.AssignedTo) {
 			return ArbitrationTask{}, ErrForbidden
 		}
 	}
@@ -860,7 +912,7 @@ func (s *MemoryStore) createArbitrationTaskLocked(tenantID string, actorID strin
 	diff := math.Abs(first.Score - second.Score)
 	now := time.Now().UTC()
 	status := "pending"
-	if assignedTo != "" {
+	if input.AssignedTo != "" {
 		status = "assigned"
 	}
 	task := ArbitrationTask{
@@ -878,9 +930,9 @@ func (s *MemoryStore) createArbitrationTaskLocked(tenantID string, actorID strin
 		FirstScore:          first.Score,
 		SecondScore:         second.Score,
 		ScoreDifference:     diff,
-		DifferenceReason:    strings.TrimSpace(reason),
+		DifferenceReason:    strings.TrimSpace(input.DifferenceReason),
 		Status:              status,
-		AssignedTo:          assignedTo,
+		AssignedTo:          input.AssignedTo,
 		AllowSameArbitrator: allowSame,
 		Context:             contextForArbitration(ctx),
 		Revision:            1,
@@ -980,37 +1032,54 @@ func validateSubmit(input SubmitGradeInput, ctx Context) error {
 	if hasRubric && (!validScore(ctx.Rubric.MaxScore) || input.Score > ctx.Rubric.MaxScore) {
 		return ErrInvalidInput
 	}
-	rubricPoints := map[string]float64{}
-	for _, point := range ctx.Rubric.Points {
-		if point.ID == "" || !validScore(point.Score) {
-			return ErrInvalidInput
-		}
-		if _, duplicate := rubricPoints[point.ID]; duplicate {
-			return ErrInvalidInput
-		}
-		rubricPoints[point.ID] = point.Score
+	// 先拒绝服务端细则的无效或重复定义，再校验客户端选择及逐项累计值。
+	rubricPoints, err := submitRubricPointScores(ctx)
+	if err != nil {
+		return err
 	}
-	seenPoints := map[string]bool{}
-	selectedScore := 0.0
-	for _, selection := range input.RubricSelections {
-		if selection.PointID == "" || !validScore(selection.Score) {
-			return ErrInvalidInput
-		}
-		pointMax, ok := rubricPoints[selection.PointID]
-		if len(rubricPoints) == 0 || !ok || selection.Score > pointMax || seenPoints[selection.PointID] {
-			return ErrInvalidInput
-		}
-		seenPoints[selection.PointID] = true
-		selectedScore += selection.Score
-		if math.IsInf(selectedScore, 0) {
-			return ErrInvalidInput
-		}
+	selectedScore, err := selectedRubricScore(input.RubricSelections, rubricPoints)
+	if err != nil {
+		return err
 	}
 	// 有细则时总分须等于所选得分点之和；只容忍 0.0001 分的浮点误差，不在这里改分或四舍五入。
 	if hasRubric && math.Abs(input.Score-selectedScore) > 0.0001 {
 		return ErrInvalidInput
 	}
 	return nil
+}
+
+func submitRubricPointScores(ctx Context) (map[string]float64, error) {
+	rubricPoints := map[string]float64{}
+	for _, point := range ctx.Rubric.Points {
+		if point.ID == "" || !validScore(point.Score) {
+			return nil, ErrInvalidInput
+		}
+		if _, duplicate := rubricPoints[point.ID]; duplicate {
+			return nil, ErrInvalidInput
+		}
+		rubricPoints[point.ID] = point.Score
+	}
+	return rubricPoints, nil
+}
+
+func selectedRubricScore(selections []RubricSelection, rubricPoints map[string]float64) (float64, error) {
+	seenPoints := map[string]bool{}
+	selectedScore := 0.0
+	for _, selection := range selections {
+		if selection.PointID == "" || !validScore(selection.Score) {
+			return 0, ErrInvalidInput
+		}
+		pointMax, ok := rubricPoints[selection.PointID]
+		if len(rubricPoints) == 0 || !ok || selection.Score > pointMax || seenPoints[selection.PointID] {
+			return 0, ErrInvalidInput
+		}
+		seenPoints[selection.PointID] = true
+		selectedScore += selection.Score
+		if math.IsInf(selectedScore, 0) {
+			return 0, ErrInvalidInput
+		}
+	}
+	return selectedScore, nil
 }
 
 // aiGradeIDFromContext 使用提交时服务端加载的 AI 建议 ID，不接受客户端指定关联。
@@ -1097,11 +1166,29 @@ func arbitratorAllowed(task ArbitrationTask, arbitratorID string) bool {
 }
 
 func contextForArbitration(ctx Context) ReviewContext {
-	return ReviewContext{
+	question := ctx.Question
+	rubric := ctx.Rubric
+	question.Rubric = nil
+	return cloneReviewContext(ReviewContext{
+		Question:     &question,
+		Rubric:       &rubric,
 		RawAnswer:    ctx.RawAnswer,
 		OCRText:      ctx.OCRText,
 		AISuggestion: cloneMap(ctx.AISuggestion),
+	})
+}
+
+func cloneReviewContext(in ReviewContext) ReviewContext {
+	// 内存实现也复制嵌套评分点；调用方编辑返回材料不能修改已冻结的仲裁依据。
+	raw, err := json.Marshal(in)
+	if err != nil {
+		return in
 	}
+	var out ReviewContext
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return in
+	}
+	return out
 }
 
 func key(tenantID string, id string) string {
@@ -1184,7 +1271,7 @@ func cloneArbitration(in ArbitrationTask) ArbitrationTask {
 	if in.FinalScore != nil {
 		in.FinalScore = floatPtr(*in.FinalScore)
 	}
-	in.Context.AISuggestion = cloneMap(in.Context.AISuggestion)
+	in.Context = cloneReviewContext(in.Context)
 	return in
 }
 

@@ -73,13 +73,13 @@ export function ModelApprovalWorkspace({
   evaluationRuns,
   canManage,
   onRefresh
-}: {
+}: Readonly<{
   tenantID: string;
   approvals: ModelApproval[];
   evaluationRuns: EvaluationRun[];
   canManage: boolean;
   onRefresh: () => Promise<void>;
-}) {
+}>) {
   const { message } = App.useApp();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [revokeTarget, setRevokeTarget] = useState<ModelApproval>();
@@ -292,7 +292,7 @@ export function ModelApprovalWorkspace({
               label="上线人工复核率"
               rules={[{ required: true }]}
             >
-              <InputNumber min={0} max={100} precision={0} addonAfter="%" />
+              <InputNumber min={0} max={100} precision={0} suffix="%" />
             </Form.Item>
             <Form.Item
               name="expires_at"

@@ -1,0 +1,41 @@
+{
+  "verified_at": "2026-10-11T16:23:51+08:00",
+  "source_root": "D:\\tools\\audit-codeql-20261010\\source-rust-context-20261011",
+  "original_manifest_entries_checked": 2514,
+  "original_manifest_entries_changed": [],
+  "original_manifest_entries_missing": [],
+  "supplementary_context_checked": [
+    {
+      "path": "apps/desktop-client/src-tauri/icons/icon.ico",
+      "expected_sha256": "016265bc71058837ebb82d73e5289a0fef8f81737cf7e7f5b6e75de723f87a17",
+      "actual_sha256": "016265bc71058837ebb82d73e5289a0fef8f81737cf7e7f5b6e75de723f87a17",
+      "unchanged": true
+    },
+    {
+      "path": "apps/desktop-client/src-tauri/gen/schemas/acl-manifests.json",
+      "expected_sha256": "b8665c2471bd4c59d570c77e226f37410ce396da52525383a15b5cbbff9d786e",
+      "actual_sha256": "b8665c2471bd4c59d570c77e226f37410ce396da52525383a15b5cbbff9d786e",
+      "unchanged": true
+    },
+    {
+      "path": "apps/desktop-client/src-tauri/gen/schemas/capabilities.json",
+      "expected_sha256": "184639d747fbd454f29939127d5309a351613b6ac532951e8d47d35993c444c5",
+      "actual_sha256": "184639d747fbd454f29939127d5309a351613b6ac532951e8d47d35993c444c5",
+      "unchanged": true
+    },
+    {
+      "path": "apps/desktop-client/src-tauri/gen/schemas/desktop-schema.json",
+      "expected_sha256": "f68a9c570ecff07ac6826145d33b966d6fc02f7d680967f44437268b08a6ba78",
+      "actual_sha256": "f68a9c570ecff07ac6826145d33b966d6fc02f7d680967f44437268b08a6ba78",
+      "unchanged": true
+    },
+    {
+      "path": "apps/desktop-client/src-tauri/gen/schemas/windows-schema.json",
+      "expected_sha256": "f68a9c570ecff07ac6826145d33b966d6fc02f7d680967f44437268b08a6ba78",
+      "actual_sha256": "f68a9c570ecff07ac6826145d33b966d6fc02f7d680967f44437268b08a6ba78",
+      "unchanged": true
+    }
+  ],
+  "all_original_manifest_entries_unchanged": true,
+  "all_supplementary_context_unchanged": true
+}

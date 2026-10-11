@@ -228,8 +228,13 @@ export async function getExamReadiness(examId: string) {
   return apiClient.request<{ readiness: ExamReadiness }>(`/api/v1/exams/${encodeURIComponent(examId)}/readiness`);
 }
 
-export async function confirmExamReadiness(examId: string) {
-  return apiClient.request<{ readiness: ExamReadiness }>(`/api/v1/exams/${encodeURIComponent(examId)}/readiness/confirm`, { method: "POST" });
+export async function confirmExamReadiness(examId: string, expectedConfigurationHash?: string): Promise<{ readiness: ExamReadiness }> {
+  const response = await generatedApi.confirmExamReadiness({
+    path: { examId },
+    body: expectedConfigurationHash === undefined ? undefined : { expected_configuration_hash: expectedConfigurationHash }
+  });
+  // 契约允许空检查列表；页面统一用数组处理，不把 null 误当作准备度加载失败。
+  return { readiness: { ...response.readiness, checks: response.readiness.checks ?? [], advisories: response.readiness.advisories ?? [] } };
 }
 
 export async function startExamCollection(examId: string) {

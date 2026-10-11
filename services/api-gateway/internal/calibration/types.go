@@ -2,6 +2,7 @@ package calibration
 
 import (
 	"context"
+	"edugrade-enterprise/services/api-gateway/internal/paper"
 	"errors"
 	"time"
 )
@@ -33,9 +34,7 @@ const (
 	QualificationRevoked   QualificationStatus = "revoked"
 )
 
-// Policy is stored per exam question. It is deliberately data, not a package
-// constant: a two-point short answer and a long-form essay cannot share one
-// meaningful national threshold.
+// Policy 按考试题目存储，属于数据而非包常量；两分简答题和长篇作文无法共用一个有意义的全国统一阈值。
 type Policy struct {
 	ID                        string    `json:"id"`
 	ExamID                    string    `json:"exam_id"`
@@ -70,17 +69,16 @@ type PutPolicyInput struct {
 }
 
 type GoldSample struct {
-	GoldPaperID    string         `json:"gold_paper_id"`
-	GoldVersion    int            `json:"gold_version"`
-	SubmissionID   string         `json:"submission_id"`
-	AnswerImageURL string         `json:"answer_image_url,omitempty"`
-	MaxScore       float64        `json:"max_score"`
-	RubricSnapshot map[string]any `json:"rubric_snapshot"`
+	Question       *paper.Question `json:"question,omitempty"`
+	GoldPaperID    string          `json:"gold_paper_id"`
+	GoldVersion    int             `json:"gold_version"`
+	SubmissionID   string          `json:"submission_id"`
+	AnswerImageURL string          `json:"answer_image_url,omitempty"`
+	MaxScore       float64         `json:"max_score"`
+	RubricSnapshot map[string]any  `json:"rubric_snapshot"`
 }
 
-// goldReference is frozen in the session and never serialized to a grader.
-// Reference scores and expected rubric points are returned only after submit
-// in the attempt result.
+// goldReference 在会话内冻结，不序列化给阅卷者；参考分数和预期评分细则得分只在提交后的作答结果中返回。
 type goldReference struct {
 	GoldSample
 	SnapshotID       string         `json:"snapshot_id"`
@@ -177,9 +175,7 @@ type Store interface {
 	InvalidateQualification(context.Context, string, string, string) (Qualification, error)
 }
 
-// QualificationReader is the narrow server-side dependency for the R3 claim
-// gate. Implementations validate the qualification against the current Gold
-// Set before returning it.
+// QualificationReader 是 R3 领取门禁使用的有限服务端依赖；实现返回资格前须对照当前 Gold Set 校验。
 type QualificationReader interface {
 	GetQualification(context.Context, string, string, string, string) (Qualification, error)
 }

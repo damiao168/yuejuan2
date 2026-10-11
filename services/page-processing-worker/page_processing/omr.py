@@ -7,7 +7,7 @@ from typing import Any
 
 import cv2
 import numpy as np
-from PIL import Image, UnidentifiedImageError
+from PIL import Image
 
 from page_processing.decoder import DecodeError, decode_document
 
@@ -65,9 +65,9 @@ def extract_marks(
         if reference.shape != image.shape:
             reference = _align_reference_crop(reference, image.shape)
         reference_foreground = _foreground_mask(reference)
-        # Registration introduces sub-pixel anti-aliasing around printed text and
-        # bubble outlines. Suppress only a narrow halo from the blank page before
-        # measuring ink added by the student.
+        # 配准会在印刷文字和填涂框轮廓周围引入
+        # 亚像素抗锯齿。测量学生新增墨迹前，只去除
+        # 空白页中很窄的一圈光晕。
         kernel_size = max(1, int(profile.reference_mask_dilation_pixels) * 2 + 1)
         reference_mask = cv2.dilate(reference_foreground, np.ones((kernel_size, kernel_size), dtype=np.uint8))
         binary = cv2.bitwise_and(foreground, cv2.bitwise_not(reference_mask))
@@ -76,34 +76,70 @@ def extract_marks(
 
     measurements: list[dict[str, Any]] = []
     for region in option_regions:
-        label = str(region.get("label") or "").strip()
-        if not label:
-            raise OMRExtractionError("omr_option_label_missing")
-        x, y, w, h = _pixel_region(region, width, height)
-        roi = binary[y : y + h, x : x + w]
-        inset_x = max(1, round(w * profile.border_fraction))
-        inset_y = max(1, round(h * profile.border_fraction))
-        inner = roi[inset_y : h - inset_y, inset_x : w - inset_x]
-        if inner.size == 0:
-            raise OMRExtractionError("omr_option_region_too_small")
-        fill_ratio = float(np.count_nonzero(inner)) / float(inner.size)
-        source_inner = foreground[y : y + h, x : x + w][inset_y : h - inset_y, inset_x : w - inset_x]
-        source_fill_ratio = float(np.count_nonzero(source_inner)) / float(source_inner.size)
-        reference_fill_ratio = 0.0
-        if reference_foreground is not None:
-            reference_inner = reference_foreground[y : y + h, x : x + w][inset_y : h - inset_y, inset_x : w - inset_x]
-            reference_fill_ratio = float(np.count_nonzero(reference_inner)) / float(reference_inner.size)
-        measurements.append({
-            "label": label,
-            "bbox": [x, y, w, h],
-            "fill_ratio": round(fill_ratio, 6),
-            "source_fill_ratio": round(source_fill_ratio, 6),
-            "reference_fill_ratio": round(reference_fill_ratio, 6),
-            "foreground_delta": round(fill_ratio, 6),
-            "marked": fill_ratio >= profile.marked_threshold,
-        })
+        measurements.append(_measure_option(region, width, height, binary, foreground, reference_foreground, profile))
 
+    decision, selected, confidence = _select_marks(measurements, multiple, profile)
+    return {
+        "decision": decision,
+        "selected": selected,
+        "confidence": confidence,
+        "needs_human_review": decision != "selected",
+        "measurements": measurements,
+        "profile_version": profile.version,
+        "thresholds": {
+            "mode": profile.mode,
+            "marked": profile.marked_threshold,
+            "ambiguous": profile.ambiguous_threshold,
+            "minimum_margin": profile.minimum_margin,
+            "reference_mask_dilation_pixels": profile.reference_mask_dilation_pixels,
+        },
+        "overlay_png": _overlay(image, measurements, selected, binary if reference_foreground is not None else None),
+    }
+
+
+def _measure_option(
+    region: dict[str, Any],
+    width: int,
+    height: int,
+    binary: np.ndarray,
+    foreground: np.ndarray,
+    reference_foreground: np.ndarray | None,
+    profile: OMRProfile,
+) -> dict[str, Any]:
+    label = str(region.get("label") or "").strip()
+    if not label:
+        raise OMRExtractionError("omr_option_label_missing")
+    x, y, w, h = _pixel_region(region, width, height)
+    roi = binary[y : y + h, x : x + w]
+    inset_x = max(1, round(w * profile.border_fraction))
+    inset_y = max(1, round(h * profile.border_fraction))
+    inner = roi[inset_y : h - inset_y, inset_x : w - inset_x]
+    if inner.size == 0:
+        raise OMRExtractionError("omr_option_region_too_small")
+    fill_ratio = float(np.count_nonzero(inner)) / float(inner.size)
+    source_inner = foreground[y : y + h, x : x + w][inset_y : h - inset_y, inset_x : w - inset_x]
+    source_fill_ratio = float(np.count_nonzero(source_inner)) / float(source_inner.size)
+    reference_fill_ratio = 0.0
+    if reference_foreground is not None:
+        reference_inner = reference_foreground[y : y + h, x : x + w][inset_y : h - inset_y, inset_x : w - inset_x]
+        reference_fill_ratio = float(np.count_nonzero(reference_inner)) / float(reference_inner.size)
+    # marked 使用原始比例；取整后的测量值用于结果排序和 margin，两者不能互换。
+    return {
+        "label": label,
+        "bbox": [x, y, w, h],
+        "fill_ratio": round(fill_ratio, 6),
+        "source_fill_ratio": round(source_fill_ratio, 6),
+        "reference_fill_ratio": round(reference_fill_ratio, 6),
+        "foreground_delta": round(fill_ratio, 6),
+        "marked": fill_ratio >= profile.marked_threshold,
+    }
+
+
+def _select_marks(
+    measurements: list[dict[str, Any]], multiple: bool, profile: OMRProfile
+) -> tuple[str, list[str], float]:
     ranked = sorted(measurements, key=lambda item: item["fill_ratio"], reverse=True)
+    # 排序只用于比较强度；已选标签保留原区域顺序，与结果和 overlay 使用的测量顺序一致。
     selected = [item["label"] for item in measurements if item["marked"]]
     top = float(ranked[0]["fill_ratio"])
     second = float(ranked[1]["fill_ratio"]) if len(ranked) > 1 else 0.0
@@ -123,22 +159,7 @@ def extract_marks(
 
     # 该值由填涂强度与间隔计算，是规则强度指标，不是经样本校准的正确概率。
     confidence = _confidence(decision, top, second, profile)
-    return {
-        "decision": decision,
-        "selected": selected,
-        "confidence": confidence,
-        "needs_human_review": decision != "selected",
-        "measurements": measurements,
-        "profile_version": profile.version,
-        "thresholds": {
-            "mode": profile.mode,
-            "marked": profile.marked_threshold,
-            "ambiguous": profile.ambiguous_threshold,
-            "minimum_margin": profile.minimum_margin,
-            "reference_mask_dilation_pixels": profile.reference_mask_dilation_pixels,
-        },
-        "overlay_png": _overlay(image, measurements, selected, binary if reference_foreground is not None else None),
-    }
+    return decision, selected, confidence
 
 
 def _validate_profile(profile: OMRProfile) -> None:
@@ -180,7 +201,7 @@ def _decode_grayscale(data: bytes) -> np.ndarray:
                 raise OMRExtractionError("omr_image_too_large")
             image.load()
             return np.asarray(image.convert("L"), dtype=np.uint8)
-    except (UnidentifiedImageError, OSError, Image.DecompressionBombError) as exc:
+    except (OSError, Image.DecompressionBombError) as exc:
         raise OMRExtractionError("omr_image_decode_failed") from exc
 
 

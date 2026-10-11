@@ -1,0 +1,28 @@
+{
+  "command": [
+    "go",
+    "run",
+    "D:\\project\\yuejuan\\reports\\sonar-remediation-2026-10-11\\go-structure-check.go"
+  ],
+  "exit_code": 0,
+  "paths": [
+    "services/api-gateway/internal/apicontract/reliability_handler_schema_test.go",
+    "services/api-gateway/internal/mathunderstanding/handlers.go",
+    "services/api-gateway/internal/paper/paper_import_runtime_batch11_test.go",
+    "services/api-gateway/internal/paper/paper_import_structure_batch37_test.go",
+    "services/api-gateway/internal/releasegate/service_batch54_test.go",
+    "services/api-gateway/internal/releasegate/service_coverage_remediation_test.go",
+    "services/api-gateway/internal/review/review_workbench_batch38_test.go",
+    "services/api-gateway/internal/subjective/adapter_http_test.go",
+    "services/api-gateway/internal/subjective/grade_settlement_pipeline_test.go",
+    "services/api-gateway/internal/subjective/grading_agent_v2_builder_batch35_test.go",
+    "services/api-gateway/internal/subjective/grading_agent_v2_contract_test.go",
+    "services/api-gateway/internal/subjective/handlers_test.go",
+    "services/api-gateway/internal/subjective/math_evidence_batch35_test.go",
+    "services/api-gateway/internal/subjective/math_grading_handler_test.go",
+    "services/api-gateway/internal/subjective/panel_agent_binding_batch48_test.go",
+    "services/api-gateway/internal/subjective/panel_shadow_runner_test.go",
+    "services/api-gateway/internal/subjective/scoring_run_batch_test.go",
+    "services/api-gateway/internal/subjective/worker_execution_service_test.go"
+  ]
+}

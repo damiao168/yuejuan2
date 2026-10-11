@@ -31,6 +31,34 @@ function strings(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
 }
 
+function solutionGraph(value: unknown): JsonRecord {
+  return value && typeof value === "object" ? value as JsonRecord : {};
+}
+
+function subjectLabel(subjectCode: string): string {
+  if (subjectCode === "mathematics") return "数学";
+  if (subjectCode === "physics") return "物理";
+  return "化学";
+}
+
+function MathEvidenceSummary({ formulaCount, stepCount, attentionCount, expanded, onToggle }: Readonly<{
+  formulaCount: number;
+  stepCount: number;
+  attentionCount: number;
+  expanded: boolean;
+  onToggle: () => void;
+}>) {
+  let toggleLabel = "查看详情";
+  if (expanded) toggleLabel = "收起详情";
+  else if (attentionCount) toggleLabel = "查看问题";
+
+  return <div className="math-evidence-summary">
+    <span>{formulaCount} 个公式 · {stepCount} 个步骤</span>
+    <strong>{attentionCount ? `${attentionCount} 项识别需要确认` : "未发现需要人工校正的公式问题"}</strong>
+    <Button size="small" onClick={onToggle}>{toggleLabel}</Button>
+  </div>;
+}
+
 export interface MathEvidenceInspectorProps {
   segmentId: string;
   subjectCode: string;
@@ -43,7 +71,7 @@ export interface MathEvidenceInspectorProps {
   onSelectStep: (stepId: string) => void;
 }
 
-export function MathEvidenceInspector({ segmentId, subjectCode, disabled = false, data, loading, onRefresh, onCorrectionSaved, onDirtyChange, onSelectStep }: MathEvidenceInspectorProps) {
+export function MathEvidenceInspector({ segmentId, subjectCode, disabled = false, data, loading, onRefresh, onCorrectionSaved, onDirtyChange, onSelectStep }: Readonly<MathEvidenceInspectorProps>) {
   const [expanded, setExpanded] = useState(false);
   const [formulaDrafts, setFormulaDrafts] = useState<Record<string, string>>({});
   const [blockDrafts, setBlockDrafts] = useState<JsonRecord[]>([]);
@@ -65,15 +93,13 @@ export function MathEvidenceInspector({ segmentId, subjectCode, disabled = false
   const artifact = data && baseArtifact ? selectEffectiveMathArtifact(data) : undefined;
   const formulas = useMemo(() => records(artifact?.formulas), [artifact]);
   const blocks = blockDrafts;
-  const graph = artifact?.solution_graph && typeof artifact.solution_graph === "object"
-    ? artifact.solution_graph as JsonRecord
-    : {};
+  const graph = solutionGraph(artifact?.solution_graph);
   const steps = stepDrafts;
   const edges = edgeDrafts;
   const rubricEvidence = useMemo(() => records(artifact?.rubric_evidence), [artifact]);
 
   useEffect(() => {
-      if (!data || data.artifact.answer_segment_id !== segmentId) {
+      if (data?.artifact.answer_segment_id !== segmentId) {
         setFormulaDrafts({}); setBlockDrafts([]); setStepDrafts([]); setEdgeDrafts([]); setPendingOperations([]);
         return;
       }
@@ -85,7 +111,7 @@ export function MathEvidenceInspector({ segmentId, subjectCode, disabled = false
       }
       setFormulaDrafts(next);
       setBlockDrafts(records(effectiveArtifact.blocks));
-      const responseGraph = effectiveArtifact.solution_graph && typeof effectiveArtifact.solution_graph === "object" ? effectiveArtifact.solution_graph as JsonRecord : {};
+      const responseGraph = solutionGraph(effectiveArtifact.solution_graph);
       setStepDrafts(records(responseGraph.steps));
       setEdgeDrafts(records(responseGraph.edges));
       setPendingOperations([]);
@@ -95,6 +121,7 @@ export function MathEvidenceInspector({ segmentId, subjectCode, disabled = false
       setMergeSecondary("");
   }, [data, segmentId]);
 
+  // 片段切换时清掉旧提示并收起详情；此 effect 只由 segmentId 的变化触发。
   useEffect(() => {
     setExpanded(false);
     setError("");
@@ -154,6 +181,7 @@ export function MathEvidenceInspector({ segmentId, subjectCode, disabled = false
     setError("");
     try {
       const result = await createMathUnderstandingCorrection(baseArtifact.id, body);
+      // 保存返回时若已在其他片段，不更新当前提示，也不把旧结果交给父组件。
       if (currentSegment.current !== segmentId) return;
       setPendingOperations([]);
       setFormulaDrafts(Object.fromEntries(correctedFormulas.map((formula) => [text(formula.id), text(formula.canonical_latex)])));
@@ -231,24 +259,10 @@ export function MathEvidenceInspector({ segmentId, subjectCode, disabled = false
     recordOperation({ type: "split_step", target_id: text(step.id), payload: { created_step_id: splitId, split_after_block: blockIds[midpoint - 1] } });
   };
 
-  return (
-    <section className="math-evidence-inspector" aria-label="公式与解题步骤证据">
-      <div className="math-evidence-head">
-        <div>
-          <h3>公式与解题步骤</h3>
-          <p>仅作为评分证据建议，最终得分仍由教师确认。</p>
-        </div>
-        <Button size="small" icon={<RefreshCw size={14} />} loading={loading} disabled={saving} onClick={onRefresh}>刷新</Button>
-      </div>
-      {error ? <Alert type="warning" showIcon message={error} /> : null}
-      {saveNotice ? <Alert type="info" showIcon message={saveNotice} /> : null}
-      {loading && !data ? <Spin size="small" /> : null}
-      {!loading && !data ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无线性化公式证据，按原答题图阅卷" /> : null}
-      {artifact ? (<>
-        <div className="math-evidence-summary"><span>{formulas.length} 个公式 · {steps.length} 个步骤</span><strong>{attentionCount ? `${attentionCount} 项识别需要确认` : "未发现需要人工校正的公式问题"}</strong><Button size="small" onClick={() => setExpanded((value) => !value)}>{expanded ? "收起详情" : attentionCount ? "查看问题" : "查看详情"}</Button></div>
-        {expanded ? <div className="math-evidence-body">
+  const renderDetails = () => (
+    <div className="math-evidence-body">
           <div className="math-evidence-meta">
-            <Tag>{subjectCode === "mathematics" ? "数学" : subjectCode === "physics" ? "物理" : "化学"}</Tag>
+            <Tag>{subjectLabel(subjectCode)}</Tag>
             <span>识别版本 {baseArtifact?.version}{data?.correction_revision ? ` · 校正 #${data.correction_revision}` : ""}</span>
             <span>{formulas.length} 个公式 · {steps.length} 个步骤</span>
           </div>
@@ -308,12 +322,18 @@ export function MathEvidenceInspector({ segmentId, subjectCode, disabled = false
           ) : null}
           {rubricEvidence.length ? (
             <div className="math-rubric-evidence">
-              {rubricEvidence.map((item) => (
+              {rubricEvidence.map((item) => {
+                const status = text(item.status);
+                let color = "orange";
+                if (status === "supported") color = "green";
+                else if (status === "unsupported") color = "red";
+                return (
                 <div key={text(item.id)}>
-                  <Tag color={text(item.status) === "supported" ? "green" : text(item.status) === "unsupported" ? "red" : "orange"}>{text(item.status)}</Tag>
+                  <Tag color={color}>{status}</Tag>
                   <span>{text(item.rubric_criterion_key)} · {text(item.explanation) || "证据待教师确认"}</span>
                 </div>
-              ))}
+                );
+              })}
             </div>
           ) : null}
           <Space className="math-evidence-actions">
@@ -322,7 +342,25 @@ export function MathEvidenceInspector({ segmentId, subjectCode, disabled = false
             </Button>
             <span>校正保存为当前数学证据，不直接改分。</span>
           </Space>
-        </div> : null}
+    </div>
+  );
+
+  return (
+    <section className="math-evidence-inspector" aria-label="公式与解题步骤证据">
+      <div className="math-evidence-head">
+        <div>
+          <h3>公式与解题步骤</h3>
+          <p>仅作为评分证据建议，最终得分仍由教师确认。</p>
+        </div>
+        <Button size="small" icon={<RefreshCw size={14} />} loading={loading} disabled={saving} onClick={onRefresh}>刷新</Button>
+      </div>
+      {error ? <Alert type="warning" showIcon message={error} /> : null}
+      {saveNotice ? <Alert type="info" showIcon message={saveNotice} /> : null}
+      {loading && !data ? <Spin size="small" /> : null}
+      {!loading && !data ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无线性化公式证据，按原答题图阅卷" /> : null}
+      {artifact ? (<>
+        <MathEvidenceSummary formulaCount={formulas.length} stepCount={steps.length} attentionCount={attentionCount} expanded={expanded} onToggle={() => setExpanded((value) => !value)} />
+        {expanded ? renderDetails() : null}
       </>) : null}
     </section>
   );

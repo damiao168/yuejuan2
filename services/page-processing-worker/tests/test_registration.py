@@ -136,5 +136,7 @@ def test_manual_four_point_registration_produces_stable_output() -> None:
 def test_manual_registration_rejects_invalid_geometry(points: list[dict], error: str) -> None:
     page = np.full((100, 100, 3), 255, np.uint8)
     target = [{"x": 0.0, "y": 0.0}, {"x": 1.0, "y": 0.0}, {"x": 1.0, "y": 1.0}, {"x": 0.0, "y": 1.0}]
+    page_bytes = _png(page)
+    page_bytes_2 = _png(page)
     with pytest.raises(RegistrationError, match=error):
-        register_page_manual(_png(page), "image/png", _png(page), "image/png", points, target)
+        register_page_manual(page_bytes, 'image/png', page_bytes_2, 'image/png', points, target)

@@ -112,8 +112,24 @@ ORDER BY ra.created_at, ra.id
 
 // 学生批注只能来自当前发布版本中该学生的 release_item 和指定题目；
 // 查询不接受提交 ID，未发布或未授权题目自然返回空结果。
-func (s *PostgresStore) ListStudentQuestionAnnotations(ctx context.Context, tenantID, examID, studentID, questionID string) ([]StudentAnnotation, error) {
-	rows, err := s.db.QueryContext(ctx, `
+func (s *PostgresStore) ListStudentQuestionAnnotations(ctx context.Context, tenantID, examID, studentID, questionID string, expectedReleaseID ...string) ([]StudentAnnotation, error) {
+	// 只读重复读事务把发布校验和批注查询固定在同一快照；先查指针再独立查批注会混入刚发布的版本。
+	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true, Isolation: sql.LevelRepeatableRead})
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback() }()
+	if len(expectedReleaseID) > 0 && expectedReleaseID[0] != "" {
+		var actual string
+		err := tx.QueryRowContext(ctx, `SELECT release_id::text FROM score_release_current WHERE tenant_id=$1::uuid AND exam_id=$2::uuid`, tenantID, examID).Scan(&actual)
+		if errors.Is(err, sql.ErrNoRows) || err == nil && actual != expectedReleaseID[0] {
+			return nil, ErrStudentReleaseChanged
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
+	rows, err := tx.QueryContext(ctx, `
 SELECT ra.id::text, ra.answer_segment_id::text, ra.submission_page_id::text,
        ra.annotation_type, ra.coordinate_space, ra.x::float8, ra.y::float8,
        ra.width::float8, ra.height::float8, ra.content, ra.created_at, ra.updated_at

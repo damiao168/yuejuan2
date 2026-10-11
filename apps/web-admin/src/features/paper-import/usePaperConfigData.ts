@@ -31,6 +31,10 @@ export function usePaperConfigData({ initialExamId = "", fixedExamId }: { initia
   const [configError, setConfigError] = useState<string | null>(null);
   const [validation, setValidation] = useState<ValidationResult | null>(null);
   const configRequestRef = useRef(0);
+  const [importConnectionError, setImportConnectionError] = useState<string>();
+  const [importRetryKey, setImportRetryKey] = useState(0);
+  const onImportConnectionError = useCallback((error?: unknown) => setImportConnectionError(error ? getUserErrorMessage(error, "暂时无法获取最新处理状态") : undefined), []);
+  useEffect(() => { setImportConnectionError(undefined); }, [selectedExamId]);
 
   const loadExams = useCallback(async () => {
     setLoading(true);
@@ -50,7 +54,7 @@ export function usePaperConfigData({ initialExamId = "", fixedExamId }: { initia
     }
   }, [fixedExamId, initialExamId]);
 
-  const loadConfig = useCallback(async (examId: string, options: { silent?: boolean } = {}) => {
+  const loadConfig = useCallback(async (examId: string, options: { silent?: boolean; propagateError?: boolean } = {}) => {
     // 手动刷新和轮询共用代次，较早完成的旧考试请求不能覆盖最新选择。
     const requestId = ++configRequestRef.current;
     if (!examId) {
@@ -84,6 +88,8 @@ export function usePaperConfigData({ initialExamId = "", fixedExamId }: { initia
       });
     } catch (currentError) {
       if (requestId === configRequestRef.current && !options.silent) setConfigError(formatError(currentError));
+      // 整题保存需要区分写入回执与刷新结果；普通读取和轮询仍由各自状态提示错误。
+      if (options.propagateError) throw currentError;
     } finally {
       if (requestId === configRequestRef.current) setConfigLoading(false);
     }
@@ -104,13 +110,14 @@ export function usePaperConfigData({ initialExamId = "", fixedExamId }: { initia
     examId: selectedExamId,
     importId: processingImportId,
     onProgress: applyImportProgress,
-    onSettled: reloadSettledImport
+    onSettled: reloadSettledImport,
+    onConnectionError: onImportConnectionError, retryKey: importRetryKey
   });
 
   return {
     exams, selectedExamId, setSelectedExamId, papers, paperImports, questions,
     selectedQuestionId, setSelectedQuestionId, editorMode, setEditorMode,
     loading, configLoading, error, configError, validation, setValidation,
-    loadExams, loadConfig
+    loadExams, loadConfig, importConnectionError, retryImportConnection: () => setImportRetryKey(value => value + 1)
   };
 }

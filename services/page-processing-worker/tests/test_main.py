@@ -56,7 +56,7 @@ def test_once_claims_one_batch_and_prints_a_machine_readable_result(monkeypatch:
         runner_instances.append(runner)
         return runner
 
-    monkeypatch.setattr(worker_main, "load_config", lambda: _config())
+    monkeypatch.setattr(worker_main, "load_config", _config)
     monkeypatch.setattr(worker_main, "Client", FakeClient)
     monkeypatch.setattr(worker_main, "Runner", new_runner)
 
@@ -76,7 +76,7 @@ def test_default_mode_preserves_the_long_running_worker(monkeypatch: pytest.Monk
         runner_instances.append(runner)
         return runner
 
-    monkeypatch.setattr(worker_main, "load_config", lambda: _config())
+    monkeypatch.setattr(worker_main, "load_config", _config)
     monkeypatch.setattr(worker_main, "Client", FakeClient)
     monkeypatch.setattr(worker_main, "Runner", new_runner)
 

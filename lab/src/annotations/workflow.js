@@ -40,6 +40,25 @@ function workerQualified(worker, sample, role) {
     (worker.grade_levels.includes("*") || worker.grade_levels.includes(sample.grade_level));
 }
 
+function validateWorkerIdentity(worker, path, ids, errors) {
+  if (!/^[a-z0-9][a-z0-9_-]{2,63}$/i.test(worker?.worker_id ?? "")) errors.push(`${path}.worker_id must be pseudonymous`);
+  if (ids.has(worker?.worker_id)) errors.push(`duplicate worker_id: ${worker?.worker_id}`);
+  ids.add(worker?.worker_id);
+}
+
+function validateWorkerQualifications(worker, path, errors) {
+  if (!Array.isArray(worker?.roles) || worker.roles.length === 0 || worker.roles.some((role) => !WORKER_ROLES.has(role))) {
+    errors.push(`${path}.roles is invalid`);
+  }
+  if (Array.isArray(worker?.roles) && new Set(worker.roles).size !== worker.roles.length) errors.push(`${path}.roles contains duplicates`);
+  if (typeof worker?.active !== "boolean") errors.push(`${path}.active must be boolean`);
+  if (!Array.isArray(worker?.subjects) || worker.subjects.length === 0) errors.push(`${path}.subjects must be non-empty`);
+  if (Array.isArray(worker?.subjects) && worker.subjects.some((subject) => subject !== "*" && !SUBJECTS.includes(subject))) {
+    errors.push(`${path}.subjects contains an unsupported subject`);
+  }
+  if (!Array.isArray(worker?.grade_levels) || worker.grade_levels.length === 0) errors.push(`${path}.grade_levels must be non-empty`);
+}
+
 export function validateAnnotationRoster(roster) {
   const errors = [];
   if (roster?.schema_version !== "annotation-roster-v1") errors.push("unsupported annotation roster schema_version");
@@ -47,19 +66,8 @@ export function validateAnnotationRoster(roster) {
   const ids = new Set();
   for (const [index, worker] of roster.workers.entries()) {
     const path = `workers[${index}]`;
-    if (!/^[a-z0-9][a-z0-9_-]{2,63}$/i.test(worker?.worker_id ?? "")) errors.push(`${path}.worker_id must be pseudonymous`);
-    if (ids.has(worker?.worker_id)) errors.push(`duplicate worker_id: ${worker?.worker_id}`);
-    ids.add(worker?.worker_id);
-    if (!Array.isArray(worker?.roles) || worker.roles.length === 0 || worker.roles.some((role) => !WORKER_ROLES.has(role))) {
-      errors.push(`${path}.roles is invalid`);
-    }
-    if (Array.isArray(worker?.roles) && new Set(worker.roles).size !== worker.roles.length) errors.push(`${path}.roles contains duplicates`);
-    if (typeof worker?.active !== "boolean") errors.push(`${path}.active must be boolean`);
-    if (!Array.isArray(worker?.subjects) || worker.subjects.length === 0) errors.push(`${path}.subjects must be non-empty`);
-    if (Array.isArray(worker?.subjects) && worker.subjects.some((subject) => subject !== "*" && !SUBJECTS.includes(subject))) {
-      errors.push(`${path}.subjects contains an unsupported subject`);
-    }
-    if (!Array.isArray(worker?.grade_levels) || worker.grade_levels.length === 0) errors.push(`${path}.grade_levels must be non-empty`);
+    validateWorkerIdentity(worker, path, ids, errors);
+    validateWorkerQualifications(worker, path, errors);
   }
   return { valid: errors.length === 0, errors };
 }
@@ -104,7 +112,7 @@ function chooseTeacherPair(sample, roster, workloads, pairCounts, seed) {
   const candidates = [];
   for (let left = 0; left < teachers.length; left += 1) {
     for (let right = left + 1; right < teachers.length; right += 1) {
-      const ids = [teachers[left].worker_id, teachers[right].worker_id].sort();
+      const ids = [teachers[left].worker_id, teachers[right].worker_id].sort((a, b) => a.localeCompare(b));
       // 派双评前就预留独立仲裁资格，防止出现争议后无人可合法接手。
       const independentAdjudicatorExists = roster.workers.some((worker) =>
         workerQualified(worker, sample, "adjudicator") && !ids.includes(worker.worker_id));
@@ -139,7 +147,7 @@ function assertDatasetBinding(dataset, samples) {
     ids.add(sample.sample_id);
     if (!sample?.rubric?.rubric_version || !Array.isArray(sample?.rubric?.points)) throw new Error(`sample ${sample.sample_id} lacks a complete Rubric`);
   }
-  const sampleIdsSha256 = sha256([...ids].sort().join("\n"));
+  const sampleIdsSha256 = sha256([...ids].sort((a, b) => a.localeCompare(b)).join("\n"));
   if (dataset.sample_ids_sha256 && dataset.sample_ids_sha256 !== sampleIdsSha256) throw new Error("dataset sample ID set hash mismatch");
   return sampleIdsSha256;
 }
@@ -212,23 +220,16 @@ export function buildBlindAnnotationPlan({ samples, roster, dataset, rosterSha25
     dataset: { ...structuredClone(dataset), sample_ids_sha256: sampleIdsSha256 },
     roster_sha256: rosterSha256,
     assignments,
-    workloads: Object.fromEntries([...workloads.entries()].sort()),
-    pair_counts: Object.fromEntries([...pairCounts.entries()].sort()),
+    workloads: Object.fromEntries([...workloads.entries()].sort(([left], [right]) => left.localeCompare(right))),
+    pair_counts: Object.fromEntries([...pairCounts.entries()].sort(([left], [right]) => left.localeCompare(right))),
     packets: packetManifests
   };
   return { plan, packets };
 }
 
-// 合并时重新核对数据与人员清单绑定及双评分配，不能只相信已落盘计划的结构。
-function assertPlanBinding(plan, samples, roster, datasetSha256, rosterSha256) {
-  if (plan?.schema_version !== "blind-annotation-plan-v1" || plan.blind !== true) throw new Error("invalid or non-blind annotation plan");
-  if (plan.dataset?.sha256 !== datasetSha256) throw new Error("annotation plan dataset hash mismatch");
-  if (plan.roster_sha256 !== rosterSha256) throw new Error("annotation plan roster hash mismatch");
-  assertDatasetBinding(plan.dataset, samples);
+function indexPlanAssignments(plan, sampleById, workerById) {
   const assignmentIds = new Set();
   const bySample = new Map();
-  const sampleById = new Map(samples.map((sample) => [sample.sample_id, sample]));
-  const workerById = new Map(roster.workers.map((worker) => [worker.worker_id, worker]));
   for (const assignment of plan.assignments ?? []) {
     if (assignmentIds.has(assignment.assignment_id)) throw new Error(`duplicate assignment_id: ${assignment.assignment_id}`);
     assignmentIds.add(assignment.assignment_id);
@@ -241,12 +242,27 @@ function assertPlanBinding(plan, samples, roster, datasetSha256, rosterSha256) {
     if (!bySample.has(assignment.sample_id)) bySample.set(assignment.sample_id, []);
     bySample.get(assignment.sample_id).push(assignment);
   }
+  return bySample;
+}
+
+function assertSampleAssignments(sample, sampleAssignments) {
+  if (sampleAssignments.length !== 2) throw new Error(`sample ${sample.sample_id} must have exactly two assignments`);
+  if (new Set(sampleAssignments.map((item) => item.labeler_id)).size !== 2) throw new Error(`sample ${sample.sample_id} assignments must use distinct teachers`);
+  if (sampleAssignments.map((item) => item.slot).sort().join("") !== "AB") throw new Error(`sample ${sample.sample_id} assignments must use slots A and B`);
+  if (new Set(sampleAssignments.map((item) => item.bundle_id)).size !== 1) throw new Error(`sample ${sample.sample_id} assignments must share one bundle_id`);
+}
+
+// 合并时重新核对数据与人员清单绑定及双评分配，不能只相信已落盘计划的结构。
+function assertPlanBinding(plan, samples, roster, datasetSha256, rosterSha256) {
+  if (plan?.schema_version !== "blind-annotation-plan-v1" || plan.blind !== true) throw new Error("invalid or non-blind annotation plan");
+  if (plan.dataset?.sha256 !== datasetSha256) throw new Error("annotation plan dataset hash mismatch");
+  if (plan.roster_sha256 !== rosterSha256) throw new Error("annotation plan roster hash mismatch");
+  assertDatasetBinding(plan.dataset, samples);
+  const sampleById = new Map(samples.map((sample) => [sample.sample_id, sample]));
+  const workerById = new Map(roster.workers.map((worker) => [worker.worker_id, worker]));
+  const bySample = indexPlanAssignments(plan, sampleById, workerById);
   for (const sample of samples) {
-    const sampleAssignments = bySample.get(sample.sample_id) ?? [];
-    if (sampleAssignments.length !== 2) throw new Error(`sample ${sample.sample_id} must have exactly two assignments`);
-    if (new Set(sampleAssignments.map((item) => item.labeler_id)).size !== 2) throw new Error(`sample ${sample.sample_id} assignments must use distinct teachers`);
-    if (sampleAssignments.map((item) => item.slot).sort().join("") !== "AB") throw new Error(`sample ${sample.sample_id} assignments must use slots A and B`);
-    if (new Set(sampleAssignments.map((item) => item.bundle_id)).size !== 1) throw new Error(`sample ${sample.sample_id} assignments must share one bundle_id`);
+    assertSampleAssignments(sample, bySample.get(sample.sample_id) ?? []);
   }
 }
 
@@ -263,12 +279,21 @@ function chooseAdjudicator(sample, teacherIds, roster, workloads, seed) {
   return candidates[0];
 }
 
-export function mergeTeacherSubmissions({ plan, samples, roster, datasetSha256, rosterSha256, submissions, policy }) {
-  const rosterValidation = validateAnnotationRoster(roster);
-  if (!rosterValidation.valid) throw new Error(`invalid annotation roster: ${rosterValidation.errors.join("; ")}`);
-  assertPlanBinding(plan, samples, roster, datasetSha256, rosterSha256);
-  if (!Array.isArray(submissions)) throw new Error("teacher submissions must be an array");
-  const sampleById = new Map(samples.map((sample) => [sample.sample_id, sample]));
+function validateTeacherSubmission(submission, assignment, sample, planId, path, labelIds, errors) {
+  if (submission.plan_id !== planId || submission.bundle_id !== assignment.bundle_id || submission.sample_id !== assignment.sample_id) {
+    errors.push(`${path} identity does not match assignment`);
+  }
+  // 调用方负责提供可信身份；这里仅检查身份、标注者和任务归属是否一致。
+  if (submission.authenticated_actor_id !== assignment.labeler_id || submission.label?.labeler_id !== assignment.labeler_id) {
+    errors.push(`${path} actor or labeler does not own assignment`);
+  }
+  if (submission.label?.labeler_role !== "teacher") errors.push(`${path}.label.labeler_role must be teacher`);
+  if (labelIds.has(submission.label?.label_id)) errors.push(`duplicate label_id: ${submission.label?.label_id}`);
+  if (submission.label?.label_id) labelIds.add(submission.label.label_id);
+  errors.push(...validateAnnotationLabel(submission.label, sample, `${path}.label`));
+}
+
+function collectTeacherSubmissions(plan, sampleById, submissions) {
   const assignmentById = new Map(plan.assignments.map((assignment) => [assignment.assignment_id, assignment]));
   const submissionByAssignment = new Map();
   const labelIds = new Set();
@@ -279,21 +304,27 @@ export function mergeTeacherSubmissions({ plan, samples, roster, datasetSha256, 
     const assignment = assignmentById.get(submission?.assignment_id);
     if (!assignment) { errors.push(`${path}.assignment_id is unknown`); continue; }
     if (submissionByAssignment.has(assignment.assignment_id)) { errors.push(`duplicate submission for ${assignment.assignment_id}`); continue; }
-    if (submission.plan_id !== plan.plan_id || submission.bundle_id !== assignment.bundle_id || submission.sample_id !== assignment.sample_id) {
-      errors.push(`${path} identity does not match assignment`);
-    }
-    // 调用方负责提供可信身份；这里仅检查身份、标注者和任务归属是否一致。
-    if (submission.authenticated_actor_id !== assignment.labeler_id || submission.label?.labeler_id !== assignment.labeler_id) {
-      errors.push(`${path} actor or labeler does not own assignment`);
-    }
-    if (submission.label?.labeler_role !== "teacher") errors.push(`${path}.label.labeler_role must be teacher`);
-    if (labelIds.has(submission.label?.label_id)) errors.push(`duplicate label_id: ${submission.label?.label_id}`);
-    if (submission.label?.label_id) labelIds.add(submission.label.label_id);
-    const sample = sampleById.get(assignment.sample_id);
-    errors.push(...validateAnnotationLabel(submission.label, sample, `${path}.label`));
+    validateTeacherSubmission(submission, assignment, sampleById.get(assignment.sample_id), plan.plan_id, path, labelIds, errors);
     submissionByAssignment.set(assignment.assignment_id, submission);
   }
   if (errors.length) throw new Error(`teacher submission merge failed: ${errors.join("; ")}`);
+  return submissionByAssignment;
+}
+
+function workflowStatus(pendingTeacherAssignments, pendingAdjudicationBundles) {
+  // 教师提交未齐时仍可已有仲裁待办；状态先反映尚未完成的双评。
+  if (pendingTeacherAssignments.length) return "teacher_pending";
+  if (pendingAdjudicationBundles.length) return "adjudication_pending";
+  return "complete";
+}
+
+export function mergeTeacherSubmissions({ plan, samples, roster, datasetSha256, rosterSha256, submissions, policy }) {
+  const rosterValidation = validateAnnotationRoster(roster);
+  if (!rosterValidation.valid) throw new Error(`invalid annotation roster: ${rosterValidation.errors.join("; ")}`);
+  assertPlanBinding(plan, samples, roster, datasetSha256, rosterSha256);
+  if (!Array.isArray(submissions)) throw new Error("teacher submissions must be an array");
+  const sampleById = new Map(samples.map((sample) => [sample.sample_id, sample]));
+  const submissionByAssignment = collectTeacherSubmissions(plan, sampleById, submissions);
 
   const pendingTeacherAssignments = plan.assignments.filter((assignment) => !submissionByAssignment.has(assignment.assignment_id));
   const completedBundles = [];
@@ -351,8 +382,7 @@ export function mergeTeacherSubmissions({ plan, samples, roster, datasetSha256, 
     assignment_count: packet.tasks.length,
     sha256: sha256(artifactText(packet))
   })).sort((left, right) => left.adjudicator_id.localeCompare(right.adjudicator_id));
-  const status = pendingTeacherAssignments.length ? "teacher_pending" :
-    pendingAdjudicationBundles.length ? "adjudication_pending" : "complete";
+  const status = workflowStatus(pendingTeacherAssignments, pendingAdjudicationBundles);
   const state = {
     schema_version: "annotation-workflow-state-v1",
     plan_id: plan.plan_id,
@@ -363,21 +393,21 @@ export function mergeTeacherSubmissions({ plan, samples, roster, datasetSha256, 
     pending_teacher_assignments: pendingTeacherAssignments,
     pending_adjudication_bundles: pendingAdjudicationBundles,
     adjudication_assignments: adjudicationAssignments,
-    adjudicator_workloads: Object.fromEntries([...adjudicatorWorkloads.entries()].sort()),
+    adjudicator_workloads: Object.fromEntries([...adjudicatorWorkloads.entries()].sort(([left], [right]) => left.localeCompare(right))),
     adjudicator_packets: packetManifests
   };
   return { state, adjudicatorPackets };
 }
 
-export function finalizeAdjudications({ state, roster, datasetSha256, rosterSha256, submissions, policy }) {
-  const rosterValidation = validateAnnotationRoster(roster);
-  if (!rosterValidation.valid) throw new Error(`invalid annotation roster: ${rosterValidation.errors.join("; ")}`);
+function assertAdjudicationStateBinding(state, datasetSha256, rosterSha256, submissions) {
   if (state?.schema_version !== "annotation-workflow-state-v1") throw new Error("invalid annotation workflow state");
   if (state.dataset?.sha256 !== datasetSha256) throw new Error("adjudication dataset hash mismatch");
   if (state.roster_sha256 !== rosterSha256) throw new Error("adjudication roster hash mismatch");
   if (state.pending_teacher_assignments.length) throw new Error("teacher assignments remain incomplete");
   if (!Array.isArray(submissions)) throw new Error("adjudication submissions must be an array");
+}
 
+function indexAdjudicationAssignments(state, roster) {
   const assignmentById = new Map(state.adjudication_assignments.map((assignment) => [assignment.adjudication_assignment_id, assignment]));
   const bundleById = new Map(state.pending_adjudication_bundles.map((bundle) => [bundle.bundle_id, bundle]));
   if (assignmentById.size !== state.adjudication_assignments.length) throw new Error("duplicate adjudication assignment id in state");
@@ -396,6 +426,25 @@ export function finalizeAdjudications({ state, roster, datasetSha256, rosterSha2
       throw new Error(`adjudication ${assignment.adjudication_assignment_id} source labels do not match bundle`);
     }
   }
+  return { assignmentById, bundleById };
+}
+
+function validateAdjudicationSubmission(submission, assignment, bundle, context, errors) {
+  const { planId, path, sourceLabelIds, adjudicationLabelIds } = context;
+  if (submission.plan_id !== planId || submission.bundle_id !== assignment.bundle_id) errors.push(`${path} identity does not match assignment`);
+  // 仲裁身份仍由调用方提供；来源教师的 label ID 不能被仲裁提交复用。
+  if (submission.authenticated_actor_id !== assignment.adjudicator_id || submission.label?.labeler_id !== assignment.adjudicator_id) {
+    errors.push(`${path} actor or labeler does not own adjudication`);
+  }
+  if (submission.label?.labeler_role !== "adjudicator") errors.push(`${path}.label.labeler_role must be adjudicator`);
+  if (sourceLabelIds.has(submission.label?.label_id) || adjudicationLabelIds.has(submission.label?.label_id)) {
+    errors.push(`${path}.label.label_id must be unique`);
+  }
+  if (submission.label?.label_id) adjudicationLabelIds.add(submission.label.label_id);
+  errors.push(...validateAnnotationLabel(submission.label, bundle.sample, `${path}.label`));
+}
+
+function collectAdjudicationSubmissions(state, assignmentById, bundleById, submissions) {
   const submissionByAssignment = new Map();
   const adjudicationLabelIds = new Set();
   const sourceLabelIds = new Set(state.pending_adjudication_bundles.flatMap((bundle) => bundle.labels.map((label) => label.label_id)));
@@ -405,23 +454,36 @@ export function finalizeAdjudications({ state, roster, datasetSha256, rosterSha2
     const assignment = assignmentById.get(submission?.adjudication_assignment_id);
     if (!assignment) { errors.push(`${path}.adjudication_assignment_id is unknown`); continue; }
     if (submissionByAssignment.has(assignment.adjudication_assignment_id)) { errors.push(`duplicate adjudication for ${assignment.adjudication_assignment_id}`); continue; }
-    if (submission.plan_id !== state.plan_id || submission.bundle_id !== assignment.bundle_id) errors.push(`${path} identity does not match assignment`);
-    if (submission.authenticated_actor_id !== assignment.adjudicator_id || submission.label?.labeler_id !== assignment.adjudicator_id) {
-      errors.push(`${path} actor or labeler does not own adjudication`);
-    }
-    if (submission.label?.labeler_role !== "adjudicator") errors.push(`${path}.label.labeler_role must be adjudicator`);
-    if (sourceLabelIds.has(submission.label?.label_id) || adjudicationLabelIds.has(submission.label?.label_id)) {
-      errors.push(`${path}.label.label_id must be unique`);
-    }
-    if (submission.label?.label_id) adjudicationLabelIds.add(submission.label.label_id);
     const bundle = bundleById.get(assignment.bundle_id);
-    errors.push(...validateAnnotationLabel(submission.label, bundle.sample, `${path}.label`));
+    validateAdjudicationSubmission(submission, assignment, bundle, {
+      planId: state.plan_id, path, sourceLabelIds, adjudicationLabelIds
+    }, errors);
     submissionByAssignment.set(assignment.adjudication_assignment_id, submission);
   }
   const missing = state.adjudication_assignments.filter((assignment) => !submissionByAssignment.has(assignment.adjudication_assignment_id));
   if (missing.length) errors.push(`${missing.length} adjudication submissions are missing`);
   if (errors.length) throw new Error(`adjudication finalization failed: ${errors.join("; ")}`);
+  return submissionByAssignment;
+}
 
+function assertFinalBundles(bundles, dataset, policy) {
+  if (bundles.length !== dataset.records) throw new Error(`final bundle count ${bundles.length} does not match dataset ${dataset.records}`);
+  // 数量相等不代表样本相同，最终还需核对去重后的完整 ID 集合哈希。
+  const finalSampleIds = bundles.map((bundle) => bundle.sample.sample_id);
+  if (new Set(finalSampleIds).size !== finalSampleIds.length) throw new Error("final bundles contain duplicate sample IDs");
+  if (sha256([...finalSampleIds].sort((a, b) => a.localeCompare(b)).join("\n")) !== dataset.sample_ids_sha256) throw new Error("final bundle sample ID set does not match annotation plan");
+  for (const bundle of bundles) {
+    const validation = validateAnnotationBundle(bundle, policy);
+    if (!validation.valid) throw new Error(`final bundle ${bundle.bundle_id} failed validation: ${validation.errors.join("; ")}`);
+  }
+}
+
+export function finalizeAdjudications({ state, roster, datasetSha256, rosterSha256, submissions, policy }) {
+  const rosterValidation = validateAnnotationRoster(roster);
+  if (!rosterValidation.valid) throw new Error(`invalid annotation roster: ${rosterValidation.errors.join("; ")}`);
+  assertAdjudicationStateBinding(state, datasetSha256, rosterSha256, submissions);
+  const { assignmentById, bundleById } = indexAdjudicationAssignments(state, roster);
+  const submissionByAssignment = collectAdjudicationSubmissions(state, assignmentById, bundleById, submissions);
   const adjudicatedBundles = state.adjudication_assignments.map((assignment) => {
     const bundle = structuredClone(bundleById.get(assignment.bundle_id));
     bundle.adjudication = structuredClone(submissionByAssignment.get(assignment.adjudication_assignment_id).label);
@@ -431,15 +493,7 @@ export function finalizeAdjudications({ state, roster, datasetSha256, rosterSha2
   });
   const bundles = [...state.completed_bundles.map((bundle) => structuredClone(bundle)), ...adjudicatedBundles]
     .sort((left, right) => left.sample.sample_id.localeCompare(right.sample.sample_id));
-  if (bundles.length !== state.dataset.records) throw new Error(`final bundle count ${bundles.length} does not match dataset ${state.dataset.records}`);
-  // 数量相等不代表样本相同，最终还需核对去重后的完整 ID 集合哈希。
-  const finalSampleIds = bundles.map((bundle) => bundle.sample.sample_id);
-  if (new Set(finalSampleIds).size !== finalSampleIds.length) throw new Error("final bundles contain duplicate sample IDs");
-  if (sha256([...finalSampleIds].sort().join("\n")) !== state.dataset.sample_ids_sha256) throw new Error("final bundle sample ID set does not match annotation plan");
-  for (const bundle of bundles) {
-    const validation = validateAnnotationBundle(bundle, policy);
-    if (!validation.valid) throw new Error(`final bundle ${bundle.bundle_id} failed validation: ${validation.errors.join("; ")}`);
-  }
+  assertFinalBundles(bundles, state.dataset, policy);
   return {
     schema_version: "annotation-workflow-final-v1",
     plan_id: state.plan_id,

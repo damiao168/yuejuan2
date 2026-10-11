@@ -11,9 +11,7 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/httpx"
 )
 
-// RegisterRoutes is wired by the composition root behind model-evaluation
-// management permission. These endpoints administer evidence artifacts only;
-// they do not expose a route that grades or releases a student answer.
+// RegisterRoutes 由组装入口接在模型评测管理权限之后。这些端点只管理证据产物，不提供评分或发布学生答案的路由。
 func RegisterRoutes(mux *http.ServeMux, handler *Handler, requireManage func(http.HandlerFunc) http.Handler) {
 	mux.Handle("POST /api/v1/model-calibrations", requireManage(handler.Create))
 	mux.Handle("GET /api/v1/model-calibrations", requireManage(handler.List))

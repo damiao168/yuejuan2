@@ -12,9 +12,8 @@ import (
 	"time"
 )
 
-// MemoryStore is a deterministic release boundary for unit/handler tests. It
-// keeps source facts separate from materialised release records so a test can
-// emulate a regrade without altering an already published version.
+// MemoryStore 是单元和 handler 测试使用的确定性发布边界。
+// 来源事实与实例化发布记录分开保存，使测试可模拟重评，而不改变已发布版本。
 type MemoryStore struct {
 	mu                    sync.Mutex
 	now                   func() time.Time
@@ -73,7 +72,7 @@ func (s *MemoryStore) Create(_ context.Context, tenantID, examID, actorID string
 	if len(facts) == 0 {
 		return Release{}, ErrNotFound
 	}
-	release := s.newReleaseLocked(tenantID, examID, actorID, input.Source, input.Reason, input.IdempotencyKey, input.VisibilityPolicy, input.AppealWindow)
+	release := s.newReleaseLocked(tenantID, examID, actorID, input)
 	s.saveSnapshotLocked(release.ID, facts)
 	s.releases[release.ID] = release
 	s.idempotency[key] = release.ID
@@ -92,7 +91,10 @@ func (s *MemoryStore) CreateRollback(_ context.Context, tenantID, examID, actorI
 		return Release{}, ErrNotFound
 	}
 	source.VisibilityPolicy.ShowHighScorePaper = false
-	release := s.newReleaseLocked(tenantID, examID, actorID, SourceRollback, input.Reason, input.IdempotencyKey, source.VisibilityPolicy, source.AppealWindow)
+	release := s.newReleaseLocked(tenantID, examID, actorID, CreateInput{
+		Source: SourceRollback, Reason: input.Reason, IdempotencyKey: input.IdempotencyKey,
+		VisibilityPolicy: source.VisibilityPolicy, AppealWindow: source.AppealWindow,
+	})
 	release.SourceReleaseID = source.ID
 	s.cloneSnapshotLocked(source.ID, release.ID)
 	s.releases[release.ID] = release
@@ -112,6 +114,7 @@ func (s *MemoryStore) CreateFromRegrade(_ context.Context, tenantID, examID, act
 		return Release{}, ErrNotFound
 	}
 	source.VisibilityPolicy.ShowHighScorePaper = false
+	// 修正以来源发布快照为基础；被改题目的旧反馈和讲评不能沿用。
 	facts := s.snapshotFactsLocked(source.ID)
 	changes := map[string]RegradeChange{}
 	for _, change := range input.Changes {
@@ -134,14 +137,15 @@ func (s *MemoryStore) CreateFromRegrade(_ context.Context, tenantID, examID, act
 			question.Explanation.RubricSummary = nil
 			matched++
 		}
-		if factIndex < len(facts) {
-			fact.TotalScore = sumQuestionScores(fact.Questions)
-		}
+		fact.TotalScore = sumQuestionScores(fact.Questions)
 	}
 	if matched != len(changes) {
 		return Release{}, ErrInvalidInput
 	}
-	release := s.newReleaseLocked(tenantID, examID, actorID, SourceRegrade, input.Reason, input.IdempotencyKey, source.VisibilityPolicy, source.AppealWindow)
+	release := s.newReleaseLocked(tenantID, examID, actorID, CreateInput{
+		Source: SourceRegrade, Reason: input.Reason, IdempotencyKey: input.IdempotencyKey,
+		VisibilityPolicy: source.VisibilityPolicy, AppealWindow: source.AppealWindow,
+	})
 	release.SourceReleaseID = source.ID
 	s.saveSnapshotLocked(release.ID, facts)
 	s.releases[release.ID] = release
@@ -240,65 +244,54 @@ func (s *MemoryStore) studentResultLocked(tenantID, examID, studentID string) (S
 		if item.StudentID != studentID {
 			continue
 		}
-		result := StudentResult{ExamID: examID, ReleaseID: id, ReleaseVersion: release.Version, TotalScore: item.TotalScore, MaxScore: item.MaxScore, OverallTotalScore: item.TotalScore, OverallMaxScore: item.MaxScore, ScoreRate: scoreRate(item.TotalScore, item.MaxScore),
-			Questions: []StudentQuestion{}, AppealWindow: appealView(release.AppealWindow, s.now().UTC())}
-		result.Reference = buildStudentReference(s.items[id], item.TotalScore, release.VisibilityPolicy)
-		if release.VisibilityPolicy.ShowExactRank && result.Reference != nil && result.Reference.StatisticsAvailable && result.Reference.Rank != nil {
-			result.Rankings = &StudentRankings{ClassRank: *result.Reference.Rank, ClassSize: result.Reference.SampleSize, GradeRank: *result.Reference.Rank, GradeSize: result.Reference.SampleSize}
-		}
-		for _, question := range s.questions[id] {
-			if question.SubmissionID != item.SubmissionID {
-				continue
-			}
-			studentQuestion := studentQuestionView(question, s.questions[id], release.VisibilityPolicy)
-			if release.VisibilityPolicy.ShowFeedback {
-				studentQuestion.Feedback = question.Explanation.Feedback
-			}
-			if release.VisibilityPolicy.ShowRubricSummary {
-				studentQuestion.RubricSummary = append([]string(nil), question.Explanation.RubricSummary...)
-			}
-			result.Questions = append(result.Questions, studentQuestion)
-		}
-		if !release.VisibilityPolicy.ShowQuestionScores {
-			result.Questions = nil
-		}
-		sort.Slice(result.Questions, func(i, j int) bool { return result.Questions[i].QuestionNo < result.Questions[j].QuestionNo })
-		return result, nil
+		return s.studentResultForItemLocked(examID, id, release, item), nil
 	}
 	return StudentResult{}, ErrNotFound
 }
 
-func (s *MemoryStore) StudentQuestion(ctx context.Context, tenantID, examID, studentID, questionID string) (StudentQuestion, error) {
-	_ = ctx
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.StudentQuestionLocked(tenantID, examID, studentID, questionID)
+// 调用方持有内存锁；学生本人题目和群体参考都取自同一个发布快照。
+func (s *MemoryStore) studentResultForItemLocked(examID, id string, release Release, item ReleaseItem) StudentResult {
+	result, _ := frozenStudentResult(Detail{Release: release, Items: s.items[id], Questions: s.questions[id]}, item.StudentID, s.now().UTC())
+	if release.VisibilityPolicy.ShowExactRank && result.Reference != nil && result.Reference.StatisticsAvailable && result.Reference.Rank != nil {
+		result.Rankings = &StudentRankings{ClassRank: *result.Reference.Rank, ClassSize: result.Reference.SampleSize, GradeRank: *result.Reference.Rank, GradeSize: result.Reference.SampleSize}
+	}
+	return result
 }
 
-func (s *MemoryStore) StudentQuestionImage(ctx context.Context, tenantID, examID, studentID, questionID string) (StudentQuestionImageSource, error) {
+func (s *MemoryStore) StudentQuestion(ctx context.Context, tenantID, examID, studentID, questionID string, expectedReleaseID ...string) (StudentQuestion, error) {
 	_ = ctx
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if _, err := s.StudentQuestionLocked(tenantID, examID, studentID, questionID); err != nil {
+	return s.StudentQuestionLocked(tenantID, examID, studentID, questionID, expectedReleaseID...)
+}
+
+func (s *MemoryStore) StudentQuestionImage(ctx context.Context, tenantID, examID, studentID, questionID string, expectedReleaseID ...string) (StudentQuestionImageSource, error) {
+	_ = ctx
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, err := s.StudentQuestionLocked(tenantID, examID, studentID, questionID, expectedReleaseID...); err != nil {
 		return StudentQuestionImageSource{}, err
 	}
 	answerSegmentID := s.studentQuestionImages[studentQuestionImageKey(tenantID, examID, studentID, questionID)]
 	if answerSegmentID == "" {
 		return StudentQuestionImageSource{}, ErrNotFound
 	}
-	return StudentQuestionImageSource{AnswerSegmentID: answerSegmentID}, nil
+	return StudentQuestionImageSource{AnswerSegmentID: answerSegmentID, ReleaseID: s.current[tenantID+":"+examID]}, nil
 }
 
-func (s *MemoryStore) StudentPaperPageImage(ctx context.Context, tenantID, examID, studentID, questionID string, highScore bool) (StudentQuestionImageSource, error) {
+func (s *MemoryStore) StudentPaperPageImage(ctx context.Context, tenantID, examID, studentID, questionID string, highScore bool, expectedReleaseID ...string) (StudentQuestionImageSource, error) {
 	if highScore {
 		return StudentQuestionImageSource{}, ErrNotFound
 	}
-	return s.StudentQuestionImage(ctx, tenantID, examID, studentID, questionID)
+	return s.StudentQuestionImage(ctx, tenantID, examID, studentID, questionID, expectedReleaseID...)
 }
 
-func (s *MemoryStore) StudentQuestionLocked(tenantID, examID, studentID, questionID string) (StudentQuestion, error) {
+func (s *MemoryStore) StudentQuestionLocked(tenantID, examID, studentID, questionID string, expectedReleaseID ...string) (StudentQuestion, error) {
 	result, err := s.studentResultLocked(tenantID, examID, studentID)
 	if err != nil {
+		return StudentQuestion{}, err
+	}
+	if err := requireStudentRelease(result.ReleaseID, expectedReleaseID); err != nil {
 		return StudentQuestion{}, err
 	}
 	if !s.releases[result.ReleaseID].VisibilityPolicy.ShowQuestionScores {
@@ -316,15 +309,16 @@ func studentQuestionImageKey(tenantID, examID, studentID, questionID string) str
 	return tenantID + "\x00" + examID + "\x00" + studentID + "\x00" + questionID
 }
 
-func (s *MemoryStore) newReleaseLocked(tenantID, examID, actorID, source, reason, idempotencyKey string, visibility VisibilityPolicy, window AppealWindow) Release {
+// 调用方持有内存锁，使版本号分配和后续快照保存处于同一临界区。
+func (s *MemoryStore) newReleaseLocked(tenantID, examID, actorID string, input CreateInput) Release {
 	version := 1
 	for _, release := range s.releases {
 		if release.TenantID == tenantID && release.ExamID == examID && release.Version >= version {
 			version = release.Version + 1
 		}
 	}
-	return Release{ID: s.idLocked("release"), TenantID: tenantID, ExamID: examID, Version: version, Source: source, Reason: reason,
-		Status: StatusDraft, IdempotencyKey: idempotencyKey, VisibilityPolicy: cloneVisibility(visibility), AppealWindow: cloneWindow(window),
+	return Release{ID: s.idLocked("release"), TenantID: tenantID, ExamID: examID, Version: version, Source: input.Source, Reason: input.Reason,
+		Status: StatusDraft, IdempotencyKey: input.IdempotencyKey, VisibilityPolicy: cloneVisibility(input.VisibilityPolicy), AppealWindow: cloneWindow(input.AppealWindow),
 		CreatedBy: actorID, CreatedAt: s.now().UTC(), GateSnapshot: emptyGate(s.now().UTC())}
 }
 
@@ -368,26 +362,31 @@ func (s *MemoryStore) gateLocked(_ string, examID, releaseID string) Gate {
 		addIssue(&gate, GateIssue{Code: "no_submission_grades", Message: "there are no confirmed grades to release", Blocking: true, Count: 1, ActionRoute: "grades"})
 	}
 	for _, fact := range facts {
-		if fact.Status != "confirmed" && fact.Status != "published" && fact.Status != "locked" {
-			addIssue(&gate, GateIssue{Code: "grades_not_confirmed", Message: "a submission grade is not confirmed", Blocking: true, Count: 1, ActionRoute: "grades"})
-		}
-		if len(fact.Questions) == 0 {
-			addIssue(&gate, GateIssue{Code: "release_snapshot_incomplete", Message: "a submission has no question facts", Blocking: true, Count: 1, ActionRoute: "grades"})
-			continue
-		}
-		var total float64
-		for _, question := range fact.Questions {
-			if question.FinalGradeID == "" || question.QuestionID == "" || question.MaxScore < 0 || question.Score < 0 || question.Score > question.MaxScore {
-				addIssue(&gate, GateIssue{Code: "release_snapshot_incomplete", Message: "a question snapshot is incomplete", Blocking: true, Count: 1, ActionRoute: "grades"})
-			}
-			total += question.Score
-		}
-		if math.Abs(total-fact.TotalScore) > 0.000001 {
-			addIssue(&gate, GateIssue{Code: "score_integrity_mismatch", Message: "submission total does not match released question scores", Blocking: true, Count: 1, ActionRoute: "grades"})
-		}
+		addSubmissionFactGateIssues(&gate, fact)
 	}
 	gate.Passed = len(gate.Blocking) == 0
 	return gate
+}
+
+func addSubmissionFactGateIssues(gate *Gate, fact SubmissionFact) {
+	if fact.Status != "confirmed" && fact.Status != "published" && fact.Status != "locked" {
+		addIssue(gate, GateIssue{Code: "grades_not_confirmed", Message: "a submission grade is not confirmed", Blocking: true, Count: 1, ActionRoute: "grades"})
+	}
+	// 没有题目事实时只报告快照缺失，不能把缺失题目当作零分参与总分校验。
+	if len(fact.Questions) == 0 {
+		addIssue(gate, GateIssue{Code: "release_snapshot_incomplete", Message: "a submission has no question facts", Blocking: true, Count: 1, ActionRoute: "grades"})
+		return
+	}
+	var total float64
+	for _, question := range fact.Questions {
+		if question.FinalGradeID == "" || question.QuestionID == "" || question.MaxScore < 0 || question.Score < 0 || question.Score > question.MaxScore {
+			addIssue(gate, GateIssue{Code: "release_snapshot_incomplete", Message: "a question snapshot is incomplete", Blocking: true, Count: 1, ActionRoute: "grades"})
+		}
+		total += question.Score
+	}
+	if math.Abs(total-fact.TotalScore) > 0.000001 {
+		addIssue(gate, GateIssue{Code: "score_integrity_mismatch", Message: "submission total does not match released question scores", Blocking: true, Count: 1, ActionRoute: "grades"})
+	}
 }
 
 func (s *MemoryStore) snapshotFactsLocked(releaseID string) []SubmissionFact {

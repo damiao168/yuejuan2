@@ -7,8 +7,7 @@ import (
 	"sort"
 )
 
-// Validate again under the publish transaction. A page, registration run, or
-// template changed after derivation must make publication fail closed.
+// 在发布事务内再次校验。派生后若页面、配准运行或模板发生改变，必须拒绝发布。
 func (s *PostgresStore) anonymousPaperReadyTx(ctx context.Context, tx *sql.Tx, tenantID, releaseID string) (bool, error) {
 	var accepted, expected, matched, derived int
 	err := tx.QueryRowContext(ctx, `

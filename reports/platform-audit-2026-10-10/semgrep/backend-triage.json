@@ -1,0 +1,322 @@
+{
+  "SG-012": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "managed_model.public_json_transport 先限制 HTTPS，拒绝任何非公网 DNS 结果，再固定已校验 IP；HTTPSConnection 保留原 hostname 进行 SNI、证书链和主机名验证，响应有 4MB 上限并关闭连接。未发现由此调用直接引入的 SSRF/TLS 绕过；未来 Python 升级需关注 _create_connection 私有接口兼容性。"
+  },
+  "SG-013": {
+    "human_status": "needs_review",
+    "human_severity": "medium",
+    "human_notes": "模型 URL 来自受信部署配置，native adapter 还限定固定供应商 HTTPS 主机与路径，学校请求模型使用另一个固定公网地址且不自动跟随跳转的 transport。此处 urllib 默认允许自动重定向，合成无网络核验证明跨域跳转保留 Authorization；需供应商或配置的服务返回攻击者可控制的重定向才能触发，当前未证明存在此路径。建议带凭据客户端拒绝重定向，或逐跳校验同源并剥离敏感头。"
+  },
+  "SG-014": {
+    "human_status": "needs_review",
+    "human_severity": "medium",
+    "human_notes": "模型 URL 来自受信部署配置，native adapter 还限定固定供应商 HTTPS 主机与路径，学校请求模型使用另一个固定公网地址且不自动跟随跳转的 transport。此处 urllib 默认允许自动重定向，合成无网络核验证明跨域跳转保留 Authorization；需供应商或配置的服务返回攻击者可控制的重定向才能触发，当前未证明存在此路径。建议带凭据客户端拒绝重定向，或逐跳校验同源并剥离敏感头。"
+  },
+  "SG-015": {
+    "human_status": "needs_review",
+    "human_severity": "medium",
+    "human_notes": "模型 URL 来自受信部署配置，native adapter 还限定固定供应商 HTTPS 主机与路径，学校请求模型使用另一个固定公网地址且不自动跟随跳转的 transport。此处 urllib 默认允许自动重定向，合成无网络核验证明跨域跳转保留 Authorization；需供应商或配置的服务返回攻击者可控制的重定向才能触发，当前未证明存在此路径。建议带凭据客户端拒绝重定向，或逐跳校验同源并剥离敏感头。"
+  },
+  "SG-016": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "测试在 127.0.0.1 随机端口启动测试 HTTP 服务，URL 由 server_port 拼出，调用设置 timeout=2；测试覆盖认证、幂等和解析结果，未使用普通用户提供的目标 URL。此告警不代表生产 SSRF。"
+  },
+  "SG-017": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "测试在 127.0.0.1 随机端口启动测试 HTTP 服务，URL 由 server_port 拼出，调用设置 timeout=2；测试覆盖认证、幂等和解析结果，未使用普通用户提供的目标 URL。此告警不代表生产 SSRF。"
+  },
+  "SG-018": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "测试在 127.0.0.1 随机端口启动测试 HTTP 服务，URL 由 server_port 拼出，调用设置 timeout=2；测试覆盖认证、幂等和解析结果，未使用普通用户提供的目标 URL。此告警不代表生产 SSRF。"
+  },
+  "SG-019": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "测试在 127.0.0.1 随机端口启动测试 HTTP 服务，URL 由 server_port 拼出，调用设置 timeout=2；测试覆盖认证、幂等和解析结果，未使用普通用户提供的目标 URL。此告警不代表生产 SSRF。"
+  },
+  "SG-020": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "测试在 127.0.0.1 随机端口启动测试 HTTP 服务，URL 由 server_port 拼出，调用设置 timeout=2；测试覆盖认证、幂等和解析结果，未使用普通用户提供的目标 URL。此告警不代表生产 SSRF。"
+  },
+  "SG-021": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "测试在 127.0.0.1 随机端口启动测试 HTTP 服务，URL 由 server_port 拼出，调用设置 timeout=2；测试覆盖认证、幂等和解析结果，未使用普通用户提供的目标 URL。此告警不代表生产 SSRF。"
+  },
+  "SG-022": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "测试在 127.0.0.1 随机端口启动测试 HTTP 服务，URL 由 server_port 拼出，调用设置 timeout=2；测试覆盖认证、幂等和解析结果，未使用普通用户提供的目标 URL。此告警不代表生产 SSRF。"
+  },
+  "SG-023": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "测试在 127.0.0.1 随机端口启动测试 HTTP 服务，URL 由 server_port 拼出，调用设置 timeout=2；测试覆盖认证、幂等和解析结果，未使用普通用户提供的目标 URL。此告警不代表生产 SSRF。"
+  },
+  "SG-024": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "测试在 127.0.0.1 随机端口启动测试 HTTP 服务，URL 由 server_port 拼出，调用设置 timeout=2；测试覆盖认证、幂等和解析结果，未使用普通用户提供的目标 URL。此告警不代表生产 SSRF。"
+  },
+  "SG-052": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "测试从固定同目录脚本读取 AST，只编译白名单函数定义，用合成输入检查生成逻辑。exec 输入是仓库维护代码，不来自 API、上传文件或不可信模型输出；可改为可导入辅助模块减少动态执行，但未证实命令注入入口。"
+  },
+  "SG-053": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "Cookie 已显式设置 Secure: h.cookieSecure、HttpOnly:true、SameSiteLax。配置默认按环境开启 Secure，productionSecurityProblems 在生产类似环境拒绝 SessionCookieSecure=false（config.go:497）；规则未解析动态布尔值，不应误判为缺少 Secure。"
+  },
+  "SG-054": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "Cookie 已显式设置 Secure: h.cookieSecure、HttpOnly:true、SameSiteLax。配置默认按环境开启 Secure，productionSecurityProblems 在生产类似环境拒绝 SessionCookieSecure=false（config.go:497）；规则未解析动态布尔值，不应误判为缺少 Secure。"
+  },
+  "SG-055": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "Cookie 已显式设置 Secure: h.cookieSecure、HttpOnly:true、SameSiteLax。配置默认按环境开启 Secure，productionSecurityProblems 在生产类似环境拒绝 SessionCookieSecure=false（config.go:497）；规则未解析动态布尔值，不应误判为缺少 Secure。"
+  },
+  "SG-056": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "Cookie 已显式设置 Secure: h.cookieSecure、HttpOnly:true、SameSiteLax。配置默认按环境开启 Secure，productionSecurityProblems 在生产类似环境拒绝 SessionCookieSecure=false（config.go:497）；规则未解析动态布尔值，不应误判为缺少 Secure。"
+  },
+  "SG-057": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "命中的是 httptest 请求侧 AddCookie 构造器；HttpOnly/Secure 是 Set-Cookie 响应属性，浏览器发送 Cookie 请求头不携带这些属性。测试用来验证 CSRF 与无效 Authorization 回退，未改变真实服务设置 Cookie 的安全属性。"
+  },
+  "SG-058": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "命中的是 httptest 请求侧 AddCookie 构造器；HttpOnly/Secure 是 Set-Cookie 响应属性，浏览器发送 Cookie 请求头不携带这些属性。测试用来验证 CSRF 与无效 Authorization 回退，未改变真实服务设置 Cookie 的安全属性。"
+  },
+  "SG-060": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "命中的是 httptest 请求侧 AddCookie 构造器；HttpOnly/Secure 是 Set-Cookie 响应属性，浏览器发送 Cookie 请求头不携带这些属性。测试用来验证 CSRF 与无效 Authorization 回退，未改变真实服务设置 Cookie 的安全属性。"
+  },
+  "SG-061": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "命中的是 httptest 请求侧 AddCookie 构造器；HttpOnly/Secure 是 Set-Cookie 响应属性，浏览器发送 Cookie 请求头不携带这些属性。测试用来验证 CSRF 与无效 Authorization 回退，未改变真实服务设置 Cookie 的安全属性。"
+  },
+  "SG-062": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "命中的是 httptest 请求侧 AddCookie 构造器；HttpOnly/Secure 是 Set-Cookie 响应属性，浏览器发送 Cookie 请求头不携带这些属性。测试用来验证 CSRF 与无效 Authorization 回退，未改变真实服务设置 Cookie 的安全属性。"
+  },
+  "SG-063": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "命中的是 httptest 请求侧 AddCookie 构造器；HttpOnly/Secure 是 Set-Cookie 响应属性，浏览器发送 Cookie 请求头不携带这些属性。测试用来验证 CSRF 与无效 Authorization 回退，未改变真实服务设置 Cookie 的安全属性。"
+  },
+  "SG-064": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "命中的是 httptest 请求侧 AddCookie 构造器；HttpOnly/Secure 是 Set-Cookie 响应属性，浏览器发送 Cookie 请求头不携带这些属性。测试用来验证 CSRF 与无效 Authorization 回退，未改变真实服务设置 Cookie 的安全属性。"
+  },
+  "SG-065": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "命中的是 httptest 请求侧 AddCookie 构造器；HttpOnly/Secure 是 Set-Cookie 响应属性，浏览器发送 Cookie 请求头不携带这些属性。测试用来验证 CSRF 与无效 Authorization 回退，未改变真实服务设置 Cookie 的安全属性。"
+  },
+  "SG-066": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "命中的是 httptest 请求侧 AddCookie 构造器；HttpOnly/Secure 是 Set-Cookie 响应属性，浏览器发送 Cookie 请求头不携带这些属性。测试用来验证 CSRF 与无效 Authorization 回退，未改变真实服务设置 Cookie 的安全属性。"
+  },
+  "SG-067": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "命中的是 httptest 请求侧 AddCookie 构造器；HttpOnly/Secure 是 Set-Cookie 响应属性，浏览器发送 Cookie 请求头不携带这些属性。测试用来验证 CSRF 与无效 Authorization 回退，未改变真实服务设置 Cookie 的安全属性。"
+  },
+  "SG-059": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "files.transition 只拼接程序生成的 $7、$8 等占位符与固定 assetColumns，tenant、id、revision、状态和错误详情通过 args... 绑定。来源状态来自代码常量；未将外部内容拼入 SQL 语法。"
+  },
+  "SG-068": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "TestNewClientRejectsTLSBeforeVersion12 故意建立 MaxVersion=TLS1.1 的测试端点，断言真实 MinIO 客户端拒绝该连接。命中代码是负向测试条件，不能建议把它改成 TLS1.2 使测试失去覆盖。"
+  },
+  "SG-069": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "math/rand 仅用于 retryManagedReadOnlyRequest 的毫秒级重试抖动（managed_config_probe.go:330），未用于令牌、密码、加密密钥或租约随机值。非密码学调度随机性允许使用该包。"
+  },
+  "SG-070": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "score.ListExamGrades 拼接固定 WHERE 片段和由 len(args) 生成的占位符；Status、Query、Cursor、Limit 均单独绑定，tenant/exam 也在 WHERE 和 JOIN 中。未发现动态查询文本来自用户输入的 SQL 注入。"
+  },
+  "SG-071": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "E2E 数据库测试使用固定表名白名单或本地 UUID 生成的隔离数据库、角色、触发器名，数据库/角色标识通过 pgx.Identifier.Sanitize 引用；故障触发条件拼入的命令 ID/题目 ID 来自测试固定字符串或 UUID fixture。不是生产 API 查询，也未找到可由外部输入控制的拼接值。"
+  },
+  "SG-072": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "E2E 数据库测试使用固定表名白名单或本地 UUID 生成的隔离数据库、角色、触发器名，数据库/角色标识通过 pgx.Identifier.Sanitize 引用；故障触发条件拼入的命令 ID/题目 ID 来自测试固定字符串或 UUID fixture。不是生产 API 查询，也未找到可由外部输入控制的拼接值。"
+  },
+  "SG-073": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "E2E 数据库测试使用固定表名白名单或本地 UUID 生成的隔离数据库、角色、触发器名，数据库/角色标识通过 pgx.Identifier.Sanitize 引用；故障触发条件拼入的命令 ID/题目 ID 来自测试固定字符串或 UUID fixture。不是生产 API 查询，也未找到可由外部输入控制的拼接值。"
+  },
+  "SG-074": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "E2E 数据库测试使用固定表名白名单或本地 UUID 生成的隔离数据库、角色、触发器名，数据库/角色标识通过 pgx.Identifier.Sanitize 引用；故障触发条件拼入的命令 ID/题目 ID 来自测试固定字符串或 UUID fixture。不是生产 API 查询，也未找到可由外部输入控制的拼接值。"
+  },
+  "SG-075": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "E2E 数据库测试使用固定表名白名单或本地 UUID 生成的隔离数据库、角色、触发器名，数据库/角色标识通过 pgx.Identifier.Sanitize 引用；故障触发条件拼入的命令 ID/题目 ID 来自测试固定字符串或 UUID fixture。不是生产 API 查询，也未找到可由外部输入控制的拼接值。"
+  },
+  "SG-076": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "E2E 数据库测试使用固定表名白名单或本地 UUID 生成的隔离数据库、角色、触发器名，数据库/角色标识通过 pgx.Identifier.Sanitize 引用；故障触发条件拼入的命令 ID/题目 ID 来自测试固定字符串或 UUID fixture。不是生产 API 查询，也未找到可由外部输入控制的拼接值。"
+  },
+  "SG-077": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "E2E 数据库测试使用固定表名白名单或本地 UUID 生成的隔离数据库、角色、触发器名，数据库/角色标识通过 pgx.Identifier.Sanitize 引用；故障触发条件拼入的命令 ID/题目 ID 来自测试固定字符串或 UUID fixture。不是生产 API 查询，也未找到可由外部输入控制的拼接值。"
+  },
+  "SG-078": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "E2E 数据库测试使用固定表名白名单或本地 UUID 生成的隔离数据库、角色、触发器名，数据库/角色标识通过 pgx.Identifier.Sanitize 引用；故障触发条件拼入的命令 ID/题目 ID 来自测试固定字符串或 UUID fixture。不是生产 API 查询，也未找到可由外部输入控制的拼接值。"
+  },
+  "SG-079": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "E2E 数据库测试使用固定表名白名单或本地 UUID 生成的隔离数据库、角色、触发器名，数据库/角色标识通过 pgx.Identifier.Sanitize 引用；故障触发条件拼入的命令 ID/题目 ID 来自测试固定字符串或 UUID fixture。不是生产 API 查询，也未找到可由外部输入控制的拼接值。"
+  },
+  "SG-080": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "E2E 数据库测试使用固定表名白名单或本地 UUID 生成的隔离数据库、角色、触发器名，数据库/角色标识通过 pgx.Identifier.Sanitize 引用；故障触发条件拼入的命令 ID/题目 ID 来自测试固定字符串或 UUID fixture。不是生产 API 查询，也未找到可由外部输入控制的拼接值。"
+  },
+  "SG-081": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "E2E 数据库测试使用固定表名白名单或本地 UUID 生成的隔离数据库、角色、触发器名，数据库/角色标识通过 pgx.Identifier.Sanitize 引用；故障触发条件拼入的命令 ID/题目 ID 来自测试固定字符串或 UUID fixture。不是生产 API 查询，也未找到可由外部输入控制的拼接值。"
+  },
+  "SG-082": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "E2E 数据库测试使用固定表名白名单或本地 UUID 生成的隔离数据库、角色、触发器名，数据库/角色标识通过 pgx.Identifier.Sanitize 引用；故障触发条件拼入的命令 ID/题目 ID 来自测试固定字符串或 UUID fixture。不是生产 API 查询，也未找到可由外部输入控制的拼接值。"
+  },
+  "SG-083": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "E2E 数据库测试使用固定表名白名单或本地 UUID 生成的隔离数据库、角色、触发器名，数据库/角色标识通过 pgx.Identifier.Sanitize 引用；故障触发条件拼入的命令 ID/题目 ID 来自测试固定字符串或 UUID fixture。不是生产 API 查询，也未找到可由外部输入控制的拼接值。"
+  },
+  "SG-084": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "E2E 数据库测试使用固定表名白名单或本地 UUID 生成的隔离数据库、角色、触发器名，数据库/角色标识通过 pgx.Identifier.Sanitize 引用；故障触发条件拼入的命令 ID/题目 ID 来自测试固定字符串或 UUID fixture。不是生产 API 查询，也未找到可由外部输入控制的拼接值。"
+  },
+  "SG-085": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "E2E 数据库测试使用固定表名白名单或本地 UUID 生成的隔离数据库、角色、触发器名，数据库/角色标识通过 pgx.Identifier.Sanitize 引用；故障触发条件拼入的命令 ID/题目 ID 来自测试固定字符串或 UUID fixture。不是生产 API 查询，也未找到可由外部输入控制的拼接值。"
+  },
+  "SG-086": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "E2E 数据库测试使用固定表名白名单或本地 UUID 生成的隔离数据库、角色、触发器名，数据库/角色标识通过 pgx.Identifier.Sanitize 引用；故障触发条件拼入的命令 ID/题目 ID 来自测试固定字符串或 UUID fixture。不是生产 API 查询，也未找到可由外部输入控制的拼接值。"
+  },
+  "SG-087": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "E2E 数据库测试使用固定表名白名单或本地 UUID 生成的隔离数据库、角色、触发器名，数据库/角色标识通过 pgx.Identifier.Sanitize 引用；故障触发条件拼入的命令 ID/题目 ID 来自测试固定字符串或 UUID fixture。不是生产 API 查询，也未找到可由外部输入控制的拼接值。"
+  },
+  "SG-088": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "E2E 数据库测试使用固定表名白名单或本地 UUID 生成的隔离数据库、角色、触发器名，数据库/角色标识通过 pgx.Identifier.Sanitize 引用；故障触发条件拼入的命令 ID/题目 ID 来自测试固定字符串或 UUID fixture。不是生产 API 查询，也未找到可由外部输入控制的拼接值。"
+  },
+  "SG-089": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "E2E 数据库测试使用固定表名白名单或本地 UUID 生成的隔离数据库、角色、触发器名，数据库/角色标识通过 pgx.Identifier.Sanitize 引用；故障触发条件拼入的命令 ID/题目 ID 来自测试固定字符串或 UUID fixture。不是生产 API 查询，也未找到可由外部输入控制的拼接值。"
+  },
+  "SG-092": {
+    "human_status": "needs_review",
+    "human_severity": "medium",
+    "human_notes": "初始 URL 通过 _trusted_service_url/_trusted_url 限制配置 API 同源，具备 timeout 和受限响应读取。但 request.urlopen 使用默认重定向处理器，跳转后不重新执行同源校验；合成无网络验证显示 Authorization 与 Worker Lease 头会保留至跨域 GET 跳转。风险前提是 API/反向代理返回攻击者可控重定向，未在本次静态检查中证明普通用户能触发。建议凭据请求禁止自动跳转，或逐跳校验 origin 且去掉敏感头。"
+  },
+  "SG-093": {
+    "human_status": "needs_review",
+    "human_severity": "medium",
+    "human_notes": "初始 URL 通过 _trusted_service_url/_trusted_url 限制配置 API 同源，具备 timeout 和受限响应读取。但 request.urlopen 使用默认重定向处理器，跳转后不重新执行同源校验；合成无网络验证显示 Authorization 与 Worker Lease 头会保留至跨域 GET 跳转。风险前提是 API/反向代理返回攻击者可控重定向，未在本次静态检查中证明普通用户能触发。建议凭据请求禁止自动跳转，或逐跳校验 origin 且去掉敏感头。"
+  },
+  "SG-094": {
+    "human_status": "needs_review",
+    "human_severity": "medium",
+    "human_notes": "初始 URL 通过 _trusted_service_url/_trusted_url 限制配置 API 同源，具备 timeout 和受限响应读取。但 request.urlopen 使用默认重定向处理器，跳转后不重新执行同源校验；合成无网络验证显示 Authorization 与 Worker Lease 头会保留至跨域 GET 跳转。风险前提是 API/反向代理返回攻击者可控重定向，未在本次静态检查中证明普通用户能触发。建议凭据请求禁止自动跳转，或逐跳校验 origin 且去掉敏感头。"
+  },
+  "SG-097": {
+    "human_status": "needs_review",
+    "human_severity": "medium",
+    "human_notes": "初始 URL 通过 _trusted_service_url/_trusted_url 限制配置 API 同源，具备 timeout 和受限响应读取。但 request.urlopen 使用默认重定向处理器，跳转后不重新执行同源校验；合成无网络验证显示 Authorization 与 Worker Lease 头会保留至跨域 GET 跳转。风险前提是 API/反向代理返回攻击者可控重定向，未在本次静态检查中证明普通用户能触发。建议凭据请求禁止自动跳转，或逐跳校验 origin 且去掉敏感头。"
+  },
+  "SG-098": {
+    "human_status": "needs_review",
+    "human_severity": "medium",
+    "human_notes": "初始 URL 通过 _trusted_service_url/_trusted_url 限制配置 API 同源，具备 timeout 和受限响应读取。但 request.urlopen 使用默认重定向处理器，跳转后不重新执行同源校验；合成无网络验证显示 Authorization 与 Worker Lease 头会保留至跨域 GET 跳转。风险前提是 API/反向代理返回攻击者可控重定向，未在本次静态检查中证明普通用户能触发。建议凭据请求禁止自动跳转，或逐跳校验 origin 且去掉敏感头。"
+  },
+  "SG-100": {
+    "human_status": "needs_review",
+    "human_severity": "medium",
+    "human_notes": "初始 URL 通过 _trusted_service_url/_trusted_url 限制配置 API 同源，具备 timeout 和受限响应读取。但 request.urlopen 使用默认重定向处理器，跳转后不重新执行同源校验；合成无网络验证显示 Authorization 与 Worker Lease 头会保留至跨域 GET 跳转。风险前提是 API/反向代理返回攻击者可控重定向，未在本次静态检查中证明普通用户能触发。建议凭据请求禁止自动跳转，或逐跳校验 origin 且去掉敏感头。"
+  },
+  "SG-101": {
+    "human_status": "needs_review",
+    "human_severity": "medium",
+    "human_notes": "初始 URL 通过 _trusted_service_url/_trusted_url 限制配置 API 同源，具备 timeout 和受限响应读取。但 request.urlopen 使用默认重定向处理器，跳转后不重新执行同源校验；合成无网络验证显示 Authorization 与 Worker Lease 头会保留至跨域 GET 跳转。风险前提是 API/反向代理返回攻击者可控重定向，未在本次静态检查中证明普通用户能触发。建议凭据请求禁止自动跳转，或逐跳校验 origin 且去掉敏感头。"
+  },
+  "SG-102": {
+    "human_status": "needs_review",
+    "human_severity": "medium",
+    "human_notes": "初始 URL 通过 _trusted_service_url/_trusted_url 限制配置 API 同源，具备 timeout 和受限响应读取。但 request.urlopen 使用默认重定向处理器，跳转后不重新执行同源校验；合成无网络验证显示 Authorization 与 Worker Lease 头会保留至跨域 GET 跳转。风险前提是 API/反向代理返回攻击者可控重定向，未在本次静态检查中证明普通用户能触发。建议凭据请求禁止自动跳转，或逐跳校验 origin 且去掉敏感头。"
+  },
+  "SG-104": {
+    "human_status": "needs_review",
+    "human_severity": "medium",
+    "human_notes": "初始 URL 通过 _trusted_service_url/_trusted_url 限制配置 API 同源，具备 timeout 和受限响应读取。但 request.urlopen 使用默认重定向处理器，跳转后不重新执行同源校验；合成无网络验证显示 Authorization 与 Worker Lease 头会保留至跨域 GET 跳转。风险前提是 API/反向代理返回攻击者可控重定向，未在本次静态检查中证明普通用户能触发。建议凭据请求禁止自动跳转，或逐跳校验 origin 且去掉敏感头。"
+  },
+  "SG-099": {
+    "human_status": "needs_review",
+    "human_severity": "medium",
+    "human_notes": "数学验证目标来自受信服务配置，操作名是内部固定调用，设置 timeout 与 JSON 大小上限，未见直接用户 URL 输入。仍使用默认 urllib 重定向，X-EduGrade-Internal-Token 等自定义凭据头不会自动清除；需服务返回不可信重定向才会触发，当前缺少可利用路径证据。建议禁用凭据请求重定向。"
+  },
+  "SG-095": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "这里只调用 pickle.dumps 对可信测试内存对象序列化，验证 multiprocessing 管道大结果场景；没有 pickle.loads/load 读取用户数据。序列化大小断言本身不是不安全反序列化。"
+  },
+  "SG-103": {
+    "human_status": "false_positive",
+    "human_severity": null,
+    "human_notes": "_config 位于 tests/test_main.py，固定测试字符串只传给 FakeClient/FakeRunner 与 monkeypatch，用来覆盖登录和配置边界，未用作真实 Worker 生产默认密码。报告不复述此合成值。"
+  },
+  "SG-105": {
+    "human_status": "test_only",
+    "human_severity": "low",
+    "human_notes": "E2E 脚本目标来自测试环境变量，默认 Compose 内部固定服务名，不接受生产 API 用户 URL。通用 urlopen 规则只发现动态地址；测试工具可同样采用拒绝重定向与受限响应读取，但当前不构成已确认生产 SSRF。"
+  }
+}

@@ -260,7 +260,7 @@ func TestEffectiveProjectionFailsClosedOnLatestCorrectionFailure(t *testing.T) {
 	}}, "tenant-a", base.AnswerSegmentID); !errors.Is(err, ErrInvalidInput) {
 		t.Fatalf("mismatched correction was projected: %v", err)
 	}
-	// The resolver must use the dedicated latest lookup, never a capped list.
+	// 解析器必须使用专门的最新记录查询，不能使用有数量上限的列表。
 	effective, err := ResolveEffectiveArtifact(ctx, artifacts, latestCorrectionStub{correction: Correction{
 		TenantID: "tenant-a", ArtifactID: base.ID, Revision: 501, CorrectedContract: validInput(),
 	}}, "tenant-a", base.AnswerSegmentID)

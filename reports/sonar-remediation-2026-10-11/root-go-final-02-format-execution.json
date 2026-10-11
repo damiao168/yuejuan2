@@ -1,0 +1,8 @@
+{
+  "command": [
+    "D:/tools/go/bin/gofmt.exe",
+    "D:\\project\\yuejuan\\services\\api-gateway\\tools\\import-fujian-2024-math-simulation\\main_batch9_test.go"
+  ],
+  "exit_code": 0,
+  "stderr": ""
+}

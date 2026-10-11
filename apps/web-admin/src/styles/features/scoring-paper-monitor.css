@@ -1,5 +1,5 @@
-/* Whole-paper scoring monitor: the paper is the primary workspace and red ink
-   is reserved for score evidence, matching the physical marking convention. */
+/* 整卷评分监控以试卷为主要工作区，红色标记
+   只用于评分证据，遵循纸面阅卷习惯。 */
 .scoring-paper-monitor {
   overflow: hidden;
   margin-bottom: 28px;

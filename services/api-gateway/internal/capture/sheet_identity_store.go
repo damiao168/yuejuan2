@@ -243,6 +243,35 @@ FOR UPDATE
 `, tenantID, sheetSerial).Scan(&sheetStatus); err != nil {
 		return mapNotFound(err)
 	}
+	pages, err := loadSheetCapturePagesTx(ctx, tx, tenantID, sheetSerial)
+	if err != nil {
+		return err
+	}
+	groups := groupSheetCapturePages(pages)
+	if sheetStatus == "revoked" {
+		if err = markRevokedSheetCapturesTx(ctx, tx, tenantID, sheetSerial, groups); err != nil {
+			return err
+		}
+		return s.aggregateSheetBatchesTx(ctx, tx, tenantID, groups.batchIDs)
+	}
+	hasDuplicate, err := reconcileActiveSheetGroupsTx(ctx, tx, tenantID, groups.activeGroups)
+	if err != nil {
+		return err
+	}
+	if _, err = tx.ExecContext(ctx, `
+UPDATE answer_sheet_print_sheet
+SET status=$3,updated_at=now()
+WHERE tenant_id=$1 AND id=$2::uuid
+`, tenantID, sheetSerial, sheetCaptureStatus(len(pages), hasDuplicate)); err != nil {
+		return err
+	}
+	if err = reconcileSheetSubmissionsTx(ctx, tx, tenantID, sheetSerial, groups.submissionIDs); err != nil {
+		return err
+	}
+	return s.aggregateSheetBatchesTx(ctx, tx, tenantID, groups.batchIDs)
+}
+
+func loadSheetCapturePagesTx(ctx context.Context, tx *sql.Tx, tenantID, sheetSerial string) ([]sheetCapturePageState, error) {
 	rows, err := tx.QueryContext(ctx, `
 SELECT cp.id::text,COALESCE(cp.submission_id::text,''),cp.capture_batch_id::text,
        COALESCE(cp.assigned_page_no,0),cp.status,COALESCE(sp.quality_status,'unchecked'),
@@ -256,7 +285,7 @@ ORDER BY cp.created_at,cp.id
 FOR UPDATE OF cp
 `, tenantID, sheetSerial)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	pages := []sheetCapturePageState{}
 	for rows.Next() {
@@ -266,38 +295,51 @@ FOR UPDATE OF cp
 			&page.Status, &page.QualityStatus, &page.ConflictCode, &page.ConflictPageID,
 		); err != nil {
 			rows.Close()
-			return err
+			return nil, err
 		}
 		pages = append(pages, page)
 	}
 	if err = rows.Err(); err != nil {
 		rows.Close()
-		return err
+		return nil, err
 	}
 	if err = rows.Close(); err != nil {
-		return err
+		return nil, err
 	}
+	return pages, nil
+}
 
-	activeGroups := map[int][]sheetCapturePageState{}
-	submissionIDs := map[string]bool{}
-	activeSubmissionIDs := map[string]bool{}
-	batchIDs := map[string]bool{}
+type sheetCaptureGroups struct {
+	activeGroups        map[int][]sheetCapturePageState
+	submissionIDs       map[string]bool
+	activeSubmissionIDs map[string]bool
+	batchIDs            map[string]bool
+}
+
+func groupSheetCapturePages(pages []sheetCapturePageState) sheetCaptureGroups {
+	groups := sheetCaptureGroups{
+		activeGroups: map[int][]sheetCapturePageState{}, submissionIDs: map[string]bool{},
+		activeSubmissionIDs: map[string]bool{}, batchIDs: map[string]bool{},
+	}
 	for _, page := range pages {
 		if page.SubmissionID != "" {
-			submissionIDs[page.SubmissionID] = true
+			groups.submissionIDs[page.SubmissionID] = true
 		}
-		batchIDs[page.BatchID] = true
+		groups.batchIDs[page.BatchID] = true
 		if page.Status != "deleted" {
-			activeGroups[page.PageNo] = append(activeGroups[page.PageNo], page)
+			groups.activeGroups[page.PageNo] = append(groups.activeGroups[page.PageNo], page)
 			if page.SubmissionID != "" {
-				activeSubmissionIDs[page.SubmissionID] = true
+				groups.activeSubmissionIDs[page.SubmissionID] = true
 			}
 		}
 	}
-	if sheetStatus == "revoked" {
-		for _, group := range activeGroups {
-			for _, page := range group {
-				if _, err = tx.ExecContext(ctx, `
+	return groups
+}
+
+func markRevokedSheetCapturesTx(ctx context.Context, tx *sql.Tx, tenantID, sheetSerial string, groups sheetCaptureGroups) error {
+	for _, group := range groups.activeGroups {
+		for _, page := range group {
+			if _, err := tx.ExecContext(ctx, `
 UPDATE capture_page
 SET status='needs_review',
     page_identity=page_identity || jsonb_build_object(
@@ -308,12 +350,12 @@ SET status='needs_review',
     revision=revision+1,updated_at=now()
 WHERE tenant_id=$1 AND id=$2::uuid
 `, tenantID, page.PageID, sheetSerial); err != nil {
-					return err
-				}
+				return err
 			}
 		}
-		for submissionID := range activeSubmissionIDs {
-			if _, err = tx.ExecContext(ctx, `
+	}
+	for submissionID := range groups.activeSubmissionIDs {
+		if _, err := tx.ExecContext(ctx, `
 UPDATE submission
 SET identity_status='conflict',identity_revision=identity_revision+1,
     identity_evidence=identity_evidence || jsonb_build_object(
@@ -324,23 +366,37 @@ SET identity_status='conflict',identity_revision=identity_revision+1,
     updated_at=now()
 WHERE tenant_id=$1 AND id=$2::uuid AND deleted_at IS NULL
 `, tenantID, submissionID, sheetSerial); err != nil {
-				return err
-			}
+			return err
 		}
-		return s.aggregateSheetBatchesTx(ctx, tx, tenantID, batchIDs)
 	}
+	return nil
+}
 
+func reconcileActiveSheetGroupsTx(ctx context.Context, tx *sql.Tx, tenantID string, activeGroups map[int][]sheetCapturePageState) (bool, error) {
 	hasDuplicate := false
 	for _, group := range activeGroups {
 		if len(group) > 1 {
 			hasDuplicate = true
-			firstPageID := group[0].PageID
-			for _, page := range group {
-				conflictPageID := firstPageID
-				if page.PageID == firstPageID && len(group) > 1 {
-					conflictPageID = group[1].PageID
-				}
-				if _, err = tx.ExecContext(ctx, `
+			if err := markDuplicateSheetGroupTx(ctx, tx, tenantID, group); err != nil {
+				return false, err
+			}
+			continue
+		}
+		if err := recoverSheetDuplicatePageTx(ctx, tx, tenantID, group[0]); err != nil {
+			return false, err
+		}
+	}
+	return hasDuplicate, nil
+}
+
+func markDuplicateSheetGroupTx(ctx context.Context, tx *sql.Tx, tenantID string, group []sheetCapturePageState) error {
+	firstPageID := group[0].PageID
+	for _, page := range group {
+		conflictPageID := firstPageID
+		if page.PageID == firstPageID {
+			conflictPageID = group[1].PageID
+		}
+		if _, err := tx.ExecContext(ctx, `
 UPDATE capture_page
 SET status='needs_review',
     duplicate_of_page_id=CASE
@@ -355,26 +411,19 @@ SET status='needs_review',
     revision=revision+1,updated_at=now()
 WHERE tenant_id=$1 AND id=$2::uuid
 `, tenantID, page.PageID, firstPageID, conflictPageID); err != nil {
-					return err
-				}
-			}
-			continue
+			return err
 		}
-		// 删除重复扫描后只解除重复页这一种冲突，并回到质检结果对应阶段，不直接标为就绪。
-		page := group[0]
-		if page.ConflictCode != "sheet_page_duplicate" {
-			continue
-		}
-		recoveredStatus := "quality_checking"
-		switch page.QualityStatus {
-		case "passed":
-			recoveredStatus = "normalized"
-		case "review":
-			recoveredStatus = "needs_review"
-		case "failed":
-			recoveredStatus = "quality_rejected"
-		}
-		if _, err = tx.ExecContext(ctx, `
+	}
+	return nil
+}
+
+// 删除重复扫描后只解除重复页这一种冲突，并回到质检结果对应阶段，不直接标为就绪。
+func recoverSheetDuplicatePageTx(ctx context.Context, tx *sql.Tx, tenantID string, page sheetCapturePageState) error {
+	if page.ConflictCode != "sheet_page_duplicate" {
+		return nil
+	}
+	recoveredStatus := recoveredSheetPageStatus(page.QualityStatus)
+	_, err := tx.ExecContext(ctx, `
 UPDATE capture_page
 SET status=$3,
     duplicate_of_page_id=NULL,
@@ -382,28 +431,37 @@ SET status=$3,
       || jsonb_build_object('barcode_status','verified'),
     revision=revision+1,updated_at=now()
 WHERE tenant_id=$1 AND id=$2::uuid
-`, tenantID, page.PageID, recoveredStatus); err != nil {
-			return err
-		}
-	}
+`, tenantID, page.PageID, recoveredStatus)
+	return err
+}
 
-	nextSheetStatus := "issued"
-	if len(pages) > 0 {
-		nextSheetStatus = "observed"
+func recoveredSheetPageStatus(qualityStatus string) string {
+	switch qualityStatus {
+	case "passed":
+		return "normalized"
+	case "review":
+		return "needs_review"
+	case "failed":
+		return "quality_rejected"
+	default:
+		return "quality_checking"
 	}
+}
+
+func sheetCaptureStatus(pageCount int, hasDuplicate bool) string {
 	if hasDuplicate {
-		nextSheetStatus = "conflict"
+		return "conflict"
 	}
-	if _, err = tx.ExecContext(ctx, `
-UPDATE answer_sheet_print_sheet
-SET status=$3,updated_at=now()
-WHERE tenant_id=$1 AND id=$2::uuid
-`, tenantID, sheetSerial, nextSheetStatus); err != nil {
-		return err
+	if pageCount > 0 {
+		return "observed"
 	}
+	return "issued"
+}
+
+func reconcileSheetSubmissionsTx(ctx context.Context, tx *sql.Tx, tenantID, sheetSerial string, submissionIDs map[string]bool) error {
 	for submissionID := range submissionIDs {
 		var hasActiveDuplicate bool
-		if err = tx.QueryRowContext(ctx, `
+		if err := tx.QueryRowContext(ctx, `
 SELECT EXISTS (
   SELECT 1
   FROM capture_page
@@ -415,7 +473,7 @@ SELECT EXISTS (
 			return err
 		}
 		if hasActiveDuplicate {
-			if _, err = tx.ExecContext(ctx, `
+			if _, err := tx.ExecContext(ctx, `
 UPDATE submission
 SET identity_status='conflict',identity_revision=identity_revision+1,
     identity_evidence=identity_evidence || jsonb_build_object(
@@ -430,7 +488,7 @@ WHERE tenant_id=$1 AND id=$2::uuid AND deleted_at IS NULL
 			}
 			continue
 		}
-		if _, err = tx.ExecContext(ctx, `
+		if _, err := tx.ExecContext(ctx, `
 UPDATE submission
 SET identity_status='unassigned',identity_revision=identity_revision+1,
     identity_evidence=identity_evidence - 'method' - 'conflict_code' - 'sheet_serial',
@@ -442,7 +500,7 @@ WHERE tenant_id=$1 AND id=$2::uuid AND deleted_at IS NULL
 			return err
 		}
 	}
-	return s.aggregateSheetBatchesTx(ctx, tx, tenantID, batchIDs)
+	return nil
 }
 
 func (s *PostgresStore) aggregateSheetBatchesTx(

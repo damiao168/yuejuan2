@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   App,
@@ -11,16 +11,14 @@ import {
   Form,
   Input,
   InputNumber,
-  List,
   Select,
   Space,
-  Spin,
   Table,
   Tag,
   Typography,
   type TableColumnsType
 } from "antd";
-import { CheckCircle2, ClipboardCheck, FlaskConical, RefreshCw, ShieldAlert, SlidersHorizontal } from "lucide-react";
+import { FlaskConical, RefreshCw, ShieldAlert } from "lucide-react";
 import { ApiClientError, getSafeUserText, getUserErrorMessage } from "../../api/client";
 import {
   addGradingEvaluationObservation,
@@ -62,16 +60,16 @@ import {
   type ModelCalibrationEvidence,
   type PutAIEligibilityPolicyRequest
 } from "../../api/scoringAssurance";
-
-const subjectOptions = [
-  ["chinese", "语文"], ["mathematics", "数学"], ["english", "英语"], ["physics", "物理"], ["chemistry", "化学"],
-  ["biology", "生物"], ["history", "历史"], ["geography", "地理"], ["ethics_politics", "道德与法治 / 思想政治"]
-].map(([value, label]) => ({ value, label }));
-
-const archetypeOptions = [
-  ["selected_response", "选择题"], ["exact_text", "精确文本"], ["numeric_expression", "数值表达式"], ["structured_steps", "步骤题"],
-  ["short_constructed", "简答题"], ["extended_response", "长作答"], ["diagram_graph", "图表题"], ["table_experiment", "表格/实验题"]
-].map(([value, label]) => ({ value, label }));
+import { CalibrationDetail, DisagreementQueue, EligibilityPolicyPanel, EvaluationDetail } from "./ScoringAssuranceViews";
+import { downloadGovernanceMaterial, observationExample } from "./governanceMaterials";
+import {
+  assuranceCalibrationStatusColor, assuranceCalibrationStatusLabel, assuranceCalibrationTransitionMessage,
+  assuranceErrorSourceOptions as errorSourceOptions, assuranceEvaluationStatusColor, assuranceEvaluationStatusLabel
+} from "./scoringAssurancePresentation";
+import {
+  eligibilitySubjects as subjectOptions, eligibilityArchetypes as archetypeOptions, eligibilityStages, eligibilityRisks,
+  eligibilityScopeLabel, isCompleteEligibilitySelection, type EligibilitySelection
+} from "./eligibilityScope";
 
 const scoringModeOptions = [
   ["RULE_AUTO", "规则自动"], ["AI_ASSIST", "AI 建议"], ["AI_FAST_CONFIRM", "AI 快速确认"],
@@ -84,27 +82,13 @@ const taxonomyOptions: Array<{ value: AIHumanDisagreementTaxonomy; label: string
   ["question_issue", "题目问题"], ["insufficient_evidence", "证据不足"], ["acceptable_variation", "可接受差异"]
 ].map(([value, label]) => ({ value: value as AIHumanDisagreementTaxonomy, label }));
 
-const errorSourceOptions = [
-  ["none", "无错误"], ["image_quality", "图像质量"], ["page_matching", "页面匹配"], ["answer_crop", "答题区域裁切"],
-  ["handwriting_ocr", "手写识别"], ["formula_recognition", "公式识别"], ["answer_structuring", "答案结构化"],
-  ["rubric", "Rubric"], ["model_scoring", "模型评分"], ["score_calculation", "分值计算"], ["system", "系统错误"],
-  ["unattributed", "待归因"]
-].map(([value, label]) => ({ value, label }));
-
-const defaultAxis: EligibilityAxis = {
-  subject_code: "mathematics",
-  education_stage: "junior",
-  archetype_code: "numeric_expression",
-  risk_tier: "R2"
-};
-
 const defaultPolicy = (axis: EligibilityAxis): PutAIEligibilityPolicyRequest => ({
   ...axis,
   min_ocr_quality: 0.9,
   min_parser_quality: 0.9,
   min_eval_n: 30,
   max_severe_error_rate: 0.02,
-  allowed_modes: ["RULE_AUTO", "AI_ASSIST"],
+  allowed_modes: axis.risk_tier === "R3" && axis.archetype_code === "extended_response" ? ["AI_ASSIST", "HUMAN_PRIMARY"] : ["RULE_AUTO", "AI_ASSIST"],
   status: "active",
   expected_version: 0
 });
@@ -113,20 +97,22 @@ function asErrorMessage(error: unknown) {
   return getUserErrorMessage(error, "请求失败，请稍后重试");
 }
 
-function percentage(value: number) {
-  return `${(value * 100).toFixed(1)}%`;
-}
-
-function optionalPercentage(value?: number) {
-  return value === undefined ? "未采集" : percentage(value);
-}
-
-function shortID(value: string) {
-  return value.length > 12 ? `${value.slice(0, 8)}…${value.slice(-4)}` : value;
-}
-
 function isNotFound(error: unknown) {
   return error instanceof ApiClientError && error.status === 404;
+}
+
+function validateObservationRow(row: unknown, acceptedKeys: ReadonlySet<string>): AddGradingEvaluationObservationRequest {
+  // 一行有多处错误时按原顺序报告首错；只校验并返回原对象，不登记键或写入观察。
+  if (!row || typeof row !== "object") throw new Error("观察记录须为对象");
+  const item = row as AddGradingEvaluationObservationRequest;
+  if (!/^[a-z0-9][a-z0-9._-]{0,127}$/.test(item.response_key ?? "") || acceptedKeys.has(item.response_key) || !/^[a-f0-9]{64}$/.test(item.response_fingerprint ?? "")) throw new Error("答卷键须唯一，指纹须为真实64位SHA256");
+  if (![item.reference_score, item.model_score, item.max_score].every((value) => typeof value === "number" && Number.isFinite(value)) || item.max_score <= 0 || item.reference_score < 0 || item.model_score < 0 || item.reference_score > item.max_score || item.model_score > item.max_score) throw new Error("请核对参考分、模型分和满分");
+  if (![item.subject, item.archetype].every((value) => typeof value === "string" && /^[a-z0-9][a-z0-9._-]{0,127}$/.test(value))) throw new Error("学科和题型须填写报告中的规范标识");
+  if (!["gold", "human_adjudicated"].includes(item.reference_kind) || !["high", "medium", "low", "unknown"].includes(item.ocr_quality) || !["short", "medium", "long", "unknown"].includes(item.answer_length) || !["low", "medium", "high", "unknown"].includes(item.rubric_complexity)) throw new Error("请核对真值来源与切片标签");
+  const reviewerCount = item.reference_reviewer_count;
+  if (typeof item.needs_human_review !== "boolean" || typeof item.reference_adjudicated !== "boolean" || typeof reviewerCount !== "number" || !Number.isInteger(reviewerCount) || reviewerCount < 1 || (item.reference_kind === "human_adjudicated" && (reviewerCount < 2 || !item.reference_adjudicated))) throw new Error("人工裁决真值须记录至少两位复核者及已裁决事实");
+  if ([item.crop_iou, item.transcription_cer, item.rubric_criterion_agreement].some((value) => value !== undefined && (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > 1))) throw new Error("可选质量比率须在0—1之间");
+  return item;
 }
 
 type PolicyForm = PutAIEligibilityPolicyRequest;
@@ -134,30 +120,58 @@ type EvaluationForm = CreateGradingEvaluationRequest;
 type ObservationForm = AddGradingEvaluationObservationRequest;
 type CalibrationForm = CreateModelCalibrationRequest;
 
-export function ScoringAssuranceWorkspace({
-  tenantID,
-  canReadEligibility,
-  canManageEligibility,
-  canManageEvaluations,
-  canReadDisagreements,
-  canManageDisagreements
-}: {
+type ScoringAssuranceProps = Readonly<{
   tenantID: string;
+  initialAxis?: EligibilitySelection;
   canReadEligibility: boolean;
   canManageEligibility: boolean;
   canManageEvaluations: boolean;
   canReadDisagreements: boolean;
   canManageDisagreements: boolean;
-}) {
+  onDirtyChange?: (dirty: boolean) => void;
+  onSavingChange?: (saving: boolean) => void;
+}>;
+
+export function ScoringAssuranceWorkspace(props: ScoringAssuranceProps) {
+  // 学校或入口评分组合改变时重建工作区；旧范围表单和未返回请求不能沿用到新对象。
+  return <ScoringAssuranceContent key={JSON.stringify([props.tenantID, props.initialAxis ?? {}])} {...props} />;
+}
+
+function ScoringAssuranceContent({
+  tenantID,
+  initialAxis,
+  canReadEligibility,
+  canManageEligibility,
+  canManageEvaluations,
+  canReadDisagreements,
+  canManageDisagreements,
+  onDirtyChange,
+  onSavingChange
+}: ScoringAssuranceProps) {
   setScoringAssuranceSchool(tenantID);
+  useEffect(() => { setScoringAssuranceSchool(tenantID); return () => setScoringAssuranceSchool(""); }, [tenantID]);
   const { message } = App.useApp();
-  const [axis, setAxis] = useState<EligibilityAxis>(defaultAxis);
+  const [axis, setAxis] = useState<EligibilitySelection>(initialAxis ?? {});
+  const policyRequestRef = useRef(0);
+  const scopeKey = JSON.stringify([tenantID, axis]);
+  const currentScopeRef = useRef(scopeKey);
+  currentScopeRef.current = scopeKey;
+  const [policyReadState, setPolicyReadState] = useState<"idle" | "loaded" | "missing" | "error">("idle");
   const [policy, setPolicy] = useState<AIEligibilityPolicy>();
   const [policyLoading, setPolicyLoading] = useState(false);
   const [policyError, setPolicyError] = useState<string>();
   const [policyDrawerOpen, setPolicyDrawerOpen] = useState(false);
   const [policySaving, setPolicySaving] = useState(false);
+  const policySavingRef = useRef(false);
   const [policyForm] = Form.useForm<PolicyForm>();
+  useEffect(() => () => { policyRequestRef.current++; }, []);
+  const changeAxis = (next: EligibilitySelection) => {
+    if (policyDrawerOpen || policySavingRef.current) return;
+    // 选择事件先失效请求，再等待 React 重绘，防止旧响应在这段间隙回填。
+    policyRequestRef.current++;
+    setPolicy(undefined); setPolicyError(undefined); setPolicyReadState("idle"); setPolicyLoading(false);
+    setAxis(next);
+  };
 
   const [evaluationRuns, setEvaluationRuns] = useState<GradingEvaluationRun[]>([]);
   const [calibrations, setCalibrations] = useState<ModelCalibration[]>([]);
@@ -177,6 +191,41 @@ export function ScoringAssuranceWorkspace({
   const [observationForm] = Form.useForm<ObservationForm>();
   const [calibrationForm] = Form.useForm<CalibrationForm>();
   const [evidenceForm] = Form.useForm<AddModelCalibrationEvidenceRequest>();
+  const [importText, setImportText] = useState("");
+  const [importRows, setImportRows] = useState<AddGradingEvaluationObservationRequest[]>([]);
+  const [importCompleted, setImportCompleted] = useState(0);
+  const [importRunID, setImportRunID] = useState("");
+  const [importOpen, setImportOpen] = useState(false);
+  const [importError, setImportError] = useState("");
+  const importBusyRef = useRef(false);
+  // 部分导入成功后保留原输入与已确认游标；切校确认不能在保存中绕过。
+  useEffect(() => { onDirtyChange?.(policyDrawerOpen || evaluationDrawerOpen || observationDrawerOpen || calibrationDrawerOpen || importOpen); return () => onDirtyChange?.(false); }, [policyDrawerOpen, evaluationDrawerOpen, observationDrawerOpen, calibrationDrawerOpen, importOpen, onDirtyChange]);
+  useEffect(() => { onSavingChange?.(actioning || policySaving); return () => onSavingChange?.(false); }, [actioning, policySaving, onSavingChange]);
+
+  const previewObservations = () => {
+    try {
+      const rows: unknown = JSON.parse(importText);
+      if (!Array.isArray(rows) || rows.length < 1 || rows.length > 500) throw new Error("请输入1—500条JSON观察记录");
+      const keys = new Set<string>();
+      for (const row of rows) {
+        const item = validateObservationRow(row, keys);
+        // 整行通过才登记键；集合只属于本次预览，失败后的重预览不继承中途记录。
+        keys.add(item.response_key);
+      }
+      setImportRows(rows as AddGradingEvaluationObservationRequest[]); setImportCompleted(0); setImportError("");
+    } catch (reason) { setImportError(asErrorMessage(reason)); }
+  };
+  const importObservations = async () => {
+    if (!importRunID || !importRows.length || actioning || importBusyRef.current) return;
+    importBusyRef.current = true;
+    setActioning(true); onSavingChange?.(true); setImportError("");
+    let completed = importCompleted;
+    try {
+      // 服务端没有批量事务；逐条确认后移动游标，失败重试不能重发已经收到成功回执的观察。
+      for (; completed < importRows.length; completed++) { await addGradingEvaluationObservation(importRunID, importRows[completed]); setImportCompleted(completed + 1); }
+      message.success(`已导入 ${completed} 条脱敏观察，仍须核对后冻结评测`); await loadAssurance();
+    } catch (reason) { setImportError(`已保存 ${completed}/${importRows.length} 条。${asErrorMessage(reason)}；剩余内容已保留。若网络未确认回执，请先核对该答卷键，服务端会拒绝重复观察。`); } finally { importBusyRef.current = false; setActioning(false); onSavingChange?.(false); }
+  };
 
   const [disagreements, setDisagreements] = useState<AIHumanDisagreement[]>([]);
   const [disagreementLoading, setDisagreementLoading] = useState(false);
@@ -188,23 +237,33 @@ export function ScoringAssuranceWorkspace({
   const [routeForm] = Form.useForm<{ review_task_id: string }>();
 
   const loadPolicy = useCallback(async () => {
-    if (!canReadEligibility) return;
+    if (!canReadEligibility || !tenantID || !isCompleteEligibilitySelection(axis)) return;
+    const requestID = ++policyRequestRef.current;
+    const stillCurrent = () => requestID === policyRequestRef.current && scopeKey === currentScopeRef.current;
     setPolicyLoading(true);
     setPolicyError(undefined);
+    setPolicy(undefined);
+    setPolicyReadState("idle");
     try {
       const response = await getAIEligibilityPolicy(axis);
+      if (!stillCurrent()) return;
+      if (response.policy.subject_code !== axis.subject_code || response.policy.education_stage !== axis.education_stage || response.policy.archetype_code !== axis.archetype_code || response.policy.risk_tier !== axis.risk_tier) throw new Error("返回的策略范围与当前选择不一致，请重新读取当前范围。");
       setPolicy(response.policy);
+      setPolicyReadState("loaded");
     } catch (error) {
+      if (!stillCurrent()) return;
+      setPolicy(undefined);
       if (isNotFound(error)) {
-        setPolicy(undefined);
+        setPolicyReadState("missing");
         setPolicyError("该学科、学段、题型与风险级别尚未配置准入策略；评分链路会保守转人工。");
       } else {
+        setPolicyReadState("error");
         setPolicyError(asErrorMessage(error));
       }
     } finally {
-      setPolicyLoading(false);
+      if (stillCurrent()) setPolicyLoading(false);
     }
-  }, [axis, canReadEligibility]);
+  }, [axis, canReadEligibility, scopeKey, tenantID]);
 
   const loadAssurance = useCallback(async () => {
     if (!canManageEvaluations) return;
@@ -251,6 +310,7 @@ export function ScoringAssuranceWorkspace({
       setQualitySummary(undefined);
       return;
     }
+    // 选中评测变化后，旧请求不能覆盖当前评测的三类证据。
     let active = true;
     Promise.all([listGradingEvaluationSliceMetrics(selectedEvaluationID), listGradingEvaluationResponseDifficulty(selectedEvaluationID), getGradingEvaluationQualitySummary(selectedEvaluationID)])
       .then(([slices, difficulty, quality]) => {
@@ -268,6 +328,7 @@ export function ScoringAssuranceWorkspace({
       setCalibrationEvidence([]);
       return;
     }
+    // 校准证据与评测证据独立加载；仅本轮选中校准仍有效时回写。
     let active = true;
     listModelCalibrationEvidence(selectedCalibrationID)
       .then((response) => { if (active) setCalibrationEvidence(response.evidence); })
@@ -276,6 +337,8 @@ export function ScoringAssuranceWorkspace({
   }, [canManageEvaluations, message, selectedCalibrationID]);
 
   const openPolicyEditor = () => {
+    // 读取失败不是未配置；只有当前范围成功读取或明确不存在，才能携带正确版本维护策略。
+    if (!isCompleteEligibilitySelection(axis) || policyLoading || !["loaded", "missing"].includes(policyReadState)) return;
     policyForm.setFieldsValue(policy ? {
       subject_code: policy.subject_code,
       education_stage: policy.education_stage,
@@ -293,47 +356,51 @@ export function ScoringAssuranceWorkspace({
   };
 
   const savePolicy = async () => {
-    const values = await policyForm.validateFields();
-    setPolicySaving(true);
+    if (!isCompleteEligibilitySelection(axis) || policySavingRef.current) return;
+    const requestedScope = scopeKey;
+    const requestID = ++policyRequestRef.current;
+    const stillCurrent = () => requestID === policyRequestRef.current && requestedScope === currentScopeRef.current;
+    policySavingRef.current = true;
+    setPolicySaving(true); onSavingChange?.(true);
     try {
+      const values = { ...await policyForm.validateFields(), ...axis };
+      if (!stillCurrent()) return;
       const response = await putAIEligibilityPolicy(values);
+      if (!stillCurrent()) return;
       setPolicy(response.policy);
-      setAxis({
-        subject_code: response.policy.subject_code,
-        education_stage: response.policy.education_stage,
-        archetype_code: response.policy.archetype_code,
-        risk_tier: response.policy.risk_tier
-      });
+      setPolicyReadState("loaded"); setPolicyError(undefined);
       setPolicyDrawerOpen(false);
       message.success("题型准入策略已保存为新版本；未满足条件的答卷仍会转人工。");
     } catch (error) {
-      message.error(asErrorMessage(error));
+      if (stillCurrent()) message.error(asErrorMessage(error));
     } finally {
-      setPolicySaving(false);
+      policySavingRef.current = false;
+      if (stillCurrent()) { setPolicySaving(false); onSavingChange?.(false); }
     }
   };
 
   const createEvaluation = async () => {
     const values = await evaluationForm.validateFields();
-    setActioning(true);
+    setActioning(true); onSavingChange?.(true);
     try {
       const response = await createGradingEvaluation(values);
       setEvaluationDrawerOpen(false);
       evaluationForm.resetFields();
+      // 列表刷新会先保留或回退选择，之后再明确选中新建评测。
       await loadAssurance();
       setSelectedEvaluationID(response.evaluation_run.id);
-      message.success("离线评测已创建；请先录入对齐的标准卷或人工裁决观察，再冻结评测。");
+      message.success("评分验证报告已登记；请录入或导入对齐观察，核对后再冻结。");
     } catch (error) {
       message.error(asErrorMessage(error));
     } finally {
-      setActioning(false);
+      setActioning(false); onSavingChange?.(false);
     }
   };
 
   const addObservation = async () => {
     if (!selectedEvaluation) return;
     const values = await observationForm.validateFields();
-    setActioning(true);
+    setActioning(true); onSavingChange?.(true);
     try {
       await addGradingEvaluationObservation(selectedEvaluation.id, values);
       setObservationDrawerOpen(false);
@@ -343,7 +410,7 @@ export function ScoringAssuranceWorkspace({
     } catch (error) {
       message.error(asErrorMessage(error));
     } finally {
-      setActioning(false);
+      setActioning(false); onSavingChange?.(false);
     }
   };
 
@@ -354,7 +421,7 @@ export function ScoringAssuranceWorkspace({
       reason = window.prompt("请说明失效原因（不会修改历史观察）：")?.trim() ?? "";
       if (!reason) return;
     }
-    setActioning(true);
+    setActioning(true); onSavingChange?.(true);
     try {
       if (kind === "complete") await completeGradingEvaluation(selectedEvaluation.id);
       else await invalidateGradingEvaluation(selectedEvaluation.id, reason);
@@ -363,13 +430,13 @@ export function ScoringAssuranceWorkspace({
     } catch (error) {
       message.error(asErrorMessage(error));
     } finally {
-      setActioning(false);
+      setActioning(false); onSavingChange?.(false);
     }
   };
 
   const createCalibration = async () => {
     const values = await calibrationForm.validateFields();
-    setActioning(true);
+    setActioning(true); onSavingChange?.(true);
     try {
       const response = await createModelCalibration(values);
       setCalibrationDrawerOpen(false);
@@ -380,15 +447,16 @@ export function ScoringAssuranceWorkspace({
     } catch (error) {
       message.error(asErrorMessage(error));
     } finally {
-      setActioning(false);
+      setActioning(false); onSavingChange?.(false);
     }
   };
 
   const addCalibrationEvidence = async () => {
     if (!selectedCalibration) return;
     const values = await evidenceForm.validateFields();
-    setActioning(true);
+    setActioning(true); onSavingChange?.(true);
     try {
+      // 先保存并重读本校准证据，再刷新列表；这些请求不能换成并发。
       await addModelCalibrationEvidence(selectedCalibration.id, values);
       evidenceForm.resetFields();
       const response = await listModelCalibrationEvidence(selectedCalibration.id);
@@ -398,7 +466,7 @@ export function ScoringAssuranceWorkspace({
     } catch (error) {
       message.error(asErrorMessage(error));
     } finally {
-      setActioning(false);
+      setActioning(false); onSavingChange?.(false);
     }
   };
 
@@ -409,25 +477,26 @@ export function ScoringAssuranceWorkspace({
       reason = window.prompt("请说明失效原因：")?.trim() ?? "";
       if (!reason) return;
     }
-    setActioning(true);
+    setActioning(true); onSavingChange?.(true);
     try {
       if (kind === "complete") await completeModelCalibration(selectedCalibration.id);
       if (kind === "approve") await approveModelCalibration(selectedCalibration.id);
       if (kind === "invalidate") await invalidateModelCalibration(selectedCalibration.id, reason);
       await loadAssurance();
-      message.success(kind === "complete" ? "校准工件已完成。" : kind === "approve" ? "校准工件已批准；仅精确版本轴可引用。" : "校准工件已失效。");
+      message.success(assuranceCalibrationTransitionMessage(kind));
     } catch (error) {
       message.error(asErrorMessage(error));
     } finally {
-      setActioning(false);
+      setActioning(false); onSavingChange?.(false);
     }
   };
 
   const submitClassification = async () => {
     if (!selectedDisagreement) return;
     const values = await classificationForm.validateFields();
-    setActioning(true);
+    setActioning(true); onSavingChange?.(true);
     try {
+      // 提交使用打开分类时的分歧版本，刷新后的列表不能替代这个修订号。
       await classifyAIHumanDisagreement(selectedDisagreement.id, { ...values, expected_revision: selectedDisagreement.revision });
       setClassificationDrawerOpen(false);
       await loadDisagreements();
@@ -435,14 +504,14 @@ export function ScoringAssuranceWorkspace({
     } catch (error) {
       message.error(asErrorMessage(error));
     } finally {
-      setActioning(false);
+      setActioning(false); onSavingChange?.(false);
     }
   };
 
   const submitRoute = async () => {
     if (!selectedDisagreement) return;
     const values = await routeForm.validateFields();
-    setActioning(true);
+    setActioning(true); onSavingChange?.(true);
     try {
       await routeAIHumanDisagreement(selectedDisagreement.id, { ...values, expected_revision: selectedDisagreement.revision });
       setRouteDrawerOpen(false);
@@ -451,7 +520,7 @@ export function ScoringAssuranceWorkspace({
     } catch (error) {
       message.error(asErrorMessage(error));
     } finally {
-      setActioning(false);
+      setActioning(false); onSavingChange?.(false);
     }
   };
 
@@ -459,7 +528,7 @@ export function ScoringAssuranceWorkspace({
     { title: "评测", render: (_value, item) => <Space direction="vertical" size={0}><strong>{item.display_name}</strong><Typography.Text type="secondary">{item.key}</Typography.Text></Space> },
     { title: "模型 / Prompt / Rubric", render: (_value, item) => <Space direction="vertical" size={0}><span>{item.model_reference}</span><Typography.Text type="secondary">{item.prompt_version} · {item.rubric_version}</Typography.Text></Space> },
     { title: "对齐观察", dataIndex: "observation_count", width: 100 },
-    { title: "状态", dataIndex: "status", width: 105, render: (value) => <Tag color={value === "completed" ? "success" : value === "invalidated" ? "default" : "processing"}>{value === "completed" ? "已冻结" : value === "invalidated" ? "已失效" : "采集中"}</Tag> },
+    { title: "状态", dataIndex: "status", width: 105, render: (value) => <Tag color={assuranceEvaluationStatusColor(value)}>{assuranceEvaluationStatusLabel(value)}</Tag> },
     { title: "操作", width: 90, render: (_value, item) => <Button type={item.id === selectedEvaluationID ? "primary" : "link"} size="small" onClick={() => setSelectedEvaluationID(item.id)}>查看</Button> }
   ];
 
@@ -467,7 +536,7 @@ export function ScoringAssuranceWorkspace({
     { title: "校准", render: (_value, item) => <Space direction="vertical" size={0}><strong>{item.key}</strong><Typography.Text type="secondary">{item.axis.subject} · {item.axis.archetype} · {item.axis.slice_key}</Typography.Text></Space> },
     { title: "版本轴", render: (_value, item) => <Typography.Text>{item.axis.model_reference}<br />{item.axis.prompt_version} · {item.axis.rubric_version}</Typography.Text> },
     { title: "样本", dataIndex: "calibration_n", width: 76 },
-    { title: "状态", dataIndex: "status", width: 105, render: (value) => <Tag color={value === "approved" ? "success" : value === "invalidated" ? "default" : value === "completed" ? "processing" : "warning"}>{value === "approved" ? "已批准" : value === "completed" ? "待批准" : value === "invalidated" ? "已失效" : "草稿"}</Tag> },
+    { title: "状态", dataIndex: "status", width: 105, render: (value) => <Tag color={assuranceCalibrationStatusColor(value)}>{assuranceCalibrationStatusLabel(value)}</Tag> },
     { title: "操作", width: 90, render: (_value, item) => <Button type={item.id === selectedCalibrationID ? "primary" : "link"} size="small" onClick={() => setSelectedCalibrationID(item.id)}>查看</Button> }
   ];
 
@@ -488,85 +557,45 @@ export function ScoringAssuranceWorkspace({
         description="准入策略、离线评测、置信度校准与人机分歧均是可追溯的安全证据。未满足任何一项时，系统必须转入人工流程。"
       />
 
-      {canReadEligibility ? <Card size="small" title={<Space><SlidersHorizontal size={17} />题型准入策略</Space>} extra={<Space><Button icon={<RefreshCw size={15} />} loading={policyLoading} onClick={() => void loadPolicy()}>查询</Button>{canManageEligibility ? <Button type="primary" onClick={openPolicyEditor}>维护策略</Button> : null}</Space>}>
-        <Space wrap className="model-assurance-axis">
-          <Select aria-label="学科" value={axis.subject_code} options={subjectOptions} onChange={(subject_code) => setAxis((current) => ({ ...current, subject_code }))} />
-          <Select aria-label="学段" value={axis.education_stage} options={[{ value: "junior", label: "初中" }, { value: "senior", label: "高中" }]} onChange={(education_stage) => setAxis((current) => ({ ...current, education_stage }))} />
-          <Select aria-label="题型" value={axis.archetype_code} options={archetypeOptions} onChange={(archetype_code) => setAxis((current) => ({ ...current, archetype_code }))} />
-          <Select aria-label="风险级别" value={axis.risk_tier} options={[{ value: "R1", label: "R1" }, { value: "R2", label: "R2" }, { value: "R3", label: "R3" }]} onChange={(risk_tier) => setAxis((current) => ({ ...current, risk_tier }))} />
-        </Space>
-        <Divider />
-        <Spin spinning={policyLoading}>
-          {policy ? <Descriptions size="small" column={{ xs: 1, sm: 2, lg: 4 }} items={[
-            { key: "version", label: "策略版本", children: `V${policy.version}` },
-            { key: "quality", label: "最低质量", children: `OCR ${percentage(policy.min_ocr_quality)} · 解析 ${percentage(policy.min_parser_quality)}` },
-            { key: "evaluation", label: "评测门槛", children: `${policy.min_eval_n} 条 · 严重误差 ≤ ${percentage(policy.max_severe_error_rate)}` },
-            { key: "modes", label: "允许模式", children: policy.allowed_modes.join(" · ") }
-          ]} /> : <Typography.Text type={policyError ? "warning" : "secondary"}>{policyError || "请选择轴后查询当前策略。"}</Typography.Text>}
-        </Spin>
-        <DecisionLookup canRead={canReadEligibility} />
-      </Card> : null}
+      {canReadEligibility ? <EligibilityPolicyPanel axis={axis} onAxisChange={changeAxis} policy={policy} policyLoading={policyLoading}
+        selectionLocked={policyDrawerOpen || policySaving} selectionComplete={isCompleteEligibilitySelection(axis)} canEditPolicy={["loaded", "missing"].includes(policyReadState)}
+        policyError={policyError} canManageEligibility={canManageEligibility} subjectOptions={subjectOptions} archetypeOptions={archetypeOptions}
+        loadPolicy={loadPolicy} openPolicyEditor={openPolicyEditor}><DecisionLookup canRead={canReadEligibility} /></EligibilityPolicyPanel> : null}
 
-      {canManageEvaluations ? <Card size="small" title={<Space><FlaskConical size={17} />离线评测与置信度校准</Space>} extra={<Space><Button icon={<RefreshCw size={15} />} loading={assuranceLoading} onClick={() => void loadAssurance()}>刷新</Button><Button type="primary" onClick={() => setEvaluationDrawerOpen(true)}>新建评测</Button></Space>}>
+      {canManageEvaluations ? <Card size="small" title={<Space><FlaskConical size={17} />已有评分报告与置信度校准</Space>} extra={<Space><Button icon={<RefreshCw size={15} />} loading={assuranceLoading} onClick={() => void loadAssurance()}>刷新</Button><Button type="primary" onClick={() => setEvaluationDrawerOpen(true)}>登记评分验证报告</Button></Space>}>
+        <p>评测负责人先完成离线评分及人工真值核验，再登记版本轴和对齐记录。此处不运行模型；冻结证据与配置准入是后续步骤。</p>
+        <Space wrap><Button onClick={() => downloadGovernanceMaterial("脱敏对齐评分记录模板.json", observationExample)}>下载对齐记录模板</Button><Button disabled={selectedEvaluation?.status !== "draft" || actioning} onClick={() => {
+          if (importText && importRunID !== selectedEvaluation!.id) { message.error("另一评测的导入材料尚未清除，请先回到原评测完成或清除材料。"); return; }
+          if (!importText) { setImportRunID(selectedEvaluation!.id); setImportRows([]);setImportCompleted(0);setImportError(""); }
+          setImportOpen(true);
+        }}>导入对齐评分记录</Button></Space>
         {assuranceError ? <Alert showIcon type="error" message="加载评分保障证据失败" description={assuranceError} action={<Button onClick={() => void loadAssurance()}>重试</Button>} /> : null}
         <Table className="dense-data-table" rowKey="id" size="small" pagination={false} columns={evaluationColumns} dataSource={evaluationRuns} locale={{ emptyText: <Empty description="尚无离线评测" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }} />
-        {selectedEvaluation ? <section className="model-assurance-detail">
-          <Divider orientation="left">{selectedEvaluation.display_name}</Divider>
-          <Space wrap>
-            {selectedEvaluation.status === "draft" ? <><Button onClick={() => setObservationDrawerOpen(true)}>录入对齐观察</Button><Button type="primary" loading={actioning} disabled={selectedEvaluation.observation_count === 0} onClick={() => void transitionEvaluation("complete")}>冻结评测</Button></> : null}
-            {selectedEvaluation.status !== "invalidated" ? <Button danger loading={actioning} onClick={() => void transitionEvaluation("invalidate")}>标记失效</Button> : null}
-            <Button onClick={() => {
-              calibrationForm.setFieldsValue({ evaluation_run_id: selectedEvaluation.id, method: "auto", axis: { model_reference: selectedEvaluation.model_reference, prompt_version: selectedEvaluation.prompt_version, rubric_version: selectedEvaluation.rubric_version, subject: "mathematics", archetype: "short_constructed", slice_key: "all" } });
-              setCalibrationDrawerOpen(true);
-            }} disabled={selectedEvaluation.status !== "completed"}>基于评测创建校准</Button>
-          </Space>
-          <div className="model-assurance-metrics">
-            <section><h4>全链路质量</h4>{qualitySummary ? <><Descriptions size="small" column={1} items={[
-              { key: "page", label: "页面匹配", children: `${optionalPercentage(qualitySummary.page_match_accuracy.rate)} · n=${qualitySummary.page_match_accuracy.observed_count}` },
-              { key: "crop", label: "平均 Crop IoU", children: `${optionalPercentage(qualitySummary.mean_crop_iou.mean)} · n=${qualitySummary.mean_crop_iou.observed_count}` },
-              { key: "cer", label: "平均转录 CER", children: `${optionalPercentage(qualitySummary.mean_transcription_cer.mean)} · n=${qualitySummary.mean_transcription_cer.observed_count}` },
-              { key: "formula", label: "公式精确率", children: `${optionalPercentage(qualitySummary.formula_exact_rate.rate)} · n=${qualitySummary.formula_exact_rate.observed_count}` },
-              { key: "rubric", label: "Rubric 评分点一致", children: `${optionalPercentage(qualitySummary.mean_rubric_criterion_agreement.mean)} · n=${qualitySummary.mean_rubric_criterion_agreement.observed_count}` },
-              { key: "routing", label: "错误转人工召回", children: optionalPercentage(qualitySummary.risky_error_routing_recall) }
-            ]} />{qualitySummary.error_attribution.length ? <List size="small" dataSource={qualitySummary.error_attribution} renderItem={(item) => <List.Item><span>{errorSourceOptions.find((option) => option.value === item.source)?.label ?? "其他来源"}</span><Space size={4}><Tag>n={item.count}</Tag><Tag color={item.human_routing_recall < 1 ? "error" : "success"}>转人工 {percentage(item.human_routing_recall)}</Tag></Space></List.Item>} /> : <Typography.Text type="secondary">尚未发现或归因错误。</Typography.Text>}</> : <Typography.Text type="secondary">录入观察后显示图像、裁切、转录、公式、Rubric 与路由指标。</Typography.Text>}</section>
-            <section><h4>切片指标</h4>{sliceMetrics.length ? <List size="small" dataSource={sliceMetrics.slice(0, 12)} renderItem={(item) => <List.Item><span>{item.dimension}: {item.value}</span><Space size={4}><Tag>n={item.metrics.sample_count}</Tag><Tag color={item.metrics.severe_error_rate > 0 ? "error" : "success"}>严重误差 {percentage(item.metrics.severe_error_rate)}</Tag></Space></List.Item>} /> : <Typography.Text type="secondary">完成评测后生成按题型、分段和 OCR 质量的切片。</Typography.Text>}</section>
-            <section><h4>困难答卷</h4>{responseDifficulty.length ? <List size="small" dataSource={responseDifficulty.slice(0, 8)} renderItem={(item) => <List.Item><span>{item.difficulty_band} · {shortID(item.response_key)}</span><Tag color={item.severe_error ? "error" : "default"}>归一化误差 {percentage(item.normalized_error)}</Tag></List.Item>} /> : <Typography.Text type="secondary">完成评测后显示经验性难例，不代表学生能力。</Typography.Text>}</section>
-          </div>
-        </section> : null}
+        <EvaluationDetail selectedEvaluation={selectedEvaluation} actioning={actioning} qualitySummary={qualitySummary}
+          sliceMetrics={sliceMetrics} responseDifficulty={responseDifficulty} onOpenObservation={() => setObservationDrawerOpen(true)}
+          transitionEvaluation={transitionEvaluation} onCreateCalibration={() => {
+            if (!selectedEvaluation) return;
+            calibrationForm.setFieldsValue({ evaluation_run_id: selectedEvaluation.id, method: "auto", axis: { model_reference: selectedEvaluation.model_reference, prompt_version: selectedEvaluation.prompt_version, rubric_version: selectedEvaluation.rubric_version, subject: "mathematics", archetype: "short_constructed", slice_key: "all" } });
+            setCalibrationDrawerOpen(true);
+          }} />
         <Divider orientation="left">校准工件</Divider>
         <Table className="dense-data-table" rowKey="id" size="small" pagination={false} columns={calibrationColumns} dataSource={calibrations} locale={{ emptyText: "尚无校准工件" }} />
-        {selectedCalibration ? <section className="model-assurance-detail">
-          <Space wrap><Typography.Text>方法：{selectedCalibration.method}</Typography.Text><Typography.Text>证据：{calibrationEvidence.length} 条</Typography.Text><Typography.Text>工件：{selectedCalibration.artifact_sha256 ? shortID(selectedCalibration.artifact_sha256) : "尚未生成"}</Typography.Text></Space>
-          <Space wrap style={{ marginTop: 12 }}>
-            {selectedCalibration.status === "draft" ? <><Button onClick={() => evidenceForm.resetFields()} disabled={actioning}>添加置信度证据</Button><Button type="primary" loading={actioning} disabled={calibrationEvidence.length === 0} onClick={() => void transitionCalibration("complete")}>完成校准</Button></> : null}
-            {selectedCalibration.status === "completed" ? <Button type="primary" icon={<CheckCircle2 size={15} />} loading={actioning} onClick={() => void transitionCalibration("approve")}>批准校准</Button> : null}
-            {selectedCalibration.status !== "invalidated" ? <Button danger loading={actioning} onClick={() => void transitionCalibration("invalidate")}>标记失效</Button> : null}
-          </Space>
-          {selectedCalibration.status === "draft" ? <Form form={evidenceForm} layout="inline" className="model-assurance-inline-form" onFinish={() => void addCalibrationEvidence()}>
-            <Form.Item name="response_key" rules={[{ required: true, pattern: /^[a-z0-9][a-z0-9._-]{0,127}$/ }]}><Input placeholder="脱敏答卷键" /></Form.Item>
-            <Form.Item name="raw_confidence" rules={[{ required: true }]}><InputNumber min={0} max={1} step={0.01} placeholder="模型置信度" /></Form.Item>
-            <Button htmlType="submit" loading={actioning}>加入证据</Button>
-          </Form> : null}
-        </section> : null}
+        <CalibrationDetail selectedCalibration={selectedCalibration} calibrationEvidence={calibrationEvidence} actioning={actioning}
+          evidenceForm={evidenceForm} transitionCalibration={transitionCalibration} addCalibrationEvidence={addCalibrationEvidence} />
       </Card> : null}
 
-      {canReadDisagreements ? <Card size="small" title={<Space><ClipboardCheck size={17} />人机分歧队列</Space>} extra={<Space><Tag color={severeCount > 0 ? "error" : "success"}>待审阅严重分歧 {severeCount}</Tag><Button icon={<RefreshCw size={15} />} loading={disagreementLoading} onClick={() => void loadDisagreements()}>刷新</Button></Space>}>
-        {disagreementError ? <Alert showIcon type="error" message="加载人机分歧失败" description={disagreementError} action={<Button onClick={() => void loadDisagreements()}>重试</Button>} /> : null}
-        <List
-          loading={disagreementLoading}
-          dataSource={disagreements}
-          locale={{ emptyText: "暂无需要处理的人机分歧" }}
-          renderItem={(item) => <List.Item actions={canManageDisagreements ? [<Button key="classify" size="small" onClick={() => { setSelectedDisagreement(item); classificationForm.setFieldsValue({ taxonomy: item.taxonomy ?? "ai_scoring_error", notes: item.notes }); setClassificationDrawerOpen(true); }}>分类</Button>, <Button key="route" size="small" onClick={() => { setSelectedDisagreement(item); routeForm.resetFields(); setRouteDrawerOpen(true); }}>关联人工任务</Button>] : undefined}>
-            <List.Item.Meta title={<Space><strong>题目 {shortID(item.question_id)}</strong><Tag color={item.severity === "severe" ? "error" : "warning"}>{item.severity === "severe" ? "严重" : "需关注"}</Tag><Tag>{item.status === "needs_review" ? "待审阅" : item.status === "classified" ? "已分类" : "已关联任务"}</Tag></Space>} description={<Space wrap><span>分差 {item.delta.toFixed(2)} / 满分 {item.max_score}</span><span>风险 {item.risk_tier}</span><span>{item.taxonomy ? taxonomyOptions.find((option) => option.value === item.taxonomy)?.label : "尚未分类"}</span></Space>} />
-          </List.Item>}
-        />
-      </Card> : null}
+      {canReadDisagreements ? <DisagreementQueue disagreements={disagreements} severeCount={severeCount} disagreementLoading={disagreementLoading}
+        disagreementError={disagreementError} canManageDisagreements={canManageDisagreements} taxonomyOptions={taxonomyOptions}
+        loadDisagreements={loadDisagreements} onClassify={(item) => {
+          setSelectedDisagreement(item); classificationForm.setFieldsValue({ taxonomy: item.taxonomy ?? "ai_scoring_error", notes: item.notes }); setClassificationDrawerOpen(true);
+        }} onRoute={(item) => { setSelectedDisagreement(item); routeForm.resetFields(); setRouteDrawerOpen(true); }} /> : null}
 
-      <Drawer title="维护题型准入策略" width={560} open={policyDrawerOpen} onClose={() => setPolicyDrawerOpen(false)} extra={<Button type="primary" loading={policySaving} onClick={() => void savePolicy()}>保存新版本</Button>}>
+      <Drawer title="维护题型准入策略" width={560} open={policyDrawerOpen} closable={!policySaving} maskClosable={!policySaving} keyboard={!policySaving} onClose={() => { if (!policySavingRef.current) setPolicyDrawerOpen(false); }} extra={<Button type="primary" loading={policySaving} onClick={() => void savePolicy()}>保存新版本</Button>}>
+        <p>当前维护范围：{eligibilityScopeLabel(axis)}。需要维护其他范围时，请先关闭并在页面重新选择和查询。</p>
         <Alert type="warning" showIcon message="此处只配置是否允许调用 AI，不授予模型最终分数权。R3 长作答禁止配置为 AI 快速确认或规则自动。" />
         <Form form={policyForm} layout="vertical" style={{ marginTop: 16 }}>
-          <Space.Compact block><Form.Item name="subject_code" label="学科" rules={[{ required: true }]} style={{ width: "25%" }}><Select options={subjectOptions} /></Form.Item><Form.Item name="education_stage" label="学段" rules={[{ required: true }]} style={{ width: "25%" }}><Select options={[{ value: "junior", label: "初中" }, { value: "senior", label: "高中" }]} /></Form.Item><Form.Item name="risk_tier" label="风险" rules={[{ required: true }]} style={{ width: "20%" }}><Select options={[{ value: "R1", label: "R1" }, { value: "R2", label: "R2" }, { value: "R3", label: "R3" }]} /></Form.Item></Space.Compact>
-          <Form.Item name="archetype_code" label="题型" rules={[{ required: true }]}><Select options={archetypeOptions} /></Form.Item>
+          <Space.Compact block><Form.Item name="subject_code" label="学科" rules={[{ required: true }]} style={{ width: "25%" }}><Select disabled options={subjectOptions} /></Form.Item><Form.Item name="education_stage" label="学段" rules={[{ required: true }]} style={{ width: "25%" }}><Select disabled options={eligibilityStages} /></Form.Item><Form.Item name="risk_tier" label="风险" rules={[{ required: true }]} style={{ width: "20%" }}><Select disabled options={eligibilityRisks} /></Form.Item></Space.Compact>
+          <Form.Item name="archetype_code" label="题型" rules={[{ required: true }]}><Select disabled options={archetypeOptions} /></Form.Item>
           <Space.Compact block><Form.Item name="min_ocr_quality" label="最低 OCR 质量" rules={[{ required: true }]} style={{ width: "33%" }}><InputNumber min={0} max={1} step={0.01} style={{ width: "100%" }} /></Form.Item><Form.Item name="min_parser_quality" label="最低解析质量" rules={[{ required: true }]} style={{ width: "33%" }}><InputNumber min={0} max={1} step={0.01} style={{ width: "100%" }} /></Form.Item><Form.Item name="min_eval_n" label="最低评测样本" rules={[{ required: true }]} style={{ width: "34%" }}><InputNumber min={1} precision={0} style={{ width: "100%" }} /></Form.Item></Space.Compact>
           <Form.Item name="max_severe_error_rate" label="最大严重误差率" rules={[{ required: true }]}><InputNumber min={0} max={1} step={0.005} style={{ width: "100%" }} /></Form.Item>
           <Form.Item name="allowed_modes" label="允许评分模式" rules={[{ required: true }]}><Select mode="multiple" options={scoringModeOptions} /></Form.Item>
@@ -575,7 +604,7 @@ export function ScoringAssuranceWorkspace({
         </Form>
       </Drawer>
 
-      <Drawer title="新建离线评分评测" width={620} open={evaluationDrawerOpen} onClose={() => setEvaluationDrawerOpen(false)} extra={<Button type="primary" loading={actioning} onClick={() => void createEvaluation()}>创建</Button>}>
+      <Drawer title="登记已有评分验证报告" width={620} open={evaluationDrawerOpen} onClose={() => setEvaluationDrawerOpen(false)} extra={<Button type="primary" loading={actioning} onClick={() => void createEvaluation()}>登记报告</Button>}>
         <Alert type="info" showIcon message="仅登记已授权的脱敏数据集引用和版本轴" description="评测不会在浏览器中调用模型，也不接收学生答案、原图或标准卷解析。" />
         <Form form={evaluationForm} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item name="key" label="评测键" rules={[{ required: true, pattern: /^[a-z0-9][a-z0-9._-]{0,127}$/ }]}><Input placeholder="math-r2-v1" /></Form.Item>
@@ -585,6 +614,16 @@ export function ScoringAssuranceWorkspace({
           <Form.Item name="dataset_reference" label="脱敏数据集引用" rules={[{ required: true, pattern: /^[a-z0-9][a-z0-9._-]{0,127}$/ }]}><Input /></Form.Item>
           <Form.Item name="dataset_sha256" label="数据集 SHA-256" rules={[{ required: true, pattern: /^[a-f0-9]{64}$/ }]}><Input /></Form.Item>
         </Form>
+      </Drawer>
+
+      <Drawer title="导入脱敏对齐评分记录" width={680} open={importOpen} closable={!actioning} maskClosable={!actioning} onClose={() => { if (!actioning) setImportOpen(false); }}>
+        <p>关闭后材料仍留在本学校工作区，再次打开可继续；离开学校前请复制备份。清除材料不会删除已保存的观察。</p>
+        <Button disabled={actioning} onClick={() => { setImportText(""); setImportRows([]); setImportCompleted(0); setImportError(""); setImportOpen(false); }}>清除本次导入材料</Button>
+        <Alert type="info" showIcon message="仅导入已完成评分的脱敏记录，不调用模型" description={`目标报告：${evaluationRuns.find((run) => run.id === importRunID)?.display_name ?? importRunID}。逐条保存，没有批量回滚；真实字段和权限由服务端再次校验。`} />
+        <label>JSON 观察记录<Input.TextArea rows={10} value={importText} disabled={actioning || importCompleted > 0} onChange={(event) => { setImportText(event.target.value); setImportRows([]); }} /></label>
+        <Button disabled={actioning || importCompleted > 0} onClick={previewObservations}>校验并预览</Button>
+        {importRows.length ? <><p>共 {importRows.length} 条，已保存 {importCompleted} 条。首条：{importRows[0].response_key}，参考 {importRows[0].reference_score} / 模型 {importRows[0].model_score}。</p><Button type="primary" loading={actioning} disabled={importCompleted === importRows.length} onClick={() => void importObservations()}>{importCompleted ? "继续保存剩余记录" : "确认导入"}</Button></> : null}
+        {importError ? <Alert type="error" showIcon message={importError} /> : null}
       </Drawer>
 
       <Drawer title="录入对齐观察" width={650} open={observationDrawerOpen} onClose={() => setObservationDrawerOpen(false)} extra={<Button type="primary" loading={actioning} onClick={() => void addObservation()}>保存观察</Button>}>
@@ -625,7 +664,7 @@ export function ScoringAssuranceWorkspace({
   );
 }
 
-function DecisionLookup({ canRead }: { canRead: boolean }) {
+function DecisionLookup({ canRead }: Readonly<{ canRead: boolean }>) {
   const { message } = App.useApp();
   const [runItemID, setRunItemID] = useState("");
   const [loading, setLoading] = useState(false);

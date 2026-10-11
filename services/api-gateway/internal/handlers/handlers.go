@@ -15,6 +15,10 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/workerruntime"
 )
 
+const (
+	ocrWorkerServiceName = "ocr-worker"
+)
+
 type Handlers struct {
 	cfg       config.Config
 	checkers  []deps.Checker
@@ -174,9 +178,8 @@ func hasDependencyError(results []deps.CheckResult) bool {
 	return false
 }
 
-// OCRAvailability exposes only the tenant-scoped OCR automation state needed by
-// capture and review workflows. Detailed dependency and observability data stay
-// behind the system:read-protected SystemStatus endpoint.
+// OCRAvailability 只提供采集和复核工作流需要的租户级 OCR 自动化状态；
+// 依赖和可观测性详情仍由 system:read 保护的 SystemStatus 端点提供。
 func (h *Handlers) OCRAvailability(w http.ResponseWriter, r *http.Request) {
 	now := time.Now().UTC()
 	workerStatus, _ := h.ocrWorkerStatus(r, now)
@@ -192,22 +195,22 @@ func (h *Handlers) ocrWorkerStatus(r *http.Request, now time.Time) (WorkerServic
 		staleAfter = 30 * time.Second
 	}
 	if h.runtime == nil {
-		return unavailableWorkerServiceStatus("ocr_worker", "ocr-worker", "ocr", now, staleAfter), fmt.Errorf("worker runtime store is unavailable")
+		return unavailableWorkerServiceStatus("ocr_worker", ocrWorkerServiceName, "ocr", now, staleAfter), fmt.Errorf("worker runtime store is unavailable")
 	}
 	user, _ := auth.UserFromContext(r.Context())
 	metrics, err := h.runtime.MetricsAcrossTenants(r.Context(), auth.PlatformTenantID)
 	if err != nil {
-		return unavailableWorkerServiceStatus("ocr_worker", "ocr-worker", "ocr", now, staleAfter), err
+		return unavailableWorkerServiceStatus("ocr_worker", ocrWorkerServiceName, "ocr", now, staleAfter), err
 	}
 	if user.TenantID != auth.PlatformTenantID {
 		scoped, scopedErr := h.runtime.Metrics(r.Context(), user.TenantID)
 		if scopedErr != nil {
-			return unavailableWorkerServiceStatus("ocr_worker", "ocr-worker", "ocr", now, staleAfter), scopedErr
+			return unavailableWorkerServiceStatus("ocr_worker", ocrWorkerServiceName, "ocr", now, staleAfter), scopedErr
 		}
 		scoped.Workers = metrics.Workers
 		metrics = scoped
 	}
-	return buildWorkerServiceStatus(metrics, "ocr_worker", "ocr-worker", "ocr", now, staleAfter), nil
+	return buildWorkerServiceStatus(metrics, "ocr_worker", ocrWorkerServiceName, "ocr", now, staleAfter), nil
 }
 
 func buildWorkerServiceStatus(metrics workerruntime.Metrics, name string, workerService string, queueName string, now time.Time, staleAfter time.Duration) WorkerServiceStatus {
@@ -219,19 +222,7 @@ func buildWorkerServiceStatus(metrics workerruntime.Metrics, name string, worker
 		Action:     "需要自动识别填空题或主观题文字时，再由平台运维部署 OCR Worker。",
 	}
 	var latest time.Time
-	for _, worker := range metrics.Workers {
-		if worker.WorkerService != workerService || worker.QueueName != queueName {
-			continue
-		}
-		if worker.LastSeenAt.After(latest) {
-			latest = worker.LastSeenAt
-		}
-		if now.Sub(worker.LastSeenAt) <= staleAfter {
-			status.FreshInstances++
-		} else {
-			status.StaleInstances++
-		}
-	}
+	status.FreshInstances, status.StaleInstances, latest = workerHeartbeatCounts(metrics.Workers, workerService, queueName, now, staleAfter)
 	for _, queue := range metrics.Queues {
 		if queue.QueueName != queueName {
 			continue
@@ -262,6 +253,26 @@ func buildWorkerServiceStatus(metrics workerruntime.Metrics, name string, worker
 		status.Action = "启动或恢复 OCR Worker，检查服务账号与 API 连通性；恢复后队列会自动继续处理。"
 	}
 	return status
+}
+
+func workerHeartbeatCounts(workers []workerruntime.WorkerHeartbeat, workerService string, queueName string, now time.Time, staleAfter time.Duration) (int, int, time.Time) {
+	var fresh, stale int
+	var latest time.Time
+	for _, worker := range workers {
+		if worker.WorkerService != workerService || worker.QueueName != queueName {
+			continue
+		}
+		if worker.LastSeenAt.After(latest) {
+			latest = worker.LastSeenAt
+		}
+		// 以同一次状态读取的 now 判定；阈值相等或心跳时间在未来时仍沿用 fresh 规则。
+		if now.Sub(worker.LastSeenAt) <= staleAfter {
+			fresh++
+		} else {
+			stale++
+		}
+	}
+	return fresh, stale, latest
 }
 
 func unavailableWorkerServiceStatus(name string, workerService string, queueName string, now time.Time, staleAfter time.Duration) WorkerServiceStatus {

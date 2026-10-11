@@ -1,0 +1,854 @@
+{
+  "file": "02-system-architecture.drawio",
+  "title": "总体架构",
+  "pages": [
+    {
+      "id": "logical",
+      "title": "逻辑分层：前端、模块化单体与持久化",
+      "nodes": [
+        {
+          "id": "web",
+          "label": "管理端 / 教师体验\nReact + Vite + TypeScript\n路由、页面权限、考试工作区",
+          "x": 166,
+          "y": 217,
+          "w": 460,
+          "h": 157,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "apps/web-admin/src/router/routes.tsx:62",
+          "display_label": "管理端 / 教师\nReact",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "student",
+          "label": "学生门户\nReact + Vite\n登录、已发布成绩、试卷与申诉",
+          "x": 1008,
+          "y": 217,
+          "w": 312,
+          "h": 157,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "apps/student-portal/src/main.tsx;apps/student-portal/src/api.ts:1",
+          "display_label": "学生门户\nReact",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "desktop",
+          "label": "桌面工作站\nReact + Tauri / Rust\n扫描、上传队列、离线草稿与同步",
+          "x": 1738,
+          "y": 217,
+          "w": 384,
+          "h": 157,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "apps/desktop-client/src-tauri/src/lib.rs",
+          "display_label": "桌面工作站\nTauri / Rust",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "sdk",
+          "label": "前端应用 / SDK\n共享类型、生成API客户端、自定义transport\n页面状态由hooks/context管理",
+          "x": 994,
+          "y": 510,
+          "w": 339,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "packages/sdk/src/index.ts;packages/sdk/src/runtime.ts:1",
+          "display_label": "共享 SDK",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "api",
+          "label": "Go HTTP API 统一入口\nServeMux + RequestID / Recover / metrics / CORS / CSRF / body limit\nAuthMiddleware + 路由guard + 幂等收据；不同guard顺序存在差异",
+          "x": 1028,
+          "y": 740,
+          "w": 272,
+          "h": 157,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/server.go:154;services/api-gateway/internal/server/router_guards.go:93",
+          "display_label": "Go API\n认证 · 授权 · 幂等",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "identity",
+          "label": "Identity / 组织与权限\nauth、org、平台学校\n会话、角色、数据范围",
+          "x": 114,
+          "y": 1069,
+          "w": 384,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/module_identity.go",
+          "display_label": "身份与组织",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "prepare",
+          "label": "ExamPreparation\nexam、paper、assessment\n题库、文件、答卷、工作区",
+          "x": 686,
+          "y": 1069,
+          "w": 384,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/module_exam.go:62",
+          "display_label": "考试与试卷",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "capture",
+          "label": "CaptureProcessing\ncapture、upload、OCR\n图像质量、编排、worker runtime",
+          "x": 1258,
+          "y": 1069,
+          "w": 384,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/module_capture.go:83",
+          "display_label": "采集与处理",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "grading",
+          "label": "GradingQuality / Release\n评分、复核、质量、重评\n发布gate、学生、申诉、报告",
+          "x": 1830,
+          "y": 1069,
+          "w": 384,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/module_grading.go:104;services/api-gateway/internal/server/module_release.go:61",
+          "display_label": "评分与发布",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "stores",
+          "label": "数据访问 / 持久化\n领域Store接口 + 手写PostgreSQL SQL\nMemoryStore用于测试；文件元数据与对象分开",
+          "x": 401,
+          "y": 1374,
+          "w": 382,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/application_stores.go;services/api-gateway/internal/server/application_modules.go:45",
+          "display_label": "领域 Store",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "compute",
+          "label": "图像与AI计算边界 → 下一页\n独立Python worker通过HTTP领取任务\nGo→grading-agent→本地或外部模型",
+          "x": 1492,
+          "y": 1374,
+          "w": 487,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/module_grading.go:198;services/page-processing-worker/page_processing/runner.py",
+          "display_label": "图像 / AI 计算",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "db",
+          "label": "PostgreSQL\n业务、任务、版本、审计、outbox",
+          "x": 174,
+          "y": 1657,
+          "w": 446,
+          "h": 157,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/infrastructure.go:53",
+          "display_label": "PostgreSQL\n业务事实",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "object",
+          "label": "MinIO / S3\n原图、裁图、试卷、报告附件",
+          "x": 1024,
+          "y": 1657,
+          "w": 280,
+          "h": 157,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/infrastructure.go:111",
+          "display_label": "MinIO\n原图 / 裁片 / 附件",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "redis",
+          "label": "Redis\n认证限流；持久任务真相在PG\n不能等同为Redis消息队列",
+          "x": 1820,
+          "y": 1657,
+          "w": 221,
+          "h": 157,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/infrastructure.go:77",
+          "display_label": "Redis\n认证限流",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        }
+      ],
+      "edges": [
+        {
+          "source": "web",
+          "target": "sdk",
+          "label": "API transport",
+          "exitX": 0.5,
+          "exitY": 1,
+          "entryX": 0.16666666666666666,
+          "entryY": 0,
+          "display_label": "API transport"
+        },
+        {
+          "source": "student",
+          "target": "sdk",
+          "label": "API transport",
+          "exitX": 0.5,
+          "exitY": 1,
+          "entryX": 0.5,
+          "entryY": 0,
+          "display_label": "API transport"
+        },
+        {
+          "source": "desktop",
+          "target": "sdk",
+          "label": "API transport",
+          "exitX": 0.5,
+          "exitY": 1,
+          "entryX": 0.8333333333333334,
+          "entryY": 0,
+          "display_label": "API transport"
+        },
+        {
+          "source": "sdk",
+          "target": "api",
+          "label": "HTTP / cookie 或 Bearer",
+          "display_label": "HTTP / cookie 或 Bearer"
+        },
+        {
+          "source": "api",
+          "target": "identity",
+          "label": "同进程调用",
+          "exitX": 0.125,
+          "exitY": 1,
+          "entryX": 0.5,
+          "entryY": 0,
+          "display_label": "同进程调用"
+        },
+        {
+          "source": "api",
+          "target": "prepare",
+          "label": "同进程调用",
+          "exitX": 0.375,
+          "exitY": 1,
+          "entryX": 0.5,
+          "entryY": 0,
+          "display_label": "同进程调用"
+        },
+        {
+          "source": "api",
+          "target": "capture",
+          "label": "同进程调用",
+          "exitX": 0.625,
+          "exitY": 1,
+          "entryX": 0.5,
+          "entryY": 0,
+          "display_label": "同进程调用"
+        },
+        {
+          "source": "api",
+          "target": "grading",
+          "label": "同进程调用",
+          "exitX": 0.875,
+          "exitY": 1,
+          "entryX": 0.5,
+          "entryY": 0,
+          "display_label": "同进程调用"
+        },
+        {
+          "source": "prepare",
+          "target": "stores",
+          "label": "读写",
+          "display_label": "读写"
+        },
+        {
+          "source": "identity",
+          "target": "stores",
+          "label": "身份查询",
+          "display_label": "身份查询"
+        },
+        {
+          "source": "capture",
+          "target": "compute",
+          "label": "任务/图像",
+          "display_label": "任务/图像"
+        },
+        {
+          "source": "grading",
+          "target": "compute",
+          "label": "模型请求",
+          "display_label": "模型请求"
+        },
+        {
+          "source": "stores",
+          "target": "db",
+          "label": "SQL事务",
+          "display_label": "SQL事务"
+        },
+        {
+          "source": "stores",
+          "target": "object",
+          "label": "受控对象读写",
+          "display_label": "受控对象读写"
+        },
+        {
+          "source": "api",
+          "target": "redis",
+          "label": "限流",
+          "points": [
+            [
+              2301,
+              819
+            ],
+            [
+              2301,
+              1612
+            ],
+            [
+              1930,
+              1612
+            ]
+          ],
+          "exitX": 1,
+          "exitY": 0.5,
+          "entryX": 0.5,
+          "entryY": 0,
+          "display_label": "限流"
+        }
+      ],
+      "width": 2340,
+      "height": 1963,
+      "note": "当前工作区实际实现 · 2026-10-10 · 箭头表示调用／依赖方向；完整出处见节点属性与provenance目录",
+      "display_note": "",
+      "typography_layout_base": {
+        "width": 1800,
+        "height": 1510,
+        "nodes": {
+          "web": {
+            "x": 60,
+            "y": 160,
+            "w": 490,
+            "h": 135
+          },
+          "student": {
+            "x": 650,
+            "y": 160,
+            "w": 490,
+            "h": 135
+          },
+          "desktop": {
+            "x": 1240,
+            "y": 160,
+            "w": 490,
+            "h": 135
+          },
+          "sdk": {
+            "x": 60,
+            "y": 380,
+            "w": 1670,
+            "h": 110
+          },
+          "api": {
+            "x": 60,
+            "y": 570,
+            "w": 1670,
+            "h": 120
+          },
+          "identity": {
+            "x": 60,
+            "y": 790,
+            "w": 350,
+            "h": 150
+          },
+          "prepare": {
+            "x": 500,
+            "y": 790,
+            "w": 350,
+            "h": 150
+          },
+          "capture": {
+            "x": 940,
+            "y": 790,
+            "w": 350,
+            "h": 150
+          },
+          "grading": {
+            "x": 1380,
+            "y": 790,
+            "w": 350,
+            "h": 150
+          },
+          "stores": {
+            "x": 60,
+            "y": 1030,
+            "w": 790,
+            "h": 140
+          },
+          "compute": {
+            "x": 940,
+            "y": 1030,
+            "w": 790,
+            "h": 140
+          },
+          "db": {
+            "x": 60,
+            "y": 1280,
+            "w": 490,
+            "h": 110
+          },
+          "object": {
+            "x": 650,
+            "y": 1280,
+            "w": 490,
+            "h": 110
+          },
+          "redis": {
+            "x": 1240,
+            "y": 1280,
+            "w": 490,
+            "h": 110
+          }
+        },
+        "points": {
+          "14": [
+            [
+              1770,
+              630
+            ],
+            [
+              1770,
+              1240
+            ],
+            [
+              1485,
+              1240
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "runtime",
+      "title": "计算、治理与异步任务的实际边界",
+      "nodes": [
+        {
+          "id": "go",
+          "label": "Go API模块化单体\nHTTP handlers / Service / Store\n装配与后台协程同一进程",
+          "x": 127,
+          "y": 270,
+          "w": 435,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/application_modules.go:49",
+          "display_label": "Go 业务服务",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "runtime",
+          "label": "workerruntime / PostgreSQL\nclaim、lease、heartbeat、generation\n结果提交校验；不是进程内任务真相",
+          "x": 849,
+          "y": 249,
+          "w": 591,
+          "h": 152,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/workerruntime/store_postgres.go",
+          "display_label": "Worker Runtime\n任务 / 租约",
+          "show_evidence": false,
+          "title_font_size": 68,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "workers",
+          "label": "独立Python Worker集合\npage-processing / image-quality / OCR\nmath-recognition、paper-formula\nsubjective-grading / math-verification",
+          "x": 1692,
+          "y": 300,
+          "w": 555,
+          "h": 102,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "infra/docker-compose/docker-compose.yml:477",
+          "display_label": "Python Workers",
+          "show_evidence": false,
+          "title_font_size": 65,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "image",
+          "label": "页面/图像计算\nOpenCV配准、质量测量、ROI裁切\n条码识别与OMR；人工恢复入口",
+          "x": 1814,
+          "y": 656,
+          "w": 312,
+          "h": 157,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/page-processing-worker/page_processing/registration.py;services/image-quality-worker/image_quality/engine.py",
+          "display_label": "图像处理\n质量 / 配准 / ROI",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "goai",
+          "label": "Go subjective / paper\n本地HTTP Adapter / 托管模型解析\n资格门禁、rubric、证据、版本",
+          "x": 82,
+          "y": 686,
+          "w": 526,
+          "h": 110,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/module_grading.go:108;services/api-gateway/internal/server/application_modules.go:126",
+          "display_label": "评分 / 试卷解析",
+          "show_evidence": false,
+          "title_font_size": 71,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "agent",
+          "label": "Python grading-agent\n结构化解析、guardrail、provider adapter\n请求鉴权与超时、输入输出协议",
+          "x": 870,
+          "y": 686,
+          "w": 549,
+          "h": 111,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "ai-services/grading_agent/server.py;ai-services/grading_agent/provider_adapter.py",
+          "display_label": "grading-agent",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "models",
+          "label": "模型运行时 / 外部AI服务\n本地llama.cpp或受控provider\n是否运行、评分质量未由静态审计确认",
+          "x": 878,
+          "y": 1092,
+          "w": 532,
+          "h": 111,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "infra/docker-compose/docker-compose.yml:443;ai-services/grading_agent/model.py",
+          "display_label": "本地 / 外部模型",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "govern",
+          "label": "AI治理与助手\nmodelgovernance / AIFoundation\n资格、评估、校准、分歧 / schoolassistant",
+          "x": 188,
+          "y": 1092,
+          "w": 312,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/module_ai_governance.go:51;services/api-gateway/internal/server/module_ai_foundation.go;services/api-gateway/internal/server/module_school_assistant.go",
+          "display_label": "模型治理",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "panel",
+          "label": "三智能体内核\nA/B并行、C盲仲裁已存在\n普通生产worker未接自动评分链",
+          "x": 1742,
+          "y": 1069,
+          "w": 456,
+          "h": 157,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/subjective/panel_orchestrator.go;services/api-gateway/internal/server/module_grading.go:108",
+          "display_label": "三智能体内核\n普通生产入口未接入",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "maintenance",
+          "label": "Go后台任务\n试卷parse executor、processing projector\n文件巡检、outbox dispatcher",
+          "x": 403,
+          "y": 1452,
+          "w": 312,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/infrastructure.go:118;services/api-gateway/internal/server/server.go:86",
+          "display_label": "后台维护",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "partialinfra",
+          "label": "部署配置中接入有限的组件\nQdrant仅查健康，未确认向量检索链\noutbox当前Publisher为结构化日志",
+          "x": 1422,
+          "y": 1430,
+          "w": 641,
+          "h": 157,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/deps/deps.go:182;services/api-gateway/internal/outbox/publisher_log.go:14",
+          "display_label": "Qdrant：健康检查\noutbox：日志投递",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        }
+      ],
+      "edges": [
+        {
+          "source": "workers",
+          "target": "runtime",
+          "label": "HTTP claim / complete / heartbeat",
+          "exitX": 0,
+          "exitY": 0.4,
+          "entryX": 1,
+          "entryY": 0.4,
+          "display_label": "HTTP claim / complete / heartbeat"
+        },
+        {
+          "source": "go",
+          "target": "runtime",
+          "label": "写入任务事实",
+          "display_label": "写入任务事实"
+        },
+        {
+          "source": "workers",
+          "target": "image",
+          "label": "本地计算",
+          "display_label": "本地计算"
+        },
+        {
+          "source": "goai",
+          "target": "agent",
+          "label": "HTTP请求",
+          "display_label": "HTTP请求"
+        },
+        {
+          "source": "agent",
+          "target": "models",
+          "label": "供应商协议",
+          "display_label": "供应商协议"
+        },
+        {
+          "source": "govern",
+          "target": "goai",
+          "label": "受控配置/资格",
+          "exitX": 0.5,
+          "exitY": 0,
+          "entryX": 0.5,
+          "entryY": 1,
+          "display_label": "受控配置/资格"
+        },
+        {
+          "source": "go",
+          "target": "goai",
+          "label": "用户/任务触发",
+          "display_label": "用户/任务触发"
+        },
+        {
+          "source": "runtime",
+          "target": "goai",
+          "label": "subjective worker请求执行",
+          "points": [
+            [
+              1144,
+              520
+            ],
+            [
+              344,
+              520
+            ]
+          ],
+          "display_label": "subjective worker请求执行"
+        },
+        {
+          "source": "maintenance",
+          "target": "partialinfra",
+          "label": "当前投递端；不是消息总线",
+          "display_label": "当前投递端；不是消息总线"
+        }
+      ],
+      "width": 2340,
+      "height": 1794,
+      "note": "当前工作区实际实现 · 2026-10-10 · 箭头表示调用／依赖方向；完整出处见节点属性与provenance目录",
+      "display_note": "",
+      "typography_layout_base": {
+        "width": 1800,
+        "height": 1380,
+        "nodes": {
+          "go": {
+            "x": 60,
+            "y": 160,
+            "w": 410,
+            "h": 180
+          },
+          "runtime": {
+            "x": 650,
+            "y": 160,
+            "w": 460,
+            "h": 180
+          },
+          "workers": {
+            "x": 1300,
+            "y": 160,
+            "w": 430,
+            "h": 220
+          },
+          "image": {
+            "x": 1300,
+            "y": 480,
+            "w": 430,
+            "h": 170
+          },
+          "goai": {
+            "x": 60,
+            "y": 480,
+            "w": 410,
+            "h": 180
+          },
+          "agent": {
+            "x": 650,
+            "y": 480,
+            "w": 460,
+            "h": 180
+          },
+          "models": {
+            "x": 650,
+            "y": 800,
+            "w": 460,
+            "h": 165
+          },
+          "govern": {
+            "x": 60,
+            "y": 800,
+            "w": 410,
+            "h": 165
+          },
+          "panel": {
+            "x": 1300,
+            "y": 800,
+            "w": 430,
+            "h": 165
+          },
+          "maintenance": {
+            "x": 60,
+            "y": 1080,
+            "w": 740,
+            "h": 160
+          },
+          "partialinfra": {
+            "x": 950,
+            "y": 1080,
+            "w": 780,
+            "h": 160
+          }
+        },
+        "points": {
+          "7": [
+            [
+              880,
+              400
+            ],
+            [
+              265,
+              400
+            ]
+          ]
+        }
+      }
+    }
+  ],
+  "compact": true
+}

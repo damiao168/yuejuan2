@@ -9,9 +9,9 @@ import { apiClient } from "./client";
 import type { Question } from "./papers";
 
 export type ReviewTask = GeneratedReviewTask;
-// The API deliberately returns null when the reviewer has not saved a draft
-// yet. Keep that runtime fact explicit even though older generated contracts
-// modelled the field as required.
+// 阅卷人尚未保存草稿时，API 会返回 null。
+// 即使旧版生成契约将该字段标为必填，
+// 这里仍明确保留实际运行时的空值情况。
 export type ReviewTaskContext = Omit<GeneratedReviewTaskContext, "draft"> & {
   draft: GeneratedReviewTaskContext["draft"] | null;
 };
@@ -84,7 +84,7 @@ export interface ReviewWorkspace {
     answer_segment_id: string;
     anonymous_code: string;
     question: Question;
-    rubric?: Question["rubric"];
+    rubric?: Exclude<Question["rubric"], undefined>;
     raw_answer: string;
     ocr_text: string;
     ai_suggestion: AiGrade | null;
@@ -234,6 +234,10 @@ export interface ReviewTaskFilter {
   status?: string;
   assigned_to?: string;
   exam_id?: string;
+  question_id?: string;
+  subject?: string;
+  q?: string;
+  unassigned?: boolean;
   limit?: number;
   cursor?: string;
 }
@@ -441,8 +445,8 @@ export async function createRuleGrade(segmentId: string) {
 }
 
 export async function createSubjectiveAiGrade(segmentId: string): Promise<{ grade: AiGrade }> {
-  // Model governance and production defaults are owned by the gateway. The
-  // workbench must never select a mock deployment or override score authority.
+  // 模型治理和生产默认值由网关负责；
+  // 工作台不能选择模拟部署或覆盖成绩的权威来源。
   const result = await generatedApi.createSubjectiveAIGrade({ path: { id: segmentId }, body: {} });
   const mode = result.grade.delivery_mode;
   if (mode !== "teacher_suggestion" && mode !== "teacher_review" && mode !== "shadow_only") throw new Error("Unexpected AI delivery mode");

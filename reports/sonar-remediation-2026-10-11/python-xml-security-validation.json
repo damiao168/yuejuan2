@@ -1,0 +1,213 @@
+{
+  "checked_at_utc": "2026-10-11T10:11:18.190250+00:00",
+  "defusedxml_version": "0.7.1",
+  "source_hashes": {
+    "docs/architecture/tools/build_diagrams.py": "405abfecefb8d7c5f19971104c940adf399fc54cfc3dc67f839c32aa4d1b28af",
+    "docs/architecture/tools/verify_delivery.py": "5c1478e9e91f541524eeda94605c16beaad14f477d615aaf1d68e253d0280792"
+  },
+  "records": [
+    {
+      "tool": "build_diagrams",
+      "case": "editable_xml",
+      "expected_error": null,
+      "error": null,
+      "parse_calls": [
+        {
+          "path": "D:\\project\\yuejuan\\docs\\architecture\\diagrams\\01-feature-tree.drawio",
+          "options": {
+            "forbid_dtd": true
+          }
+        },
+        {
+          "path": "D:\\project\\yuejuan\\docs\\architecture\\diagrams\\02-system-architecture.drawio",
+          "options": {
+            "forbid_dtd": true
+          }
+        },
+        {
+          "path": "D:\\project\\yuejuan\\docs\\architecture\\diagrams\\03-module-dependencies.drawio",
+          "options": {
+            "forbid_dtd": true
+          }
+        },
+        {
+          "path": "D:\\project\\yuejuan\\docs\\architecture\\diagrams\\04-database-er.drawio",
+          "options": {
+            "forbid_dtd": true
+          }
+        },
+        {
+          "path": "D:\\project\\yuejuan\\docs\\architecture\\diagrams\\05-business-workflow.drawio",
+          "options": {
+            "forbid_dtd": true
+          }
+        },
+        {
+          "path": "D:\\project\\yuejuan\\docs\\architecture\\diagrams\\06-image-template-pipeline.drawio",
+          "options": {
+            "forbid_dtd": true
+          }
+        },
+        {
+          "path": "D:\\project\\yuejuan\\docs\\architecture\\diagrams\\07-ai-grading.drawio",
+          "options": {
+            "forbid_dtd": true
+          }
+        },
+        {
+          "path": "D:\\project\\yuejuan\\docs\\architecture\\diagrams\\08-api-data-flow.drawio",
+          "options": {
+            "forbid_dtd": true
+          }
+        },
+        {
+          "path": "D:\\project\\yuejuan\\docs\\architecture\\diagrams\\09-task-state-machine.drawio",
+          "options": {
+            "forbid_dtd": true
+          }
+        },
+        {
+          "path": "D:\\project\\yuejuan\\docs\\architecture\\diagrams\\10-security-deployment.drawio",
+          "options": {
+            "forbid_dtd": true
+          }
+        }
+      ],
+      "virtual_writes": 12,
+      "passed": true
+    },
+    {
+      "tool": "build_diagrams",
+      "case": "plain_dtd",
+      "expected_error": "DTDForbidden",
+      "error": {
+        "type": "DTDForbidden",
+        "message": "DTDForbidden(name='mxfile', system_id=None, public_id=None)"
+      },
+      "parse_calls": [
+        {
+          "path": "D:\\project\\yuejuan\\docs\\architecture\\diagrams\\01-feature-tree.drawio",
+          "options": {
+            "forbid_dtd": true
+          }
+        }
+      ],
+      "virtual_writes": 1,
+      "passed": true
+    },
+    {
+      "tool": "build_diagrams",
+      "case": "internal_entity",
+      "expected_error": "DTDForbidden",
+      "error": {
+        "type": "DTDForbidden",
+        "message": "DTDForbidden(name='mxfile', system_id=None, public_id=None)"
+      },
+      "parse_calls": [
+        {
+          "path": "D:\\project\\yuejuan\\docs\\architecture\\diagrams\\01-feature-tree.drawio",
+          "options": {
+            "forbid_dtd": true
+          }
+        }
+      ],
+      "virtual_writes": 1,
+      "passed": true
+    },
+    {
+      "tool": "build_diagrams",
+      "case": "external_entity",
+      "expected_error": "DTDForbidden",
+      "error": {
+        "type": "DTDForbidden",
+        "message": "DTDForbidden(name='mxfile', system_id=None, public_id=None)"
+      },
+      "parse_calls": [
+        {
+          "path": "D:\\project\\yuejuan\\docs\\architecture\\diagrams\\01-feature-tree.drawio",
+          "options": {
+            "forbid_dtd": true
+          }
+        }
+      ],
+      "virtual_writes": 1,
+      "passed": true
+    },
+    {
+      "tool": "verify_delivery",
+      "case": "editable_xml",
+      "expected_error": null,
+      "error": null,
+      "parse_calls": [
+        {
+          "path": "D:\\project\\yuejuan\\docs\\architecture\\diagrams\\01-feature-tree.drawio",
+          "options": {
+            "forbid_dtd": true
+          }
+        }
+      ],
+      "virtual_writes": 0,
+      "passed": true
+    },
+    {
+      "tool": "verify_delivery",
+      "case": "plain_dtd",
+      "expected_error": "DTDForbidden",
+      "error": {
+        "type": "DTDForbidden",
+        "message": "DTDForbidden(name='mxfile', system_id=None, public_id=None)"
+      },
+      "parse_calls": [
+        {
+          "path": "D:\\project\\yuejuan\\docs\\architecture\\diagrams\\01-feature-tree.drawio",
+          "options": {
+            "forbid_dtd": true
+          }
+        }
+      ],
+      "virtual_writes": 0,
+      "passed": true
+    },
+    {
+      "tool": "verify_delivery",
+      "case": "internal_entity",
+      "expected_error": "DTDForbidden",
+      "error": {
+        "type": "DTDForbidden",
+        "message": "DTDForbidden(name='mxfile', system_id=None, public_id=None)"
+      },
+      "parse_calls": [
+        {
+          "path": "D:\\project\\yuejuan\\docs\\architecture\\diagrams\\01-feature-tree.drawio",
+          "options": {
+            "forbid_dtd": true
+          }
+        }
+      ],
+      "virtual_writes": 0,
+      "passed": true
+    },
+    {
+      "tool": "verify_delivery",
+      "case": "external_entity",
+      "expected_error": "DTDForbidden",
+      "error": {
+        "type": "DTDForbidden",
+        "message": "DTDForbidden(name='mxfile', system_id=None, public_id=None)"
+      },
+      "parse_calls": [
+        {
+          "path": "D:\\project\\yuejuan\\docs\\architecture\\diagrams\\01-feature-tree.drawio",
+          "options": {
+            "forbid_dtd": true
+          }
+        }
+      ],
+      "virtual_writes": 0,
+      "passed": true
+    }
+  ],
+  "network_calls": [],
+  "passed": true,
+  "scope": "真实入口的XML回读；所有生成写入仅在内存；不宣称工作区全交付门禁已通过"
+}

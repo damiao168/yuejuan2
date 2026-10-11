@@ -10,7 +10,7 @@ export function resolveImportAnswerValue(value: unknown, original: unknown): unk
   if (typeof value !== "string") throw new Error("结构化标准答案必须保持原有数组或对象格式");
   try {
     const parsed: unknown = JSON.parse(value);
-    if (!isStructuredAnswer(parsed) || Array.isArray(parsed) !== Array.isArray(original)) throw new Error();
+    if (!isStructuredAnswer(parsed) || Array.isArray(parsed) !== Array.isArray(original)) throw new Error("标准答案必须保留原有数组或对象格式");
     return parsed;
   } catch {
     throw new Error("结构化标准答案必须填写有效 JSON，并保留原有数组或对象格式");

@@ -1,0 +1,200 @@
+{
+  "language": "rust",
+  "findings": [
+    {
+      "resultIndex": 0,
+      "ruleId": "rust/hard-coded-cryptographic-value",
+      "path": "apps/desktop-client/src-tauri/src/durable_store/paths.rs",
+      "status": "false_positive",
+      "reason": "paths.rs:105 的 true 是 durable_data_exists 返回的布尔存在标志，crypto.rs:168 只把它用作已有密文时拒绝生成新密钥的分支条件；该分支 return Err。实际返回密钥来自凭据管理器已保存的32字节值，或 OsRng 填满的新32字节数组。原始 codeFlow 的 bool guard -> master_key 返回值关联是保守流摘要，不存在 bool 转为 AES key 的实现。",
+      "changedFiles": [],
+      "currentSha256": "18d6cd3ad7c0df27444117953ed996e7532e1f07331cd4c56e57f92998c796a6",
+      "snapshotSha256": "18d6cd3ad7c0df27444117953ed996e7532e1f07331cd4c56e57f92998c796a6",
+      "unchangedSinceTaskBaseline": true,
+      "currentContextReviewed": true
+    },
+    {
+      "resultIndex": 1,
+      "ruleId": "rust/hard-coded-cryptographic-value",
+      "path": "apps/desktop-client/src-tauri/src/durable_store/claim.rs",
+      "status": "intentional",
+      "reason": "固定正确 key [7_u8;32] 用于新 UUID 临时 legacy SQLite 库里的合成 JSON 密文，整个测试模块被 cfg(test) 包围。 已读实际 #[cfg(test)] mod tests 的起止边界；正常非 test 构建排除整个模块。测试调用生产 crypto/storage helper 不会把测试常量变成生产入口。",
+      "changedFiles": [],
+      "currentSha256": "ef254596635799104d520b25d386f4cdb7421879dad79f952dd169cb90af2876",
+      "snapshotSha256": "ef254596635799104d520b25d386f4cdb7421879dad79f952dd169cb90af2876",
+      "unchangedSinceTaskBaseline": true,
+      "currentContextReviewed": true
+    },
+    {
+      "resultIndex": 2,
+      "ruleId": "rust/hard-coded-cryptographic-value",
+      "path": "apps/desktop-client/src-tauri/src/durable_store/claim.rs",
+      "status": "intentional",
+      "reason": "同一测试用正确固定 key [7_u8;32] 验证前面生成的合成 legacy 密文成功，整个调用在 cfg(test) 模块。 已读实际 #[cfg(test)] mod tests 的起止边界；正常非 test 构建排除整个模块。测试调用生产 crypto/storage helper 不会把测试常量变成生产入口。",
+      "changedFiles": [],
+      "currentSha256": "ef254596635799104d520b25d386f4cdb7421879dad79f952dd169cb90af2876",
+      "snapshotSha256": "ef254596635799104d520b25d386f4cdb7421879dad79f952dd169cb90af2876",
+      "unchangedSinceTaskBaseline": true,
+      "currentContextReviewed": true
+    },
+    {
+      "resultIndex": 3,
+      "ruleId": "rust/hard-coded-cryptographic-value",
+      "path": "apps/desktop-client/src-tauri/src/durable_store/claim.rs",
+      "status": "intentional",
+      "reason": "错误 key [8_u8;32] 是解密失败和文件保留断言的负例，不是生产加密密钥。 已读实际 #[cfg(test)] mod tests 的起止边界；正常非 test 构建排除整个模块。测试调用生产 crypto/storage helper 不会把测试常量变成生产入口。",
+      "changedFiles": [],
+      "currentSha256": "ef254596635799104d520b25d386f4cdb7421879dad79f952dd169cb90af2876",
+      "snapshotSha256": "ef254596635799104d520b25d386f4cdb7421879dad79f952dd169cb90af2876",
+      "unchangedSinceTaskBaseline": true,
+      "currentContextReviewed": true
+    },
+    {
+      "resultIndex": 4,
+      "ruleId": "rust/hard-coded-cryptographic-value",
+      "path": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+      "status": "false_positive",
+      "reason": "crypto.rs:127 的全零12字节数组只用于分配 nonce 缓冲区。第128行立即 OsRng.fill_bytes(&mut nonce)，第130行后才送入 AES-GCM；锁定 rand_core 0.6.4 的 OsRng.fill_bytes 在随机源失败时 panic，不存在继续使用全零缓冲区的回退路径。未执行系统随机源故障注入或完整Rust测试。",
+      "changedFiles": [],
+      "currentSha256": "8fdadd2b87d65a01f913540db8864a62eb37d2c6c71d93dbf26d177befd8cb35",
+      "snapshotSha256": "8fdadd2b87d65a01f913540db8864a62eb37d2c6c71d93dbf26d177befd8cb35",
+      "unchangedSinceTaskBaseline": true,
+      "currentContextReviewed": true
+    },
+    {
+      "resultIndex": 5,
+      "ruleId": "rust/hard-coded-cryptographic-value",
+      "path": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+      "status": "false_positive",
+      "reason": "crypto.rs:171 的全零32字节数组只用于分配新密钥缓冲区；第172行 OsRng.fill_bytes 后才写入 Windows Credential Manager 并返回。已有本地密文而密钥丢失时前一分支返回错误，不会新建替代密钥。凭据管理器读取成功的另一分支使用已保存值；随机源失败时 fill_bytes panic，不会返回初始化全零值。",
+      "changedFiles": [],
+      "currentSha256": "8fdadd2b87d65a01f913540db8864a62eb37d2c6c71d93dbf26d177befd8cb35",
+      "snapshotSha256": "8fdadd2b87d65a01f913540db8864a62eb37d2c6c71d93dbf26d177befd8cb35",
+      "unchangedSinceTaskBaseline": true,
+      "currentContextReviewed": true
+    },
+    {
+      "resultIndex": 6,
+      "ruleId": "rust/hard-coded-cryptographic-value",
+      "path": "apps/desktop-client/src-tauri/src/durable_store/drafts.rs",
+      "status": "intentional",
+      "reason": "KEY=[37;32] 是 cfg(test) 模块私有夹具常量，insert helper 只在本模块测试中加密内存 SQLite 的合成草稿。 已读实际 #[cfg(test)] mod tests 的起止边界；正常非 test 构建排除整个模块。测试调用生产 crypto/storage helper 不会把测试常量变成生产入口。",
+      "changedFiles": [],
+      "currentSha256": "8da95099ce829d112c8a09442c516c0c12f67144f2a18f703780a190371c3a3f",
+      "snapshotSha256": "8da95099ce829d112c8a09442c516c0c12f67144f2a18f703780a190371c3a3f",
+      "unchangedSinceTaskBaseline": true,
+      "currentContextReviewed": true
+    },
+    {
+      "resultIndex": 7,
+      "ruleId": "rust/hard-coded-cryptographic-value",
+      "path": "apps/desktop-client/src-tauri/src/durable_store/drafts.rs",
+      "status": "intentional",
+      "reason": "错误 key [88;32] 有意触发清理失败，断言两条过期草稿都保留；调用只在 cfg(test) 测试中。 已读实际 #[cfg(test)] mod tests 的起止边界；正常非 test 构建排除整个模块。测试调用生产 crypto/storage helper 不会把测试常量变成生产入口。",
+      "changedFiles": [],
+      "currentSha256": "8da95099ce829d112c8a09442c516c0c12f67144f2a18f703780a190371c3a3f",
+      "snapshotSha256": "8da95099ce829d112c8a09442c516c0c12f67144f2a18f703780a190371c3a3f",
+      "unchangedSinceTaskBaseline": true,
+      "currentContextReviewed": true
+    },
+    {
+      "resultIndex": 8,
+      "ruleId": "rust/hard-coded-cryptographic-value",
+      "path": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+      "status": "intentional",
+      "reason": "固定 key [7_u8;32] 只为合成草稿的 AES-GCM 回环测试提供可重现密钥；caller 是 cfg(test) 模块中的 test。 已读实际 #[cfg(test)] mod tests 的起止边界；正常非 test 构建排除整个模块。测试调用生产 crypto/storage helper 不会把测试常量变成生产入口。",
+      "changedFiles": [],
+      "currentSha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969",
+      "snapshotSha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969",
+      "unchangedSinceTaskBaseline": true,
+      "currentContextReviewed": true
+    },
+    {
+      "resultIndex": 9,
+      "ruleId": "rust/hard-coded-cryptographic-value",
+      "path": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+      "status": "intentional",
+      "reason": "错误 key [8_u8;32] 有意验证同一合成密文用错误密钥解密失败；caller 是 cfg(test) 测试。 已读实际 #[cfg(test)] mod tests 的起止边界；正常非 test 构建排除整个模块。测试调用生产 crypto/storage helper 不会把测试常量变成生产入口。",
+      "changedFiles": [],
+      "currentSha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969",
+      "snapshotSha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969",
+      "unchangedSinceTaskBaseline": true,
+      "currentContextReviewed": true
+    },
+    {
+      "resultIndex": 10,
+      "ruleId": "rust/hard-coded-cryptographic-value",
+      "path": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+      "status": "intentional",
+      "reason": "固定 key [17_u8;32] 只用于 UUID 临时目录/内存 SQLite 的分块暂存、顺序与内容校验测试。 已读实际 #[cfg(test)] mod tests 的起止边界；正常非 test 构建排除整个模块。测试调用生产 crypto/storage helper 不会把测试常量变成生产入口。",
+      "changedFiles": [],
+      "currentSha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969",
+      "snapshotSha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969",
+      "unchangedSinceTaskBaseline": true,
+      "currentContextReviewed": true
+    },
+    {
+      "resultIndex": 11,
+      "ruleId": "rust/hard-coded-cryptographic-value",
+      "path": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+      "status": "intentional",
+      "reason": "固定 key [29_u8;32] 只用于内存 SQLite 中500页合成暂存与第173页中断恢复场景。 已读实际 #[cfg(test)] mod tests 的起止边界；正常非 test 构建排除整个模块。测试调用生产 crypto/storage helper 不会把测试常量变成生产入口。",
+      "changedFiles": [],
+      "currentSha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969",
+      "snapshotSha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969",
+      "unchangedSinceTaskBaseline": true,
+      "currentContextReviewed": true
+    },
+    {
+      "resultIndex": 12,
+      "ruleId": "rust/hard-coded-cryptographic-value",
+      "path": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+      "status": "intentional",
+      "reason": "固定 key [43_u8;32] 只用于 UUID 临时 A/B 账号与独立 SQLite 的隔离断言，不是生产账号密钥配置。 已读实际 #[cfg(test)] mod tests 的起止边界；正常非 test 构建排除整个模块。测试调用生产 crypto/storage helper 不会把测试常量变成生产入口。",
+      "changedFiles": [],
+      "currentSha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969",
+      "snapshotSha256": "36a56524c6dcc2a415150dde39370b49ee7bb4126ec32b3a04a45cf8089b5969",
+      "unchangedSinceTaskBaseline": true,
+      "currentContextReviewed": true
+    },
+    {
+      "resultIndex": 13,
+      "ruleId": "rust/hard-coded-cryptographic-value",
+      "path": "apps/desktop-client/src-tauri/src/durable_store/storage.rs",
+      "status": "intentional",
+      "reason": "[61_u8;32] 是 cfg(test) 私有 fixture 返回的合成数据密钥，只由同测试模块调用。 已读实际 #[cfg(test)] mod tests 的起止边界；正常非 test 构建排除整个模块。测试调用生产 crypto/storage helper 不会把测试常量变成生产入口。",
+      "changedFiles": [],
+      "currentSha256": "2ab93840f2a3f14b5abb01a09f192d1f19f73bf9f9281f2dd34debbd41107ba8",
+      "snapshotSha256": "2ab93840f2a3f14b5abb01a09f192d1f19f73bf9f9281f2dd34debbd41107ba8",
+      "unchangedSinceTaskBaseline": true,
+      "currentContextReviewed": true
+    }
+  ],
+  "changedFiles": [],
+  "tests": [
+    {
+      "command": "cargo test --offline --locked --lib --all-features --jobs 1 -- --test-threads=1",
+      "status": "passed",
+      "exitCode": 0,
+      "passed": 31,
+      "log": "rust-tests.log"
+    },
+    {
+      "command": "cargo test --offline --locked --lib --all-features --jobs 1 -- --test-threads=1",
+      "status": "environment_failure_then_retried",
+      "exitCode": 101,
+      "reason": "主机页面文件不足，serde元数据mmap报os error1455；保持源码和系统设置不变重试成功。",
+      "log": "rust-tests-attempt1.log"
+    }
+  ],
+  "notes": [
+    "已重新读取当前生产密钥、nonce生成路径，四个cfg(test)模块和生产调用；原结论在当前工作区仍适用。",
+    "当前锁定rand_core 0.6.4本地实现fill_bytes在随机源失败时panic；不能把预分配零数组当成固定密钥，也不能声称执行了随机源故障注入。",
+    "queue.rs和spool.rs在本轮基线前已经没有CRLF，现有.gitattributes固定二者LF；不覆盖此前修改，不声称已复跑CodeQL消除了警告。",
+    "当前存在真实icons/icon.ico；没有替换配置、图标、生成schema或锁文件。"
+  ],
+  "limitations": [
+    "本轮尚未重建CodeQL数据库，原数据库28条字符串提取警告继续作为原扫描限制保留。",
+    "只有候选相关上下文已重新审读，全文件和全仓未审读部分仍是pending。"
+  ]
+}

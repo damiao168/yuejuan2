@@ -1,0 +1,8 @@
+{
+  "download_completed": "2026-10-11T10:49:49+08:00",
+  "bundle": "D:\\tools\\audit-codeql-20261010\\codeql-bundle-win64.tar.gz",
+  "size": 698921984,
+  "sha256": "c4834b337e2db85bdd4e7e97455319ff70d28f06abb2987eff9ec0f62d51dcea",
+  "expected_sha256": "c4834b337e2db85bdd4e7e97455319ff70d28f06abb2987eff9ec0f62d51dcea",
+  "download_url": "https://github.com/github/codeql-action/releases/download/codeql-bundle-v2.27.2/codeql-bundle-win64.tar.gz"
+}

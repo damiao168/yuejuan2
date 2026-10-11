@@ -1,4 +1,4 @@
-// Package questionbank owns reusable content upstream of exam questions.
+// Package questionbank 管理考试题目上游的可复用内容。
 package questionbank
 
 import (
@@ -19,8 +19,7 @@ var (
 	ErrSourceUnavailable = errors.New("frozen question import source is unavailable")
 )
 
-// MetadataValidationError keeps validation failures attached to stable field
-// keys so API clients can render them beside the relevant controlled field.
+// MetadataValidationError 将校验失败关联到稳定字段键，使 API 客户端可在对应受控字段旁展示错误。
 type MetadataValidationError struct {
 	FieldErrors map[string][]string
 }
@@ -252,6 +251,7 @@ type VersionPage struct {
 }
 
 type Store interface {
+	ListMembers(context.Context, auth.AccessScope, string) ([]Member, error)
 	PreviewImports(context.Context, auth.AccessScope, ImportPreviewInput) (ImportPreviewBatch, error)
 	ImportQuestion(context.Context, auth.AccessScope, string, ImportQuestionInput) (ImportResult, error)
 	UpdateScoring(context.Context, auth.AccessScope, string, UpdateScoringInput) (Version, error)
@@ -417,8 +417,7 @@ type BatchImportResult struct {
 	Items []BatchImportResultItem `json:"items"`
 }
 
-// Scoring is owned by an item version. Template selection copies the facts;
-// the reference records provenance and is never dereferenced by exam scoring.
+// 评分事实归属于条目版本。选择模板时复制事实，引用只记录来源，考试评分不会再沿引用读取。
 type Scoring struct {
 	Answer            *paper.AnswerKeyInput `json:"answer"`
 	Solution          *paper.SolutionInput  `json:"solution"`

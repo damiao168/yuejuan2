@@ -1,0 +1,26 @@
+✔ canonical API paths preserve literal and dynamic resource semantics (2.2218ms)
+✔ unclosed repeated braces are scanned as literal suffix once (0.5333ms)
+✔ native geometry retains endpoints, background, border tolerance and dangling edges (19.8109ms)
+✔ snapshot reads the opened file after path replacement and includes nested and missing outputs (75.2537ms)
+✔ snapshot closes files on read failure and propagates directory permission errors (13.0864ms)
+✔ generated writes preserve unchanged metadata and permissions and truncate UTF-8 output correctly (34.6642ms)
+✔ generated writes preserve the replaced path and reject success for a detached artifact (28.2973ms)
+✔ exclusive creation retries an intervening creator without truncating unchanged output (15.1356ms)
+✔ generated writes complete short writes and close their descriptor on failure (23.7461ms)
+✔ write errors and repeated creation contention do not report generation success (6.2759ms)
+✔ unchanged read-only artifacts remain valid but changed output requires write permission (19.4086ms)
+✔ route coverage creates and updates outputs and preserves unchanged files (114.9965ms)
+✔ route coverage rejects replaced output and propagates write failures (62.126ms)
+✔ schema references and literal schemas retain precedence over sibling type modifiers (2.7462ms)
+✔ object schemas preserve required keys, property order and additional-property composition (3.4823ms)
+✔ schema fallback boundaries retain primitive, inferred-object and array output (0.7439ms)
+✔ type declarations preserve exact composition text and schema declaration order (0.6548ms)
+✔ client generation retains schema-name boundaries and binary, JSON and header text (1.8339ms)
+ℹ tests 18
+ℹ suites 0
+ℹ pass 18
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 630.7138

@@ -1,0 +1,282 @@
+[
+  {
+    "path": "api/hotspots",
+    "actions": [
+      {
+        "key": "change_status",
+        "description": "Change the status of a Security Hotpot.<br/>Requires the 'Administer Security Hotspot' permission.",
+        "since": "8.1",
+        "deprecatedSince": "2026.4",
+        "internal": false,
+        "post": true,
+        "hasResponseExample": false,
+        "changelog": [
+          {
+            "description": "Hotspots are deprecated and replaced by security issues (software quality) and vulnerabilities (type). Please use the API of security issues / vulnerabilities instead.",
+            "version": "2026.4"
+          },
+          {
+            "description": "The following 'resolution' values are not deprecated anymore: FIXED, SAFE, ACKNOWLEDGED",
+            "version": "2025.1"
+          },
+          {
+            "description": "The following 'status' values are not deprecated anymore: TO_REVIEW, REVIEWED",
+            "version": "2025.1"
+          },
+          {
+            "description": "Endpoint visibility change from internal to public",
+            "version": "10.1"
+          }
+        ],
+        "params": [
+          {
+            "key": "comment",
+            "description": "Comment text.",
+            "required": false,
+            "internal": false,
+            "exampleValue": "This is safe because user input is validated by the calling code"
+          },
+          {
+            "key": "hotspot",
+            "description": "Key of the Security Hotspot",
+            "required": true,
+            "internal": false,
+            "exampleValue": "AU-TpxcA-iU5OvuD2FL0"
+          },
+          {
+            "key": "resolution",
+            "description": "Resolution of the Security Hotspot when new status is REVIEWED, otherwise must not be set.",
+            "required": false,
+            "internal": false,
+            "possibleValues": [
+              "FIXED",
+              "SAFE",
+              "ACKNOWLEDGED"
+            ]
+          },
+          {
+            "key": "status",
+            "description": "New status of the Security Hotspot.",
+            "required": true,
+            "internal": false,
+            "possibleValues": [
+              "TO_REVIEW",
+              "REVIEWED"
+            ]
+          }
+        ]
+      },
+      {
+        "key": "show",
+        "description": "Provides the details of a Security Hotspot.",
+        "since": "8.1",
+        "deprecatedSince": "2026.4",
+        "internal": false,
+        "post": false,
+        "hasResponseExample": true,
+        "changelog": [
+          {
+            "description": "Hotspots are deprecated and replaced by security issues (software quality) and vulnerabilities (type). Please use the API of security issues / vulnerabilities instead.",
+            "version": "2026.4"
+          },
+          {
+            "description": "Add the 'codeVariants' response field",
+            "version": "10.1"
+          },
+          {
+            "description": "Add message formatting to issue and locations response",
+            "version": "9.8"
+          },
+          {
+            "description": "Hotspot flows in the response may contain a description and a type",
+            "version": "9.7"
+          },
+          {
+            "description": "The fields rule.riskDescription, rule.fixRecommendations, rule.vulnerabilityDescription of the response are deprecated. /api/rules/show endpoint should be used to fetch rule descriptions.",
+            "version": "9.5"
+          }
+        ],
+        "params": [
+          {
+            "key": "hotspot",
+            "description": "Key of the Security Hotspot",
+            "required": true,
+            "internal": false,
+            "exampleValue": "AU-TpxcA-iU5OvuD2FL0"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "path": "api/issues",
+    "actions": [
+      {
+        "key": "add_comment",
+        "description": "Add a comment.<br/>Requires authentication and the following permission: 'Browse' on the project of the specified issue.",
+        "since": "3.6",
+        "internal": false,
+        "post": true,
+        "hasResponseExample": true,
+        "changelog": [
+          {
+            "description": "The response fields 'severity' and 'type' are not deprecated anymore.",
+            "version": "10.8"
+          },
+          {
+            "description": "Possible values 'INFO' and 'BLOCKER' for response field 'severity' of 'impacts' have been added.",
+            "version": "10.8"
+          },
+          {
+            "description": "The response fields 'severity' and 'type' are deprecated. Please use 'impacts' instead.",
+            "version": "10.4"
+          },
+          {
+            "description": "The response fields 'status' and 'resolution' are deprecated. Please use 'issueStatus' instead.",
+            "version": "10.4"
+          },
+          {
+            "description": "Add 'issueStatus' field to the response.",
+            "version": "10.4"
+          },
+          {
+            "description": "Add 'impacts', 'cleanCodeAttribute', 'cleanCodeAttributeCategory' fields to the response",
+            "version": "10.2"
+          },
+          {
+            "description": "Response field 'ruleDescriptionContextKey' added",
+            "version": "9.6"
+          },
+          {
+            "description": "The response field components.uuid is removed",
+            "version": "8.8"
+          },
+          {
+            "description": "the database ids of the components are removed from the response",
+            "version": "6.5"
+          },
+          {
+            "description": "the response field components.uuid is deprecated. Use components.key instead.",
+            "version": "6.5"
+          },
+          {
+            "description": "the response returns the issue with all its details",
+            "version": "6.3"
+          }
+        ],
+        "params": [
+          {
+            "key": "issue",
+            "description": "Issue key",
+            "required": true,
+            "internal": false,
+            "exampleValue": "AU-Tpxb--iU5OvuD2FLy"
+          },
+          {
+            "key": "text",
+            "description": "Comment text",
+            "required": true,
+            "internal": false,
+            "exampleValue": "Won't fix because it doesn't apply to the context"
+          }
+        ]
+      },
+      {
+        "key": "do_transition",
+        "description": "Do workflow transition on an issue. Requires authentication and Browse permission on project.<br/>\nThe transitions 'accept', 'wontfix' and 'falsepositive' require the permission 'Administer Issues'.<br/>\nThe transitions involving security hotspots require the permission 'Administer Security Hotspot'.\n",
+        "since": "3.6",
+        "internal": false,
+        "post": true,
+        "hasResponseExample": true,
+        "changelog": [
+          {
+            "description": "The response fields 'severity' and 'type' are not deprecated anymore.",
+            "version": "10.8"
+          },
+          {
+            "description": "Possible values 'INFO' and 'BLOCKER' for response field 'severity' of 'impacts' have been added.",
+            "version": "10.8"
+          },
+          {
+            "description": "The transitions 'wontfix' and 'confirm' are deprecated. Please use 'accept' instead. The transition 'unconfirm' is deprecated too. ",
+            "version": "10.4"
+          },
+          {
+            "description": "Add transition 'accept'.",
+            "version": "10.4"
+          },
+          {
+            "description": "The response fields 'severity' and 'type' are deprecated. Please use 'impacts' instead.",
+            "version": "10.4"
+          },
+          {
+            "description": "The response fields 'status' and 'resolution' are deprecated. Please use 'issueStatus' instead.",
+            "version": "10.4"
+          },
+          {
+            "description": "Add 'issueStatus' field to the response.",
+            "version": "10.4"
+          },
+          {
+            "description": "Add 'impacts', 'cleanCodeAttribute', 'cleanCodeAttributeCategory' fields to the response",
+            "version": "10.2"
+          },
+          {
+            "description": "Response field 'ruleDescriptionContextKey' added",
+            "version": "9.6"
+          },
+          {
+            "description": "The response field components.uuid is removed",
+            "version": "8.8"
+          },
+          {
+            "description": "transitions 'setinreview' and 'openasvulnerability' are no more supported",
+            "version": "8.1"
+          },
+          {
+            "description": "added 'setinreview', resolveasreviewed, openasvulnerability and resetastoreview transitions for security hotspots ",
+            "version": "7.8"
+          },
+          {
+            "description": "added transitions for security hotspots",
+            "version": "7.3"
+          },
+          {
+            "description": "the database ids of the components are removed from the response",
+            "version": "6.5"
+          },
+          {
+            "description": "the response field components.uuid is deprecated. Use components.key instead.",
+            "version": "6.5"
+          }
+        ],
+        "params": [
+          {
+            "key": "issue",
+            "description": "Issue key",
+            "required": true,
+            "internal": false,
+            "exampleValue": "AU-Tpxb--iU5OvuD2FLy"
+          },
+          {
+            "key": "transition",
+            "description": "Transition",
+            "required": true,
+            "internal": false,
+            "possibleValues": [
+              "confirm",
+              "unconfirm",
+              "reopen",
+              "resolve",
+              "falsepositive",
+              "wontfix",
+              "resolveasreviewed",
+              "resetastoreview",
+              "accept"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+]

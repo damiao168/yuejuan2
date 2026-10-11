@@ -1,5 +1,8 @@
 import { recoverScoringCommand, startScoringRun } from "../../../../api/review";
 
+// 默认适配器只保存接口函数，命令状态仍由每次调用的 options 和局部变量承载。
+const defaultScoringTransport = { recover: recoverScoringCommand, start: startScoringRun };
+
 type Storage = Pick<globalThis.Storage, "getItem" | "setItem" | "removeItem">;
 
 export async function submitScoringCommand(options: {
@@ -8,7 +11,7 @@ export async function submitScoringCommand(options: {
   storage: Storage;
   ready: () => Promise<boolean>;
   pending: (id: string | null) => void;
-}, transport = { recover: recoverScoringCommand, start: startScoringRun }) {
+}, transport = defaultScoringTransport) {
   let commandId = options.storage.getItem(options.storageKey);
   let accepted = false;
   if (commandId) {
@@ -26,6 +29,6 @@ export async function submitScoringCommand(options: {
   try {
     options.storage.removeItem(options.storageKey);
     options.pending(null);
-  } catch { /* The accepted command remains safe to recover. */ }
+  } catch { /* 已接受的命令仍可安全恢复。 */ }
   return true;
 }

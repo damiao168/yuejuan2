@@ -47,7 +47,10 @@ func (s *PostgresStore) CreateArbitrationTask(ctx context.Context, tenantID stri
 		return ArbitrationTask{}, ErrInvalidTransition
 	}
 	policy, _ := s.effectivePolicyTx(ctx, tx, tenantID, session.ExamID, session.QuestionID)
-	task, err := s.createArbitrationTaskTx(ctx, tx, tenantID, actorID, session, first, second, input.DifferenceReason, input.AssignedTo, policy.AllowSameArbitrator)
+	task, err := s.createArbitrationTaskTx(ctx, tx, tenantID, actorID, session, ArbitrationTask{
+		FirstScore: first.Score, SecondScore: second.Score, DifferenceReason: input.DifferenceReason,
+		AssignedTo: input.AssignedTo, AllowSameArbitrator: policy.AllowSameArbitrator,
+	})
 	if err != nil {
 		return ArbitrationTask{}, err
 	}
@@ -103,9 +106,28 @@ LIMIT NULLIF($7, 0)
 }
 
 func (s *PostgresStore) GetArbitrationTask(ctx context.Context, tenantID string, id string) (ArbitrationTask, error) {
-	return scanArbitration(s.db.QueryRowContext(ctx, arbitrationSelect()+`
+	task, err := scanArbitration(s.db.QueryRowContext(ctx, arbitrationSelect()+`
 WHERE tenant_id = $1 AND id::text = $2 AND deleted_at IS NULL
 `, tenantID, id))
+	if err != nil {
+		return ArbitrationTask{}, err
+	}
+	if task.Context.Question == nil || task.Context.Rubric == nil {
+		// 历史记录仅保存作答摘要；补齐同租户、同片段的冻结标准，不读取最新可编辑题库。
+		// Handler 继续按任务分配校验访问，补齐材料不会授予整场考试的管理权限。
+		frozen, loadErr := s.loadContext(ctx, tenantID, task.AnswerSegmentID)
+		if loadErr != nil {
+			return ArbitrationTask{}, loadErr
+		}
+		materials := contextForArbitration(frozen)
+		if task.Context.Question == nil {
+			task.Context.Question = materials.Question
+		}
+		if task.Context.Rubric == nil {
+			task.Context.Rubric = materials.Rubric
+		}
+	}
+	return task, nil
 }
 
 func (s *PostgresStore) AssignArbitrationTask(ctx context.Context, tenantID string, id string, _ string, input AssignArbitrationTaskInput) (ArbitrationTask, error) {
@@ -171,7 +193,8 @@ func (s *PostgresStore) SubmitArbitration(ctx context.Context, tenantID string, 
 	}
 	defer func() { _ = tx.Rollback() }()
 	var replay ArbitrationSubmitResult
-	if found, err := commandreceipt.Load(ctx, tx, tenantID, arbitratorID, "review.arbitrate", id, input, &replay); err != nil || found {
+	identity := commandreceipt.Identity{TenantID: tenantID, ActorID: arbitratorID, Operation: "review.arbitrate", TargetID: id}
+	if found, err := commandreceipt.Load(ctx, tx, identity, input, &replay); err != nil || found {
 		return replay.Task, replay.Grade, err
 	}
 	// 先按评分取消流程的锁序锁住父运行，再锁仲裁任务，避免取消与提交交叉写入。
@@ -210,7 +233,9 @@ FOR UPDATE
 	if err != nil {
 		return ArbitrationTask{}, FinalGrade{}, err
 	}
-	finalGrade, err := s.insertFinalGradeTx(ctx, tx, tenantID, arbitratorID, session, input.FinalScore, "arbitration", task.ID, "arbitration")
+	finalGrade, err := s.insertFinalGradeTx(ctx, tx, tenantID, arbitratorID, session, FinalGrade{
+		Score: input.FinalScore, Source: "arbitration", ArbitrationTaskID: task.ID, ResolutionStrategy: "arbitration",
+	})
 	if err != nil {
 		return ArbitrationTask{}, FinalGrade{}, err
 	}
@@ -250,7 +275,7 @@ WHERE tenant_id = $1 AND id::text = $2
 		}
 	}
 	// 回执与终分、任务状态同一事务提交；响应丢失后可按命令 ID 找回本次结果。
-	if err := commandreceipt.Save(ctx, tx, tenantID, arbitratorID, "review.arbitrate", id, input, ArbitrationSubmitResult{Task: task, Grade: finalGrade}); err != nil {
+	if err := commandreceipt.Save(ctx, tx, identity, input, ArbitrationSubmitResult{Task: task, Grade: finalGrade}); err != nil {
 		return ArbitrationTask{}, FinalGrade{}, err
 	}
 	if err := tx.Commit(); err != nil {

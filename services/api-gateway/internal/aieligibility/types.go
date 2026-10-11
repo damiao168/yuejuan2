@@ -1,6 +1,4 @@
-// Package aieligibility is the server-side admission control for any external
-// AI grading call.  It is deliberately separate from subjective: the latter
-// executes a request only after this package has recorded a decision.
+// Package aieligibility 为所有外部 AI 评分调用提供服务端准入控制。它与 subjective 分离；后者仅在本包记录决策后执行请求。
 package aieligibility
 
 import (
@@ -26,9 +24,7 @@ const (
 
 func (s PolicyStatus) Valid() bool { return s == PolicyActive || s == PolicyDisabled }
 
-// Policy is a versioned tenant-owned policy for one assessment axis.  A
-// policy never names a model: model-specific empirical evidence belongs in
-// DecisionInput so each actual scoring run remains auditable.
+// Policy 是租户所有、按版本管理的单个评估维度策略。策略不指定模型；模型专属的实证证据放在 DecisionInput 中，使每次实际评分运行可审计。
 type Policy struct {
 	ID                 string                    `json:"id"`
 	TenantID           string                    `json:"tenant_id"`
@@ -67,17 +63,14 @@ type EvaluationEvidence struct {
 	EvaluationRef   string  `json:"evaluation_ref,omitempty"`
 }
 
-// CalibrationEvidence answers only whether the model/prompt/deployment is
-// usable for this frozen question context. It intentionally does not expose
-// Gold answers, calibration submissions, or a teacher's quality record.
+// CalibrationEvidence 只说明模型、提示词和部署能否用于当前冻结的题目上下文，不暴露 Gold 答案、校准提交或教师质量记录。
 type CalibrationEvidence struct {
 	Available      bool   `json:"available"`
 	CalibrationRef string `json:"calibration_ref,omitempty"`
 }
 
 type DecisionInput struct {
-	// RunItemID is the idempotency/audit key. It is an opaque caller-owned id:
-	// it may be a subjective grading run, a worker item, or a dry-run item.
+	// RunItemID 是幂等和审计键，由调用方提供且视为不透明 ID；它可以表示主观题评分运行、工作项或试运行项。
 	RunItemID          string                          `json:"run_item_id"`
 	AssessmentSnapshot assessment.ExamQuestionSnapshot `json:"assessment_snapshot"`
 	RequestedMode      assessment.ScoringMode          `json:"requested_mode"`
@@ -95,16 +88,12 @@ type Reason struct {
 	Blocking bool   `json:"blocking"`
 }
 
-// OutputConstraint makes the product boundary explicit: even when an AI call
-// is admitted, the model returns criterion/evidence observations. Scores are
-// derived by the server from the frozen rubric or settled by a human flow.
+// OutputConstraint 明确产品边界：即使允许调用 AI，模型也只返回评分标准和证据观察；分数由服务端按冻结的评分细则派生，或由人工流程裁定。
 type OutputConstraint struct {
 	CriteriaEvidenceOnly bool   `json:"criteria_evidence_only"`
 	AllowModelFinalScore bool   `json:"allow_model_final_score"`
 	FinalScoreAuthority  string `json:"final_score_authority"`
-	// MaxSevereErrorRisk is copied from the active immutable policy and is
-	// consumed by A15 when recording the model's confidence candidate.
-	// It is not a score threshold and never grants final-score authority.
+	// MaxSevereErrorRisk 从当前启用的不可变策略复制，供 A15 记录模型置信度候选值时使用。它不是分数阈值，也不授予最终评分权。
 	MaxSevereErrorRisk float64 `json:"max_severe_error_risk"`
 }
 
@@ -124,9 +113,7 @@ type Decision struct {
 
 func (d Decision) CanCallExternalAI() bool { return d.ExternalAIAllowed }
 
-// Gate is the only dependency a grading pipeline needs. A caller must invoke
-// Decide before an adapter is called, then use CanCallExternalAI rather than
-// re-implementing risk logic in a handler or worker.
+// Gate 是评分流水线所需的唯一依赖。调用适配器前必须先调用 Decide，再使用 CanCallExternalAI；处理器或工作器不应重新实现风险逻辑。
 type Gate interface {
 	Decide(context.Context, string, DecisionInput) (Decision, error)
 }

@@ -69,9 +69,13 @@ func (s *MemoryStore) CreateExamSession(ctx context.Context, scope auth.AccessSc
 		child.SessionGradeID = session.GradeID
 		s.mu.Lock()
 		s.items[child.ID] = child
+		s.managementRules[child.ID] = subject.CandidateRule
 		s.mu.Unlock()
 		session.Exams = append(session.Exams, child)
 	}
+	s.mu.Lock()
+	s.managementSessions[session.ID] = cloneExamSession(session)
+	s.mu.Unlock()
 	if commandKey != "" {
 		s.sessionsByCommand[commandKey] = cloneExamSession(session)
 		s.sessionCommandHash[commandKey] = requestHash

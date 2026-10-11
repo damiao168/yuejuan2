@@ -182,7 +182,14 @@ export function formatAnswer(value: unknown): string {
     return Object.values(record).map(formatAnswer).filter((item) => item !== "-").join("、") || "-";
   }
   if (typeof value === "boolean") return value ? "正确" : "错误";
-  return String(value);
+  switch (typeof value) {
+    case "string": return value;
+    case "number":
+    case "bigint":
+    case "symbol":
+    case "function": return String(value);
+    default: return "-";
+  }
 }
 
 export function resultState(item: ScoringRunItem): { label: string; tone: StatusTone } {
@@ -243,7 +250,7 @@ export interface ServerDraftSnapshot {
   updatedAt: number;
 }
 
-/** Converts the authoritative API draft into the same shape as the in-memory fallback. */
+/** 将权威 API 草稿转换为与内存回退草稿相同的结构。 */
 export function serverDraftSnapshot(initial: ScoreDraft, draft: ReviewDraft | null, canViewOriginalImage: boolean): ServerDraftSnapshot {
   if (!draft) {
     return {
@@ -279,15 +286,14 @@ export function serverDraftSnapshot(initial: ScoreDraft, draft: ReviewDraft | nu
   };
 }
 
+// 数值字段必须是有限数才覆盖默认值；0 分有效，不能按假值丢弃。
 export function fallbackSnapshot(value: unknown, initial: ScoreDraft): DraftFallbackSnapshot | null {
   if (!value || typeof value !== "object") return null;
   const root = value as { draft?: unknown; viewer?: unknown };
   if (!root.draft || typeof root.draft !== "object" || !root.viewer || typeof root.viewer !== "object") return null;
   const cachedDraft = root.draft as Partial<ScoreDraft>;
   const cachedViewer = root.viewer as { mode?: unknown; scale?: unknown; rotation?: unknown; offset?: unknown; fit?: unknown };
-  const selections = cachedDraft.rubricSelections && typeof cachedDraft.rubricSelections === "object" && !Array.isArray(cachedDraft.rubricSelections)
-    ? Object.fromEntries(Object.entries(cachedDraft.rubricSelections).flatMap(([key, value]) => typeof value === "number" && Number.isFinite(value) ? [[key, value]] : []))
-    : initial.rubricSelections;
+  const selections = fallbackRubricSelections(cachedDraft, initial);
   const rawOffset = cachedViewer.offset && typeof cachedViewer.offset === "object" ? cachedViewer.offset as { x?: unknown; y?: unknown } : {};
   const score = typeof cachedDraft.score === "number" && Number.isFinite(cachedDraft.score) ? cachedDraft.score : null;
   const mode = cachedViewer.mode === "original" || cachedViewer.mode === "ocr" || cachedViewer.mode === "segment" ? cachedViewer.mode : "segment";
@@ -295,17 +301,7 @@ export function fallbackSnapshot(value: unknown, initial: ScoreDraft): DraftFall
   const rotation = typeof cachedViewer.rotation === "number" && Number.isFinite(cachedViewer.rotation) ? cachedViewer.rotation : 0;
   const fit = cachedViewer.fit !== false;
   return {
-    draft: {
-      ...initial,
-      score,
-      comments: typeof cachedDraft.comments === "string" ? cachedDraft.comments : initial.comments,
-      privateNote: typeof cachedDraft.privateNote === "string" ? cachedDraft.privateNote : initial.privateNote,
-      studentFeedback: typeof cachedDraft.studentFeedback === "string" ? cachedDraft.studentFeedback : initial.studentFeedback,
-      reason: typeof cachedDraft.reason === "string" ? cachedDraft.reason : initial.reason,
-      disputeReason: typeof cachedDraft.disputeReason === "string" ? cachedDraft.disputeReason : initial.disputeReason,
-      rubricSelections: selections,
-      answerText: typeof cachedDraft.answerText === "string" ? cachedDraft.answerText : initial.answerText
-    },
+    draft: restoreFallbackDraft(cachedDraft, initial, score, selections),
     viewer: {
       mode,
       scale,
@@ -316,5 +312,26 @@ export function fallbackSnapshot(value: unknown, initial: ScoreDraft): DraftFall
         y: typeof rawOffset.y === "number" && Number.isFinite(rawOffset.y) ? rawOffset.y : 0
       }
     }
+  };
+}
+
+function fallbackRubricSelections(cachedDraft: Partial<ScoreDraft>, initial: ScoreDraft): Record<string, number> {
+  // 非对象或数组沿用初始采分点对象；有效对象仅保留有限数值，并产生独立对象。
+  return cachedDraft.rubricSelections && typeof cachedDraft.rubricSelections === "object" && !Array.isArray(cachedDraft.rubricSelections)
+    ? Object.fromEntries(Object.entries(cachedDraft.rubricSelections).flatMap(([key, value]) => typeof value === "number" && Number.isFinite(value) ? [[key, value]] : []))
+    : initial.rubricSelections;
+}
+
+function restoreFallbackDraft(cachedDraft: Partial<ScoreDraft>, initial: ScoreDraft, score: number | null, selections: Record<string, number>): ScoreDraft {
+  return {
+    ...initial,
+    score,
+    comments: typeof cachedDraft.comments === "string" ? cachedDraft.comments : initial.comments,
+    privateNote: typeof cachedDraft.privateNote === "string" ? cachedDraft.privateNote : initial.privateNote,
+    studentFeedback: typeof cachedDraft.studentFeedback === "string" ? cachedDraft.studentFeedback : initial.studentFeedback,
+    reason: typeof cachedDraft.reason === "string" ? cachedDraft.reason : initial.reason,
+    disputeReason: typeof cachedDraft.disputeReason === "string" ? cachedDraft.disputeReason : initial.disputeReason,
+    rubricSelections: selections,
+    answerText: typeof cachedDraft.answerText === "string" ? cachedDraft.answerText : initial.answerText
   };
 }

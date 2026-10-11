@@ -1,0 +1,10 @@
+{
+  "command": [
+    "D:/tools/go/bin/go.exe",
+    "run",
+    "D:\\project\\yuejuan\\reports\\sonar-remediation-2026-10-11\\go-structure-check.go"
+  ],
+  "exit_code": 0,
+  "stderr": "",
+  "limit": "本地辅助估值，不替代安装版本的 SonarQube 复扫"
+}

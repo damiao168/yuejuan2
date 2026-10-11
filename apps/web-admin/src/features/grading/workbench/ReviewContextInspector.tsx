@@ -3,7 +3,7 @@ import type { ReviewTaskContext } from "../../../api/review";
 import { AIContextPanel } from "./AIContextPanel";
 import { SubjectToolPanel } from "./SubjectToolPanel";
 
-export function ReviewContextInspector({ context }: { context: ReviewTaskContext }) {
+export function ReviewContextInspector({ context }: Readonly<{ context: ReviewTaskContext }>) {
   const [secondOpinionVisible, setSecondOpinionVisible] = useState(false);
   const reveal = () => setSecondOpinionVisible(true);
   return (

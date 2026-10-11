@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"os"
 	"strings"
@@ -31,6 +32,28 @@ WHERE code = 'demo' AND deleted_at IS NULL
 		t.Fatalf("lookup demo tenant: %v", err)
 	}
 
+	e2eAssertGovernanceDefaultAndSQLConstraints(t, ctx, db, tenantID)
+	e2eAssertGovernanceCallFactsAndRBAC(t, ctx, db, tenantID)
+	governanceStore := modelgovernance.NewPostgresStore(db)
+	baseline := e2eRegisterGovernanceLocalBaseline(t, ctx, governanceStore, tenantID)
+	createdDeployment := e2eCreateGovernedExternalInventory(t, ctx, governanceStore, tenantID)
+	e2eCloseGovernanceExternalPolicy(t, ctx, governanceStore, tenantID)
+	evaluation := e2eCompleteGovernanceOfflineEvaluation(t, ctx, governanceStore, tenantID, baseline, createdDeployment)
+	evaluation.GuardRun = e2eAssertGovernanceEvaluationSQLGuards(t, ctx, db, governanceStore, tenantID, evaluation)
+	approvalInput := e2eAssertGovernanceSandboxApprovalLifecycle(t, ctx, db, governanceStore, tenantID)
+	e2eAssertGovernanceNewTenantIsolation(t, ctx, db, governanceStore, tenantID, evaluation, approvalInput)
+}
+
+type story061EvaluationFixture struct {
+	Input                              modelgovernance.EvaluationRunInput
+	CandidateInput                     func(string) modelgovernance.EvaluationCandidateInput
+	LocalDeployment, CreatedDeployment modelgovernance.Deployment
+	GuardRun                           modelgovernance.EvaluationRun
+}
+
+// 租户模型策略默认关闭外部访问；数据库必须拒绝明文凭据和不兼容适配器，显式授权后也不能保留禁用外部路由。
+func e2eAssertGovernanceDefaultAndSQLConstraints(t *testing.T, ctx context.Context, db *sql.DB, tenantID string) {
+	t.Helper()
 	var mode, fallback string
 	var externalEnabled, textEnabled, imageEnabled bool
 	var allowed string
@@ -122,6 +145,11 @@ WHERE tenant_id = $1 AND policy_key = 'default'
 		t.Fatal("database allowed external opt-out while retaining an external route")
 	}
 
+}
+
+// 同一请求只产生一个可计费调用事实，平台供应商管理与租户策略、评测权限分别核对。
+func e2eAssertGovernanceCallFactsAndRBAC(t *testing.T, ctx context.Context, db *sql.DB, tenantID string) {
+	t.Helper()
 	requestID := "story061-" + uuid.NewString()
 	if _, err := db.ExecContext(ctx, `
 INSERT INTO model_call_fact (
@@ -195,7 +223,11 @@ SELECT
 		)
 	}
 
-	governanceStore := modelgovernance.NewPostgresStore(db)
+}
+
+// 先登记本地基线，提供商读模型必须隐藏凭据引用，不能把凭据配置误当成公开字段。
+func e2eRegisterGovernanceLocalBaseline(t *testing.T, ctx context.Context, governanceStore *modelgovernance.PostgresStore, tenantID string) modelgovernance.LocalBaseline {
+	t.Helper()
 	baseline := modelgovernance.LocalBaseline{
 		ProviderKey:       "local",
 		ProviderName:      "Local grading runtime",
@@ -225,6 +257,12 @@ SELECT
 	if !localRegistered {
 		t.Fatal("local baseline provider was not registered")
 	}
+	return baseline
+}
+
+// 存储层创建外部提供商和部署时保留凭据脱敏及库存绑定核对。
+func e2eCreateGovernedExternalInventory(t *testing.T, ctx context.Context, governanceStore *modelgovernance.PostgresStore, tenantID string) modelgovernance.Deployment {
+	t.Helper()
 	createdProvider, err := governanceStore.CreateProvider(ctx, tenantID, "", modelgovernance.ProviderInput{
 		Key:           "vendor-b",
 		DisplayName:   "Vendor B",
@@ -260,6 +298,12 @@ SELECT
 	if createdDeployment.ProviderKey != createdProvider.Key || createdDeployment.Key != "vendor-b-text-v1" {
 		t.Fatalf("unexpected governed deployment: %#v", createdDeployment)
 	}
+	return createdDeployment
+}
+
+// 先按当前策略版本关闭外部路由，再用旧版本更新验证乐观锁冲突。
+func e2eCloseGovernanceExternalPolicy(t *testing.T, ctx context.Context, governanceStore *modelgovernance.PostgresStore, tenantID string) {
+	t.Helper()
 	policy, err := governanceStore.GetPolicy(ctx, tenantID)
 	if err != nil {
 		t.Fatalf("get tenant model policy through store: %v", err)
@@ -288,6 +332,11 @@ SELECT
 		t.Fatalf("stale policy version was not rejected: %v", err)
 	}
 
+}
+
+// 离线协议评测冻结本地和外部两个候选；完成后不能追加候选，随后明确作废证据。
+func e2eCompleteGovernanceOfflineEvaluation(t *testing.T, ctx context.Context, governanceStore *modelgovernance.PostgresStore, tenantID string, baseline modelgovernance.LocalBaseline, createdDeployment modelgovernance.Deployment) story061EvaluationFixture {
+	t.Helper()
 	deployments, err := governanceStore.ListDeployments(ctx, tenantID)
 	if err != nil {
 		t.Fatalf("list deployments for offline evaluation: %v", err)
@@ -366,6 +415,13 @@ SELECT
 		t.Fatalf("invalidate offline evaluation: %v", err)
 	}
 
+	return story061EvaluationFixture{Input: evaluationInput, CandidateInput: candidateInput, LocalDeployment: localDeployment, CreatedDeployment: createdDeployment}
+}
+
+// 新建独立评测检查数据库护栏：测量不可变、候选不足不能完成、样本数量不能超出冻结范围。
+func e2eAssertGovernanceEvaluationSQLGuards(t *testing.T, ctx context.Context, db *sql.DB, governanceStore *modelgovernance.PostgresStore, tenantID string, evaluation story061EvaluationFixture) modelgovernance.EvaluationRun {
+	t.Helper()
+	evaluationInput, candidateInput, localDeployment, createdDeployment := evaluation.Input, evaluation.CandidateInput, evaluation.LocalDeployment, evaluation.CreatedDeployment
 	guardInput := evaluationInput
 	guardInput.Key = "story061-guard-" + uuid.NewString()
 	guardInput.DatasetReference = "guard-" + uuid.NewString()
@@ -413,6 +469,12 @@ VALUES (
 		t.Fatal("database accepted evaluation counts outside the frozen run scope")
 	}
 
+	return guardRun
+}
+
+// 沙箱批准必须绑定库存和审阅事实；重复批准、重复撤销冲突，明确撤销后才允许替代批准。
+func e2eAssertGovernanceSandboxApprovalLifecycle(t *testing.T, ctx context.Context, db *sql.DB, governanceStore *modelgovernance.PostgresStore, tenantID string) modelgovernance.SandboxApprovalInput {
+	t.Helper()
 	dashscopeProvider, err := governanceStore.CreateProvider(ctx, tenantID, "", modelgovernance.ProviderInput{
 		Key:           "dashscope-sandbox-" + uuid.NewString(),
 		DisplayName:   "DashScope synthetic sandbox",
@@ -512,6 +574,13 @@ VALUES (
 		t.Fatal("database accepted incomplete sandbox approval facts")
 	}
 
+	return approvalInput
+}
+
+// 新租户由触发器建立关闭的默认策略，并拒绝跨租户沙箱、评测候选和提供商创建者。
+func e2eAssertGovernanceNewTenantIsolation(t *testing.T, ctx context.Context, db *sql.DB, governanceStore *modelgovernance.PostgresStore, tenantID string, evaluation story061EvaluationFixture, approvalInput modelgovernance.SandboxApprovalInput) {
+	t.Helper()
+	guardRun, candidateInput, createdDeployment := evaluation.GuardRun, evaluation.CandidateInput, evaluation.CreatedDeployment
 	newTenantID := uuid.NewString()
 	if _, err := db.ExecContext(ctx, `
 INSERT INTO tenant (id, tenant_id, name, code, status, settings)
@@ -562,4 +631,5 @@ VALUES (
 `, newTenantID, demoUserID); err == nil {
 		t.Fatal("database accepted a provider creator from another tenant")
 	}
+
 }

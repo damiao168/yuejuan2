@@ -69,18 +69,7 @@ func TestAnswerGroupingRequiresSamplingAndNeverProducesFinalGrade(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err = store.Confirm(context.Background(), "tenant", group.ID, "teacher", ConfirmInput{ExpectedRevision: 1}); !errors.Is(err, ErrSamplingIncomplete) {
-		t.Fatalf("confirmation must fail before sampling, got %v", err)
-	}
-	for _, member := range group.Members {
-		group, err = store.ReviewSample(context.Background(), "tenant", group.ID, member.SegmentID, "teacher", SampleReviewInput{Outcome: SampleAccepted})
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
-	if !group.CanConfirm || group.ReviewedSampleCount != group.MinimumSample {
-		t.Fatalf("group should become confirmable only after policy is met: %#v", group)
-	}
+	group = completeGroupingSampleReviews(t, store, group)
 	group, candidates, err := store.Confirm(context.Background(), "tenant", group.ID, "teacher", ConfirmInput{ExpectedRevision: group.Decision.Revision})
 	if err != nil {
 		t.Fatal(err)
@@ -88,14 +77,7 @@ func TestAnswerGroupingRequiresSamplingAndNeverProducesFinalGrade(t *testing.T) 
 	if group.Status != StatusConfirmed || len(candidates) != 3 || group.Decision.RollbackReference == "" {
 		t.Fatalf("expected three traceable proposed facts, got group=%#v candidates=%#v", group, candidates)
 	}
-	for _, candidate := range candidates {
-		if candidate.Kind != CandidateGroupScore || candidate.Status != CandidateActive || candidate.RollbackReference != group.Decision.RollbackReference {
-			t.Fatalf("unexpected candidate: %#v", candidate)
-		}
-		if _, pretendsFinal := candidate.ScoreCandidate["final_grade"]; pretendsFinal {
-			t.Fatal("grouping candidate must not represent a final grade")
-		}
-	}
+	assertGroupingCandidatesAreProposals(t, candidates, group.Decision.RollbackReference)
 
 	group, rolledBack, err := store.Rollback(context.Background(), "tenant", group.ID, "supervisor", RollbackInput{
 		RollbackReference: group.Decision.RollbackReference, Reason: "post-audit mismatch",
@@ -143,4 +125,36 @@ func TestAnswerGroupingBuildIsIdempotentForSameSourceFacts(t *testing.T) {
 	if len(first) != 1 || len(second) != 1 || first[0].ID != second[0].ID {
 		t.Fatalf("same source facts must reuse the build: first=%#v second=%#v", first, second)
 	}
+}
+
+// 分组确认只产生可回滚的建议事实；不能将同一分组的候选标成最终成绩。
+func assertGroupingCandidatesAreProposals(t *testing.T, candidates []Candidate, rollbackReference string) {
+	t.Helper()
+	for _, candidate := range candidates {
+		if candidate.Kind != CandidateGroupScore || candidate.Status != CandidateActive || candidate.RollbackReference != rollbackReference {
+			t.Fatalf("unexpected candidate: %#v", candidate)
+		}
+		if _, pretendsFinal := candidate.ScoreCandidate["final_grade"]; pretendsFinal {
+			t.Fatal("grouping candidate must not represent a final grade")
+		}
+	}
+}
+
+// 未完成抽样先拒绝确认；所有样本通过后才检查策略达到最低抽样数量。
+func completeGroupingSampleReviews(t *testing.T, store *MemoryStore, group Group) Group {
+	t.Helper()
+	var err error
+	if _, _, err = store.Confirm(context.Background(), "tenant", group.ID, "teacher", ConfirmInput{ExpectedRevision: 1}); !errors.Is(err, ErrSamplingIncomplete) {
+		t.Fatalf("confirmation must fail before sampling, got %v", err)
+	}
+	for _, member := range group.Members {
+		group, err = store.ReviewSample(context.Background(), "tenant", group.ID, member.SegmentID, "teacher", SampleReviewInput{Outcome: SampleAccepted})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	if !group.CanConfirm || group.ReviewedSampleCount != group.MinimumSample {
+		t.Fatalf("group should become confirmable only after policy is met: %#v", group)
+	}
+	return group
 }

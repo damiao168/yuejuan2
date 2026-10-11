@@ -1,0 +1,64 @@
+{
+  "findings": [
+    {
+      "ids": [
+        "SG-034",
+        "SG-035"
+      ],
+      "status": "fixed",
+      "files": [
+        "docs/architecture/tools/build_diagrams.py"
+      ],
+      "change": "仅 XML 磁盘回读使用 defusedxml 并 forbid_dtd=True；标准库 ElementTree 保留生成职责，不使用全局 monkey patch。"
+    },
+    {
+      "ids": [
+        "SG-036",
+        "SG-037"
+      ],
+      "status": "fixed",
+      "files": [
+        "docs/architecture/tools/verify_delivery.py"
+      ],
+      "change": "验收读取使用 defusedxml，拒绝 DTD 和实体引用，异常终止验收。固定依赖声明与安装/失败恢复说明已同步。"
+    }
+  ],
+  "validation": [
+    {
+      "command": "python -m pytest -q docs/architecture/tools/test_xml_security.py",
+      "result": "12 passed；生成并回读原生图纸、UTF-8/UTF-16 的 DTD/实体/外部引用拒绝及现有十份图纸可读。",
+      "exit_code": 0
+    },
+    {
+      "command": "node --test scripts/ci/architecture-audit-tools.test.mjs",
+      "result": "3 passed",
+      "exit_code": 0
+    },
+    {
+      "command": "go test ./internal/auth ./internal/config ./internal/middleware ./internal/minioadapter ./internal/files ./internal/score ./internal/modelgovernance",
+      "cwd": "services/api-gateway",
+      "result": "7 packages passed，核验既有 Cookie/TLS/参数化查询/重试等防护回归。",
+      "exit_code": 0
+    },
+    {
+      "command": "git diff --check -- ai-services/grading_agent/model.py tests/e2e/story060_grading_agent.py services/image-quality-worker/image_quality/api.py services/ocr-worker/ocr_worker/api.py services/ocr-worker/ocr_worker/math_runner.py services/page-processing-worker/page_processing/api.py services/subjective-grading-worker/subjective_grading_worker/api.py docs/architecture/tools/build_diagrams.py docs/architecture/tools/verify_delivery.py .github/dependabot.yml infra/docker-compose/nginx/nginx.conf infra/docker-compose/nginx/story056-e2e.conf infra/docker-compose/nginx/story060-e2e.conf services/api-gateway/tools/story056-real-worker-e2e/Dockerfile docs/architecture/DIAGRAM_MAINTENANCE.md",
+      "result": "Passed；仅既有 CRLF/LF 归一化提示。",
+      "exit_code": 0
+    },
+    {
+      "command": "python -m ruff check ai-services/grading_agent/model.py tests/e2e/story060_grading_agent.py services/image-quality-worker/image_quality/api.py services/ocr-worker/ocr_worker/api.py services/ocr-worker/ocr_worker/math_runner.py services/page-processing-worker/page_processing/api.py services/subjective-grading-worker/subjective_grading_worker/api.py docs/architecture/tools/build_diagrams.py docs/architecture/tools/verify_delivery.py ai-services/tests/test_model_transport_security.py services/image-quality-worker/tests/test_redirect_boundaries_semgrep.py services/ocr-worker/tests/test_redirect_boundaries_semgrep.py services/page-processing-worker/tests/test_redirect_boundaries_semgrep.py services/subjective-grading-worker/tests/test_redirect_boundaries_semgrep.py docs/architecture/tools/test_xml_security.py",
+      "result": "All checks passed",
+      "exit_code": 0
+    }
+  ],
+  "dependency": {
+    "file": "docs/architecture/tools/requirements.txt",
+    "version": "defusedxml==0.7.1",
+    "source": "https://github.com/tiran/defusedxml#defusedxml"
+  },
+  "limitations": [
+    "原报告XML加固覆盖build_diagrams/verify_delivery；复扫新增build_preview/verify_typography补充加固另见 supplemental-xml-results.json，不声称其它工具可处理不可信外部文件。",
+    "没有运行会覆盖历史图纸/验收账本的完整文档生成或审读合并流程；测试只写临时输出。",
+    "针对68条误报沿用原报告结论并核对基线字节与部分既有回归，不冒充新一轮全文件人工审读。"
+  ]
+}

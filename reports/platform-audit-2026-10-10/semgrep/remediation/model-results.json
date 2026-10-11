@@ -1,0 +1,73 @@
+{
+  "scope": "model transports and STORY-060 E2E client",
+  "date": "2026-10-11",
+  "findings": [
+    {
+      "ids": ["SG-013", "SG-014", "SG-015"],
+      "status": "fixed",
+      "files": ["ai-services/grading_agent/model.py"],
+      "change": "局部 build_opener 对带模型凭据的 POST 以及 GET 就绪请求拒绝自动跳转，同源也拒绝；跳转响应关闭后按原 HTTPError 流程失败，未修改全局 opener 或默认 TLS 校验。"
+    },
+    {
+      "ids": ["SG-105"],
+      "status": "fixed",
+      "files": ["tests/e2e/story060_grading_agent.py"],
+      "change": "E2E JSON 请求拒绝自动跳转；响应以 4 MiB 限额读取，校验存在的 Content-Length，缺失长度时仍最多读取限额加一个字节。主场景移入 main() 便于离线测试调用 helper。"
+    }
+  ],
+  "new_tests": ["ai-services/tests/test_model_transport_security.py"],
+  "validation": [
+    {
+      "command": "$env:PYTHONPATH = 'ai-services;packages/worker-runtime-python'; python -m unittest discover -s ai-services/tests -p 'test_*.py'",
+      "exit_code": 0,
+      "result": "173 tests passed in 19.626 seconds"
+    },
+    {
+      "command": "$env:PYTHONPATH = 'ai-services;packages/worker-runtime-python'; python -W error::ResourceWarning -m unittest discover -s ai-services/tests -p test_model_transport_security.py -v",
+      "exit_code": 0,
+      "result": "8 tests passed; five redirect statuses (301/302/303/307/308), target origin received zero requests, same-origin rejected, normal JSON/readiness, existing HTTP error mapping, timeout, real untrusted TLS certificate and E2E response size limits verified"
+    },
+    {
+      "command": "python -m ruff check ai-services/grading_agent/model.py ai-services/tests/test_model_transport_security.py tests/e2e/story060_grading_agent.py",
+      "exit_code": 0,
+      "result": "All checks passed"
+    },
+    {
+      "command": "git diff --check -- ai-services/grading_agent/model.py tests/e2e/story060_grading_agent.py",
+      "exit_code": 0,
+      "result": "No whitespace errors; Git reported its existing CRLF normalization advisory"
+    },
+    {
+      "command": "Compare current files against remediation/baseline/files using Python difflib/ast/read_bytes",
+      "exit_code": 0,
+      "result": "model.py contains only the new local redirect helper and three urlopen replacements; STORY-060 scenario AST is identical after main() move; managed_model.py bytes are identical to baseline"
+    }
+  ],
+  "file_review": [
+    {
+      "file": "ai-services/grading_agent/model.py",
+      "status": "pending",
+      "increment_review": "annotated",
+      "reviewed_scope": "模型 POST、原生供应商 POST、就绪 GET、上层认证/超时/供应商错误映射与附近测试",
+      "maintenance_notes": "凭据只授权初始部署地址，同源跳转也拒绝；请求级 opener 沿用默认 TLS、代理与超时。"
+    },
+    {
+      "file": "tests/e2e/story060_grading_agent.py",
+      "status": "annotated",
+      "reviewed_scope": "完整 E2E 脚本及迁移后的场景 AST",
+      "maintenance_notes": "密码和 Bearer 令牌的初始地址边界、限额不能只相信 Content-Length。"
+    },
+    {
+      "file": "ai-services/tests/test_model_transport_security.py",
+      "status": "annotated",
+      "reviewed_scope": "完整新增测试",
+      "maintenance_notes": "合成双 origin 的目的端零请求断言，真实本地 TLS 证书、失败路径和有限读取。"
+    }
+  ],
+  "limitations": [
+    "本次验证使用本地合成 HTTP/HTTPS 服务和合成凭据，没有访问真实供应商，也没有启动完整 STORY-060 Docker Compose 环境。",
+    "拒绝跳转是保守的兼容性约束：部署端点如依赖 HTTP 重定向，需将配置改为最终授权地址。",
+    "本项验证不替代模型初始 URL 配置校验或生产代理/证书配置核验。",
+    "全局 Semgrep 复扫由根代理统一执行；原始报告及原始扫描 JSON 未修改。"
+  ]
+}

@@ -1,0 +1,24 @@
+Command: node scripts/check-architecture-boundaries.mjs
+Date: 2026-10-10 (current workspace; rerun after source fingerprint changes)
+Exit code: 1
+
+architecture warning: apps\web-admin\src\features\grading\workbench\hooks\useExamScoring.ts: 429 hook lines
+architecture warning: apps\web-admin\src\features\grading\workbench\hooks\useExamScoring.ts: 18 useState calls
+architecture warning: apps\web-admin\src\features\grading\workbench\hooks\useGradingQueue.ts: 375 hook lines
+architecture warning: apps\web-admin\src\features\grading\workbench\hooks\useGradingQueue.ts: 24 useState calls
+architecture warning: apps\web-admin\src\features\grading\workbench\hooks\useGradingReviewActions.ts: 397 hook lines
+architecture warning: apps\web-admin\src\features\paper-import\usePaperImportWorkflow.ts: 625 hook lines
+architecture warning: apps\web-admin\src\features\grading\workbench\hooks\useGradingReviewActions.test.tsx: 372 hook lines
+architecture warning: apps\web-admin\src\features\paper-import\usePaperImportWorkflow.test.tsx: 563 hook lines
+architecture warning: apps\desktop-client\src\features\capture\useExamCaptureContext.ts: 16 useState calls
+architecture warning: apps\desktop-client\src\features\scan-queue\useScanQueue.ts: 397 hook lines
+architecture warning: apps\desktop-client\src\features\session\useDesktopSession.ts: 401 hook lines
+architecture warning: apps\desktop-client\src\features\session\useDesktopSession.ts: 20 useState calls
+architecture warning: apps\desktop-client\src\features\scan-queue\useScanQueue.test.tsx: 367 hook lines
+architecture warning: services\api-gateway\internal\capture\types.go: Store has 49 methods
+architecture warning: services\api-gateway\internal\modelgovernance\store.go: Store has 21 methods
+architecture warning: services\api-gateway\internal\questionbank\types.go: Store has 26 methods
+architecture warning: services\api-gateway\internal\review\types.go: Store has 21 methods
+architecture violation: apps/web-admin/src/features/question-bank/QuestionBankPage.tsx: new page has 827 lines; maximum is 700
+architecture violation: apps/web-admin/src/pages/CaptureBatchPage.tsx: new page has 748 lines; maximum is 700
+architecture violation: apps/web-admin/src/pages/PlatformModelConfigPage.tsx: new page has 773 lines; maximum is 700

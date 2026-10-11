@@ -4,6 +4,7 @@ import { Check, Pencil } from "lucide-react";
 import { getUserErrorMessage } from "../../api/client";
 import { generatePaperImportRubricDraft, type PaperImportDraftQuestion, type PaperImportJob, type PaperImportSourceRef, type Question, type RubricCandidate, type RubricPayload, type SuggestedRubricCandidate } from "../../api/papers";
 import { MathMarkdown } from "../../components/MathMarkdown";
+import { StructuredAnswerEditor } from "../../components/StructuredTeacherFields";
 import { questionTypeOptions } from "../../constants/examCatalog";
 import { RubricReviewEditor } from "./RubricReviewEditor";
 
@@ -56,7 +57,12 @@ export function rubricSuggestionContextKey(item: PaperImportDraftQuestion) {
 
 function mergeSourceRefs(current: PaperImportSourceRef[], added: PaperImportSourceRef[]) {
   const seen = new Set<string>();
-  return [...current, ...added].filter((ref) => { const key = `${ref.source_id}|${ref.file_asset_id}|${ref.document_index}|${ref.page_no ?? ""}|${ref.block_id ?? ""}`; if (seen.has(key)) return false; seen.add(key); return true; });
+  return [...current, ...added].filter((ref) => {
+    const key = `${ref.source_id}|${ref.file_asset_id}|${ref.document_index}|${ref.page_no ?? ""}|${ref.block_id ?? ""}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 const objectiveQuestionTypes = new Set(["single_choice", "multiple_choice", "true_false", "fill_blank", "numeric"]);
@@ -85,7 +91,7 @@ function answerOptionLabels(value: unknown, labels = new Set<string>()) {
 }
 
 function optionLabel(option: string, index: number) {
-  return option.trim().match(/^([A-H])(?:\s|[.．、:：)）])/i)?.[1].toUpperCase() ?? String.fromCharCode(65 + index);
+  return /^([A-H])(?:\s|[.．、:：)）])/i.exec(option.trim())?.[1].toUpperCase() ?? String.fromCodePoint(65 + index);
 }
 
 function formatScore(value: number) {
@@ -102,7 +108,8 @@ function questionSectionSummary(drafts: PaperImportDraftQuestion[], startIndex: 
   const firstScore = sectionDrafts[0]?.score ?? 0;
   const uniformScore = sectionDrafts.every((draft) => draft.score === firstScore);
   const totalScore = sectionDrafts.reduce((total, draft) => total + draft.score, 0);
-  return `${uniformScore ? `每题 ${formatScore(firstScore)} 分` : "每题分值不同"}，共 ${sectionDrafts.length} 题，合计 ${formatScore(totalScore)} 分`;
+  const scoreDescription = uniformScore ? `每题 ${formatScore(firstScore)} 分` : "每题分值不同";
+  return `${scoreDescription}，共 ${sectionDrafts.length} 题，合计 ${formatScore(totalScore)} 分`;
 }
 
 function questionSectionNumber(drafts: PaperImportDraftQuestion[], index: number) {
@@ -125,7 +132,100 @@ function matchPresentation(status: PaperImportDraftQuestion["match_status"]) {
   }
 }
 
-export function PaperImportReviewPanel({ job, drafts, readOnly = false, showOverview = true, existingQuestions = [], onChange, onOpenSource }: { job: PaperImportJob; drafts: PaperImportDraftQuestion[]; readOnly?: boolean; showOverview?: boolean; existingQuestions?: Question[]; onChange: (index: number, field: string, patch: Partial<PaperImportDraftQuestion>) => void; onOpenSource: (ref: PaperImportSourceRef) => void }) {
+type DraftChangeHandler = (index: number, field: string, patch: Partial<PaperImportDraftQuestion>) => void;
+
+function QuestionMatchNotices({ item, index, matchedQuestion, readOnly, onChange }: Readonly<{
+  item: PaperImportDraftQuestion; index: number; matchedQuestion?: Question; readOnly: boolean; onChange: DraftChangeHandler;
+}>) {
+  const match = matchPresentation(item.match_status);
+  const scoreConflict = Boolean(matchedQuestion && item.score > 0 && matchedQuestion.score !== item.score);
+  const typeConflict = Boolean(matchedQuestion && matchedQuestion.question_type !== item.question_type);
+  return <>
+    {match ? <div className="paper-import-match-state"><Tag color={match.color}>{match.label}</Tag><span>{match.detail}</span></div> : null}
+    {item.score <= 0 || item.score_source === "missing" && !(item.human_confirmed_fields ?? []).includes("score") ? <div className="paper-import-conflict"><strong>分值待确认</strong><span>资料中没有可靠的小题分值；请对照原卷或评分标准填写，不能从题干中的“得分”推定。</span></div> : null}
+    {scoreConflict && matchedQuestion && !readOnly ? <div className="paper-import-conflict"><strong>分值冲突：当前 {matchedQuestion.score} 分 → 资料 {item.score} 分</strong><Select aria-label={`第 ${item.question_no} 题分值冲突处理`} placeholder="选择保留哪一项" value={item.score_resolution} options={[{ label: `采用资料 ${item.score} 分`, value: "use_material" }, { label: `保留当前 ${matchedQuestion.score} 分`, value: "use_blueprint" }]} onChange={(value) => onChange(index, "score_resolution", { score_resolution: value })} /></div> : null}
+    {typeConflict && matchedQuestion && !readOnly ? <div className="paper-import-conflict"><strong>题型冲突：当前 {questionTypeLabel(matchedQuestion.question_type)} → 资料 {questionTypeLabel(item.question_type)}</strong><Select aria-label={`第 ${item.question_no} 题题型冲突处理`} placeholder="选择保留哪一项" value={item.question_type_resolution} options={[{ label: `采用资料：${questionTypeLabel(item.question_type)}`, value: "use_material" }, { label: `保留当前：${questionTypeLabel(matchedQuestion.question_type)}`, value: "use_blueprint" }]} onChange={(value) => onChange(index, "question_type_resolution", { question_type_resolution: value })} /></div> : null}
+  </>;
+}
+
+// 展示拆分不持有草稿或请求状态；编辑与异步建议的代次检查仍由面板处理。
+function QuestionTextFields({ item, index, showRaw, readOnly, options, correctOptions, onToggleRaw, onChange }: Readonly<{
+  item: PaperImportDraftQuestion; index: number; showRaw: boolean; readOnly: boolean; options: string[]; correctOptions: Set<string>;
+  onToggleRaw: () => void; onChange: DraftChangeHandler;
+}>) {
+  return <>
+    <div className="paper-import-field-with-source">
+      <div className="paper-import-readable-field paper-import-question-content">
+        {!readOnly ? <Button
+          className="paper-import-question-edit" size="small" type="text"
+          icon={showRaw ? <Check size={15} /> : <Pencil size={15} />}
+          aria-label={showRaw ? "完成编辑" : "编辑题目"} title={showRaw ? "完成编辑" : "编辑题目"}
+          aria-pressed={showRaw} onClick={onToggleRaw}
+        /> : null}
+        <MathMarkdown className="paper-import-question-stem" promoteInlineMath={false}>{`**${item.question_no || index + 1}.** ${item.stem}`}</MathMarkdown>
+        {options.length ? <div className="paper-import-option-preview">
+          {options.map((option, optionIndex) => <div className={`paper-import-option${correctOptions.has(optionLabel(option, optionIndex)) ? " is-correct" : ""}`} key={`${item.candidate_id}-option-${optionIndex}`}><MathMarkdown promoteInlineMath={false}>{option}</MathMarkdown></div>)}
+        </div> : null}
+      </div>
+      {showRaw ? <div className="paper-import-raw-editor">
+        <div className="paper-import-review-grid">
+          <label>题号<Input value={item.question_no} onChange={(event) => onChange(index, "question_no", { question_no: event.target.value })} /></label>
+          <label>题型<Select value={item.question_type || undefined} options={questionTypeOptions} onChange={(value) => onChange(index, "question_type", { question_type: value })} /></label>
+          <label>分值<InputNumber min={0} value={item.score} onChange={(value) => onChange(index, "score", { score: Number(value ?? 0) })} /></label>
+        </div>
+        <label>题干原文（Markdown / LaTeX）<Input.TextArea autoSize={{ minRows: 2, maxRows: 8 }} value={item.stem} onChange={(event) => onChange(index, "stem", { stem: event.target.value })} /></label>
+        {["single_choice", "multiple_choice"].includes(item.question_type) ? <label>选项（每行一项）<Input.TextArea autoSize={{ minRows: 2, maxRows: 8 }} value={options.join("\n")} onChange={(event) => onChange(index, "options", { options: event.target.value.split("\n") })} /></label> : null}
+        <label>标准答案<StructuredAnswerEditor questionType={item.question_type} options={options} value={displayPaperImportValue(item.answer_key?.standard_answer)} onChange={(value) => {
+          let answer: unknown = value;
+          try { if (["multiple_choice","fill_blank","true_false","numeric"].includes(item.question_type) || typeof item.answer_key?.standard_answer === "object") answer = JSON.parse(value); } catch { /* 普通文字答案保持文本。 */ }
+          onChange(index, "answer", { answer_key: { standard_answer: answer, equivalent_answers: item.answer_key?.equivalent_answers ?? [], tolerance: item.answer_key?.tolerance ?? {} } });
+        }} /></label>
+      </div> : null}
+    </div>
+    <div className="paper-import-field-with-source">
+      <div className="paper-import-readable-field"><MathMarkdown promoteInlineMath={false}>{item.solution?.raw_text ?? ""}</MathMarkdown></div>
+      {showRaw ? <label>解析原文（Markdown / LaTeX）<Input.TextArea autoSize={{ minRows: 2, maxRows: 8 }} value={item.solution?.raw_text ?? ""} onChange={(event) => onChange(index, "solution", { solution: { raw_text: event.target.value, steps: item.solution?.steps ?? [], source_refs: item.solution?.source_refs ?? item.source_refs } })} /></label> : null}
+    </div>
+  </>;
+}
+
+function readOnlyRubricPoint(point: RubricPayload["points"][number]) {
+  const scoreDescription = point.score == null ? "" : `（${point.score} 分）`;
+  return `${point.description}${scoreDescription}`;
+}
+
+function QuestionRubricSection({ item, index, readOnly, candidate, suggestion, canSuggest, contextDirty, suggestingCandidateId, onSuggest, onScoreChange, onCopy, onChange, onOpenSource }: Readonly<{
+  item: PaperImportDraftQuestion; index: number; readOnly: boolean; candidate?: RubricCandidate; suggestion?: SuggestedRubricCandidate;
+  canSuggest: boolean; contextDirty: boolean; suggestingCandidateId: string | null;
+  onSuggest: (item: PaperImportDraftQuestion) => Promise<void>; onScoreChange: (candidateId: string, pointId: string, score: number | null) => void;
+  onCopy: (item: PaperImportDraftQuestion, index: number, suggestion: SuggestedRubricCandidate) => void;
+  onChange: DraftChangeHandler; onOpenSource: (ref: PaperImportSourceRef) => void;
+}>) {
+  if (objectiveQuestionTypes.has(item.question_type)) return null;
+  return <div className="paper-import-rubric-review">
+    <div className="paper-import-rubric-heading">
+      <strong>评分细则</strong>
+      {canSuggest ? <Button size="small" disabled={contextDirty} title={contextDirty ? "请先保存人工核对，确保生成建议使用当前题干、答案与解析" : undefined} loading={suggestingCandidateId === item.candidate_id} onClick={() => void onSuggest(item)}>根据教师解析生成评分点建议</Button> : null}
+    </div>
+    {candidate?.points.some((point) => point.score == null) ? <div className="text-danger">
+      <MathMarkdown promoteInlineMath={false}>{`资料明确包含以下采分点，但未写明分值：${candidate.points.filter((point) => point.score == null).map((point) => point.description).join("；")}。请对照教师资料人工填写。`}</MathMarkdown>
+    </div> : null}
+    {suggestion ? <div className="paper-import-rubric-suggestion">
+      <strong>AI 建议 · 待教师核对</strong>
+      <p>以下采分点来自教师解析。模型未明确给出的分值保留为空，须由教师填写后才能复制。</p>
+      <ol>{suggestion.points.map((point) => <li key={point.id}>
+        <MathMarkdown promoteInlineMath={false}>{point.description}</MathMarkdown>
+        <InputNumber min={0} precision={1} aria-label={`采分点 ${point.description} 的建议分值`} placeholder="待填写" value={point.suggested_score} onChange={(score) => onScoreChange(item.candidate_id!, point.id, score)} />
+        <div className="paper-import-rubric-review-note" style={{ gridColumn: "1 / -1", color: "#526174" }}><MathMarkdown promoteInlineMath={false}>{point.review_note || (point.suggested_score == null ? "资料未给出分值" : "建议分值")}</MathMarkdown></div>
+      </li>)}</ol>
+      <Button size="small" type="primary" disabled={suggestion.points.some((point) => point.suggested_score == null)} onClick={() => onCopy(item, index, suggestion)}>复制建议到评分细则</Button>
+    </div> : null}
+    {readOnly ? <MathMarkdown promoteInlineMath={false}>{item.rubric?.points.map(readOnlyRubricPoint).join("\n\n") ?? "暂无评分细则"}</MathMarkdown> : <RubricReviewEditor value={item.rubric} questionScore={item.score} onChange={(rubric) => onChange(index, "rubric", { rubric })} />}
+    <SourceLink label="查看评分标准来源" refs={candidate?.source_refs} onOpen={onOpenSource} />
+  </div>;
+}
+
+export function PaperImportReviewPanel({ job, drafts, readOnly = false, showOverview = true, existingQuestions = [], onChange, onOpenSource, onConfirmQuestion }: Readonly<{ job: PaperImportJob; drafts: PaperImportDraftQuestion[]; readOnly?: boolean; showOverview?: boolean; existingQuestions?: Question[]; onChange: (index: number, field: string, patch: Partial<PaperImportDraftQuestion>) => void; onOpenSource: (ref: PaperImportSourceRef) => void; onConfirmQuestion?: (index: number) => void }>) {
   const { message, modal } = App.useApp();
   const [rawVisible, setRawVisible] = useState<Set<string>>(() => new Set());
   const [suggestions, setSuggestions] = useState<Record<string, SuggestedRubricCandidate>>({});
@@ -143,7 +243,6 @@ export function PaperImportReviewPanel({ job, drafts, readOnly = false, showOver
   const rubricCandidates = useMemo(() => new Map((job.rubric_candidates ?? []).map((candidate) => [candidate.candidate_id, candidate])), [job.rubric_candidates]);
   const questionCandidate = (item: PaperImportDraftQuestion) => questionCandidates.get(item.candidate_id ?? "");
   const rubricCandidate = (item: PaperImportDraftQuestion) => rubricCandidates.get(item.rubric_candidate_id ?? "");
-  const rubricRefs = (item: PaperImportDraftQuestion) => rubricCandidate(item)?.source_refs;
   const assignedRubricCandidateIDs = new Set(drafts.map((item) => item.rubric_candidate_id).filter(Boolean));
   const answerKeyOnlyQuestionNumbers = new Set(drafts.filter((item) => item.question_type === "fill_blank").map((item) => item.question_no));
   const unmatchedRubricCandidates = (job.rubric_candidates ?? []).filter((candidate) =>
@@ -242,6 +341,14 @@ export function PaperImportReviewPanel({ job, drafts, readOnly = false, showOver
     });
   }
 
+  function toggleRaw(key: string) {
+    setRawVisible((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  }
+
   const changePage = (page: number) => {
     startPaging(() => setCurrentPage(page));
     requestAnimationFrame(() => reviewStartRef.current?.scrollIntoView({ block: "start" }));
@@ -261,20 +368,13 @@ export function PaperImportReviewPanel({ job, drafts, readOnly = false, showOver
   </nav> : null;
 
   return <div className="paper-import-review-panel">
-    {showOverview && job.model_usage?.total_tokens ? <div className="paper-import-model-usage" title="Token 数量由模型厂商返回，最终费用以厂商账单为准">
-      <strong>{readOnly ? "上一轮模型用量" : "本次模型用量"}</strong>
-      <span>输入 {job.model_usage.input_tokens ?? 0}</span>
-      <span>输出 {job.model_usage.output_tokens ?? 0}</span>
-      {job.model_usage.cached_input_tokens ? <span>缓存命中 {job.model_usage.cached_input_tokens}</span> : null}
-      <span>合计 {job.model_usage.total_tokens}</span>
-    </div> : null}
-    {showOverview && hasMatchResult ? <div className="paper-import-match-summary" role="status">
+    {showOverview && hasMatchResult ? <output className="paper-import-match-summary">
       <strong>与当前考试比对结果</strong>
       <span>{matchedCount} 道将更新已有题目</span>
       <span>{createdCount} 道将新增</span>
       {conflictCount ? <span className="is-warning">{conflictCount} 道需要确认</span> : null}
       <small>系统优先按标准化题号匹配；不会因为重复粘贴而静默新增同一道题。</small>
-    </div> : null}
+    </output> : null}
     {showOverview && !readOnly && unmatchedRubricCandidates.length ? <section className="paper-import-unmatched-rubrics" aria-labelledby="unmatched-rubrics-title">
       <div><strong id="unmatched-rubrics-title">待匹配评分标准</strong><p>这些评分标准没有可靠题号。请选择对应题目，再核对采分点和分值。</p></div>
       {unmatchedRubricCandidates.map((candidate) => <div className="paper-import-unmatched-rubric" key={candidate.candidate_id}>
@@ -303,11 +403,8 @@ export function PaperImportReviewPanel({ job, drafts, readOnly = false, showOver
       const sectionIndex = questionSectionNumber(drafts, index);
       const options = item.options ?? questionCandidate(item)?.options ?? [];
       const correctOptions = answerOptionLabels(item.answer_key?.standard_answer);
-      const match = matchPresentation(item.match_status);
       const matchedQuestion = existingQuestions.find((question) => question.id === item.matched_question_id)
         ?? existingQuestions.find((question) => question.question_no === item.question_no);
-      const scoreConflict = Boolean(matchedQuestion && item.score > 0 && matchedQuestion.score !== item.score);
-      const typeConflict = Boolean(matchedQuestion && matchedQuestion.question_type !== item.question_type);
       const suggestion = item.candidate_id && suggestionContexts.current[item.candidate_id] === rubricSuggestionContextKey(item) ? suggestions[item.candidate_id] : undefined;
       const savedDraft = (job.questions ?? []).find((draft) => draft.candidate_id === item.candidate_id);
       const suggestionContextDirty = !savedDraft || rubricSuggestionContextKey(savedDraft) !== rubricSuggestionContextKey(item);
@@ -317,48 +414,11 @@ export function PaperImportReviewPanel({ job, drafts, readOnly = false, showOver
       return <Fragment key={`${item.candidate_id}-${index}`}>
       {showOverview && startsSection ? <h3 className="paper-import-question-type-heading">{sectionNumerals[sectionIndex - 1] ?? sectionIndex}、{questionTypeLabel(item.question_type)}<span>（{questionSectionSummary(drafts, index)}）</span></h3> : null}
       <section className="paper-import-question-review">
-      {match ? <div className="paper-import-match-state"><Tag color={match.color}>{match.label}</Tag><span>{match.detail}</span></div> : null}
-      {item.score <= 0 || item.score_source === "missing" && !(item.human_confirmed_fields ?? []).includes("score") ? <div className="paper-import-conflict"><strong>分值待确认</strong><span>资料中没有可靠的小题分值；请对照原卷或评分标准填写，不能从题干中的“得分”推定。</span></div> : null}
-      {scoreConflict && matchedQuestion && !readOnly ? <div className="paper-import-conflict"><strong>分值冲突：当前 {matchedQuestion.score} 分 → 资料 {item.score} 分</strong><Select aria-label={`第 ${item.question_no} 题分值冲突处理`} placeholder="选择保留哪一项" value={item.score_resolution} options={[{ label: `采用资料 ${item.score} 分`, value: "use_material" }, { label: `保留当前 ${matchedQuestion.score} 分`, value: "use_blueprint" }]} onChange={(value) => onChange(index, "score_resolution", { score_resolution: value })} /></div> : null}
-      {typeConflict && matchedQuestion && !readOnly ? <div className="paper-import-conflict"><strong>题型冲突：当前 {questionTypeLabel(matchedQuestion.question_type)} → 资料 {questionTypeLabel(item.question_type)}</strong><Select aria-label={`第 ${item.question_no} 题题型冲突处理`} placeholder="选择保留哪一项" value={item.question_type_resolution} options={[{ label: `采用资料：${questionTypeLabel(item.question_type)}`, value: "use_material" }, { label: `保留当前：${questionTypeLabel(matchedQuestion.question_type)}`, value: "use_blueprint" }]} onChange={(value) => onChange(index, "question_type_resolution", { question_type_resolution: value })} /></div> : null}
-      <div className="paper-import-field-with-source">
-        <div className="paper-import-readable-field paper-import-question-content">
-          {!readOnly ? <Button
-            className="paper-import-question-edit"
-            size="small"
-            type="text"
-            icon={showRaw ? <Check size={15} /> : <Pencil size={15} />}
-            aria-label={showRaw ? "完成编辑" : "编辑题目"}
-            title={showRaw ? "完成编辑" : "编辑题目"}
-            aria-pressed={showRaw}
-            onClick={() => setRawVisible((current) => {
-              const next = new Set(current);
-              if (next.has(rawKey)) next.delete(rawKey); else next.add(rawKey);
-              return next;
-            })}
-          /> : null}
-          <MathMarkdown className="paper-import-question-stem">{`**${item.question_no || index + 1}.** ${item.stem}`}</MathMarkdown>
-          {options.length ? <div className="paper-import-option-preview">
-            {options.map((option, optionIndex) => <div className={`paper-import-option${correctOptions.has(optionLabel(option, optionIndex)) ? " is-correct" : ""}`} key={`${item.candidate_id}-option-${optionIndex}`}><MathMarkdown>{option}</MathMarkdown></div>)}
-          </div> : null}
-        </div>
-        {showRaw ? <div className="paper-import-raw-editor">
-          <div className="paper-import-review-grid">
-            <label>题号<Input value={item.question_no} onChange={(event) => onChange(index, "question_no", { question_no: event.target.value })} /></label>
-            <label>题型<Select value={item.question_type || undefined} options={questionTypeOptions} onChange={(value) => onChange(index, "question_type", { question_type: value })} /></label>
-            <label>分值<InputNumber min={0} value={item.score} onChange={(value) => onChange(index, "score", { score: Number(value ?? 0) })} /></label>
-          </div>
-          <label>题干原文（Markdown / LaTeX）<Input.TextArea autoSize={{ minRows: 2, maxRows: 8 }} value={item.stem} onChange={(event) => onChange(index, "stem", { stem: event.target.value })} /></label>
-          {["single_choice", "multiple_choice"].includes(item.question_type) ? <label>选项（每行一项）<Input.TextArea autoSize={{ minRows: 2, maxRows: 8 }} value={options.join("\n")} onChange={(event) => onChange(index, "options", { options: event.target.value.split("\n") })} /></label> : null}
-          <label>答案原文<Input.TextArea autoSize={{ minRows: 1, maxRows: 5 }} value={displayPaperImportValue(item.answer_key?.standard_answer)} onChange={(event) => onChange(index, "answer", { answer_key: { standard_answer: event.target.value, equivalent_answers: item.answer_key?.equivalent_answers ?? [], tolerance: item.answer_key?.tolerance ?? {} } })} /></label>
-        </div> : null}
-      </div>
-      <div className="paper-import-field-with-source">
-        <div className="paper-import-readable-field"><MathMarkdown>{item.solution?.raw_text ?? ""}</MathMarkdown></div>
-        {showRaw ? <label>解析原文（Markdown / LaTeX）<Input.TextArea autoSize={{ minRows: 2, maxRows: 8 }} value={item.solution?.raw_text ?? ""} onChange={(event) => onChange(index, "solution", { solution: { raw_text: event.target.value, steps: item.solution?.steps ?? [], source_refs: item.solution?.source_refs ?? item.source_refs } })} /></label> : null}
-      </div>
-      {!objectiveQuestionTypes.has(item.question_type) ? <div className="paper-import-rubric-review"><div className="paper-import-rubric-heading"><strong>评分细则</strong>{canSuggestRubric ? <Button size="small" disabled={suggestionContextDirty} title={suggestionContextDirty ? "请先保存人工核对，确保生成建议使用当前题干、答案与解析" : undefined} loading={suggestingCandidateId === item.candidate_id} onClick={() => void suggestRubric(item)}>根据教师解析生成评分点建议</Button> : null}</div>{rubricCandidate(item)?.points.some((point) => point.score == null) ? <div className="text-danger">资料明确包含以下采分点，但未写明分值：{rubricCandidate(item)?.points.filter((point) => point.score == null).map((point) => point.description).join("；")}。请对照教师资料人工填写。</div> : null}{suggestion ? <div className="paper-import-rubric-suggestion"><strong>AI 建议 · 待教师核对</strong><p>以下采分点来自教师解析。模型未明确给出的分值保留为空，须由教师填写后才能复制。</p><ol>{suggestion.points.map((point) => <li key={point.id}><span>{point.description}</span><InputNumber min={0} precision={1} aria-label={`采分点 ${point.description} 的建议分值`} placeholder="待填写" value={point.suggested_score} onChange={(score) => updateSuggestedScore(item.candidate_id!, point.id, score)} /><small>{point.review_note || (point.suggested_score == null ? "资料未给出分值" : "建议分值")}</small></li>)}</ol><Button size="small" type="primary" disabled={suggestion.points.some((point) => point.suggested_score == null)} onClick={() => copySuggestion(item, index, suggestion)}>复制建议到评分细则</Button></div> : null}{readOnly ? <MathMarkdown>{item.rubric?.points.map((point) => `${point.description}${point.score == null ? "" : `（${point.score} 分）`}`).join("\n\n") ?? "暂无评分细则"}</MathMarkdown> : <RubricReviewEditor value={item.rubric} questionScore={item.score} onChange={(rubric) => onChange(index, "rubric", { rubric })} />}<SourceLink label="查看评分标准来源" refs={rubricRefs(item)} onOpen={onOpenSource} /></div> : null}
+      <QuestionMatchNotices item={item} index={index} matchedQuestion={matchedQuestion} readOnly={readOnly} onChange={onChange} />
+      <QuestionTextFields item={item} index={index} showRaw={showRaw} readOnly={readOnly} options={options} correctOptions={correctOptions} onToggleRaw={() => toggleRaw(rawKey)} onChange={onChange} />
+      <QuestionRubricSection item={item} index={index} readOnly={readOnly} candidate={rubricCandidate(item)} suggestion={suggestion} canSuggest={canSuggestRubric} contextDirty={suggestionContextDirty} suggestingCandidateId={suggestingCandidateId} onSuggest={suggestRubric} onScoreChange={updateSuggestedScore} onCopy={copySuggestion} onChange={onChange} onOpenSource={onOpenSource} />
       {item.issues.length ? <div className="text-danger">当前问题：{item.issues.join("；")}</div> : null}
+      {!readOnly && onConfirmQuestion && <Button onClick={() => onConfirmQuestion(index)}>确认并保存本题</Button>}
       </section>
       </Fragment>;
     })}

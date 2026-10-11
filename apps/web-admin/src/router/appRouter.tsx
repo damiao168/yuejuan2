@@ -26,6 +26,11 @@ const examWorkspaceRoute = createRoute({
   path: "/$experience/exams/$examId/$section"
 });
 
+const managementExamRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/$experience/exams/overview/$kind/$examId"
+});
+
 // 旧入口由 AppShell 的路由注册表继续解析；通配匹配本身不授予页面访问权限。
 const compatibilityRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -35,6 +40,7 @@ const compatibilityRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   dashboardRoute,
   examListRoute,
+  managementExamRoute,
   examWorkspaceRoute,
   compatibilityRoute
 ]);

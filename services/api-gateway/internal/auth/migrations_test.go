@@ -223,29 +223,7 @@ func TestAuthorizationHardeningDefinesFinalRoleMatrix(t *testing.T) {
 			t.Fatalf("contract role %s scope=%q want %q", role, contract[role].Scope, scope)
 		}
 	}
-	contains := func(values []string, target string) bool {
-		for _, value := range values {
-			if value == target {
-				return true
-			}
-		}
-		return false
-	}
-	for _, permission := range []string{"org:manage", "exam:manage", "file:manage", "submission:manage", "capture:manage", "review:manage", "review:work", "arbitration:manage", "score:manage", "report:read", "appeal:manage", "audit:read", "dashboard:read"} {
-		if !contains(contract["school_admin"].Permissions, permission) {
-			t.Fatalf("school_admin contract missing %s", permission)
-		}
-	}
-	for _, role := range []string{"teacher", "grader", "arbitrator"} {
-		for _, forbidden := range []string{"tenant:manage", "org:manage", "exam:manage", "system:read", "review:manage", "arbitration:manage", "score:manage"} {
-			if contains(contract[role].Permissions, forbidden) {
-				t.Fatalf("%s contract retains management permission %s", role, forbidden)
-			}
-		}
-	}
-	if contract["page_processing_worker"].Human || contract["page_processing_worker"].ManagedUserAssignable {
-		t.Fatal("service role must not be human managed-user assignable")
-	}
+	assertAuthorizationContractPermissionBoundaries(t, contract)
 	sqlText := compactMigrationSQL(string(raw))
 	for _, want := range []string{"'dashboard:read'", "('teacher','class')", "('grader','exam_task')", "('arbitrator','exam_task')", "declared_school_binding", "HAVING COUNT(DISTINCT school_id)=1", "u.school_id IS NULL", "jsonb_build_object('scope','none')", "jsonb_build_object('scope','service')", "FROM student st", "UPDATE teacher_class"} {
 		if !strings.Contains(sqlText, want) {
@@ -323,4 +301,33 @@ func TestStory061OfflineEvaluationMigrationEnforcesEvidenceAndCompletionBoundari
 func compactMigrationSQL(value string) string {
 	// 这些断言只保护迁移源码契约；实际最终权限另由授权矩阵 PostgreSQL 测试核对。
 	return strings.Join(strings.Fields(value), " ")
+}
+
+// 学校管理员保留管理授权；阅卷角色和服务角色分别受人工职责边界约束。
+func assertAuthorizationContractPermissionBoundaries(t *testing.T, contract map[string]authorizationRoleContract) {
+	t.Helper()
+	for _, permission := range []string{"org:manage", "exam:manage", "file:manage", "submission:manage", "capture:manage", "review:manage", "review:work", "arbitration:manage", "score:manage", "report:read", "appeal:manage", "audit:read", "dashboard:read"} {
+		if !authorizationPermissionPresent(contract["school_admin"].Permissions, permission) {
+			t.Fatalf("school_admin contract missing %s", permission)
+		}
+	}
+	for _, role := range []string{"teacher", "grader", "arbitrator"} {
+		for _, forbidden := range []string{"tenant:manage", "org:manage", "exam:manage", "system:read", "review:manage", "arbitration:manage", "score:manage"} {
+			if authorizationPermissionPresent(contract[role].Permissions, forbidden) {
+				t.Fatalf("%s contract retains management permission %s", role, forbidden)
+			}
+		}
+	}
+	if contract["page_processing_worker"].Human || contract["page_processing_worker"].ManagedUserAssignable {
+		t.Fatal("service role must not be human managed-user assignable")
+	}
+}
+
+func authorizationPermissionPresent(values []string, target string) bool {
+	for _, value := range values {
+		if value == target {
+			return true
+		}
+	}
+	return false
 }

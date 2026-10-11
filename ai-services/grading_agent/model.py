@@ -18,6 +18,7 @@ from .dashscope_native_contract import (
     parse_dashscope_text_response,
 )
 from .dashscope_native_transport import (
+    JSON_CONTENT_TYPE,
     MAX_DASHSCOPE_RESPONSE_BYTES,
     MAX_DASHSCOPE_TEXT_REQUEST_BYTES,
 )
@@ -56,6 +57,21 @@ def _validate_structured_output(output, schema, request_id):
     return output
 
 
+def _wrapped_object_candidates(content):
+    decoder = json.JSONDecoder()
+    candidates = []
+    for start, character in enumerate(content):
+        if character != "{":
+            continue
+        try:
+            value, end = decoder.raw_decode(content, start)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(value, dict):
+            candidates.append((end - start, value))
+    return candidates
+
+
 def _decode_structured_content(content, request_id):
     if isinstance(content, dict):
         return content
@@ -70,21 +86,8 @@ def _decode_structured_content(content, request_id):
     try:
         return json.loads(stripped)
     except json.JSONDecodeError as original_error:
-        # Some OpenAI-compatible multimodal providers still wrap json_object
-        # responses in Markdown fences or a short explanatory prefix. Decode
-        # exactly one complete object and let the JSON Schema validator remain
-        # the authoritative structural gate.
-        decoder = json.JSONDecoder()
-        candidates = []
-        for start, character in enumerate(stripped):
-            if character != "{":
-                continue
-            try:
-                value, end = decoder.raw_decode(stripped, start)
-            except json.JSONDecodeError:
-                continue
-            if isinstance(value, dict):
-                candidates.append((end - start, value))
+        # 兼容供应商的 Markdown 或说明文字；选取最长完整对象，再由调用方校验 schema。
+        candidates = _wrapped_object_candidates(stripped)
         if candidates:
             return max(candidates, key=lambda item: item[0])[1]
         raise AgentError(
@@ -95,6 +98,15 @@ def _decode_structured_content(content, request_id):
         ) from original_error
 
 
+def _nonnegative_token_count(value):
+    return value if isinstance(value, int) and not isinstance(value, bool) and value >= 0 else 0
+
+
+def _usage_detail_count(usage, details_name, count_name):
+    details = usage.get(details_name)
+    return _nonnegative_token_count(details.get(count_name, 0)) if isinstance(details, dict) else 0
+
+
 def _openai_usage(response):
     """Normalize provider usage without trusting it for billing decisions."""
     usage = response.get("usage") if isinstance(response, dict) else None
@@ -102,27 +114,17 @@ def _openai_usage(response):
         return {}
 
     def count(name):
-        value = usage.get(name, 0)
-        return value if isinstance(value, int) and not isinstance(value, bool) and value >= 0 else 0
+        return _nonnegative_token_count(usage.get(name, 0))
 
     prompt = count("prompt_tokens") or count("input_tokens")
     completion = count("completion_tokens") or count("output_tokens")
     total = count("total_tokens") or prompt + completion
-    prompt_details = usage.get("prompt_tokens_details")
-    completion_details = usage.get("completion_tokens_details")
-    cached_from_details = prompt_details.get("cached_tokens", 0) if isinstance(prompt_details, dict) else 0
-    cached_from_deepseek = usage.get("prompt_cache_hit_tokens", 0)
+    # 两种缓存字段可能描述同一批 token，取较大值，不能相加重复计入。
     cached = max(
-        cached_from_details if isinstance(cached_from_details, int) and not isinstance(cached_from_details, bool) else 0,
-        cached_from_deepseek if isinstance(cached_from_deepseek, int) and not isinstance(cached_from_deepseek, bool) else 0,
+        _usage_detail_count(usage, "prompt_tokens_details", "cached_tokens"),
+        count("prompt_cache_hit_tokens"),
     )
-    reasoning = (
-        completion_details.get("reasoning_tokens", 0)
-        if isinstance(completion_details, dict)
-        else 0
-    )
-    cached = max(cached, 0)
-    reasoning = reasoning if isinstance(reasoning, int) and not isinstance(reasoning, bool) and reasoning >= 0 else 0
+    reasoning = _usage_detail_count(usage, "completion_tokens_details", "reasoning_tokens")
     return {
         "input_tokens": prompt,
         "cached_input_tokens": cached,
@@ -445,13 +447,25 @@ class PromptRegistry:
         }
 
 
+class _RejectModelRedirects(urlrequest.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        # 模型凭据只授权初始部署地址；同源跳转也拒绝，不能让供应商响应扩大授权边界。
+        fp.close()
+        raise urlerror.HTTPError(req.full_url, code, msg, headers, None)
+
+
+def _open_model_request(request, timeout):
+    # 仅替换当前请求的跳转策略，沿用 urllib 的 TLS 校验、代理和超时行为。
+    return urlrequest.build_opener(_RejectModelRedirects()).open(request, timeout=timeout)
+
+
 def _default_transport(url, payload, headers, timeout):
     body = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode(
         "utf-8"
     )
     req = urlrequest.Request(url, data=body, headers=headers, method="POST")
     try:
-        with urlrequest.urlopen(req, timeout=timeout) as response:
+        with _open_model_request(req, timeout=timeout) as response:
             return json.loads(read_json_response(response).decode("utf-8"))
     except ResponseValidationError as exc:
         raise AgentError(
@@ -514,7 +528,7 @@ class LocalLlamaCppAdapter:
                 },
             },
         }
-        headers = {"Content-Type": "application/json"}
+        headers = {"Content-Type": JSON_CONTENT_TYPE}
         if self.settings.model_api_key:
             headers["Authorization"] = f"Bearer {self.settings.model_api_key}"
         try:
@@ -535,7 +549,7 @@ class LocalLlamaCppAdapter:
             ) from exc
         except urlerror.HTTPError as exc:
             raise _map_model_http_error(exc, request_id) from exc
-        except (urlerror.URLError, OSError, ValueError, json.JSONDecodeError) as exc:
+        except (OSError, ValueError) as exc:
             raise AgentError(
                 "model_unavailable",
                 "local model request failed",
@@ -560,7 +574,7 @@ class LocalLlamaCppAdapter:
             "chat_template_kwargs": {"enable_thinking": False},
             "response_format": {"type": "json_schema", "json_schema": {"name": name, "strict": True, "schema": schema}},
         }
-        headers = {"Content-Type": "application/json"}
+        headers = {"Content-Type": JSON_CONTENT_TYPE}
         if self.settings.model_api_key:
             headers["Authorization"] = f"Bearer {self.settings.model_api_key}"
         try:
@@ -574,7 +588,7 @@ class LocalLlamaCppAdapter:
             raise AgentError("model_timeout", "document parsing model request timed out", status=504, retryable=True, request_id=request_id) from exc
         except urlerror.HTTPError as exc:
             raise _map_model_http_error(exc, request_id) from exc
-        except (urlerror.URLError, OSError, ValueError, json.JSONDecodeError) as exc:
+        except (OSError, ValueError) as exc:
             raise AgentError("model_unavailable", "document parsing model request failed", status=503, retryable=True, request_id=request_id) from exc
 
     def _parse_content(self, response, request_id):
@@ -599,11 +613,11 @@ class LocalLlamaCppAdapter:
             f"{self.settings.model_base_url}/models", headers=headers, method="GET"
         )
         try:
-            with urlrequest.urlopen(
+            with _open_model_request(
                 req, timeout=self.settings.model_ready_timeout_seconds
             ) as response:
                 return 200 <= response.status < 300
-        except (urlerror.URLError, OSError, TimeoutError):
+        except OSError:
             return False
 
 
@@ -642,9 +656,9 @@ class DashScopeNativeAdapter:
                 f"{self.settings.model_base_url}{DASHSCOPE_TEXT_GENERATION_PATH}",
                 payload,
                 {
-                    "Accept": "application/json",
+                    "Accept": JSON_CONTENT_TYPE,
                     "Authorization": f"Bearer {self.settings.model_api_key}",
-                    "Content-Type": "application/json",
+                    "Content-Type": JSON_CONTENT_TYPE,
                     "X-DashScope-SSE": "disable",
                 },
                 self.settings.model_timeout_seconds,
@@ -670,7 +684,7 @@ class DashScopeNativeAdapter:
             mapped = map_dashscope_error(exc.code, error_payload)
             mapped.request_id = mapped.request_id or request_id
             raise mapped from exc
-        except (urlerror.URLError, OSError, ValueError, json.JSONDecodeError) as exc:
+        except (OSError, ValueError) as exc:
             raise AgentError(
                 "model_unavailable",
                 "external model request failed",
@@ -694,7 +708,7 @@ class DashScopeNativeAdapter:
         try:
             response = self.transport(
                 f"{self.settings.model_base_url}{DASHSCOPE_TEXT_GENERATION_PATH}", payload,
-                {"Accept": "application/json", "Authorization": f"Bearer {self.settings.model_api_key}", "Content-Type": "application/json", "X-DashScope-SSE": "disable"},
+                {"Accept": JSON_CONTENT_TYPE, "Authorization": f"Bearer {self.settings.model_api_key}", "Content-Type": JSON_CONTENT_TYPE, "X-DashScope-SSE": "disable"},
                 self.settings.model_timeout_seconds,
             )
             self._usage.value = _openai_usage(response)
@@ -710,7 +724,7 @@ class DashScopeNativeAdapter:
             mapped = map_dashscope_error(exc.code, error_payload)
             mapped.request_id = mapped.request_id or request_id
             raise mapped from exc
-        except (KeyError, IndexError, TypeError, TimeoutError, urlerror.URLError, OSError, ValueError) as exc:
+        except (KeyError, IndexError, TypeError, OSError, ValueError) as exc:
             raise AgentError("model_unavailable", "document parsing model request failed", status=503, retryable=True, request_id=request_id) from exc
 
     @staticmethod
@@ -728,7 +742,7 @@ class DashScopeNativeAdapter:
                 status=413,
             )
         req = urlrequest.Request(url, data=body, headers=headers, method="POST")
-        with urlrequest.urlopen(req, timeout=timeout) as response:
+        with _open_model_request(req, timeout=timeout) as response:
             try:
                 raw = read_json_response(response, MAX_DASHSCOPE_RESPONSE_BYTES)
             except ResponseValidationError as exc:
@@ -755,12 +769,13 @@ class DashScopeNativeAdapter:
                 value[key] = item
             return value
 
+        def reject_nonfinite(_value):
+            raise ValueError("non-finite JSON number")
+
         return json.loads(
             raw.decode("utf-8"),
             object_pairs_hook=reject_duplicates,
-            parse_constant=lambda _value: (_ for _ in ()).throw(
-                ValueError("non-finite JSON number")
-            ),
+            parse_constant=reject_nonfinite,
         )
 
     @staticmethod
@@ -775,6 +790,6 @@ class DashScopeNativeAdapter:
             return {}
 
     def ready(self):
-        # Avoid a billable model call from readiness. Startup validation already
-        # pins the native HTTPS host and requires a non-empty API key.
+        # 就绪检查不发起计费模型调用。启动校验已
+        # 固定原生 HTTPS 主机，并要求 API 密钥非空。
         return bool(self.settings.model_api_key)

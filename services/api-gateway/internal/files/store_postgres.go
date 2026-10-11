@@ -137,8 +137,7 @@ WHERE tenant_id=$1 AND id::text=$2 AND deleted_at IS NULL
 	if !AllowsAsset(scope, asset) {
 		return FileAsset{}, ErrForbidden
 	}
-	// A file becomes question-bank content once a version pins it. School scope
-	// alone must never turn that durable reference into a download capability.
+	// 版本固定引用文件后，该文件就成为题库内容；仅凭学校作用域不能将此持久引用变为下载权限。
 	var bankAuthorized bool
 	if err := s.db.QueryRowContext(ctx, `SELECT NOT EXISTS(
 		SELECT 1 FROM question_bank_item_asset qa WHERE qa.tenant_id=$1 AND qa.file_asset_id=$2
@@ -158,19 +157,19 @@ WHERE tenant_id=$1 AND id::text=$2 AND deleted_at IS NULL
 }
 
 func (s *PostgresStore) Activate(ctx context.Context, tenantID, id string, expectedRevision int64) (FileAsset, error) {
-	return s.transition(ctx, tenantID, id, expectedRevision, []string{LifecyclePendingUpload, LifecycleUploadFailed}, LifecycleActive, "", false)
+	return s.transition(ctx, tenantID, id, expectedRevision, assetTransition{from: []string{LifecyclePendingUpload, LifecycleUploadFailed}, to: LifecycleActive})
 }
 
 func (s *PostgresStore) RecoverMissing(ctx context.Context, tenantID, id string, expectedRevision int64) (FileAsset, error) {
-	return s.transition(ctx, tenantID, id, expectedRevision, []string{LifecycleMissingObject}, LifecycleActive, "", false)
+	return s.transition(ctx, tenantID, id, expectedRevision, assetTransition{from: []string{LifecycleMissingObject}, to: LifecycleActive})
 }
 
 func (s *PostgresStore) MarkMissing(ctx context.Context, tenantID, id string, expectedRevision int64) (FileAsset, error) {
-	return s.transition(ctx, tenantID, id, expectedRevision, []string{LifecycleActive}, LifecycleMissingObject, "object_missing", false)
+	return s.transition(ctx, tenantID, id, expectedRevision, assetTransition{from: []string{LifecycleActive}, to: LifecycleMissingObject, detail: "object_missing"})
 }
 
 func (s *PostgresStore) MarkUploadFailed(ctx context.Context, tenantID, id string, expectedRevision int64, detail string) (FileAsset, error) {
-	return s.transition(ctx, tenantID, id, expectedRevision, []string{LifecyclePendingUpload}, LifecycleUploadFailed, detail, false)
+	return s.transition(ctx, tenantID, id, expectedRevision, assetTransition{from: []string{LifecyclePendingUpload}, to: LifecycleUploadFailed, detail: detail})
 }
 
 func (s *PostgresStore) BeginDelete(ctx context.Context, scope auth.AccessScope, id string, expectedRevision int64) (FileAsset, error) {
@@ -192,22 +191,30 @@ func (s *PostgresStore) BeginDelete(ctx context.Context, scope auth.AccessScope,
 	if asset.LegalHold || (asset.RetentionUntil != nil && asset.RetentionUntil.After(time.Now().UTC())) {
 		return FileAsset{}, ErrForbidden
 	}
-	return s.transition(ctx, scope.TenantID, id, expectedRevision, []string{LifecycleActive, LifecycleDeleteFailed}, LifecyclePendingDelete, "", false)
+	return s.transition(ctx, scope.TenantID, id, expectedRevision, assetTransition{from: []string{LifecycleActive, LifecycleDeleteFailed}, to: LifecyclePendingDelete})
 }
 
 func (s *PostgresStore) CompleteDelete(ctx context.Context, tenantID, id string, expectedRevision int64) (FileAsset, error) {
-	return s.transition(ctx, tenantID, id, expectedRevision, []string{LifecyclePendingDelete}, LifecycleDeleted, "", true)
+	return s.transition(ctx, tenantID, id, expectedRevision, assetTransition{from: []string{LifecyclePendingDelete}, to: LifecycleDeleted, deleted: true})
 }
 
 func (s *PostgresStore) MarkDeleteFailed(ctx context.Context, tenantID, id string, expectedRevision int64, detail string) (FileAsset, error) {
-	return s.transition(ctx, tenantID, id, expectedRevision, []string{LifecyclePendingDelete}, LifecycleDeleteFailed, detail, false)
+	return s.transition(ctx, tenantID, id, expectedRevision, assetTransition{from: []string{LifecyclePendingDelete}, to: LifecycleDeleteFailed, detail: detail})
 }
 
-func (s *PostgresStore) transition(ctx context.Context, tenantID, id string, expectedRevision int64, from []string, to, detail string, deleted bool) (FileAsset, error) {
+// 来源状态与修订号一同参与条件更新；只有 CompleteDelete 设置 deleted，其他状态不能提前标记已删除。
+type assetTransition struct {
+	from    []string
+	to      string
+	detail  string
+	deleted bool
+}
+
+func (s *PostgresStore) transition(ctx context.Context, tenantID, id string, expectedRevision int64, change assetTransition) (FileAsset, error) {
 	// 前置读取不代表状态仍有效；实际更新同时比较修订号和允许的来源状态。
-	placeholders := make([]string, len(from))
-	args := []any{tenantID, id, expectedRevision, to, detail, deleted}
-	for index, state := range from {
+	placeholders := make([]string, len(change.from))
+	args := []any{tenantID, id, expectedRevision, change.to, change.detail, change.deleted}
+	for index, state := range change.from {
 		placeholders[index] = "$" + strconv.Itoa(7+index)
 		args = append(args, state)
 	}

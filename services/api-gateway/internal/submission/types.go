@@ -49,8 +49,7 @@ type SubmissionPage struct {
 	CreatedAt             time.Time      `json:"created_at"`
 }
 
-// AnswerRegion is the privacy-safe subset of answer_segment exposed to the OCR
-// worker. It intentionally contains no student identity or answer text.
+// AnswerRegion 是向 OCR worker 提供的 answer_segment 隐私受限子集，不包含学生身份或答案文本。
 type AnswerRegion struct {
 	ID           string    `json:"answer_segment_id"`
 	QuestionID   string    `json:"question_id"`
@@ -58,7 +57,7 @@ type AnswerRegion struct {
 	QuestionType string    `json:"question_type"`
 	BBox         []float64 `json:"bbox"`
 	PageID       string    `json:"submission_page_id"`
-	// Registered/template coordinates cannot be applied to the original page.
+	// 配准或模板坐标不能直接应用于原始页面。
 	RequiresFullPage bool `json:"-"`
 }
 
@@ -121,14 +120,13 @@ type Store interface {
 	UpdateStatus(ctx context.Context, tenantID string, submissionID string, actorID string, status string, expectedRevision int64) (Submission, error)
 }
 
-// AnswerRegionLister is optional for backwards-compatible stores. When
-// unavailable, OCR input falls back to full-page inference.
+// AnswerRegionLister 对兼容旧版的存储是可选接口。不可用时，OCR 输入回退到整页推断。
 type AnswerRegionLister interface {
 	ListAnswerRegions(ctx context.Context, tenantID string, submissionID string) ([]AnswerRegion, error)
 }
 
-// ExamBatchLister avoids one submission query per exam on dashboards and
-// reporting summaries. Implementations must keep the tenant predicate in SQL.
+// ExamBatchLister 避免仪表盘和报告汇总为每场考试单独查询提交。
+// 实现必须在 SQL 中保留租户条件。
 type ExamBatchLister interface {
 	ListByExams(ctx context.Context, tenantID string, examIDs []string) (map[string][]Submission, error)
 }

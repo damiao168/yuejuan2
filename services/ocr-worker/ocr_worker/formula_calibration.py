@@ -45,15 +45,7 @@ def calibrate_formula_runtime(
     clock: Callable[[], float] = time.perf_counter,
     progress: Callable[[dict[str, Any]], None] | None = None,
 ) -> dict[str, Any]:
-    if not images or any(not image for image in images):
-        raise ValueError("formula calibration requires non-empty images")
-    if repeats < 1:
-        raise ValueError("formula calibration repeats must be positive")
-    candidates = sorted(set(batch_sizes))
-    if not candidates or candidates[0] < 1 or candidates[-1] > 16:
-        raise ValueError("formula calibration batch sizes must be between 1 and 16")
-    if lifecycle_goal not in {"compatibility", "latency"}:
-        raise ValueError("formula calibration lifecycle goal must be compatibility or latency")
+    candidates = _validate_calibration_inputs(images, batch_sizes, repeats, lifecycle_goal)
 
     detector = detector or PaddleFormulaLayoutDetector(settings.formula_layout_model_version, settings.device)
     engine = engine or PaddleFormulaNetEngine(
@@ -86,18 +78,9 @@ def calibrate_formula_runtime(
         consistent = True
         recognized = sum(bool(value) for value in baseline) if batch_size == 1 else 0
         if batch_size == 1:
+            # 基准已执行过单张批次，作为该候选的第一次测量，不能再推理或重复计数。
             completed_runs += 1
-            if progress is not None:
-                progress(
-                    {
-                        "phase": "candidate_run",
-                        "batch_size": 1,
-                        "repeat_no": 1,
-                        "repeat_total": repeats,
-                        "completed_runs": completed_runs,
-                        "total_runs": len(candidates) * repeats,
-                    }
-                )
+            _report_candidate_run(progress, 1, 1, repeats, completed_runs, len(candidates) * repeats)
         for repeat_index in range(len(durations), repeats):
             started = clock()
             results = engine.recognize_formulas(images, batch_size=batch_size)
@@ -106,34 +89,13 @@ def calibrate_formula_runtime(
             consistent = consistent and observed == baseline
             recognized = max(recognized, sum(bool(value) for value in observed))
             completed_runs += 1
-            if progress is not None:
-                progress(
-                    {
-                        "phase": "candidate_run",
-                        "batch_size": batch_size,
-                        "repeat_no": repeat_index + 1,
-                        "repeat_total": repeats,
-                        "completed_runs": completed_runs,
-                        "total_runs": len(candidates) * repeats,
-                    }
-                )
-        average_ms = statistics.fmean(durations)
+            _report_candidate_run(
+                progress, batch_size, repeat_index + 1, repeats, completed_runs, len(candidates) * repeats,
+            )
         measurements.append(
-            {
-                "batch_size": batch_size,
-                "repeat_count": repeats,
-                "average_ms_per_bundle": average_ms,
-                "p50_ms_per_bundle": _percentile(durations, 50),
-                "p95_ms_per_bundle": _percentile(durations, 95),
-                "throughput_roi_per_second": len(images) * 1000 / average_ms if average_ms > 0 else 0.0,
-                "output_consistency_passed": consistent,
-                "recognized_roi_count": recognized,
-            }
+            _formula_batch_measurement(batch_size, repeats, images, durations, consistent, recognized)
         )
-    usable = [row for row in measurements if row["output_consistency_passed"] and row["recognized_roi_count"] > 0]
-    if not usable:
-        raise RuntimeError("no formula batch candidate produced consistent recognized output")
-    selected = max(usable, key=lambda row: (row["throughput_roi_per_second"], -row["batch_size"]))
+    selected = _select_formula_batch(measurements)
     hardware = formula_hardware_descriptor(settings.device)
     lifecycle = "resident" if lifecycle_goal == "latency" else "per_job"
     return {
@@ -158,6 +120,72 @@ def calibrate_formula_runtime(
             "batch_size": int(selected["batch_size"]),
         },
     }
+
+
+def _validate_calibration_inputs(
+    images: list[bytes], batch_sizes: list[int], repeats: int, lifecycle_goal: str,
+) -> list[int]:
+    # 保留输入校验顺序，多个输入同时非法时仍返回原来的首次错误。
+    if not images or any(not image for image in images):
+        raise ValueError("formula calibration requires non-empty images")
+    if repeats < 1:
+        raise ValueError("formula calibration repeats must be positive")
+    candidates = sorted(set(batch_sizes))
+    if not candidates or candidates[0] < 1 or candidates[-1] > 16:
+        raise ValueError("formula calibration batch sizes must be between 1 and 16")
+    if lifecycle_goal not in {"compatibility", "latency"}:
+        raise ValueError("formula calibration lifecycle goal must be compatibility or latency")
+    return candidates
+
+
+def _report_candidate_run(
+    progress: Callable[[dict[str, Any]], None] | None,
+    batch_size: int,
+    repeat_no: int,
+    repeats: int,
+    completed_runs: int,
+    total_runs: int,
+) -> None:
+    if progress is not None:
+        progress(
+            {
+                "phase": "candidate_run",
+                "batch_size": batch_size,
+                "repeat_no": repeat_no,
+                "repeat_total": repeats,
+                "completed_runs": completed_runs,
+                "total_runs": total_runs,
+            }
+        )
+
+
+def _formula_batch_measurement(
+    batch_size: int,
+    repeats: int,
+    images: list[bytes],
+    durations: list[float],
+    consistent: bool,
+    recognized: int,
+) -> dict[str, Any]:
+    average_ms = statistics.fmean(durations)
+    return {
+        "batch_size": batch_size,
+        "repeat_count": repeats,
+        "average_ms_per_bundle": average_ms,
+        "p50_ms_per_bundle": _percentile(durations, 50),
+        "p95_ms_per_bundle": _percentile(durations, 95),
+        "throughput_roi_per_second": len(images) * 1000 / average_ms if average_ms > 0 else 0.0,
+        "output_consistency_passed": consistent,
+        "recognized_roi_count": recognized,
+    }
+
+
+def _select_formula_batch(measurements: list[dict[str, Any]]) -> dict[str, Any]:
+    usable = [row for row in measurements if row["output_consistency_passed"] and row["recognized_roi_count"] > 0]
+    if not usable:
+        raise RuntimeError("no formula batch candidate produced consistent recognized output")
+    # 仅比较输出一致且非空的候选；吞吐相同时选更小批次，不能用容量推断生命周期。
+    return max(usable, key=lambda row: (row["throughput_roi_per_second"], -row["batch_size"]))
 
 
 def _builtin_samples() -> list[bytes]:

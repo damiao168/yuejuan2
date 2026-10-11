@@ -8,10 +8,14 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/workerruntime"
 )
 
+const (
+	subjectiveWorkerUnavailable = "subjective worker runtime is unavailable"
+)
+
 func (h *Handler) CompleteWorker(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
 	if h.runtime == nil {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "subjective_worker_unavailable", "subjective worker runtime is unavailable")
+		httpx.Error(w, r, http.StatusServiceUnavailable, "subjective_worker_unavailable", subjectiveWorkerUnavailable)
 		return
 	}
 	var input WorkerResultInput
@@ -75,7 +79,7 @@ func (h *Handler) ExecuteWorker(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if h.runtime == nil {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "subjective_worker_unavailable", "subjective worker runtime is unavailable")
+		httpx.Error(w, r, http.StatusServiceUnavailable, "subjective_worker_unavailable", subjectiveWorkerUnavailable)
 		return
 	}
 	var input struct {
@@ -139,7 +143,7 @@ func (h *Handler) ExecuteWorker(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) FailWorker(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
 	if h.runtime == nil {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "subjective_worker_unavailable", "subjective worker runtime is unavailable")
+		httpx.Error(w, r, http.StatusServiceUnavailable, "subjective_worker_unavailable", subjectiveWorkerUnavailable)
 		return
 	}
 	var input WorkerFailureInput

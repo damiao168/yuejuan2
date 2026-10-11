@@ -15,7 +15,7 @@ export function readComposeSchemaVersion(source) {
 }
 
 export function getLatestMigrationVersion() {
-  const migrations = fs.readdirSync(migrationsDir).filter((name) => /^\d{6}_.*\.sql$/.test(name)).sort();
+  const migrations = fs.readdirSync(migrationsDir).filter((name) => /^\d{6}_.*\.sql$/.test(name)).sort((left, right) => left.localeCompare(right));
   if (!migrations.length) throw new Error('No versioned migrations found');
   return migrations.at(-1).slice(0, 6);
 }

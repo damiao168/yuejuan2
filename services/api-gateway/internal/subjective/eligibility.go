@@ -9,9 +9,8 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/modelcalibration"
 )
 
-// EligibilityGate is the narrow admission boundary for an external grading
-// model. It is optional for isolated legacy tests; production composition
-// always injects the real A14 gate.
+// EligibilityGate 是外部评分模型的受限准入边界。
+// 隔离的旧版测试可不提供它；生产组装始终注入真实 A14 门禁。
 type EligibilityGate interface {
 	Decide(context.Context, string, aieligibility.DecisionInput) (aieligibility.Decision, error)
 }
@@ -57,8 +56,7 @@ func (h *Handler) decideEligibility(ctx context.Context, tenantID, runID string,
 		AssessmentSnapshot: value.AssessmentSnapshot,
 		RequestedMode:      requestedScoringMode(value),
 		OCRQuality:         value.OCRConfidence,
-		// Absence remains nil, so A14 safely abstains rather than treating a
-		// generic OCR signal as evidence of a specialised parser result.
+		// 缺失时保持 nil，让 A14 安全地放弃判断，而不将通用 OCR 信号视为专用解析器结果的证据。
 		ParserQuality:     parserQuality,
 		RubricComplete:    rubricIsComplete(value),
 		EvidenceAvailable: hasRequiredMaterialEvidence(value),
@@ -100,10 +98,8 @@ func hasRequiredMaterialEvidence(value Context) bool {
 	return strings.TrimSpace(value.AnswerText) != "" && len(value.AnswerImageRef) > 0
 }
 
-// recordCalibrationCandidate preserves the raw model confidence separately
-// from score facts and applies A15's empirical risk-coverage abstention. It
-// runs only after the response passed schema/evidence validation. A returned
-// suggestion remains teacher-review-only in every branch.
+// recordCalibrationCandidate 将原始模型置信度与成绩事实分开保存，并应用 A15 基于经验风险覆盖率的弃权规则。
+// 它只在响应通过结构和证据校验后运行；所有分支返回的建议仍只供教师复核。
 func (h *Handler) recordCalibrationCandidate(ctx context.Context, tenantID, runID string, value Context, policy ModelPolicy, decision aieligibility.Decision, output *AdapterOutput) error {
 	if h.calibration == nil || output == nil || !decision.CanCallExternalAI() {
 		return nil

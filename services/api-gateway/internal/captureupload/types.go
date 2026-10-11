@@ -1,8 +1,5 @@
-// Package captureupload implements the resumable handoff from an offline
-// scanning workstation to a capture batch.  It deliberately keeps the
-// temporary upload separate from capture_file: a page-processing task is only
-// visible after the complete hash has been verified and the file has been
-// registered once.
+// Package captureupload 实现离线扫描工作站到采集批次的可续传交接。临时上传与 capture_file 分开；
+// 只有完整哈希验证通过且文件登记一次后，页面处理任务才可见。
 package captureupload
 
 import (
@@ -44,9 +41,7 @@ type ChunkInput struct {
 	Data   []byte
 }
 
-// CompleteInput accepts the expected hash again so a client can detect a
-// stale local queue record before it asks the server to materialize a file.
-// It is optional because InitInput is the authoritative immutable contract.
+// CompleteInput 再次接收预期哈希，使客户端在请求服务端具化文件前发现过时的本地队列记录。此字段可选，因为 InitInput 才是权威且不可变的约定。
 type CompleteInput struct {
 	SHA256 string `json:"sha256,omitempty"`
 }

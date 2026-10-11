@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { SessionUser } from "../auth/session";
 import { acceptBatchCreateCommand, batchCreateCommandKey, loadBatchCreateCommand } from "../features/capture/batchCreateCommand";
-import { recoverCaptureBatchCommand } from "../api/capture";
-import { ApiClientError } from "../api/client";
+import { findCaptureTargets, getCaptureBatch, recoverCaptureBatchCommand } from "../api/capture";
+import { hashQueryParam } from "../router/query";
+import { ApiClientError, getUserErrorMessage } from "../api/client";
 import {
   App,
+  Alert,
   Button,
   Empty,
   Form,
@@ -15,6 +17,7 @@ import {
   Space,
   Tabs,
   Upload,
+  type TableColumnsType,
   type UploadProps,
 } from "antd";
 import {
@@ -27,7 +30,6 @@ import {
   Undo2,
   Workflow,
 } from "lucide-react";
-import { getUserErrorMessage } from "../api/client";
 import {
   confirmRegistration,
   completeCaptureBatch,
@@ -39,7 +41,9 @@ import {
   retryRegistration,
   updateCapturePage,
   type CaptureBatch,
+  type CaptureBatchDetail,
   type CapturePage,
+  type ProcessingSummary,
 } from "../api/capture";
 import { downloadFileBlob } from "../api/files";
 import { ErrorState, LoadingState } from "../components/PageState";
@@ -60,15 +64,241 @@ function formatError(error: unknown) {
   return getUserErrorMessage(error, "操作失败，请重试");
 }
 
+function CaptureBatchListPanel({ batches, selectedId, setSelectedId, hasMoreBatches, loadingMoreBatches, loadMoreBatches }: Readonly<Pick<ReturnType<typeof useCaptureBatchList>, "batches" | "selectedId" | "setSelectedId" | "hasMoreBatches" | "loadingMoreBatches" | "loadMoreBatches">>) {
+  return (
+    <aside className="capture-batch-list">
+      <div className="capture-pane-title">
+        <strong>批次</strong>
+        <span>{batches.length}</span>
+      </div>
+      {batches.map((batch) => (
+        <button
+          type="button"
+          key={batch.id}
+          className={batch.id === selectedId ? "capture-batch-row active" : "capture-batch-row"}
+          onClick={() => setSelectedId(batch.id)}
+        >
+          <span>
+            <strong>{batch.name}</strong>
+            <small>{new Date(batch.created_at).toLocaleString("zh-CN", { hour12: false })}</small>
+          </span>
+          <StatusTag tone={statusTone(batch.status)}>{statusLabels[batch.status]}</StatusTag>
+        </button>
+      ))}
+      {hasMoreBatches ? <Button block loading={loadingMoreBatches} onClick={() => void loadMoreBatches()}>加载更多批次</Button> : null}
+    </aside>
+  );
+}
+
+function CaptureProgress({ percent }: Readonly<{ percent: number | null }>) {
+  if (percent === null) return null;
+  return <Progress percent={percent} size="small" />;
+}
+
+function CaptureIssueQueue({ detail, issuePages, pageColumns, actioning, batchCanManage, startProcessing, uploadRepair }: Readonly<{
+  detail: CaptureBatchDetail;
+  issuePages: CapturePage[];
+  pageColumns: TableColumnsType<CapturePage>;
+  actioning: boolean;
+  batchCanManage: boolean;
+  startProcessing: () => Promise<void>;
+  uploadRepair: () => void;
+}>) {
+  if (!(issuePages.length || detail.batch.failed_count > 0)) {
+    return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="当前没有需要人工处理的页面" />;
+  }
+  return (
+    <div className="capture-issue-queue">
+      {detail.files.filter((file) => file.status === "failed").map((file) => (
+        <div className="capture-file-issue" key={file.id}>
+          <div><strong>{file.original_name}</strong><span title={file.error_code || undefined}>文件处理失败：{(file.error_code && errorLabels[file.error_code]) || "请重新导入正确的文件"}</span></div>
+          <Space><Button icon={<RefreshCw size={15} />} loading={actioning} disabled={!batchCanManage} onClick={() => void startProcessing()}>重试原文件</Button><Button icon={<FileUp size={15} />} disabled={!batchCanManage} onClick={uploadRepair}>上传修复文件</Button></Space>
+        </div>
+      ))}
+      {issuePages.length > 0 ? <ResponsiveTable className="dense-data-table" rowKey="id" columns={pageColumns} dataSource={issuePages} pagination={false} size="small" /> : null}
+    </div>
+  );
+}
+
+function pageProcessingLabel(complete: boolean, summary?: ProcessingSummary) {
+  if (complete) return "已完成版面对齐与题目切分";
+  if (summary) return `已完成 ${summary.ready_pages} 页 · 需人工处理 ${summary.blocked_pages} 页 · 处理中 ${summary.pending_pages} 页`;
+  return "等待版面对齐或人工确认";
+}
+
+function CaptureProcessingList({ detail, submissions, processingSummaries, actioning, batchCanManage, resolveRegistration, setCorrectionRunId, startPageProcessing }: Readonly<{
+  detail: CaptureBatchDetail;
+  submissions: string[];
+  processingSummaries: Record<string, ProcessingSummary>;
+  actioning: boolean;
+  batchCanManage: boolean;
+  resolveRegistration: (runId: string, action: "confirm" | "retry") => Promise<void>;
+  setCorrectionRunId: (runId: string | undefined) => void;
+  startPageProcessing: (submissionId: string) => Promise<void>;
+}>) {
+  if (!submissions.length) {
+    return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="拆页完成后，系统将自动对齐版面并按题切分" />;
+  }
+  return (
+    <div className="capture-processing-list">
+      {submissions.map((submissionId, index) => {
+        const pages = detail.pages.filter((item) => item.submission_id === submissionId);
+        const complete = pages.every((item) => item.status === "ready");
+        const summary = processingSummaries[submissionId];
+        return (
+          <div key={submissionId} className="capture-processing-row">
+            <div>
+              <strong>答卷 {index + 1}</strong>
+              <span>{pages.length} 页 · {pageProcessingLabel(complete, summary)}</span>
+            </div>
+            <Space wrap>
+              {summary?.blockers
+                .filter((item) => item.registration_run_id && item.stage === "registration")
+                .map((item) => (
+                  <Space key={item.page_id} wrap>
+                    {["confirm_registration", "retry_registration"].includes(item.action) && (
+                      <Button
+                        type={item.action === "confirm_registration" ? "primary" : "default"}
+                        loading={actioning}
+                        disabled={!batchCanManage}
+                        onClick={() => void resolveRegistration(item.registration_run_id!, item.action === "confirm_registration" ? "confirm" : "retry")}
+                      >
+                        {item.action === "confirm_registration" ? `确认第 ${item.page_no} 页对齐` : `重试第 ${item.page_no} 页对齐`}
+                      </Button>
+                    )}
+                    <Button icon={<SlidersHorizontal size={15} />} disabled={!batchCanManage} onClick={() => setCorrectionRunId(item.registration_run_id)}>校正第 {item.page_no} 页边界</Button>
+                  </Space>
+                ))}
+              <Button icon={<Workflow size={16} />} loading={actioning} disabled={!batchCanManage || complete} onClick={() => void startPageProcessing(submissionId)}>{complete ? "处理完成" : "对齐版面并切题"}</Button>
+            </Space>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function CaptureMatchingContent({ loading, error, onRetry, queue, workspaceProps }: Readonly<{
+  loading: boolean;
+  error?: string;
+  onRetry: () => void;
+  queue?: Parameters<typeof MatchingWorkspace>[0]["queue"];
+  workspaceProps: Omit<Parameters<typeof MatchingWorkspace>[0], "queue">;
+}>) {
+  // 匹配读取尚未完成时优先显示加载状态，旧队列不能冒充本次读取结果。
+  if (loading) return <LoadingState label="正在加载考试名册" />;
+  if (error) return <ErrorState message={error} onRetry={onRetry} />;
+  if (!queue) return <Empty description="暂无匹配数据" />;
+  return <MatchingWorkspace queue={queue} {...workspaceProps} />;
+}
+
+function CaptureBatchWorkspace({
+  detail, detailError, detailLoading, selectedId, loadDetail, canManage, batchCanManage,
+  progressPercent, summary, uploadProps, uploading, actioning, startProcessing, completeBatch,
+  reopenBatch, activeTab, setActiveTab, issuePages, pageColumns, fileColumns, uploadRepair,
+  onOverride, processingProps, matchingProps,
+}: Readonly<{
+  detail?: CaptureBatchDetail;
+  detailError?: string;
+  detailLoading: boolean;
+  selectedId: string;
+  loadDetail: ReturnType<typeof useCaptureBatchDetail>["loadDetail"];
+  canManage: boolean;
+  batchCanManage: boolean;
+  progressPercent: number | null;
+  summary: ReturnType<typeof captureSummary>;
+  uploadProps: UploadProps;
+  uploading: boolean;
+  actioning: boolean;
+  startProcessing: () => Promise<void>;
+  completeBatch: () => void;
+  reopenBatch: () => void;
+  activeTab: string;
+  setActiveTab: (key: string) => void;
+  issuePages: CapturePage[];
+  pageColumns: ReturnType<typeof capturePageColumns>;
+  fileColumns: ReturnType<typeof captureFileColumns>;
+  uploadRepair: () => void;
+  onOverride: (page: CapturePage) => void;
+  processingProps: Omit<Parameters<typeof CaptureProcessingList>[0], "detail" | "actioning" | "batchCanManage">;
+  matchingProps: Parameters<typeof CaptureMatchingContent>[0];
+}>) {
+  // 首次读取失败时没有可展示事实；同批次刷新失败仍保留原详情，只在就绪面板提示错误。
+  if (detailError && !detail) return <ErrorState message={detailError} onRetry={() => void loadDetail(selectedId)} />;
+  if (detailLoading || !detail) return <LoadingState label="正在读取批次" />;
+  return <>
+    {detailError ? <Alert type="warning" showIcon message={detailError} action={<Button onClick={() => void loadDetail(selectedId)}>重试读取批次</Button>} /> : null}
+    <header className="capture-batch-header">
+      <div>
+        <Space>
+          <ScanLine size={20} />
+          <h2>{detail.batch.name}</h2>
+          <StatusTag tone={statusTone(detail.batch.status)}>{statusLabels[detail.batch.status]}</StatusTag>
+        </Space>
+        <CaptureProgress percent={progressPercent} />
+      </div>
+      <Space wrap>
+        <Upload {...uploadProps}>
+          <Button icon={<FileUp size={16} />} loading={uploading} disabled={!batchCanManage}>导入文件</Button>
+        </Upload>
+        <Button type="primary" icon={<Workflow size={16} />} onClick={() => void startProcessing()} loading={actioning}
+          disabled={!batchCanManage || !detail.files.some((item) => ["uploaded", "failed"].includes(item.status))}>
+          {detail.files.some((item) => item.status === "failed") ? "处理待办文件" : "开始处理"}
+        </Button>
+        {detail.batch.status === "ready" && (
+          <Button type="primary" icon={<Check size={16} />} onClick={completeBatch} loading={actioning} disabled={!batchCanManage}>完成批次</Button>
+        )}
+        {detail.batch.status === "completed" && canManage && (
+          <Button icon={<Undo2 size={16} />} onClick={reopenBatch} loading={actioning}>重开批次</Button>
+        )}
+      </Space>
+    </header>
+    <div className="capture-summary-strip">
+      {summary.map((item) => <div key={item.label}><span>{item.label}</span><strong>{item.value}</strong></div>)}
+    </div>
+    <Tabs activeKey={activeTab} onChange={setActiveTab} items={[
+      {
+        key: "issues",
+        label: `需要处理 (${issuePages.length + detail.batch.failed_count})`,
+        children: <CaptureIssueQueue detail={detail} issuePages={issuePages} pageColumns={pageColumns} actioning={actioning} batchCanManage={batchCanManage} startProcessing={startProcessing} uploadRepair={uploadRepair} />,
+      },
+      {
+        key: "files",
+        label: "全部文件与页面",
+        children: <div className="capture-detail-stack">
+          <ResponsiveTable className="dense-data-table" rowKey="id" columns={fileColumns} dataSource={detail.files} pagination={false} size="small" />
+          <ResponsiveTable className="dense-data-table" rowKey="id" columns={pageColumns} dataSource={detail.pages} pagination={{ pageSize: 20 }} size="small" />
+        </div>,
+      },
+      {
+        key: "image-quality",
+        label: `图像质检 (${detail.pages.filter((page) => page.status !== "deleted").length})`,
+        children: <ImageQualityWorkspace key={selectedId} initialPageId={hashQueryParam("page")} pages={detail.pages}
+          canManage={batchCanManage} onRefresh={() => loadDetail(detail.batch.id, true)} onOverride={onOverride} />,
+      },
+      {
+        key: "processing",
+        label: `页面处理 (${processingProps.submissions.length})`,
+        children: <CaptureProcessingList detail={detail} actioning={actioning} batchCanManage={batchCanManage} {...processingProps} />,
+      },
+      {
+        key: "matching",
+        label: `学生匹配（待确认 ${matchingProps.queue?.submissions.filter((item) => item.identity_status !== "matched").length ?? 0}）`,
+        children: <CaptureMatchingContent {...matchingProps} />,
+      },
+    ]} />
+  </>;
+}
+
 export function CaptureBatchPage({
   user,
   examId,
   canManage,
-}: {
+}: Readonly<{
   user: SessionUser;
   examId: string;
   canManage: boolean;
-}) {
+}>) {
   const { message, modal } = App.useApp();
   const [form] = Form.useForm<{
     name: string;
@@ -89,15 +319,23 @@ export function CaptureBatchPage({
   const [preview, setPreview] = useState<{ url: string; page: CapturePage }>();
   const [correctionRunId, setCorrectionRunId] = useState<string>();
   const [activeTab, setActiveTab] = useState("files");
-  const { detail, detailLoading, matching, setMatching, matchingLoading, processingSummaries,
-    loadDetail, loadMatching, resetDetail } = useCaptureBatchDetail(setBatches, setActiveTab);
+  const [locatedSubmission,setLocatedSubmission]=useState("");
+  const [locatedBatch, setLocatedBatch] = useState("");
+  const [locationError,setLocationError]=useState("");
+  const [locationAttempt,setLocationAttempt]=useState(0);
+  const [locating, setLocating] = useState(() => Boolean(hashQueryParam("batch") || hashQueryParam("submission") || hashQueryParam("student")));
+  const [locationChoices, setLocationChoices] = useState<Array<{ batch: CaptureBatch; submissionId: string; candidateNo: string }>>([]);
+  const { detail, detailError, detailLoading, matching, matchingError, setMatching, matchingLoading, processingSummaries,
+    loadDetail, loadMatching, resetDetail } = useCaptureBatchDetail(setBatches, setActiveTab, selectedId, selectedId === locatedBatch ? hashQueryParam("tab") || "matching" : undefined);
   const { uploading, uploadSource } = useCaptureUpload(detail, examId, loadDetail);
   const [reopenOpen, setReopenOpen] = useState(false);
   const [reopenReason, setReopenReason] = useState("");
   const [qualityOverridePage, setQualityOverridePage] = useState<CapturePage>();
   const [qualityOverrideReason, setQualityOverrideReason] = useState("");
   const previewRequestRef = useRef(0);
-  const batchCanManage = canManage && !["completed", "cancelled"].includes(detail?.batch.status ?? "");
+  const activeBatch = useRef(selectedId);
+  activeBatch.current = selectedId;
+  const batchCanManage = canManage && !locating && detail?.batch.id === selectedId && !detailLoading && !detailError && !["completed", "cancelled"].includes(detail?.batch.status ?? "");
 
   useEffect(() => {
     resetDetail();
@@ -109,20 +347,51 @@ export function CaptureBatchPage({
     void loadBatches();
   }, [loadBatches]);
   useEffect(() => {
+    const batch = hashQueryParam("batch"), submission = hashQueryParam("submission"), student = hashQueryParam("student");
+    if (loading || (!batch && !submission && !student)) return;
+    let active = true;
+    setLocating(true); setLocationError(""); setLocationChoices([]);
+    const locate = async () => {
+      const targets = batch ? [{ batch_id: batch, submission_id: submission, candidate_no: "" }] : (await findCaptureTargets(examId, submission, student)).targets;
+      const unique = [...new Map(targets.map(target => [`${target.batch_id}:${target.submission_id}`, target])).values()];
+      if (!unique.length) throw new Error("尚未找到该名册对象的采集页面，请核查漏扫或未确认学生的答卷。");
+      const choices = await Promise.all(unique.map(async target => {
+        const result = await getCaptureBatch(target.batch_id);
+        if (result.batch.exam_id !== examId) throw new Error("答卷不属于当前考试");
+        return { batch: result.batch, submissionId: target.submission_id, candidateNo: target.candidate_no };
+      }));
+      if (!active) return;
+      setBatches(current => [...new Map([...current, ...choices.map(choice => choice.batch)].map(value => [value.id, value])).values()]);
+      if (choices.length > 1) {
+        // 同一名册对象可能有重扫/重复答卷，不能静默把第一份当作需要处理的唯一对象。
+        setLocationChoices(choices); setSelectedId(""); setLocatedSubmission(""); setLocatedBatch(""); return;
+      }
+      setSelectedId(choices[0].batch.id); setLocatedBatch(choices[0].batch.id); setLocatedSubmission(choices[0].submissionId); setActiveTab(hashQueryParam("tab") || "matching"); setLocating(false);
+    };
+    void locate().catch(cause => { if (active) { setLocationError(formatError(cause)); setLocating(false); } });
+    return () => { active = false; };
+  }, [examId, loading, locationAttempt, setBatches, setSelectedId]);
+  useEffect(() => {
+    previewRequestRef.current += 1;
+    setPreview(undefined);
+    setCorrectionRunId(undefined);
+    setQualityOverridePage(undefined);
+    setQualityOverrideReason("");
+    setReopenOpen(false);
     void loadDetail(selectedId);
   }, [loadDetail, selectedId]);
   useEffect(() => {
     void loadMatching(selectedId);
   }, [loadMatching, selectedId]);
   useEffect(() => {
-    if (!detail || !["uploading", "processing"].includes(detail.batch.status))
+    if (detail?.batch.id !== selectedId || !["uploading", "processing"].includes(detail.batch.status))
       return;
     const timer = window.setInterval(
       () => void loadDetail(detail.batch.id, true),
       3000,
     );
     return () => window.clearInterval(timer);
-  }, [detail, loadDetail]);
+  }, [detail, loadDetail, selectedId]);
   useEffect(
     () => () => {
       if (preview?.url) URL.revokeObjectURL(preview.url);
@@ -143,7 +412,7 @@ export function CaptureBatchPage({
       const result = recovered?.command.status === "succeeded" && recovered.command.batch
         ? { batch: recovered.command.batch }
         : await createCaptureBatch(examId, command.payload);
-      try { localStorage.removeItem(creationCommandKey); } catch { /* recovery still returns the same batch */ }
+      try { localStorage.removeItem(creationCommandKey); } catch { /* 恢复仍返回同一个批次。 */ }
       setPendingCreation(false);
       setModalOpen(false);
       form.resetFields();
@@ -152,7 +421,7 @@ export function CaptureBatchPage({
       message.success("采集批次已创建");
     } catch (currentError) {
       if (currentError instanceof ApiClientError && currentError.code === "capture_invalid_input") {
-        try { localStorage.removeItem(creationCommandKey); setPendingCreation(false); } catch { /* retain recovery data */ }
+        try { localStorage.removeItem(creationCommandKey); setPendingCreation(false); } catch { /* 保留恢复数据。 */ }
       }
       message.error(formatError(currentError));
     } finally {
@@ -172,7 +441,7 @@ export function CaptureBatchPage({
   };
 
   async function startProcessing() {
-    if (!detail) return;
+    if (!detail || !batchCanManage) return;
     setActioning(true);
     try {
       await processCaptureBatch(detail.batch.id);
@@ -186,13 +455,14 @@ export function CaptureBatchPage({
   }
 
   function completeBatch() {
-    if (!detail) return;
+    if (!detail || !batchCanManage) return;
     modal.confirm({
       title: "确认完成批次",
       content: "完成后批次将不可再修改。请确认所有页面已处理完毕，且每份答卷都已确认学生身份。",
       okText: "完成批次",
       cancelText: "返回检查",
       onOk: async () => {
+        if (activeBatch.current !== detail.batch.id) throw new Error("批次已切换，请返回当前批次确认");
         setActioning(true);
         try {
           await completeCaptureBatch(detail.batch.id, "所有页面处理完成并已人工确认");
@@ -214,7 +484,7 @@ export function CaptureBatchPage({
   }
 
   async function confirmReopen() {
-    if (!detail || !reopenReason.trim()) return;
+    if (detail?.batch.id !== selectedId || !canManage || !reopenReason.trim()) return;
     setActioning(true);
     try {
       await reopenCaptureBatch(detail.batch.id, reopenReason.trim());
@@ -229,6 +499,7 @@ export function CaptureBatchPage({
   }
 
   async function startPageProcessing(submissionId: string) {
+    if (!batchCanManage || !detail?.pages.some((page) => page.submission_id === submissionId)) return;
     setActioning(true);
     try {
       const result = await processSubmissionPages(submissionId);
@@ -244,7 +515,7 @@ export function CaptureBatchPage({
   }
 
   async function confirmQualityOverride() {
-    if (!detail || !qualityOverridePage?.submission_page_id || !qualityOverrideReason.trim()) return;
+    if (!detail || !batchCanManage || qualityOverridePage?.capture_batch_id !== selectedId || !qualityOverridePage?.submission_page_id || !qualityOverrideReason.trim()) return;
     setActioning(true);
     try {
       const result = await overrideCapturePageQuality(
@@ -263,6 +534,7 @@ export function CaptureBatchPage({
   }
 
   async function showPage(page: CapturePage) {
+    if (page.capture_batch_id !== selectedId) return;
     const requestId = ++previewRequestRef.current;
     try {
       const blob = await downloadFileBlob(page.decoded_file_asset_id);
@@ -278,6 +550,7 @@ export function CaptureBatchPage({
   }
 
   async function rotatePage(page: CapturePage) {
+    if (!batchCanManage || page.capture_batch_id !== selectedId) return;
     try {
       await updateCapturePage(page.id, {
         revision: page.revision,
@@ -301,7 +574,23 @@ export function CaptureBatchPage({
   const summary = useMemo(() => captureSummary(detail), [detail]);
   const submissions = useMemo(() => captureSubmissionIds(detail), [detail]);
   const issuePages = useMemo(() => captureIssuePages(detail), [detail]);
-  async function resolveRegistration(runId: string, action: "confirm" | "retry") { setActioning(true); try { if (action === "confirm") await confirmRegistration(runId, "人工核对版面对齐边界与题目区域正确"); else await retryRegistration(runId); await loadDetail(selectedId, true); message.success(action === "confirm" ? "版面对齐已确认" : "已重新排队对齐"); } catch (currentError) { message.error(formatError(currentError)); } finally { setActioning(false); } }
+  async function resolveRegistration(runId: string, action: "confirm" | "retry") {
+    setActioning(true);
+    try {
+      if (action === "confirm") {
+        await confirmRegistration(runId, "人工核对版面对齐边界与题目区域正确");
+      } else {
+        await retryRegistration(runId);
+      }
+      // 确认与重试成功后都回读当前批次；刷新和提示不属于某一个动作分支。
+      await loadDetail(selectedId, true);
+      message.success(action === "confirm" ? "版面对齐已确认" : "已重新排队对齐");
+    } catch (currentError) {
+      message.error(formatError(currentError));
+    } finally {
+      setActioning(false);
+    }
+  }
 
   if (loading) return <LoadingState label="正在加载采集批次" />;
   if (error)
@@ -336,6 +625,8 @@ export function CaptureBatchPage({
           </Button>
         </Space>
       </section>
+      {locationError ? <Alert type="warning" showIcon message={locationError} action={<Button onClick={() => setLocationAttempt(value => value + 1)}>重试定位</Button>} /> : null}
+      {locationChoices.length > 1 ? <Alert type="info" message={`定位到 ${locationChoices.length} 份采集答卷，请选择本次核对对象`} description={<Select aria-label="选择名册对应采集答卷" style={{ minWidth: 320 }} value={locatedSubmission ? `${selectedId}:${locatedSubmission}` : undefined} options={locationChoices.map((choice, index) => ({ value: `${choice.batch.id}:${choice.submissionId}`, label: `${choice.batch.name} · 考号 ${choice.candidateNo || "待匹配"} · 答卷 ${index + 1}` }))} onChange={value => { const choice = locationChoices.find(item => `${item.batch.id}:${item.submissionId}` === value); if (choice) { setSelectedId(choice.batch.id); setLocatedBatch(choice.batch.id); setLocatedSubmission(choice.submissionId); setActiveTab(hashQueryParam("tab") || "matching"); setLocating(false); } }} />} /> : null}
       {batches.length === 0 ? (
         <Empty description="尚未创建采集批次">
           <Button type="primary" onClick={() => setModalOpen(true)} disabled={!canManage}>
@@ -344,261 +635,19 @@ export function CaptureBatchPage({
         </Empty>
       ) : (
         <div className="capture-batch-layout">
-          <aside className="capture-batch-list">
-            <div className="capture-pane-title">
-              <strong>批次</strong>
-              <span>{batches.length}</span>
-            </div>
-            {batches.map((batch) => (
-              <button
-                type="button"
-                key={batch.id}
-                className={
-                  batch.id === selectedId
-                    ? "capture-batch-row active"
-                    : "capture-batch-row"
-                }
-                onClick={() => setSelectedId(batch.id)}
-              >
-                <span>
-                  <strong>{batch.name}</strong>
-                  <small>{new Date(batch.created_at).toLocaleString("zh-CN", { hour12: false })}</small>
-                </span>
-                <StatusTag tone={statusTone(batch.status)}>
-                  {statusLabels[batch.status]}
-                </StatusTag>
-              </button>
-            ))}
-            {hasMoreBatches ? (
-              <Button block loading={loadingMoreBatches} onClick={() => void loadMoreBatches()}>
-                加载更多批次
-              </Button>
-            ) : null}
-          </aside>
+          <CaptureBatchListPanel batches={batches} selectedId={selectedId} setSelectedId={setSelectedId} hasMoreBatches={hasMoreBatches} loadingMoreBatches={loadingMoreBatches} loadMoreBatches={loadMoreBatches} />
           <main className="capture-batch-workspace">
-            {detailLoading || !detail ? (
-              <LoadingState label="正在读取批次" />
-            ) : (
-              <>
-                <header className="capture-batch-header">
-                  <div>
-                    <Space>
-                      <ScanLine size={20} />
-                      <h2>{detail.batch.name}</h2>
-                      <StatusTag tone={statusTone(detail.batch.status)}>
-                        {statusLabels[detail.batch.status]}
-                      </StatusTag>
-                    </Space>
-                    {progressPercent !== null ? (
-                      <Progress percent={progressPercent} size="small" />
-                    ) : null}
-                  </div>
-                  <Space wrap>
-                    <Upload {...uploadProps}>
-                      <Button
-                        icon={<FileUp size={16} />}
-                        loading={uploading}
-                        disabled={!batchCanManage}
-                      >
-                        导入文件
-                      </Button>
-                    </Upload>
-                    <Button
-                      type="primary"
-                      icon={<Workflow size={16} />}
-                      onClick={() => void startProcessing()}
-                      loading={actioning}
-                      disabled={
-                        !batchCanManage ||
-                        !detail.files.some((item) =>
-                          ["uploaded", "failed"].includes(item.status),
-                        )
-                      }
-                    >
-                      {detail.files.some((item) => item.status === "failed")
-                        ? "处理待办文件"
-                        : "开始处理"}
-                    </Button>
-                    {detail.batch.status === "ready" && (
-                      <Button
-                        type="primary"
-                        icon={<Check size={16} />}
-                        onClick={completeBatch}
-                        loading={actioning}
-                        disabled={!batchCanManage}
-                      >
-                        完成批次
-                      </Button>
-                    )}
-                    {detail.batch.status === "completed" && canManage && (
-                      <Button icon={<Undo2 size={16} />} onClick={reopenBatch} loading={actioning}>
-                        重开批次
-                      </Button>
-                    )}
-                  </Space>
-                </header>
-                <div className="capture-summary-strip">
-                  {summary.map((item) => (
-                    <div key={item.label}>
-                      <span>{item.label}</span>
-                      <strong>{item.value}</strong>
-                    </div>
-                  ))}
-                </div>
-                <Tabs
-                  activeKey={activeTab}
-                  onChange={setActiveTab}
-                  items={[
-                    {
-                      key: "issues",
-                      label: `需要处理 (${issuePages.length + detail.batch.failed_count})`,
-                      children: issuePages.length || detail.batch.failed_count > 0 ? (
-                        <div className="capture-issue-queue">
-                          {detail.files.filter((file) => file.status === "failed").map((file) => (
-                            <div className="capture-file-issue" key={file.id}>
-                              <div><strong>{file.original_name}</strong><span title={file.error_code || undefined}>文件处理失败：{(file.error_code && errorLabels[file.error_code]) || "请重新导入正确的文件"}</span></div>
-                              <Space><Button icon={<RefreshCw size={15} />} loading={actioning} disabled={!batchCanManage} onClick={() => void startProcessing()}>重试原文件</Button><Button icon={<FileUp size={15} />} disabled={!batchCanManage} onClick={() => { setActiveTab("files"); message.info("可重新导入修复后的同一文件，系统会保留原失败记录"); }}>上传修复文件</Button></Space>
-                            </div>
-                          ))}
-                          {issuePages.length > 0 ? <ResponsiveTable className="dense-data-table" rowKey="id" columns={pageColumns} dataSource={issuePages} pagination={false} size="small" /> : null}
-                        </div>
-                      ) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="当前没有需要人工处理的页面" />,
-                    },
-                    {
-                      key: "files",
-                      label: "全部文件与页面",
-                      children: (
-                        <div className="capture-detail-stack">
-                          <ResponsiveTable
-                            className="dense-data-table"
-                            rowKey="id"
-                            columns={fileColumns}
-                            dataSource={detail.files}
-                            pagination={false}
-                            size="small"
-                          />
-                          <ResponsiveTable
-                            className="dense-data-table"
-                            rowKey="id"
-                            columns={pageColumns}
-                            dataSource={detail.pages}
-                            pagination={{ pageSize: 20 }}
-                            size="small"
-                          />
-                        </div>
-                      ),
-                    },
-                    {
-                      key: "image-quality",
-                      label: `图像质检 (${detail.pages.filter((page) => page.status !== "deleted").length})`,
-                      children: (
-                        <ImageQualityWorkspace
-                          pages={detail.pages}
-                          canManage={batchCanManage}
-                          onRefresh={() => loadDetail(detail.batch.id, true)}
-                          onOverride={(page) => {
-                            setQualityOverrideReason("");
-                            setQualityOverridePage(page);
-                          }}
-                        />
-                      ),
-                    },
-                    {
-                      key: "processing",
-                      label: `页面处理 (${submissions.length})`,
-                      children: submissions.length ? (
-                        <div className="capture-processing-list">
-                          {submissions.map((submissionId, index) => {
-                            const pages = detail.pages.filter(
-                              (item) => item.submission_id === submissionId,
-                            );
-                            const complete = pages.every(
-                              (item) => item.status === "ready",
-                            );
-                            const summary = processingSummaries[submissionId];
-                            return (
-                              <div
-                                key={submissionId}
-                                className="capture-processing-row"
-                              >
-                                <div>
-                                  <strong>答卷 {index + 1}</strong>
-                                  <span>
-                                    {pages.length} 页 ·{" "}
-                                    {complete
-                                      ? "已完成版面对齐与题目切分"
-                                      : summary ? `已完成 ${summary.ready_pages} 页 · 需人工处理 ${summary.blocked_pages} 页 · 处理中 ${summary.pending_pages} 页` : "等待版面对齐或人工确认"}
-                                  </span>
-                                </div>
-                                <Space wrap>
-                                  {summary?.blockers
-                                    .filter((item) => item.registration_run_id && item.stage === "registration")
-                                    .map((item) => (
-                                      <Space key={item.page_id} wrap>
-                                        {["confirm_registration", "retry_registration"].includes(item.action) && (
-                                          <Button
-                                            type={item.action === "confirm_registration" ? "primary" : "default"}
-                                            loading={actioning}
-                                            disabled={!batchCanManage}
-                                            onClick={() =>
-                                              void resolveRegistration(
-                                                item.registration_run_id!,
-                                                item.action === "confirm_registration" ? "confirm" : "retry",
-                                              )
-                                            }
-                                          >
-                                            {item.action === "confirm_registration"
-                                              ? `确认第 ${item.page_no} 页对齐`
-                                              : `重试第 ${item.page_no} 页对齐`}
-                                          </Button>
-                                        )}
-                                        <Button
-                                          icon={<SlidersHorizontal size={15} />}
-                                          disabled={!batchCanManage}
-                                          onClick={() => setCorrectionRunId(item.registration_run_id)}
-                                        >
-                                          校正第 {item.page_no} 页边界
-                                        </Button>
-                                      </Space>
-                                    ))}
-                                  <Button icon={<Workflow size={16} />} loading={actioning} disabled={!batchCanManage || complete} onClick={() => void startPageProcessing(submissionId)}>{complete ? "处理完成" : "对齐版面并切题"}</Button>
-                                </Space>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <Empty
-                          image={Empty.PRESENTED_IMAGE_SIMPLE}
-                          description="拆页完成后，系统将自动对齐版面并按题切分"
-                        />
-                      ),
-                    },
-                    {
-                      key: "matching",
-                      label: `学生匹配（待确认 ${matching?.submissions.filter((item) => item.identity_status !== "matched").length ?? 0}）`,
-                      children: matchingLoading ? (
-                        <LoadingState label="正在加载考试名册" />
-                      ) : matching ? (
-                        <MatchingWorkspace
-                          queue={matching}
-                          canManage={batchCanManage}
-                          actioning={actioning}
-                          onPreview={showPage}
-                          onConfirmStudent={matchStudent}
-                          onUnknown={markUnknown}
-                          onConfirmPage={matchPage}
-                          onSplit={splitSubmission}
-                          onMerge={mergeSubmissions}
-                        />
-                      ) : (
-                        <Empty description="暂无匹配数据" />
-                      ),
-                    },
-                  ]}
-                />
-              </>
-            )}
+            <CaptureBatchWorkspace detail={detail} detailError={detailError} detailLoading={detailLoading} selectedId={selectedId}
+              loadDetail={loadDetail} canManage={canManage} batchCanManage={batchCanManage} progressPercent={progressPercent}
+              summary={summary} uploadProps={uploadProps} uploading={uploading} actioning={actioning} startProcessing={startProcessing}
+              completeBatch={completeBatch} reopenBatch={reopenBatch} activeTab={activeTab} setActiveTab={setActiveTab}
+              issuePages={issuePages} pageColumns={pageColumns} fileColumns={fileColumns}
+              uploadRepair={() => { setActiveTab("files"); message.info("可重新导入修复后的同一文件，系统会保留原失败记录"); }}
+              onOverride={(page) => { setQualityOverrideReason(""); setQualityOverridePage(page); }}
+              processingProps={{ submissions, processingSummaries, resolveRegistration, setCorrectionRunId, startPageProcessing }}
+              matchingProps={{ loading: matchingLoading, error: matchingError, onRetry: () => void loadMatching(selectedId), queue: matching,
+                workspaceProps: { initialSubmissionId: locatedSubmission, canManage: batchCanManage, actioning, onPreview: showPage,
+                  onConfirmStudent: matchStudent, onUnknown: markUnknown, onConfirmPage: matchPage, onSplit: splitSubmission, onMerge: mergeSubmissions } }} />
           </main>
         </div>
       )}

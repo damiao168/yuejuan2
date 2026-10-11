@@ -1,0 +1,26 @@
+{
+  "changed": [
+    ".github/workflows/ci.yml",
+    "ai-services/grading_agent/config.py",
+    "ai-services/grading_agent/server.py",
+    "ai-services/tests/test_config.py",
+    "ai-services/tests/test_server_tls.py",
+    "infra/docker-compose/docker-compose.story060-e2e.yml",
+    "infra/docker-compose/docker-compose.yml",
+    "infra/docker-compose/scripts/preflight.ps1",
+    "services/api-gateway/tools/story056-postgres-e2e/Dockerfile",
+    "services/math-verification-worker/Dockerfile",
+    "services/math-verification-worker/math_verification_worker/server.py",
+    "services/math-verification-worker/tests/test_server.py",
+    "services/ocr-worker/ocr_worker/config.py",
+    "services/ocr-worker/tests/test_config.py",
+    "tests/e2e/story060_grading_agent.py"
+  ],
+  "added": [
+    "ai-services/tests/test_server_tls_handshake.py",
+    "docs/architecture/tools/finalize_delivery_records.py",
+    "infra/docker-compose/scripts/generate-internal-test-certificates.py",
+    "services/math-verification-worker/tests/test_server_tls_batch54.py"
+  ],
+  "removed": []
+}

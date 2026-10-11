@@ -89,7 +89,8 @@ func TestApprovedPanelScopeRequiresEvidenceAndValidRoleBindings(t *testing.T) {
 		{ModelRoleArbiter, "model-c", 3},
 	} {
 		_, err := store.SaveModelRoleBinding(context.Background(), scope.tenant, "actor-1", SaveModelRoleBindingInput{
-			EducationStage: scope.stage, SubjectCode: scope.subject, ArchetypeCode: scope.archetype,
+			ExpectedRevision: ModelRoleBindingAbsent,
+			EducationStage:   scope.stage, SubjectCode: scope.subject, ArchetypeCode: scope.archetype,
 			AgentRole: binding.role, ManagedModelAPIConfigID: binding.id,
 			PromptVersion: "p1", StrengthRank: binding.rank,
 		})

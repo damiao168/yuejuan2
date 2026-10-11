@@ -6,9 +6,8 @@ import (
 	"errors"
 )
 
-// RetryPaperImportParseGeneration requeues only the immutable parse input for
-// the current generation. OCR and formula results are deliberately preserved.
-// The active/succeeded branches make client retries safe after a lost response.
+// RetryPaperImportParseGeneration 只将当前代次的不可变解析输入重新入队。
+// OCR 和公式结果保留不变；active 和 succeeded 分支使响应丢失后的客户端重试安全。
 func (s *PostgresStore) RetryPaperImportParseGeneration(ctx context.Context, tenantID, importID string, expectedGeneration int64) (PaperImportJob, error) {
 	if tenantID == "" || importID == "" || expectedGeneration <= 0 {
 		return PaperImportJob{}, ErrInvalidInput
@@ -62,10 +61,8 @@ FOR UPDATE OF task`, tenantID, runID, generation, importID).Scan(&taskID, &taskS
 		return PaperImportJob{}, err
 	}
 
-	// A repeated HTTP request may arrive after the first request was accepted or
-	// even after the very fast deterministic parser completed.
-	if (jobStatus == "processing" && (taskStatus == "queued" || taskStatus == "leased" || taskStatus == "running")) ||
-		((jobStatus == "review_required" || jobStatus == "applied") && taskStatus == "succeeded") {
+	// 重复 HTTP 请求可能在首个请求被接受之后到达，甚至可能晚于很快完成的确定性解析器。
+	if paperImportParseRetryAlreadyAccepted(jobStatus, taskStatus) {
 		if err = tx.Commit(); err != nil {
 			return PaperImportJob{}, err
 		}
@@ -112,4 +109,10 @@ WHERE tenant_id=$1 AND paper_import_id=$2::uuid AND deleted_at IS NULL`, tenantI
 		return PaperImportJob{}, err
 	}
 	return s.GetPaperImport(ctx, tenantID, importID)
+}
+
+// 同代次解析已在运行或已有成功结果时，重复重试只读取原结果，不重新排队。
+func paperImportParseRetryAlreadyAccepted(jobStatus, taskStatus string) bool {
+	return (jobStatus == "processing" && (taskStatus == "queued" || taskStatus == "leased" || taskStatus == "running")) ||
+		((jobStatus == "review_required" || jobStatus == "applied") && taskStatus == "succeeded")
 }

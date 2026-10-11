@@ -4,13 +4,13 @@ $repo = Split-Path -Parent $PSScriptRoot
 $compose = Join-Path $repo 'infra/docker-compose/docker-compose.yml'
 $preflight = Join-Path $repo 'infra/docker-compose/scripts/preflight.ps1'
 $sample = Get-Content -LiteralPath (Join-Path $repo 'infra/docker-compose/.env.example') -Raw
-# The operator must supply a model key; use a synthetic value to reach the
-# database-configuration checks without reading the local deployment secrets.
+# 操作人员必须提供模型密钥；这里使用合成值进入
+# 数据库配置检查，不读取本地部署密钥。
 $sample = $sample -replace '(?m)^EDUGRADE_GRADING_MODEL_API_KEY=.*$', 'EDUGRADE_GRADING_MODEL_API_KEY=synthetic-deployment-test-key'
 $testEnv = [IO.Path]::GetTempFileName()
 $deploymentDockerState = @{ Calls = 0 }
 
-# This suite exercises the real preflight without starting or changing services.
+# 本套件测试真实预检，不启动或更改服务。
 function docker {
     $deploymentDockerState.Calls++
     throw 'TEST_DOCKER_BOUNDARY'

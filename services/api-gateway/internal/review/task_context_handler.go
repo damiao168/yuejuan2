@@ -7,7 +7,7 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/httpx"
 )
 
-// GetTaskContext returns one aggregated workbench payload. Route wiring:
+// GetTaskContext 返回一个聚合的工作台载荷。路由连接如下：
 // GET /api/v1/review-tasks/{id}/context -> reviewHandler.GetTaskContext.
 func (h *Handler) GetTaskContext(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
@@ -15,8 +15,7 @@ func (h *Handler) GetTaskContext(w http.ResponseWriter, r *http.Request) {
 	if taskID == "" {
 		taskID = r.PathValue("id")
 	} else if r.PathValue("id") == "" {
-		// Existing review authorization helpers use the sibling routes' "id"
-		// wildcard; accept the OpenAPI's more descriptive taskId as well.
+		// 既有复核授权辅助函数使用相邻路由的“id”通配符；同时接受 OpenAPI 中描述更明确的 taskId。
 		r.SetPathValue("id", taskID)
 	}
 	if h.seedHook != nil {
@@ -49,7 +48,7 @@ func (h *Handler) GetTaskContext(w http.ResponseWriter, r *http.Request) {
 		case draftErr == nil:
 			contextValue.Draft = &draft
 		case errors.Is(draftErr, ErrNotFound):
-			// A missing draft is a normal first-open state.
+			// 草稿缺失是首次打开时的正常状态。
 		default:
 			writeStoreError(w, r, draftErr)
 			return

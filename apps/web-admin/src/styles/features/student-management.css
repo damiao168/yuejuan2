@@ -6,6 +6,7 @@
 
 .student-management-page {
   gap: 12px;
+  container: student-management / inline-size;
 }
 
 .student-management-table h2 {
@@ -19,12 +20,14 @@
 }
 
 .student-management-filters {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(180px, 240px) auto;
   align-items: center;
-  flex-wrap: wrap;
   gap: 8px 14px;
   padding: 10px 12px;
 }
+.student-advanced-filters { display: grid; grid-column: 1 / -1; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 16px; padding-top: 10px; border-top: 1px solid var(--border); }
+.student-more-filters { justify-self: end; }
 
 .student-filter-field {
   display: grid;
@@ -37,24 +40,30 @@
 }
 
 .student-filter-field .ant-select {
-  width: 150px;
+  width: 100%;
 }
 
 .student-filter-grade .ant-select {
-  width: 170px;
+  width: 100%;
 }
 
 .student-filter-status .ant-select {
-  width: 120px;
+  width: 100%;
 }
 
 .student-filter-search {
-  margin-left: auto;
+  min-width: 0;
 }
 
 .student-filter-search .ant-input-affix-wrapper {
-  width: 220px;
+  width: 100%;
 }
+.student-import-preview { margin-top: 12px; padding: 10px 12px; color: var(--text); background: #f7faff; border: 1px solid var(--border); }
+.student-import-result { display: grid; gap: 10px; margin-top: 14px; }
+.student-import-result > .ant-btn { justify-self: start; }
+.student-import-result ol { max-height: 220px; margin: 0; padding-left: 24px; overflow: auto; }
+.student-import-result li { margin-bottom: 6px; overflow-wrap: anywhere; }
+.student-import-result p { margin: 0; color: var(--text-muted); }
 
 .student-management-table {
   padding: 6px 8px 8px;
@@ -108,17 +117,14 @@
   margin-bottom: 14px;
 }
 
-@media (max-width: 1100px) {
-  .student-filter-search { margin-left: 0; }
+@container student-management (max-width: 700px) {
+  .student-management-filters { grid-template-columns: minmax(0, 1fr) auto; }
+  .student-filter-class { grid-column: 1 / -1; }
+  .student-advanced-filters { grid-template-columns: minmax(0, 1fr); }
 }
-
-@media (max-width: 900px) {
-  .student-management-filters { display: grid; grid-template-columns: 1fr 1fr; }
-  .student-filter-field .ant-select,
-  .student-filter-search .ant-input-affix-wrapper { width: 100%; }
-}
-
-@media (max-width: 560px) {
-  .student-management-filters { grid-template-columns: 1fr; }
+@container student-management (max-width: 480px) {
+  .student-management-filters { grid-template-columns: minmax(0, 1fr); }
+  .student-filter-search, .student-filter-class, .student-more-filters { grid-column: 1; }
+  .student-more-filters { justify-self: start; }
 }
 

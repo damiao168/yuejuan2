@@ -42,8 +42,7 @@ func TestReadyRegradeCreatesChangedSuccessorFromFrozenRelease(t *testing.T) {
 
 	releases := scorerelease.NewMemoryStore()
 	releases.SeedFacts("exam", []scorerelease.SubmissionFact{{SubmissionID: "submission", TotalScore: 2, MaxScore: 5, Status: "confirmed", Questions: []scorerelease.QuestionFact{{QuestionID: "question", QuestionNo: "1", FinalGradeID: "final", Score: 2, MaxScore: 5, SourceType: "single_review"}}}})
-	// Materialise a source release with the same immutable facts the regrade
-	// store used. Current facts are intentionally not read by the bridge.
+	// 使用重评存储所用的相同不可变事实实例化来源发布。交接桥接不读取当前事实。
 	source, err := releases.Create(ctx, "tenant", "exam", "manager", scorerelease.CreateInput{Reason: "initial", IdempotencyKey: "source-key-123"})
 	if err != nil {
 		t.Fatal(err)

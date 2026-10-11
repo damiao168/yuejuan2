@@ -63,6 +63,38 @@ func TestMemoryConcurrencyReceiptsAndACL(t *testing.T) {
 		t.Fatal(err)
 	}
 	cloneCtx := commandreceipt.WithID(ctx, "clone")
+	id := cloneQuestionBankVersionConcurrently(t, s, cloneCtx, scope, item)
+	edited := fixtureContent()
+	edited.Stem = "Edited"
+	editCtx := commandreceipt.WithID(ctx, "edit")
+	v, err := s.UpdateVersion(editCtx, scope, id, UpdateVersionInput{ExpectedRevision: 1, Content: edited})
+	if err != nil || v.Revision != 2 {
+		t.Fatalf("update: %+v %v", v, err)
+	}
+	if _, err = s.UpdateVersion(commandreceipt.WithID(ctx, "stale"), scope, id, UpdateVersionInput{ExpectedRevision: 1, Content: edited}); !errors.Is(err, ErrConflict) {
+		t.Fatalf("stale revision: %v", err)
+	}
+	other := scope
+	other.ActorID = uuid.NewString()
+	page, err := s.ListBanks(ctx, other, Filter{})
+	if err != nil || page.Total != 0 {
+		t.Fatalf("bank count leaks: %+v %v", page, err)
+	}
+	if _, err = s.GetVersion(ctx, other, id); !errors.Is(err, ErrNotFound) {
+		t.Fatal("same tenant private version exposed")
+	}
+	delete(s.acl, aclKey(scope.TenantID, bank.ID, scope.ActorID, "read"))
+	if _, err = s.UpdateVersion(editCtx, scope, id, UpdateVersionInput{ExpectedRevision: 1, Content: edited}); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("receipt bypassed revoked read: %v", err)
+	}
+	if _, err = s.CreateVersion(cloneCtx, scope, item.Item.ID, CreateVersionInput{SourceVersionID: item.Version.ID}); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("clone replay bypassed ACL: %v", err)
+	}
+}
+
+// 四次调用共用同一命令标识；先等所有调用结束，再分别检查每个错误和版本身份。
+func cloneQuestionBankVersionConcurrently(t *testing.T, s *MemoryStore, cloneCtx context.Context, scope auth.AccessScope, item ItemResult) string {
+	t.Helper()
 	var wg sync.WaitGroup
 	results := make(chan Version, 4)
 	failures := make(chan error, 4)
@@ -92,30 +124,5 @@ func TestMemoryConcurrencyReceiptsAndACL(t *testing.T) {
 			t.Fatal("one command created multiple versions")
 		}
 	}
-	edited := fixtureContent()
-	edited.Stem = "Edited"
-	editCtx := commandreceipt.WithID(ctx, "edit")
-	v, err := s.UpdateVersion(editCtx, scope, id, UpdateVersionInput{ExpectedRevision: 1, Content: edited})
-	if err != nil || v.Revision != 2 {
-		t.Fatalf("update: %+v %v", v, err)
-	}
-	if _, err = s.UpdateVersion(commandreceipt.WithID(ctx, "stale"), scope, id, UpdateVersionInput{ExpectedRevision: 1, Content: edited}); !errors.Is(err, ErrConflict) {
-		t.Fatalf("stale revision: %v", err)
-	}
-	other := scope
-	other.ActorID = uuid.NewString()
-	page, err := s.ListBanks(ctx, other, Filter{})
-	if err != nil || page.Total != 0 {
-		t.Fatalf("bank count leaks: %+v %v", page, err)
-	}
-	if _, err = s.GetVersion(ctx, other, id); !errors.Is(err, ErrNotFound) {
-		t.Fatal("same tenant private version exposed")
-	}
-	delete(s.acl, aclKey(scope.TenantID, bank.ID, scope.ActorID, "read"))
-	if _, err = s.UpdateVersion(editCtx, scope, id, UpdateVersionInput{ExpectedRevision: 1, Content: edited}); !errors.Is(err, ErrNotFound) {
-		t.Fatalf("receipt bypassed revoked read: %v", err)
-	}
-	if _, err = s.CreateVersion(cloneCtx, scope, item.Item.ID, CreateVersionInput{SourceVersionID: item.Version.ID}); !errors.Is(err, ErrNotFound) {
-		t.Fatalf("clone replay bypassed ACL: %v", err)
-	}
+	return id
 }

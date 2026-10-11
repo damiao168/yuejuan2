@@ -1,0 +1,301 @@
+{
+  "record_kind": "字节比对清单；修复增量评审另见各分工与独立评审证据，未重新全文审读不自动升级",
+  "files": [
+    {
+      "path": ".github/dependabot.yml",
+      "baseline_sha256": "fcd0654993bd5710669e881621b8ac583f3cd1c16b94f1ab0ab0a75dce26d746",
+      "current_sha256": "1594288669db667f11d55c2fd5ca331a6a8eaa5c81f4678a11922e477f48a82a",
+      "rescan_sha256": "1594288669db667f11d55c2fd5ca331a6a8eaa5c81f4678a11922e477f48a82a",
+      "latest_scan_sha256": "1594288669db667f11d55c2fd5ca331a6a8eaa5c81f4678a11922e477f48a82a",
+      "full_file_review": "pending"
+    },
+    {
+      "path": "ai-services/grading_agent/managed_model.py",
+      "baseline_sha256": "0f922dd26e7987670a01eab18dba801ffce522b66048baa603438d7b59721ef3",
+      "current_sha256": "0f922dd26e7987670a01eab18dba801ffce522b66048baa603438d7b59721ef3",
+      "rescan_sha256": "0f922dd26e7987670a01eab18dba801ffce522b66048baa603438d7b59721ef3",
+      "latest_scan_sha256": "0f922dd26e7987670a01eab18dba801ffce522b66048baa603438d7b59721ef3",
+      "full_file_review": "pending"
+    },
+    {
+      "path": "ai-services/grading_agent/model.py",
+      "baseline_sha256": "c86f862e02f17e00fa6385eb5aa75f918b3d0cf1ef56a295621309c26f905241",
+      "current_sha256": "6df8267f6d4201ad69ddbe692986b930cd0d57e0ab6b1785639151ed922abbb9",
+      "rescan_sha256": "6df8267f6d4201ad69ddbe692986b930cd0d57e0ab6b1785639151ed922abbb9",
+      "latest_scan_sha256": "6df8267f6d4201ad69ddbe692986b930cd0d57e0ab6b1785639151ed922abbb9",
+      "full_file_review": "pending"
+    },
+    {
+      "path": "ai-services/tests/test_http.py",
+      "baseline_sha256": "81d8a8d91ff9028f8649fd01ddd5e6e30e768d9e81d0539ba019fb47ab14104f",
+      "current_sha256": "81d8a8d91ff9028f8649fd01ddd5e6e30e768d9e81d0539ba019fb47ab14104f",
+      "rescan_sha256": "81d8a8d91ff9028f8649fd01ddd5e6e30e768d9e81d0539ba019fb47ab14104f",
+      "latest_scan_sha256": "81d8a8d91ff9028f8649fd01ddd5e6e30e768d9e81d0539ba019fb47ab14104f",
+      "full_file_review": "pending"
+    },
+    {
+      "path": "ai-services/tests/test_math_v2_production.py",
+      "baseline_sha256": "5d9d6fb21d993f660bd5060494424ed5069ba9a24b472a1f73b38bd7cc4c1cae",
+      "current_sha256": "5d9d6fb21d993f660bd5060494424ed5069ba9a24b472a1f73b38bd7cc4c1cae",
+      "rescan_sha256": "5d9d6fb21d993f660bd5060494424ed5069ba9a24b472a1f73b38bd7cc4c1cae",
+      "latest_scan_sha256": "5d9d6fb21d993f660bd5060494424ed5069ba9a24b472a1f73b38bd7cc4c1cae",
+      "full_file_review": "pending"
+    },
+    {
+      "path": "apps/web-admin/nginx.conf",
+      "baseline_sha256": "1c400e1102a523e7ab66666abd2c8bc6370c40567095f616d91d51b2157a4723",
+      "current_sha256": "1c400e1102a523e7ab66666abd2c8bc6370c40567095f616d91d51b2157a4723",
+      "rescan_sha256": "1c400e1102a523e7ab66666abd2c8bc6370c40567095f616d91d51b2157a4723",
+      "latest_scan_sha256": "1c400e1102a523e7ab66666abd2c8bc6370c40567095f616d91d51b2157a4723",
+      "full_file_review": "pending"
+    },
+    {
+      "path": "apps/web-admin/src/auth/mfaFlow.test.ts",
+      "baseline_sha256": "5908ab52a1faf03e63a00412d9e97efaee05b4a9742ac32f8ee0abb32d51ff8b",
+      "current_sha256": "5908ab52a1faf03e63a00412d9e97efaee05b4a9742ac32f8ee0abb32d51ff8b",
+      "rescan_sha256": "5908ab52a1faf03e63a00412d9e97efaee05b4a9742ac32f8ee0abb32d51ff8b",
+      "latest_scan_sha256": "5908ab52a1faf03e63a00412d9e97efaee05b4a9742ac32f8ee0abb32d51ff8b",
+      "full_file_review": "pending"
+    },
+    {
+      "path": "docs/architecture/tools/build_diagrams.py",
+      "baseline_sha256": "f10e815110bc2b59021a94abbbe1122c0082e4072f8f3c889ef546711dbd2303",
+      "current_sha256": "405abfecefb8d7c5f19971104c940adf399fc54cfc3dc67f839c32aa4d1b28af",
+      "rescan_sha256": "405abfecefb8d7c5f19971104c940adf399fc54cfc3dc67f839c32aa4d1b28af",
+      "latest_scan_sha256": "405abfecefb8d7c5f19971104c940adf399fc54cfc3dc67f839c32aa4d1b28af",
+      "full_file_review": "pending"
+    },
+    {
+      "path": "docs/architecture/tools/verify_delivery.py",
+      "baseline_sha256": "1c8665c1ffa18d8c11b01041b8ac3886f2879fd81dcfa241ec5c832c659a777a",
+      "current_sha256": "5c1478e9e91f541524eeda94605c16beaad14f477d615aaf1d68e253d0280792",
+      "rescan_sha256": "5c1478e9e91f541524eeda94605c16beaad14f477d615aaf1d68e253d0280792",
+      "latest_scan_sha256": "5c1478e9e91f541524eeda94605c16beaad14f477d615aaf1d68e253d0280792",
+      "full_file_review": "pending"
+    },
+    {
+      "path": "infra/docker-compose/nginx/nginx.conf",
+      "baseline_sha256": "531c5f024f66944a7a4e40e9f23eced6231a324b13f60e315c9aca539e22699f",
+      "current_sha256": "7762b643a7fcc54ba82b3c69de702176c34ad516ab119dd013b666355b967c02",
+      "rescan_sha256": "7762b643a7fcc54ba82b3c69de702176c34ad516ab119dd013b666355b967c02",
+      "latest_scan_sha256": "7762b643a7fcc54ba82b3c69de702176c34ad516ab119dd013b666355b967c02",
+      "full_file_review": "pending"
+    },
+    {
+      "path": "infra/docker-compose/nginx/story056-e2e.conf",
+      "baseline_sha256": "4f017e8fbb95408b36f5699bb2fba5a61b0f7a699380e73b5e0858812ba8a1a6",
+      "current_sha256": "5e9171dda9353247af01ab6fb11dc5e640e246e4c362ce14dee777004933860a",
+      "rescan_sha256": "5e9171dda9353247af01ab6fb11dc5e640e246e4c362ce14dee777004933860a",
+      "latest_scan_sha256": "5e9171dda9353247af01ab6fb11dc5e640e246e4c362ce14dee777004933860a",
+      "full_file_review": "pending"
+    },
+    {
+      "path": "infra/docker-compose/nginx/story060-e2e.conf",
+      "baseline_sha256": "6c7c78e5f7a4238c5c927b130aa75effc0d81849a82ab67210a20e3189ec6be0",
+      "current_sha256": "f7e0521b4b91970ddfd0004e75dfc926c93b6bd2534e4f8732a3267f65c72c9a",
+      "rescan_sha256": "f7e0521b4b91970ddfd0004e75dfc926c93b6bd2534e4f8732a3267f65c72c9a",
+      "latest_scan_sha256": "f7e0521b4b91970ddfd0004e75dfc926c93b6bd2534e4f8732a3267f65c72c9a",
+      "full_file_review": "pending"
+    },
+    {
+      "path": "scripts/test_fujian_math_batch29.py",
+      "baseline_sha256": "44b0529092a4de0ab516177de918c958d236049d62c1417ab71c0b776d95be13",
+      "current_sha256": "44b0529092a4de0ab516177de918c958d236049d62c1417ab71c0b776d95be13",
+      "rescan_sha256": "44b0529092a4de0ab516177de918c958d236049d62c1417ab71c0b776d95be13",
+      "latest_scan_sha256": "44b0529092a4de0ab516177de918c958d236049d62c1417ab71c0b776d95be13",
+      "full_file_review": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/cookies.go",
+      "baseline_sha256": "e9115bf1d1e88a3678d4feab3cc1ce7dbd4b27a94c42437b1092fd98308d15b8",
+      "current_sha256": "e9115bf1d1e88a3678d4feab3cc1ce7dbd4b27a94c42437b1092fd98308d15b8",
+      "rescan_sha256": "e9115bf1d1e88a3678d4feab3cc1ce7dbd4b27a94c42437b1092fd98308d15b8",
+      "latest_scan_sha256": "e9115bf1d1e88a3678d4feab3cc1ce7dbd4b27a94c42437b1092fd98308d15b8",
+      "full_file_review": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/mfa_http_test.go",
+      "baseline_sha256": "00cf41bef16b3f5eadcbbcb2183846e40c593e5179dfa9d248303fcc072475bc",
+      "current_sha256": "00cf41bef16b3f5eadcbbcb2183846e40c593e5179dfa9d248303fcc072475bc",
+      "rescan_sha256": "00cf41bef16b3f5eadcbbcb2183846e40c593e5179dfa9d248303fcc072475bc",
+      "latest_scan_sha256": "00cf41bef16b3f5eadcbbcb2183846e40c593e5179dfa9d248303fcc072475bc",
+      "full_file_review": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/files/store_postgres.go",
+      "baseline_sha256": "c05e1e7f479bec4a8b80f7cfd4be574c2be4ab76ec7876dcf31f884b851c4211",
+      "current_sha256": "c05e1e7f479bec4a8b80f7cfd4be574c2be4ab76ec7876dcf31f884b851c4211",
+      "rescan_sha256": "c05e1e7f479bec4a8b80f7cfd4be574c2be4ab76ec7876dcf31f884b851c4211",
+      "latest_scan_sha256": "c05e1e7f479bec4a8b80f7cfd4be574c2be4ab76ec7876dcf31f884b851c4211",
+      "full_file_review": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/middleware/middleware_test.go",
+      "baseline_sha256": "a13f68f27784c630e2465f5aa0832036a573357ab050ec1243bb011c5bd7e6bd",
+      "current_sha256": "a13f68f27784c630e2465f5aa0832036a573357ab050ec1243bb011c5bd7e6bd",
+      "rescan_sha256": "a13f68f27784c630e2465f5aa0832036a573357ab050ec1243bb011c5bd7e6bd",
+      "latest_scan_sha256": "a13f68f27784c630e2465f5aa0832036a573357ab050ec1243bb011c5bd7e6bd",
+      "full_file_review": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/minioadapter/client_test.go",
+      "baseline_sha256": "a94ea4453cbee7d344976a6a4927ab14e6eb9a038c9a41f268073203b715aa2f",
+      "current_sha256": "9e333c376e444762ff5e182af2571590c488054640dc8f77c7013b614fcb0282",
+      "rescan_sha256": "9e333c376e444762ff5e182af2571590c488054640dc8f77c7013b614fcb0282",
+      "latest_scan_sha256": "9e333c376e444762ff5e182af2571590c488054640dc8f77c7013b614fcb0282",
+      "full_file_review": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/managed_config_probe.go",
+      "baseline_sha256": "0aa82bba41c2aef97d1dcb8950ad7392172e944b9b1b977a6285600e7b1c6550",
+      "current_sha256": "adad77306802937f01e9d8808c9735259e05beb69b3fb70ca0e80ba6aeb88420",
+      "rescan_sha256": "adad77306802937f01e9d8808c9735259e05beb69b3fb70ca0e80ba6aeb88420",
+      "latest_scan_sha256": "adad77306802937f01e9d8808c9735259e05beb69b3fb70ca0e80ba6aeb88420",
+      "full_file_review": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/score/store_postgres.go",
+      "baseline_sha256": "822368ebcf902180406b529bec159b9001d6efeeeab0c3fffe574e87bd4cd748",
+      "current_sha256": "822368ebcf902180406b529bec159b9001d6efeeeab0c3fffe574e87bd4cd748",
+      "rescan_sha256": "822368ebcf902180406b529bec159b9001d6efeeeab0c3fffe574e87bd4cd748",
+      "latest_scan_sha256": "822368ebcf902180406b529bec159b9001d6efeeeab0c3fffe574e87bd4cd748",
+      "full_file_review": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_business_command_test.go",
+      "baseline_sha256": "1af3f87eddd6c86a657dc2021dc54b47c6aa6a55c75af84df879cae1ca9c53e6",
+      "current_sha256": "704dfeb9bdee1b96f4c59900f06966a2d738f48b261aeaf6bbceb045b032fc61",
+      "rescan_sha256": "704dfeb9bdee1b96f4c59900f06966a2d738f48b261aeaf6bbceb045b032fc61",
+      "latest_scan_sha256": "704dfeb9bdee1b96f4c59900f06966a2d738f48b261aeaf6bbceb045b032fc61",
+      "full_file_review": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_compose_bootstrap_test.go",
+      "baseline_sha256": "87947d4eec3131e1a8c99637719641cc9537b51be7c9f36f6356215c43a07ec6",
+      "current_sha256": "87947d4eec3131e1a8c99637719641cc9537b51be7c9f36f6356215c43a07ec6",
+      "rescan_sha256": "87947d4eec3131e1a8c99637719641cc9537b51be7c9f36f6356215c43a07ec6",
+      "latest_scan_sha256": "87947d4eec3131e1a8c99637719641cc9537b51be7c9f36f6356215c43a07ec6",
+      "full_file_review": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_mfa_test.go",
+      "baseline_sha256": "711197018ef203f85552ab2b685789e5ddda91f7952b6fbbc2122be3b3ab0ac6",
+      "current_sha256": "d96120d9299f453d22441a852eb7c476c34feba291727c07c79a794012f8e9f0",
+      "rescan_sha256": "baef7b00789aa9b30bc285357fdc645175dd34bdf446cc33b64aef51a4455f60",
+      "latest_scan_sha256": "d96120d9299f453d22441a852eb7c476c34feba291727c07c79a794012f8e9f0",
+      "full_file_review": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+      "baseline_sha256": "1360c335249ed3989135882998433f289884d8350dc9a6abd7269652cc319c09",
+      "current_sha256": "63661ddcd204726ad063beec0b53c009ba11021abf0822af5f7a3af166695af4",
+      "rescan_sha256": "9e64cc5888db987c913d01baf93e784fdf1f465aab406b9542950732f5a2b916",
+      "latest_scan_sha256": "63661ddcd204726ad063beec0b53c009ba11021abf0822af5f7a3af166695af4",
+      "full_file_review": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_question_bank_import_test.go",
+      "baseline_sha256": "900cf48447bf2d5cd0d1a9b00e60fc1811bc4242f962aa5283df481e284b8bf8",
+      "current_sha256": "dd90a2dd55eede5c0ad9f1c955e5897aab85d6afa6f07f26af7fe62f570bb6ba",
+      "rescan_sha256": "dd90a2dd55eede5c0ad9f1c955e5897aab85d6afa6f07f26af7fe62f570bb6ba",
+      "latest_scan_sha256": "dd90a2dd55eede5c0ad9f1c955e5897aab85d6afa6f07f26af7fe62f570bb6ba",
+      "full_file_review": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_question_bank_test.go",
+      "baseline_sha256": "8a49f1e335d1147462ae7d10c83ef986d38a1e5beff17dfa6ab127878499207e",
+      "current_sha256": "69d9c04bca67a84cc90b4ca948fd91a3b392e75e3a0eac9df6d2f4a23e8308eb",
+      "rescan_sha256": "69d9c04bca67a84cc90b4ca948fd91a3b392e75e3a0eac9df6d2f4a23e8308eb",
+      "latest_scan_sha256": "69d9c04bca67a84cc90b4ca948fd91a3b392e75e3a0eac9df6d2f4a23e8308eb",
+      "full_file_review": "pending"
+    },
+    {
+      "path": "services/api-gateway/tools/story056-postgres-e2e/Dockerfile",
+      "baseline_sha256": "20c9fbae828ab0c478929582e614253844e1f5ad5deb0a003af7962d99e8485e",
+      "current_sha256": "20c9fbae828ab0c478929582e614253844e1f5ad5deb0a003af7962d99e8485e",
+      "rescan_sha256": "20c9fbae828ab0c478929582e614253844e1f5ad5deb0a003af7962d99e8485e",
+      "latest_scan_sha256": "20c9fbae828ab0c478929582e614253844e1f5ad5deb0a003af7962d99e8485e",
+      "full_file_review": "pending"
+    },
+    {
+      "path": "services/api-gateway/tools/story056-real-worker-e2e/Dockerfile",
+      "baseline_sha256": "4ceef89609710d6fff5879e722e27605dcd4c446e91468eafcc175026ff1c073",
+      "current_sha256": "fb6454601dc33c9f06effcf2fb932a67bb9a06a30dfbafb9261f2e8601bc9024",
+      "rescan_sha256": "fb6454601dc33c9f06effcf2fb932a67bb9a06a30dfbafb9261f2e8601bc9024",
+      "latest_scan_sha256": "fb6454601dc33c9f06effcf2fb932a67bb9a06a30dfbafb9261f2e8601bc9024",
+      "full_file_review": "pending"
+    },
+    {
+      "path": "services/image-quality-worker/image_quality/api.py",
+      "baseline_sha256": "87662225adbb64daaea15634625abb3e4c1ef33c161a7d594fcbb32f2cf69ada",
+      "current_sha256": "c631091a0c3c202cce1db46e3ad22d843d12f4e3552640e3f43fb9b196cf419b",
+      "rescan_sha256": "c631091a0c3c202cce1db46e3ad22d843d12f4e3552640e3f43fb9b196cf419b",
+      "latest_scan_sha256": "c631091a0c3c202cce1db46e3ad22d843d12f4e3552640e3f43fb9b196cf419b",
+      "full_file_review": "pending"
+    },
+    {
+      "path": "services/math-verification-worker/tests/test_timeout.py",
+      "baseline_sha256": "bcd059ac6de82165eb902c887869a4face8e137c0a24e98582bee499e458e65d",
+      "current_sha256": "bcd059ac6de82165eb902c887869a4face8e137c0a24e98582bee499e458e65d",
+      "rescan_sha256": "bcd059ac6de82165eb902c887869a4face8e137c0a24e98582bee499e458e65d",
+      "latest_scan_sha256": "bcd059ac6de82165eb902c887869a4face8e137c0a24e98582bee499e458e65d",
+      "full_file_review": "pending"
+    },
+    {
+      "path": "services/ocr-worker/Dockerfile",
+      "baseline_sha256": "2005a51cb0db33fc42e9fe36d38c14d8f28f98229b0a1286692d4cbb9a0e0ad8",
+      "current_sha256": "2005a51cb0db33fc42e9fe36d38c14d8f28f98229b0a1286692d4cbb9a0e0ad8",
+      "rescan_sha256": "2005a51cb0db33fc42e9fe36d38c14d8f28f98229b0a1286692d4cbb9a0e0ad8",
+      "latest_scan_sha256": "2005a51cb0db33fc42e9fe36d38c14d8f28f98229b0a1286692d4cbb9a0e0ad8",
+      "full_file_review": "pending"
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/api.py",
+      "baseline_sha256": "cfb3b2587d307ff4b993b0e00ae91a8b270476ed1e59026e38c9cd38acdf77c7",
+      "current_sha256": "86249bc03cc04645534caf4f2ba4c678878b4058507c00bc0bb22b986ba1d58a",
+      "rescan_sha256": "86249bc03cc04645534caf4f2ba4c678878b4058507c00bc0bb22b986ba1d58a",
+      "latest_scan_sha256": "86249bc03cc04645534caf4f2ba4c678878b4058507c00bc0bb22b986ba1d58a",
+      "full_file_review": "pending"
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/math_runner.py",
+      "baseline_sha256": "e3c0c9e9a010faf60a228ae49ed338e9bd26b5ce83ff57ae47ffb25fb85ff152",
+      "current_sha256": "77877944371829b157259687f03a2f4fc85adeb94d74d3e8c801310425371b7f",
+      "rescan_sha256": "77877944371829b157259687f03a2f4fc85adeb94d74d3e8c801310425371b7f",
+      "latest_scan_sha256": "77877944371829b157259687f03a2f4fc85adeb94d74d3e8c801310425371b7f",
+      "full_file_review": "pending"
+    },
+    {
+      "path": "services/page-processing-worker/page_processing/api.py",
+      "baseline_sha256": "3978341cf162a5ebe2948300c67b21313248ac949ee406b67d301db7e18a8b3d",
+      "current_sha256": "892b247716993e5ff653950746a43e7fc9f9432a7fae19a6f0d7e10e691f750d",
+      "rescan_sha256": "892b247716993e5ff653950746a43e7fc9f9432a7fae19a6f0d7e10e691f750d",
+      "latest_scan_sha256": "892b247716993e5ff653950746a43e7fc9f9432a7fae19a6f0d7e10e691f750d",
+      "full_file_review": "pending"
+    },
+    {
+      "path": "services/page-processing-worker/tests/test_main.py",
+      "baseline_sha256": "37a50842d349b755717519989e239261320e382b966776fe6f4d71e3e953d690",
+      "current_sha256": "56f964b4de901c3b84701ed0fa98ad0ed7c72987d0e1f274243d15116a039100",
+      "rescan_sha256": "56f964b4de901c3b84701ed0fa98ad0ed7c72987d0e1f274243d15116a039100",
+      "latest_scan_sha256": "56f964b4de901c3b84701ed0fa98ad0ed7c72987d0e1f274243d15116a039100",
+      "full_file_review": "pending"
+    },
+    {
+      "path": "services/subjective-grading-worker/subjective_grading_worker/api.py",
+      "baseline_sha256": "f52966f6f9a70db074344817a28d07a180fc4e2fe732afe81bc55a8986c3cbdc",
+      "current_sha256": "1679343a46b5af65466717cda9385220f91b1a9f1141fcab6370748c5ddd4564",
+      "rescan_sha256": "1679343a46b5af65466717cda9385220f91b1a9f1141fcab6370748c5ddd4564",
+      "latest_scan_sha256": "1679343a46b5af65466717cda9385220f91b1a9f1141fcab6370748c5ddd4564",
+      "full_file_review": "pending"
+    },
+    {
+      "path": "tests/e2e/story060_grading_agent.py",
+      "baseline_sha256": "aa7978bb3fbb8e658314abd1bc595b6381edf739eb4731e0b30214cea9870f69",
+      "current_sha256": "afa9da5df5a52e13ebc131fe1d7c01cd3d99569d3ebbb9366e5da699eb55bb3f",
+      "rescan_sha256": "afa9da5df5a52e13ebc131fe1d7c01cd3d99569d3ebbb9366e5da699eb55bb3f",
+      "latest_scan_sha256": "afa9da5df5a52e13ebc131fe1d7c01cd3d99569d3ebbb9366e5da699eb55bb3f",
+      "full_file_review": "pending"
+    }
+  ]
+}

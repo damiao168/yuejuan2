@@ -1,7 +1,4 @@
-// Package gradingevaluation records real, offline comparisons between a
-// governed scoring run and an already-aligned Gold or human reference.  It is
-// intentionally evidence-only: it does not invoke a model, expose answers, or
-// make a production routing decision.
+// Package gradingevaluation 记录受治理评分运行与已对齐 Gold 或人工参考之间的真实离线比较，只提供证据，不调用模型、暴露答案或作生产路由决策。
 package gradingevaluation
 
 import (
@@ -78,10 +75,8 @@ type Run struct {
 	CreatedAt          time.Time  `json:"created_at"`
 }
 
-// Observation contains only an opaque response key/fingerprint and aligned
-// scores. Answer text, images and Gold content never enter this component.
-// The six slice fields are recorded at observation time so a later metadata
-// change cannot rewrite historical evaluation evidence.
+// Observation 仅包含不透明响应键、指纹和对齐分数；答案文本、图片及 Gold 内容不进入此组件。
+// 六个切片字段在观察时记录，防止后续元数据变化改写历史评测证据。
 type Observation struct {
 	ID                   string        `json:"id"`
 	RunID                string        `json:"run_id"`
@@ -162,8 +157,7 @@ type SliceMetric struct {
 	ComputedAt time.Time `json:"computed_at"`
 }
 
-// ResponseDifficulty is a run-scoped, empirical hard-case indicator. It is
-// not a label of student ability and must not be used as a production score.
+// ResponseDifficulty 是运行范围内、基于实证的疑难案例指标；它不标记学生能力，也不能作为生产分数。
 type ResponseDifficulty struct {
 	ID                  string    `json:"id"`
 	RunID               string    `json:"run_id"`

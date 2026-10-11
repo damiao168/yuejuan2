@@ -1,6 +1,5 @@
-// Package regraderelease is the narrow A19→A18 hand-off. It turns only a
-// ready, reviewed regrade ReleasePlan into a new draft release; it never
-// mutates final_grade or the already published source version.
+// Package regraderelease 是范围受限的 A19→A18 交接。
+// 它只将已就绪、已复核的重评 ReleasePlan 转为新发布草稿；绝不修改 final_grade 或已发布的来源版本。
 package regraderelease
 
 import (

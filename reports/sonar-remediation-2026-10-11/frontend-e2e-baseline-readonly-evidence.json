@@ -1,0 +1,264 @@
+{
+  "recorded_at": "2026-10-11T10:48:24.781588+00:00",
+  "snapshot_directory_timestamp": "2026-10-11T07:56:17.037Z",
+  "remediation_baseline_recorded_at": "2026-10-11T16:52:45.240137+08:00",
+  "method": "逐个比较指定文件真实字节和 UTF-8 按行差异；此自动比较不代表全文人工审读。",
+  "files": [
+    {
+      "path": "apps/web-admin/src/features/exams/create/CreateExamComposer.tsx",
+      "current_sha256": "ee20208637f8aa175830ef8c879033a3a6bd5b6545aff4b09204bf1da6fcadd1",
+      "comparisons": [
+        {
+          "kind": "remediation_baseline",
+          "exists": true,
+          "path": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\features\\exams\\create\\CreateExamComposer.tsx",
+          "sha256": "0713403671989c490acb3fa3a14abefc572acb51217fecb56ec44174470e25e9",
+          "byte_equal": false,
+          "line_normalized_equal": false,
+          "unified_diff": "--- D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\features\\exams\\create\\CreateExamComposer.tsx\n\n+++ D:\\project\\yuejuan\\apps\\web-admin\\src\\features\\exams\\create\\CreateExamComposer.tsx\n\n@@ -95,12 +95,12 @@\n\n     <div className=\"exam-subject-fields\">\n       <label className=\"exam-composer-field\" data-exam-field={`${prefix}.totalScore`} htmlFor={createExamFieldId(`${prefix}.totalScore`)}>\n         <span>预期满分</span>\n-        <InputNumber id={createExamFieldId(`${prefix}.totalScore`)} min={1} precision={0} value={subject.totalScore} status={scoreError ? \"error\" : undefined} aria-invalid={Boolean(scoreError)} addonAfter=\"分\" onChange={(value) => onChange({ ...subject, totalScore: Number(value ?? 0) })} />\n+        <InputNumber id={createExamFieldId(`${prefix}.totalScore`)} min={1} precision={0} value={subject.totalScore} status={scoreError ? \"error\" : undefined} aria-invalid={Boolean(scoreError)} suffix=\"分\" onChange={(value) => onChange({ ...subject, totalScore: Number(value ?? 0) })} />\n         <FieldError message={scoreError} />\n       </label>\n       <label className=\"exam-composer-field\" data-exam-field={`${prefix}.durationMinutes`} htmlFor={createExamFieldId(`${prefix}.durationMinutes`)}>\n         <span>考试时间</span>\n-        <InputNumber id={createExamFieldId(`${prefix}.durationMinutes`)} min={1} precision={0} value={subject.durationMinutes} status={durationError ? \"error\" : undefined} aria-invalid={Boolean(durationError)} addonAfter=\"分钟\" onChange={(value) => onChange({ ...subject, durationMinutes: Number(value ?? 0) })} />\n+        <InputNumber id={createExamFieldId(`${prefix}.durationMinutes`)} min={1} precision={0} value={subject.durationMinutes} status={durationError ? \"error\" : undefined} aria-invalid={Boolean(durationError)} suffix=\"分钟\" onChange={(value) => onChange({ ...subject, durationMinutes: Number(value ?? 0) })} />\n         <FieldError message={durationError} />\n       </label>\n     </div>"
+        },
+        {
+          "kind": "pre_remediation_local_snapshot",
+          "exists": true,
+          "path": "D:\\tools\\sonarqube-yuejuan\\snapshots\\workspace-batch57-clippy-2026-10-11T07-56-17-037Z\\apps\\web-admin\\src\\features\\exams\\create\\CreateExamComposer.tsx",
+          "sha256": "0713403671989c490acb3fa3a14abefc572acb51217fecb56ec44174470e25e9",
+          "byte_equal": false,
+          "line_normalized_equal": false,
+          "unified_diff": "--- D:\\tools\\sonarqube-yuejuan\\snapshots\\workspace-batch57-clippy-2026-10-11T07-56-17-037Z\\apps\\web-admin\\src\\features\\exams\\create\\CreateExamComposer.tsx\n\n+++ D:\\project\\yuejuan\\apps\\web-admin\\src\\features\\exams\\create\\CreateExamComposer.tsx\n\n@@ -95,12 +95,12 @@\n\n     <div className=\"exam-subject-fields\">\n       <label className=\"exam-composer-field\" data-exam-field={`${prefix}.totalScore`} htmlFor={createExamFieldId(`${prefix}.totalScore`)}>\n         <span>预期满分</span>\n-        <InputNumber id={createExamFieldId(`${prefix}.totalScore`)} min={1} precision={0} value={subject.totalScore} status={scoreError ? \"error\" : undefined} aria-invalid={Boolean(scoreError)} addonAfter=\"分\" onChange={(value) => onChange({ ...subject, totalScore: Number(value ?? 0) })} />\n+        <InputNumber id={createExamFieldId(`${prefix}.totalScore`)} min={1} precision={0} value={subject.totalScore} status={scoreError ? \"error\" : undefined} aria-invalid={Boolean(scoreError)} suffix=\"分\" onChange={(value) => onChange({ ...subject, totalScore: Number(value ?? 0) })} />\n         <FieldError message={scoreError} />\n       </label>\n       <label className=\"exam-composer-field\" data-exam-field={`${prefix}.durationMinutes`} htmlFor={createExamFieldId(`${prefix}.durationMinutes`)}>\n         <span>考试时间</span>\n-        <InputNumber id={createExamFieldId(`${prefix}.durationMinutes`)} min={1} precision={0} value={subject.durationMinutes} status={durationError ? \"error\" : undefined} aria-invalid={Boolean(durationError)} addonAfter=\"分钟\" onChange={(value) => onChange({ ...subject, durationMinutes: Number(value ?? 0) })} />\n+        <InputNumber id={createExamFieldId(`${prefix}.durationMinutes`)} min={1} precision={0} value={subject.durationMinutes} status={durationError ? \"error\" : undefined} aria-invalid={Boolean(durationError)} suffix=\"分钟\" onChange={(value) => onChange({ ...subject, durationMinutes: Number(value ?? 0) })} />\n         <FieldError message={durationError} />\n       </label>\n     </div>"
+        }
+      ]
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/create/exam-create.css",
+      "current_sha256": "b406aad3d65b4fd3ff7e58f122d7f31e8e5346bf78fcdb0ef0f3dd52e72483f3",
+      "comparisons": [
+        {
+          "kind": "remediation_baseline",
+          "exists": false,
+          "path": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\features\\exams\\create\\exam-create.css"
+        },
+        {
+          "kind": "pre_remediation_local_snapshot",
+          "exists": true,
+          "path": "D:\\tools\\sonarqube-yuejuan\\snapshots\\workspace-batch57-clippy-2026-10-11T07-56-17-037Z\\apps\\web-admin\\src\\features\\exams\\create\\exam-create.css",
+          "sha256": "b406aad3d65b4fd3ff7e58f122d7f31e8e5346bf78fcdb0ef0f3dd52e72483f3",
+          "byte_equal": true,
+          "line_normalized_equal": true,
+          "unified_diff": ""
+        }
+      ]
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/workspace/ExamWorkspaceLayout.tsx",
+      "current_sha256": "58531086b9ff7171ae50bd6fc0f4a5ba449e9f959ec20b9cdc631d65f3f4d366",
+      "comparisons": [
+        {
+          "kind": "remediation_baseline",
+          "exists": false,
+          "path": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\features\\exams\\workspace\\ExamWorkspaceLayout.tsx"
+        },
+        {
+          "kind": "pre_remediation_local_snapshot",
+          "exists": true,
+          "path": "D:\\tools\\sonarqube-yuejuan\\snapshots\\workspace-batch57-clippy-2026-10-11T07-56-17-037Z\\apps\\web-admin\\src\\features\\exams\\workspace\\ExamWorkspaceLayout.tsx",
+          "sha256": "58531086b9ff7171ae50bd6fc0f4a5ba449e9f959ec20b9cdc631d65f3f4d366",
+          "byte_equal": true,
+          "line_normalized_equal": true,
+          "unified_diff": ""
+        }
+      ]
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/preparation/preparationSteps.ts",
+      "current_sha256": "8c4117f16043469c8ad9e25f6fbf4c06675664581d7a911aa0f1cef3879a2a56",
+      "comparisons": [
+        {
+          "kind": "remediation_baseline",
+          "exists": false,
+          "path": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\features\\exams\\preparation\\preparationSteps.ts"
+        },
+        {
+          "kind": "pre_remediation_local_snapshot",
+          "exists": true,
+          "path": "D:\\tools\\sonarqube-yuejuan\\snapshots\\workspace-batch57-clippy-2026-10-11T07-56-17-037Z\\apps\\web-admin\\src\\features\\exams\\preparation\\preparationSteps.ts",
+          "sha256": "8c4117f16043469c8ad9e25f6fbf4c06675664581d7a911aa0f1cef3879a2a56",
+          "byte_equal": true,
+          "line_normalized_equal": true,
+          "unified_diff": ""
+        }
+      ]
+    },
+    {
+      "path": "apps/web-admin/src/components/AppLayout.tsx",
+      "current_sha256": "bf7aa4aeb517a16f5da96b429b703fa96922d749b56b4d307add4bf62476b9ad",
+      "comparisons": [
+        {
+          "kind": "remediation_baseline",
+          "exists": true,
+          "path": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\components\\AppLayout.tsx",
+          "sha256": "3333ea8d4d7152c3f07c7d8795eaee6942553e965c16b8108ec0c0281cfa646d",
+          "byte_equal": false,
+          "line_normalized_equal": false,
+          "unified_diff": "--- D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\components\\AppLayout.tsx\n\n+++ D:\\project\\yuejuan\\apps\\web-admin\\src\\components\\AppLayout.tsx\n\n@@ -1,4 +1,4 @@\n\n-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from \"react\";\n+import { useEffect, useRef, useState, type SubmitEvent, type ReactNode } from \"react\";\n import { Alert, Button, ConfigProvider, Drawer, Grid, Input, Layout, Modal, Tag, theme } from \"antd\";\n import type { SessionUser } from \"../auth/session\";\n import type { AppRoute } from \"../router/routes\";\n@@ -141,7 +141,7 @@\n\n       document.removeEventListener(\"visibilitychange\", checkOnReturn);\n     };\n   }, [cancelStepUp, onLockSession, user.publicComputer, workspaceLocked]);\n-  const unlockWorkspace = async (event: FormEvent<HTMLFormElement>) => {\n+  const unlockWorkspace = async (event: SubmitEvent<HTMLFormElement>) => {\n     event.preventDefault();\n     if (!unlockPassword || unlocking || lockingSession) return;\n     setUnlocking(true);"
+        },
+        {
+          "kind": "pre_remediation_local_snapshot",
+          "exists": true,
+          "path": "D:\\tools\\sonarqube-yuejuan\\snapshots\\workspace-batch57-clippy-2026-10-11T07-56-17-037Z\\apps\\web-admin\\src\\components\\AppLayout.tsx",
+          "sha256": "3333ea8d4d7152c3f07c7d8795eaee6942553e965c16b8108ec0c0281cfa646d",
+          "byte_equal": false,
+          "line_normalized_equal": false,
+          "unified_diff": "--- D:\\tools\\sonarqube-yuejuan\\snapshots\\workspace-batch57-clippy-2026-10-11T07-56-17-037Z\\apps\\web-admin\\src\\components\\AppLayout.tsx\n\n+++ D:\\project\\yuejuan\\apps\\web-admin\\src\\components\\AppLayout.tsx\n\n@@ -1,4 +1,4 @@\n\n-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from \"react\";\n+import { useEffect, useRef, useState, type SubmitEvent, type ReactNode } from \"react\";\n import { Alert, Button, ConfigProvider, Drawer, Grid, Input, Layout, Modal, Tag, theme } from \"antd\";\n import type { SessionUser } from \"../auth/session\";\n import type { AppRoute } from \"../router/routes\";\n@@ -141,7 +141,7 @@\n\n       document.removeEventListener(\"visibilitychange\", checkOnReturn);\n     };\n   }, [cancelStepUp, onLockSession, user.publicComputer, workspaceLocked]);\n-  const unlockWorkspace = async (event: FormEvent<HTMLFormElement>) => {\n+  const unlockWorkspace = async (event: SubmitEvent<HTMLFormElement>) => {\n     event.preventDefault();\n     if (!unlockPassword || unlocking || lockingSession) return;\n     setUnlocking(true);"
+        }
+      ]
+    },
+    {
+      "path": "apps/web-admin/src/components/appLayoutPresentation.tsx",
+      "current_sha256": "d0928ad8c4d9b5c6e9a0707466699984820dbc6b107ea872a7ee0fe0586e7b79",
+      "comparisons": [
+        {
+          "kind": "remediation_baseline",
+          "exists": false,
+          "path": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\components\\appLayoutPresentation.tsx"
+        },
+        {
+          "kind": "pre_remediation_local_snapshot",
+          "exists": true,
+          "path": "D:\\tools\\sonarqube-yuejuan\\snapshots\\workspace-batch57-clippy-2026-10-11T07-56-17-037Z\\apps\\web-admin\\src\\components\\appLayoutPresentation.tsx",
+          "sha256": "d0928ad8c4d9b5c6e9a0707466699984820dbc6b107ea872a7ee0fe0586e7b79",
+          "byte_equal": true,
+          "line_normalized_equal": true,
+          "unified_diff": ""
+        }
+      ]
+    },
+    {
+      "path": "apps/web-admin/src/AppShell.tsx",
+      "current_sha256": "02d525d91a3c907c5b0c563314714de376e5db99b49469f0ec1fcdf394d68cbc",
+      "comparisons": [
+        {
+          "kind": "remediation_baseline",
+          "exists": false,
+          "path": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\AppShell.tsx"
+        },
+        {
+          "kind": "pre_remediation_local_snapshot",
+          "exists": true,
+          "path": "D:\\tools\\sonarqube-yuejuan\\snapshots\\workspace-batch57-clippy-2026-10-11T07-56-17-037Z\\apps\\web-admin\\src\\AppShell.tsx",
+          "sha256": "02d525d91a3c907c5b0c563314714de376e5db99b49469f0ec1fcdf394d68cbc",
+          "byte_equal": true,
+          "line_normalized_equal": true,
+          "unified_diff": ""
+        }
+      ]
+    },
+    {
+      "path": "apps/web-admin/src/experience.css",
+      "current_sha256": "3a73e86a676fafccf27800d2b3ef39c86178c7c83b9707eed4a911a9ac30d196",
+      "comparisons": [
+        {
+          "kind": "remediation_baseline",
+          "exists": false,
+          "path": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\experience.css"
+        },
+        {
+          "kind": "pre_remediation_local_snapshot",
+          "exists": true,
+          "path": "D:\\tools\\sonarqube-yuejuan\\snapshots\\workspace-batch57-clippy-2026-10-11T07-56-17-037Z\\apps\\web-admin\\src\\experience.css",
+          "sha256": "3a73e86a676fafccf27800d2b3ef39c86178c7c83b9707eed4a911a9ac30d196",
+          "byte_equal": true,
+          "line_normalized_equal": true,
+          "unified_diff": ""
+        }
+      ]
+    },
+    {
+      "path": "tests/e2e/specs/exam-create.visual.spec.ts",
+      "current_sha256": "8dd072f3eae0ba078400a3bf97af2a82508e22f27c8dee172b2248b2258f96a6",
+      "comparisons": [
+        {
+          "kind": "remediation_baseline",
+          "exists": true,
+          "path": "D:\\tools\\sonar-remediation-20261011\\baseline\\tests\\e2e\\specs\\exam-create.visual.spec.ts",
+          "sha256": "ed7accd3f6cb08edcab494c2ca84f5253bdb6e753c53427ec9a78ec6a7d7f4b4",
+          "byte_equal": false,
+          "line_normalized_equal": false,
+          "unified_diff": "--- D:\\tools\\sonar-remediation-20261011\\baseline\\tests\\e2e\\specs\\exam-create.visual.spec.ts\n\n+++ D:\\project\\yuejuan\\tests\\e2e\\specs\\exam-create.visual.spec.ts\n\n@@ -14,7 +14,7 @@\n\n     test.setTimeout(90_000);\n     await page.setViewportSize(viewport);\n     await installApiMocks(page, { role: \"school_admin\", initiallyAuthenticated: true });\n-    await page.goto(\"/#/admin/exams/new\", { waitUntil: \"networkidle\" });\n+    await page.goto(\"/#/admin/exams/new\", { waitUntil: \"domcontentloaded\" });\n     await expect(page.locator(\".exam-composer\")).toBeVisible({ timeout: 30_000 });\n     await expect(page.locator(\".sidebar\")).toHaveCount(0);\n     await expect(page.locator(\".ant-steps\")).toHaveCount(0);"
+        },
+        {
+          "kind": "pre_remediation_local_snapshot",
+          "exists": true,
+          "path": "D:\\tools\\sonarqube-yuejuan\\snapshots\\workspace-batch57-clippy-2026-10-11T07-56-17-037Z\\tests\\e2e\\specs\\exam-create.visual.spec.ts",
+          "sha256": "ed7accd3f6cb08edcab494c2ca84f5253bdb6e753c53427ec9a78ec6a7d7f4b4",
+          "byte_equal": false,
+          "line_normalized_equal": false,
+          "unified_diff": "--- D:\\tools\\sonarqube-yuejuan\\snapshots\\workspace-batch57-clippy-2026-10-11T07-56-17-037Z\\tests\\e2e\\specs\\exam-create.visual.spec.ts\n\n+++ D:\\project\\yuejuan\\tests\\e2e\\specs\\exam-create.visual.spec.ts\n\n@@ -14,7 +14,7 @@\n\n     test.setTimeout(90_000);\n     await page.setViewportSize(viewport);\n     await installApiMocks(page, { role: \"school_admin\", initiallyAuthenticated: true });\n-    await page.goto(\"/#/admin/exams/new\", { waitUntil: \"networkidle\" });\n+    await page.goto(\"/#/admin/exams/new\", { waitUntil: \"domcontentloaded\" });\n     await expect(page.locator(\".exam-composer\")).toBeVisible({ timeout: 30_000 });\n     await expect(page.locator(\".sidebar\")).toHaveCount(0);\n     await expect(page.locator(\".ant-steps\")).toHaveCount(0);"
+        }
+      ]
+    },
+    {
+      "path": "tests/e2e/specs/exam-workspace.spec.ts",
+      "current_sha256": "0e1cb8aa6570f0c22478792d3ef8e13576facafeec6e0997e642b2885412ee04",
+      "comparisons": [
+        {
+          "kind": "remediation_baseline",
+          "exists": true,
+          "path": "D:\\tools\\sonar-remediation-20261011\\baseline\\tests\\e2e\\specs\\exam-workspace.spec.ts",
+          "sha256": "8c8d1055c0288ca1c74d806f083bdefb3dcb11c8a4df767b60de51cbabdade95",
+          "byte_equal": false,
+          "line_normalized_equal": false,
+          "unified_diff": "--- D:\\tools\\sonar-remediation-20261011\\baseline\\tests\\e2e\\specs\\exam-workspace.spec.ts\n\n+++ D:\\project\\yuejuan\\tests\\e2e\\specs\\exam-workspace.spec.ts\n\n@@ -125,7 +125,7 @@\n\n     if (new URL(request.url()).pathname === \"/api/v1/exams\") examListRequests += 1;\n   });\n \n-  await page.goto(\"/#/admin/exams/exam-1/settings\", { waitUntil: \"networkidle\" });\n+  await page.goto(\"/#/admin/exams/exam-1/settings\", { waitUntil: \"domcontentloaded\" });\n   await expect(page.getByRole(\"heading\", { name: \"2026 春季期中考试\" })).toBeVisible();\n   await page.locator(\".exam-workspace-subject .ant-select-selector\").click();\n   await page.getByTitle(\"物理 · 100 分\").click();"
+        },
+        {
+          "kind": "pre_remediation_local_snapshot",
+          "exists": true,
+          "path": "D:\\tools\\sonarqube-yuejuan\\snapshots\\workspace-batch57-clippy-2026-10-11T07-56-17-037Z\\tests\\e2e\\specs\\exam-workspace.spec.ts",
+          "sha256": "8c8d1055c0288ca1c74d806f083bdefb3dcb11c8a4df767b60de51cbabdade95",
+          "byte_equal": false,
+          "line_normalized_equal": false,
+          "unified_diff": "--- D:\\tools\\sonarqube-yuejuan\\snapshots\\workspace-batch57-clippy-2026-10-11T07-56-17-037Z\\tests\\e2e\\specs\\exam-workspace.spec.ts\n\n+++ D:\\project\\yuejuan\\tests\\e2e\\specs\\exam-workspace.spec.ts\n\n@@ -125,7 +125,7 @@\n\n     if (new URL(request.url()).pathname === \"/api/v1/exams\") examListRequests += 1;\n   });\n \n-  await page.goto(\"/#/admin/exams/exam-1/settings\", { waitUntil: \"networkidle\" });\n+  await page.goto(\"/#/admin/exams/exam-1/settings\", { waitUntil: \"domcontentloaded\" });\n   await expect(page.getByRole(\"heading\", { name: \"2026 春季期中考试\" })).toBeVisible();\n   await page.locator(\".exam-workspace-subject .ant-select-selector\").click();\n   await page.getByTitle(\"物理 · 100 分\").click();"
+        }
+      ]
+    },
+    {
+      "path": "tests/e2e/specs/dashboard-workbench.spec.ts",
+      "current_sha256": "67664576c00bf956edda79642f91c4bb7fccfacb57863fbecb09f5932895945f",
+      "comparisons": [
+        {
+          "kind": "remediation_baseline",
+          "exists": true,
+          "path": "D:\\tools\\sonar-remediation-20261011\\baseline\\tests\\e2e\\specs\\dashboard-workbench.spec.ts",
+          "sha256": "0091dc3d2baa7808abfb1cc71ca916bd1c04de9e3f582048196b11e776c06ff3",
+          "byte_equal": false,
+          "line_normalized_equal": false,
+          "unified_diff": "--- D:\\tools\\sonar-remediation-20261011\\baseline\\tests\\e2e\\specs\\dashboard-workbench.spec.ts\n\n+++ D:\\project\\yuejuan\\tests\\e2e\\specs\\dashboard-workbench.spec.ts\n\n@@ -17,7 +17,7 @@\n\n \n test(\"桌面壳层取消空置顶栏，并固定品牌、菜单和账户区域\", async ({ page }) => {\n   await installApiMocks(page, { initiallyAuthenticated: true });\n-  await page.goto(\"/#/admin/dashboard\", { waitUntil: \"networkidle\" });\n+  await page.goto(\"/#/admin/dashboard\", { waitUntil: \"domcontentloaded\" });\n \n   await expect(page.locator(\".topbar\")).toHaveCount(0);\n   await expect(page.locator(\".brand-copy\")).toContainText(\"EduGrade\");\n@@ -45,7 +45,7 @@\n\n test(\"移动端只保留导航触发条，账户位于抽屉底部\", async ({ page }) => {\n   await page.setViewportSize({ width: 760, height: 800 });\n   await installApiMocks(page, { initiallyAuthenticated: true });\n-  await page.goto(\"/#/admin/dashboard\", { waitUntil: \"networkidle\" });\n+  await page.goto(\"/#/admin/dashboard\", { waitUntil: \"domcontentloaded\" });\n \n   await expect(page.locator(\".topbar\")).toHaveCount(0);\n   const shellbar = page.locator(\".mobile-shellbar\");"
+        },
+        {
+          "kind": "pre_remediation_local_snapshot",
+          "exists": true,
+          "path": "D:\\tools\\sonarqube-yuejuan\\snapshots\\workspace-batch57-clippy-2026-10-11T07-56-17-037Z\\tests\\e2e\\specs\\dashboard-workbench.spec.ts",
+          "sha256": "0091dc3d2baa7808abfb1cc71ca916bd1c04de9e3f582048196b11e776c06ff3",
+          "byte_equal": false,
+          "line_normalized_equal": false,
+          "unified_diff": "--- D:\\tools\\sonarqube-yuejuan\\snapshots\\workspace-batch57-clippy-2026-10-11T07-56-17-037Z\\tests\\e2e\\specs\\dashboard-workbench.spec.ts\n\n+++ D:\\project\\yuejuan\\tests\\e2e\\specs\\dashboard-workbench.spec.ts\n\n@@ -17,7 +17,7 @@\n\n \n test(\"桌面壳层取消空置顶栏，并固定品牌、菜单和账户区域\", async ({ page }) => {\n   await installApiMocks(page, { initiallyAuthenticated: true });\n-  await page.goto(\"/#/admin/dashboard\", { waitUntil: \"networkidle\" });\n+  await page.goto(\"/#/admin/dashboard\", { waitUntil: \"domcontentloaded\" });\n \n   await expect(page.locator(\".topbar\")).toHaveCount(0);\n   await expect(page.locator(\".brand-copy\")).toContainText(\"EduGrade\");\n@@ -45,7 +45,7 @@\n\n test(\"移动端只保留导航触发条，账户位于抽屉底部\", async ({ page }) => {\n   await page.setViewportSize({ width: 760, height: 800 });\n   await installApiMocks(page, { initiallyAuthenticated: true });\n-  await page.goto(\"/#/admin/dashboard\", { waitUntil: \"networkidle\" });\n+  await page.goto(\"/#/admin/dashboard\", { waitUntil: \"domcontentloaded\" });\n \n   await expect(page.locator(\".topbar\")).toHaveCount(0);\n   const shellbar = page.locator(\".mobile-shellbar\");"
+        }
+      ]
+    },
+    {
+      "path": "tests/e2e/specs/exam-create.visual.spec.ts-snapshots/exam-create-390x844-chromium-win32.png",
+      "current_sha256": "a910914be638835e0e17c975865a896228a89c1b970d16fc748330f7adc3b69f",
+      "comparisons": [
+        {
+          "kind": "remediation_baseline",
+          "exists": false,
+          "path": "D:\\tools\\sonar-remediation-20261011\\baseline\\tests\\e2e\\specs\\exam-create.visual.spec.ts-snapshots\\exam-create-390x844-chromium-win32.png"
+        },
+        {
+          "kind": "pre_remediation_local_snapshot",
+          "exists": false,
+          "path": "D:\\tools\\sonarqube-yuejuan\\snapshots\\workspace-batch57-clippy-2026-10-11T07-56-17-037Z\\tests\\e2e\\specs\\exam-create.visual.spec.ts-snapshots\\exam-create-390x844-chromium-win32.png"
+        }
+      ]
+    }
+  ]
+}

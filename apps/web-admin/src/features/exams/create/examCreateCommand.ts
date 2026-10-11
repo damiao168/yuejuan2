@@ -25,7 +25,7 @@ export function commandSnapshotKey(tenantId: string, userId: string) {
 export function loadExamCreateCommand(storage: Pick<Storage, "getItem">, key: string): ExamCreateCommandSnapshot | null {
   try {
     const value = JSON.parse(storage.getItem(key) ?? "null") as Partial<ExamCreateCommandSnapshot> | null;
-    if (!value || value.version !== 1 || value.operation !== "create_exam_session" || !value.commandId || !value.payload || !value.target) return null;
+    if (value?.version !== 1 || value.operation !== "create_exam_session" || !value.commandId || !value.payload || !value.target) return null;
     return value as ExamCreateCommandSnapshot;
   } catch {
     return null;
@@ -64,8 +64,8 @@ export function commandAfterFailure(command: ExamCreateCommandSnapshot, error: u
     recoveryAttempt: 0,
     ...(error.retryAfterSeconds ? { retryNotBefore: new Date(Date.now() + error.retryAfterSeconds * 1000).toISOString() } : {})
   };
-  // An expired login or changed scope rejects this HTTP attempt, but says
-  // nothing about a previous attempt whose response was lost.
+  // 登录过期或作用域改变只会拒绝本次 HTTP 请求，
+  // 不能据此判断先前响应丢失的请求结果。
   if (["invalid_exam_session", "invalid_request", "invalid_exam"].includes(error.code)) return null;
   return { ...command, state: "unknown" };
 }
@@ -114,9 +114,9 @@ export function recordExamCreateSuccess(
   session: ExamSession,
 ): ExamCreateCommandSnapshot {
   const completed = commandAfterSuccess(command, session);
-  // Transport success is definitive. Local cleanup must not turn it into a
-  // retryable creation; the previous durable snapshot can still recover it.
-  try { persistExamCreateCommand(storage, key, completed); } catch { /* recover original command on reload */ }
-  try { storage.removeItem(draftKey); } catch { /* stale draft cannot change the receipt */ }
+  // 传输成功的结果已确定。本地清理不能使其变成
+  // 可重试的创建操作；之前的持久化快照仍可用于恢复。
+  try { persistExamCreateCommand(storage, key, completed); } catch { /* 重载后恢复原命令。 */ }
+  try { storage.removeItem(draftKey); } catch { /* 旧草稿不能改变回执。 */ }
   return completed;
 }

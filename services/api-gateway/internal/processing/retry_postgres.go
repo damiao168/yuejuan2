@@ -8,7 +8,7 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/workerruntime"
 )
 
-// Match the result coordinator's source-before-runtime lock order.
+// 与结果协调器保持先来源、后运行时的加锁顺序。
 func (s *PostgresStore) RetryImageQuality(ctx context.Context, tenantID, runID, taskID string) (workerruntime.Task, error) {
 	// 先锁质量运行记录，再在同一事务中重新排队 worker，避免页面状态和任务状态分叉。
 	tx, err := s.db.BeginTx(ctx, nil)

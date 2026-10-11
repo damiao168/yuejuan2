@@ -1,0 +1,7 @@
+{
+  "language": "actions",
+  "findings": [],
+  "changedFiles": [],
+  "tests": [],
+  "reason": "原Actions SARIF实际包含0条候选，原扫描28条查询成功。本轮无报告候选需要修改；未将静态扫描当成线上CI运行结果。"
+}

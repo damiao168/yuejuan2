@@ -1,0 +1,92 @@
+{
+  "updated_at": "2026-10-11T18:33:31.862913+08:00",
+  "source_report": "full-checkpoint-02/issues.json",
+  "count": 5,
+  "source_changed": 5,
+  "dynamically_validated": 5,
+  "platform_verified_resolved": 0,
+  "issue_states": [
+    {
+      "key": "b3e8303d-8aee-467f-af64-817d4527cf2f",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/mathunderstanding/handlers.go",
+      "original_line": 359,
+      "state": "changed_awaiting_sonar",
+      "change": "容量/溢出预算检查与语法证据收集分离；仍先计 syntax 数、减法检查、再分配，不改保持顺序、ID集合、contradicted归零和人工复核累积。生产接口/权限/事务调用保持原样。",
+      "sonar_rescan": "pending",
+      "test_execution": "go-batch22-26-and-new-five-tests.json"
+    },
+    {
+      "key": "8d6ddd13-214b-4202-9449-af8fe432a9e9",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/releasegate/service_batch54_test.go",
+      "original_line": 39,
+      "state": "changed_awaiting_sonar",
+      "change": "分离发布事实、历史预览不可变和返回计数副本保护断言；保留范围复读、阻断、未发布及所有原期望。",
+      "sonar_rescan": "pending",
+      "test_execution": "go-batch22-26-and-new-five-tests.json"
+    },
+    {
+      "key": "5e8c2af6-af96-4016-8bee-7732512442d1",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/releasegate/service_coverage_remediation_test.go",
+      "original_line": 136,
+      "state": "changed_awaiting_sonar",
+      "change": "按发布成功/事务失败与门禁依赖失败场景拆分，独立检查失败后的依赖调用计数；保留门禁先落库、原错误、历史预览及范围不变。",
+      "sonar_rescan": "pending",
+      "test_execution": "go-batch22-26-and-new-five-tests.json"
+    },
+    {
+      "key": "7b28d661-b791-47e4-bd42-86aefd295157",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/releasegate/service_coverage_remediation_test.go",
+      "original_line": 174,
+      "state": "changed_awaiting_sonar",
+      "change": "按发布成功/事务失败与门禁依赖失败场景拆分，独立检查失败后的依赖调用计数；保留门禁先落库、原错误、历史预览及范围不变。",
+      "sonar_rescan": "pending",
+      "test_execution": "go-batch22-26-and-new-five-tests.json"
+    },
+    {
+      "key": "60f4e41c-095d-4c79-a021-25d8a76a527d",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "path": "services/api-gateway/internal/review/review_workbench_batch38_test.go",
+      "original_line": 273,
+      "state": "changed_awaiting_sonar",
+      "change": "二次意见事实和历史列表形状/顺序职责拆分；原短路的分数存在性累积、风险级别可见性及空数组 JSON 仍逐项验证。",
+      "sonar_rescan": "pending",
+      "test_execution": "go-batch22-26-and-new-five-tests.json"
+    }
+  ],
+  "files": [
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/handlers.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "d7a45cba78c1391403e119b5ef6cc6258a1f20dd18cbb012d1ba68ae805926f6",
+      "maintenance_points": "容量/溢出预算检查与语法证据收集分离；仍先计 syntax 数、减法检查、再分配，不改保持顺序、ID集合、contradicted归零和人工复核累积。生产接口/权限/事务调用保持原样。"
+    },
+    {
+      "path": "services/api-gateway/internal/releasegate/service_batch54_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "fc5003aa4ab0ce9d163ca1c5f484f933b07329608683787b200e75784d6a99f1",
+      "maintenance_points": "分离发布事实、历史预览不可变和返回计数副本保护断言；保留范围复读、阻断、未发布及所有原期望。"
+    },
+    {
+      "path": "services/api-gateway/internal/releasegate/service_coverage_remediation_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "9e56d658b603337e4ce44281e0665d1486a26aeb745ca488825f504dfac7a080",
+      "maintenance_points": "按发布成功/事务失败与门禁依赖失败场景拆分，独立检查失败后的依赖调用计数；保留门禁先落库、原错误、历史预览及范围不变。"
+    },
+    {
+      "path": "services/api-gateway/internal/review/review_workbench_batch38_test.go",
+      "review_state": "read_and_refactored",
+      "source_sha256": "ad37b954b8a34c2add3dd0fea7755c2ee3bc47856fbb8274f4da64583aeff504",
+      "maintenance_points": "二次意见事实和历史列表形状/顺序职责拆分；原短路的分数存在性累积、风险级别可见性及空数组 JSON 仍逐项验证。"
+    }
+  ],
+  "test_execution": "go-batch22-26-and-new-five-tests.json"
+}

@@ -9,6 +9,7 @@ const backendProxy = {
 export default defineConfig({
   plugins: [react()],
   build: {
+    manifest: true,
     rollupOptions: {
       output: {
         manualChunks: {

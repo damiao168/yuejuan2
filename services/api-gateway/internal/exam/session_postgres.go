@@ -27,11 +27,8 @@ func (s *PostgresStore) CreateExamSession(ctx context.Context, scope auth.Access
 		return ExamSession{}, ErrInvalidInput
 	}
 	if input.CommandID != "" {
-		existing, existingErr := loadExamSessionByCommandTx(ctx, tx, scope.TenantID, createdBy, input.CommandID)
+		existing, existingErr := loadMatchingExamSessionCommandTx(ctx, tx, scope.TenantID, createdBy, input.CommandID, requestHash)
 		if existingErr == nil {
-			if err := requireExamSessionCommandHash(ctx, tx, scope.TenantID, createdBy, input.CommandID, requestHash); err != nil {
-				return ExamSession{}, err
-			}
 			return existing, tx.Commit()
 		}
 		if !errors.Is(existingErr, ErrNotFound) {
@@ -39,13 +36,53 @@ func (s *PostgresStore) CreateExamSession(ctx context.Context, scope auth.Access
 		}
 	}
 
-	appealEnabled := true
-	if input.AppealEnabled != nil {
-		appealEnabled = *input.AppealEnabled
-	}
-	templateVersion, err := requireExamTemplate(ctx, tx, scope, input.TemplateID)
+	appealEnabled := examSessionAppealEnabled(input.AppealEnabled)
+	// 哈希保留原请求的 nil 表示；后续子科使用这里解析的同一个申诉开关值。
+	input.AppealEnabled = &appealEnabled
+	session, created, err := insertExamSessionTx(ctx, tx, scope, createdBy, input, requestHash)
 	if err != nil {
 		return ExamSession{}, err
+	}
+	if !created {
+		return session, tx.Commit()
+	}
+	for _, subject := range input.Subjects {
+		child, err := s.createExamSessionSubjectTx(ctx, tx, scope, createdBy, input, session, subject)
+		if err != nil {
+			return ExamSession{}, err
+		}
+		session.Exams = append(session.Exams, child)
+	}
+	if err := tx.Commit(); err != nil {
+		return ExamSession{}, err
+	}
+	return session, nil
+}
+
+func examSessionAppealEnabled(option *bool) bool {
+	if option == nil {
+		return true
+	}
+	return *option
+}
+
+// 首次查找和唯一冲突后的恢复都要核对原请求正文；提交仍由外层创建事务负责。
+func loadMatchingExamSessionCommandTx(ctx context.Context, tx *sql.Tx, tenantID, createdBy, commandID, requestHash string) (ExamSession, error) {
+	existing, err := loadExamSessionByCommandTx(ctx, tx, tenantID, createdBy, commandID)
+	if err != nil {
+		return ExamSession{}, err
+	}
+	if err := requireExamSessionCommandHash(ctx, tx, tenantID, createdBy, commandID, requestHash); err != nil {
+		return ExamSession{}, err
+	}
+	return existing, nil
+}
+
+// 申诉开关已由调用方解析为非 nil；created 区分新建和冲突后的复用，复用不能再次创建子科。
+func insertExamSessionTx(ctx context.Context, tx *sql.Tx, scope auth.AccessScope, createdBy string, input CreateSessionInput, requestHash string) (ExamSession, bool, error) {
+	templateVersion, err := requireExamTemplate(ctx, tx, scope, input.TemplateID)
+	if err != nil {
+		return ExamSession{}, false, err
 	}
 	row := tx.QueryRowContext(ctx, `
 INSERT INTO exam_session (tenant_id, school_id, grade_id, exam_template_id, exam_template_version, name, exam_type, grading_mode, appeal_enabled, publish_policy, created_by, command_id, command_request_hash, command_status, command_completed_at)
@@ -58,88 +95,88 @@ ON CONFLICT (tenant_id, created_by, command_id) WHERE command_id IS NOT NULL DO 
 RETURNING id::text, tenant_id::text, school_id::text, grade_id::text, COALESCE(exam_template_id::text,''), COALESCE(exam_template_version,0), name, exam_type,
           status, grading_mode, appeal_enabled, publish_policy, created_by::text,
           COALESCE(command_id,''), revision, created_at, updated_at
-`, scope.TenantID, input.SchoolID, input.GradeID, input.TemplateID, templateVersion, input.Name, input.ExamType, input.GradingMode, appealEnabled, input.PublishPolicy, createdBy, input.CommandID, requestHash)
+`, scope.TenantID, input.SchoolID, input.GradeID, input.TemplateID, templateVersion, input.Name, input.ExamType, input.GradingMode, *input.AppealEnabled, input.PublishPolicy, createdBy, input.CommandID, requestHash)
 	var session ExamSession
 	if err := row.Scan(&session.ID, &session.TenantID, &session.SchoolID, &session.GradeID, &session.TemplateID, &session.TemplateVersion, &session.Name, &session.ExamType, &session.Status, &session.GradingMode, &session.AppealEnabled, &session.PublishPolicy, &session.CreatedBy, &session.CommandID, &session.Revision, &session.CreatedAt, &session.UpdatedAt); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			if input.CommandID != "" {
-				existing, existingErr := loadExamSessionByCommandTx(ctx, tx, scope.TenantID, createdBy, input.CommandID)
-				if existingErr == nil {
-					if hashErr := requireExamSessionCommandHash(ctx, tx, scope.TenantID, createdBy, input.CommandID, requestHash); hashErr != nil {
-						return ExamSession{}, hashErr
-					}
-					return existing, tx.Commit()
-				}
-				return ExamSession{}, existingErr
+				existing, existingErr := loadMatchingExamSessionCommandTx(ctx, tx, scope.TenantID, createdBy, input.CommandID, requestHash)
+				return existing, false, existingErr
 			}
-			return ExamSession{}, ErrInvalidInput
+			return ExamSession{}, false, ErrInvalidInput
 		}
-		return ExamSession{}, err
+		return ExamSession{}, false, err
 	}
+	return session, true, nil
+}
 
-	for _, subject := range input.Subjects {
-		classIDs := subject.ClassIDs
-		if len(classIDs) == 0 {
-			classIDs = input.ClassIDs
-		}
-		if !scopeAllowsRequestedClasses(scope, input.SchoolID, classIDs) {
-			return ExamSession{}, ErrScopeForbidden
-		}
-		if err := requireSessionClasses(ctx, tx, scope.TenantID, input.SchoolID, input.GradeID, classIDs); err != nil {
-			return ExamSession{}, err
-		}
-		candidateRule := subject.CandidateRule
-		if candidateRule == "" {
-			candidateRule = "all_selected_classes"
-		}
-		examName := fmt.Sprintf("%s · %s", input.Name, subjectDisplayName(subject.Subject))
-		examRow := tx.QueryRowContext(ctx, `
+// 子科班级为空时继承考次班级；每科在写入前仍按服务器作用域检查，并使用外层事务创建名册和蓝图。
+func (s *PostgresStore) createExamSessionSubjectTx(ctx context.Context, tx *sql.Tx, scope auth.AccessScope, createdBy string, input CreateSessionInput, session ExamSession, subject SessionSubjectInput) (Exam, error) {
+	classIDs := subject.ClassIDs
+	if len(classIDs) == 0 {
+		classIDs = input.ClassIDs
+	}
+	if !scopeAllowsRequestedClasses(scope, input.SchoolID, classIDs) {
+		return Exam{}, ErrScopeForbidden
+	}
+	if err := requireSessionClasses(ctx, tx, scope.TenantID, input.SchoolID, input.GradeID, classIDs); err != nil {
+		return Exam{}, err
+	}
+	candidateRule := subject.CandidateRule
+	if candidateRule == "" {
+		candidateRule = "all_selected_classes"
+	}
+	examName := fmt.Sprintf("%s · %s", input.Name, subjectDisplayName(subject.Subject))
+	examRow := tx.QueryRowContext(ctx, `
 INSERT INTO exam (tenant_id, school_id, exam_session_id, name, subject, exam_type, total_score, status,
                   grading_mode, appeal_enabled, publish_policy, created_by, duration_minutes, candidate_rule)
 VALUES ($1, $2, $3, $4, $5, $6, $7, 'draft', $8, $9, $10, $11, $12, $13)
 RETURNING id::text, tenant_id::text, school_id::text, name, subject, exam_type, total_score::float8,
           status, grading_mode, appeal_enabled, publish_policy, created_by::text, revision, created_at, updated_at
-`, scope.TenantID, input.SchoolID, session.ID, examName, subject.Subject, input.ExamType, subject.TotalScore, input.GradingMode, appealEnabled, input.PublishPolicy, createdBy, subject.DurationMinutes, candidateRule)
-		var child Exam
-		if err := scanExam(examRow, &child); err != nil {
-			return ExamSession{}, err
-		}
-		if err := s.replaceClasses(ctx, tx, scope, child.ID, classIDs); err != nil {
-			return ExamSession{}, err
-		}
-		if err := s.refreshExamCandidateSnapshot(ctx, tx, scope.TenantID, child.ID); err != nil {
-			return ExamSession{}, err
-		}
-		child.ClassIDs = cloneStrings(classIDs)
-		child.SessionID = session.ID
-		child.SessionName = session.Name
-		child.SessionGradeID = session.GradeID
-		questionOrder := 1
-		for sectionOrder, section := range subject.Sections {
-			var sectionID string
-			if err := tx.QueryRowContext(ctx, `
+`, scope.TenantID, input.SchoolID, session.ID, examName, subject.Subject, input.ExamType, subject.TotalScore, input.GradingMode, *input.AppealEnabled, input.PublishPolicy, createdBy, subject.DurationMinutes, candidateRule)
+	var child Exam
+	if err := scanExam(examRow, &child); err != nil {
+		return Exam{}, err
+	}
+	if err := s.replaceClasses(ctx, tx, scope, child.ID, classIDs); err != nil {
+		return Exam{}, err
+	}
+	if err := s.refreshExamCandidateSnapshot(ctx, tx, scope.TenantID, child.ID); err != nil {
+		return Exam{}, err
+	}
+	child.ClassIDs = cloneStrings(classIDs)
+	child.SessionID = session.ID
+	child.SessionName = session.Name
+	child.SessionGradeID = session.GradeID
+	if err := insertExamSessionBlueprintTx(ctx, tx, scope.TenantID, child.ID, subject.Sections); err != nil {
+		return Exam{}, err
+	}
+	return child, nil
+}
+
+// 每科题号从 1 开始，在分区间连续递增；分区和题目失败都交由外层考次事务回滚。
+func insertExamSessionBlueprintTx(ctx context.Context, tx *sql.Tx, tenantID, examID string, sections []BlueprintSectionInput) error {
+	questionOrder := 1
+	for sectionOrder, section := range sections {
+		var sectionID string
+		if err := tx.QueryRowContext(ctx, `
 INSERT INTO exam_blueprint_section (tenant_id, exam_id, title, question_type, question_count, score_per_question, sort_order)
 VALUES ($1, $2, $3, $4, $5, $6, $7)
 RETURNING id::text
-`, scope.TenantID, child.ID, section.Title, section.QuestionType, section.QuestionCount, section.ScorePerQuestion, sectionOrder+1).Scan(&sectionID); err != nil {
-				return ExamSession{}, err
-			}
-			for index := 0; index < section.QuestionCount; index++ {
-				if _, err := tx.ExecContext(ctx, `
-INSERT INTO question (tenant_id, exam_id, question_no, question_type, score, stem, knowledge_points, sort_order, status)
-VALUES ($1, $2, $3, $4, $5, '', '[]', $6, 'draft')
-`, scope.TenantID, child.ID, fmt.Sprintf("%d", questionOrder), section.QuestionType, section.ScorePerQuestion, questionOrder); err != nil {
-					return ExamSession{}, err
-				}
-				questionOrder++
-			}
+`, tenantID, examID, section.Title, section.QuestionType, section.QuestionCount, section.ScorePerQuestion, sectionOrder+1).Scan(&sectionID); err != nil {
+			return err
 		}
-		session.Exams = append(session.Exams, child)
+		for index := 0; index < section.QuestionCount; index++ {
+			if _, err := tx.ExecContext(ctx, `
+INSERT INTO question (tenant_id, exam_id, question_no, question_type, score, stem, knowledge_points, sort_order, status,score_source)
+VALUES ($1, $2, $3, $4, $5, '', '[]', $6, 'draft','preset')
+`, tenantID, examID, fmt.Sprintf("%d", questionOrder), section.QuestionType, section.ScorePerQuestion, questionOrder); err != nil {
+				return err
+			}
+			questionOrder++
+		}
 	}
-	if err := tx.Commit(); err != nil {
-		return ExamSession{}, err
-	}
-	return session, nil
+	return nil
 }
 
 func loadExamSessionByCommandTx(ctx context.Context, tx *sql.Tx, tenantID, createdBy, commandID string) (ExamSession, error) {
@@ -240,8 +277,7 @@ WHERE tenant_id=$1::uuid AND actor_id=$2::uuid AND method='POST'
 					result.ErrorCode = envelope.Error.Code
 				}
 			default:
-				// A completed success receipt without its transactional business
-				// fact is an integrity anomaly, not permission to create again.
+				// 成功完成的回执缺少事务性业务事实，属于完整性异常，不能视为允许重新创建。
 				result.Status = "unknown"
 			}
 		}

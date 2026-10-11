@@ -1,0 +1,567 @@
+{
+  "files": 10,
+  "pages": 70,
+  "errors": [],
+  "details": [
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "01 系统功能总览与详细页入口",
+      "nodes": 11,
+      "edges": 10,
+      "width": 2340,
+      "height": 1859
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "02 F01 身份与平台",
+      "nodes": 8,
+      "edges": 6,
+      "width": 2340,
+      "height": 1742
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "03 F02 组织与学校",
+      "nodes": 8,
+      "edges": 6,
+      "width": 2340,
+      "height": 1742
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "04 F03 题库与试卷",
+      "nodes": 8,
+      "edges": 6,
+      "width": 2340,
+      "height": 1742
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "05 F04 考试管理",
+      "nodes": 8,
+      "edges": 6,
+      "width": 2340,
+      "height": 1742
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "06 F05 采集、图像与模板",
+      "nodes": 8,
+      "edges": 6,
+      "width": 2340,
+      "height": 1742
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "07 F06 OCR 与答案理解",
+      "nodes": 8,
+      "edges": 6,
+      "width": 2340,
+      "height": 1742
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "08 F07 AI 评分与人工复核",
+      "nodes": 8,
+      "edges": 6,
+      "width": 2340,
+      "height": 1742
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "09 F08 成绩、发布与学生",
+      "nodes": 8,
+      "edges": 6,
+      "width": 2340,
+      "height": 1742
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "10 F09 模型治理与阅卷质量",
+      "nodes": 8,
+      "edges": 6,
+      "width": 2340,
+      "height": 1742
+    },
+    {
+      "file": "01-feature-tree.drawio",
+      "page": "11 F10 桌面客户端与运维",
+      "nodes": 8,
+      "edges": 6,
+      "width": 2340,
+      "height": 1742
+    },
+    {
+      "file": "02-system-architecture.drawio",
+      "page": "逻辑分层：前端、模块化单体与持久化",
+      "nodes": 14,
+      "edges": 15,
+      "width": 2340,
+      "height": 1963
+    },
+    {
+      "file": "02-system-architecture.drawio",
+      "page": "计算、治理与异步任务的实际边界",
+      "nodes": 11,
+      "edges": 9,
+      "width": 2340,
+      "height": 1794
+    },
+    {
+      "file": "03-module-dependencies.drawio",
+      "page": "组合根、公共依赖与维护债务",
+      "nodes": 8,
+      "edges": 4,
+      "width": 2340,
+      "height": 1599
+    },
+    {
+      "file": "03-module-dependencies.drawio",
+      "page": "考试资料与采集的直接包依赖",
+      "nodes": 9,
+      "edges": 11,
+      "width": 2340,
+      "height": 1781
+    },
+    {
+      "file": "03-module-dependencies.drawio",
+      "page": "主观评分的直接包依赖",
+      "nodes": 9,
+      "edges": 10,
+      "width": 2340,
+      "height": 1690
+    },
+    {
+      "file": "03-module-dependencies.drawio",
+      "page": "发布与学校助手的直接包依赖",
+      "nodes": 8,
+      "edges": 7,
+      "width": 2340,
+      "height": 1690
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "数据库全局：核心实体与历史事实",
+      "nodes": 20,
+      "edges": 18,
+      "width": 3450,
+      "height": 3075
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "关系读法：M:N桥表与1:0..1约束",
+      "nodes": 17,
+      "edges": 11,
+      "width": 3525,
+      "height": 3525
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "认证与RBAC",
+      "nodes": 8,
+      "edges": 2,
+      "width": 3450,
+      "height": 2175
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "身份激活、风险与MFA",
+      "nodes": 10,
+      "edges": 1,
+      "width": 3450,
+      "height": 2175
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "组织、学籍与学校",
+      "nodes": 8,
+      "edges": 7,
+      "width": 3450,
+      "height": 2175
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "整场考试、学科与冻结名册",
+      "nodes": 10,
+      "edges": 4,
+      "width": 3450,
+      "height": 2175
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "试卷、题目、答案与评分细则",
+      "nodes": 6,
+      "edges": 3,
+      "width": 3450,
+      "height": 2175
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "试卷资料导入与识别代次",
+      "nodes": 5,
+      "edges": 2,
+      "width": 3450,
+      "height": 2175
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "答卷采集、批次与页面",
+      "nodes": 9,
+      "edges": 4,
+      "width": 3450,
+      "height": 2175
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "质量、配准与模板复用",
+      "nodes": 8,
+      "edges": 3,
+      "width": 3450,
+      "height": 2175
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "答题卡打印与学生纸张身份",
+      "nodes": 3,
+      "edges": 2,
+      "width": 3450,
+      "height": 2175
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "任务来源、执行与投影",
+      "nodes": 11,
+      "edges": 2,
+      "width": 3450,
+      "height": 2175
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "答案与客观评分版本",
+      "nodes": 7,
+      "edges": 3,
+      "width": 3450,
+      "height": 2175
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "人工复核、双评与成绩事实",
+      "nodes": 10,
+      "edges": 4,
+      "width": 3450,
+      "height": 2175
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "主观AI评分、面板与评估门禁",
+      "nodes": 7,
+      "edges": 3,
+      "width": 3450,
+      "height": 2175
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "模型治理、配置与审批",
+      "nodes": 11,
+      "edges": 6,
+      "width": 3450,
+      "height": 2175
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "学校运维、调用计量与投影",
+      "nodes": 5,
+      "edges": 0,
+      "width": 3450,
+      "height": 2175
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "学科画像、题型、冻结快照与证据",
+      "nodes": 5,
+      "edges": 1,
+      "width": 3450,
+      "height": 2175
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "金标卷与阅卷员校准",
+      "nodes": 6,
+      "edges": 1,
+      "width": 3450,
+      "height": 2175
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "答案组、抽样与决策",
+      "nodes": 5,
+      "edges": 2,
+      "width": 3450,
+      "height": 2175
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "种子题、漂移与回评",
+      "nodes": 9,
+      "edges": 3,
+      "width": 3450,
+      "height": 2175
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "AI资格、评估与校准",
+      "nodes": 10,
+      "edges": 5,
+      "width": 3450,
+      "height": 2175
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "不可变成绩发布与质量门禁",
+      "nodes": 10,
+      "edges": 4,
+      "width": 3450,
+      "height": 2175
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "重评、题目申诉与调整",
+      "nodes": 7,
+      "edges": 3,
+      "width": 3450,
+      "height": 2175
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "数学理解证据、纠错与试点门禁",
+      "nodes": 3,
+      "edges": 1,
+      "width": 3450,
+      "height": 2175
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "题库内容版本、ACL与发布",
+      "nodes": 8,
+      "edges": 4,
+      "width": 3450,
+      "height": 2175
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "题库模板、元数据、分组与导入",
+      "nodes": 8,
+      "edges": 3,
+      "width": 3450,
+      "height": 2175
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "文件生命周期、审计命令与迁移",
+      "nodes": 9,
+      "edges": 1,
+      "width": 3450,
+      "height": 2175
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "桌面离线SQLite与本地关系",
+      "nodes": 8,
+      "edges": 5,
+      "width": 3450,
+      "height": 2175
+    },
+    {
+      "file": "05-business-workflow.drawio",
+      "page": "01 创建考试、资料冻结与答题卡处理",
+      "nodes": 13,
+      "edges": 12,
+      "width": 2340,
+      "height": 1963
+    },
+    {
+      "file": "05-business-workflow.drawio",
+      "page": "02 评分分流、人工终评与不可变发布",
+      "nodes": 13,
+      "edges": 16,
+      "width": 2340,
+      "height": 1950
+    },
+    {
+      "file": "05-business-workflow.drawio",
+      "page": "03 两条发布与学生读取路径并存",
+      "nodes": 10,
+      "edges": 6,
+      "width": 2340,
+      "height": 1898
+    },
+    {
+      "file": "06-image-template-pipeline.drawio",
+      "page": "01 采集、质量与已有模板路由",
+      "nodes": 13,
+      "edges": 13,
+      "width": 2340,
+      "height": 1963
+    },
+    {
+      "file": "06-image-template-pipeline.drawio",
+      "page": "02 OpenCV 配准、切题与人工纠正",
+      "nodes": 12,
+      "edges": 13,
+      "width": 2340,
+      "height": 1911
+    },
+    {
+      "file": "06-image-template-pipeline.drawio",
+      "page": "03 整页空白、OMR空白与OCR空文本",
+      "nodes": 10,
+      "edges": 6,
+      "width": 2340,
+      "height": 1833
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "01 实际生产入口：单适配器建议与服务端结算",
+      "nodes": 13,
+      "edges": 11,
+      "width": 2340,
+      "height": 1963
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "02 已实现的三智能体内核：并行主评、盲仲裁",
+      "nodes": 12,
+      "edges": 14,
+      "width": 2340,
+      "height": 1963
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "03 模型失败、幂等与成本边界",
+      "nodes": 9,
+      "edges": 8,
+      "width": 2340,
+      "height": 1534
+    },
+    {
+      "file": "07-ai-grading.drawio",
+      "page": "04 数学多模态输入与确定性结算",
+      "nodes": 12,
+      "edges": 9,
+      "width": 2340,
+      "height": 1872
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "01 API 全局入口、统计口径与数据边界",
+      "nodes": 11,
+      "edges": 8,
+      "width": 2340,
+      "height": 1950
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "02 身份、平台学校与组织成员",
+      "nodes": 16,
+      "edges": 12,
+      "width": 2340,
+      "height": 1716
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "03 考试、试卷、题库与模板",
+      "nodes": 16,
+      "edges": 12,
+      "width": 2340,
+      "height": 1716
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "04 采集、配准、OCR 与答案证据",
+      "nodes": 16,
+      "edges": 12,
+      "width": 2340,
+      "height": 1716
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "05 评分、复核、发布与学生数据",
+      "nodes": 16,
+      "edges": 12,
+      "width": 2340,
+      "height": 1716
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "06 模型治理、质量工具与 AI 外部调用",
+      "nodes": 16,
+      "edges": 12,
+      "width": 2340,
+      "height": 1716
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "07 文件、对象存储与后台任务的数据流",
+      "nodes": 12,
+      "edges": 11,
+      "width": 2340,
+      "height": 1911
+    },
+    {
+      "file": "08-api-data-flow.drawio",
+      "page": "08 重要 API 的鉴权顺序与缓存重放",
+      "nodes": 11,
+      "edges": 5,
+      "width": 2340,
+      "height": 1950
+    },
+    {
+      "file": "09-task-state-machine.drawio",
+      "page": "01 agent_worker_task 的真实状态机",
+      "nodes": 11,
+      "edges": 15,
+      "width": 2340,
+      "height": 1885
+    },
+    {
+      "file": "09-task-state-machine.drawio",
+      "page": "02 评分编排与人工双评的领域状态",
+      "nodes": 12,
+      "edges": 12,
+      "width": 2340,
+      "height": 1885
+    },
+    {
+      "file": "09-task-state-machine.drawio",
+      "page": "03 提交边界与已确认恢复缺口",
+      "nodes": 12,
+      "edges": 6,
+      "width": 2340,
+      "height": 1872
+    },
+    {
+      "file": "10-security-deployment.drawio",
+      "page": "身份、权限、幂等与学校数据边界",
+      "nodes": 9,
+      "edges": 7,
+      "width": 2340,
+      "height": 1885
+    },
+    {
+      "file": "10-security-deployment.drawio",
+      "page": "凭据加密、使用与会话安全",
+      "nodes": 8,
+      "edges": 5,
+      "width": 2340,
+      "height": 1677
+    },
+    {
+      "file": "10-security-deployment.drawio",
+      "page": "物理部署：Compose定义与客户端宿主机",
+      "nodes": 10,
+      "edges": 8,
+      "width": 2340,
+      "height": 2028
+    }
+  ]
+}

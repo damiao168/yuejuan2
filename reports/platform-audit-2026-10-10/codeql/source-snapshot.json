@@ -1,0 +1,8 @@
+{
+  "snapshot_completed": "2026-10-11T10:55:42+08:00",
+  "manifest": "D:\\project\\yuejuan\\reports\\platform-audit-2026-10-10\\source-manifest-resume-2026-10-11.csv",
+  "verification": "All copied files match manifest SHA256",
+  "manifest_sha256": "f939ec3a24e837f45fba766fc1d614ad75d63707d8303e2f090029787506a56f",
+  "source_root": "D:\\tools\\audit-codeql-20261010\\source-20261011",
+  "files": 2502
+}

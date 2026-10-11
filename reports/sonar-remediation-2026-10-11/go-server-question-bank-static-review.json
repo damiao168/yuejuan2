@@ -1,0 +1,62 @@
+[
+  {
+    "path": "services/api-gateway/internal/server/e2e_question_bank_acl_ux_test.go",
+    "removed_diagnostics": [],
+    "added_diagnostics": [],
+    "removed_string_literals": [],
+    "added_string_literals": [],
+    "qb_request_call_count_before": 0,
+    "qb_request_call_count_after": 0,
+    "subtest_count_before": 0,
+    "subtest_count_after": 0,
+    "single_occurrence_bindings": []
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_question_bank_import_test.go",
+    "removed_diagnostics": [],
+    "added_diagnostics": [],
+    "removed_string_literals": [],
+    "added_string_literals": [],
+    "qb_request_call_count_before": 8,
+    "qb_request_call_count_after": 8,
+    "subtest_count_before": 0,
+    "subtest_count_after": 0,
+    "single_occurrence_bindings": []
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_question_bank_metadata_acl_search_test.go",
+    "removed_diagnostics": [],
+    "added_diagnostics": [],
+    "removed_string_literals": [],
+    "added_string_literals": [],
+    "qb_request_call_count_before": 1,
+    "qb_request_call_count_after": 1,
+    "subtest_count_before": 0,
+    "subtest_count_after": 0,
+    "single_occurrence_bindings": []
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_question_bank_publication_test.go",
+    "removed_diagnostics": [],
+    "added_diagnostics": [],
+    "removed_string_literals": [],
+    "added_string_literals": [],
+    "qb_request_call_count_before": 5,
+    "qb_request_call_count_after": 5,
+    "subtest_count_before": 4,
+    "subtest_count_after": 4,
+    "single_occurrence_bindings": []
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_question_bank_test.go",
+    "removed_diagnostics": [],
+    "added_diagnostics": [],
+    "removed_string_literals": [],
+    "added_string_literals": [],
+    "qb_request_call_count_before": 22,
+    "qb_request_call_count_after": 22,
+    "subtest_count_before": 8,
+    "subtest_count_after": 8,
+    "single_occurrence_bindings": []
+  }
+]

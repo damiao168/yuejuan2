@@ -1,11 +1,11 @@
-//! Scanner integration boundary for the Windows scan station.
+//! Windows 扫描站的扫描器集成边界。
 //!
-//! The product layer only knows about [`ScannerProfile`] and preflight results.
-//! It never imports a vendor SDK.  The first Windows bridge uses the operating
-//! system's WIA inventory solely to discover supported drivers; acquisition is
-//! deliberately kept behind [`ScannerBridge`] until it is validated against a
-//! real device.  This prevents a detected printer/driver from being advertised
-//! as a working production scanner.
+//! 产品层只依赖 [`ScannerProfile`] 和预检结果。
+//! 它不导入厂商 SDK。首个 Windows 桥接仅使用操作系统的
+//! WIA 设备清单发现受支持的驱动；采集功能
+//! 保留在 [`ScannerBridge`] 后面，只有在真实设备上
+//! 验证后才可启用。这样可避免将检测到的打印机或驱动
+//! 宣传为已经可用于生产的扫描器。
 
 use chrono::Utc;
 use rusqlite::{params, Connection};
@@ -56,17 +56,17 @@ pub struct SaveScannerProfileInput {
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct ScannerDevice {
-    /// Stable, non-reversible identity derived from the driver supplied ID.
+    /// 从驱动提供的 ID 派生的稳定、不可逆标识。
     pub fingerprint: String,
     pub display_name: String,
     pub driver_status: String,
-    /// "wia_inventory" means the Windows driver is visible.  It is not a
-    /// promise that an acquisition workflow has passed hardware validation.
+    /// "wia_inventory" 表示 Windows 驱动可见，
+    /// 不表示采集流程已经通过硬件验证。
     pub bridge: String,
 }
 
-/// A scanner adapter is intentionally small so WIA, TWAIN or a school-supplied
-/// bridge can be substituted without spreading vendor types through the app.
+/// 扫描器适配器保持精简，便于替换 WIA、TWAIN 或学校提供的
+/// 桥接实现，避免厂商类型扩散到整个应用。
 pub trait ScannerBridge {
     fn inventory(&self) -> Result<Vec<ScannerDevice>, String>;
     fn bridge_name(&self) -> &'static str;
@@ -88,8 +88,8 @@ impl ScannerBridge for SystemWiaInventoryBridge {
 #[serde(rename_all = "camelCase")]
 pub struct ScannerPreflightRequest {
     pub profile_id: String,
-    /// The answer-sheet template selected for this batch.  It is deliberately
-    /// passed by the caller rather than inferred from a filename.
+    /// 本批次选用的答题卡模板，由调用方显式传入，
+    /// 不从文件名推断。
     pub expected_paper_size: String,
     pub expected_template_preset: String,
     pub expected_duplex: bool,
@@ -114,8 +114,8 @@ pub struct ScannerPreflightResult {
     pub ready_to_scan: bool,
     pub profile: ScannerProfile,
     pub checks: Vec<ScannerPreflightCheck>,
-    /// Direct WIA/TWAIN acquisition is a separately validated driver bridge.
-    /// File intake remains available after a passing preflight.
+    /// 直接 WIA/TWAIN 采集由单独验证的驱动桥接实现。
+    /// 预检通过后仍可使用文件导入。
     pub acquisition_status: String,
 }
 
@@ -287,8 +287,8 @@ fn run_scanner_preflight_scoped(
     let conn = open_profile_store(&app)?;
     let profile = read_profile(&conn, &request.profile_id)?;
     let inventory = SystemWiaInventoryBridge.inventory();
-    // The outer lease guard holds the operation lock while preflight runs.
-    // A scoped store root proves that a logged-in account is selected.
+    // 预检期间，外层租约守卫持有操作锁。
+    // 带账号作用域的存储根目录表明已选定登录账号。
     let durable_status = crate::durable_store::scoped_status(app.clone());
     let free_bytes = available_disk_bytes();
     Ok(evaluate_preflight(
@@ -367,23 +367,10 @@ fn evaluate_preflight(
             ),
         ));
     }
-    if profile.duplex == request.expected_duplex {
-        checks.push(pass(
-            "duplex",
-            "单双面",
-            if profile.duplex {
-                "Profile 使用双面扫描。"
-            } else {
-                "Profile 使用单面扫描。"
-            },
-        ));
-    } else {
-        checks.push(fail(
-            "duplex",
-            "单双面",
-            "Profile 的单双面设置与本批答题卡不一致。",
-        ));
-    }
+    checks.push(duplex_preflight_check(
+        profile.duplex,
+        request.expected_duplex,
+    ));
     match request.expected_dpi {
         Some(expected) if expected == profile.dpi => checks.push(pass(
             "dpi",
@@ -462,6 +449,7 @@ fn evaluate_preflight(
         "样张质量预检",
         "请在开始批量扫描前选择一张扫描样张，运行模糊、曝光、裁边和倾斜检查。该检查是筛查，不替代服务端质量门禁。",
     ));
+    // warning 不阻止本机扫描；开始扫描只取决于 blocking 检查，离线提示仍允许本地扫描。
     let ready_to_scan = !checks.iter().any(|check| check.blocking);
     ScannerPreflightResult {
         ready_to_scan,
@@ -469,6 +457,26 @@ fn evaluate_preflight(
         checks,
         acquisition_status: "file_intake_ready; direct_wia_acquisition_requires_device_validation"
             .to_string(),
+    }
+}
+
+fn duplex_preflight_check(actual_duplex: bool, expected_duplex: bool) -> ScannerPreflightCheck {
+    if actual_duplex == expected_duplex {
+        pass(
+            "duplex",
+            "单双面",
+            if actual_duplex {
+                "Profile 使用双面扫描。"
+            } else {
+                "Profile 使用单面扫描。"
+            },
+        )
+    } else {
+        fail(
+            "duplex",
+            "单双面",
+            "Profile 的单双面设置与本批答题卡不一致。",
+        )
     }
 }
 
@@ -621,8 +629,8 @@ fn read_profile(conn: &Connection, id: &str) -> Result<ScannerProfile, String> {
 fn inventory_devices() -> Result<Vec<ScannerDevice>, String> {
     #[cfg(windows)]
     {
-        // This script is static (no device/profile data is interpolated).  WIA
-        // is part of Windows, which lets us avoid a vendor SDK at this boundary.
+        // 此脚本是静态内容，不插入设备或配置数据。WIA
+        // 属于 Windows 系统组件，因此这个边界无需厂商 SDK。
         let output = Command::new("powershell")
             .args([
                 "-NoProfile",
@@ -804,6 +812,92 @@ mod tests {
             result.checks.iter().filter(|check| check.blocking).count(),
             4
         );
+    }
+
+    fn connected_devices() -> Vec<ScannerDevice> {
+        vec![ScannerDevice {
+            fingerprint: "wia:test-device".into(),
+            display_name: "fixture".into(),
+            driver_status: "ready".into(),
+            bridge: "wia_inventory".into(),
+        }]
+    }
+
+    #[test]
+    fn preflight_preserves_check_order_and_nonblocking_warnings() {
+        let mut input = request();
+        input.expected_dpi = None;
+        // 无磁盘探测值、未校准 DPI 与离线网络都只提示；设备和模板匹配时仍允许本机扫描。
+        let result = evaluate_preflight(profile(), Ok(connected_devices()), true, None, &input);
+        assert!(result.ready_to_scan);
+        assert_eq!(
+            result
+                .checks
+                .iter()
+                .map(|check| check.key.as_str())
+                .collect::<Vec<_>>(),
+            vec![
+                "device_connected",
+                "paper_size",
+                "template_preset",
+                "duplex",
+                "dpi",
+                "secure_storage",
+                "disk_space",
+                "network",
+                "sample_quality",
+            ]
+        );
+        assert_eq!(
+            result
+                .checks
+                .iter()
+                .filter(|check| check.status == "warning")
+                .map(|check| check.key.as_str())
+                .collect::<Vec<_>>(),
+            vec!["dpi", "disk_space", "network", "sample_quality"]
+        );
+        assert!(result.checks.iter().all(|check| !check.blocking));
+    }
+
+    #[test]
+    fn preflight_duplex_check_preserves_actual_mode_and_template_gate() {
+        for actual_duplex in [false, true] {
+            for expected_duplex in [false, true] {
+                let mut scanner_profile = profile();
+                scanner_profile.duplex = actual_duplex;
+                let mut input = request();
+                input.expected_duplex = expected_duplex;
+                let result = evaluate_preflight(
+                    scanner_profile,
+                    Ok(connected_devices()),
+                    true,
+                    Some(4096),
+                    &input,
+                );
+                let duplex = result
+                    .checks
+                    .iter()
+                    .find(|check| check.key == "duplex")
+                    .unwrap();
+                assert_eq!(result.ready_to_scan, actual_duplex == expected_duplex);
+                assert_eq!(duplex.blocking, actual_duplex != expected_duplex);
+                if actual_duplex == expected_duplex {
+                    assert_eq!(duplex.status, "passed");
+                    assert_eq!(
+                        duplex.detail,
+                        if actual_duplex {
+                            "Profile 使用双面扫描。"
+                        } else {
+                            "Profile 使用单面扫描。"
+                        }
+                    );
+                } else {
+                    assert_eq!(duplex.status, "failed");
+                    assert_eq!(duplex.detail, "Profile 的单双面设置与本批答题卡不一致。");
+                }
+            }
+        }
     }
 
     #[test]

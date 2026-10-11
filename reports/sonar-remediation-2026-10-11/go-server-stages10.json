@@ -1,0 +1,25 @@
+{
+  "files": [
+    {
+      "file": "services/api-gateway/internal/server/e2e_math_grading_binding_test.go",
+      "sha256": "d3f8ab80b62d1751cf983f819b69ee1f53960d7d6c1bd3ecb90c96927ed27e27",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_math_grading_binding_test.go"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_story060_roster_test.go",
+      "sha256": "0cc5ffd6b12e538f44a0a7b3e2da3778ee09ec87cf05edbb976f7ad5b3bbb16c",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_story060_roster_test.go"
+    }
+  ],
+  "issue_functions": [
+    {
+      "file": "services/api-gateway/internal/server/e2e_math_grading_binding_test.go",
+      "function": "TestPostgresMathGradingBindingsRoundTripAndRejectWrongVersion"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_story060_roster_test.go",
+      "function": "TestStory060FiveHundredStudentRosterScaleE2EWithPostgresTestDatabase"
+    }
+  ],
+  "checkpoint_relation": "after checkpoint02; requires subsequent scan"
+}

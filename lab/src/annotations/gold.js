@@ -15,9 +15,8 @@ export function loadAnnotationPolicy(path = DEFAULT_ANNOTATION_POLICY) {
   return JSON.parse(readFileSync(path, "utf8"));
 }
 
-function validateLabel(label, sample, labelName) {
-  const errors = [];
-  if (!label || typeof label !== "object" || Array.isArray(label)) return [`${labelName} must be an object`];
+function appendLabelFieldErrors(label, labelName, errors) {
+  // 标注只接收人工字段；来源引用仅供仲裁，不能混入教师标注。
   const allowedLabelFields = new Set(LABEL_FIELDS);
   if (label.labeler_role === "adjudicator") allowedLabelFields.add("source_label_ids");
   for (const field of Object.keys(label)) {
@@ -26,6 +25,9 @@ function validateLabel(label, sample, labelName) {
   if (label.labeler_role !== "adjudicator" && label.source_label_ids !== undefined) {
     errors.push(`${labelName}.source_label_ids is allowed only for adjudicators`);
   }
+}
+
+function appendLabelMetadataErrors(label, sample, labelName, errors) {
   if (!label.label_id) errors.push(`${labelName}.label_id is required`);
   if (!/^[a-z0-9][a-z0-9_-]{2,63}$/i.test(label.labeler_id ?? "")) errors.push(`${labelName}.labeler_id must be pseudonymous`);
   if (label.labeler_role !== "teacher" && label.labeler_role !== "adjudicator") errors.push(`${labelName}.labeler_role is invalid`);
@@ -35,6 +37,50 @@ function validateLabel(label, sample, labelName) {
     errors.push(`${labelName}.label_confidence must be between 0 and 1`);
   }
   if (typeof label.rationale !== "string" || label.rationale.trim().length === 0) errors.push(`${labelName}.rationale is required`);
+}
+
+function appendPointIdentityErrors(decision, path, rubricPoints, seen, errors) {
+  for (const field of Object.keys(decision)) {
+    if (!POINT_DECISION_FIELDS.has(field)) errors.push(`${path}.${field} is not allowed`);
+  }
+  const rubricPoint = rubricPoints.get(decision.rubric_point_id);
+  if (!rubricPoint) errors.push(`${path}.rubric_point_id is unknown`);
+  if (seen.has(decision.rubric_point_id)) errors.push(`${path}.rubric_point_id is duplicated`);
+  seen.add(decision.rubric_point_id);
+  if (!STATUSES.has(decision.status)) errors.push(`${path}.status is invalid`);
+  return rubricPoint;
+}
+
+function appendPointScoreErrors(decision, rubricPoint, path, errors) {
+  if (!Number.isFinite(decision.score) || decision.score < 0 || (rubricPoint && decision.score > rubricPoint.score)) {
+    errors.push(`${path}.score is out of range`);
+  }
+  // 状态限定采分点分值：matched 为满分，missing 为零分，partial 位于两者之间。
+  if (decision.status === "missing" && decision.score !== 0) errors.push(`${path} missing status must score zero`);
+  if (decision.status === "matched" && rubricPoint && decision.score !== rubricPoint.score) errors.push(`${path} matched status must receive full point score`);
+  if (decision.status === "partial" && rubricPoint && !(decision.score > 0 && decision.score < rubricPoint.score)) {
+    errors.push(`${path} partial status must be between zero and full point score`);
+  }
+}
+
+function appendPointEvidenceErrors(decision, sample, path, errors) {
+  if (!Array.isArray(decision.evidence)) errors.push(`${path}.evidence must be an array`);
+  const evidence = decision.evidence ?? [];
+  // 得分证据必须来自本份作答；未命中采分点不能附带证据。
+  if (decision.status !== "missing" && evidence.length === 0) errors.push(`${path} scored decisions require evidence`);
+  if (decision.status === "missing" && evidence.length > 0) errors.push(`${path} missing decisions cannot contain evidence`);
+  for (const excerpt of evidence) {
+    if (typeof excerpt !== "string" || !normalizeText(sample.answer_text).includes(normalizeText(excerpt)) || normalizeText(excerpt).length === 0) {
+      errors.push(`${path}.evidence is not found in answer_text`);
+    }
+  }
+}
+
+function validateLabel(label, sample, labelName) {
+  const errors = [];
+  if (!label || typeof label !== "object" || Array.isArray(label)) return [`${labelName} must be an object`];
+  appendLabelFieldErrors(label, labelName, errors);
+  appendLabelMetadataErrors(label, sample, labelName, errors);
   if (!Array.isArray(label.point_decisions)) return [...errors, `${labelName}.point_decisions must be an array`];
 
   const rubricPoints = new Map(sample.rubric.points.map((point) => [point.id, point]));
@@ -46,31 +92,9 @@ function validateLabel(label, sample, labelName) {
       errors.push(`${path} must be an object`);
       return;
     }
-    for (const field of Object.keys(decision)) {
-      if (!POINT_DECISION_FIELDS.has(field)) errors.push(`${path}.${field} is not allowed`);
-    }
-    const rubricPoint = rubricPoints.get(decision.rubric_point_id);
-    if (!rubricPoint) errors.push(`${path}.rubric_point_id is unknown`);
-    if (seen.has(decision.rubric_point_id)) errors.push(`${path}.rubric_point_id is duplicated`);
-    seen.add(decision.rubric_point_id);
-    if (!STATUSES.has(decision.status)) errors.push(`${path}.status is invalid`);
-    if (!Number.isFinite(decision.score) || decision.score < 0 || (rubricPoint && decision.score > rubricPoint.score)) {
-      errors.push(`${path}.score is out of range`);
-    }
-    if (decision.status === "missing" && decision.score !== 0) errors.push(`${path} missing status must score zero`);
-    if (decision.status === "matched" && rubricPoint && decision.score !== rubricPoint.score) errors.push(`${path} matched status must receive full point score`);
-    if (decision.status === "partial" && rubricPoint && !(decision.score > 0 && decision.score < rubricPoint.score)) {
-      errors.push(`${path} partial status must be between zero and full point score`);
-    }
-    if (!Array.isArray(decision.evidence)) errors.push(`${path}.evidence must be an array`);
-    const evidence = decision.evidence ?? [];
-    if (decision.status !== "missing" && evidence.length === 0) errors.push(`${path} scored decisions require evidence`);
-    if (decision.status === "missing" && evidence.length > 0) errors.push(`${path} missing decisions cannot contain evidence`);
-    for (const excerpt of evidence) {
-      if (typeof excerpt !== "string" || !normalizeText(sample.answer_text).includes(normalizeText(excerpt)) || normalizeText(excerpt).length === 0) {
-        errors.push(`${path}.evidence is not found in answer_text`);
-      }
-    }
+    const rubricPoint = appendPointIdentityErrors(decision, path, rubricPoints, seen, errors);
+    appendPointScoreErrors(decision, rubricPoint, path, errors);
+    appendPointEvidenceErrors(decision, sample, path, errors);
     pointTotal += Number.isFinite(decision.score) ? decision.score : 0;
   });
   for (const pointId of rubricPoints.keys()) {
@@ -101,6 +125,28 @@ export function labelsRequireAdjudication(first, second, policy = loadAnnotation
   return policy.evidence_disagreement_requires_adjudication && evidenceSignature(first) !== evidenceSignature(second);
 }
 
+function labelsHaveComparableDecisions(labels) {
+  return Array.isArray(labels[0]?.point_decisions) && Array.isArray(labels[1]?.point_decisions) &&
+    labels.every((label) => label.point_decisions.every((decision) => decision && typeof decision === "object" && !Array.isArray(decision)));
+}
+
+function appendAdjudicationErrors(bundle, errors) {
+  errors.push(...validateLabel(bundle.adjudication, bundle.sample, "adjudication"));
+  if (bundle.adjudication.labeler_role !== "adjudicator") errors.push("adjudication labeler_role must be adjudicator");
+  // 仲裁者不能兼任任一标注者，来源引用还必须覆盖这两份标注。
+  if (bundle.labels.some((label) => label.labeler_id === bundle.adjudication.labeler_id)) {
+    errors.push("adjudicator must be independent from both labelers");
+  }
+  if (!Array.isArray(bundle.adjudication.source_label_ids) || bundle.adjudication.source_label_ids.length !== 2) {
+    errors.push("adjudication.source_label_ids must reference both labels");
+  } else {
+    const expected = bundle.labels.map((label) => label.label_id).sort();
+    if (bundle.adjudication.source_label_ids.slice().sort().join("|") !== expected.join("|")) {
+      errors.push("adjudication.source_label_ids do not match labels");
+    }
+  }
+}
+
 export function validateAnnotationBundle(bundle, policy = loadAnnotationPolicy()) {
   const errors = [];
   if (!bundle?.bundle_id) errors.push("bundle_id is required");
@@ -115,24 +161,11 @@ export function validateAnnotationBundle(bundle, policy = loadAnnotationPolicy()
   const secondErrors = validateLabel(bundle.labels[1], bundle.sample, "labels[1]");
   errors.push(...firstErrors, ...secondErrors);
   if (bundle.labels[0].labeler_id === bundle.labels[1].labeler_id) errors.push("independent labels require different labelers");
-  const labelsHaveDecisions = Array.isArray(bundle.labels[0]?.point_decisions) && Array.isArray(bundle.labels[1]?.point_decisions) &&
-    bundle.labels.every((label) => label.point_decisions.every((decision) => decision && typeof decision === "object" && !Array.isArray(decision)));
+  const labelsHaveDecisions = labelsHaveComparableDecisions(bundle.labels);
   const adjudicationRequired = labelsHaveDecisions ? labelsRequireAdjudication(bundle.labels[0], bundle.labels[1], policy) : true;
   if (adjudicationRequired && !bundle.adjudication) errors.push("adjudication is required for label disagreement");
   if (bundle.adjudication) {
-    errors.push(...validateLabel(bundle.adjudication, bundle.sample, "adjudication"));
-    if (bundle.adjudication.labeler_role !== "adjudicator") errors.push("adjudication labeler_role must be adjudicator");
-    if (bundle.labels.some((label) => label.labeler_id === bundle.adjudication.labeler_id)) {
-      errors.push("adjudicator must be independent from both labelers");
-    }
-    if (!Array.isArray(bundle.adjudication.source_label_ids) || bundle.adjudication.source_label_ids.length !== 2) {
-      errors.push("adjudication.source_label_ids must reference both labels");
-    } else {
-      const expected = bundle.labels.map((label) => label.label_id).sort();
-      if (bundle.adjudication.source_label_ids.slice().sort().join("|") !== expected.join("|")) {
-        errors.push("adjudication.source_label_ids do not match labels");
-      }
-    }
+    appendAdjudicationErrors(bundle, errors);
   }
   return { valid: errors.length === 0, errors, adjudication_required: adjudicationRequired };
 }
@@ -160,9 +193,9 @@ export function buildGoldRecord(bundle, policy = loadAnnotationPolicy()) {
 function quadraticWeightedKappa(pairs, bins) {
   if (pairs.length === 0) return 0;
   const size = bins + 1;
-  const observed = Array.from({ length: size }, () => Array(size).fill(0));
-  const firstHistogram = Array(size).fill(0);
-  const secondHistogram = Array(size).fill(0);
+  const observed = Array.from({ length: size }, () => new Array(size).fill(0));
+  const firstHistogram = new Array(size).fill(0);
+  const secondHistogram = new Array(size).fill(0);
   for (const [first, second] of pairs) {
     observed[first][second] += 1;
     firstHistogram[first] += 1;

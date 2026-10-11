@@ -7,6 +7,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"edugrade-enterprise/services/api-gateway/internal/aidisagreement"
@@ -20,20 +21,23 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/segment"
 )
 
+const (
+	invalidCursorMessage   = "cursor is invalid"
+	reviewImageUnavailable = "review image handler is unavailable"
+)
+
 type GraderQualificationGate interface {
 	RequireQualification(context.Context, string, string, string, string) error
 }
 
-// SeedObservationRefresher is intentionally best-effort. A completed blind
-// quality sample is durable even when its aggregate monitoring projection is
-// temporarily unavailable.
+// SeedObservationRefresher 采用尽力而为方式。
+// 即使聚合监控投影暂时不可用，已完成的盲测质量样本仍已持久化。
 type SeedObservationRefresher interface {
 	RefreshSeedObservation(context.Context, string, string, string, string) error
 }
 
-// AIHumanDisagreementObserver runs only after the durable human-grade commit.
-// It is best-effort by design: observability must never roll back a teacher's
-// legitimate grading action or alter a current/final score.
+// AIHumanDisagreementObserver 只在人工成绩持久化提交后运行，并采用尽力而为方式：
+// 可观测性绝不能回滚教师的有效评分操作，也不能改变当前或最终成绩。
 type AIHumanDisagreementObserver interface {
 	ObserveHumanGrade(context.Context, string, string, string) (aidisagreement.Disagreement, bool, error)
 }
@@ -58,8 +62,8 @@ func (h *Handler) WithQualificationGate(gate GraderQualificationGate) *Handler {
 	return h
 }
 
-// WithSeedHook keeps dark quality samples behind the ordinary review routes.
-// The hook only returns synthetic identifiers and never exposes the Gold source.
+// WithSeedHook 将暗样本隐藏在普通复核路由之后。
+// 钩子只返回合成标识，绝不暴露 Gold 来源。
 func (h *Handler) WithSeedHook(hook seedquality.ReviewHook) *Handler {
 	h.seedHook = hook
 	return h
@@ -107,28 +111,27 @@ func (h *Handler) ListTasks(w http.ResponseWriter, r *http.Request) {
 		Status:     r.URL.Query().Get("status"),
 		AssignedTo: r.URL.Query().Get("assigned_to"),
 		ExamID:     r.URL.Query().Get("exam_id"),
+		QuestionID: r.URL.Query().Get("question_id"),
+		Subject:    strings.TrimSpace(r.URL.Query().Get("subject")),
+		Q:          strings.TrimSpace(r.URL.Query().Get("q")),
 		Limit:      limit + 1,
+	}
+	if value := r.URL.Query().Get("unassigned"); value != "" {
+		filter.Unassigned, err = strconv.ParseBool(value)
+		if err != nil {
+			httpx.Error(w, r, http.StatusBadRequest, "invalid_filter", "unassigned must be a boolean")
+			return
+		}
 	}
 	if scope, ok := auth.AccessScopeFromContext(r.Context()); ok {
 		applyReviewListScope(&filter, scope)
 	}
-	parts, err := pagination.DecodeParts(r.URL.Query().Get("cursor"), 3)
-	if err != nil {
-		httpx.Error(w, r, http.StatusBadRequest, "invalid_pagination", "cursor is invalid")
+	if err := applyReviewListCursor(&filter, r.URL.Query().Get("cursor")); err != nil {
+		httpx.Error(w, r, http.StatusBadRequest, "invalid_pagination", invalidCursorMessage)
 		return
 	}
-	if len(parts) == 3 {
-		filter.CursorPriority, err = strconv.Atoi(parts[0])
-		if err == nil {
-			filter.CursorCreatedAt, err = time.Parse(time.RFC3339Nano, parts[1])
-		}
-		if err != nil {
-			httpx.Error(w, r, http.StatusBadRequest, "invalid_pagination", "cursor is invalid")
-			return
-		}
-		filter.CursorID = parts[2]
-	}
 	if reviewWorkerScoped(user) {
+		// 阅卷员只能读取分配给自己的任务，客户端筛选不能放宽认证身份的边界。
 		filter.AssignedTo = user.ID
 	}
 	tasks, err := h.store.ListTasks(r.Context(), user.TenantID, filter)
@@ -151,6 +154,26 @@ func (h *Handler) ListTasks(w http.ResponseWriter, r *http.Request) {
 		nextCursor = pagination.EncodeParts(strconv.Itoa(last.Priority), last.CreatedAt.UTC().Format(time.RFC3339Nano), last.ID)
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"tasks": tasks, "next_cursor": nextCursor, "has_more": hasMore, "aggregate": aggregate})
+}
+
+// 非空游标必须有三个非空字段；优先级和时间另做类型解析，任务 ID 沿用游标原值。
+func applyReviewListCursor(filter *ListFilter, cursor string) error {
+	parts, err := pagination.DecodeParts(cursor, 3)
+	if err != nil {
+		return err
+	}
+	if len(parts) != 3 {
+		return nil
+	}
+	filter.CursorPriority, err = strconv.Atoi(parts[0])
+	if err == nil {
+		filter.CursorCreatedAt, err = time.Parse(time.RFC3339Nano, parts[1])
+	}
+	if err != nil {
+		return err
+	}
+	filter.CursorID = parts[2]
+	return nil
 }
 
 func (h *Handler) GetTask(w http.ResponseWriter, r *http.Request) {
@@ -217,38 +240,8 @@ func (h *Handler) SubmitGrade(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	r = r.WithContext(commandreceipt.WithInput(r.Context(), input))
-	if h.seedHook != nil {
-		seedExamID, seedQuestionID := "", ""
-		if h.seedRefresher != nil {
-			// The task context carries only synthetic identifiers but retains the
-			// exam/question scope needed for aggregate quality monitoring.
-			if seedContext, handled, contextErr := h.seedHook.GetGraderTaskContext(r.Context(), user.TenantID, r.PathValue("id"), user.ID); contextErr == nil && handled {
-				seedExamID, seedQuestionID = seedContext.Task.ExamID, seedContext.Task.QuestionID
-			}
-		}
-		selections := make(map[string]any, len(input.RubricSelections))
-		for _, selection := range input.RubricSelections {
-			selections[selection.PointID] = selection.Score
-		}
-		receipt, handled, seedErr := h.seedHook.TrySubmit(r.Context(), user.TenantID, r.PathValue("id"), user.ID, seedquality.SubmitInput{
-			Score: input.Score, RubricSelections: selections, ExpectedRevision: input.ExpectedRevision,
-		})
-		if seedErr != nil {
-			writeSeedHookError(w, r, seedErr)
-			return
-		}
-		if handled {
-			h.auditAction(r, "review.human_grade_submitted", "review_task", receipt.TaskID, "submit quality review task")
-			if h.seedRefresher != nil && seedExamID != "" && seedQuestionID != "" {
-				// Keep the blind submission successful even if its asynchronous
-				// quality projection cannot be refreshed right now.
-				_ = h.seedRefresher.RefreshSeedObservation(r.Context(), user.TenantID, seedExamID, seedQuestionID, user.ID)
-			}
-			httpx.JSON(w, http.StatusCreated, map[string]any{"task": map[string]any{
-				"id": receipt.TaskID, "status": receipt.Status, "revision": receipt.Revision,
-			}})
-			return
-		}
+	if h.trySubmitSeedGrade(w, r, user, input) {
+		return
 	}
 	result, err := h.store.SubmitGrade(r.Context(), user.TenantID, r.PathValue("id"), user.ID, input)
 	if err != nil {
@@ -257,8 +250,8 @@ func (h *Handler) SubmitGrade(w http.ResponseWriter, r *http.Request) {
 	}
 	h.auditAction(r, "review.human_grade_submitted", "review_task", result.Task.ID, "submit human grade")
 	if h.disagreement != nil && result.Task.GradeRound == "single" && result.Grade.AIGradeID != "" {
-		// Capture derives both source facts directly from tenant-scoped storage.
-		// A temporary projection error cannot invalidate the submitted grade.
+		// Capture 直接从租户作用域内的存储取得两侧来源事实。
+		// 临时投影错误不能使已提交成绩失效。
 		_, _, _ = h.disagreement.ObserveHumanGrade(r.Context(), user.TenantID, result.Grade.AIGradeID, result.Grade.ID)
 	}
 	if result.FinalGrade != nil {
@@ -283,6 +276,44 @@ func (h *Handler) SubmitGrade(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusCreated, response)
 }
 
+// trySubmitSeedGrade 返回 true 表示已写成功或错误响应；仅未接管时允许普通存储继续提交。
+func (h *Handler) trySubmitSeedGrade(w http.ResponseWriter, r *http.Request, user auth.User, input SubmitGradeInput) bool {
+	if h.seedHook == nil {
+		return false
+	}
+	seedExamID, seedQuestionID := "", ""
+	if h.seedRefresher != nil {
+		// 任务上下文只携带合成标识，但保留聚合质量监控所需的考试与题目作用域。
+		if seedContext, handled, contextErr := h.seedHook.GetGraderTaskContext(r.Context(), user.TenantID, r.PathValue("id"), user.ID); contextErr == nil && handled {
+			seedExamID, seedQuestionID = seedContext.Task.ExamID, seedContext.Task.QuestionID
+		}
+	}
+	selections := make(map[string]any, len(input.RubricSelections))
+	for _, selection := range input.RubricSelections {
+		selections[selection.PointID] = selection.Score
+	}
+	receipt, handled, seedErr := h.seedHook.TrySubmit(r.Context(), user.TenantID, r.PathValue("id"), user.ID, seedquality.SubmitInput{
+		Score: input.Score, RubricSelections: selections, ExpectedRevision: input.ExpectedRevision,
+	})
+	// 钩子错误优先于 handled；失败不能回退普通存储，避免同次请求提交另一种任务。
+	if seedErr != nil {
+		writeSeedHookError(w, r, seedErr)
+		return true
+	}
+	if !handled {
+		return false
+	}
+	h.auditAction(r, "review.human_grade_submitted", "review_task", receipt.TaskID, "submit quality review task")
+	if h.seedRefresher != nil && seedExamID != "" && seedQuestionID != "" {
+		// 即使暂时无法刷新异步质量投影，盲测提交仍保持成功。
+		_ = h.seedRefresher.RefreshSeedObservation(r.Context(), user.TenantID, seedExamID, seedQuestionID, user.ID)
+	}
+	httpx.JSON(w, http.StatusCreated, map[string]any{"task": map[string]any{
+		"id": receipt.TaskID, "status": receipt.Status, "revision": receipt.Revision,
+	}})
+	return true
+}
+
 func (h *Handler) ReturnTask(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
 	isReviewManager := reviewManagerScoped(user)
@@ -304,10 +335,8 @@ func (h *Handler) ReturnTask(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, map[string]any{"task": task})
 }
 
-// A queue manager may return any mutable task. A reviewer may return only a
-// task that is both durably assigned to them and actively claimed by them.
-// Assignment alone is deliberately insufficient: merely opening or prefetching
-// a task must not grant authority to alter the queue.
+// 队列管理员可退回任意可变任务。复核人员只能退回已持久分配给自己且当前由自己领取的任务。
+// 仅分配还不够：打开或预取任务不能授予修改队列的权限。
 func (h *Handler) authorizeTaskReturn(w http.ResponseWriter, r *http.Request, user auth.User) bool {
 	if reviewManagerScoped(user) {
 		return true
@@ -386,9 +415,8 @@ func (h *Handler) authorizeTaskWorker(w http.ResponseWriter, r *http.Request, us
 	return true
 }
 
-// Drafts are the assigned reviewer's mutable work product. Review managers may
-// inspect task context and answer images, but must not read or overwrite a
-// reviewer's private draft merely because they can manage the queue.
+// 草稿属于被分配复核人员的可变工作成果。
+// 复核管理员可以检查任务上下文和答案图像，但不能仅凭管理队列权限读取或覆盖复核人员的私有草稿。
 func (h *Handler) authorizeAssignedReviewer(w http.ResponseWriter, r *http.Request, user auth.User) bool {
 	task, err := h.store.GetTask(r.Context(), user.TenantID, r.PathValue("id"))
 	if err != nil {
@@ -402,8 +430,7 @@ func (h *Handler) authorizeAssignedReviewer(w http.ResponseWriter, r *http.Reque
 	return true
 }
 
-// Queue assignment is deliberately narrower than review:manage: the target
-// must be an active grader account in the same tenant.
+// 队列分配的限制比 review:manage 更严格：目标必须是同一租户内启用的阅卷账户。
 func (h *Handler) authorizeReviewAssignee(w http.ResponseWriter, r *http.Request, tenantID, assigneeID string) bool {
 	return h.authorizeActiveRole(w, r, tenantID, assigneeID, "grader")
 }
@@ -492,8 +519,7 @@ func (h *Handler) ClaimNextTask(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	// Pending tasks require an explicit manager assignment; "next" never grants
-	// answer access through an implicit self-assignment.
+	// 待处理任务要求管理员显式分配；“next”绝不能通过隐式自分配授予答案访问权。
 	options := ClaimTaskOptions{}
 	task, err := h.store.(WorkbenchStore).ClaimNextTask(r.Context(), user.TenantID, user.ID, input, options)
 	if err != nil {
@@ -546,7 +572,7 @@ func (h *Handler) GetWorkspaceSegmentImage(w http.ResponseWriter, r *http.Reques
 		}
 		if handled {
 			if h.segmentImage == nil {
-				httpx.Error(w, r, http.StatusInternalServerError, "review_image_unavailable", "review image handler is unavailable")
+				httpx.Error(w, r, http.StatusInternalServerError, "review_image_unavailable", reviewImageUnavailable)
 				return
 			}
 			resource, err := h.segmentImage.ReadCropImage(r.Context(), user.TenantID, seedImage.AnswerSegmentID)
@@ -567,7 +593,7 @@ func (h *Handler) GetWorkspaceSegmentImage(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	if h.segmentImage == nil {
-		httpx.Error(w, r, http.StatusInternalServerError, "review_image_unavailable", "review image handler is unavailable")
+		httpx.Error(w, r, http.StatusInternalServerError, "review_image_unavailable", reviewImageUnavailable)
 		return
 	}
 	resource, err := h.segmentImage.ReadCropImage(r.Context(), user.TenantID, workspace.Task.AnswerSegmentID)
@@ -594,7 +620,7 @@ func (h *Handler) GetWorkspaceOriginalImage(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	if h.fileDownload == nil {
-		httpx.Error(w, r, http.StatusInternalServerError, "review_image_unavailable", "review image handler is unavailable")
+		httpx.Error(w, r, http.StatusInternalServerError, "review_image_unavailable", reviewImageUnavailable)
 		return
 	}
 	resource, err := h.fileDownload.ReadDownload(r.Context(), user, workspace.OriginalFileID)
@@ -760,7 +786,7 @@ func (h *Handler) ListArbitrationTasks(w http.ResponseWriter, r *http.Request) {
 	}
 	cursor, err := pagination.Decode(r.URL.Query().Get("cursor"))
 	if err != nil {
-		httpx.Error(w, r, http.StatusBadRequest, "invalid_pagination", "cursor is invalid")
+		httpx.Error(w, r, http.StatusBadRequest, "invalid_pagination", invalidCursorMessage)
 		return
 	}
 	filter := ArbitrationFilter{

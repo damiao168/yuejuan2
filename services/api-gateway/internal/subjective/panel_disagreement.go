@@ -49,8 +49,7 @@ func ComparePrimaryGrades(left, right Grade, rubric paper.Rubric, config PanelDe
 	}
 	triggers = uniqueSorted(triggers)
 	primaryConsensus := facts.AbsoluteDelta <= 1e-9 && !hasScoringCriterionConflict(facts) && !facts.EvidenceConflict
-	// A low-weight scoring conflict below calibrated thresholds is deliberately
-	// not averaged away. It still needs a blind arbiter or a human.
+	// 低于校准阈值的低权重评分冲突也不能通过平均分消除，仍需盲评仲裁或人工处理。
 	requiresArbitration := len(triggers) > 0 || !primaryConsensus
 	if !primaryConsensus && len(triggers) == 0 {
 		triggers = []string{"unresolved_criterion_conflict"}
@@ -86,8 +85,7 @@ func panelObservation(grade Grade, rubric paper.Rubric) gradingdisagreement.Obse
 		}
 		normalized := normalizeEvidenceText(evidence.AnswerText)
 		if normalized == "" && evidence.Type == "math_artifact" {
-			// Mathematical evidence is a verified artifact link rather than a
-			// text excerpt. Its source identity must still affect agreement.
+			// 数学证据是已核验产物链接，而不是文本片段；其来源身份仍必须影响一致性判断。
 			normalized = strings.TrimSpace(evidence.EvidenceID) + ":" + strings.TrimSpace(evidence.Location)
 		}
 		if normalized == "" {

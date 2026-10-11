@@ -24,36 +24,7 @@ class MathRubricDraftGenerator:
         ``rubric_candidates`` and require a review before using it to grade.
         """
 
-        if not isinstance(question, dict) or not isinstance(solution, dict):
-            raise AgentError("invalid_request", "question and solution are required", status=400, request_id=request_id)
-        if question.get("question_type") not in SUBJECTIVE_TYPES:
-            raise AgentError("invalid_request", "math rubric drafts require a subjective question", status=400, request_id=request_id)
-        question_no = str(question.get("question_no_normalized") or "").strip()
-        solution_no = str(solution.get("question_no_normalized") or "").strip()
-        if not question_no or question_no != solution_no:
-            raise AgentError("invalid_request", "question and solution numbers must match", status=400, request_id=request_id)
-        steps = solution.get("steps")
-        if not isinstance(steps, list) or not steps:
-            raise AgentError("invalid_request", "a detailed solution is required", status=400, request_id=request_id)
-        source_refs = solution.get("source_refs")
-        if not isinstance(source_refs, list) or not source_refs:
-            raise AgentError("invalid_request", "solution provenance is required", status=400, request_id=request_id)
-        score = question.get("score")
-        if score == 0 and not isinstance(score, bool):
-            # Legacy import storage represented a missing score as zero.
-            score = None
-        if score is not None and (
-            isinstance(score, bool) or not isinstance(score, (int, float))
-            or not math.isfinite(score) or score <= 0
-        ):
-            raise AgentError("invalid_request", "question score must be positive or null", status=400, request_id=request_id)
-        numbered_steps = []
-        for index, step in enumerate(steps, 1):
-            if not isinstance(step, dict) or not str(step.get("content") or "").strip():
-                continue
-            numbered_steps.append({"id": f"step-{index}", "content": str(step["content"]).strip()})
-        if not numbered_steps:
-            raise AgentError("invalid_request", "a detailed solution is required", status=400, request_id=request_id)
+        question_no, source_refs, score, numbered_steps = _validated_draft_input(question, solution, request_id)
         allowed_step_ids = {step["id"] for step in numbered_steps}
         schema = _draft_schema(sorted(allowed_step_ids))
         model_input = {
@@ -80,39 +51,8 @@ class MathRubricDraftGenerator:
                 schema,
                 "math_rubric_draft",
             )
-        points = output.get("points") if isinstance(output, dict) else None
-        if not isinstance(points, list) or not points:
-            raise AgentError("model_output_invalid", "math rubric draft was empty", status=502, request_id=request_id)
-        normalized_points = []
-        for index, point in enumerate(points, 1):
-            if not isinstance(point, dict):
-                raise AgentError("model_output_invalid", "math rubric point was invalid", status=502, request_id=request_id)
-            description = str(point.get("description") or "").strip()
-            step_ids = point.get("evidence_step_ids")
-            proposed = point.get("suggested_score")
-            if not description or not isinstance(step_ids, list) or not step_ids or any(
-                value not in allowed_step_ids for value in step_ids
-            ) or (proposed is not None and (
-                isinstance(proposed, bool) or not isinstance(proposed, (int, float))
-                or not math.isfinite(proposed) or proposed < 0
-            )):
-                raise AgentError("model_output_invalid", "math rubric point was not grounded", status=502, request_id=request_id)
-            normalized_points.append({
-                "id": f"suggested-{question_no}-{index}",
-                "description": description,
-                "suggested_score": float(proposed) if score is not None and proposed is not None else None,
-                "evidence_step_ids": list(dict.fromkeys(step_ids)),
-                "source_refs": source_refs,
-                "review_note": str(point.get("review_note") or "").strip(),
-            })
-        # 建议分值不一致时保留复核问题，不自动重分配，也不把草稿冒充原文评分标准。
-        issues = []
-        if score is None:
-            issues.append("题目满分未可靠识别；采分点分值待教师确定")
-        else:
-            values = [point["suggested_score"] for point in normalized_points]
-            if any(value is None for value in values) or not math.isclose(sum(values), score, rel_tol=0, abs_tol=1e-6):
-                issues.append("建议采分点分值与题目满分不一致；分配需教师核对")
+        normalized_points = _normalize_draft_points(output, question_no, score, source_refs, allowed_step_ids, request_id)
+        issues = _draft_review_issues(score, normalized_points)
         return {
             "suggested_rubric_candidates": [{
                 "candidate_id": f"suggested-rubric-{question_no}-{solution.get('candidate_id', 'solution')}",
@@ -128,6 +68,92 @@ class MathRubricDraftGenerator:
                 "issues": issues,
             }]
         }
+
+
+def _validated_draft_input(question, solution, request_id):
+    if not isinstance(question, dict) or not isinstance(solution, dict):
+        raise AgentError("invalid_request", "question and solution are required", status=400, request_id=request_id)
+    if question.get("question_type") not in SUBJECTIVE_TYPES:
+        raise AgentError("invalid_request", "math rubric drafts require a subjective question", status=400, request_id=request_id)
+    question_no = str(question.get("question_no_normalized") or "").strip()
+    solution_no = str(solution.get("question_no_normalized") or "").strip()
+    if not question_no or question_no != solution_no:
+        raise AgentError("invalid_request", "question and solution numbers must match", status=400, request_id=request_id)
+    steps = solution.get("steps")
+    if not isinstance(steps, list) or not steps:
+        raise AgentError("invalid_request", "a detailed solution is required", status=400, request_id=request_id)
+    source_refs = solution.get("source_refs")
+    if not isinstance(source_refs, list) or not source_refs:
+        raise AgentError("invalid_request", "solution provenance is required", status=400, request_id=request_id)
+    score = _draft_max_score(question.get("score"), request_id)
+    return question_no, source_refs, score, _number_solution_steps(steps, request_id)
+
+
+def _draft_max_score(score, request_id):
+    if score == 0 and not isinstance(score, bool):
+        # 旧导入记录以零表示未识别满分；它仍按未知满分处理，不能授权模型分配分值。
+        score = None
+    if score is not None and (
+        isinstance(score, bool) or not isinstance(score, (int, float))
+        or not math.isfinite(score) or score <= 0
+    ):
+        raise AgentError("invalid_request", "question score must be positive or null", status=400, request_id=request_id)
+    return score
+
+
+def _number_solution_steps(steps, request_id):
+    numbered_steps = []
+    # 空步骤跳过但保留原位置编号，模型引用必须对应输入中实际存在的步骤。
+    for index, step in enumerate(steps, 1):
+        if not isinstance(step, dict) or not str(step.get("content") or "").strip():
+            continue
+        numbered_steps.append({"id": f"step-{index}", "content": str(step["content"]).strip()})
+    if not numbered_steps:
+        raise AgentError("invalid_request", "a detailed solution is required", status=400, request_id=request_id)
+    return numbered_steps
+
+
+def _normalize_draft_points(output, question_no, score, source_refs, allowed_step_ids, request_id):
+    points = output.get("points") if isinstance(output, dict) else None
+    if not isinstance(points, list) or not points:
+        raise AgentError("model_output_invalid", "math rubric draft was empty", status=502, request_id=request_id)
+    return [
+        _normalize_draft_point(point, index, question_no, score, source_refs, allowed_step_ids, request_id)
+        for index, point in enumerate(points, 1)
+    ]
+
+
+def _normalize_draft_point(point, index, question_no, score, source_refs, allowed_step_ids, request_id):
+    if not isinstance(point, dict):
+        raise AgentError("model_output_invalid", "math rubric point was invalid", status=502, request_id=request_id)
+    description = str(point.get("description") or "").strip()
+    step_ids = point.get("evidence_step_ids")
+    proposed = point.get("suggested_score")
+    if not description or not isinstance(step_ids, list) or not step_ids or any(
+        value not in allowed_step_ids for value in step_ids
+    ) or (proposed is not None and (
+        isinstance(proposed, bool) or not isinstance(proposed, (int, float))
+        or not math.isfinite(proposed) or proposed < 0
+    )):
+        raise AgentError("model_output_invalid", "math rubric point was not grounded", status=502, request_id=request_id)
+    return {
+        "id": f"suggested-{question_no}-{index}",
+        "description": description,
+        "suggested_score": float(proposed) if score is not None and proposed is not None else None,
+        "evidence_step_ids": list(dict.fromkeys(step_ids)),
+        "source_refs": source_refs,
+        "review_note": str(point.get("review_note") or "").strip(),
+    }
+
+
+def _draft_review_issues(score, normalized_points):
+    # 建议分值不一致时保留复核问题，不自动重分配，也不把草稿冒充原文评分标准。
+    if score is None:
+        return ["题目满分未可靠识别；采分点分值待教师确定"]
+    values = [point["suggested_score"] for point in normalized_points]
+    if any(value is None for value in values) or not math.isclose(sum(values), score, rel_tol=0, abs_tol=1e-6):
+        return ["建议采分点分值与题目满分不一致；分配需教师核对"]
+    return []
 
 
 def _draft_schema(step_ids):

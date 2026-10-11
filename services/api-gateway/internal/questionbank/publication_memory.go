@@ -13,7 +13,7 @@ func (s *MemoryStore) UpdateScoring(ctx context.Context, scope auth.AccessScope,
 	if err != nil || in.ExpectedRevision <= 0 {
 		return Version{}, ErrInvalidInput
 	}
-	return memoryMutation(ctx, s, scope, "question_bank.scoring.update", id, in, "edit", func() (Version, error) {
+	return memoryMutation(ctx, s, scope, memoryMutationCommand{op: "question_bank.scoring.update", target: id, input: in, action: "edit"}, func() (Version, error) {
 		v, err := s.version(scope, id, "edit")
 		if err != nil {
 			return v, err
@@ -26,21 +26,13 @@ func (s *MemoryStore) UpdateScoring(ctx context.Context, scope auth.AccessScope,
 		if v.Revision != in.ExpectedRevision {
 			return v, ErrConflict
 		}
-		// File binding and materialization require the PostgreSQL transaction graph.
+		// 文件绑定与实例化需要 PostgreSQL 事务依赖图。
 		if len(scoring.Assets) > 0 {
 			return v, ErrUnavailable
 		}
-		if scoring.TemplateVersionID != nil {
-			source, err := s.version(scope, *scoring.TemplateVersionID, "read")
-			if err != nil {
-				return v, err
-			}
-			si, _ := s.item(scope, source.ItemID, "read")
-			sb, _ := s.bank(scope, si.BankID, "read")
-			if i.Kind == "rubric_template" || si.Kind != "rubric_template" || source.WorkflowStatus != "published" || source.Scoring.Rubric == nil || si.Status != "active" || sb.Status != "active" {
-				return v, ErrInvalidInput
-			}
-			scoring.Rubric = copyScoring(source.Scoring).Rubric
+		scoring, err = s.resolveMemoryScoringTemplate(scope, i, scoring)
+		if err != nil {
+			return v, err
 		}
 		v.Scoring = scoring
 		v.Revision++
@@ -58,6 +50,25 @@ func (s *MemoryStore) UpdateScoring(ctx context.Context, scope auth.AccessScope,
 		return copyVersion(v), nil
 	})
 }
+
+// 调用方持有 memoryMutation 的锁；模板读取与目标版本保存必须在同一临界区。
+func (s *MemoryStore) resolveMemoryScoringTemplate(scope auth.AccessScope, target Item, scoring Scoring) (Scoring, error) {
+	if scoring.TemplateVersionID == nil {
+		return scoring, nil
+	}
+	source, err := s.version(scope, *scoring.TemplateVersionID, "read")
+	if err != nil {
+		return scoring, err
+	}
+	i, _ := s.item(scope, source.ItemID, "read")
+	b, _ := s.bank(scope, i.BankID, "read")
+	if target.Kind == "rubric_template" || i.Kind != "rubric_template" || source.WorkflowStatus != "published" || source.Scoring.Rubric == nil || i.Status != "active" || b.Status != "active" {
+		return scoring, ErrInvalidInput
+	}
+	scoring.Rubric = copyScoring(source.Scoring).Rubric
+	return scoring, nil
+}
+
 func (s *MemoryStore) Transition(ctx context.Context, scope auth.AccessScope, id, decision string, in ReviewInput) (Version, error) {
 	s.mu.Lock()
 	v, err := s.version(scope, id, "read")
@@ -66,7 +77,7 @@ func (s *MemoryStore) Transition(ctx context.Context, scope auth.AccessScope, id
 		return v, err
 	}
 	action := transitionAction(decision, v.AuthorID == scope.ActorID)
-	return memoryMutation(ctx, s, scope, "question_bank."+decision, id, in, action, func() (Version, error) {
+	return memoryMutation(ctx, s, scope, memoryMutationCommand{op: "question_bank." + decision, target: id, input: in, action: action}, func() (Version, error) {
 		v, err := s.version(scope, id, action)
 		if err != nil {
 			return v, err
@@ -114,7 +125,7 @@ func (s *MemoryStore) BindReviewers(ctx context.Context, scope auth.AccessScope,
 	if !validID(in.UserID) || in.ExpectedRevision <= 0 || ((in.Review || in.Publish) && !in.Read) {
 		return Bank{}, ErrInvalidInput
 	}
-	return memoryMutation(ctx, s, scope, "question_bank.reviewers.bind", id, in, "manage", func() (Bank, error) {
+	return memoryMutation(ctx, s, scope, memoryMutationCommand{op: "question_bank.reviewers.bind", target: id, input: in, action: "manage"}, func() (Bank, error) {
 		b, err := s.bank(scope, id, "manage")
 		if err != nil {
 			return b, err

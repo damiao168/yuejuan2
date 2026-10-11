@@ -1,8 +1,7 @@
 package paper
 
-// mergePaperImportAppendResult keeps the accepted candidate history when a run
-// only adds sources. New material replaces the same normalized question number
-// within its own candidate kind and otherwise appends to the prior result.
+// mergePaperImportAppendResult 在运行仅增加来源时保留已接受的候选历史。
+// 新材料在同类候选内替换相同规范化题号的条目，其余材料追加到之前的结果中。
 func mergePaperImportAppendResult(previous PaperImportJob, fresh PaperImportParseResult) PaperImportParseResult {
 	fresh.QuestionCandidates = mergeQuestionCandidates(previous.QuestionCandidates, fresh.QuestionCandidates)
 	fresh.AnswerCandidates = mergeAnswerCandidates(previous.AnswerCandidates, fresh.AnswerCandidates)

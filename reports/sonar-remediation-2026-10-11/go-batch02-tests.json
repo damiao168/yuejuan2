@@ -1,0 +1,75 @@
+{
+  "started_at": "2026-10-11T17:02:04.457188+08:00",
+  "finished_at": "2026-10-11T17:02:50.538973+08:00",
+  "duration_seconds": 46.078000000008615,
+  "command": [
+    "go",
+    "test",
+    "-json",
+    "-p",
+    "1",
+    "-count=1",
+    "-timeout=5m",
+    "./internal/review",
+    "./internal/schoolassistant",
+    "./internal/questionbank",
+    "./internal/subjective",
+    "./internal/grading"
+  ],
+  "cwd": "D:\\project\\yuejuan\\services\\api-gateway",
+  "exit_code": 0,
+  "isolation": {
+    "toolchain": "local",
+    "module_proxy": "off",
+    "checksum_service": "off",
+    "GOMAXPROCS": 2,
+    "cleared_environment_names": []
+  },
+  "package_results": [
+    {
+      "Time": "2026-10-11T17:02:18.3246582+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/review",
+      "Elapsed": 0.763
+    },
+    {
+      "Time": "2026-10-11T17:02:23.2593732+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/schoolassistant",
+      "Elapsed": 1.597
+    },
+    {
+      "Time": "2026-10-11T17:02:27.5722002+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/questionbank",
+      "Elapsed": 1.619
+    },
+    {
+      "Time": "2026-10-11T17:02:38.9353033+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/subjective",
+      "Elapsed": 3.339
+    },
+    {
+      "Time": "2026-10-11T17:02:50.1736405+08:00",
+      "Action": "pass",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/grading",
+      "Elapsed": 2.067
+    }
+  ],
+  "test_result_counts": {
+    "pass": 827,
+    "fail": 0,
+    "skip": 1
+  },
+  "skipped_tests": [
+    {
+      "Time": "2026-10-11T17:02:37.6877957+08:00",
+      "Action": "skip",
+      "Package": "edugrade-enterprise/services/api-gateway/internal/subjective",
+      "Test": "TestHTTPAdapterRealLocalAgent",
+      "Elapsed": 0
+    }
+  ],
+  "note": "只报告实际运行的包；环境缺失跳过项不算真实数据库或外部模型集成通过。"
+}

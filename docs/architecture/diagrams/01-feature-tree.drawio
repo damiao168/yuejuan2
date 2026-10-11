@@ -1,0 +1,1038 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxfile host="app.diagrams.net" agent="yuejuan architecture audit" version="24.7.17" type="device" compressed="false">
+  <diagram id="feature-overview" name="01 系统功能总览与详细页入口">
+    <mxGraphModel dx="2340" dy="1859" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2340" pageHeight="1859" math="0" shadow="0" background="#FFFFFF">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="__title" value="01 / 01  系统功能总览与详细页入口" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Microsoft YaHei;fontColor=#25364B;fontSize=48;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40" y="24" width="2260" height="64" />
+        </mxCell>
+        <mxCell id="__note" value="" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Microsoft YaHei;fontColor=#25364B;fontSize=26;fontColor=#617084;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40" y="96" width="2260" height="48" />
+        </mxCell>
+        <mxCell id="system" value="&lt;div style=&quot;font-size:43px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;yuejuan 智能阅卷系统&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#EAF2FF;strokeColor=#5278B0;strokeWidth=1.5;" vertex="1" parent="1" evidence="apps/web-admin/src/router/pageRendering.tsx;services/api-gateway/internal/server/application_modules.go" details="yuejuan 智能阅卷系统&#10;当前工作区实际实现" implementationStatus="infra">
+          <mxGeometry as="geometry" x="936" y="235" width="467" height="76" />
+        </mxCell>
+        <mxCell id="F01" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F01 身份与平台&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#FFF4D9;strokeColor=#AD7D24;strokeWidth=1.5;" vertex="1" parent="1" evidence="apps/web-admin/src/router/routes.tsx;services/api-gateway/internal/server/routes_auth.go" details="F01 身份与平台&#10;已编码，接入边界见详页&#10;阅读入口：第 02 页" implementationStatus="partial">
+          <mxGeometry as="geometry" x="286" y="478" width="533" height="111" />
+        </mxCell>
+        <mxCell id="F02" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F02 组织与学校&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_org.go;apps/web-admin/src/router/pageRendering.tsx" details="F02 组织与学校&#10;主要业务入口已有代码&#10;阅读入口：第 03 页" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="286" y="731" width="533" height="111" />
+        </mxCell>
+        <mxCell id="F03" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F03 题库与试卷&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_questionbank.go;services/api-gateway/internal/server/routes_paper.go" details="F03 题库与试卷&#10;主要业务入口已有代码&#10;阅读入口：第 04 页" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="286" y="984" width="533" height="111" />
+        </mxCell>
+        <mxCell id="F04" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F04 考试管理&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_exam.go;apps/web-admin/src/features/exams/create/CreateExamPage.tsx" details="F04 考试管理&#10;主要业务入口已有代码&#10;阅读入口：第 05 页" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="322" y="1238" width="461" height="111" />
+        </mxCell>
+        <mxCell id="F05" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F05 采集、图像与模板&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#FFF4D9;strokeColor=#AD7D24;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_capture.go;docs/architecture/specs/06-image-template-pipeline.json" details="F05 采集、图像与模板&#10;已编码，接入边界见详页&#10;阅读入口：第 06 页" implementationStatus="partial">
+          <mxGeometry as="geometry" x="178" y="1492" width="749" height="111" />
+        </mxCell>
+        <mxCell id="F06" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F06 OCR 与答案理解&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_processing.go;services/api-gateway/internal/server/routes_exam.go" details="F06 OCR 与答案理解&#10;主要业务入口已有代码&#10;阅读入口：第 07 页" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="1432" y="478" width="711" height="111" />
+        </mxCell>
+        <mxCell id="F07" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F07 AI 评分与人工复核&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#FFF4D9;strokeColor=#AD7D24;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_grading.go;docs/architecture/specs/07-ai-grading.json" details="F07 AI 评分与人工复核&#10;已编码，接入边界见详页&#10;阅读入口：第 08 页" implementationStatus="partial">
+          <mxGeometry as="geometry" x="1400" y="731" width="776" height="111" />
+        </mxCell>
+        <mxCell id="F08" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F08 成绩、发布与学生&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#FFF4D9;strokeColor=#AD7D24;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_release.go;apps/student-portal/src/App.tsx" details="F08 成绩、发布与学生&#10;已编码，接入边界见详页&#10;阅读入口：第 09 页" implementationStatus="partial">
+          <mxGeometry as="geometry" x="1413" y="984" width="749" height="111" />
+        </mxCell>
+        <mxCell id="F09" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F09 模型治理与阅卷质量&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#FFF4D9;strokeColor=#AD7D24;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_governance.go;services/api-gateway/internal/server/routes_review.go" details="F09 模型治理与阅卷质量&#10;已编码，接入边界见详页&#10;阅读入口：第 10 页" implementationStatus="partial">
+          <mxGeometry as="geometry" x="1377" y="1238" width="821" height="111" />
+        </mxCell>
+        <mxCell id="F10" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F10 桌面客户端与运维&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#FFF4D9;strokeColor=#AD7D24;strokeWidth=1.5;" vertex="1" parent="1" evidence="apps/desktop-client/src/App.tsx;services/api-gateway/internal/server/routes_system.go" details="F10 桌面客户端与运维&#10;已编码，接入边界见详页&#10;阅读入口：第 11 页" implementationStatus="partial">
+          <mxGeometry as="geometry" x="1413" y="1492" width="749" height="111" />
+        </mxCell>
+        <mxCell id="__e0" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=0.25;exitY=1;entryX=1;entryY=0.5;" edge="1" parent="1" source="system" target="F01" evidence="apps/web-admin/src/router/routes.tsx;services/api-gateway/internal/server/routes_auth.go" details="">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="1118" y="396" />
+              <mxPoint x="1118" y="533" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=0.25;exitY=1;entryX=1;entryY=0.5;" edge="1" parent="1" source="system" target="F02" evidence="services/api-gateway/internal/server/routes_org.go;apps/web-admin/src/router/pageRendering.tsx" details="">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="1118" y="396" />
+              <mxPoint x="1118" y="786" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=0.25;exitY=1;entryX=1;entryY=0.5;" edge="1" parent="1" source="system" target="F03" evidence="services/api-gateway/internal/server/routes_questionbank.go;services/api-gateway/internal/server/routes_paper.go" details="">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="1118" y="396" />
+              <mxPoint x="1118" y="1040" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=0.25;exitY=1;entryX=1;entryY=0.5;" edge="1" parent="1" source="system" target="F04" evidence="services/api-gateway/internal/server/routes_exam.go;apps/web-admin/src/features/exams/create/CreateExamPage.tsx" details="">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="1118" y="396" />
+              <mxPoint x="1118" y="1294" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=0.25;exitY=1;entryX=1;entryY=0.5;" edge="1" parent="1" source="system" target="F05" evidence="services/api-gateway/internal/server/routes_capture.go;docs/architecture/specs/06-image-template-pipeline.json" details="">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="1118" y="396" />
+              <mxPoint x="1118" y="1547" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=0.75;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="system" target="F06" evidence="services/api-gateway/internal/server/routes_processing.go;services/api-gateway/internal/server/routes_exam.go" details="">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="1222" y="396" />
+              <mxPoint x="1222" y="533" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e6" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=0.75;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="system" target="F07" evidence="services/api-gateway/internal/server/routes_grading.go;docs/architecture/specs/07-ai-grading.json" details="">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="1222" y="396" />
+              <mxPoint x="1222" y="786" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e7" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=0.75;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="system" target="F08" evidence="services/api-gateway/internal/server/routes_release.go;apps/student-portal/src/App.tsx" details="">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="1222" y="396" />
+              <mxPoint x="1222" y="1040" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e8" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=0.75;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="system" target="F09" evidence="services/api-gateway/internal/server/routes_governance.go;services/api-gateway/internal/server/routes_review.go" details="">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="1222" y="396" />
+              <mxPoint x="1222" y="1294" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=0.75;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="system" target="F10" evidence="apps/desktop-client/src/App.tsx;services/api-gateway/internal/server/routes_system.go" details="">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="1222" y="396" />
+              <mxPoint x="1222" y="1547" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__legend0" value="已实现" style="rounded=1;html=1;fillColor=#E9F6EE;strokeColor=#38835B;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40.0" y="1797" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend1" value="部分接入" style="rounded=1;html=1;fillColor=#FFF4D9;strokeColor=#AD7D24;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="416.6666666666667" y="1797" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend2" value="规划" style="rounded=1;html=1;fillColor=#F1F2F4;strokeColor=#969DA7;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="793.3333333333334" y="1797" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend3" value="问题" style="rounded=1;html=1;fillColor=#FDECEF;strokeColor=#B64857;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1170.0" y="1797" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend4" value="基础设施" style="rounded=1;html=1;fillColor=#EAF2FF;strokeColor=#5278B0;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1546.6666666666667" y="1797" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend5" value="待确认" style="rounded=1;html=1;fillColor=#F5F5F6;strokeColor=#8C94A0;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1923.3333333333335" y="1797" width="373.3333333333333" height="38" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="f01" name="02 F01 身份与平台">
+    <mxGraphModel dx="2340" dy="1742" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2340" pageHeight="1742" math="0" shadow="0" background="#FFFFFF">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="__title" value="01 / 02  F01 身份与平台" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Microsoft YaHei;fontColor=#25364B;fontSize=48;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40" y="24" width="2260" height="64" />
+        </mxCell>
+        <mxCell id="__note" value="" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Microsoft YaHei;fontColor=#25364B;fontSize=26;fontColor=#617084;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40" y="96" width="2260" height="48" />
+        </mxCell>
+        <mxCell id="F01" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F01&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;身份与平台&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#FFF4D9;strokeColor=#AD7D24;strokeWidth=1.5;" vertex="1" parent="1" evidence="apps/web-admin/src/router/routes.tsx;services/api-gateway/internal/server/routes_auth.go" details="F01&#10;身份与平台" implementationStatus="partial">
+          <mxGeometry as="geometry" x="168" y="604" width="184" height="157" />
+        </mxCell>
+        <mxCell id="F01.01" value="&lt;div style=&quot;font-size:40px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F01.01 登录与账户安全&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_auth.go" details="F01.01 登录与账户安全" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="588" y="322" width="449" height="72" />
+        </mxCell>
+        <mxCell id="F01.01.features" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;密码 / Token / 微信登录&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;F01.01.02 激活、恢复、改密与会话撤销&lt;br&gt;F01.01.03 锁定、近期认证、TOTP 与恢复码&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_auth.go" details="具体功能&#10;F01.01.01 密码 / Token / 微信登录&#10;F01.01.02 激活、恢复、改密与会话撤销&#10;F01.01.03 锁定、近期认证、TOTP 与恢复码" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="1359" y="258" width="832" height="198" />
+        </mxCell>
+        <mxCell id="F01.02" value="&lt;div style=&quot;font-size:49px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F01.02 平台控制台&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="apps/web-admin/src/router/pageRendering.tsx;services/api-gateway/internal/server/routes_platform_schools.go" details="F01.02 平台控制台" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="590" y="667" width="445" height="83" />
+        </mxCell>
+        <mxCell id="F01.02.features" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;平台启用与学校管理入口&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;F01.02.02 工作台汇总、操作审计与导出&lt;br&gt;F01.02.03 平台管理员与学校工作区分离&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="apps/web-admin/src/router/pageRendering.tsx;services/api-gateway/internal/server/routes_platform_schools.go" details="具体功能&#10;F01.02.01 平台首次启用与学校管理入口&#10;F01.02.02 工作台汇总、操作审计与导出&#10;F01.02.03 平台管理员与学校工作区分离" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="1366" y="610" width="816" height="198" />
+        </mxCell>
+        <mxCell id="F01.03" value="&lt;div style=&quot;font-size:40px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F01.03 产品身份与页面访问&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#FFF4D9;strokeColor=#AD7D24;strokeWidth=1.5;" vertex="1" parent="1" evidence="apps/web-admin/src/router/experience.ts;apps/web-admin/src/router/routes.tsx" details="F01.03 产品身份与页面访问" implementationStatus="partial">
+          <mxGeometry as="geometry" x="548" y="1024" width="529" height="72" />
+        </mxCell>
+        <mxCell id="F01.03.features" value="&lt;div style=&quot;font-size:69px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;管理员、教师、审计员、学生&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;F01.03.02 角色、权限、工作区及深链接边界&lt;br&gt;F01.03.03 4 个 mock 页仅开发 / demo；生产禁用&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#FFF4D9;strokeColor=#AD7D24;strokeWidth=1.5;" vertex="1" parent="1" evidence="apps/web-admin/src/router/experience.ts;apps/web-admin/src/router/routes.tsx" details="具体功能&#10;F01.03.01 admin / teacher / auditor / student 体验&#10;F01.03.02 角色、权限、工作区及深链接边界&#10;F01.03.03 4 个 mock 页仅开发 / demo；生产禁用" implementationStatus="partial">
+          <mxGeometry as="geometry" x="1314" y="962" width="921" height="194" />
+        </mxCell>
+        <mxCell id="F01-boundary" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;外部身份服务：未现场验收&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#FFF4D9;strokeColor=#AD7D24;strokeWidth=1.5;dashed=1;" vertex="1" parent="1" evidence="apps/web-admin/src/router/routes.tsx;services/api-gateway/internal/server/routes_auth.go" details="阅读边界与未接入能力&#10;功能状态依据当前工作区源码；登录方案已编码不代表本次完成外部身份服务验收。" implementationStatus="partial">
+          <mxGeometry as="geometry" x="720" y="1410" width="888" height="111" />
+        </mxCell>
+        <mxCell id="__e0" value="归属" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F01" target="F01.01" evidence="services/api-gateway/internal/server/routes_auth.go" details="归属">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="500" y="682" />
+              <mxPoint x="500" y="358" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e1" value="包含" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F01.01" target="F01.01.features" evidence="services/api-gateway/internal/server/routes_auth.go" details="包含">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e2" value="归属" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F01" target="F01.02" evidence="apps/web-admin/src/router/pageRendering.tsx;services/api-gateway/internal/server/routes_platform_schools.go" details="归属">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="500" y="682" />
+              <mxPoint x="500" y="708" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e3" value="包含" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F01.02" target="F01.02.features" evidence="apps/web-admin/src/router/pageRendering.tsx;services/api-gateway/internal/server/routes_platform_schools.go" details="包含">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e4" value="归属" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F01" target="F01.03" evidence="apps/web-admin/src/router/experience.ts;apps/web-admin/src/router/routes.tsx" details="归属">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="500" y="682" />
+              <mxPoint x="500" y="1060" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e5" value="包含" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F01.03" target="F01.03.features" evidence="apps/web-admin/src/router/experience.ts;apps/web-admin/src/router/routes.tsx" details="包含">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__legend0" value="已实现" style="rounded=1;html=1;fillColor=#E9F6EE;strokeColor=#38835B;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40.0" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend1" value="部分接入" style="rounded=1;html=1;fillColor=#FFF4D9;strokeColor=#AD7D24;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="416.6666666666667" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend2" value="规划" style="rounded=1;html=1;fillColor=#F1F2F4;strokeColor=#969DA7;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="793.3333333333334" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend3" value="问题" style="rounded=1;html=1;fillColor=#FDECEF;strokeColor=#B64857;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1170.0" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend4" value="基础设施" style="rounded=1;html=1;fillColor=#EAF2FF;strokeColor=#5278B0;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1546.6666666666667" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend5" value="待确认" style="rounded=1;html=1;fillColor=#F5F5F6;strokeColor=#8C94A0;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1923.3333333333335" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="f02" name="03 F02 组织与学校">
+    <mxGraphModel dx="2340" dy="1742" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2340" pageHeight="1742" math="0" shadow="0" background="#FFFFFF">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="__title" value="01 / 03  F02 组织与学校" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Microsoft YaHei;fontColor=#25364B;fontSize=48;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40" y="24" width="2260" height="64" />
+        </mxCell>
+        <mxCell id="__note" value="" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Microsoft YaHei;fontColor=#25364B;fontSize=26;fontColor=#617084;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40" y="96" width="2260" height="48" />
+        </mxCell>
+        <mxCell id="F02" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F02&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;组织与学校&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_org.go;apps/web-admin/src/router/pageRendering.tsx" details="F02&#10;组织与学校" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="168" y="604" width="184" height="157" />
+        </mxCell>
+        <mxCell id="F02.01" value="&lt;div style=&quot;font-size:56px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F02.01 组织结构&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_org.go;apps/web-admin/src/pages/OrganizationSetupPage.tsx" details="F02.01 组织结构" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="586" y="312" width="452" height="92" />
+        </mxCell>
+        <mxCell id="F02.01.features" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;学校初始化与机构配置&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;F02.01.02 学年、年级、班级维护&lt;br&gt;F02.01.03 学校级成员作用域管理&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_org.go;apps/web-admin/src/pages/OrganizationSetupPage.tsx" details="具体功能&#10;F02.01.01 学校初始化与机构配置&#10;F02.01.02 学年、年级、班级维护&#10;F02.01.03 学校级成员作用域管理" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="1402" y="258" width="744" height="198" />
+        </mxCell>
+        <mxCell id="F02.02" value="&lt;div style=&quot;font-size:49px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F02.02 学生与教师&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="apps/web-admin/src/pages/StudentManagementPage.tsx;apps/web-admin/src/features/members/teachers/TeacherManagementPage.tsx;services/api-gateway/internal/server/routes_auth.go" details="F02.02 学生与教师" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="590" y="667" width="445" height="83" />
+        </mxCell>
+        <mxCell id="F02.02.features" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;学生名单、导入与班级归属&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;F02.02.02 教师账号、状态与访问权限&lt;br&gt;F02.02.03 账户激活和凭据重置入口&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="apps/web-admin/src/pages/StudentManagementPage.tsx;apps/web-admin/src/features/members/teachers/TeacherManagementPage.tsx;services/api-gateway/internal/server/routes_auth.go" details="具体功能&#10;F02.02.01 学生名单维护、导入与班级归属&#10;F02.02.02 教师账号、状态与访问权限&#10;F02.02.03 账户激活和凭据重置入口" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="1330" y="610" width="888" height="198" />
+        </mxCell>
+        <mxCell id="F02.03" value="&lt;div style=&quot;font-size:56px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F02.03 学校助手&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="apps/web-admin/src/api/schoolAiChat.ts;services/api-gateway/internal/server/routes_school_assistant.go;services/api-gateway/internal/schoolassistant/handlers.go" details="F02.03 学校助手" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="586" y="1014" width="452" height="92" />
+        </mxCell>
+        <mxCell id="F02.03.features" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;学校管理员聊天 / SSE&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;F02.03.02 助手查询考试、处理与成绩上下文&lt;br&gt;F02.03.03 工具查询重新校验业务权限与范围&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="apps/web-admin/src/api/schoolAiChat.ts;services/api-gateway/internal/server/routes_school_assistant.go;services/api-gateway/internal/schoolassistant/handlers.go" details="具体功能&#10;F02.03.01 学校管理员模型聊天与 SSE&#10;F02.03.02 助手查询考试、处理与成绩上下文&#10;F02.03.03 工具查询重新校验业务权限与范围" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="1409" y="960" width="731" height="198" />
+        </mxCell>
+        <mxCell id="F02-boundary" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;学校 AI 助手：仅学校管理员&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#EAF2FF;strokeColor=#5278B0;strokeWidth=1.5;dashed=1;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_org.go;apps/web-admin/src/router/pageRendering.tsx" details="阅读边界与未接入能力&#10;学校 AI 助手入口限 school_admin；聊天正文不进入通用幂等收据。" implementationStatus="infra">
+          <mxGeometry as="geometry" x="696" y="1410" width="936" height="111" />
+        </mxCell>
+        <mxCell id="__e0" value="归属" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F02" target="F02.01" evidence="services/api-gateway/internal/server/routes_org.go;apps/web-admin/src/pages/OrganizationSetupPage.tsx" details="归属">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="500" y="682" />
+              <mxPoint x="500" y="358" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e1" value="包含" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F02.01" target="F02.01.features" evidence="services/api-gateway/internal/server/routes_org.go;apps/web-admin/src/pages/OrganizationSetupPage.tsx" details="包含">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e2" value="归属" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F02" target="F02.02" evidence="apps/web-admin/src/pages/StudentManagementPage.tsx;apps/web-admin/src/features/members/teachers/TeacherManagementPage.tsx;services/api-gateway/internal/server/routes_auth.go" details="归属">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="500" y="682" />
+              <mxPoint x="500" y="708" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e3" value="包含" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F02.02" target="F02.02.features" evidence="apps/web-admin/src/pages/StudentManagementPage.tsx;apps/web-admin/src/features/members/teachers/TeacherManagementPage.tsx;services/api-gateway/internal/server/routes_auth.go" details="包含">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e4" value="归属" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F02" target="F02.03" evidence="apps/web-admin/src/api/schoolAiChat.ts;services/api-gateway/internal/server/routes_school_assistant.go;services/api-gateway/internal/schoolassistant/handlers.go" details="归属">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="500" y="682" />
+              <mxPoint x="500" y="1060" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e5" value="包含" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F02.03" target="F02.03.features" evidence="apps/web-admin/src/api/schoolAiChat.ts;services/api-gateway/internal/server/routes_school_assistant.go;services/api-gateway/internal/schoolassistant/handlers.go" details="包含">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__legend0" value="已实现" style="rounded=1;html=1;fillColor=#E9F6EE;strokeColor=#38835B;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40.0" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend1" value="部分接入" style="rounded=1;html=1;fillColor=#FFF4D9;strokeColor=#AD7D24;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="416.6666666666667" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend2" value="规划" style="rounded=1;html=1;fillColor=#F1F2F4;strokeColor=#969DA7;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="793.3333333333334" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend3" value="问题" style="rounded=1;html=1;fillColor=#FDECEF;strokeColor=#B64857;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1170.0" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend4" value="基础设施" style="rounded=1;html=1;fillColor=#EAF2FF;strokeColor=#5278B0;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1546.6666666666667" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend5" value="待确认" style="rounded=1;html=1;fillColor=#F5F5F6;strokeColor=#8C94A0;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1923.3333333333335" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="f03" name="04 F03 题库与试卷">
+    <mxGraphModel dx="2340" dy="1742" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2340" pageHeight="1742" math="0" shadow="0" background="#FFFFFF">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="__title" value="01 / 04  F03 题库与试卷" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Microsoft YaHei;fontColor=#25364B;fontSize=48;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40" y="24" width="2260" height="64" />
+        </mxCell>
+        <mxCell id="__note" value="" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Microsoft YaHei;fontColor=#25364B;fontSize=26;fontColor=#617084;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40" y="96" width="2260" height="48" />
+        </mxCell>
+        <mxCell id="F03" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F03&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;题库与试卷&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_questionbank.go;services/api-gateway/internal/server/routes_paper.go" details="F03&#10;题库与试卷" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="168" y="604" width="184" height="157" />
+        </mxCell>
+        <mxCell id="F03.01" value="&lt;div style=&quot;font-size:40px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F03.01 题库与访问控制&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_questionbank.go;apps/web-admin/src/features/question-bank/QuestionBankPage.tsx" details="F03.01 题库与访问控制" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="588" y="322" width="449" height="72" />
+        </mxCell>
+        <mxCell id="F03.01.features" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;题库内容、资产与元数据&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;F03.01.02 成员权限与 ACL 管理&lt;br&gt;F03.01.03 题库题目实例化到考试&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_questionbank.go;apps/web-admin/src/features/question-bank/QuestionBankPage.tsx" details="具体功能&#10;F03.01.01 题库题目、内容、资产与元数据&#10;F03.01.02 成员权限与 ACL 管理&#10;F03.01.03 题库题目实例化到考试" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="1366" y="258" width="816" height="198" />
+        </mxCell>
+        <mxCell id="F03.02" value="&lt;div style=&quot;font-size:44px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F03.02 试卷资料导入&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_paper.go;services/api-gateway/internal/paper/paper_import_structure_handlers.go" details="F03.02 试卷资料导入" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="589" y="670" width="447" height="77" />
+        </mxCell>
+        <mxCell id="F03.02.features" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;试卷上传、解析与人工确认&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;F03.02.02 内容补齐、结构预览与结构采纳&lt;br&gt;F03.02.03 取消、重试解析与量规草案&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_paper.go;services/api-gateway/internal/paper/paper_import_structure_handlers.go" details="具体功能&#10;F03.02.01 试卷来源上传、解析与人工确认&#10;F03.02.02 内容补齐、结构预览与结构采纳&#10;F03.02.03 取消、重试解析与量规草案" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="1330" y="610" width="888" height="198" />
+        </mxCell>
+        <mxCell id="F03.03" value="&lt;div style=&quot;font-size:40px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F03.03 题目与评估策略&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_exam.go;services/api-gateway/internal/paper/configuration_handlers.go;apps/web-admin/src/pages/PaperRubricPage.tsx" details="F03.03 题目与评估策略" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="588" y="1024" width="449" height="72" />
+        </mxCell>
+        <mxCell id="F03.03.features" value="&lt;div style=&quot;font-size:69px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;题目、答案、量规与规则版本&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;F03.03.02 学科画像 / 题型原型配置及快照&lt;br&gt;F03.03.03 试卷准备检查与配置 hash 确认&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_exam.go;services/api-gateway/internal/paper/configuration_handlers.go;apps/web-admin/src/pages/PaperRubricPage.tsx" details="具体功能&#10;F03.03.01 题目、参考答案、量规与规则版本&#10;F03.03.02 学科画像 / 题型原型配置及快照&#10;F03.03.03 试卷准备检查与配置 hash 确认" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="1314" y="962" width="921" height="194" />
+        </mxCell>
+        <mxCell id="F03-boundary" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;题库素材 ≠ 考试题目&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;实例化需考试管理 + 题库读取权限&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#EAF2FF;strokeColor=#5278B0;strokeWidth=1.5;dashed=1;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_questionbank.go;services/api-gateway/internal/server/routes_paper.go" details="阅读边界与未接入能力&#10;题库素材与考试题目是不同资源；实例化需要 exam:manage 与 question_bank:read。" implementationStatus="infra">
+          <mxGeometry as="geometry" x="815" y="1387" width="697" height="157" />
+        </mxCell>
+        <mxCell id="__e0" value="归属" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F03" target="F03.01" evidence="services/api-gateway/internal/server/routes_questionbank.go;apps/web-admin/src/features/question-bank/QuestionBankPage.tsx" details="归属">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="500" y="682" />
+              <mxPoint x="500" y="358" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e1" value="包含" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F03.01" target="F03.01.features" evidence="services/api-gateway/internal/server/routes_questionbank.go;apps/web-admin/src/features/question-bank/QuestionBankPage.tsx" details="包含">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e2" value="归属" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F03" target="F03.02" evidence="services/api-gateway/internal/server/routes_paper.go;services/api-gateway/internal/paper/paper_import_structure_handlers.go" details="归属">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="500" y="682" />
+              <mxPoint x="500" y="708" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e3" value="包含" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F03.02" target="F03.02.features" evidence="services/api-gateway/internal/server/routes_paper.go;services/api-gateway/internal/paper/paper_import_structure_handlers.go" details="包含">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e4" value="归属" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F03" target="F03.03" evidence="services/api-gateway/internal/server/routes_exam.go;services/api-gateway/internal/paper/configuration_handlers.go;apps/web-admin/src/pages/PaperRubricPage.tsx" details="归属">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="500" y="682" />
+              <mxPoint x="500" y="1060" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e5" value="包含" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F03.03" target="F03.03.features" evidence="services/api-gateway/internal/server/routes_exam.go;services/api-gateway/internal/paper/configuration_handlers.go;apps/web-admin/src/pages/PaperRubricPage.tsx" details="包含">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__legend0" value="已实现" style="rounded=1;html=1;fillColor=#E9F6EE;strokeColor=#38835B;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40.0" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend1" value="部分接入" style="rounded=1;html=1;fillColor=#FFF4D9;strokeColor=#AD7D24;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="416.6666666666667" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend2" value="规划" style="rounded=1;html=1;fillColor=#F1F2F4;strokeColor=#969DA7;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="793.3333333333334" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend3" value="问题" style="rounded=1;html=1;fillColor=#FDECEF;strokeColor=#B64857;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1170.0" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend4" value="基础设施" style="rounded=1;html=1;fillColor=#EAF2FF;strokeColor=#5278B0;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1546.6666666666667" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend5" value="待确认" style="rounded=1;html=1;fillColor=#F5F5F6;strokeColor=#8C94A0;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1923.3333333333335" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="f04" name="05 F04 考试管理">
+    <mxGraphModel dx="2340" dy="1742" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2340" pageHeight="1742" math="0" shadow="0" background="#FFFFFF">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="__title" value="01 / 05  F04 考试管理" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Microsoft YaHei;fontColor=#25364B;fontSize=48;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40" y="24" width="2260" height="64" />
+        </mxCell>
+        <mxCell id="__note" value="" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Microsoft YaHei;fontColor=#25364B;fontSize=26;fontColor=#617084;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40" y="96" width="2260" height="48" />
+        </mxCell>
+        <mxCell id="F04" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F04&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;考试管理&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_exam.go;apps/web-admin/src/features/exams/create/CreateExamPage.tsx" details="F04&#10;考试管理" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="184" y="604" width="152" height="157" />
+        </mxCell>
+        <mxCell id="F04.01" value="&lt;div style=&quot;font-size:49px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F04.01 创建与管理&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_exam.go;apps/web-admin/src/features/exams/management/ManagementExamOverviewPage.tsx" details="F04.01 创建与管理" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="590" y="316" width="445" height="83" />
+        </mxCell>
+        <mxCell id="F04.01.features" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;新建单科考试 / 多科场次&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;F04.01.02 考试模板、列表与管理总览&lt;br&gt;F04.01.03 考试资料修改及命令回执恢复&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_exam.go;apps/web-admin/src/features/exams/management/ManagementExamOverviewPage.tsx" details="具体功能&#10;F04.01.01 新建单科考试或多科考试场次&#10;F04.01.02 考试模板、列表与管理总览&#10;F04.01.03 考试资料修改及命令回执恢复" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="1364" y="258" width="820" height="198" />
+        </mxCell>
+        <mxCell id="F04.02" value="&lt;div style=&quot;font-size:40px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F04.02 准备与采集边界&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_exam.go;services/api-gateway/internal/server/routes_paper.go;apps/web-admin/src/pages/ExamPreparationPage.tsx" details="F04.02 准备与采集边界" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="588" y="672" width="449" height="72" />
+        </mxCell>
+        <mxCell id="F04.02.features" value="&lt;div style=&quot;font-size:69px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;学生范围、名单与候选人刷新&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;F04.02.02 readiness 检查、确认、开始采集&lt;br&gt;F04.02.03 冻结配置变化后重新检查&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_exam.go;services/api-gateway/internal/server/routes_paper.go;apps/web-admin/src/pages/ExamPreparationPage.tsx" details="具体功能&#10;F04.02.01 学生范围、名单与候选人刷新&#10;F04.02.02 readiness 检查、确认、开始采集&#10;F04.02.03 冻结配置变化后重新检查" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="1314" y="612" width="921" height="194" />
+        </mxCell>
+        <mxCell id="F04.03" value="&lt;div style=&quot;font-size:49px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F04.03 考试工作区&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="apps/web-admin/src/router/pageRendering.tsx;apps/web-admin/src/router/routes.tsx;services/api-gateway/internal/exam/management_archive_handlers.go" details="F04.03 考试工作区" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="590" y="1018" width="445" height="83" />
+        </mxCell>
+        <mxCell id="F04.03.features" value="&lt;div style=&quot;font-size:71px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;13 个管理分区承载业务阶段&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;F04.03.02 管理考试归档检查、归档与恢复&lt;br&gt;F04.03.03 归档事实控制工作区只读入口&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="apps/web-admin/src/router/pageRendering.tsx;apps/web-admin/src/router/routes.tsx;services/api-gateway/internal/exam/management_archive_handlers.go" details="具体功能&#10;F04.03.01 13 个 admin 分区承载各业务阶段&#10;F04.03.02 管理考试归档检查、归档与恢复&#10;F04.03.03 归档事实控制工作区只读入口" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="1318" y="962" width="914" height="196" />
+        </mxCell>
+        <mxCell id="F04-boundary" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;考试工作区：按分区授权&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#EAF2FF;strokeColor=#5278B0;strokeWidth=1.5;dashed=1;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_exam.go;apps/web-admin/src/features/exams/create/CreateExamPage.tsx" details="阅读边界与未接入能力&#10;工作区动态路由不计入 24 个生产静态入口；teacher/auditor/student 无考试工作区分区授权。" implementationStatus="infra">
+          <mxGeometry as="geometry" x="756" y="1410" width="816" height="111" />
+        </mxCell>
+        <mxCell id="__e0" value="归属" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F04" target="F04.01" evidence="services/api-gateway/internal/server/routes_exam.go;apps/web-admin/src/features/exams/management/ManagementExamOverviewPage.tsx" details="归属">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="500" y="682" />
+              <mxPoint x="500" y="358" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e1" value="包含" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F04.01" target="F04.01.features" evidence="services/api-gateway/internal/server/routes_exam.go;apps/web-admin/src/features/exams/management/ManagementExamOverviewPage.tsx" details="包含">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e2" value="归属" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F04" target="F04.02" evidence="services/api-gateway/internal/server/routes_exam.go;services/api-gateway/internal/server/routes_paper.go;apps/web-admin/src/pages/ExamPreparationPage.tsx" details="归属">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="500" y="682" />
+              <mxPoint x="500" y="708" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e3" value="包含" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F04.02" target="F04.02.features" evidence="services/api-gateway/internal/server/routes_exam.go;services/api-gateway/internal/server/routes_paper.go;apps/web-admin/src/pages/ExamPreparationPage.tsx" details="包含">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e4" value="归属" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F04" target="F04.03" evidence="apps/web-admin/src/router/pageRendering.tsx;apps/web-admin/src/router/routes.tsx;services/api-gateway/internal/exam/management_archive_handlers.go" details="归属">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="500" y="682" />
+              <mxPoint x="500" y="1060" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e5" value="包含" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F04.03" target="F04.03.features" evidence="apps/web-admin/src/router/pageRendering.tsx;apps/web-admin/src/router/routes.tsx;services/api-gateway/internal/exam/management_archive_handlers.go" details="包含">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__legend0" value="已实现" style="rounded=1;html=1;fillColor=#E9F6EE;strokeColor=#38835B;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40.0" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend1" value="部分接入" style="rounded=1;html=1;fillColor=#FFF4D9;strokeColor=#AD7D24;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="416.6666666666667" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend2" value="规划" style="rounded=1;html=1;fillColor=#F1F2F4;strokeColor=#969DA7;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="793.3333333333334" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend3" value="问题" style="rounded=1;html=1;fillColor=#FDECEF;strokeColor=#B64857;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1170.0" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend4" value="基础设施" style="rounded=1;html=1;fillColor=#EAF2FF;strokeColor=#5278B0;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1546.6666666666667" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend5" value="待确认" style="rounded=1;html=1;fillColor=#F5F5F6;strokeColor=#8C94A0;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1923.3333333333335" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="f05" name="06 F05 采集、图像与模板">
+    <mxGraphModel dx="2340" dy="1742" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2340" pageHeight="1742" math="0" shadow="0" background="#FFFFFF">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="__title" value="01 / 06  F05 采集、图像与模板" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Microsoft YaHei;fontColor=#25364B;fontSize=48;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40" y="24" width="2260" height="64" />
+        </mxCell>
+        <mxCell id="__note" value="" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Microsoft YaHei;fontColor=#25364B;fontSize=26;fontColor=#617084;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40" y="96" width="2260" height="48" />
+        </mxCell>
+        <mxCell id="F05" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F05&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;采集、图像与模板&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#FFF4D9;strokeColor=#AD7D24;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_capture.go;docs/architecture/specs/06-image-template-pipeline.json" details="F05&#10;采集、图像与模板" implementationStatus="partial">
+          <mxGeometry as="geometry" x="120" y="604" width="280" height="157" />
+        </mxCell>
+        <mxCell id="F05.01" value="&lt;div style=&quot;font-size:40px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F05.01 模板编辑与打印&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_paper.go;services/api-gateway/internal/server/routes_grading.go;apps/web-admin/src/pages/AnswerSheetTemplatePage.tsx" details="F05.01 模板编辑与打印" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="588" y="322" width="449" height="72" />
+        </mxCell>
+        <mxCell id="F05.01.features" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;模板 ROI 编辑、锁定与克隆&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;F05.01.02 绑定已有模板、条码与学生打印包&lt;br&gt;F05.01.03 OMR 校准案例标注、批准和撤销&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_paper.go;services/api-gateway/internal/server/routes_grading.go;apps/web-admin/src/pages/AnswerSheetTemplatePage.tsx" details="具体功能&#10;F05.01.01 模板页与 ROI 编辑、锁定和克隆&#10;F05.01.02 绑定已有模板、条码与学生打印包&#10;F05.01.03 OMR 校准案例标注、批准和撤销" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="1315" y="258" width="919" height="198" />
+        </mxCell>
+        <mxCell id="F05.02" value="&lt;div style=&quot;font-size:40px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F05.02 采集与图像处理&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/capture/registration_store_postgres.go;services/page-processing-worker/page_processing/registration.py;services/image-quality-worker/image_quality/engine.py" details="F05.02 采集与图像处理" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="588" y="672" width="449" height="72" />
+        </mxCell>
+        <mxCell id="F05.02.features" value="&lt;div style=&quot;font-size:71px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;采集批次、解码与多页 PNG&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;F05.02.02 质量检测、条码观测与身份核对&lt;br&gt;F05.02.03 候选模板匹配、OpenCV 配准及 ROI 切题&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/capture/registration_store_postgres.go;services/page-processing-worker/page_processing/registration.py;services/image-quality-worker/image_quality/engine.py" details="具体功能&#10;F05.02.01 采集批次、文件解码、多页 PNG&#10;F05.02.02 质量检测、条码观测与身份核对&#10;F05.02.03 候选模板匹配、OpenCV 配准及 ROI 切题" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="1316" y="610" width="916" height="196" />
+        </mxCell>
+        <mxCell id="F05.03" value="&lt;div style=&quot;font-size:40px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F05.03 人工纠正与处理中心&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_capture.go;services/api-gateway/internal/processing/handlers.go;apps/web-admin/src/features/capture/MatchingWorkspace.tsx" details="F05.03 人工纠正与处理中心" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="548" y="1024" width="529" height="72" />
+        </mxCell>
+        <mxCell id="F05.03.features" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;页/学生匹配确认、拆分合并&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;F05.03.02 质量覆写、重试与四点校正预览&lt;br&gt;F05.03.03 应用 / 撤销校正及阻断异常定位&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_capture.go;services/api-gateway/internal/processing/handlers.go;apps/web-admin/src/features/capture/MatchingWorkspace.tsx" details="具体功能&#10;F05.03.01 页面 / 学生匹配确认、拆分与合并&#10;F05.03.02 质量覆写、重试与四点校正预览&#10;F05.03.03 应用 / 撤销校正及阻断异常定位" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="1314" y="960" width="922" height="198" />
+        </mxCell>
+        <mxCell id="F05-boundary" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;待确认：YOLO 未知版面模板&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#F5F5F6;strokeColor=#8C94A0;strokeWidth=1.5;dashed=1;dashed=1;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_capture.go;docs/architecture/specs/06-image-template-pipeline.json" details="阅读边界与未接入能力&#10;F05.04（待确认）：未发现 YOLO 备用识别与未知版面自动建模板的实现；不能接入主流程。配准完成事务边界问题见图 09。" implementationStatus="unknown">
+          <mxGeometry as="geometry" x="679" y="1410" width="969" height="111" />
+        </mxCell>
+        <mxCell id="__e0" value="归属" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F05" target="F05.01" evidence="services/api-gateway/internal/server/routes_paper.go;services/api-gateway/internal/server/routes_grading.go;apps/web-admin/src/pages/AnswerSheetTemplatePage.tsx" details="归属">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="500" y="682" />
+              <mxPoint x="500" y="358" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e1" value="包含" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F05.01" target="F05.01.features" evidence="services/api-gateway/internal/server/routes_paper.go;services/api-gateway/internal/server/routes_grading.go;apps/web-admin/src/pages/AnswerSheetTemplatePage.tsx" details="包含">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e2" value="归属" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F05" target="F05.02" evidence="services/api-gateway/internal/capture/registration_store_postgres.go;services/page-processing-worker/page_processing/registration.py;services/image-quality-worker/image_quality/engine.py" details="归属">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="500" y="682" />
+              <mxPoint x="500" y="708" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e3" value="包含" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F05.02" target="F05.02.features" evidence="services/api-gateway/internal/capture/registration_store_postgres.go;services/page-processing-worker/page_processing/registration.py;services/image-quality-worker/image_quality/engine.py" details="包含">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e4" value="归属" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F05" target="F05.03" evidence="services/api-gateway/internal/server/routes_capture.go;services/api-gateway/internal/processing/handlers.go;apps/web-admin/src/features/capture/MatchingWorkspace.tsx" details="归属">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="500" y="682" />
+              <mxPoint x="500" y="1060" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e5" value="包含" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F05.03" target="F05.03.features" evidence="services/api-gateway/internal/server/routes_capture.go;services/api-gateway/internal/processing/handlers.go;apps/web-admin/src/features/capture/MatchingWorkspace.tsx" details="包含">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__legend0" value="已实现" style="rounded=1;html=1;fillColor=#E9F6EE;strokeColor=#38835B;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40.0" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend1" value="部分接入" style="rounded=1;html=1;fillColor=#FFF4D9;strokeColor=#AD7D24;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="416.6666666666667" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend2" value="规划" style="rounded=1;html=1;fillColor=#F1F2F4;strokeColor=#969DA7;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="793.3333333333334" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend3" value="问题" style="rounded=1;html=1;fillColor=#FDECEF;strokeColor=#B64857;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1170.0" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend4" value="基础设施" style="rounded=1;html=1;fillColor=#EAF2FF;strokeColor=#5278B0;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1546.6666666666667" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend5" value="待确认" style="rounded=1;html=1;fillColor=#F5F5F6;strokeColor=#8C94A0;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1923.3333333333335" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="f06" name="07 F06 OCR 与答案理解">
+    <mxGraphModel dx="2340" dy="1742" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2340" pageHeight="1742" math="0" shadow="0" background="#FFFFFF">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="__title" value="01 / 07  F06 OCR 与答案理解" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Microsoft YaHei;fontColor=#25364B;fontSize=48;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40" y="24" width="2260" height="64" />
+        </mxCell>
+        <mxCell id="__note" value="" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Microsoft YaHei;fontColor=#25364B;fontSize=26;fontColor=#617084;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40" y="96" width="2260" height="48" />
+        </mxCell>
+        <mxCell id="F06" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F06&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;OCR 与答案理解&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_processing.go;services/api-gateway/internal/server/routes_exam.go" details="F06&#10;OCR 与答案理解" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="130" y="604" width="261" height="157" />
+        </mxCell>
+        <mxCell id="F06.01" value="&lt;div style=&quot;font-size:53px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F06.01 OCR 任务&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/ocr/runtime_coordinator_postgres.go;services/api-gateway/internal/server/routes_processing.go" details="F06.01 OCR 任务" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="585" y="314" width="455" height="88" />
+        </mxCell>
+        <mxCell id="F06.01.features" value="&lt;div style=&quot;font-size:70px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;答卷 OCR 创建、读取与提交&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;F06.01.02 worker 任务来源与租约校验&lt;br&gt;F06.01.03 OCR 结果与 runtime 完成的事务协调&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/ocr/runtime_coordinator_postgres.go;services/api-gateway/internal/server/routes_processing.go" details="具体功能&#10;F06.01.01 答卷 OCR 创建、读取、开始与结果提交&#10;F06.01.02 worker 任务来源与租约校验&#10;F06.01.03 OCR 结果与 runtime 完成的事务协调" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="1315" y="260" width="919" height="195" />
+        </mxCell>
+        <mxCell id="F06.02" value="&lt;div style=&quot;font-size:40px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F06.02 分段答案与证据&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_processing.go;services/api-gateway/internal/mathunderstanding/handlers.go" details="F06.02 分段答案与证据" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="588" y="672" width="449" height="72" />
+        </mxCell>
+        <mxCell id="F06.02.features" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;答案分段生成、修订与读图&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;F06.02.02 OCR / 公式 / 数学证据关联&lt;br&gt;F06.02.03 当前答案版本与有效裁片追踪&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_processing.go;services/api-gateway/internal/mathunderstanding/handlers.go" details="具体功能&#10;F06.02.01 答案分段生成、修订及图像读取&#10;F06.02.02 OCR / 公式 / 数学证据关联&#10;F06.02.03 当前答案版本与有效裁片追踪" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="1330" y="610" width="888" height="198" />
+        </mxCell>
+        <mxCell id="F06.03" value="&lt;div style=&quot;font-size:40px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F06.03 数学理解与验证&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/mathunderstanding/handlers.go;services/api-gateway/internal/server/routes_worker.go" details="F06.03 数学理解与验证" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="588" y="1024" width="449" height="72" />
+        </mxCell>
+        <mxCell id="F06.03.features" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;数学任务、产物与证据核验&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;F06.03.02 符号、图形、空间与量规辅助&lt;br&gt;F06.03.03 worker runtime 回调绑定授权任务&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/mathunderstanding/handlers.go;services/api-gateway/internal/server/routes_worker.go" details="具体功能&#10;F06.03.01 数学理解任务、产物与证据核验&#10;F06.03.02 符号、图形、空间与量规辅助&#10;F06.03.03 worker runtime 回调绑定授权任务" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="1330" y="960" width="888" height="198" />
+        </mxCell>
+        <mxCell id="F06-boundary" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;识别≠人工确认 / 最终成绩&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#EAF2FF;strokeColor=#5278B0;strokeWidth=1.5;dashed=1;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_processing.go;services/api-gateway/internal/server/routes_exam.go" details="阅读边界与未接入能力&#10;OCR、数学产物和模型建议都是版本化证据；不把识别成功直接等同人工确认或最终成绩。" implementationStatus="infra">
+          <mxGeometry as="geometry" x="726" y="1410" width="875" height="111" />
+        </mxCell>
+        <mxCell id="__e0" value="归属" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F06" target="F06.01" evidence="services/api-gateway/internal/ocr/runtime_coordinator_postgres.go;services/api-gateway/internal/server/routes_processing.go" details="归属">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="500" y="682" />
+              <mxPoint x="500" y="358" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e1" value="包含" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F06.01" target="F06.01.features" evidence="services/api-gateway/internal/ocr/runtime_coordinator_postgres.go;services/api-gateway/internal/server/routes_processing.go" details="包含">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e2" value="归属" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F06" target="F06.02" evidence="services/api-gateway/internal/server/routes_processing.go;services/api-gateway/internal/mathunderstanding/handlers.go" details="归属">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="500" y="682" />
+              <mxPoint x="500" y="708" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e3" value="包含" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F06.02" target="F06.02.features" evidence="services/api-gateway/internal/server/routes_processing.go;services/api-gateway/internal/mathunderstanding/handlers.go" details="包含">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e4" value="归属" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F06" target="F06.03" evidence="services/api-gateway/internal/mathunderstanding/handlers.go;services/api-gateway/internal/server/routes_worker.go" details="归属">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="500" y="682" />
+              <mxPoint x="500" y="1060" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e5" value="包含" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F06.03" target="F06.03.features" evidence="services/api-gateway/internal/mathunderstanding/handlers.go;services/api-gateway/internal/server/routes_worker.go" details="包含">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__legend0" value="已实现" style="rounded=1;html=1;fillColor=#E9F6EE;strokeColor=#38835B;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40.0" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend1" value="部分接入" style="rounded=1;html=1;fillColor=#FFF4D9;strokeColor=#AD7D24;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="416.6666666666667" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend2" value="规划" style="rounded=1;html=1;fillColor=#F1F2F4;strokeColor=#969DA7;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="793.3333333333334" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend3" value="问题" style="rounded=1;html=1;fillColor=#FDECEF;strokeColor=#B64857;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1170.0" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend4" value="基础设施" style="rounded=1;html=1;fillColor=#EAF2FF;strokeColor=#5278B0;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1546.6666666666667" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend5" value="待确认" style="rounded=1;html=1;fillColor=#F5F5F6;strokeColor=#8C94A0;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1923.3333333333335" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="f07" name="08 F07 AI 评分与人工复核">
+    <mxGraphModel dx="2340" dy="1742" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2340" pageHeight="1742" math="0" shadow="0" background="#FFFFFF">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="__title" value="01 / 08  F07 AI 评分与人工复核" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Microsoft YaHei;fontColor=#25364B;fontSize=48;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40" y="24" width="2260" height="64" />
+        </mxCell>
+        <mxCell id="__note" value="" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Microsoft YaHei;fontColor=#25364B;fontSize=26;fontColor=#617084;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40" y="96" width="2260" height="48" />
+        </mxCell>
+        <mxCell id="F07" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F07&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;AI 评分与人工复核&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#FFF4D9;strokeColor=#AD7D24;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_grading.go;docs/architecture/specs/07-ai-grading.json" details="F07&#10;AI 评分与人工复核" implementationStatus="partial">
+          <mxGeometry as="geometry" x="116" y="604" width="289" height="157" />
+        </mxCell>
+        <mxCell id="F07.01" value="&lt;div style=&quot;font-size:41px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F07.01 规则与 AI 建议&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/grading/scoring_run_routing.go;services/api-gateway/internal/subjective/handlers_worker.go;services/api-gateway/internal/subjective/grade_settlement_pipeline.go" details="F07.01 规则与 AI 建议" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="590" y="320" width="445" height="74" />
+        </mxCell>
+        <mxCell id="F07.01.features" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;客观题规则/OMR 评分运行&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;F07.01.02 主观题单题、批次、排队和重试&lt;br&gt;F07.01.03 单 activeAdapter + 服务端结算与证据风险&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/grading/scoring_run_routing.go;services/api-gateway/internal/subjective/handlers_worker.go;services/api-gateway/internal/subjective/grade_settlement_pipeline.go" details="具体功能&#10;F07.01.01 客观题规则 / OMR 评分与评分运行&#10;F07.01.02 主观题单题、批次、排队和重试&#10;F07.01.03 单 activeAdapter + 服务端结算与证据风险" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="1320" y="258" width="910" height="198" />
+        </mxCell>
+        <mxCell id="F07.02" value="&lt;div style=&quot;font-size:40px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F07.02 人工阅卷与仲裁&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_review.go;services/api-gateway/internal/server/routes_grading.go;apps/web-admin/src/features/grading/workbench/GradingWorkbench.tsx" details="F07.02 人工阅卷与仲裁" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="588" y="672" width="449" height="72" />
+        </mxCell>
+        <mxCell id="F07.02.features" value="&lt;div style=&quot;font-size:64px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;领取、续租、分派、草稿、提交&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;F07.02.02 双评策略与人工分差仲裁&lt;br&gt;F07.02.03 批注 / 评语、退回与匿名裁片工作台&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_review.go;services/api-gateway/internal/server/routes_grading.go;apps/web-admin/src/features/grading/workbench/GradingWorkbench.tsx" details="具体功能&#10;F07.02.01 任务领取、续租、分派、草稿及提交&#10;F07.02.02 双评策略与人工分差仲裁&#10;F07.02.03 批注 / 评语、退回与匿名裁片工作台" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="1314" y="614" width="920" height="188" />
+        </mxCell>
+        <mxCell id="F07.03" value="&lt;div style=&quot;font-size:40px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F07.03 三智能体 A/B/C 内核&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#FFF4D9;strokeColor=#AD7D24;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/subjective/panel_orchestrator.go;services/api-gateway/internal/subjective/panel_shadow_runner.go;services/api-gateway/internal/subjective/handlers.go" details="F07.03 三智能体 A/B/C 内核" implementationStatus="partial">
+          <mxGeometry as="geometry" x="535" y="1024" width="555" height="72" />
+        </mxCell>
+        <mxCell id="F07.03.features" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;A/B 并行盲评与差异比较&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;F07.03.02 C 盲仲裁、准入策略与影子评估&lt;br&gt;F07.03.03 普通生产 Grade / worker 未自动调用 Panel&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#FFF4D9;strokeColor=#AD7D24;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/subjective/panel_orchestrator.go;services/api-gateway/internal/subjective/panel_shadow_runner.go;services/api-gateway/internal/subjective/handlers.go" details="具体功能&#10;F07.03.01 A/B 并行盲评与差异比较内核&#10;F07.03.02 C 盲仲裁、准入策略与影子评估&#10;F07.03.03 普通生产 Grade / worker 未自动调用 Panel" implementationStatus="partial">
+          <mxGeometry as="geometry" x="1360" y="960" width="830" height="198" />
+        </mxCell>
+        <mxCell id="F07-boundary" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;人工双评 ≠ AI Panel&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;主观题建议需人工确认&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#FFF4D9;strokeColor=#AD7D24;strokeWidth=1.5;dashed=1;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_grading.go;docs/architecture/specs/07-ai-grading.json" details="阅读边界与未接入能力&#10;人工双评与 AI Panel 是两种不同机制。AI 建议不直接创建最终发布成绩；主观题仍要求人工确认。" implementationStatus="partial">
+          <mxGeometry as="geometry" x="810" y="1387" width="707" height="157" />
+        </mxCell>
+        <mxCell id="__e0" value="归属" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F07" target="F07.01" evidence="services/api-gateway/internal/grading/scoring_run_routing.go;services/api-gateway/internal/subjective/handlers_worker.go;services/api-gateway/internal/subjective/grade_settlement_pipeline.go" details="归属">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="500" y="682" />
+              <mxPoint x="500" y="358" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e1" value="包含" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F07.01" target="F07.01.features" evidence="services/api-gateway/internal/grading/scoring_run_routing.go;services/api-gateway/internal/subjective/handlers_worker.go;services/api-gateway/internal/subjective/grade_settlement_pipeline.go" details="包含">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e2" value="归属" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F07" target="F07.02" evidence="services/api-gateway/internal/server/routes_review.go;services/api-gateway/internal/server/routes_grading.go;apps/web-admin/src/features/grading/workbench/GradingWorkbench.tsx" details="归属">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="500" y="682" />
+              <mxPoint x="500" y="708" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e3" value="包含" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F07.02" target="F07.02.features" evidence="services/api-gateway/internal/server/routes_review.go;services/api-gateway/internal/server/routes_grading.go;apps/web-admin/src/features/grading/workbench/GradingWorkbench.tsx" details="包含">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e4" value="归属" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F07" target="F07.03" evidence="services/api-gateway/internal/subjective/panel_orchestrator.go;services/api-gateway/internal/subjective/panel_shadow_runner.go;services/api-gateway/internal/subjective/handlers.go" details="归属">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="500" y="682" />
+              <mxPoint x="500" y="1060" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e5" value="包含" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F07.03" target="F07.03.features" evidence="services/api-gateway/internal/subjective/panel_orchestrator.go;services/api-gateway/internal/subjective/panel_shadow_runner.go;services/api-gateway/internal/subjective/handlers.go" details="包含">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__legend0" value="已实现" style="rounded=1;html=1;fillColor=#E9F6EE;strokeColor=#38835B;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40.0" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend1" value="部分接入" style="rounded=1;html=1;fillColor=#FFF4D9;strokeColor=#AD7D24;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="416.6666666666667" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend2" value="规划" style="rounded=1;html=1;fillColor=#F1F2F4;strokeColor=#969DA7;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="793.3333333333334" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend3" value="问题" style="rounded=1;html=1;fillColor=#FDECEF;strokeColor=#B64857;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1170.0" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend4" value="基础设施" style="rounded=1;html=1;fillColor=#EAF2FF;strokeColor=#5278B0;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1546.6666666666667" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend5" value="待确认" style="rounded=1;html=1;fillColor=#F5F5F6;strokeColor=#8C94A0;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1923.3333333333335" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="f08" name="09 F08 成绩、发布与学生">
+    <mxGraphModel dx="2340" dy="1742" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2340" pageHeight="1742" math="0" shadow="0" background="#FFFFFF">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="__title" value="01 / 09  F08 成绩、发布与学生" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Microsoft YaHei;fontColor=#25364B;fontSize=48;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40" y="24" width="2260" height="64" />
+        </mxCell>
+        <mxCell id="__note" value="" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Microsoft YaHei;fontColor=#25364B;fontSize=26;fontColor=#617084;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40" y="96" width="2260" height="48" />
+        </mxCell>
+        <mxCell id="F08" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F08&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;成绩、发布与学生&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#FFF4D9;strokeColor=#AD7D24;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_release.go;apps/student-portal/src/App.tsx" details="F08&#10;成绩、发布与学生" implementationStatus="partial">
+          <mxGeometry as="geometry" x="120" y="604" width="280" height="157" />
+        </mxCell>
+        <mxCell id="F08.01" value="&lt;div style=&quot;font-size:40px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F08.01 成绩汇总与发布&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#FFF4D9;strokeColor=#AD7D24;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_release.go;services/api-gateway/internal/scorerelease/handlers.go;services/api-gateway/internal/regraderelease/handlers.go" details="F08.01 成绩汇总与发布" implementationStatus="partial">
+          <mxGeometry as="geometry" x="588" y="322" width="449" height="72" />
+        </mxCell>
+        <mxCell id="F08.01.features" value="&lt;div style=&quot;font-size:69px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;结分、质检、缺考与名单核对&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;F08.01.02 确认成绩；旧发布与新快照/门禁并存&lt;br&gt;F08.01.03 成绩导出、重评结果发布&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#FFF4D9;strokeColor=#AD7D24;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_release.go;services/api-gateway/internal/scorerelease/handlers.go;services/api-gateway/internal/regraderelease/handlers.go" details="具体功能&#10;F08.01.01 finalize、质量检查、缺考及名单核对&#10;F08.01.02 确认成绩；旧发布与新快照/门禁并存&#10;F08.01.03 成绩导出、重评结果发布" implementationStatus="partial">
+          <mxGeometry as="geometry" x="1314" y="260" width="921" height="194" />
+        </mxCell>
+        <mxCell id="F08.02" value="&lt;div style=&quot;font-size:49px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F08.02 统计与复核&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_release.go;apps/web-admin/src/pages/LearningReportsPage.tsx;apps/web-admin/src/pages/QuestionAppealCenterPage.tsx" details="F08.02 统计与复核" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="590" y="667" width="445" height="83" />
+        </mxCell>
+        <mxCell id="F08.02.features" value="&lt;div style=&quot;font-size:66px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;考试/班级/题目/阅卷质量报告&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;F08.02.02 成绩复核分派、教师建议与决定&lt;br&gt;F08.02.03 公开逐题申诉、重评与新版本关联&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_release.go;apps/web-admin/src/pages/LearningReportsPage.tsx;apps/web-admin/src/pages/QuestionAppealCenterPage.tsx" details="具体功能&#10;F08.02.01 考试 / 班级 / 题目 / 阅卷质量报告&#10;F08.02.02 成绩复核分派、教师建议与决定&#10;F08.02.03 公开逐题申诉、重评与新版本关联" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="1320" y="614" width="909" height="190" />
+        </mxCell>
+        <mxCell id="F08.03" value="&lt;div style=&quot;font-size:65px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F08.03 学生端&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="apps/student-portal/src/App.tsx;apps/student-portal/src/api.ts;services/api-gateway/internal/studentportal/handlers.go" details="F08.03 学生端" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="586" y="1008" width="453" height="102" />
+        </mxCell>
+        <mxCell id="F08.03.features" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;本人已发布成绩与逐题反馈&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;F08.03.02 答题图片 / 公开批注按 release 读取&lt;br&gt;F08.03.03 圈选申诉区域、草稿与发布变化处理&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="apps/student-portal/src/App.tsx;apps/student-portal/src/api.ts;services/api-gateway/internal/studentportal/handlers.go" details="具体功能&#10;F08.03.01 本人已发布考试、成绩与逐题反馈&#10;F08.03.02 答题图片 / 公开批注按 release 读取&#10;F08.03.03 圈选申诉区域、草稿与发布变化处理" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="1330" y="960" width="888" height="198" />
+        </mxCell>
+        <mxCell id="F08-boundary" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;旧发布与新快照并存&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;门禁与学生读取来源不同&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#FFF4D9;strokeColor=#AD7D24;strokeWidth=1.5;dashed=1;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_release.go;apps/student-portal/src/App.tsx" details="阅读边界与未接入能力&#10;学生页面同时检查角色与读取权限。旧 /exams/{examId}/publish 仅发布grade并执行旧质量检查；新版 score_release 路径才提供快照/当前指针和对应门禁。" implementationStatus="partial">
+          <mxGeometry as="geometry" x="828" y="1387" width="672" height="157" />
+        </mxCell>
+        <mxCell id="__e0" value="归属" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F08" target="F08.01" evidence="services/api-gateway/internal/server/routes_release.go;services/api-gateway/internal/scorerelease/handlers.go;services/api-gateway/internal/regraderelease/handlers.go" details="归属">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="500" y="682" />
+              <mxPoint x="500" y="358" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e1" value="包含" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F08.01" target="F08.01.features" evidence="services/api-gateway/internal/server/routes_release.go;services/api-gateway/internal/scorerelease/handlers.go;services/api-gateway/internal/regraderelease/handlers.go" details="包含">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e2" value="归属" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F08" target="F08.02" evidence="services/api-gateway/internal/server/routes_release.go;apps/web-admin/src/pages/LearningReportsPage.tsx;apps/web-admin/src/pages/QuestionAppealCenterPage.tsx" details="归属">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="500" y="682" />
+              <mxPoint x="500" y="708" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e3" value="包含" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F08.02" target="F08.02.features" evidence="services/api-gateway/internal/server/routes_release.go;apps/web-admin/src/pages/LearningReportsPage.tsx;apps/web-admin/src/pages/QuestionAppealCenterPage.tsx" details="包含">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e4" value="归属" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F08" target="F08.03" evidence="apps/student-portal/src/App.tsx;apps/student-portal/src/api.ts;services/api-gateway/internal/studentportal/handlers.go" details="归属">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="500" y="682" />
+              <mxPoint x="500" y="1060" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e5" value="包含" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F08.03" target="F08.03.features" evidence="apps/student-portal/src/App.tsx;apps/student-portal/src/api.ts;services/api-gateway/internal/studentportal/handlers.go" details="包含">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__legend0" value="已实现" style="rounded=1;html=1;fillColor=#E9F6EE;strokeColor=#38835B;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40.0" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend1" value="部分接入" style="rounded=1;html=1;fillColor=#FFF4D9;strokeColor=#AD7D24;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="416.6666666666667" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend2" value="规划" style="rounded=1;html=1;fillColor=#F1F2F4;strokeColor=#969DA7;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="793.3333333333334" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend3" value="问题" style="rounded=1;html=1;fillColor=#FDECEF;strokeColor=#B64857;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1170.0" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend4" value="基础设施" style="rounded=1;html=1;fillColor=#EAF2FF;strokeColor=#5278B0;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1546.6666666666667" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend5" value="待确认" style="rounded=1;html=1;fillColor=#F5F5F6;strokeColor=#8C94A0;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1923.3333333333335" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="f09" name="10 F09 模型治理与阅卷质量">
+    <mxGraphModel dx="2340" dy="1742" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2340" pageHeight="1742" math="0" shadow="0" background="#FFFFFF">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="__title" value="01 / 10  F09 模型治理与阅卷质量" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Microsoft YaHei;fontColor=#25364B;fontSize=48;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40" y="24" width="2260" height="64" />
+        </mxCell>
+        <mxCell id="__note" value="" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Microsoft YaHei;fontColor=#25364B;fontSize=26;fontColor=#617084;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40" y="96" width="2260" height="48" />
+        </mxCell>
+        <mxCell id="F09" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F09&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;模型治理与阅卷质量&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#FFF4D9;strokeColor=#AD7D24;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_governance.go;services/api-gateway/internal/server/routes_review.go" details="F09&#10;模型治理与阅卷质量" implementationStatus="partial">
+          <mxGeometry as="geometry" x="104" y="604" width="312" height="157" />
+        </mxCell>
+        <mxCell id="F09.01" value="&lt;div style=&quot;font-size:40px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F09.01 模型与策略治理&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_governance.go;apps/web-admin/src/pages/PlatformModelConfigPage.tsx" details="F09.01 模型与策略治理" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="588" y="322" width="449" height="72" />
+        </mxCell>
+        <mxCell id="F09.01.features" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;API 配置、探测与学校授权&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;F09.01.02 模型角色绑定、提示版本与评估&lt;br&gt;F09.01.03 批准 / 撤销、校准与 AI 准入&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_governance.go;apps/web-admin/src/pages/PlatformModelConfigPage.tsx" details="具体功能&#10;F09.01.01 托管 API 配置、探测与学校模型授权&#10;F09.01.02 模型角色绑定、提示版本与评估&#10;F09.01.03 批准 / 撤销、校准与 AI 准入" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="1330" y="258" width="890" height="198" />
+        </mxCell>
+        <mxCell id="F09.02" value="&lt;div style=&quot;font-size:44px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F09.02 人工阅卷质量&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_review.go;services/api-gateway/internal/server/routes_governance.go" details="F09.02 人工阅卷质量" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="589" y="670" width="447" height="77" />
+        </mxCell>
+        <mxCell id="F09.02.features" value="&lt;div style=&quot;font-size:70px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;样卷、校准、答案组与 Seed&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;F09.02.02 评分分歧、阅卷员漂移与 backmark&lt;br&gt;F09.02.03 重评批次与质量仪表板&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_review.go;services/api-gateway/internal/server/routes_governance.go" details="具体功能&#10;F09.02.01 Gold 样卷、校准、答案组与 Seed&#10;F09.02.02 评分分歧、阅卷员漂移与 backmark&#10;F09.02.03 重评批次与质量仪表板" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="1316" y="611" width="916" height="195" />
+        </mxCell>
+        <mxCell id="F09.03" value="&lt;div style=&quot;font-size:40px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F09.03 治理边界与外部验证&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#FFF4D9;strokeColor=#AD7D24;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_governance.go;services/api-gateway/internal/subjective/panel_orchestrator.go;docs/verification-status.md" details="F09.03 治理边界与外部验证" implementationStatus="partial">
+          <mxGeometry as="geometry" x="548" y="1024" width="529" height="72" />
+        </mxCell>
+        <mxCell id="F09.03.features" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;旧模型写接口返回 410&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;F09.03.02 三智能体策略管理不表示生产自动接入&lt;br&gt;F09.03.03 真实模型效果、成本与样本验收待外部验证&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#FFF4D9;strokeColor=#AD7D24;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_governance.go;services/api-gateway/internal/subjective/panel_orchestrator.go;docs/verification-status.md" details="具体功能&#10;F09.03.01 旧 provider / deployment 写路由返回 410&#10;F09.03.02 三智能体策略管理不表示生产自动接入&#10;F09.03.03 真实模型效果、成本与样本验收待外部验证" implementationStatus="partial">
+          <mxGeometry as="geometry" x="1380" y="960" width="788" height="198" />
+        </mxCell>
+        <mxCell id="F09-boundary" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;旧模型入口 → 共用模型配置页&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#FFF4D9;strokeColor=#AD7D24;strokeWidth=1.5;dashed=1;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_governance.go;services/api-gateway/internal/server/routes_review.go" details="阅读边界与未接入能力&#10;/system/models 由 AppShell 兼容重定向到 /platform/model-config?tab=governance；最终共用模型配置页面。" implementationStatus="partial">
+          <mxGeometry as="geometry" x="662" y="1410" width="1002" height="111" />
+        </mxCell>
+        <mxCell id="__e0" value="归属" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F09" target="F09.01" evidence="services/api-gateway/internal/server/routes_governance.go;apps/web-admin/src/pages/PlatformModelConfigPage.tsx" details="归属">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="500" y="682" />
+              <mxPoint x="500" y="358" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e1" value="包含" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F09.01" target="F09.01.features" evidence="services/api-gateway/internal/server/routes_governance.go;apps/web-admin/src/pages/PlatformModelConfigPage.tsx" details="包含">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e2" value="归属" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F09" target="F09.02" evidence="services/api-gateway/internal/server/routes_review.go;services/api-gateway/internal/server/routes_governance.go" details="归属">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="500" y="682" />
+              <mxPoint x="500" y="708" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e3" value="包含" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F09.02" target="F09.02.features" evidence="services/api-gateway/internal/server/routes_review.go;services/api-gateway/internal/server/routes_governance.go" details="包含">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e4" value="归属" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F09" target="F09.03" evidence="services/api-gateway/internal/server/routes_governance.go;services/api-gateway/internal/subjective/panel_orchestrator.go;docs/verification-status.md" details="归属">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="500" y="682" />
+              <mxPoint x="500" y="1060" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e5" value="包含" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F09.03" target="F09.03.features" evidence="services/api-gateway/internal/server/routes_governance.go;services/api-gateway/internal/subjective/panel_orchestrator.go;docs/verification-status.md" details="包含">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__legend0" value="已实现" style="rounded=1;html=1;fillColor=#E9F6EE;strokeColor=#38835B;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40.0" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend1" value="部分接入" style="rounded=1;html=1;fillColor=#FFF4D9;strokeColor=#AD7D24;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="416.6666666666667" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend2" value="规划" style="rounded=1;html=1;fillColor=#F1F2F4;strokeColor=#969DA7;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="793.3333333333334" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend3" value="问题" style="rounded=1;html=1;fillColor=#FDECEF;strokeColor=#B64857;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1170.0" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend4" value="基础设施" style="rounded=1;html=1;fillColor=#EAF2FF;strokeColor=#5278B0;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1546.6666666666667" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend5" value="待确认" style="rounded=1;html=1;fillColor=#F5F5F6;strokeColor=#8C94A0;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1923.3333333333335" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="f10" name="11 F10 桌面客户端与运维">
+    <mxGraphModel dx="2340" dy="1742" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2340" pageHeight="1742" math="0" shadow="0" background="#FFFFFF">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="__title" value="01 / 11  F10 桌面客户端与运维" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Microsoft YaHei;fontColor=#25364B;fontSize=48;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40" y="24" width="2260" height="64" />
+        </mxCell>
+        <mxCell id="__note" value="" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Microsoft YaHei;fontColor=#25364B;fontSize=26;fontColor=#617084;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40" y="96" width="2260" height="48" />
+        </mxCell>
+        <mxCell id="F10" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F10&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;桌面客户端与运维&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#FFF4D9;strokeColor=#AD7D24;strokeWidth=1.5;" vertex="1" parent="1" evidence="apps/desktop-client/src/App.tsx;services/api-gateway/internal/server/routes_system.go" details="F10&#10;桌面客户端与运维" implementationStatus="partial">
+          <mxGeometry as="geometry" x="120" y="604" width="280" height="157" />
+        </mxCell>
+        <mxCell id="F10.01" value="&lt;div style=&quot;font-size:49px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F10.01 采集工作站&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#FFF4D9;strokeColor=#AD7D24;strokeWidth=1.5;" vertex="1" parent="1" evidence="apps/desktop-client/src/api/captureUploads.ts;apps/desktop-client/src-tauri/src/scanner.rs;apps/desktop-client/src/App.tsx" details="F10.01 采集工作站" implementationStatus="partial">
+          <mxGeometry as="geometry" x="590" y="316" width="445" height="83" />
+        </mxCell>
+        <mxCell id="F10.01.features" value="&lt;div style=&quot;font-size:64px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;文件导入、批次与持久上传队列&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;F10.01.02 分块续传、offset 确认与失败恢复&lt;br&gt;F10.01.03 WIA 设备发现 / Profile / 预检；硬件采集待现场验收&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#FFF4D9;strokeColor=#AD7D24;strokeWidth=1.5;" vertex="1" parent="1" evidence="apps/desktop-client/src/api/captureUploads.ts;apps/desktop-client/src-tauri/src/scanner.rs;apps/desktop-client/src/App.tsx" details="具体功能&#10;F10.01.01 文件导入、批次定位与持久上传队列&#10;F10.01.02 分块续传、offset 确认与失败恢复&#10;F10.01.03 WIA 设备发现 / Profile / 预检；硬件采集待现场验收" implementationStatus="partial">
+          <mxGeometry as="geometry" x="1313" y="244" width="923" height="228" />
+        </mxCell>
+        <mxCell id="F10.02" value="&lt;div style=&quot;font-size:56px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F10.02 离线阅卷&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="apps/desktop-client/src/components/OfflineWorkbench.tsx;apps/desktop-client/src-tauri/src/durable_store/mod.rs;apps/desktop-client/src-tauri/src/durable_store/offline_access.rs" details="F10.02 离线阅卷" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="586" y="662" width="452" height="92" />
+        </mxCell>
+        <mxCell id="F10.02.features" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;下载、加密草稿与本机授权&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;F10.02.02 版本冲突 / 回执核对与联网同步&lt;br&gt;F10.02.03 系统凭据库、Spool 与账号范围隔离&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#E9F6EE;strokeColor=#38835B;strokeWidth=1.5;" vertex="1" parent="1" evidence="apps/desktop-client/src/components/OfflineWorkbench.tsx;apps/desktop-client/src-tauri/src/durable_store/mod.rs;apps/desktop-client/src-tauri/src/durable_store/offline_access.rs" details="具体功能&#10;F10.02.01 下载任务、SQLite 加密草稿载荷与本机授权&#10;F10.02.02 版本冲突 / 回执核对与联网同步&#10;F10.02.03 系统凭据库、Spool 与账号范围隔离" implementationStatus="implemented">
+          <mxGeometry as="geometry" x="1330" y="610" width="888" height="198" />
+        </mxCell>
+        <mxCell id="F10.03" value="&lt;div style=&quot;font-size:40px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;F10.03 运维与基础设施&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#FFF4D9;strokeColor=#AD7D24;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_system.go;apps/desktop-client/src/lib/localRuntime.ts;apps/desktop-client/src-tauri/src/lib.rs" details="F10.03 运维与基础设施" implementationStatus="partial">
+          <mxGeometry as="geometry" x="588" y="1024" width="449" height="72" />
+        </mxCell>
+        <mxCell id="F10.03.features" value="&lt;div style=&quot;font-size:69px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;健康、依赖、指标与文件对账&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;F10.03.02 本地日志与运行时能力诊断&lt;br&gt;F10.03.03 设备登记 / 吊销与自动更新仍为预留&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#FFF4D9;strokeColor=#AD7D24;strokeWidth=1.5;" vertex="1" parent="1" evidence="services/api-gateway/internal/server/routes_system.go;apps/desktop-client/src/lib/localRuntime.ts;apps/desktop-client/src-tauri/src/lib.rs" details="具体功能&#10;F10.03.01 健康检查、依赖状态、指标与文件对账&#10;F10.03.02 本地日志与运行时能力诊断&#10;F10.03.03 设备登记 / 吊销与自动更新仍为预留" implementationStatus="partial">
+          <mxGeometry as="geometry" x="1314" y="962" width="921" height="194" />
+        </mxCell>
+        <mxCell id="F10-boundary" value="&lt;div style=&quot;font-size:72px;font-weight:bold;line-height:1.2;white-space:nowrap&quot;&gt;独立教师门户：仅规划&lt;/div&gt;&lt;div style=&quot;font-size:32px;line-height:1.26;margin-top:6px;word-break:break-all&quot;&gt;Windows 能力与浏览器回退分开&lt;/div&gt;" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;spacing=12;fontFamily=Microsoft YaHei;fontSize=32;fontColor=#25364B;fillColor=#FFF4D9;strokeColor=#AD7D24;strokeWidth=1.5;dashed=1;" vertex="1" parent="1" evidence="apps/desktop-client/src/App.tsx;services/api-gateway/internal/server/routes_system.go" details="阅读边界与未接入能力&#10;F10.04（仅规划）：独立 teacher-portal 尚无业务代码。浏览器开发回退与 Windows 原生能力分开标识。" implementationStatus="partial">
+          <mxGeometry as="geometry" x="792" y="1387" width="744" height="157" />
+        </mxCell>
+        <mxCell id="__e0" value="归属" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F10" target="F10.01" evidence="apps/desktop-client/src/api/captureUploads.ts;apps/desktop-client/src-tauri/src/scanner.rs;apps/desktop-client/src/App.tsx" details="归属">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="500" y="682" />
+              <mxPoint x="500" y="358" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e1" value="包含" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F10.01" target="F10.01.features" evidence="apps/desktop-client/src/api/captureUploads.ts;apps/desktop-client/src-tauri/src/scanner.rs;apps/desktop-client/src/App.tsx" details="包含">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e2" value="归属" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F10" target="F10.02" evidence="apps/desktop-client/src/components/OfflineWorkbench.tsx;apps/desktop-client/src-tauri/src/durable_store/mod.rs;apps/desktop-client/src-tauri/src/durable_store/offline_access.rs" details="归属">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="500" y="682" />
+              <mxPoint x="500" y="708" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e3" value="包含" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F10.02" target="F10.02.features" evidence="apps/desktop-client/src/components/OfflineWorkbench.tsx;apps/desktop-client/src-tauri/src/durable_store/mod.rs;apps/desktop-client/src-tauri/src/durable_store/offline_access.rs" details="包含">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__e4" value="归属" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F10" target="F10.03" evidence="services/api-gateway/internal/server/routes_system.go;apps/desktop-client/src/lib/localRuntime.ts;apps/desktop-client/src-tauri/src/lib.rs" details="归属">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="500" y="682" />
+              <mxPoint x="500" y="1060" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="__e5" value="包含" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5278B0;strokeWidth=1.3;fontFamily=Microsoft YaHei;fontSize=26;fontColor=#435671;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F10.03" target="F10.03.features" evidence="services/api-gateway/internal/server/routes_system.go;apps/desktop-client/src/lib/localRuntime.ts;apps/desktop-client/src-tauri/src/lib.rs" details="包含">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="__legend0" value="已实现" style="rounded=1;html=1;fillColor=#E9F6EE;strokeColor=#38835B;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="40.0" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend1" value="部分接入" style="rounded=1;html=1;fillColor=#FFF4D9;strokeColor=#AD7D24;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="416.6666666666667" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend2" value="规划" style="rounded=1;html=1;fillColor=#F1F2F4;strokeColor=#969DA7;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="793.3333333333334" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend3" value="问题" style="rounded=1;html=1;fillColor=#FDECEF;strokeColor=#B64857;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1170.0" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend4" value="基础设施" style="rounded=1;html=1;fillColor=#EAF2FF;strokeColor=#5278B0;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1546.6666666666667" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+        <mxCell id="__legend5" value="待确认" style="rounded=1;html=1;fillColor=#F5F5F6;strokeColor=#8C94A0;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#405065;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1923.3333333333335" y="1680" width="373.3333333333333" height="38" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

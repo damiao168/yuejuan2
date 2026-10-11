@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>EduGrade 前端 UI 设计分析</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231667d8'/%3E%3Cpath d='M21 20h22M21 32h22M21 44h15' stroke='white' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E" />
+<style>
+  :root{
+    --bg:#f5f7fa;--panel:#fff;--ink:#1b2432;--ink-2:#4a5568;--ink-3:#7a8699;
+    --line:#e4e8ef;--line-2:#eef1f6;--brand:#1667d8;--brand-soft:#eaf2fe;
+    --p0:#d92d3a;--p0-soft:#fdecee;--p1:#d97706;--p1-soft:#fdf3e3;--p2:#2f9e44;--p2-soft:#e9f7ec;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei","Noto Sans CJK SC",Arial,sans-serif;
+    --shadow:0 1px 2px rgba(16,24,40,.05),0 1px 3px rgba(16,24,40,.06);
+  }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.7;-webkit-font-smoothing:antialiased}
+  a{color:var(--brand);text-decoration:none}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+  header.hero{background:linear-gradient(180deg,#10233f,#16335c);color:#fff;padding:56px 0 48px}
+  header.hero .kicker{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:#9fc0ee;margin:0 0 14px}
+  header.hero h1{font-size:34px;margin:0 0 14px;font-weight:700}
+  header.hero p.sub{font-size:16px;color:#cdd9ea;max-width:740px;margin:0}
+  .meta-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}
+  .meta-chip{background:#2d476c;border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:6px 14px;font-size:13px;color:#e7eef9}
+  section.block{padding:44px 0 8px}
+  h2.sec{font-size:23px;margin:0 0 6px;font-weight:700;display:flex;gap:12px;align-items:center}
+  h2.sec .no{width:30px;height:30px;border-radius:8px;background:var(--brand-soft);color:var(--brand);display:inline-flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex:none}
+  p.sec-desc{color:var(--ink-2);margin:0 0 22px;max-width:840px}
+  h3{font-size:17px;margin:30px 0 12px;font-weight:700}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:22px 24px;margin-bottom:18px}
+  .score-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(205px,1fr));gap:14px}
+  .score-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px;box-shadow:var(--shadow)}
+  .score-card .lab{font-size:13px;color:var(--ink-3);margin:0 0 6px}
+  .score-card .val{font-size:26px;font-weight:700;line-height:1}
+  .score-card .val small{font-size:14px;color:var(--ink-3);font-weight:500}
+  .bar{height:7px;background:var(--line-2);border-radius:99px;margin-top:12px;overflow:hidden}
+  .bar>i{display:block;height:100%;border-radius:99px;background:var(--brand)}
+  /* swatches */
+  .sw-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+  .sw{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff;box-shadow:var(--shadow)}
+  .sw .chip{height:56px}
+  .sw .info{padding:8px 11px}
+  .sw .nm{font-size:13px;font-weight:600}
+  .sw .hx{font-size:11.5px;color:var(--ink-3);font-family:var(--mono)}
+  /* type scale */
+  .ts{display:grid;grid-template-columns:96px 1fr 70px;gap:0;align-items:baseline;border-bottom:1px solid var(--line-2)}
+  .ts>div{padding:11px 8px}
+  .ts .role{color:var(--ink-3);font-size:13px}
+  .ts .px{font-family:var(--mono);font-size:12px;color:var(--ink-3);text-align:right}
+  /* issue */
+  .issue{border:1px solid var(--line);border-radius:12px;background:var(--panel);box-shadow:var(--shadow);margin-bottom:16px;overflow:hidden}
+  .issue .hd{display:flex;gap:12px;align-items:center;padding:14px 20px;border-bottom:1px solid var(--line-2);background:#fcfdfe}
+  .issue .hd .ttl{font-weight:700;font-size:15.5px;flex:1}
+  .issue .bd{padding:15px 20px}
+  .issue .bd p{margin:0 0 9px;color:var(--ink-2);font-size:14.5px}
+  .issue .bd p:last-child{margin-bottom:0}
+  .rec{background:var(--brand-soft);border:1px solid #d4e4fb;border-radius:9px;padding:11px 15px;margin-top:9px;font-size:14px;color:#1c3f73}
+  .rec b{color:#14305c}
+  .tag{display:inline-block;border-radius:6px;padding:2px 9px;font-size:12px;font-weight:600;white-space:nowrap}
+  .t0{background:var(--p0-soft);color:var(--p0)}.t1{background:var(--p1-soft);color:var(--p1)}.t2{background:var(--p2-soft);color:var(--p2)}
+  .tag.k{background:#eef2f7;color:var(--ink-2);font-family:var(--mono);font-weight:500}
+  code{font-family:var(--mono);font-size:12.5px;background:#f1f4f9;border:1px solid var(--line-2);border-radius:5px;padding:1px 6px;color:#33415c}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line-2);vertical-align:top}
+  th{font-size:12.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-3);font-weight:600;background:#fafbfd}
+  ul.tight{margin:6px 0;padding-left:22px;color:var(--ink-2);font-size:14.5px} ul.tight li{margin-bottom:6px}
+  /* gallery */
+  figure.shot{margin:0 0 22px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff;box-shadow:var(--shadow)}
+  figure.shot img{display:block;width:100%}
+  figure.shot figcaption{padding:12px 16px;font-size:13.5px;color:var(--ink-2);border-top:1px solid var(--line-2)}
+  figure.shot figcaption b{color:var(--ink)}
+  .good{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--p2);border-radius:10px;padding:14px 18px;box-shadow:var(--shadow)}
+  .good b{display:block;margin-bottom:3px}.good span{color:var(--ink-2);font-size:14px}
+  .good-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(285px,1fr));gap:14px}
+  .road{display:grid;grid-template-columns:repeat(auto-fit,minmax(275px,1fr));gap:16px}
+  .phase{border:1px solid var(--line);border-radius:12px;background:var(--panel);box-shadow:var(--shadow);overflow:hidden}
+  .phase .ph{padding:13px 18px;font-weight:700;color:#fff}
+  .phase.p0 .ph{background:var(--p0)}.phase.p1 .ph{background:var(--p1)}.phase.p2 .ph{background:var(--p2)}
+  .phase ul{margin:0;padding:14px 18px 16px 34px;font-size:14px;color:var(--ink-2)}.phase li{margin-bottom:8px}
+  .layout{display:grid;grid-template-columns:200px 1fr;gap:34px;align-items:start}
+  .toc{position:sticky;top:16px}
+  .toc a{display:block;padding:6px 10px;border-radius:7px;color:var(--ink-2);font-size:13.5px;margin-bottom:2px}
+  .toc a:hover{background:var(--brand-soft);color:var(--brand)}
+  .toc .tg{font-size:11.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin:14px 10px 4px;font-weight:600}
+  .note{font-size:13px;color:var(--ink-3);margin:6px 2px 0}
+  footer{padding:40px 0 60px;color:var(--ink-3);font-size:13px;text-align:center}
+  @media(max-width:860px){.layout{grid-template-columns:1fr}.toc{display:none}header.hero h1{font-size:27px}.ts{grid-template-columns:72px 1fr 56px}}
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <p class="kicker">UI / Visual Design Analysis · 只读评审</p>
+    <h1>EduGrade 前端 UI 设计分析</h1>
+    <p class="sub">聚焦<b>视觉与交互设计</b>：设计定位、色彩、排版、布局、组件、数据可视化、可访问性与设计系统成熟度。分析基于对真实运行界面的截图观察（登录、平台/学校工作台、图像质检、阅卷监控、学生报告、移动端）与 design-tokens 定义，<b>未改动任何源码</b>。</p>
+    <div class="meta-row">
+      <span class="meta-chip">分析日期 2026-10-04</span>
+      <span class="meta-chip">基于 Ant Design 5 设计语言</span>
+      <span class="meta-chip">观察 7+ 真实界面 / 3 端</span>
+      <span class="meta-chip">配套 design-tokens 设计令牌</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap layout" style="padding-top:36px">
+  <nav class="toc">
+    <div class="tg">总览</div>
+    <a href="#conclusion">总体结论</a><a href="#scores">UI 评分</a>
+    <div class="tg">设计要素</div>
+    <a href="#color">色彩系统</a><a href="#type">字体排版</a><a href="#layout">布局间距</a>
+    <a href="#component">组件视觉</a><a href="#dataviz">数据可视化</a><a href="#a11y">可访问性</a><a href="#system">设计系统</a>
+    <div class="tg">问题与落地</div>
+    <a href="#issues">UI 问题清单</a><a href="#roadmap">改进路线图</a>
+    <div class="tg">实证</div>
+    <a href="#gallery">界面画廊</a>
+  </nav>
+
+  <main>
+  <section class="block" id="conclusion" style="padding-top:6px">
+    <h2 class="sec"><span class="no">1</span>总体结论</h2>
+    <p class="sec-desc">EduGrade 的 UI 是一套<b>完成度较高、信息设计能力突出的企业级（B 端）后台界面</b>。它不追求花哨视觉，而是以“让高频、高强度的考试组织与阅卷工作高效、清晰、少出错”为目标，这一定位与产品属性高度匹配。综合 UI 评级 <b>B+（7.2/10）</b>：功能与信息架构是强项，<b>视觉个性（品牌识别）与局部一致性</b>是主要提升空间。</p>
+    <div class="card">
+      <ul class="tight">
+        <li><b>风格定位准确：</b>克制、扁平、低饱和、信息优先，符合专业阅卷/教育管理工具的专业气质，没有为“好看”牺牲效率。</li>
+        <li><b>信息架构与工作台范式成熟：</b>“左侧队列 + 中央工作区 + 右侧详情”的三栏布局贯穿质检、阅卷等核心场景，符合专业人员心智。</li>
+        <li><b>领域驱动的色彩语义：</b>除通用成功/警告/危险色外，专门定义了阅卷评分色板（正确/部分正确/错误/AI 建议/低置信/分歧/人工推翻），是难得的领域设计亮点。</li>
+        <li><b>数据可视化服务判断：</b>质量分环形图、七维指标条、答卷热区、红色批注定位，都直接回答“这份答卷/这道题怎么了、要不要人工介入”。</li>
+        <li><b>主要短板：</b>整体视觉接近“标准 AntD 模板”，品牌记忆点弱；蓝/青两套强调色、两套步骤条、多个近似红色值，局部规范不统一；缺暗色模式；关键数字未做等宽对齐。</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="block" id="scores">
+    <h2 class="sec"><span class="no">2</span>UI 设计评分</h2>
+    <p class="sec-desc">从视觉与交互设计专业维度评分（10 分制），侧重真实使用体验与长期一致性。</p>
+    <div class="score-grid">
+      <div class="score-card"><p class="lab">视觉美观与品牌识别</p><div class="val" style="color:var(--p1)">6.0</div><div class="bar"><i style="width:60%;background:var(--p1)"></i></div></div>
+      <div class="score-card"><p class="lab">色彩系统</p><div class="val">7.5</div><div class="bar"><i style="width:75%"></i></div></div>
+      <div class="score-card"><p class="lab">字体与排版</p><div class="val">6.5</div><div class="bar"><i style="width:65%"></i></div></div>
+      <div class="score-card"><p class="lab">布局与信息架构</p><div class="val" style="color:var(--p2)">8.0</div><div class="bar"><i style="width:80%;background:var(--p2)"></i></div></div>
+      <div class="score-card"><p class="lab">组件一致性</p><div class="val">7.0</div><div class="bar"><i style="width:70%"></i></div></div>
+      <div class="score-card"><p class="lab">数据可视化</p><div class="val" style="color:var(--p2)">8.0</div><div class="bar"><i style="width:80%;background:var(--p2)"></i></div></div>
+      <div class="score-card"><p class="lab">交互与反馈</p><div class="val">7.5</div><div class="bar"><i style="width:75%"></i></div></div>
+      <div class="score-card"><p class="lab">可访问性/包容性</p><div class="val">7.0</div><div class="bar"><i style="width:70%"></i></div></div>
+      <div class="score-card"><p class="lab">设计系统成熟度</p><div class="val">6.5</div><div class="bar"><i style="width:65%"></i></div></div>
+      <div class="score-card" style="grid-column:1/-1;background:#10233f;color:#fff;border:0"><p class="lab" style="color:#9fc0ee">综合 UI 评价</p><div class="val" style="color:#fff">7.2 <small style="color:#cdd9ea">/10 · B+ · 信息设计强，补“品牌个性 + 局部统一”</small></div></div>
+    </div>
+  </section>
+  <!-- ===== 色彩 ===== -->
+  <section class="block" id="color">
+    <h2 class="sec"><span class="no">3</span>色彩系统</h2>
+    <p class="sec-desc">整体采用“单一主色 + 三语义色 + 中性色”的 B 端经典结构，并为阅卷业务扩展了专用评分色板。每个语义色都配有浅底色（soft）用于标签与卡片背景，搭配成熟。</p>
+
+    <h3>品牌与强调色</h3>
+    <div class="sw-grid">
+      <div class="sw"><div class="chip" style="background:#1677ff"></div><div class="info"><div class="nm">主操作蓝</div><div class="hx">#1677ff</div></div></div>
+      <div class="sw"><div class="chip" style="background:#1667d8"></div><div class="info"><div class="nm">Logo / 深蓝</div><div class="hx">#1667d8</div></div></div>
+      <div class="sw"><div class="chip" style="background:#13c2c2"></div><div class="info"><div class="nm">采集 / 质检青</div><div class="hx">#13c2c2</div></div></div>
+    </div>
+    <p class="note">观察：主按钮与链接用蓝（#1677ff），而采集进度条、质检热区、当前环节大量使用青色（teal/cyan）。蓝与青并存，且没有明确的“何时用蓝、何时用青”的书面规范，是色彩一致性的首要隐患。</p>
+
+    <h3>语义色（含浅底配对）</h3>
+    <div class="sw-grid">
+      <div class="sw"><div class="chip" style="background:#2f8f46"></div><div class="info"><div class="nm">成功</div><div class="hx">#2f8f46 · soft #edf8f0</div></div></div>
+      <div class="sw"><div class="chip" style="background:#ad6800"></div><div class="info"><div class="nm">警告</div><div class="hx">#ad6800 · soft #fff7e6</div></div></div>
+      <div class="sw"><div class="chip" style="background:#c9363e"></div><div class="info"><div class="nm">危险</div><div class="hx">#c9363e · soft #fff1f0</div></div></div>
+    </div>
+
+    <h3>阅卷评分专用色板（领域设计亮点）</h3>
+    <div class="sw-grid">
+      <div class="sw"><div class="chip" style="background:#237804"></div><div class="info"><div class="nm">正确</div><div class="hx">correct #237804</div></div></div>
+      <div class="sw"><div class="chip" style="background:#ad6800"></div><div class="info"><div class="nm">部分正确</div><div class="hx">partial #ad6800</div></div></div>
+      <div class="sw"><div class="chip" style="background:#c9363e"></div><div class="info"><div class="nm">错误</div><div class="hx">incorrect #c9363e</div></div></div>
+      <div class="sw"><div class="chip" style="background:#1677ff"></div><div class="info"><div class="nm">AI 建议</div><div class="hx">aiSuggestion #1677ff</div></div></div>
+      <div class="sw"><div class="chip" style="background:#c81424"></div><div class="info"><div class="nm">人工推翻</div><div class="hx">humanOverride #c81424</div></div></div>
+    </div>
+    <div class="card">
+      <p style="margin:0 0 8px"><b>色彩层面的改进点：</b></p>
+      <ul class="tight">
+        <li><b>统一强调色职责：</b>明确“蓝=全局主动作/导航，青=采集与质检业务”，并写入设计规范；或收敛为单一强调色，避免视觉上两种“高亮”竞争注意力。</li>
+        <li><b>合并近似红色：</b>实测出现 #c9363e / #c81424 / #d92d3a / 批注红等多个接近的红，建议归并到 danger 与 humanOverride 两个明确色值。</li>
+        <li><b>补齐暗色模式：</b>当前令牌仅有浅色。教师长时间阅卷场景对暗色有真实需求，建议按 token 派生 dark 主题（B 端可列为 P2）。</li>
+        <li><b>核对弱对比文字：</b>#667085、#7a8699 等次要灰字在白底与小字号下接近 WCAG AA（4.5:1）边界，密集表格中建议适当加深。</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ===== 字体排版 ===== -->
+  <section class="block" id="type">
+    <h2 class="sec"><span class="no">4</span>字体与排版</h2>
+    <p class="sec-desc">使用系统字体栈（苹方 / 微软雅黑 / Noto Sans CJK），中文渲染稳妥、零外部字体加载成本；正文行距 1.6，阅读舒适。字号以 rem 定义并随“大字模式”整体放大。</p>
+    <div class="card" style="padding:6px 16px">
+      <div class="ts"><div class="role">辅助说明</div><div style="font-size:13px;color:var(--ink-3)">标签 / 表头 / 注脚 caption</div><div class="px">13px</div></div>
+      <div class="ts"><div class="role">正文</div><div style="font-size:14px">表单、表格、段落 body</div><div class="px">14px</div></div>
+      <div class="ts"><div class="role">阅读正文</div><div style="font-size:16px">大字模式正文 reading</div><div class="px">16px</div></div>
+      <div class="ts"><div class="role">分区标题</div><div style="font-size:18px;font-weight:700">卡片 / 小节标题 section</div><div class="px">18px</div></div>
+      <div class="ts"><div class="role">页面标题</div><div style="font-size:24px;font-weight:700">页面主标题 title</div><div class="px">24px</div></div>
+      <div class="ts"><div class="role">指标大数字</div><div style="font-size:26px;font-weight:700">关键统计 metric</div><div class="px">26px</div></div>
+    </div>
+    <div class="card">
+      <ul class="tight">
+        <li><b>关键数字建议等宽（tabular-nums）：</b>分数、计数、排名等是界面的核心信息，目前用比例数字，相邻数字宽度不一、纵向不易对齐。建议对指标与数字列启用 <code>font-variant-numeric: tabular-nums</code>，显著提升扫描与对账效率。</li>
+        <li><b>正文 14px 偏小：</b>在高密度后台可接受，但教育场景用户年龄跨度大，建议默认正文向 14–15px 靠拢并继续推广已有的“大字模式”。</li>
+        <li><b>层级主要靠字重与字号、对比克制：</b>整体清晰；建议加强页面主标题与卡片标题的字重/留白对比，让“当前在哪个业务、看哪张卡”更一目了然。</li>
+        <li><b>中英文/数字混排：</b>建议统一中西文间距与数字字体，避免同一行内中英文基线与字号观感不齐。</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ===== 布局 ===== -->
+  <section class="block" id="layout">
+    <h2 class="sec"><span class="no">5</span>布局与间距</h2>
+    <p class="sec-desc">间距采用 4 的倍数阶梯（4/8/12/16/20/24），节奏统一；桌面端以固定侧边栏 + 三栏工作台为骨架，断点在 900/1200（平板/紧凑）切换，移动端抽屉式导航。</p>
+    <div class="card">
+      <ul class="tight">
+        <li><b>三栏工作台是核心资产：</b>队列（左）—主工作区（中）—详情/指标（右）在图像质检、阅卷监控中一致复用，专业人员无需重新学习布局。</li>
+        <li><b>核心右侧面板信息偏密：</b>图像质检右栏同屏堆叠“质量分环形 + 七项指标 + 触发问题 + HARD GATE 门控 + 算法元信息”，认知负荷较高。建议用更明确的分组标题/分隔，或把“算法元信息”降级为可展开的次要区。</li>
+        <li><b>响应式是“自适应堆叠”而非移动端重设计：</b>手机端可完成查看与简单操作，但阅卷/质检这类重操作在小屏效率低；建议明确移动端定位为“监看/轻处理”，重操作引导至桌面端，并放大次级图标按钮的触控区域（建议 ≥40px）。</li>
+        <li><b>留白与卡片密度整体均衡：</b>没有大面积无意义留白；表格长内容区可进一步统一卡片内边距，减少不同页面的密度差异。</li>
+      </ul>
+    </div>
+  </section>
+  <!-- ===== 组件视觉 ===== -->
+  <section class="block" id="component">
+    <h2 class="sec"><span class="no">6</span>组件视觉</h2>
+    <p class="sec-desc">组件整体“轻边框 + 圆角 6–10px + 极轻阴影”，视觉非常平、层级主要依靠边框与浅底色，克制统一。图标统一使用 lucide 线性图标（约 18px、相近描边），与整体气质一致。</p>
+    <div class="card">
+      <p style="margin:0 0 10px"><b>观察到的组件级问题：</b></p>
+      <ul class="tight">
+        <li><b>“考试阶段”存在两套步骤条：</b>学校工作台用“圆点 + 连线”（当前实心蓝、其余空心灰），图像质检用“卡片式横向步骤”（✓ / 数字、当前蓝底）。表达同一信息却有两种视觉，建议统一为一种并复用。</li>
+        <li><b>空状态插画单一：</b>所有空场景都用同一个灰色“文件盒”线稿，在同一页面多次重复，情感化与区分度不足。建议按“无任务 / 无考试 / 无筛选结果”使用不同图示，并保留已有的“解释文字 + 引导动作”（这部分做得好）。</li>
+        <li><b>浮层层级略弱：</b>因阴影极轻，弹窗/下拉/抽屉与背景的层级主要靠遮罩与边框区分；建议对 floating 元素使用已定义但用得较少的 <code>floating</code> 阴影，增强“浮起”感。</li>
+        <li><b>超长内容防护：</b>测试页中长数字串不折行、横向溢出。真实业务的长 ID / 长文本需统一换行、截断（ellipsis）或横向滚动策略，避免破坏布局。</li>
+        <li><b>按钮主次清晰：</b>主蓝实心、次级白底描边、图标+文字组合规范；建议统一各页面图标按钮的尺寸与触控热区。</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ===== 数据可视化 ===== -->
+  <section class="block" id="dataviz">
+    <h2 class="sec"><span class="no">7</span>数据可视化</h2>
+    <p class="sec-desc">这是 UI 的强项之一：可视化不追求炫技，而是直接支撑“是否需要人工介入”的决策，且与业务上下文（答卷原图、题目位置）紧密结合。</p>
+    <div class="good-grid">
+      <div class="good"><b>质量分环形图</b><span>用环形分值（如 72）+ 等级（C·低质量复核）+ 颜色，一眼给出整体结论并紧邻“重检 / 人工放行”动作。</span></div>
+      <div class="good"><b>七维指标横向条</b><span>页面完整性、分辨率、清晰度、几何质量、噪声音压缩等分项，达标青色、不达标红色，定位具体短板。</span></div>
+      <div class="good"><b>答卷热区叠加</b><span>在原图上以蓝（清晰）/橙（风险）/红（模糊）色块标注问题区域，所见即所检。</span></div>
+      <div class="good"><b>红色批注定位</b><span>阅卷监控中以 “Q1 4/4” 红色批注定位到每道题，AI 建议分与原题位置对应，便于快速确认。</span></div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <ul class="tight">
+        <li>建议统一图表配色到 design-tokens（含语义色与阅卷色），为 recharts/ECharts 建立同一主题，避免不同页面图表色不一致。</li>
+        <li>补齐图表的无数据/加载/异常态与图例说明；环形分值建议标注口径（如“质量分如何计算”），增强可信度。</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ===== 可访问性 ===== -->
+  <section class="block" id="a11y">
+    <h2 class="sec"><span class="no">8</span>可访问性与包容性</h2>
+    <p class="sec-desc">在 B 端产品中属于做得较用心的：具备“跳到主要内容”链接、全局 focus-visible 焦点轮廓、大字阅读模式、reduced-motion 降级，以及主区域 tabIndex。</p>
+    <div class="card">
+      <ul class="tight">
+        <li><b>自定义图片查看器 / 全局快捷键：</b>需保证可聚焦、具 aria-label 与等价键盘路径，快捷键避免与浏览器/读屏冲突并可查看/关闭。</li>
+        <li><b>错误与状态不仅靠颜色：</b>当前已配合 Alert 与文字，方向正确；状态标签建议同时带图标或文字，避免色觉障碍用户无法区分。</li>
+        <li><b>路由切换的焦点管理：</b>可在进入新页面时把焦点移至主区域并朗读页面标题（已有 #main-workspace 基础）。</li>
+        <li><b>对比度：</b>系统核对次要文字与图表细线在白底达到 WCAG AA。</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ===== 设计系统 ===== -->
+  <section class="block" id="system">
+    <h2 class="sec"><span class="no">9</span>设计系统成熟度</h2>
+    <p class="sec-desc">已具备设计令牌分层（颜色 / 间距 / 圆角 / 阴影 / 动效 / 字号 / 层级 / 断点 / 阅卷色）与共享 UI 包，底座完整；但“令牌—组件—规范文档”的闭环尚未完全打通。</p>
+    <div class="card">
+      <ul class="tight">
+        <li><b>令牌文件存在编码损坏：</b><span class="tag k">packages/design-tokens/src/grading.ts</span>、<span class="tag k">reading.ts</span> 的中文注释呈现乱码（如“鎸夎瘎鍒嗚...”），设计系统源文件本身需要修复编码，否则规范无法被阅读。</li>
+        <li><b>双令牌映射：</b>--eg-* 自定义令牌与 antd 主题 token 各维护一套、两处 ConfigProvider（main.tsx 与 AppLayout），建议由 design-tokens 单点生成 antd 主题，减少不一致。</li>
+        <li><b>共享 UI 包利用率低：</b>13 个共享组件全仓仅约 6 处使用（详见此前代码审查报告），建议“要么推广、要么精简”，并补充组件用法示例与文档。</li>
+        <li><b>缺设计规范文档：</b>建议沉淀一份面向设计/开发的 UI 规范（色彩用法、步骤条、空状态、图表、间距与密度），把当前“约定俗成”变为“有据可依”。</li>
+      </ul>
+    </div>
+  </section>
+  <!-- ===== 问题清单 ===== -->
+  <section class="block" id="issues">
+    <h2 class="sec"><span class="no">10</span>UI 问题清单（汇总）</h2>
+    <p class="sec-desc">将前述发现按优先级汇总，便于排期。多数为“规范统一”类问题，改动风险低、收益直接。</p>
+    <div class="card" style="padding:8px 10px">
+      <table>
+        <thead><tr><th style="width:13%">优先级</th><th style="width:34%">问题</th><th>影响 / 归属</th></tr></thead>
+        <tbody>
+          <tr><td><span class="tag t1">P1</span></td><td>蓝 / 青两套强调色职责不清</td><td>注意力竞争，色彩一致性</td></tr>
+          <tr><td><span class="tag t1">P1</span></td><td>同一“考试阶段”两套步骤条</td><td>组件视觉不统一</td></tr>
+          <tr><td><span class="tag t1">P1</span></td><td>设计令牌源文件注释编码乱码</td><td>规范无法阅读，设计系统</td></tr>
+          <tr><td><span class="tag t1">P1</span></td><td>主题两处 ConfigProvider / 双令牌映射</td><td>主题易漂移</td></tr>
+          <tr><td><span class="tag t1">P1</span></td><td>质检右栏信息过载、分组弱</td><td>认知负荷，布局</td></tr>
+          <tr><td><span class="tag t2">P2</span></td><td>品牌视觉个性弱、记忆点少</td><td>差异化与品牌识别</td></tr>
+          <tr><td><span class="tag t2">P2</span></td><td>多个近似红色值未归并</td><td>色彩一致性</td></tr>
+          <tr><td><span class="tag t2">P2</span></td><td>关键数字未做等宽 tabular-nums</td><td>数字扫描/对账效率</td></tr>
+          <tr><td><span class="tag t2">P2</span></td><td>空状态图示单一、浮层阴影过轻</td><td>情感化与层级</td></tr>
+          <tr><td><span class="tag t2">P2</span></td><td>超长内容缺换行/截断防护</td><td>布局稳定性</td></tr>
+          <tr><td><span class="tag t2">P2</span></td><td>移动端为缩放适配、触控热区偏小</td><td>移动可用性</td></tr>
+          <tr><td><span class="tag t2">P2</span></td><td>缺暗色模式、图表主题待统一</td><td>长时间使用 / 一致性</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ===== 路线图 ===== -->
+  <section class="block" id="roadmap">
+    <h2 class="sec"><span class="no">11</span>UI 改进路线图</h2>
+    <div class="road">
+      <div class="phase p0"><div class="ph">阶段一 · 约 1–2 周｜低成本统一</div>
+        <ul><li>修复令牌文件编码；主题单点收敛</li><li>明确蓝/青使用职责；归并近似红色</li><li>关键数字启用 tabular-nums</li><li>浮层阴影、超长内容防护</li></ul></div>
+      <div class="phase p1"><div class="ph">阶段二 · 约 3–6 周｜组件与模式</div>
+        <ul><li>统一步骤条、空状态、标签</li><li>图表主题与无数据态统一</li><li>质检右栏分组减负</li><li>推广共享 UI；输出 UI 规范文档</li></ul></div>
+      <div class="phase p2"><div class="ph">阶段三 · 持续｜品牌与包容</div>
+        <ul><li>提炼品牌视觉（登录页/主色/插画）</li><li>暗色模式</li><li>移动端“监看/轻处理”定位与触控优化</li><li>自定义交互键盘与 ARIA</li></ul></div>
+    </div>
+  </section>
+
+  <!-- ===== 画廊 ===== -->
+  <section class="block" id="gallery">
+    <h2 class="sec"><span class="no">12</span>界面画廊（实证）</h2>
+    <p class="sec-desc">以下为本次观察的真实运行界面，配图注说明设计要点。完整分辨率截图已随报告放在 <code>ui-design-assets/</code> 目录。</p>
+    <figure class="shot"><img src="ui-design-assets/01-login.png" alt="登录页"><figcaption><b>登录页</b>：浅蓝灰背景 + 居中白色卡片，品牌标识与表单清晰、留白充足；品牌氛围与差异化可再强化。</figcaption></figure>
+    <figure class="shot"><img src="ui-design-assets/02-admin-dashboard.png" alt="平台运营总览"><figcaption><b>平台运营总览</b>：分组导航 + 状态卡 / 待办 / 系统运维，绿/黄/蓝语义左边框让状态一目了然。</figcaption></figure>
+    <figure class="shot"><img src="ui-design-assets/03-school-workbench.png" alt="学校考试工作台"><figcaption><b>学校考试工作台</b>：统计数字 + 待办 + 进行中考试阶段步骤，右侧成员/阅卷中心，层级清晰、密度均衡。</figcaption></figure>
+    <figure class="shot"><img src="ui-design-assets/04-image-quality.png" alt="图像质检工作台"><figcaption><b>图像质检工作台</b>：三栏布局，质量分环形 + 七维指标 + 答卷热区 + HARD GATE 门控，专业度高；右栏可再分组减负。</figcaption></figure>
+    <figure class="shot"><img src="ui-design-assets/05-grading-monitor.png" alt="阅卷监控"><figcaption><b>阅卷监控</b>：答卷队列 + 答题卡红色批注定位 + 待确认题目与原因，AI 识别到人工确认的闭环清晰。</figcaption></figure>
+    <figure class="shot"><img src="ui-design-assets/06-student-report.png" alt="学生成绩报告"><figcaption><b>学生成绩报告</b>：指标卡 → 逐题分析表（掌握程度标签）→ 答卷原图叠加分数，信息架构优秀。</figcaption></figure>
+    <figure class="shot"><img src="ui-design-assets/07-mobile-teacher.png" alt="移动端教师工作台"><figcaption><b>移动端教师工作台</b>：卡片纵向堆叠、2×2 指标与常用入口，触控友好；重操作建议回到桌面端。</figcaption></figure>
+  </section>
+  </main>
+</div>
+<footer><div class="wrap">EduGrade 前端 UI 只读分析 · 未修改任何源码 · 2026-10-04</div></footer>
+</body>
+</html>

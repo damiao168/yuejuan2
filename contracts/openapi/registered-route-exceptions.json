@@ -169,7 +169,6 @@
         "GET /api/v1/roles",
         "GET /api/v1/schools",
         "GET /api/v1/seed-observations",
-        "GET /api/v1/student/exams/{examId}/questions/{questionId}/page-image",
         "GET /api/v1/students",
         "GET /api/v1/students/{id}/enrollments",
         "GET /api/v1/students/{studentId}/exams/{examId}/grade",
@@ -184,7 +183,6 @@
         "GET /api/v1/system/info",
         "GET /api/v1/system/status",
         "GET /api/v1/tenants",
-        "GET /api/v1/users",
         "HEAD /api/v1/answer-segments/{id}/image"
       ]
     },
@@ -247,7 +245,6 @@
         "POST /api/v1/exams/{examId}/finalize",
         "POST /api/v1/exams/{examId}/papers",
         "POST /api/v1/exams/{examId}/questions",
-        "POST /api/v1/exams/{examId}/readiness/confirm",
         "POST /api/v1/exams/{examId}/start-collection",
         "POST /api/v1/exams/{examId}/submissions",
         "POST /api/v1/exams/{examId}/validate-paper-config",
@@ -309,7 +306,6 @@
         "POST /api/v1/submissions/{id}/student-match/confirm",
         "POST /api/v1/submissions/{id}/student-match/unknown",
         "POST /api/v1/tenants",
-        "POST /api/v1/users",
         "PUT /api/v1/exams/{examId}/double-mark-policy",
         "PUT /api/v1/exams/{examId}/questions/{questionId}/seed-policy",
         "PUT /api/v1/exams/{examId}/roster/{studentId}/attendance",

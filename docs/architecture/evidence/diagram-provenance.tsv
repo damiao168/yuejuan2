@@ -1,0 +1,981 @@
+﻿diagram	page	object	label	status	evidence
+01-feature-tree.drawio	01 系统功能总览与详细页入口	system	yuejuan 智能阅卷系统	infra	apps/web-admin/src/router/pageRendering.tsx;services/api-gateway/internal/server/application_modules.go
+01-feature-tree.drawio	01 系统功能总览与详细页入口	F01	F01 身份与平台	partial	apps/web-admin/src/router/routes.tsx;services/api-gateway/internal/server/routes_auth.go
+01-feature-tree.drawio	01 系统功能总览与详细页入口	F02	F02 组织与学校	implemented	services/api-gateway/internal/server/routes_org.go;apps/web-admin/src/router/pageRendering.tsx
+01-feature-tree.drawio	01 系统功能总览与详细页入口	F03	F03 题库与试卷	implemented	services/api-gateway/internal/server/routes_questionbank.go;services/api-gateway/internal/server/routes_paper.go
+01-feature-tree.drawio	01 系统功能总览与详细页入口	F04	F04 考试管理	implemented	services/api-gateway/internal/server/routes_exam.go;apps/web-admin/src/features/exams/create/CreateExamPage.tsx
+01-feature-tree.drawio	01 系统功能总览与详细页入口	F05	F05 采集、图像与模板	partial	services/api-gateway/internal/server/routes_capture.go;docs/architecture/specs/06-image-template-pipeline.json
+01-feature-tree.drawio	01 系统功能总览与详细页入口	F06	F06 OCR 与答案理解	implemented	services/api-gateway/internal/server/routes_processing.go;services/api-gateway/internal/server/routes_exam.go
+01-feature-tree.drawio	01 系统功能总览与详细页入口	F07	F07 AI 评分与人工复核	partial	services/api-gateway/internal/server/routes_grading.go;docs/architecture/specs/07-ai-grading.json
+01-feature-tree.drawio	01 系统功能总览与详细页入口	F08	F08 成绩、发布与学生	partial	services/api-gateway/internal/server/routes_release.go;apps/student-portal/src/App.tsx
+01-feature-tree.drawio	01 系统功能总览与详细页入口	F09	F09 模型治理与阅卷质量	partial	services/api-gateway/internal/server/routes_governance.go;services/api-gateway/internal/server/routes_review.go
+01-feature-tree.drawio	01 系统功能总览与详细页入口	F10	F10 桌面客户端与运维	partial	apps/desktop-client/src/App.tsx;services/api-gateway/internal/server/routes_system.go
+01-feature-tree.drawio	01 系统功能总览与详细页入口	edge-0		infra	apps/web-admin/src/router/routes.tsx;services/api-gateway/internal/server/routes_auth.go
+01-feature-tree.drawio	01 系统功能总览与详细页入口	edge-1		infra	services/api-gateway/internal/server/routes_org.go;apps/web-admin/src/router/pageRendering.tsx
+01-feature-tree.drawio	01 系统功能总览与详细页入口	edge-2		infra	services/api-gateway/internal/server/routes_questionbank.go;services/api-gateway/internal/server/routes_paper.go
+01-feature-tree.drawio	01 系统功能总览与详细页入口	edge-3		infra	services/api-gateway/internal/server/routes_exam.go;apps/web-admin/src/features/exams/create/CreateExamPage.tsx
+01-feature-tree.drawio	01 系统功能总览与详细页入口	edge-4		infra	services/api-gateway/internal/server/routes_capture.go;docs/architecture/specs/06-image-template-pipeline.json
+01-feature-tree.drawio	01 系统功能总览与详细页入口	edge-5		infra	services/api-gateway/internal/server/routes_processing.go;services/api-gateway/internal/server/routes_exam.go
+01-feature-tree.drawio	01 系统功能总览与详细页入口	edge-6		infra	services/api-gateway/internal/server/routes_grading.go;docs/architecture/specs/07-ai-grading.json
+01-feature-tree.drawio	01 系统功能总览与详细页入口	edge-7		infra	services/api-gateway/internal/server/routes_release.go;apps/student-portal/src/App.tsx
+01-feature-tree.drawio	01 系统功能总览与详细页入口	edge-8		infra	services/api-gateway/internal/server/routes_governance.go;services/api-gateway/internal/server/routes_review.go
+01-feature-tree.drawio	01 系统功能总览与详细页入口	edge-9		infra	apps/desktop-client/src/App.tsx;services/api-gateway/internal/server/routes_system.go
+01-feature-tree.drawio	02 F01 身份与平台	F01	F01	partial	apps/web-admin/src/router/routes.tsx;services/api-gateway/internal/server/routes_auth.go
+01-feature-tree.drawio	02 F01 身份与平台	F01.01	F01.01 登录与账户安全	implemented	services/api-gateway/internal/server/routes_auth.go
+01-feature-tree.drawio	02 F01 身份与平台	F01.01.features	具体功能	implemented	services/api-gateway/internal/server/routes_auth.go
+01-feature-tree.drawio	02 F01 身份与平台	F01.02	F01.02 平台控制台	implemented	apps/web-admin/src/router/pageRendering.tsx;services/api-gateway/internal/server/routes_platform_schools.go
+01-feature-tree.drawio	02 F01 身份与平台	F01.02.features	具体功能	implemented	apps/web-admin/src/router/pageRendering.tsx;services/api-gateway/internal/server/routes_platform_schools.go
+01-feature-tree.drawio	02 F01 身份与平台	F01.03	F01.03 产品身份与页面访问	partial	apps/web-admin/src/router/experience.ts;apps/web-admin/src/router/routes.tsx
+01-feature-tree.drawio	02 F01 身份与平台	F01.03.features	具体功能	partial	apps/web-admin/src/router/experience.ts;apps/web-admin/src/router/routes.tsx
+01-feature-tree.drawio	02 F01 身份与平台	F01-boundary	阅读边界与未接入能力	partial	apps/web-admin/src/router/routes.tsx;services/api-gateway/internal/server/routes_auth.go
+01-feature-tree.drawio	02 F01 身份与平台	edge-0	归属	infra	services/api-gateway/internal/server/routes_auth.go
+01-feature-tree.drawio	02 F01 身份与平台	edge-1	包含	infra	services/api-gateway/internal/server/routes_auth.go
+01-feature-tree.drawio	02 F01 身份与平台	edge-2	归属	infra	apps/web-admin/src/router/pageRendering.tsx;services/api-gateway/internal/server/routes_platform_schools.go
+01-feature-tree.drawio	02 F01 身份与平台	edge-3	包含	infra	apps/web-admin/src/router/pageRendering.tsx;services/api-gateway/internal/server/routes_platform_schools.go
+01-feature-tree.drawio	02 F01 身份与平台	edge-4	归属	infra	apps/web-admin/src/router/experience.ts;apps/web-admin/src/router/routes.tsx
+01-feature-tree.drawio	02 F01 身份与平台	edge-5	包含	infra	apps/web-admin/src/router/experience.ts;apps/web-admin/src/router/routes.tsx
+01-feature-tree.drawio	03 F02 组织与学校	F02	F02	implemented	services/api-gateway/internal/server/routes_org.go;apps/web-admin/src/router/pageRendering.tsx
+01-feature-tree.drawio	03 F02 组织与学校	F02.01	F02.01 组织结构	implemented	services/api-gateway/internal/server/routes_org.go;apps/web-admin/src/pages/OrganizationSetupPage.tsx
+01-feature-tree.drawio	03 F02 组织与学校	F02.01.features	具体功能	implemented	services/api-gateway/internal/server/routes_org.go;apps/web-admin/src/pages/OrganizationSetupPage.tsx
+01-feature-tree.drawio	03 F02 组织与学校	F02.02	F02.02 学生与教师	implemented	apps/web-admin/src/pages/StudentManagementPage.tsx;apps/web-admin/src/features/members/teachers/TeacherManagementPage.tsx;services/api-gateway/internal/server/routes_auth.go
+01-feature-tree.drawio	03 F02 组织与学校	F02.02.features	具体功能	implemented	apps/web-admin/src/pages/StudentManagementPage.tsx;apps/web-admin/src/features/members/teachers/TeacherManagementPage.tsx;services/api-gateway/internal/server/routes_auth.go
+01-feature-tree.drawio	03 F02 组织与学校	F02.03	F02.03 学校助手	implemented	apps/web-admin/src/api/schoolAiChat.ts;services/api-gateway/internal/server/routes_school_assistant.go;services/api-gateway/internal/schoolassistant/handlers.go
+01-feature-tree.drawio	03 F02 组织与学校	F02.03.features	具体功能	implemented	apps/web-admin/src/api/schoolAiChat.ts;services/api-gateway/internal/server/routes_school_assistant.go;services/api-gateway/internal/schoolassistant/handlers.go
+01-feature-tree.drawio	03 F02 组织与学校	F02-boundary	阅读边界与未接入能力	infra	services/api-gateway/internal/server/routes_org.go;apps/web-admin/src/router/pageRendering.tsx
+01-feature-tree.drawio	03 F02 组织与学校	edge-0	归属	infra	services/api-gateway/internal/server/routes_org.go;apps/web-admin/src/pages/OrganizationSetupPage.tsx
+01-feature-tree.drawio	03 F02 组织与学校	edge-1	包含	infra	services/api-gateway/internal/server/routes_org.go;apps/web-admin/src/pages/OrganizationSetupPage.tsx
+01-feature-tree.drawio	03 F02 组织与学校	edge-2	归属	infra	apps/web-admin/src/pages/StudentManagementPage.tsx;apps/web-admin/src/features/members/teachers/TeacherManagementPage.tsx;services/api-gateway/internal/server/routes_auth.go
+01-feature-tree.drawio	03 F02 组织与学校	edge-3	包含	infra	apps/web-admin/src/pages/StudentManagementPage.tsx;apps/web-admin/src/features/members/teachers/TeacherManagementPage.tsx;services/api-gateway/internal/server/routes_auth.go
+01-feature-tree.drawio	03 F02 组织与学校	edge-4	归属	infra	apps/web-admin/src/api/schoolAiChat.ts;services/api-gateway/internal/server/routes_school_assistant.go;services/api-gateway/internal/schoolassistant/handlers.go
+01-feature-tree.drawio	03 F02 组织与学校	edge-5	包含	infra	apps/web-admin/src/api/schoolAiChat.ts;services/api-gateway/internal/server/routes_school_assistant.go;services/api-gateway/internal/schoolassistant/handlers.go
+01-feature-tree.drawio	04 F03 题库与试卷	F03	F03	implemented	services/api-gateway/internal/server/routes_questionbank.go;services/api-gateway/internal/server/routes_paper.go
+01-feature-tree.drawio	04 F03 题库与试卷	F03.01	F03.01 题库与访问控制	implemented	services/api-gateway/internal/server/routes_questionbank.go;apps/web-admin/src/features/question-bank/QuestionBankPage.tsx
+01-feature-tree.drawio	04 F03 题库与试卷	F03.01.features	具体功能	implemented	services/api-gateway/internal/server/routes_questionbank.go;apps/web-admin/src/features/question-bank/QuestionBankPage.tsx
+01-feature-tree.drawio	04 F03 题库与试卷	F03.02	F03.02 试卷资料导入	implemented	services/api-gateway/internal/server/routes_paper.go;services/api-gateway/internal/paper/paper_import_structure_handlers.go
+01-feature-tree.drawio	04 F03 题库与试卷	F03.02.features	具体功能	implemented	services/api-gateway/internal/server/routes_paper.go;services/api-gateway/internal/paper/paper_import_structure_handlers.go
+01-feature-tree.drawio	04 F03 题库与试卷	F03.03	F03.03 题目与评估策略	implemented	services/api-gateway/internal/server/routes_exam.go;services/api-gateway/internal/paper/configuration_handlers.go;apps/web-admin/src/pages/PaperRubricPage.tsx
+01-feature-tree.drawio	04 F03 题库与试卷	F03.03.features	具体功能	implemented	services/api-gateway/internal/server/routes_exam.go;services/api-gateway/internal/paper/configuration_handlers.go;apps/web-admin/src/pages/PaperRubricPage.tsx
+01-feature-tree.drawio	04 F03 题库与试卷	F03-boundary	阅读边界与未接入能力	infra	services/api-gateway/internal/server/routes_questionbank.go;services/api-gateway/internal/server/routes_paper.go
+01-feature-tree.drawio	04 F03 题库与试卷	edge-0	归属	infra	services/api-gateway/internal/server/routes_questionbank.go;apps/web-admin/src/features/question-bank/QuestionBankPage.tsx
+01-feature-tree.drawio	04 F03 题库与试卷	edge-1	包含	infra	services/api-gateway/internal/server/routes_questionbank.go;apps/web-admin/src/features/question-bank/QuestionBankPage.tsx
+01-feature-tree.drawio	04 F03 题库与试卷	edge-2	归属	infra	services/api-gateway/internal/server/routes_paper.go;services/api-gateway/internal/paper/paper_import_structure_handlers.go
+01-feature-tree.drawio	04 F03 题库与试卷	edge-3	包含	infra	services/api-gateway/internal/server/routes_paper.go;services/api-gateway/internal/paper/paper_import_structure_handlers.go
+01-feature-tree.drawio	04 F03 题库与试卷	edge-4	归属	infra	services/api-gateway/internal/server/routes_exam.go;services/api-gateway/internal/paper/configuration_handlers.go;apps/web-admin/src/pages/PaperRubricPage.tsx
+01-feature-tree.drawio	04 F03 题库与试卷	edge-5	包含	infra	services/api-gateway/internal/server/routes_exam.go;services/api-gateway/internal/paper/configuration_handlers.go;apps/web-admin/src/pages/PaperRubricPage.tsx
+01-feature-tree.drawio	05 F04 考试管理	F04	F04	implemented	services/api-gateway/internal/server/routes_exam.go;apps/web-admin/src/features/exams/create/CreateExamPage.tsx
+01-feature-tree.drawio	05 F04 考试管理	F04.01	F04.01 创建与管理	implemented	services/api-gateway/internal/server/routes_exam.go;apps/web-admin/src/features/exams/management/ManagementExamOverviewPage.tsx
+01-feature-tree.drawio	05 F04 考试管理	F04.01.features	具体功能	implemented	services/api-gateway/internal/server/routes_exam.go;apps/web-admin/src/features/exams/management/ManagementExamOverviewPage.tsx
+01-feature-tree.drawio	05 F04 考试管理	F04.02	F04.02 准备与采集边界	implemented	services/api-gateway/internal/server/routes_exam.go;services/api-gateway/internal/server/routes_paper.go;apps/web-admin/src/pages/ExamPreparationPage.tsx
+01-feature-tree.drawio	05 F04 考试管理	F04.02.features	具体功能	implemented	services/api-gateway/internal/server/routes_exam.go;services/api-gateway/internal/server/routes_paper.go;apps/web-admin/src/pages/ExamPreparationPage.tsx
+01-feature-tree.drawio	05 F04 考试管理	F04.03	F04.03 考试工作区	implemented	apps/web-admin/src/router/pageRendering.tsx;apps/web-admin/src/router/routes.tsx;services/api-gateway/internal/exam/management_archive_handlers.go
+01-feature-tree.drawio	05 F04 考试管理	F04.03.features	具体功能	implemented	apps/web-admin/src/router/pageRendering.tsx;apps/web-admin/src/router/routes.tsx;services/api-gateway/internal/exam/management_archive_handlers.go
+01-feature-tree.drawio	05 F04 考试管理	F04-boundary	阅读边界与未接入能力	infra	services/api-gateway/internal/server/routes_exam.go;apps/web-admin/src/features/exams/create/CreateExamPage.tsx
+01-feature-tree.drawio	05 F04 考试管理	edge-0	归属	infra	services/api-gateway/internal/server/routes_exam.go;apps/web-admin/src/features/exams/management/ManagementExamOverviewPage.tsx
+01-feature-tree.drawio	05 F04 考试管理	edge-1	包含	infra	services/api-gateway/internal/server/routes_exam.go;apps/web-admin/src/features/exams/management/ManagementExamOverviewPage.tsx
+01-feature-tree.drawio	05 F04 考试管理	edge-2	归属	infra	services/api-gateway/internal/server/routes_exam.go;services/api-gateway/internal/server/routes_paper.go;apps/web-admin/src/pages/ExamPreparationPage.tsx
+01-feature-tree.drawio	05 F04 考试管理	edge-3	包含	infra	services/api-gateway/internal/server/routes_exam.go;services/api-gateway/internal/server/routes_paper.go;apps/web-admin/src/pages/ExamPreparationPage.tsx
+01-feature-tree.drawio	05 F04 考试管理	edge-4	归属	infra	apps/web-admin/src/router/pageRendering.tsx;apps/web-admin/src/router/routes.tsx;services/api-gateway/internal/exam/management_archive_handlers.go
+01-feature-tree.drawio	05 F04 考试管理	edge-5	包含	infra	apps/web-admin/src/router/pageRendering.tsx;apps/web-admin/src/router/routes.tsx;services/api-gateway/internal/exam/management_archive_handlers.go
+01-feature-tree.drawio	06 F05 采集、图像与模板	F05	F05	partial	services/api-gateway/internal/server/routes_capture.go;docs/architecture/specs/06-image-template-pipeline.json
+01-feature-tree.drawio	06 F05 采集、图像与模板	F05.01	F05.01 模板编辑与打印	implemented	services/api-gateway/internal/server/routes_paper.go;services/api-gateway/internal/server/routes_grading.go;apps/web-admin/src/pages/AnswerSheetTemplatePage.tsx
+01-feature-tree.drawio	06 F05 采集、图像与模板	F05.01.features	具体功能	implemented	services/api-gateway/internal/server/routes_paper.go;services/api-gateway/internal/server/routes_grading.go;apps/web-admin/src/pages/AnswerSheetTemplatePage.tsx
+01-feature-tree.drawio	06 F05 采集、图像与模板	F05.02	F05.02 采集与图像处理	implemented	services/api-gateway/internal/capture/registration_store_postgres.go;services/page-processing-worker/page_processing/registration.py;services/image-quality-worker/image_quality/engine.py
+01-feature-tree.drawio	06 F05 采集、图像与模板	F05.02.features	具体功能	implemented	services/api-gateway/internal/capture/registration_store_postgres.go;services/page-processing-worker/page_processing/registration.py;services/image-quality-worker/image_quality/engine.py
+01-feature-tree.drawio	06 F05 采集、图像与模板	F05.03	F05.03 人工纠正与处理中心	implemented	services/api-gateway/internal/server/routes_capture.go;services/api-gateway/internal/processing/handlers.go;apps/web-admin/src/features/capture/MatchingWorkspace.tsx
+01-feature-tree.drawio	06 F05 采集、图像与模板	F05.03.features	具体功能	implemented	services/api-gateway/internal/server/routes_capture.go;services/api-gateway/internal/processing/handlers.go;apps/web-admin/src/features/capture/MatchingWorkspace.tsx
+01-feature-tree.drawio	06 F05 采集、图像与模板	F05-boundary	阅读边界与未接入能力	unknown	services/api-gateway/internal/server/routes_capture.go;docs/architecture/specs/06-image-template-pipeline.json
+01-feature-tree.drawio	06 F05 采集、图像与模板	edge-0	归属	infra	services/api-gateway/internal/server/routes_paper.go;services/api-gateway/internal/server/routes_grading.go;apps/web-admin/src/pages/AnswerSheetTemplatePage.tsx
+01-feature-tree.drawio	06 F05 采集、图像与模板	edge-1	包含	infra	services/api-gateway/internal/server/routes_paper.go;services/api-gateway/internal/server/routes_grading.go;apps/web-admin/src/pages/AnswerSheetTemplatePage.tsx
+01-feature-tree.drawio	06 F05 采集、图像与模板	edge-2	归属	infra	services/api-gateway/internal/capture/registration_store_postgres.go;services/page-processing-worker/page_processing/registration.py;services/image-quality-worker/image_quality/engine.py
+01-feature-tree.drawio	06 F05 采集、图像与模板	edge-3	包含	infra	services/api-gateway/internal/capture/registration_store_postgres.go;services/page-processing-worker/page_processing/registration.py;services/image-quality-worker/image_quality/engine.py
+01-feature-tree.drawio	06 F05 采集、图像与模板	edge-4	归属	infra	services/api-gateway/internal/server/routes_capture.go;services/api-gateway/internal/processing/handlers.go;apps/web-admin/src/features/capture/MatchingWorkspace.tsx
+01-feature-tree.drawio	06 F05 采集、图像与模板	edge-5	包含	infra	services/api-gateway/internal/server/routes_capture.go;services/api-gateway/internal/processing/handlers.go;apps/web-admin/src/features/capture/MatchingWorkspace.tsx
+01-feature-tree.drawio	07 F06 OCR 与答案理解	F06	F06	implemented	services/api-gateway/internal/server/routes_processing.go;services/api-gateway/internal/server/routes_exam.go
+01-feature-tree.drawio	07 F06 OCR 与答案理解	F06.01	F06.01 OCR 任务	implemented	services/api-gateway/internal/ocr/runtime_coordinator_postgres.go;services/api-gateway/internal/server/routes_processing.go
+01-feature-tree.drawio	07 F06 OCR 与答案理解	F06.01.features	具体功能	implemented	services/api-gateway/internal/ocr/runtime_coordinator_postgres.go;services/api-gateway/internal/server/routes_processing.go
+01-feature-tree.drawio	07 F06 OCR 与答案理解	F06.02	F06.02 分段答案与证据	implemented	services/api-gateway/internal/server/routes_processing.go;services/api-gateway/internal/mathunderstanding/handlers.go
+01-feature-tree.drawio	07 F06 OCR 与答案理解	F06.02.features	具体功能	implemented	services/api-gateway/internal/server/routes_processing.go;services/api-gateway/internal/mathunderstanding/handlers.go
+01-feature-tree.drawio	07 F06 OCR 与答案理解	F06.03	F06.03 数学理解与验证	implemented	services/api-gateway/internal/mathunderstanding/handlers.go;services/api-gateway/internal/server/routes_worker.go
+01-feature-tree.drawio	07 F06 OCR 与答案理解	F06.03.features	具体功能	implemented	services/api-gateway/internal/mathunderstanding/handlers.go;services/api-gateway/internal/server/routes_worker.go
+01-feature-tree.drawio	07 F06 OCR 与答案理解	F06-boundary	阅读边界与未接入能力	infra	services/api-gateway/internal/server/routes_processing.go;services/api-gateway/internal/server/routes_exam.go
+01-feature-tree.drawio	07 F06 OCR 与答案理解	edge-0	归属	infra	services/api-gateway/internal/ocr/runtime_coordinator_postgres.go;services/api-gateway/internal/server/routes_processing.go
+01-feature-tree.drawio	07 F06 OCR 与答案理解	edge-1	包含	infra	services/api-gateway/internal/ocr/runtime_coordinator_postgres.go;services/api-gateway/internal/server/routes_processing.go
+01-feature-tree.drawio	07 F06 OCR 与答案理解	edge-2	归属	infra	services/api-gateway/internal/server/routes_processing.go;services/api-gateway/internal/mathunderstanding/handlers.go
+01-feature-tree.drawio	07 F06 OCR 与答案理解	edge-3	包含	infra	services/api-gateway/internal/server/routes_processing.go;services/api-gateway/internal/mathunderstanding/handlers.go
+01-feature-tree.drawio	07 F06 OCR 与答案理解	edge-4	归属	infra	services/api-gateway/internal/mathunderstanding/handlers.go;services/api-gateway/internal/server/routes_worker.go
+01-feature-tree.drawio	07 F06 OCR 与答案理解	edge-5	包含	infra	services/api-gateway/internal/mathunderstanding/handlers.go;services/api-gateway/internal/server/routes_worker.go
+01-feature-tree.drawio	08 F07 AI 评分与人工复核	F07	F07	partial	services/api-gateway/internal/server/routes_grading.go;docs/architecture/specs/07-ai-grading.json
+01-feature-tree.drawio	08 F07 AI 评分与人工复核	F07.01	F07.01 规则与 AI 建议	implemented	services/api-gateway/internal/grading/scoring_run_routing.go;services/api-gateway/internal/subjective/handlers_worker.go;services/api-gateway/internal/subjective/grade_settlement_pipeline.go
+01-feature-tree.drawio	08 F07 AI 评分与人工复核	F07.01.features	具体功能	implemented	services/api-gateway/internal/grading/scoring_run_routing.go;services/api-gateway/internal/subjective/handlers_worker.go;services/api-gateway/internal/subjective/grade_settlement_pipeline.go
+01-feature-tree.drawio	08 F07 AI 评分与人工复核	F07.02	F07.02 人工阅卷与仲裁	implemented	services/api-gateway/internal/server/routes_review.go;services/api-gateway/internal/server/routes_grading.go;apps/web-admin/src/features/grading/workbench/GradingWorkbench.tsx
+01-feature-tree.drawio	08 F07 AI 评分与人工复核	F07.02.features	具体功能	implemented	services/api-gateway/internal/server/routes_review.go;services/api-gateway/internal/server/routes_grading.go;apps/web-admin/src/features/grading/workbench/GradingWorkbench.tsx
+01-feature-tree.drawio	08 F07 AI 评分与人工复核	F07.03	F07.03 三智能体 A/B/C 内核	partial	services/api-gateway/internal/subjective/panel_orchestrator.go;services/api-gateway/internal/subjective/panel_shadow_runner.go;services/api-gateway/internal/subjective/handlers.go
+01-feature-tree.drawio	08 F07 AI 评分与人工复核	F07.03.features	具体功能	partial	services/api-gateway/internal/subjective/panel_orchestrator.go;services/api-gateway/internal/subjective/panel_shadow_runner.go;services/api-gateway/internal/subjective/handlers.go
+01-feature-tree.drawio	08 F07 AI 评分与人工复核	F07-boundary	阅读边界与未接入能力	partial	services/api-gateway/internal/server/routes_grading.go;docs/architecture/specs/07-ai-grading.json
+01-feature-tree.drawio	08 F07 AI 评分与人工复核	edge-0	归属	infra	services/api-gateway/internal/grading/scoring_run_routing.go;services/api-gateway/internal/subjective/handlers_worker.go;services/api-gateway/internal/subjective/grade_settlement_pipeline.go
+01-feature-tree.drawio	08 F07 AI 评分与人工复核	edge-1	包含	infra	services/api-gateway/internal/grading/scoring_run_routing.go;services/api-gateway/internal/subjective/handlers_worker.go;services/api-gateway/internal/subjective/grade_settlement_pipeline.go
+01-feature-tree.drawio	08 F07 AI 评分与人工复核	edge-2	归属	infra	services/api-gateway/internal/server/routes_review.go;services/api-gateway/internal/server/routes_grading.go;apps/web-admin/src/features/grading/workbench/GradingWorkbench.tsx
+01-feature-tree.drawio	08 F07 AI 评分与人工复核	edge-3	包含	infra	services/api-gateway/internal/server/routes_review.go;services/api-gateway/internal/server/routes_grading.go;apps/web-admin/src/features/grading/workbench/GradingWorkbench.tsx
+01-feature-tree.drawio	08 F07 AI 评分与人工复核	edge-4	归属	infra	services/api-gateway/internal/subjective/panel_orchestrator.go;services/api-gateway/internal/subjective/panel_shadow_runner.go;services/api-gateway/internal/subjective/handlers.go
+01-feature-tree.drawio	08 F07 AI 评分与人工复核	edge-5	包含	infra	services/api-gateway/internal/subjective/panel_orchestrator.go;services/api-gateway/internal/subjective/panel_shadow_runner.go;services/api-gateway/internal/subjective/handlers.go
+01-feature-tree.drawio	09 F08 成绩、发布与学生	F08	F08	partial	services/api-gateway/internal/server/routes_release.go;apps/student-portal/src/App.tsx
+01-feature-tree.drawio	09 F08 成绩、发布与学生	F08.01	F08.01 成绩汇总与发布	partial	services/api-gateway/internal/server/routes_release.go;services/api-gateway/internal/scorerelease/handlers.go;services/api-gateway/internal/regraderelease/handlers.go
+01-feature-tree.drawio	09 F08 成绩、发布与学生	F08.01.features	具体功能	partial	services/api-gateway/internal/server/routes_release.go;services/api-gateway/internal/scorerelease/handlers.go;services/api-gateway/internal/regraderelease/handlers.go
+01-feature-tree.drawio	09 F08 成绩、发布与学生	F08.02	F08.02 统计与复核	implemented	services/api-gateway/internal/server/routes_release.go;apps/web-admin/src/pages/LearningReportsPage.tsx;apps/web-admin/src/pages/QuestionAppealCenterPage.tsx
+01-feature-tree.drawio	09 F08 成绩、发布与学生	F08.02.features	具体功能	implemented	services/api-gateway/internal/server/routes_release.go;apps/web-admin/src/pages/LearningReportsPage.tsx;apps/web-admin/src/pages/QuestionAppealCenterPage.tsx
+01-feature-tree.drawio	09 F08 成绩、发布与学生	F08.03	F08.03 学生端	implemented	apps/student-portal/src/App.tsx;apps/student-portal/src/api.ts;services/api-gateway/internal/studentportal/handlers.go
+01-feature-tree.drawio	09 F08 成绩、发布与学生	F08.03.features	具体功能	implemented	apps/student-portal/src/App.tsx;apps/student-portal/src/api.ts;services/api-gateway/internal/studentportal/handlers.go
+01-feature-tree.drawio	09 F08 成绩、发布与学生	F08-boundary	阅读边界与未接入能力	partial	services/api-gateway/internal/server/routes_release.go;apps/student-portal/src/App.tsx
+01-feature-tree.drawio	09 F08 成绩、发布与学生	edge-0	归属	infra	services/api-gateway/internal/server/routes_release.go;services/api-gateway/internal/scorerelease/handlers.go;services/api-gateway/internal/regraderelease/handlers.go
+01-feature-tree.drawio	09 F08 成绩、发布与学生	edge-1	包含	infra	services/api-gateway/internal/server/routes_release.go;services/api-gateway/internal/scorerelease/handlers.go;services/api-gateway/internal/regraderelease/handlers.go
+01-feature-tree.drawio	09 F08 成绩、发布与学生	edge-2	归属	infra	services/api-gateway/internal/server/routes_release.go;apps/web-admin/src/pages/LearningReportsPage.tsx;apps/web-admin/src/pages/QuestionAppealCenterPage.tsx
+01-feature-tree.drawio	09 F08 成绩、发布与学生	edge-3	包含	infra	services/api-gateway/internal/server/routes_release.go;apps/web-admin/src/pages/LearningReportsPage.tsx;apps/web-admin/src/pages/QuestionAppealCenterPage.tsx
+01-feature-tree.drawio	09 F08 成绩、发布与学生	edge-4	归属	infra	apps/student-portal/src/App.tsx;apps/student-portal/src/api.ts;services/api-gateway/internal/studentportal/handlers.go
+01-feature-tree.drawio	09 F08 成绩、发布与学生	edge-5	包含	infra	apps/student-portal/src/App.tsx;apps/student-portal/src/api.ts;services/api-gateway/internal/studentportal/handlers.go
+01-feature-tree.drawio	10 F09 模型治理与阅卷质量	F09	F09	partial	services/api-gateway/internal/server/routes_governance.go;services/api-gateway/internal/server/routes_review.go
+01-feature-tree.drawio	10 F09 模型治理与阅卷质量	F09.01	F09.01 模型与策略治理	implemented	services/api-gateway/internal/server/routes_governance.go;apps/web-admin/src/pages/PlatformModelConfigPage.tsx
+01-feature-tree.drawio	10 F09 模型治理与阅卷质量	F09.01.features	具体功能	implemented	services/api-gateway/internal/server/routes_governance.go;apps/web-admin/src/pages/PlatformModelConfigPage.tsx
+01-feature-tree.drawio	10 F09 模型治理与阅卷质量	F09.02	F09.02 人工阅卷质量	implemented	services/api-gateway/internal/server/routes_review.go;services/api-gateway/internal/server/routes_governance.go
+01-feature-tree.drawio	10 F09 模型治理与阅卷质量	F09.02.features	具体功能	implemented	services/api-gateway/internal/server/routes_review.go;services/api-gateway/internal/server/routes_governance.go
+01-feature-tree.drawio	10 F09 模型治理与阅卷质量	F09.03	F09.03 治理边界与外部验证	partial	services/api-gateway/internal/server/routes_governance.go;services/api-gateway/internal/subjective/panel_orchestrator.go;docs/verification-status.md
+01-feature-tree.drawio	10 F09 模型治理与阅卷质量	F09.03.features	具体功能	partial	services/api-gateway/internal/server/routes_governance.go;services/api-gateway/internal/subjective/panel_orchestrator.go;docs/verification-status.md
+01-feature-tree.drawio	10 F09 模型治理与阅卷质量	F09-boundary	阅读边界与未接入能力	partial	services/api-gateway/internal/server/routes_governance.go;services/api-gateway/internal/server/routes_review.go
+01-feature-tree.drawio	10 F09 模型治理与阅卷质量	edge-0	归属	infra	services/api-gateway/internal/server/routes_governance.go;apps/web-admin/src/pages/PlatformModelConfigPage.tsx
+01-feature-tree.drawio	10 F09 模型治理与阅卷质量	edge-1	包含	infra	services/api-gateway/internal/server/routes_governance.go;apps/web-admin/src/pages/PlatformModelConfigPage.tsx
+01-feature-tree.drawio	10 F09 模型治理与阅卷质量	edge-2	归属	infra	services/api-gateway/internal/server/routes_review.go;services/api-gateway/internal/server/routes_governance.go
+01-feature-tree.drawio	10 F09 模型治理与阅卷质量	edge-3	包含	infra	services/api-gateway/internal/server/routes_review.go;services/api-gateway/internal/server/routes_governance.go
+01-feature-tree.drawio	10 F09 模型治理与阅卷质量	edge-4	归属	infra	services/api-gateway/internal/server/routes_governance.go;services/api-gateway/internal/subjective/panel_orchestrator.go;docs/verification-status.md
+01-feature-tree.drawio	10 F09 模型治理与阅卷质量	edge-5	包含	infra	services/api-gateway/internal/server/routes_governance.go;services/api-gateway/internal/subjective/panel_orchestrator.go;docs/verification-status.md
+01-feature-tree.drawio	11 F10 桌面客户端与运维	F10	F10	partial	apps/desktop-client/src/App.tsx;services/api-gateway/internal/server/routes_system.go
+01-feature-tree.drawio	11 F10 桌面客户端与运维	F10.01	F10.01 采集工作站	partial	apps/desktop-client/src/api/captureUploads.ts;apps/desktop-client/src-tauri/src/scanner.rs;apps/desktop-client/src/App.tsx
+01-feature-tree.drawio	11 F10 桌面客户端与运维	F10.01.features	具体功能	partial	apps/desktop-client/src/api/captureUploads.ts;apps/desktop-client/src-tauri/src/scanner.rs;apps/desktop-client/src/App.tsx
+01-feature-tree.drawio	11 F10 桌面客户端与运维	F10.02	F10.02 离线阅卷	implemented	apps/desktop-client/src/components/OfflineWorkbench.tsx;apps/desktop-client/src-tauri/src/durable_store/mod.rs;apps/desktop-client/src-tauri/src/durable_store/offline_access.rs
+01-feature-tree.drawio	11 F10 桌面客户端与运维	F10.02.features	具体功能	implemented	apps/desktop-client/src/components/OfflineWorkbench.tsx;apps/desktop-client/src-tauri/src/durable_store/mod.rs;apps/desktop-client/src-tauri/src/durable_store/offline_access.rs
+01-feature-tree.drawio	11 F10 桌面客户端与运维	F10.03	F10.03 运维与基础设施	partial	services/api-gateway/internal/server/routes_system.go;apps/desktop-client/src/lib/localRuntime.ts;apps/desktop-client/src-tauri/src/lib.rs
+01-feature-tree.drawio	11 F10 桌面客户端与运维	F10.03.features	具体功能	partial	services/api-gateway/internal/server/routes_system.go;apps/desktop-client/src/lib/localRuntime.ts;apps/desktop-client/src-tauri/src/lib.rs
+01-feature-tree.drawio	11 F10 桌面客户端与运维	F10-boundary	阅读边界与未接入能力	partial	apps/desktop-client/src/App.tsx;services/api-gateway/internal/server/routes_system.go
+01-feature-tree.drawio	11 F10 桌面客户端与运维	edge-0	归属	infra	apps/desktop-client/src/api/captureUploads.ts;apps/desktop-client/src-tauri/src/scanner.rs;apps/desktop-client/src/App.tsx
+01-feature-tree.drawio	11 F10 桌面客户端与运维	edge-1	包含	infra	apps/desktop-client/src/api/captureUploads.ts;apps/desktop-client/src-tauri/src/scanner.rs;apps/desktop-client/src/App.tsx
+01-feature-tree.drawio	11 F10 桌面客户端与运维	edge-2	归属	infra	apps/desktop-client/src/components/OfflineWorkbench.tsx;apps/desktop-client/src-tauri/src/durable_store/mod.rs;apps/desktop-client/src-tauri/src/durable_store/offline_access.rs
+01-feature-tree.drawio	11 F10 桌面客户端与运维	edge-3	包含	infra	apps/desktop-client/src/components/OfflineWorkbench.tsx;apps/desktop-client/src-tauri/src/durable_store/mod.rs;apps/desktop-client/src-tauri/src/durable_store/offline_access.rs
+01-feature-tree.drawio	11 F10 桌面客户端与运维	edge-4	归属	infra	services/api-gateway/internal/server/routes_system.go;apps/desktop-client/src/lib/localRuntime.ts;apps/desktop-client/src-tauri/src/lib.rs
+01-feature-tree.drawio	11 F10 桌面客户端与运维	edge-5	包含	infra	services/api-gateway/internal/server/routes_system.go;apps/desktop-client/src/lib/localRuntime.ts;apps/desktop-client/src-tauri/src/lib.rs
+02-system-architecture.drawio	逻辑分层：前端、模块化单体与持久化	web	管理端 / 教师体验	implemented	apps/web-admin/src/router/routes.tsx:62
+02-system-architecture.drawio	逻辑分层：前端、模块化单体与持久化	student	学生门户	implemented	apps/student-portal/src/main.tsx;apps/student-portal/src/api.ts:1
+02-system-architecture.drawio	逻辑分层：前端、模块化单体与持久化	desktop	桌面工作站	implemented	apps/desktop-client/src-tauri/src/lib.rs
+02-system-architecture.drawio	逻辑分层：前端、模块化单体与持久化	sdk	前端应用 / SDK	implemented	packages/sdk/src/index.ts;packages/sdk/src/runtime.ts:1
+02-system-architecture.drawio	逻辑分层：前端、模块化单体与持久化	api	Go HTTP API 统一入口	implemented	services/api-gateway/internal/server/server.go:154;services/api-gateway/internal/server/router_guards.go:93
+02-system-architecture.drawio	逻辑分层：前端、模块化单体与持久化	identity	Identity / 组织与权限	implemented	services/api-gateway/internal/server/module_identity.go
+02-system-architecture.drawio	逻辑分层：前端、模块化单体与持久化	prepare	ExamPreparation	implemented	services/api-gateway/internal/server/module_exam.go:62
+02-system-architecture.drawio	逻辑分层：前端、模块化单体与持久化	capture	CaptureProcessing	implemented	services/api-gateway/internal/server/module_capture.go:83
+02-system-architecture.drawio	逻辑分层：前端、模块化单体与持久化	grading	GradingQuality / Release	implemented	services/api-gateway/internal/server/module_grading.go:104;services/api-gateway/internal/server/module_release.go:61
+02-system-architecture.drawio	逻辑分层：前端、模块化单体与持久化	stores	数据访问 / 持久化	implemented	services/api-gateway/internal/server/application_stores.go;services/api-gateway/internal/server/application_modules.go:45
+02-system-architecture.drawio	逻辑分层：前端、模块化单体与持久化	compute	图像与AI计算边界 → 下一页	implemented	services/api-gateway/internal/server/module_grading.go:198;services/page-processing-worker/page_processing/runner.py
+02-system-architecture.drawio	逻辑分层：前端、模块化单体与持久化	db	PostgreSQL	infra	services/api-gateway/internal/server/infrastructure.go:53
+02-system-architecture.drawio	逻辑分层：前端、模块化单体与持久化	object	MinIO / S3	infra	services/api-gateway/internal/server/infrastructure.go:111
+02-system-architecture.drawio	逻辑分层：前端、模块化单体与持久化	redis	Redis	infra	services/api-gateway/internal/server/infrastructure.go:77
+02-system-architecture.drawio	计算、治理与异步任务的实际边界	go	Go API模块化单体	implemented	services/api-gateway/internal/server/application_modules.go:49
+02-system-architecture.drawio	计算、治理与异步任务的实际边界	runtime	workerruntime / PostgreSQL	implemented	services/api-gateway/internal/workerruntime/store_postgres.go
+02-system-architecture.drawio	计算、治理与异步任务的实际边界	workers	独立Python Worker集合	infra	infra/docker-compose/docker-compose.yml:477
+02-system-architecture.drawio	计算、治理与异步任务的实际边界	image	页面/图像计算	implemented	services/page-processing-worker/page_processing/registration.py;services/image-quality-worker/image_quality/engine.py
+02-system-architecture.drawio	计算、治理与异步任务的实际边界	goai	Go subjective / paper	implemented	services/api-gateway/internal/server/module_grading.go:108;services/api-gateway/internal/server/application_modules.go:126
+02-system-architecture.drawio	计算、治理与异步任务的实际边界	agent	Python grading-agent	infra	ai-services/grading_agent/server.py;ai-services/grading_agent/provider_adapter.py
+02-system-architecture.drawio	计算、治理与异步任务的实际边界	models	模型运行时 / 外部AI服务	infra	infra/docker-compose/docker-compose.yml:443;ai-services/grading_agent/model.py
+02-system-architecture.drawio	计算、治理与异步任务的实际边界	govern	AI治理与助手	implemented	services/api-gateway/internal/server/module_ai_governance.go:51;services/api-gateway/internal/server/module_ai_foundation.go;services/api-gateway/internal/server/module_school_assistant.go
+02-system-architecture.drawio	计算、治理与异步任务的实际边界	panel	三智能体内核	partial	services/api-gateway/internal/subjective/panel_orchestrator.go;services/api-gateway/internal/server/module_grading.go:108
+02-system-architecture.drawio	计算、治理与异步任务的实际边界	maintenance	Go后台任务	implemented	services/api-gateway/internal/server/infrastructure.go:118;services/api-gateway/internal/server/server.go:86
+02-system-architecture.drawio	计算、治理与异步任务的实际边界	partialinfra	部署配置中接入有限的组件	partial	services/api-gateway/internal/deps/deps.go:182;services/api-gateway/internal/outbox/publisher_log.go:14
+03-module-dependencies.drawio	组合根、公共依赖与维护债务	server	server 组合根	implemented	services/api-gateway/internal/server/application_modules.go:49
+03-module-dependencies.drawio	组合根、公共依赖与维护债务	auth	auth / httpx / logger	implemented	services/api-gateway/internal/auth/store_contracts.go;services/api-gateway/internal/server/module_exam.go:55
+03-module-dependencies.drawio	组合根、公共依赖与维护债务	db	database/sql + pgx	implemented	services/api-gateway/internal/db/tenant_context.go:90;services/api-gateway/internal/server/application_stores.go
+03-module-dependencies.drawio	组合根、公共依赖与维护债务	web	Web / Student / Desktop	implemented	apps/student-portal/src/api.ts:1;apps/desktop-client/src/api/captureUploads.ts:3
+03-module-dependencies.drawio	组合根、公共依赖与维护债务	sdk	packages/sdk	implemented	packages/sdk/src/index.ts;docs/architecture/evidence/api-catalog.json
+03-module-dependencies.drawio	组合根、公共依赖与维护债务	workers	Python worker	implemented	packages/worker-runtime-python/edugrade_worker_runtime/lease.py;packages/worker-runtime-python/edugrade_worker_runtime/http.py
+03-module-dependencies.drawio	组合根、公共依赖与维护债务	debt	P2：维护边界债务	issue	services/api-gateway/internal/capture/types.go;services/api-gateway/internal/review/types.go;contracts/architecture/frontend-debt.json
+03-module-dependencies.drawio	组合根、公共依赖与维护债务	constraints	边界结论与限制	infra	scripts/check-architecture-boundaries.mjs;docs/architecture/evidence/frontend-api-audit.md
+03-module-dependencies.drawio	组合根、公共依赖与维护债务	edge-0	构造注入	infra	services/api-gateway/internal/server/application_modules.go:50
+03-module-dependencies.drawio	组合根、公共依赖与维护债务	edge-1	Postgres组装	infra	services/api-gateway/internal/server/application_modules.go:113
+03-module-dependencies.drawio	组合根、公共依赖与维护债务	edge-2	直接import	infra	apps/student-portal/src/api.ts:1
+03-module-dependencies.drawio	考试资料与采集的直接包依赖	capture	capture	implemented	services/api-gateway/internal/capture/
+03-module-dependencies.drawio	考试资料与采集的直接包依赖	ocr	ocr	implemented	services/api-gateway/internal/ocr/
+03-module-dependencies.drawio	考试资料与采集的直接包依赖	paper	paper	implemented	services/api-gateway/internal/paper/
+03-module-dependencies.drawio	考试资料与采集的直接包依赖	processing	processing	implemented	services/api-gateway/internal/processing/
+03-module-dependencies.drawio	考试资料与采集的直接包依赖	exam	exam	implemented	services/api-gateway/internal/exam/
+03-module-dependencies.drawio	考试资料与采集的直接包依赖	submission	submission	implemented	services/api-gateway/internal/submission/
+03-module-dependencies.drawio	考试资料与采集的直接包依赖	files	files	implemented	services/api-gateway/internal/files/
+03-module-dependencies.drawio	考试资料与采集的直接包依赖	workerruntime	workerruntime	implemented	services/api-gateway/internal/workerruntime/
+03-module-dependencies.drawio	考试资料与采集的直接包依赖	scope	如何阅读	infra	docs/architecture/evidence/module-imports.json
+03-module-dependencies.drawio	考试资料与采集的直接包依赖	edge-0	import	infra	services/api-gateway/internal/capture/handlers.go:12
+03-module-dependencies.drawio	考试资料与采集的直接包依赖	edge-1	import	infra	services/api-gateway/internal/capture/handlers.go:13
+03-module-dependencies.drawio	考试资料与采集的直接包依赖	edge-2	import	infra	services/api-gateway/internal/capture/handlers.go:17
+03-module-dependencies.drawio	考试资料与采集的直接包依赖	edge-3	import	infra	services/api-gateway/internal/ocr/handlers.go:14
+03-module-dependencies.drawio	考试资料与采集的直接包依赖	edge-4	import	infra	services/api-gateway/internal/ocr/handlers.go:15
+03-module-dependencies.drawio	考试资料与采集的直接包依赖	edge-5	import	infra	services/api-gateway/internal/paper/store_postgres_configuration.go:12
+03-module-dependencies.drawio	考试资料与采集的直接包依赖	edge-6	import	infra	services/api-gateway/internal/paper/document_import.go:12
+03-module-dependencies.drawio	考试资料与采集的直接包依赖	edge-7	import	infra	services/api-gateway/internal/paper/paper_import_parse_commit_postgres.go:9
+03-module-dependencies.drawio	考试资料与采集的直接包依赖	edge-8	import	infra	services/api-gateway/internal/processing/context.go:7
+03-module-dependencies.drawio	考试资料与采集的直接包依赖	edge-9	import	infra	services/api-gateway/internal/processing/handlers.go:16
+03-module-dependencies.drawio	考试资料与采集的直接包依赖	edge-10	import	infra	services/api-gateway/internal/capture/scan_context.go:11
+03-module-dependencies.drawio	主观评分的直接包依赖	subjective	subjective	implemented	services/api-gateway/internal/subjective/
+03-module-dependencies.drawio	主观评分的直接包依赖	modelgovernance	modelgovernance	implemented	services/api-gateway/internal/modelgovernance/
+03-module-dependencies.drawio	主观评分的直接包依赖	review	review	implemented	services/api-gateway/internal/review/
+03-module-dependencies.drawio	主观评分的直接包依赖	mathunderstanding	mathunderstanding	implemented	services/api-gateway/internal/mathunderstanding/
+03-module-dependencies.drawio	主观评分的直接包依赖	grading	grading	implemented	services/api-gateway/internal/grading/
+03-module-dependencies.drawio	主观评分的直接包依赖	paper	paper	implemented	services/api-gateway/internal/paper/
+03-module-dependencies.drawio	主观评分的直接包依赖	segment	segment	implemented	services/api-gateway/internal/segment/
+03-module-dependencies.drawio	主观评分的直接包依赖	assessment	assessment	implemented	services/api-gateway/internal/assessment/
+03-module-dependencies.drawio	主观评分的直接包依赖	scope	如何阅读	infra	docs/architecture/evidence/module-imports.json
+03-module-dependencies.drawio	主观评分的直接包依赖	edge-0	import	infra	services/api-gateway/internal/subjective/grading_agent_v2_builder.go:15
+03-module-dependencies.drawio	主观评分的直接包依赖	edge-1	import	infra	services/api-gateway/internal/subjective/adapter.go:7
+03-module-dependencies.drawio	主观评分的直接包依赖	edge-2	import	infra	services/api-gateway/internal/subjective/grading_agent_v2_builder.go:16
+03-module-dependencies.drawio	主观评分的直接包依赖	edge-3	import	infra	services/api-gateway/internal/subjective/active_crop_resolver.go:15
+03-module-dependencies.drawio	主观评分的直接包依赖	edge-4	import	infra	services/api-gateway/internal/subjective/eligibility.go:8
+03-module-dependencies.drawio	主观评分的直接包依赖	edge-5	import	infra	services/api-gateway/internal/modelgovernance/role_binding.go:9
+03-module-dependencies.drawio	主观评分的直接包依赖	edge-6	import	infra	services/api-gateway/internal/review/store_postgres_context.go:9
+03-module-dependencies.drawio	主观评分的直接包依赖	edge-7	import	infra	services/api-gateway/internal/review/handlers.go:21
+03-module-dependencies.drawio	主观评分的直接包依赖	edge-8	import	infra	services/api-gateway/internal/review/task_context.go:8
+03-module-dependencies.drawio	主观评分的直接包依赖	edge-9	import	infra	services/api-gateway/internal/subjective/panel_agent_binding.go:7
+03-module-dependencies.drawio	发布与学校助手的直接包依赖	schoolassistant	schoolassistant	implemented	services/api-gateway/internal/schoolassistant/
+03-module-dependencies.drawio	发布与学校助手的直接包依赖	releasegate	releasegate	implemented	services/api-gateway/internal/releasegate/
+03-module-dependencies.drawio	发布与学校助手的直接包依赖	scorerelease	scorerelease	implemented	services/api-gateway/internal/scorerelease/
+03-module-dependencies.drawio	发布与学校助手的直接包依赖	exam	exam	implemented	services/api-gateway/internal/exam/
+03-module-dependencies.drawio	发布与学校助手的直接包依赖	workspace	workspace	implemented	services/api-gateway/internal/workspace/
+03-module-dependencies.drawio	发布与学校助手的直接包依赖	qualitydashboard	qualitydashboard	implemented	services/api-gateway/internal/qualitydashboard/
+03-module-dependencies.drawio	发布与学校助手的直接包依赖	files	files	implemented	services/api-gateway/internal/files/
+03-module-dependencies.drawio	发布与学校助手的直接包依赖	scope	如何阅读	infra	docs/architecture/evidence/module-imports.json
+03-module-dependencies.drawio	发布与学校助手的直接包依赖	edge-0	import	infra	services/api-gateway/internal/schoolassistant/conversation.go:13
+03-module-dependencies.drawio	发布与学校助手的直接包依赖	edge-1	import	infra	services/api-gateway/internal/schoolassistant/adapters.go:11
+03-module-dependencies.drawio	发布与学校助手的直接包依赖	edge-2	import	infra	services/api-gateway/internal/scorerelease/store_postgres.go:14
+03-module-dependencies.drawio	发布与学校助手的直接包依赖	edge-3	import	infra	services/api-gateway/internal/scorerelease/anonymous_paper.go:23
+03-module-dependencies.drawio	发布与学校助手的直接包依赖	edge-4	import	infra	services/api-gateway/internal/schoolassistant/types.go:12
+03-module-dependencies.drawio	发布与学校助手的直接包依赖	edge-5	import	infra	services/api-gateway/internal/schoolassistant/adapters.go:10
+03-module-dependencies.drawio	发布与学校助手的直接包依赖	edge-6	import	infra	services/api-gateway/internal/releasegate/coordinator.go:8
+04-database-er.drawio	数据库全局：核心实体与历史事实	school	school	implemented	services/api-gateway/migrations/000002_organization.sql:1;services/api-gateway/migrations/000002_organization.sql:96
+04-database-er.drawio	数据库全局：核心实体与历史事实	exam	exam	implemented	services/api-gateway/migrations/000003_exam_management.sql:1;services/api-gateway/migrations/000003_exam_management.sql:33
+04-database-er.drawio	数据库全局：核心实体与历史事实	exam_paper	exam_paper	implemented	services/api-gateway/migrations/000004_paper_question.sql:23;services/api-gateway/migrations/000004_paper_question.sql:109
+04-database-er.drawio	数据库全局：核心实体与历史事实	question	question	implemented	services/api-gateway/migrations/000004_paper_question.sql:37;services/api-gateway/migrations/000004_paper_question.sql:110
+04-database-er.drawio	数据库全局：核心实体与历史事实	student	student	implemented	services/api-gateway/migrations/000002_organization.sql:42;services/api-gateway/migrations/000002_organization.sql:99
+04-database-er.drawio	数据库全局：核心实体与历史事实	submission	submission	implemented	services/api-gateway/migrations/000006_submission_collection.sql:18;services/api-gateway/migrations/000006_submission_collection.sql:41
+04-database-er.drawio	数据库全局：核心实体与历史事实	submission_page	submission_page	implemented	services/api-gateway/migrations/000006_submission_collection.sql:45;services/api-gateway/migrations/000006_submission_collection.sql:62
+04-database-er.drawio	数据库全局：核心实体与历史事实	answer_segment	answer_segment	implemented	services/api-gateway/migrations/000008_answer_segment.sql:18;services/api-gateway/migrations/000008_answer_segment.sql:39
+04-database-er.drawio	数据库全局：核心实体与历史事实	rubric_version	rubric_version	implemented	services/api-gateway/migrations/000004_paper_question.sql:72
+04-database-er.drawio	数据库全局：核心实体与历史事实	scoring_run	scoring_run	implemented	services/api-gateway/migrations/000036_story056_grading_workbench.sql:89;services/api-gateway/migrations/000127_scoring_run_command.sql:3
+04-database-er.drawio	数据库全局：核心实体与历史事实	question_grade	question_grade	implemented	services/api-gateway/migrations/000036_story056_grading_workbench.sql:206;services/api-gateway/migrations/000036_story056_grading_workbench.sql:245
+04-database-er.drawio	数据库全局：核心实体与历史事实	review_task	review_task	implemented	services/api-gateway/migrations/000013_human_review_workflow.sql:27;services/api-gateway/migrations/000162_subjective_panel_legacy_hardening.sql:154
+04-database-er.drawio	数据库全局：核心实体与历史事实	subjective_grading_panel	subjective_grading_panel	implemented	services/api-gateway/migrations/000155_subjective_multi_agent_panel.sql:7;services/api-gateway/migrations/000162_subjective_panel_legacy_hardening.sql:5
+04-database-er.drawio	数据库全局：核心实体与历史事实	subjective_grading_run	subjective_grading_run	implemented	services/api-gateway/migrations/000063_story063_subjective_grading_runs.sql:1;services/api-gateway/migrations/000155_subjective_multi_agent_panel.sql:78
+04-database-er.drawio	数据库全局：核心实体与历史事实	ai_grade	ai_grade	implemented	services/api-gateway/migrations/000010_rule_grading.sql:34;services/api-gateway/migrations/000044_grading_agent_integration.sql:22
+04-database-er.drawio	数据库全局：核心实体与历史事实	human_grade	human_grade	implemented	services/api-gateway/migrations/000013_human_review_workflow.sql:59;services/api-gateway/migrations/000013_human_review_workflow.sql:84
+04-database-er.drawio	数据库全局：核心实体与历史事实	final_grade	final_grade	implemented	services/api-gateway/migrations/000014_double_mark_arbitration.sql:144;services/api-gateway/migrations/000014_double_mark_arbitration.sql:177
+04-database-er.drawio	数据库全局：核心实体与历史事实	score_release	score_release	implemented	services/api-gateway/migrations/000088_storyA18_score_releases.sql:5;services/api-gateway/migrations/000088_storyA18_score_releases.sql:103
+04-database-er.drawio	数据库全局：核心实体与历史事实	score_release_item	score_release_item	implemented	services/api-gateway/migrations/000088_storyA18_score_releases.sql:55;services/api-gateway/migrations/000088_storyA18_score_releases.sql:109
+04-database-er.drawio	数据库全局：核心实体与历史事实	score_release_question	score_release_question	implemented	services/api-gateway/migrations/000088_storyA18_score_releases.sql:77;services/api-gateway/migrations/000088_storyA18_score_releases.sql:112
+04-database-er.drawio	数据库全局：核心实体与历史事实	edge-0	1:N FK (tenant_id, school_id)	infra	services/api-gateway/migrations/000020_story047_tenant_constraints.sql:106
+04-database-er.drawio	数据库全局：核心实体与历史事实	edge-1	1:N FK (tenant_id, exam_id)	infra	services/api-gateway/migrations/000020_story047_tenant_constraints.sql:114
+04-database-er.drawio	数据库全局：核心实体与历史事实	edge-2	1:N FK (tenant_id, exam_id)	infra	services/api-gateway/migrations/000020_story047_tenant_constraints.sql:129
+04-database-er.drawio	数据库全局：核心实体与历史事实	edge-3	1:N FK (tenant_id, exam_id)	infra	services/api-gateway/migrations/000088_storyA18_score_releases.sql:27
+04-database-er.drawio	数据库全局：核心实体与历史事实	edge-4	1:N FK (tenant_id, exam_paper_id)	infra	services/api-gateway/migrations/000020_story047_tenant_constraints.sql:118
+04-database-er.drawio	数据库全局：核心实体与历史事实	edge-5	1:N FK (tenant_id, student_id)	infra	services/api-gateway/migrations/000020_story047_tenant_constraints.sql:130
+04-database-er.drawio	数据库全局：核心实体与历史事实	edge-6	1:N FK (tenant_id, submission_id)	infra	services/api-gateway/migrations/000020_story047_tenant_constraints.sql:132
+04-database-er.drawio	数据库全局：核心实体与历史事实	edge-7	1:N FK (tenant_id, submission_page_id)	infra	services/api-gateway/migrations/000020_story047_tenant_constraints.sql:141
+04-database-er.drawio	数据库全局：核心实体与历史事实	edge-8	1:N FK (tenant_id, question_id)	infra	services/api-gateway/migrations/000020_story047_tenant_constraints.sql:142
+04-database-er.drawio	数据库全局：核心实体与历史事实	edge-9	1:N FK (tenant_id, question_id)	infra	services/api-gateway/migrations/000020_story047_tenant_constraints.sql:121
+04-database-er.drawio	数据库全局：核心实体与历史事实	edge-10	1:N FK (tenant_id, answer_segment_id)	infra	services/api-gateway/migrations/000036_story056_grading_workbench.sql:232
+04-database-er.drawio	数据库全局：核心实体与历史事实	edge-11	1:N FK (tenant_id, scoring_run_id)	infra	services/api-gateway/migrations/000036_story056_grading_workbench.sql:233
+04-database-er.drawio	数据库全局：核心实体与历史事实	edge-12	1:N FK (tenant_id, answer_segment_id)	infra	services/api-gateway/migrations/000020_story047_tenant_constraints.sql:153
+04-database-er.drawio	数据库全局：核心实体与历史事实	edge-13	1:N FK (tenant_id, panel_id)	infra	services/api-gateway/migrations/000155_subjective_multi_agent_panel.sql:67
+04-database-er.drawio	数据库全局：核心实体与历史事实	edge-14	1:N FK (tenant_id, review_task_id)	infra	services/api-gateway/migrations/000020_story047_tenant_constraints.sql:157
+04-database-er.drawio	数据库全局：核心实体与历史事实	edge-15	1:N FK (tenant_id, final_grade_id)	infra	services/api-gateway/migrations/000088_storyA18_score_releases.sql:96
+04-database-er.drawio	数据库全局：核心实体与历史事实	edge-16	1:N FK (tenant_id, release_id)	infra	services/api-gateway/migrations/000088_storyA18_score_releases.sql:68
+04-database-er.drawio	数据库全局：核心实体与历史事实	edge-17	1:N FK (tenant_id, release_id)	infra	services/api-gateway/migrations/000088_storyA18_score_releases.sql:93
+04-database-er.drawio	关系读法：M:N桥表与1:0..1约束	relation_0_app_user	app_user	implemented	services/api-gateway/migrations/000001_auth_rbac.sql:16;services/api-gateway/migrations/000143_auth_identity_security_epoch.sql:55
+04-database-er.drawio	关系读法：M:N桥表与1:0..1约束	relation_0_user_role	user_role	implemented	services/api-gateway/migrations/000001_auth_rbac.sql:60
+04-database-er.drawio	关系读法：M:N桥表与1:0..1约束	relation_0_role	role	implemented	services/api-gateway/migrations/000001_auth_rbac.sql:33
+04-database-er.drawio	关系读法：M:N桥表与1:0..1约束	relation_1_role	role	implemented	services/api-gateway/migrations/000001_auth_rbac.sql:33
+04-database-er.drawio	关系读法：M:N桥表与1:0..1约束	relation_1_role_permission	role_permission	implemented	services/api-gateway/migrations/000001_auth_rbac.sql:72
+04-database-er.drawio	关系读法：M:N桥表与1:0..1约束	relation_1_permission	permission	implemented	services/api-gateway/migrations/000001_auth_rbac.sql:46
+04-database-er.drawio	关系读法：M:N桥表与1:0..1约束	relation_2_app_user	app_user	implemented	services/api-gateway/migrations/000001_auth_rbac.sql:16;services/api-gateway/migrations/000143_auth_identity_security_epoch.sql:55
+04-database-er.drawio	关系读法：M:N桥表与1:0..1约束	relation_2_teacher_class	teacher_class	implemented	services/api-gateway/migrations/000002_organization.sql:58;services/api-gateway/migrations/000002_organization.sql:100
+04-database-er.drawio	关系读法：M:N桥表与1:0..1约束	relation_2_school_class	school_class	implemented	services/api-gateway/migrations/000002_organization.sql:27;services/api-gateway/migrations/000002_organization.sql:98
+04-database-er.drawio	关系读法：M:N桥表与1:0..1约束	relation_3_exam	exam	implemented	services/api-gateway/migrations/000003_exam_management.sql:1;services/api-gateway/migrations/000003_exam_management.sql:33
+04-database-er.drawio	关系读法：M:N桥表与1:0..1约束	relation_3_exam_class	exam_class	implemented	services/api-gateway/migrations/000003_exam_management.sql:22;services/api-gateway/migrations/000003_exam_management.sql:35
+04-database-er.drawio	关系读法：M:N桥表与1:0..1约束	relation_3_school_class	school_class	implemented	services/api-gateway/migrations/000002_organization.sql:27;services/api-gateway/migrations/000002_organization.sql:98
+04-database-er.drawio	关系读法：M:N桥表与1:0..1约束	relation_4_exam	exam	implemented	services/api-gateway/migrations/000003_exam_management.sql:1;services/api-gateway/migrations/000003_exam_management.sql:33
+04-database-er.drawio	关系读法：M:N桥表与1:0..1约束	relation_4_score_release_current	score_release_current	implemented	services/api-gateway/migrations/000088_storyA18_score_releases.sql:45;services/api-gateway/migrations/000088_storyA18_score_releases.sql:106
+04-database-er.drawio	关系读法：M:N桥表与1:0..1约束	relation_4_score_release	score_release	implemented	services/api-gateway/migrations/000088_storyA18_score_releases.sql:5;services/api-gateway/migrations/000088_storyA18_score_releases.sql:103
+04-database-er.drawio	关系读法：M:N桥表与1:0..1约束	relation_5_local_asset	local_asset	implemented	apps/desktop-client/src-tauri/src/durable_store/schema.rs:9
+04-database-er.drawio	关系读法：M:N桥表与1:0..1约束	relation_5_upload_session	upload_session	implemented	apps/desktop-client/src-tauri/src/durable_store/schema.rs:30
+04-database-er.drawio	关系读法：M:N桥表与1:0..1约束	edge-0	1:N FK (tenant_id, user_id)	infra	services/api-gateway/migrations/000020_story047_tenant_constraints.sql:90
+04-database-er.drawio	关系读法：M:N桥表与1:0..1约束	edge-1	1:N FK (tenant_id, role_id)	infra	services/api-gateway/migrations/000020_story047_tenant_constraints.sql:91
+04-database-er.drawio	关系读法：M:N桥表与1:0..1约束	edge-2	1:N FK (tenant_id, role_id)	infra	services/api-gateway/migrations/000020_story047_tenant_constraints.sql:92
+04-database-er.drawio	关系读法：M:N桥表与1:0..1约束	edge-3	1:N FK (tenant_id, permission_id)	infra	services/api-gateway/migrations/000020_story047_tenant_constraints.sql:93
+04-database-er.drawio	关系读法：M:N桥表与1:0..1约束	edge-4	1:N FK (tenant_id, teacher_id)	infra	services/api-gateway/migrations/000020_story047_tenant_constraints.sql:103
+04-database-er.drawio	关系读法：M:N桥表与1:0..1约束	edge-5	1:N FK (tenant_id, class_id)	infra	services/api-gateway/migrations/000020_story047_tenant_constraints.sql:104
+04-database-er.drawio	关系读法：M:N桥表与1:0..1约束	edge-6	1:N FK (tenant_id, exam_id)	infra	services/api-gateway/migrations/000020_story047_tenant_constraints.sql:108
+04-database-er.drawio	关系读法：M:N桥表与1:0..1约束	edge-7	1:N FK (tenant_id, class_id)	infra	services/api-gateway/migrations/000020_story047_tenant_constraints.sql:109
+04-database-er.drawio	关系读法：M:N桥表与1:0..1约束	edge-8	1:0..1 FK (tenant_id, exam_id)	infra	services/api-gateway/migrations/000088_storyA18_score_releases.sql:51
+04-database-er.drawio	关系读法：M:N桥表与1:0..1约束	edge-9	1:0..1 FK (tenant_id, release_id, exam_id)	infra	services/api-gateway/migrations/000088_storyA18_score_releases.sql:52
+04-database-er.drawio	关系读法：M:N桥表与1:0..1约束	edge-10	1:0..1 FK (local_asset_id)	infra	apps/desktop-client/src-tauri/src/durable_store/schema.rs:31
+04-database-er.drawio	认证与RBAC	tenant	tenant	implemented	services/api-gateway/migrations/000001_auth_rbac.sql:3
+04-database-er.drawio	认证与RBAC	app_user	app_user	implemented	services/api-gateway/migrations/000001_auth_rbac.sql:16;services/api-gateway/migrations/000143_auth_identity_security_epoch.sql:55
+04-database-er.drawio	认证与RBAC	role	role	implemented	services/api-gateway/migrations/000001_auth_rbac.sql:33
+04-database-er.drawio	认证与RBAC	permission	permission	implemented	services/api-gateway/migrations/000001_auth_rbac.sql:46
+04-database-er.drawio	认证与RBAC	user_role	user_role	implemented	services/api-gateway/migrations/000001_auth_rbac.sql:60
+04-database-er.drawio	认证与RBAC	role_permission	role_permission	implemented	services/api-gateway/migrations/000001_auth_rbac.sql:72
+04-database-er.drawio	认证与RBAC	auth_session	auth_session	implemented	services/api-gateway/migrations/000001_auth_rbac.sql:83;services/api-gateway/migrations/000001_auth_rbac.sql:192
+04-database-er.drawio	认证与RBAC	audit_log	audit_log	implemented	services/api-gateway/migrations/000001_auth_rbac.sql:94;services/api-gateway/migrations/000068_strong_audit_outbox.sql:136
+04-database-er.drawio	认证与RBAC	edge-0	1:N FK (tenant_id)	infra	services/api-gateway/migrations/000001_auth_rbac.sql:18
+04-database-er.drawio	认证与RBAC	edge-1	1:N FK (tenant_id)	infra	services/api-gateway/migrations/000001_auth_rbac.sql:62
+04-database-er.drawio	身份激活、风险与MFA	auth_activation	auth_activation	unknown	services/api-gateway/migrations/000143_auth_identity_security_epoch.sql:104;services/api-gateway/migrations/000143_auth_identity_security_epoch.sql:119
+04-database-er.drawio	身份激活、风险与MFA	auth_recovery	auth_recovery	unknown	services/api-gateway/migrations/000143_auth_identity_security_epoch.sql:123;services/api-gateway/migrations/000143_auth_identity_security_epoch.sql:146
+04-database-er.drawio	身份激活、风险与MFA	auth_trusted_device	auth_trusted_device	unknown	services/api-gateway/migrations/000147_auth_dynamic_risk_shadow.sql:39;services/api-gateway/migrations/000147_auth_dynamic_risk_shadow.sql:65
+04-database-er.drawio	身份激活、风险与MFA	auth_risk_event	auth_risk_event	unknown	services/api-gateway/migrations/000147_auth_dynamic_risk_shadow.sql:76;services/api-gateway/migrations/000147_auth_dynamic_risk_shadow.sql:101
+04-database-er.drawio	身份激活、风险与MFA	auth_totp	auth_totp	implemented	services/api-gateway/migrations/000149_auth_totp_scoped_challenges.sql:2
+04-database-er.drawio	身份激活、风险与MFA	auth_mfa_recovery_code	auth_mfa_recovery_code	implemented	services/api-gateway/migrations/000149_auth_totp_scoped_challenges.sql:21
+04-database-er.drawio	身份激活、风险与MFA	auth_mfa_challenge	auth_mfa_challenge	implemented	services/api-gateway/migrations/000149_auth_totp_scoped_challenges.sql:32;services/api-gateway/migrations/000149_auth_totp_scoped_challenges.sql:50
+04-database-er.drawio	身份激活、风险与MFA	auth_security_notification_intent	auth_security_notification_intent	unknown	services/api-gateway/migrations/000150_auth_mfa_security_notification_intents.sql:38;services/api-gateway/migrations/000150_auth_mfa_security_notification_intents.sql:47
+04-database-er.drawio	身份激活、风险与MFA	wechat_identity	wechat_identity	unknown	services/api-gateway/migrations/000154_auth_wechat_login.sql:1;services/api-gateway/migrations/000154_auth_wechat_login.sql:15
+04-database-er.drawio	身份激活、风险与MFA	auth_wechat_login_challenge	auth_wechat_login_challenge	unknown	services/api-gateway/migrations/000154_auth_wechat_login.sql:23;services/api-gateway/migrations/000154_auth_wechat_login.sql:44
+04-database-er.drawio	身份激活、风险与MFA	edge-0	1:N FK (tenant_id, user_id, credential_id)	infra	services/api-gateway/migrations/000149_auth_totp_scoped_challenges.sql:29
+04-database-er.drawio	组织、学籍与学校	school	school	implemented	services/api-gateway/migrations/000002_organization.sql:1;services/api-gateway/migrations/000002_organization.sql:96
+04-database-er.drawio	组织、学籍与学校	grade	grade	implemented	services/api-gateway/migrations/000002_organization.sql:14;services/api-gateway/migrations/000002_organization.sql:97
+04-database-er.drawio	组织、学籍与学校	school_class	school_class	implemented	services/api-gateway/migrations/000002_organization.sql:27;services/api-gateway/migrations/000002_organization.sql:98
+04-database-er.drawio	组织、学籍与学校	student	student	implemented	services/api-gateway/migrations/000002_organization.sql:42;services/api-gateway/migrations/000002_organization.sql:99
+04-database-er.drawio	组织、学籍与学校	teacher_class	teacher_class	implemented	services/api-gateway/migrations/000002_organization.sql:58;services/api-gateway/migrations/000002_organization.sql:100
+04-database-er.drawio	组织、学籍与学校	academic_year	academic_year	implemented	services/api-gateway/migrations/000108_school_enrollment_model.sql:3;services/api-gateway/migrations/000108_school_enrollment_model.sql:23
+04-database-er.drawio	组织、学籍与学校	grade_cohort	grade_cohort	implemented	services/api-gateway/migrations/000108_school_enrollment_model.sql:26
+04-database-er.drawio	组织、学籍与学校	student_enrollment	student_enrollment	implemented	services/api-gateway/migrations/000108_school_enrollment_model.sql:96;services/api-gateway/migrations/000108_school_enrollment_model.sql:115
+04-database-er.drawio	组织、学籍与学校	edge-0	1:N FK (tenant_id, school_id)	infra	services/api-gateway/migrations/000020_story047_tenant_constraints.sql:97
+04-database-er.drawio	组织、学籍与学校	edge-1	1:N FK (tenant_id, grade_id)	infra	services/api-gateway/migrations/000020_story047_tenant_constraints.sql:99
+04-database-er.drawio	组织、学籍与学校	edge-2	1:N FK (tenant_id, class_id)	infra	services/api-gateway/migrations/000020_story047_tenant_constraints.sql:102
+04-database-er.drawio	组织、学籍与学校	edge-3	1:N FK (student_id)	infra	services/api-gateway/migrations/000108_school_enrollment_model.sql:100
+04-database-er.drawio	组织、学籍与学校	edge-4	1:N FK (academic_year_id)	infra	services/api-gateway/migrations/000108_school_enrollment_model.sql:69
+04-database-er.drawio	组织、学籍与学校	edge-5	1:N FK (grade_cohort_id)	infra	services/api-gateway/migrations/000108_school_enrollment_model.sql:86
+04-database-er.drawio	组织、学籍与学校	edge-6	1:N FK (grade_cohort_id)	infra	services/api-gateway/migrations/000108_school_enrollment_model.sql:102
+04-database-er.drawio	整场考试、学科与冻结名册	exam_session	exam_session	implemented	services/api-gateway/migrations/000104_exam_sessions.sql:1;services/api-gateway/migrations/000121_exam_session_command_id.sql:4
+04-database-er.drawio	整场考试、学科与冻结名册	exam	exam	implemented	services/api-gateway/migrations/000003_exam_management.sql:1;services/api-gateway/migrations/000003_exam_management.sql:33
+04-database-er.drawio	整场考试、学科与冻结名册	exam_class	exam_class	implemented	services/api-gateway/migrations/000003_exam_management.sql:22;services/api-gateway/migrations/000003_exam_management.sql:35
+04-database-er.drawio	整场考试、学科与冻结名册	exam_candidate_snapshot	exam_candidate_snapshot	implemented	services/api-gateway/migrations/000107_exam_candidate_snapshot.sql:3;services/api-gateway/migrations/000107_exam_candidate_snapshot.sql:21
+04-database-er.drawio	整场考试、学科与冻结名册	exam_blueprint_section	exam_blueprint_section	implemented	services/api-gateway/migrations/000104_exam_sessions.sql:25;services/api-gateway/migrations/000104_exam_sessions.sql:45
+04-database-er.drawio	整场考试、学科与冻结名册	exam_template	exam_template	unknown	services/api-gateway/migrations/000106_exam_templates.sql:1;services/api-gateway/migrations/000106_exam_templates.sql:70
+04-database-er.drawio	整场考试、学科与冻结名册	exam_template_subject	exam_template_subject	unknown	services/api-gateway/migrations/000106_exam_templates.sql:29
+04-database-er.drawio	整场考试、学科与冻结名册	exam_template_section	exam_template_section	unknown	services/api-gateway/migrations/000106_exam_templates.sql:48
+04-database-er.drawio	整场考试、学科与冻结名册	exam_student_attendance	exam_student_attendance	unknown	services/api-gateway/migrations/000052_story060_exam_roster_attendance.sql:6;services/api-gateway/migrations/000052_story060_exam_roster_attendance.sql:25
+04-database-er.drawio	整场考试、学科与冻结名册	exam_readiness_snapshot	exam_readiness_snapshot	implemented	services/api-gateway/migrations/000026_story054_exam_readiness.sql:44;services/api-gateway/migrations/000026_story054_exam_readiness.sql:62
+04-database-er.drawio	整场考试、学科与冻结名册	edge-0	1:N FK (exam_session_id)	infra	services/api-gateway/migrations/000104_exam_sessions.sql:21
+04-database-er.drawio	整场考试、学科与冻结名册	edge-1	1:N FK (tenant_id, exam_id)	infra	services/api-gateway/migrations/000020_story047_tenant_constraints.sql:108
+04-database-er.drawio	整场考试、学科与冻结名册	edge-2	1:N FK (tenant_id, exam_template_id)	infra	services/api-gateway/migrations/000106_exam_templates.sql:43
+04-database-er.drawio	整场考试、学科与冻结名册	edge-3	1:N FK (tenant_id, exam_template_subject_id)	infra	services/api-gateway/migrations/000106_exam_templates.sql:61
+04-database-er.drawio	试卷、题目、答案与评分细则	exam_paper	exam_paper	implemented	services/api-gateway/migrations/000004_paper_question.sql:23;services/api-gateway/migrations/000004_paper_question.sql:109
+04-database-er.drawio	试卷、题目、答案与评分细则	question	question	implemented	services/api-gateway/migrations/000004_paper_question.sql:37;services/api-gateway/migrations/000004_paper_question.sql:110
+04-database-er.drawio	试卷、题目、答案与评分细则	question_answer_key	question_answer_key	implemented	services/api-gateway/migrations/000004_paper_question.sql:58;services/api-gateway/migrations/000004_paper_question.sql:111
+04-database-er.drawio	试卷、题目、答案与评分细则	rubric_version	rubric_version	implemented	services/api-gateway/migrations/000004_paper_question.sql:72
+04-database-er.drawio	试卷、题目、答案与评分细则	question_rubric	question_rubric	implemented	services/api-gateway/migrations/000004_paper_question.sql:89;services/api-gateway/migrations/000004_paper_question.sql:112
+04-database-er.drawio	试卷、题目、答案与评分细则	question_solution	question_solution	unknown	services/api-gateway/migrations/000110_paper_import_sources_candidates.sql:55;services/api-gateway/migrations/000110_paper_import_sources_candidates.sql:71
+04-database-er.drawio	试卷、题目、答案与评分细则	edge-0	1:N FK (tenant_id, exam_paper_id)	infra	services/api-gateway/migrations/000020_story047_tenant_constraints.sql:118
+04-database-er.drawio	试卷、题目、答案与评分细则	edge-1	1:N FK (tenant_id, question_id)	infra	services/api-gateway/migrations/000020_story047_tenant_constraints.sql:119
+04-database-er.drawio	试卷、题目、答案与评分细则	edge-2	1:N FK (question_id)	infra	services/api-gateway/migrations/000110_paper_import_sources_candidates.sql:58
+04-database-er.drawio	试卷资料导入与识别代次	paper_import_job	paper_import_job	unknown	services/api-gateway/migrations/000102_paper_document_import.sql:1;services/api-gateway/migrations/000102_paper_document_import.sql:20
+04-database-er.drawio	试卷资料导入与识别代次	paper_import_source	paper_import_source	unknown	services/api-gateway/migrations/000110_paper_import_sources_candidates.sql:12;services/api-gateway/migrations/000110_paper_import_sources_candidates.sql:32
+04-database-er.drawio	试卷资料导入与识别代次	paper_import_parse_input	paper_import_parse_input	unknown	services/api-gateway/migrations/000120_paper_import_parse_runtime.sql:13;services/api-gateway/migrations/000120_paper_import_parse_runtime.sql:30
+04-database-er.drawio	试卷资料导入与识别代次	paper_import_formula_input	paper_import_formula_input	unknown	services/api-gateway/migrations/000135_paper_formula_recognition.sql:6;services/api-gateway/migrations/000135_paper_formula_recognition.sql:27
+04-database-er.drawio	试卷资料导入与识别代次	paper_import_run	paper_import_run	unknown	services/api-gateway/migrations/000123_reliability_command_runs.sql:22;services/api-gateway/migrations/000123_reliability_command_runs.sql:65
+04-database-er.drawio	试卷资料导入与识别代次	edge-0	1:N FK (paper_import_id)	infra	services/api-gateway/migrations/000110_paper_import_sources_candidates.sql:15
+04-database-er.drawio	试卷资料导入与识别代次	edge-1	1:N FK (tenant_id, paper_import_id)	infra	services/api-gateway/migrations/000123_reliability_command_runs.sql:49
+04-database-er.drawio	答卷采集、批次与页面	capture_batch	capture_batch	unknown	services/api-gateway/migrations/000027_story055_capture_processing.sql:13;services/api-gateway/migrations/000027_story055_capture_processing.sql:45
+04-database-er.drawio	答卷采集、批次与页面	capture_file	capture_file	unknown	services/api-gateway/migrations/000027_story055_capture_processing.sql:53;services/api-gateway/migrations/000027_story055_capture_processing.sql:80
+04-database-er.drawio	答卷采集、批次与页面	capture_page	capture_page	unknown	services/api-gateway/migrations/000027_story055_capture_processing.sql:84;services/api-gateway/migrations/000027_story055_capture_processing.sql:120
+04-database-er.drawio	答卷采集、批次与页面	capture_operation	capture_operation	unknown	services/api-gateway/migrations/000027_story055_capture_processing.sql:182
+04-database-er.drawio	答卷采集、批次与页面	submission	submission	implemented	services/api-gateway/migrations/000006_submission_collection.sql:18;services/api-gateway/migrations/000006_submission_collection.sql:41
+04-database-er.drawio	答卷采集、批次与页面	submission_page	submission_page	implemented	services/api-gateway/migrations/000006_submission_collection.sql:45;services/api-gateway/migrations/000006_submission_collection.sql:62
+04-database-er.drawio	答卷采集、批次与页面	capture_upload_session	capture_upload_session	unknown	services/api-gateway/migrations/000093_storyA24_offline_scan_spool.sql:5;services/api-gateway/migrations/000093_storyA24_offline_scan_spool.sql:42
+04-database-er.drawio	答卷采集、批次与页面	capture_upload_chunk	capture_upload_chunk	unknown	services/api-gateway/migrations/000093_storyA24_offline_scan_spool.sql:46
+04-database-er.drawio	答卷采集、批次与页面	scanner_profile	scanner_profile	unknown	services/api-gateway/migrations/000094_storyA25_scanner_profiles.sql:6;services/api-gateway/migrations/000094_storyA25_scanner_profiles.sql:24
+04-database-er.drawio	答卷采集、批次与页面	edge-0	1:N FK (tenant_id, capture_batch_id)	infra	services/api-gateway/migrations/000027_story055_capture_processing.sql:72
+04-database-er.drawio	答卷采集、批次与页面	edge-1	1:N FK (tenant_id, capture_file_id)	infra	services/api-gateway/migrations/000027_story055_capture_processing.sql:108
+04-database-er.drawio	答卷采集、批次与页面	edge-2	1:N FK (tenant_id, submission_id)	infra	services/api-gateway/migrations/000020_story047_tenant_constraints.sql:132
+04-database-er.drawio	答卷采集、批次与页面	edge-3	1:N FK (tenant_id, capture_upload_session_id)	infra	services/api-gateway/migrations/000093_storyA24_offline_scan_spool.sql:55
+04-database-er.drawio	质量、配准与模板复用	submission_page_quality_run	submission_page_quality_run	unknown	services/api-gateway/migrations/000022_story050_image_quality_run.sql:44;services/api-gateway/migrations/000022_story050_image_quality_run.sql:95
+04-database-er.drawio	质量、配准与模板复用	page_registration_run	page_registration_run	unknown	services/api-gateway/migrations/000027_story055_capture_processing.sql:128;services/api-gateway/migrations/000027_story055_capture_processing.sql:178
+04-database-er.drawio	质量、配准与模板复用	page_registration_correction	page_registration_correction	unknown	services/api-gateway/migrations/000034_story055_manual_registration_correction.sql:24;services/api-gateway/migrations/000034_story055_manual_registration_correction.sql:80
+04-database-er.drawio	质量、配准与模板复用	page_template_match_run	page_template_match_run	implemented	services/api-gateway/migrations/000131_exam_answer_sheet_template_binding.sql:39;services/api-gateway/migrations/000131_exam_answer_sheet_template_binding.sql:83
+04-database-er.drawio	质量、配准与模板复用	answer_sheet_template	answer_sheet_template	implemented	services/api-gateway/migrations/000026_story054_exam_readiness.sql:6;services/api-gateway/migrations/000026_story054_exam_readiness.sql:40
+04-database-er.drawio	质量、配准与模板复用	exam_answer_sheet_template_binding	exam_answer_sheet_template_binding	implemented	services/api-gateway/migrations/000131_exam_answer_sheet_template_binding.sql:3;services/api-gateway/migrations/000131_exam_answer_sheet_template_binding.sql:29
+04-database-er.drawio	质量、配准与模板复用	omr_calibration_session	omr_calibration_session	unknown	services/api-gateway/migrations/000041_story056_omr_calibration_approval.sql:3;services/api-gateway/migrations/000056_story060_template_omr_calibration.sql:35
+04-database-er.drawio	质量、配准与模板复用	omr_calibration_case	omr_calibration_case	unknown	services/api-gateway/migrations/000041_story056_omr_calibration_approval.sql:65;services/api-gateway/migrations/000041_story056_omr_calibration_approval.sql:98
+04-database-er.drawio	质量、配准与模板复用	edge-0	1:N FK (tenant_id, base_registration_run_id)	infra	services/api-gateway/migrations/000034_story055_manual_registration_correction.sql:61
+04-database-er.drawio	质量、配准与模板复用	edge-1	1:N FK (tenant_id, template_id)	infra	services/api-gateway/migrations/000131_exam_answer_sheet_template_binding.sql:19
+04-database-er.drawio	质量、配准与模板复用	edge-2	1:N FK (tenant_id, calibration_session_id)	infra	services/api-gateway/migrations/000041_story056_omr_calibration_approval.sql:84
+04-database-er.drawio	答题卡打印与学生纸张身份	answer_sheet_print_batch	answer_sheet_print_batch	unknown	services/api-gateway/migrations/000054_story060_student_sheet_identity.sql:7;services/api-gateway/migrations/000054_story060_student_sheet_identity.sql:32
+04-database-er.drawio	答题卡打印与学生纸张身份	answer_sheet_print_sheet	answer_sheet_print_sheet	unknown	services/api-gateway/migrations/000054_story060_student_sheet_identity.sql:35;services/api-gateway/migrations/000055_story060_sheet_reprint_lifecycle.sql:41
+04-database-er.drawio	答题卡打印与学生纸张身份	answer_sheet_print_page	answer_sheet_print_page	unknown	services/api-gateway/migrations/000054_story060_student_sheet_identity.sql:63
+04-database-er.drawio	答题卡打印与学生纸张身份	edge-0	1:N FK (tenant_id, print_batch_id)	infra	services/api-gateway/migrations/000054_story060_student_sheet_identity.sql:52
+04-database-er.drawio	答题卡打印与学生纸张身份	edge-1	1:N FK (tenant_id, print_sheet_id)	infra	services/api-gateway/migrations/000054_story060_student_sheet_identity.sql:74
+04-database-er.drawio	任务来源、执行与投影	orchestration_run	orchestration_run	unknown	services/api-gateway/migrations/000009_orchestrator.sql:18;services/api-gateway/migrations/000009_orchestrator.sql:60
+04-database-er.drawio	任务来源、执行与投影	agent_task	agent_task	unknown	services/api-gateway/migrations/000009_orchestrator.sql:34;services/api-gateway/migrations/000009_orchestrator.sql:61
+04-database-er.drawio	任务来源、执行与投影	agent_job	agent_job	unknown	services/api-gateway/migrations/000012_evidence_check.sql:18;services/api-gateway/migrations/000012_evidence_check.sql:36
+04-database-er.drawio	任务来源、执行与投影	agent_worker_task	agent_worker_task	unknown	services/api-gateway/migrations/000023_story051_agent_worker_runtime.sql:1;services/api-gateway/migrations/000023_story051_agent_worker_runtime.sql:82
+04-database-er.drawio	任务来源、执行与投影	agent_worker_task_attempt	agent_worker_task_attempt	unknown	services/api-gateway/migrations/000023_story051_agent_worker_runtime.sql:50;services/api-gateway/migrations/000023_story051_agent_worker_runtime.sql:92
+04-database-er.drawio	任务来源、执行与投影	agent_worker_heartbeat	agent_worker_heartbeat	unknown	services/api-gateway/migrations/000023_story051_agent_worker_runtime.sql:72
+04-database-er.drawio	任务来源、执行与投影	ocr_task	ocr_task	unknown	services/api-gateway/migrations/000007_ocr_task.sql:18;services/api-gateway/migrations/000048_ocr_runtime_atomicity.sql:24
+04-database-er.drawio	任务来源、执行与投影	ocr_result	ocr_result	unknown	services/api-gateway/migrations/000007_ocr_task.sql:40;services/api-gateway/migrations/000007_ocr_task.sql:60
+04-database-er.drawio	任务来源、执行与投影	submission_page_processing_state	submission_page_processing_state	unknown	services/api-gateway/migrations/000095_storyA26_processing_state.sql:6;services/api-gateway/migrations/000095_storyA26_processing_state.sql:29
+04-database-er.drawio	任务来源、执行与投影	operational_exception	operational_exception	unknown	services/api-gateway/migrations/000095_storyA26_processing_state.sql:35;services/api-gateway/migrations/000095_storyA26_processing_state.sql:58
+04-database-er.drawio	任务来源、执行与投影	processing_projection_cursor	processing_projection_cursor	unknown	services/api-gateway/migrations/000122_processing_projection_refresh.sql:3;services/api-gateway/migrations/000122_processing_projection_refresh.sql:23
+04-database-er.drawio	任务来源、执行与投影	edge-0	1:N FK (orchestration_run_id)	infra	services/api-gateway/migrations/000009_orchestrator.sql:37
+04-database-er.drawio	任务来源、执行与投影	edge-1	1:N FK (tenant_id, ocr_task_id)	infra	services/api-gateway/migrations/000020_story047_tenant_constraints.sql:136
+04-database-er.drawio	答案与客观评分版本	answer_segment	answer_segment	implemented	services/api-gateway/migrations/000008_answer_segment.sql:18;services/api-gateway/migrations/000008_answer_segment.sql:39
+04-database-er.drawio	答案与客观评分版本	answer_segment_answer	answer_segment_answer	implemented	services/api-gateway/migrations/000010_rule_grading.sql:18;services/api-gateway/migrations/000010_rule_grading.sql:69
+04-database-er.drawio	答案与客观评分版本	scoring_rule	scoring_rule	implemented	services/api-gateway/migrations/000036_story056_grading_workbench.sql:49;services/api-gateway/migrations/000036_story056_grading_workbench.sql:81
+04-database-er.drawio	答案与客观评分版本	scoring_run	scoring_run	implemented	services/api-gateway/migrations/000036_story056_grading_workbench.sql:89;services/api-gateway/migrations/000127_scoring_run_command.sql:3
+04-database-er.drawio	答案与客观评分版本	answer_candidate	answer_candidate	implemented	services/api-gateway/migrations/000036_story056_grading_workbench.sql:122;services/api-gateway/migrations/000036_story056_grading_workbench.sql:151
+04-database-er.drawio	答案与客观评分版本	omr_run	omr_run	implemented	services/api-gateway/migrations/000036_story056_grading_workbench.sql:159;services/api-gateway/migrations/000036_story056_grading_workbench.sql:202
+04-database-er.drawio	答案与客观评分版本	question_grade	question_grade	implemented	services/api-gateway/migrations/000036_story056_grading_workbench.sql:206;services/api-gateway/migrations/000036_story056_grading_workbench.sql:245
+04-database-er.drawio	答案与客观评分版本	edge-0	1:N FK (tenant_id, answer_segment_id)	infra	services/api-gateway/migrations/000020_story047_tenant_constraints.sql:144
+04-database-er.drawio	答案与客观评分版本	edge-1	1:N FK (tenant_id, answer_segment_id)	infra	services/api-gateway/migrations/000036_story056_grading_workbench.sql:141
+04-database-er.drawio	答案与客观评分版本	edge-2	1:N FK (tenant_id, scoring_rule_id)	infra	services/api-gateway/migrations/000036_story056_grading_workbench.sql:235
+04-database-er.drawio	人工复核、双评与成绩事实	review_task	review_task	implemented	services/api-gateway/migrations/000013_human_review_workflow.sql:27;services/api-gateway/migrations/000162_subjective_panel_legacy_hardening.sql:154
+04-database-er.drawio	人工复核、双评与成绩事实	human_grade	human_grade	implemented	services/api-gateway/migrations/000013_human_review_workflow.sql:59;services/api-gateway/migrations/000013_human_review_workflow.sql:84
+04-database-er.drawio	人工复核、双评与成绩事实	review_draft	review_draft	implemented	services/api-gateway/migrations/000036_story056_grading_workbench.sql:257;services/api-gateway/migrations/000036_story056_grading_workbench.sql:281
+04-database-er.drawio	人工复核、双评与成绩事实	double_mark_policy	double_mark_policy	implemented	services/api-gateway/migrations/000014_double_mark_arbitration.sql:56;services/api-gateway/migrations/000014_double_mark_arbitration.sql:73
+04-database-er.drawio	人工复核、双评与成绩事实	double_mark_session	double_mark_session	implemented	services/api-gateway/migrations/000014_double_mark_arbitration.sql:81;services/api-gateway/migrations/000014_double_mark_arbitration.sql:172
+04-database-er.drawio	人工复核、双评与成绩事实	arbitration_task	arbitration_task	implemented	services/api-gateway/migrations/000014_double_mark_arbitration.sql:110;services/api-gateway/migrations/000014_double_mark_arbitration.sql:175
+04-database-er.drawio	人工复核、双评与成绩事实	final_grade	final_grade	implemented	services/api-gateway/migrations/000014_double_mark_arbitration.sql:144;services/api-gateway/migrations/000014_double_mark_arbitration.sql:177
+04-database-er.drawio	人工复核、双评与成绩事实	submission_grade	submission_grade	implemented	services/api-gateway/migrations/000015_final_grades_publishing.sql:70;services/api-gateway/migrations/000015_final_grades_publishing.sql:97
+04-database-er.drawio	人工复核、双评与成绩事实	review_annotation	review_annotation	unknown	services/api-gateway/migrations/000077_storyA06_review_annotations.sql:1;services/api-gateway/migrations/000077_storyA06_review_annotations.sql:37
+04-database-er.drawio	人工复核、双评与成绩事实	review_comment_template	review_comment_template	unknown	services/api-gateway/migrations/000077_storyA06_review_annotations.sql:45;services/api-gateway/migrations/000077_storyA06_review_annotations.sql:71
+04-database-er.drawio	人工复核、双评与成绩事实	edge-0	1:N FK (tenant_id, review_task_id)	infra	services/api-gateway/migrations/000020_story047_tenant_constraints.sql:157
+04-database-er.drawio	人工复核、双评与成绩事实	edge-1	1:N FK (tenant_id, first_review_task_id)	infra	services/api-gateway/migrations/000020_story047_tenant_constraints.sql:168
+04-database-er.drawio	人工复核、双评与成绩事实	edge-2	1:N FK (tenant_id, double_mark_session_id)	infra	services/api-gateway/migrations/000020_story047_tenant_constraints.sql:173
+04-database-er.drawio	人工复核、双评与成绩事实	edge-3	1:N FK (tenant_id, arbitration_task_id)	infra	services/api-gateway/migrations/000020_story047_tenant_constraints.sql:188
+04-database-er.drawio	主观AI评分、面板与评估门禁	ai_grade	ai_grade	implemented	services/api-gateway/migrations/000010_rule_grading.sql:34;services/api-gateway/migrations/000044_grading_agent_integration.sql:22
+04-database-er.drawio	主观AI评分、面板与评估门禁	subjective_grading_run	subjective_grading_run	implemented	services/api-gateway/migrations/000063_story063_subjective_grading_runs.sql:1;services/api-gateway/migrations/000155_subjective_multi_agent_panel.sql:78
+04-database-er.drawio	主观AI评分、面板与评估门禁	subjective_grading_batch	subjective_grading_batch	unknown	services/api-gateway/migrations/000064_story063_subjective_grading_batches.sql:1;services/api-gateway/migrations/000128_subjective_batch_commands.sql:4
+04-database-er.drawio	主观AI评分、面板与评估门禁	subjective_grading_panel	subjective_grading_panel	implemented	services/api-gateway/migrations/000155_subjective_multi_agent_panel.sql:7;services/api-gateway/migrations/000162_subjective_panel_legacy_hardening.sql:5
+04-database-er.drawio	主观AI评分、面板与评估门禁	subjective_panel_policy	subjective_panel_policy	implemented	services/api-gateway/migrations/000158_subjective_panel_policy.sql:16;services/api-gateway/migrations/000158_subjective_panel_policy.sql:60
+04-database-er.drawio	主观AI评分、面板与评估门禁	grading_panel_evaluation_observation	grading_panel_evaluation_observation	unknown	services/api-gateway/migrations/000157_subjective_panel_evaluation.sql:4;services/api-gateway/migrations/000157_subjective_panel_evaluation.sql:51
+04-database-er.drawio	主观AI评分、面板与评估门禁	subjective_batch_enqueue_plan	subjective_batch_enqueue_plan	unknown	services/api-gateway/migrations/000128_subjective_batch_commands.sql:6
+04-database-er.drawio	主观AI评分、面板与评估门禁	edge-0	1:N FK (grade_id)	infra	services/api-gateway/migrations/000063_story063_subjective_grading_runs.sql:14
+04-database-er.drawio	主观AI评分、面板与评估门禁	edge-1	1:N FK (batch_id)	infra	services/api-gateway/migrations/000064_story063_subjective_grading_batches.sql:31
+04-database-er.drawio	主观AI评分、面板与评估门禁	edge-2	1:0..1 FK (tenant_id, batch_id)	infra	services/api-gateway/migrations/000128_subjective_batch_commands.sql:17
+04-database-er.drawio	模型治理、配置与审批	model_provider	model_provider	unknown	services/api-gateway/migrations/000057_story061_model_governance_foundation.sql:4
+04-database-er.drawio	模型治理、配置与审批	model_deployment	model_deployment	unknown	services/api-gateway/migrations/000057_story061_model_governance_foundation.sql:56;services/api-gateway/migrations/000057_story061_model_governance_foundation.sql:211
+04-database-er.drawio	模型治理、配置与审批	managed_model_api_config	managed_model_api_config	unknown	services/api-gateway/migrations/000118_managed_model_api_config.sql:5;services/api-gateway/migrations/000118_managed_model_api_config.sql:54
+04-database-er.drawio	模型治理、配置与审批	model_role_binding	model_role_binding	implemented	services/api-gateway/migrations/000156_model_role_binding.sql:5;services/api-gateway/migrations/000156_model_role_binding.sql:31
+04-database-er.drawio	模型治理、配置与审批	tenant_model_policy	tenant_model_policy	unknown	services/api-gateway/migrations/000057_story061_model_governance_foundation.sql:103
+04-database-er.drawio	模型治理、配置与审批	tenant_model_policy_model	tenant_model_policy_model	unknown	services/api-gateway/migrations/000172_model_policy_managed_config.sql:3;services/api-gateway/migrations/000172_model_policy_managed_config.sql:17
+04-database-er.drawio	模型治理、配置与审批	model_call_fact	model_call_fact	unknown	services/api-gateway/migrations/000057_story061_model_governance_foundation.sql:150;services/api-gateway/migrations/000057_story061_model_governance_foundation.sql:215
+04-database-er.drawio	模型治理、配置与审批	model_sandbox_approval	model_sandbox_approval	unknown	services/api-gateway/migrations/000060_story061_sandbox_approval.sql:4;services/api-gateway/migrations/000060_story061_sandbox_approval.sql:59
+04-database-er.drawio	模型治理、配置与审批	model_evaluation_run	model_evaluation_run	unknown	services/api-gateway/migrations/000061_story061_offline_model_evaluation.sql:4;services/api-gateway/migrations/000061_story061_offline_model_evaluation.sql:136
+04-database-er.drawio	模型治理、配置与审批	model_evaluation_candidate	model_evaluation_candidate	unknown	services/api-gateway/migrations/000061_story061_offline_model_evaluation.sql:82;services/api-gateway/migrations/000170_model_evaluation_managed_config.sql:9
+04-database-er.drawio	模型治理、配置与审批	model_approval	model_approval	unknown	services/api-gateway/migrations/000062_story061_model_promotion.sql:4;services/api-gateway/migrations/000062_story061_model_promotion.sql:75
+04-database-er.drawio	模型治理、配置与审批	edge-0	1:N FK (tenant_id, provider_id)	infra	services/api-gateway/migrations/000057_story061_model_governance_foundation.sql:76
+04-database-er.drawio	模型治理、配置与审批	edge-1	1:N FK (tenant_id, managed_model_api_config_id)	infra	services/api-gateway/migrations/000156_model_role_binding.sql:21
+04-database-er.drawio	模型治理、配置与审批	edge-2	1:N FK (tenant_id, managed_model_api_config_id)	infra	services/api-gateway/migrations/000169_model_governance_managed_config_bridge.sql:44
+04-database-er.drawio	模型治理、配置与审批	edge-3	1:N FK (tenant_id, policy_id)	infra	services/api-gateway/migrations/000172_model_policy_managed_config.sql:10
+04-database-er.drawio	模型治理、配置与审批	edge-4	1:N FK (tenant_id, run_id)	infra	services/api-gateway/migrations/000061_story061_offline_model_evaluation.sql:105
+04-database-er.drawio	模型治理、配置与审批	edge-5	1:N FK (tenant_id, evaluation_candidate_id)	infra	services/api-gateway/migrations/000062_story061_model_promotion.sql:34
+04-database-er.drawio	学校运维、调用计量与投影	model_usage_event	model_usage_event	unknown	services/api-gateway/migrations/000165_platform_school_operations.sql:5;services/api-gateway/migrations/000165_platform_school_operations.sql:34
+04-database-er.drawio	学校运维、调用计量与投影	model_usage_daily	model_usage_daily	unknown	services/api-gateway/migrations/000165_platform_school_operations.sql:47;services/api-gateway/migrations/000165_platform_school_operations.sql:69
+04-database-er.drawio	学校运维、调用计量与投影	platform_school_metrics	platform_school_metrics	unknown	services/api-gateway/migrations/000165_platform_school_operations.sql:72
+04-database-er.drawio	学校运维、调用计量与投影	platform_school_model_role	platform_school_model_role	unknown	services/api-gateway/migrations/000165_platform_school_operations.sql:116
+04-database-er.drawio	学校运维、调用计量与投影	activity_event	activity_event	unknown	services/api-gateway/migrations/000115_school_activity_projection.sql:5;services/api-gateway/migrations/000115_school_activity_projection.sql:28
+04-database-er.drawio	学科画像、题型、冻结快照与证据	subject_profile	subject_profile	unknown	services/api-gateway/migrations/000076_storyA01_assessment_domain.sql:1;services/api-gateway/migrations/000076_storyA01_assessment_domain.sql:30
+04-database-er.drawio	学科画像、题型、冻结快照与证据	question_archetype	question_archetype	unknown	services/api-gateway/migrations/000076_storyA01_assessment_domain.sql:33
+04-database-er.drawio	学科画像、题型、冻结快照与证据	question_assessment_config	question_assessment_config	unknown	services/api-gateway/migrations/000076_storyA01_assessment_domain.sql:117;services/api-gateway/migrations/000076_storyA01_assessment_domain.sql:151
+04-database-er.drawio	学科画像、题型、冻结快照与证据	exam_question_snapshot	exam_question_snapshot	unknown	services/api-gateway/migrations/000076_storyA01_assessment_domain.sql:154;services/api-gateway/migrations/000076_storyA01_assessment_domain.sql:186
+04-database-er.drawio	学科画像、题型、冻结快照与证据	scoring_evidence	scoring_evidence	unknown	services/api-gateway/migrations/000076_storyA01_assessment_domain.sql:237;services/api-gateway/migrations/000076_storyA01_assessment_domain.sql:265
+04-database-er.drawio	学科画像、题型、冻结快照与证据	edge-0	1:N FK (archetype_code)	infra	services/api-gateway/migrations/000076_storyA01_assessment_domain.sql:123
+04-database-er.drawio	金标卷与阅卷员校准	grading_gold_paper	grading_gold_paper	unknown	services/api-gateway/migrations/000078_storyA08_gold_papers.sql:1;services/api-gateway/migrations/000078_storyA08_gold_papers.sql:28
+04-database-er.drawio	金标卷与阅卷员校准	grading_gold_paper_version	grading_gold_paper_version	unknown	services/api-gateway/migrations/000078_storyA08_gold_papers.sql:31;services/api-gateway/migrations/000078_storyA08_gold_papers.sql:65
+04-database-er.drawio	金标卷与阅卷员校准	grader_calibration_policy	grader_calibration_policy	unknown	services/api-gateway/migrations/000079_storyA09_grader_calibration.sql:1
+04-database-er.drawio	金标卷与阅卷员校准	grader_calibration_session	grader_calibration_session	unknown	services/api-gateway/migrations/000079_storyA09_grader_calibration.sql:36;services/api-gateway/migrations/000079_storyA09_grader_calibration.sql:67
+04-database-er.drawio	金标卷与阅卷员校准	grader_calibration_attempt	grader_calibration_attempt	unknown	services/api-gateway/migrations/000079_storyA09_grader_calibration.sql:74;services/api-gateway/migrations/000079_storyA09_grader_calibration.sql:102
+04-database-er.drawio	金标卷与阅卷员校准	grader_question_qualification	grader_question_qualification	unknown	services/api-gateway/migrations/000079_storyA09_grader_calibration.sql:105;services/api-gateway/migrations/000079_storyA09_grader_calibration.sql:129
+04-database-er.drawio	金标卷与阅卷员校准	edge-0	1:N FK (tenant_id, gold_paper_id)	infra	services/api-gateway/migrations/000078_storyA08_gold_papers.sql:50
+04-database-er.drawio	答案组、抽样与决策	answer_group	answer_group	unknown	services/api-gateway/migrations/000080_storyA07_answer_groups.sql:34;services/api-gateway/migrations/000080_storyA07_answer_groups.sql:65
+04-database-er.drawio	答案组、抽样与决策	answer_group_member	answer_group_member	unknown	services/api-gateway/migrations/000080_storyA07_answer_groups.sql:71;services/api-gateway/migrations/000080_storyA07_answer_groups.sql:92
+04-database-er.drawio	答案组、抽样与决策	answer_group_sample_review	answer_group_sample_review	unknown	services/api-gateway/migrations/000080_storyA07_answer_groups.sql:95
+04-database-er.drawio	答案组、抽样与决策	answer_group_decision	answer_group_decision	unknown	services/api-gateway/migrations/000080_storyA07_answer_groups.sql:113
+04-database-er.drawio	答案组、抽样与决策	answer_group_automation_candidate	answer_group_automation_candidate	unknown	services/api-gateway/migrations/000080_storyA07_answer_groups.sql:150;services/api-gateway/migrations/000080_storyA07_answer_groups.sql:180
+04-database-er.drawio	答案组、抽样与决策	edge-0	1:N FK (tenant_id, group_id)	infra	services/api-gateway/migrations/000080_storyA07_answer_groups.sql:84
+04-database-er.drawio	答案组、抽样与决策	edge-1	1:0..1 FK (tenant_id, group_id, segment_id)	infra	services/api-gateway/migrations/000080_storyA07_answer_groups.sql:106
+04-database-er.drawio	种子题、漂移与回评	seed_sampling_policy	seed_sampling_policy	unknown	services/api-gateway/migrations/000081_storyA10_seed_quality.sql:5
+04-database-er.drawio	种子题、漂移与回评	seed_sampling_cursor	seed_sampling_cursor	unknown	services/api-gateway/migrations/000081_storyA10_seed_quality.sql:31
+04-database-er.drawio	种子题、漂移与回评	seed_task	seed_task	unknown	services/api-gateway/migrations/000081_storyA10_seed_quality.sql:47;services/api-gateway/migrations/000081_storyA10_seed_quality.sql:82
+04-database-er.drawio	种子题、漂移与回评	seed_observation	seed_observation	unknown	services/api-gateway/migrations/000081_storyA10_seed_quality.sql:89;services/api-gateway/migrations/000081_storyA10_seed_quality.sql:126
+04-database-er.drawio	种子题、漂移与回评	grader_quality_window	grader_quality_window	unknown	services/api-gateway/migrations/000082_storyA11_grader_drift.sql:5;services/api-gateway/migrations/000082_storyA11_grader_drift.sql:44
+04-database-er.drawio	种子题、漂移与回评	grading_quality_incident	grading_quality_incident	unknown	services/api-gateway/migrations/000082_storyA11_grader_drift.sql:47;services/api-gateway/migrations/000082_storyA11_grader_drift.sql:77
+04-database-er.drawio	种子题、漂移与回评	backmark_batch	backmark_batch	unknown	services/api-gateway/migrations/000083_storyA12_backmark.sql:18;services/api-gateway/migrations/000083_storyA12_backmark.sql:91
+04-database-er.drawio	种子题、漂移与回评	backmark_item	backmark_item	unknown	services/api-gateway/migrations/000083_storyA12_backmark.sql:38;services/api-gateway/migrations/000083_storyA12_backmark.sql:93
+04-database-er.drawio	种子题、漂移与回评	backmark_grade	backmark_grade	unknown	services/api-gateway/migrations/000083_storyA12_backmark.sql:71
+04-database-er.drawio	种子题、漂移与回评	edge-0	1:0..1 FK (tenant_id, seed_task_id)	infra	services/api-gateway/migrations/000081_storyA10_seed_quality.sql:109
+04-database-er.drawio	种子题、漂移与回评	edge-1	1:N FK (source_window_id)	infra	services/api-gateway/migrations/000082_storyA11_grader_drift.sql:65
+04-database-er.drawio	种子题、漂移与回评	edge-2	1:N FK (tenant_id, batch_id)	infra	services/api-gateway/migrations/000083_storyA12_backmark.sql:64
+04-database-er.drawio	AI资格、评估与校准	ai_eligibility_policy	ai_eligibility_policy	unknown	services/api-gateway/migrations/000084_storyA14_ai_eligibility.sql:5;services/api-gateway/migrations/000084_storyA14_ai_eligibility.sql:36
+04-database-er.drawio	AI资格、评估与校准	ai_eligibility_decision	ai_eligibility_decision	unknown	services/api-gateway/migrations/000084_storyA14_ai_eligibility.sql:39;services/api-gateway/migrations/000084_storyA14_ai_eligibility.sql:63
+04-database-er.drawio	AI资格、评估与校准	grading_evaluation_run	grading_evaluation_run	unknown	services/api-gateway/migrations/000085_storyA16_grading_evaluation.sql:5;services/api-gateway/migrations/000085_storyA16_grading_evaluation.sql:135
+04-database-er.drawio	AI资格、评估与校准	grading_evaluation_observation	grading_evaluation_observation	unknown	services/api-gateway/migrations/000085_storyA16_grading_evaluation.sql:39;services/api-gateway/migrations/000085_storyA16_grading_evaluation.sql:136
+04-database-er.drawio	AI资格、评估与校准	grading_evaluation_slice_metric	grading_evaluation_slice_metric	unknown	services/api-gateway/migrations/000085_storyA16_grading_evaluation.sql:78;services/api-gateway/migrations/000085_storyA16_grading_evaluation.sql:137
+04-database-er.drawio	AI资格、评估与校准	grading_evaluation_response_difficulty	grading_evaluation_response_difficulty	unknown	services/api-gateway/migrations/000085_storyA16_grading_evaluation.sql:108;services/api-gateway/migrations/000085_storyA16_grading_evaluation.sql:138
+04-database-er.drawio	AI资格、评估与校准	model_calibration	model_calibration	unknown	services/api-gateway/migrations/000086_storyA15_model_calibration.sql:5;services/api-gateway/migrations/000086_storyA15_model_calibration.sql:112
+04-database-er.drawio	AI资格、评估与校准	model_calibration_evidence	model_calibration_evidence	unknown	services/api-gateway/migrations/000086_storyA15_model_calibration.sql:58;services/api-gateway/migrations/000086_storyA15_model_calibration.sql:114
+04-database-er.drawio	AI资格、评估与校准	model_score_candidate	model_score_candidate	unknown	services/api-gateway/migrations/000086_storyA15_model_calibration.sql:80
+04-database-er.drawio	AI资格、评估与校准	ai_human_disagreement	ai_human_disagreement	unknown	services/api-gateway/migrations/000087_storyA17_ai_human_disagreement.sql:13;services/api-gateway/migrations/000087_storyA17_ai_human_disagreement.sql:69
+04-database-er.drawio	AI资格、评估与校准	edge-0	1:N FK (tenant_id, policy_id)	infra	services/api-gateway/migrations/000084_storyA14_ai_eligibility.sql:53
+04-database-er.drawio	AI资格、评估与校准	edge-1	1:N FK (tenant_id, run_id)	infra	services/api-gateway/migrations/000085_storyA16_grading_evaluation.sql:58
+04-database-er.drawio	AI资格、评估与校准	edge-2	1:N FK (tenant_id, evaluation_run_id)	infra	services/api-gateway/migrations/000086_storyA15_model_calibration.sql:32
+04-database-er.drawio	AI资格、评估与校准	edge-3	1:N FK (tenant_id, evaluation_run_id, response_key)	infra	services/api-gateway/migrations/000086_storyA15_model_calibration.sql:73
+04-database-er.drawio	AI资格、评估与校准	edge-4	1:N FK (tenant_id, calibration_id)	infra	services/api-gateway/migrations/000086_storyA15_model_calibration.sql:72
+04-database-er.drawio	不可变成绩发布与质量门禁	score_release	score_release	implemented	services/api-gateway/migrations/000088_storyA18_score_releases.sql:5;services/api-gateway/migrations/000088_storyA18_score_releases.sql:103
+04-database-er.drawio	不可变成绩发布与质量门禁	score_release_current	score_release_current	implemented	services/api-gateway/migrations/000088_storyA18_score_releases.sql:45;services/api-gateway/migrations/000088_storyA18_score_releases.sql:106
+04-database-er.drawio	不可变成绩发布与质量门禁	score_release_item	score_release_item	implemented	services/api-gateway/migrations/000088_storyA18_score_releases.sql:55;services/api-gateway/migrations/000088_storyA18_score_releases.sql:109
+04-database-er.drawio	不可变成绩发布与质量门禁	score_release_question	score_release_question	implemented	services/api-gateway/migrations/000088_storyA18_score_releases.sql:77;services/api-gateway/migrations/000088_storyA18_score_releases.sql:112
+04-database-er.drawio	不可变成绩发布与质量门禁	score_release_anonymous_page	score_release_anonymous_page	unknown	services/api-gateway/migrations/000164_score_release_anonymous_page.sql:4;services/api-gateway/migrations/000164_score_release_anonymous_page.sql:43
+04-database-er.drawio	不可变成绩发布与质量门禁	release_gate_policy	release_gate_policy	unknown	services/api-gateway/migrations/000090_storyA20_release_gate.sql:5;services/api-gateway/migrations/000090_storyA20_release_gate.sql:23
+04-database-er.drawio	不可变成绩发布与质量门禁	release_gate_evidence	release_gate_evidence	unknown	services/api-gateway/migrations/000090_storyA20_release_gate.sql:26;services/api-gateway/migrations/000090_storyA20_release_gate.sql:47
+04-database-er.drawio	不可变成绩发布与质量门禁	release_gate_waiver_request	release_gate_waiver_request	unknown	services/api-gateway/migrations/000090_storyA20_release_gate.sql:50
+04-database-er.drawio	不可变成绩发布与质量门禁	release_gate_waiver_decision	release_gate_waiver_decision	unknown	services/api-gateway/migrations/000090_storyA20_release_gate.sql:69
+04-database-er.drawio	不可变成绩发布与质量门禁	report	report	unknown	services/api-gateway/migrations/000017_report_analytics.sql:36;services/api-gateway/migrations/000017_report_analytics.sql:56
+04-database-er.drawio	不可变成绩发布与质量门禁	edge-0	1:0..1 FK (tenant_id, release_id, exam_id)	infra	services/api-gateway/migrations/000088_storyA18_score_releases.sql:52
+04-database-er.drawio	不可变成绩发布与质量门禁	edge-1	1:N FK (tenant_id, release_id)	infra	services/api-gateway/migrations/000164_score_release_anonymous_page.sql:23
+04-database-er.drawio	不可变成绩发布与质量门禁	edge-2	1:N FK (tenant_id, policy_id)	infra	services/api-gateway/migrations/000090_storyA20_release_gate.sql:40
+04-database-er.drawio	不可变成绩发布与质量门禁	edge-3	1:N FK (tenant_id, evidence_id)	infra	services/api-gateway/migrations/000090_storyA20_release_gate.sql:63
+04-database-er.drawio	重评、题目申诉与调整	regrade_job	regrade_job	unknown	services/api-gateway/migrations/000089_storyA19_regrade_workflow.sql:5;services/api-gateway/migrations/000089_storyA19_regrade_workflow.sql:106
+04-database-er.drawio	重评、题目申诉与调整	regrade_item	regrade_item	unknown	services/api-gateway/migrations/000089_storyA19_regrade_workflow.sql:49;services/api-gateway/migrations/000089_storyA19_regrade_workflow.sql:109
+04-database-er.drawio	重评、题目申诉与调整	regrade_event	regrade_event	unknown	services/api-gateway/migrations/000089_storyA19_regrade_workflow.sql:90;services/api-gateway/migrations/000089_storyA19_regrade_workflow.sql:115
+04-database-er.drawio	重评、题目申诉与调整	question_appeal	question_appeal	unknown	services/api-gateway/migrations/000092_storyA22_question_appeal.sql:5;services/api-gateway/migrations/000101_question_appeal_single_submission.sql:3
+04-database-er.drawio	重评、题目申诉与调整	question_appeal_event	question_appeal_event	unknown	services/api-gateway/migrations/000092_storyA22_question_appeal.sql:65;services/api-gateway/migrations/000092_storyA22_question_appeal.sql:86
+04-database-er.drawio	重评、题目申诉与调整	appeal	appeal	unknown	services/api-gateway/migrations/000016_appeal_workflow.sql:36;services/api-gateway/migrations/000016_appeal_workflow.sql:90
+04-database-er.drawio	重评、题目申诉与调整	score_adjustment	score_adjustment	unknown	services/api-gateway/migrations/000016_appeal_workflow.sql:68;services/api-gateway/migrations/000016_appeal_workflow.sql:93
+04-database-er.drawio	重评、题目申诉与调整	edge-0	1:N FK (tenant_id, job_id)	infra	services/api-gateway/migrations/000089_storyA19_regrade_workflow.sql:72
+04-database-er.drawio	重评、题目申诉与调整	edge-1	1:N FK (tenant_id, item_id)	infra	services/api-gateway/migrations/000089_storyA19_regrade_workflow.sql:100
+04-database-er.drawio	重评、题目申诉与调整	edge-2	1:N FK (tenant_id, appeal_id)	infra	services/api-gateway/migrations/000020_story047_tenant_constraints.sql:207
+04-database-er.drawio	数学理解证据、纠错与试点门禁	math_understanding_artifact	math_understanding_artifact	unknown	services/api-gateway/migrations/000097_story_math00_understanding_contract.sql:4;services/api-gateway/migrations/000097_story_math00_understanding_contract.sql:39
+04-database-er.drawio	数学理解证据、纠错与试点门禁	math_understanding_correction	math_understanding_correction	unknown	services/api-gateway/migrations/000098_story_math07_corrections.sql:2;services/api-gateway/migrations/000098_story_math07_corrections.sql:20
+04-database-er.drawio	数学理解证据、纠错与试点门禁	math_pilot_gate_evaluation	math_pilot_gate_evaluation	unknown	services/api-gateway/migrations/000099_story_math08_pilot_gate.sql:2;services/api-gateway/migrations/000099_story_math08_pilot_gate.sql:21
+04-database-er.drawio	数学理解证据、纠错与试点门禁	edge-0	1:N FK (tenant_id, artifact_id)	infra	services/api-gateway/migrations/000098_story_math07_corrections.sql:14
+04-database-er.drawio	题库内容版本、ACL与发布	question_bank	question_bank	unknown	services/api-gateway/migrations/000140_question_bank_core.sql:2;services/api-gateway/migrations/000140_question_bank_core.sql:72
+04-database-er.drawio	题库内容版本、ACL与发布	question_bank_acl	question_bank_acl	unknown	services/api-gateway/migrations/000140_question_bank_core.sql:16;services/api-gateway/migrations/000140_question_bank_core.sql:73
+04-database-er.drawio	题库内容版本、ACL与发布	question_bank_item	question_bank_item	unknown	services/api-gateway/migrations/000140_question_bank_core.sql:24;services/api-gateway/migrations/000142_question_bank_metadata_acl_search.sql:104
+04-database-er.drawio	题库内容版本、ACL与发布	question_bank_item_version	question_bank_item_version	unknown	services/api-gateway/migrations/000140_question_bank_core.sql:36;services/api-gateway/migrations/000140_question_bank_core.sql:74
+04-database-er.drawio	题库内容版本、ACL与发布	question_bank_review	question_bank_review	unknown	services/api-gateway/migrations/000141_question_bank_publication.sql:28
+04-database-er.drawio	题库内容版本、ACL与发布	question_bank_answer_version	question_bank_answer_version	unknown	services/api-gateway/migrations/000141_question_bank_publication.sql:37
+04-database-er.drawio	题库内容版本、ACL与发布	question_bank_rubric_version	question_bank_rubric_version	unknown	services/api-gateway/migrations/000141_question_bank_publication.sql:41
+04-database-er.drawio	题库内容版本、ACL与发布	question_bank_item_asset	question_bank_item_asset	unknown	services/api-gateway/migrations/000141_question_bank_publication.sql:43
+04-database-er.drawio	题库内容版本、ACL与发布	edge-0	1:N FK (tenant_id, bank_id)	infra	services/api-gateway/migrations/000140_question_bank_core.sql:21
+04-database-er.drawio	题库内容版本、ACL与发布	edge-1	1:N FK (tenant_id, item_id)	infra	services/api-gateway/migrations/000140_question_bank_core.sql:46
+04-database-er.drawio	题库内容版本、ACL与发布	edge-2	1:0..1 FK (tenant_id, id, current_published_version_id)	infra	services/api-gateway/migrations/000140_question_bank_core.sql:70
+04-database-er.drawio	题库内容版本、ACL与发布	edge-3	1:N FK (tenant_id, version_id)	infra	services/api-gateway/migrations/000141_question_bank_publication.sql:45
+04-database-er.drawio	题库模板、元数据、分组与导入	question_bank_rubric_template	question_bank_rubric_template	unknown	services/api-gateway/migrations/000141_question_bank_publication.sql:48
+04-database-er.drawio	题库模板、元数据、分组与导入	question_bank_rubric_template_version	question_bank_rubric_template_version	unknown	services/api-gateway/migrations/000141_question_bank_publication.sql:51
+04-database-er.drawio	题库模板、元数据、分组与导入	question_bank_metadata_schema	question_bank_metadata_schema	unknown	services/api-gateway/migrations/000142_question_bank_metadata_acl_search.sql:10
+04-database-er.drawio	题库模板、元数据、分组与导入	question_bank_item_metadata	question_bank_item_metadata	unknown	services/api-gateway/migrations/000142_question_bank_metadata_acl_search.sql:24
+04-database-er.drawio	题库模板、元数据、分组与导入	question_bank_group	question_bank_group	unknown	services/api-gateway/migrations/000142_question_bank_metadata_acl_search.sql:34
+04-database-er.drawio	题库模板、元数据、分组与导入	question_bank_group_member	question_bank_group_member	unknown	services/api-gateway/migrations/000142_question_bank_metadata_acl_search.sql:42;services/api-gateway/migrations/000142_question_bank_metadata_acl_search.sql:102
+04-database-er.drawio	题库模板、元数据、分组与导入	question_bank_group_acl	question_bank_group_acl	unknown	services/api-gateway/migrations/000142_question_bank_metadata_acl_search.sql:48;services/api-gateway/migrations/000142_question_bank_metadata_acl_search.sql:103
+04-database-er.drawio	题库模板、元数据、分组与导入	question_bank_import	question_bank_import	unknown	services/api-gateway/migrations/000144_question_bank_snapshot_import.sql:42;services/api-gateway/migrations/000144_question_bank_snapshot_import.sql:100
+04-database-er.drawio	题库模板、元数据、分组与导入	edge-0	1:N FK (tenant_id, template_id)	infra	services/api-gateway/migrations/000141_question_bank_publication.sql:54
+04-database-er.drawio	题库模板、元数据、分组与导入	edge-1	1:N FK (tenant_id, bank_id, schema_version)	infra	services/api-gateway/migrations/000142_question_bank_metadata_acl_search.sql:31
+04-database-er.drawio	题库模板、元数据、分组与导入	edge-2	1:N FK (tenant_id, group_id)	infra	services/api-gateway/migrations/000142_question_bank_metadata_acl_search.sql:45
+04-database-er.drawio	文件生命周期、审计命令与迁移	file_asset	file_asset	implemented	services/api-gateway/migrations/000004_paper_question.sql:1;services/api-gateway/migrations/000071_file_reconciliation.sql:21
+04-database-er.drawio	文件生命周期、审计命令与迁移	file_reconciliation_run	file_reconciliation_run	implemented	services/api-gateway/migrations/000071_file_reconciliation.sql:29;services/api-gateway/migrations/000071_file_reconciliation.sql:57
+04-database-er.drawio	文件生命周期、审计命令与迁移	file_reconciliation_finding	file_reconciliation_finding	implemented	services/api-gateway/migrations/000071_file_reconciliation.sql:44;services/api-gateway/migrations/000071_file_reconciliation.sql:60
+04-database-er.drawio	文件生命周期、审计命令与迁移	event_outbox	event_outbox	implemented	services/api-gateway/migrations/000068_strong_audit_outbox.sql:3;services/api-gateway/migrations/000068_strong_audit_outbox.sql:18
+04-database-er.drawio	文件生命周期、审计命令与迁移	idempotency_record	idempotency_record	implemented	services/api-gateway/migrations/000069_request_idempotency.sql:1;services/api-gateway/migrations/000069_request_idempotency.sql:24
+04-database-er.drawio	文件生命周期、审计命令与迁移	business_command_receipt	business_command_receipt	unknown	services/api-gateway/migrations/000129_business_command_receipts.sql:2
+04-database-er.drawio	文件生命周期、审计命令与迁移	exam_management_command	exam_management_command	implemented	services/api-gateway/migrations/000183_exam_management_archive.sql:9
+04-database-er.drawio	文件生命周期、审计命令与迁移	exam_archive_guarded_table	exam_archive_guarded_table	implemented	services/api-gateway/migrations/000183_exam_management_archive.sql:51
+04-database-er.drawio	文件生命周期、审计命令与迁移	schema_migration	schema_migration	unknown	infra/docker-compose/docker-compose.yml:166
+04-database-er.drawio	文件生命周期、审计命令与迁移	edge-0	1:N FK (run_id)	infra	services/api-gateway/migrations/000071_file_reconciliation.sql:46
+04-database-er.drawio	桌面离线SQLite与本地关系	local_asset	local_asset	implemented	apps/desktop-client/src-tauri/src/durable_store/schema.rs:9
+04-database-er.drawio	桌面离线SQLite与本地关系	scan_batch_local	scan_batch_local	implemented	apps/desktop-client/src-tauri/src/durable_store/schema.rs:22
+04-database-er.drawio	桌面离线SQLite与本地关系	upload_session	upload_session	implemented	apps/desktop-client/src-tauri/src/durable_store/schema.rs:30
+04-database-er.drawio	桌面离线SQLite与本地关系	upload_chunk	upload_chunk	implemented	apps/desktop-client/src-tauri/src/durable_store/schema.rs:39
+04-database-er.drawio	桌面离线SQLite与本地关系	local_asset_ingest	local_asset_ingest	implemented	apps/desktop-client/src-tauri/src/durable_store/schema.rs:48
+04-database-er.drawio	桌面离线SQLite与本地关系	local_asset_chunk	local_asset_chunk	implemented	apps/desktop-client/src-tauri/src/durable_store/schema.rs:58
+04-database-er.drawio	桌面离线SQLite与本地关系	sync_event	sync_event	implemented	apps/desktop-client/src-tauri/src/durable_store/schema.rs:67;apps/desktop-client/src-tauri/src/durable_store/schema.rs:80
+04-database-er.drawio	桌面离线SQLite与本地关系	draft	draft	implemented	apps/desktop-client/src-tauri/src/durable_store/schema.rs:81
+04-database-er.drawio	桌面离线SQLite与本地关系	edge-0	1:0..1 FK (local_asset_id)	infra	apps/desktop-client/src-tauri/src/durable_store/schema.rs:31
+04-database-er.drawio	桌面离线SQLite与本地关系	edge-1	1:N FK (upload_session_asset_id)	infra	apps/desktop-client/src-tauri/src/durable_store/schema.rs:40
+04-database-er.drawio	桌面离线SQLite与本地关系	edge-2	1:0..1 FK (local_asset_id)	infra	apps/desktop-client/src-tauri/src/durable_store/schema.rs:49
+04-database-er.drawio	桌面离线SQLite与本地关系	edge-3	1:N FK (local_asset_id)	infra	apps/desktop-client/src-tauri/src/durable_store/schema.rs:59
+04-database-er.drawio	桌面离线SQLite与本地关系	edge-4	1:N FK (entity_id)	infra	apps/desktop-client/src-tauri/src/durable_store/schema.rs:70
+05-business-workflow.drawio	01 创建考试、资料冻结与答题卡处理	create	用户：创建考试	implemented	services/api-gateway/internal/exam/handlers.go:24
+05-business-workflow.drawio	01 创建考试、资料冻结与答题卡处理	configure	用户：配置试卷、题目、名单、模板	implemented	services/api-gateway/internal/paper/configuration_handlers.go:138
+05-business-workflow.drawio	01 创建考试、资料冻结与答题卡处理	ready	用户：准备确认、开始采集	implemented	services/api-gateway/internal/paper/configuration_handlers.go:167
+05-business-workflow.drawio	01 创建考试、资料冻结与答题卡处理	capture	用户：上传并启动采集批次	implemented	services/api-gateway/internal/capture/store_postgres.go:180
+05-business-workflow.drawio	01 创建考试、资料冻结与答题卡处理	decode	自动：解码 PDF / 图像为页 PNG	implemented	services/page-processing-worker/page_processing/runner.py:182
+05-business-workflow.drawio	01 创建考试、资料冻结与答题卡处理	quality	自动：图像质量任务	implemented	services/image-quality-worker/image_quality/engine.py:43
+05-business-workflow.drawio	01 创建考试、资料冻结与答题卡处理	quality_result	quality_status = passed？	implemented	services/api-gateway/internal/imagequality/coordinator_postgres.go:79
+05-business-workflow.drawio	01 创建考试、资料冻结与答题卡处理	review_quality	用户：质量 / 身份复核	partial	services/api-gateway/internal/capture/registration_review_store_postgres.go:129
+05-business-workflow.drawio	01 创建考试、资料冻结与答题卡处理	template	自动：已验证纸张 / 考试绑定 / 唯一模板	implemented	services/api-gateway/internal/capture/registration_store_postgres.go:240
+05-business-workflow.drawio	01 创建考试、资料冻结与答题卡处理	registration	自动：OpenCV 配准并按 ROI 切题	implemented	services/page-processing-worker/page_processing/runner.py:205
+05-business-workflow.drawio	01 创建考试、资料冻结与答题卡处理	segments	answer_segment + 裁片资产	implemented	services/api-gateway/internal/capture/registration_store_postgres.go:430
+05-business-workflow.drawio	01 创建考试、资料冻结与答题卡处理	recognize	用户另行启动 OCR / 数学理解等任务	implemented	services/api-gateway/internal/ocr/runtime_coordinator_postgres.go:16
+05-business-workflow.drawio	01 创建考试、资料冻结与答题卡处理	next	进入业务评分、人工终评与发布	infra	services/api-gateway/internal/grading/scoring_run_routing.go:59
+05-business-workflow.drawio	02 评分分流、人工终评与不可变发布	start	用户：启动 ScoringRun	implemented	services/api-gateway/internal/grading/scoring_run_start.go:56
+05-business-workflow.drawio	02 评分分流、人工终评与不可变发布	mode	读取冻结 scoring_mode	implemented	services/api-gateway/internal/grading/scoring_run_routing.go:59
+05-business-workflow.drawio	02 评分分流、人工终评与不可变发布	human	HUMAN_PRIMARY / DUAL_HUMAN / MANUAL_ONLY	implemented	services/api-gateway/internal/grading/scoring_run_routing.go:61
+05-business-workflow.drawio	02 评分分流、人工终评与不可变发布	rule	RULE_AUTO：已有文本答案 + 规则	implemented	services/api-gateway/internal/grading/scoring_run_routing.go:36
+05-business-workflow.drawio	02 评分分流、人工终评与不可变发布	omr	RULE_AUTO：选择题 + 选项 ROI + 规则	implemented	services/api-gateway/internal/grading/scoring_run_routing.go:42
+05-business-workflow.drawio	02 评分分流、人工终评与不可变发布	ai_assist	AI_ASSIST / AI_FAST_CONFIRM	partial	services/api-gateway/internal/grading/scoring_run_routing.go:63
+05-business-workflow.drawio	02 评分分流、人工终评与不可变发布	confirm_rule	自动确认条件满足？	implemented	services/api-gateway/internal/grading/scoring_run_process.go:42
+05-business-workflow.drawio	02 评分分流、人工终评与不可变发布	review	用户：领取、提交人工评分	implemented	services/api-gateway/internal/review/store_postgres_resolution.go:45
+05-business-workflow.drawio	02 评分分流、人工终评与不可变发布	ai_optional	独立 AI 批次 / 单题调用入口	partial	services/api-gateway/internal/subjective/handlers_worker.go:76
+05-business-workflow.drawio	02 评分分流、人工终评与不可变发布	finalize	用户：FinalizeExam	implemented	services/api-gateway/internal/score/store_postgres.go:25
+05-business-workflow.drawio	02 评分分流、人工终评与不可变发布	confirm	用户：确认成绩	implemented	services/api-gateway/internal/score/store_postgres.go:301
+05-business-workflow.drawio	02 评分分流、人工终评与不可变发布	release	用户：创建 score_release 草稿并 Publish	implemented	services/api-gateway/internal/releasegate/coordinator.go:29
+05-business-workflow.drawio	02 评分分流、人工终评与不可变发布	student	新学生结果读取当前 published release	implemented	services/api-gateway/internal/scorerelease/service.go:125
+05-business-workflow.drawio	03 两条发布与学生读取路径并存	old_route	旧入口：POST /exams/{examId}/publish	implemented	services/api-gateway/internal/server/routes_release.go:18
+05-business-workflow.drawio	03 两条发布与学生读取路径并存	old_gate	旧 qualityReportTx	implemented	services/api-gateway/internal/score/store_postgres.go:587
+05-business-workflow.drawio	03 两条发布与学生读取路径并存	old_publish	同事务：submission_grade published/locked	implemented	services/api-gateway/internal/score/store_postgres.go:333
+05-business-workflow.drawio	03 两条发布与学生读取路径并存	old_student	旧学生 GET /students/{studentId}/exams/{examId}/grade	implemented	services/api-gateway/internal/score/store_postgres.go:398
+05-business-workflow.drawio	03 两条发布与学生读取路径并存	new_route	新入口：POST /score-releases/{id}/publish	implemented	services/api-gateway/internal/scorerelease/handlers.go:214
+05-business-workflow.drawio	03 两条发布与学生读取路径并存	new_gate	PublicationCoordinator → RecheckForPublish	implemented	services/api-gateway/internal/releasegate/service.go:50;services/api-gateway/internal/releasegate/service.go:131
+05-business-workflow.drawio	03 两条发布与学生读取路径并存	new_publish	同事务再验来源/快照、记录 gate_snapshot	implemented	services/api-gateway/internal/scorerelease/store_postgres.go:259
+05-business-workflow.drawio	03 两条发布与学生读取路径并存	new_student	新学生 GET /student/exams/{examId}/result	implemented	services/api-gateway/internal/scorerelease/student_detail_postgres.go:10
+05-business-workflow.drawio	03 两条发布与学生读取路径并存	gap	P1：旧路径可绕过新增门禁	issue	docs/architecture/evidence/pipeline-audit.md:117
+05-business-workflow.drawio	03 两条发布与学生读取路径并存	split	旧公开成绩可见、新接口无快照而查无结果	issue	docs/architecture/evidence/pipeline-audit.md:121
+06-image-template-pipeline.drawio	01 采集、质量与已有模板路由	upload	输入：采集文件资产	implemented	services/api-gateway/internal/capture/store_postgres.go:80
+06-image-template-pipeline.drawio	01 采集、质量与已有模板路由	decode	capture_file_decode	implemented	services/page-processing-worker/page_processing/runner.py:182
+06-image-template-pipeline.drawio	01 采集、质量与已有模板路由	quality	image_quality	implemented	services/image-quality-worker/image_quality/engine.py:43
+06-image-template-pipeline.drawio	01 采集、质量与已有模板路由	q	quality_status = passed？	implemented	services/api-gateway/internal/imagequality/coordinator_postgres.go:79
+06-image-template-pipeline.drawio	01 采集、质量与已有模板路由	blocked	质量 / 身份复核阻塞	implemented	services/api-gateway/internal/capture/registration_review_store_postgres.go:129
+06-image-template-pipeline.drawio	01 采集、质量与已有模板路由	controlled	已有可验证模板身份？	implemented	services/api-gateway/internal/capture/registration_store_postgres.go:240
+06-image-template-pipeline.drawio	01 采集、质量与已有模板路由	bound	使用现有锁定模板及内容 hash	implemented	services/api-gateway/internal/capture/registration_store_postgres.go:249
+06-image-template-pipeline.drawio	01 采集、质量与已有模板路由	candidates	无直接路由：候选匹配任务	implemented	services/api-gateway/internal/capture/template_match_store_postgres.go:15
+06-image-template-pipeline.drawio	01 采集、质量与已有模板路由	score	候选粗结构 + OpenCV 几何证据	implemented	services/page-processing-worker/page_processing/registration.py:77
+06-image-template-pipeline.drawio	01 采集、质量与已有模板路由	match	matched → bound_auto	implemented	services/api-gateway/internal/capture/template_match_store_postgres.go:210
+06-image-template-pipeline.drawio	01 采集、质量与已有模板路由	unknown	unknown / ambiguous / conflict	implemented	services/api-gateway/internal/paper/store_postgres_template_binding.go:25
+06-image-template-pipeline.drawio	01 采集、质量与已有模板路由	next	排 page_registration	implemented	services/api-gateway/internal/capture/registration_store_postgres.go:321
+06-image-template-pipeline.drawio	01 采集、质量与已有模板路由	missing	待确认：YOLO 备用识别 / 未知版面建模板	unknown	docs/architecture/evidence/pipeline-audit.md:34
+06-image-template-pipeline.drawio	02 OpenCV 配准、切题与人工纠正	input	输入：normalized PNG + 模板页	implemented	services/api-gateway/internal/capture/registration_store_postgres.go:344
+06-image-template-pipeline.drawio	02 OpenCV 配准、切题与人工纠正	guard	bound_auto / locked_with_guard？	implemented	services/page-processing-worker/page_processing/runner.py:243
+06-image-template-pipeline.drawio	02 OpenCV 配准、切题与人工纠正	fallback	guard 不通过：少量候选重匹配	implemented	services/page-processing-worker/page_processing/runner.py:298
+06-image-template-pipeline.drawio	02 OpenCV 配准、切题与人工纠正	cv	pixel_identity 或 ORB → AKAZE	implemented	services/page-processing-worker/page_processing/registration.py:234
+06-image-template-pipeline.drawio	02 OpenCV 配准、切题与人工纠正	safe	几何证据门槛通过？	implemented	services/page-processing-worker/page_processing/registration.py:283
+06-image-template-pipeline.drawio	02 OpenCV 配准、切题与人工纠正	terminal	确定算法错误：不可自动重试	partial	services/page-processing-worker/page_processing/runner.py:463
+06-image-template-pipeline.drawio	02 OpenCV 配准、切题与人工纠正	crop	warpPerspective → registered PNG	implemented	services/page-processing-worker/page_processing/registration.py:369
+06-image-template-pipeline.drawio	02 OpenCV 配准、切题与人工纠正	persist	提交配准领域事实	implemented	services/api-gateway/internal/capture/registration_store_postgres.go:430
+06-image-template-pipeline.drawio	02 OpenCV 配准、切题与人工纠正	runtime	入口先验租约；领域提交后 runtime.Complete	issue	services/api-gateway/internal/capture/handlers.go:760
+06-image-template-pipeline.drawio	02 OpenCV 配准、切题与人工纠正	confirm	用户：ConfirmRegistration	implemented	services/api-gateway/internal/capture/registration_review_store_postgres.go:8
+06-image-template-pipeline.drawio	02 OpenCV 配准、切题与人工纠正	manual	用户：手工四点校正	implemented	services/page-processing-worker/page_processing/registration.py:307
+06-image-template-pipeline.drawio	02 OpenCV 配准、切题与人工纠正	apply	用户：应用 / 撤销校正	partial	services/api-gateway/internal/capture/correction_apply_store_postgres.go:14
+06-image-template-pipeline.drawio	03 整页空白、OMR空白与OCR空文本	page_input	整页 normalized 输入质量测量	implemented	services/image-quality-worker/image_quality/metrics.py:14
+06-image-template-pipeline.drawio	03 整页空白、OMR空白与OCR空文本	page_detect	blank_probability = clamp(1-ink/0.012)	implemented	services/image-quality-worker/image_quality/policy.py:84
+06-image-template-pipeline.drawio	03 整页空白、OMR空白与OCR空文本	page_review	质量复核：不是学生逐题未作答证明	implemented	services/api-gateway/internal/capture/registration_review_store_postgres.go:129
+06-image-template-pipeline.drawio	03 整页空白、OMR空白与OCR空文本	omr_input	选择题裁片 + option ROI	implemented	services/page-processing-worker/page_processing/runner.py:409
+06-image-template-pipeline.drawio	03 整页空白、OMR空白与OCR空文本	omr_detect	最高选项 strength<ambiguous_threshold	implemented	services/page-processing-worker/page_processing/omr.py:148
+06-image-template-pipeline.drawio	03 整页空白、OMR空白与OCR空文本	omr_review	decision!=selected → needs_human_review	implemented	services/page-processing-worker/page_processing/omr.py:86
+06-image-template-pipeline.drawio	03 整页空白、OMR空白与OCR空文本	ocr_input	TEXT OCR → 可定位文字 blocks	implemented	services/ocr-worker/ocr_worker/recognition_router.py:105
+06-image-template-pipeline.drawio	03 整页空白、OMR空白与OCR空文本	ocr_detect	无 blocks → empty_text_result	implemented	services/ocr-worker/ocr_worker/recognition_router.py:122
+06-image-template-pipeline.drawio	03 整页空白、OMR空白与OCR空文本	ocr_review	needs_human_review → 人工判断	implemented	services/ocr-worker/ocr_worker/recognition_router.py:115
+06-image-template-pipeline.drawio	03 整页空白、OMR空白与OCR空文本	gap	待确认：任意主观题的统一空白判定与自动零分	unknown	docs/architecture/evidence/pipeline-audit.md:48
+07-ai-grading.drawio	01 实际生产入口：单适配器建议与服务端结算	entry	用户命令：单题 Grade / AI 批次	implemented	services/api-gateway/internal/subjective/handlers_grade.go:21
+07-ai-grading.drawio	01 实际生产入口：单适配器建议与服务端结算	worker	subjective-grading-worker	implemented	services/subjective-grading-worker/subjective_grading_worker/runner.py:26
+07-ai-grading.drawio	01 实际生产入口：单适配器建议与服务端结算	prepare	Prepare：来源/租约/版本检查	implemented	services/api-gateway/internal/subjective/worker_execution_service.go:81
+07-ai-grading.drawio	01 实际生产入口：单适配器建议与服务端结算	gate	准入允许外部 AI？	implemented	services/api-gateway/internal/subjective/worker_execution_service.go:119
+07-ai-grading.drawio	01 实际生产入口：单适配器建议与服务端结算	abstain	拒绝 / 证据不可用	implemented	services/api-gateway/internal/subjective/worker_execution_service.go:110
+07-ai-grading.drawio	01 实际生产入口：单适配器建议与服务端结算	input	buildAdapterInput	implemented	services/api-gateway/internal/subjective/grading_agent_v2_builder.go:125
+07-ai-grading.drawio	01 实际生产入口：单适配器建议与服务端结算	adapter	Go HTTPAdapter / HTTPAdapterV2	implemented	services/api-gateway/internal/subjective/handlers_worker.go:110
+07-ai-grading.drawio	01 实际生产入口：单适配器建议与服务端结算	agent	Python grading_agent	infra	ai-services/grading_agent/app.py:37
+07-ai-grading.drawio	01 实际生产入口：单适配器建议与服务端结算	settle	服务端 GradeSettlementPipeline	implemented	services/api-gateway/internal/subjective/grade_settlement_pipeline.go:49
+07-ai-grading.drawio	01 实际生产入口：单适配器建议与服务端结算	complete	worker 回传 CompleteWorker	partial	services/api-gateway/internal/subjective/worker_completion_service.go:49
+07-ai-grading.drawio	01 实际生产入口：单适配器建议与服务端结算	human	教师复核 AI 建议	implemented	services/api-gateway/internal/grading/scoring_run_routing.go:63
+07-ai-grading.drawio	01 实际生产入口：单适配器建议与服务端结算	missing	三智能体接入状态：部分	partial	services/api-gateway/internal/subjective/handlers.go:66
+07-ai-grading.drawio	01 实际生产入口：单适配器建议与服务端结算	version	可追溯：run / grade / request_id	infra	services/api-gateway/internal/subjective/worker_execution_service.go:136
+07-ai-grading.drawio	02 已实现的三智能体内核：并行主评、盲仲裁	policy	库入口：GradeWithApprovedPolicy	partial	services/api-gateway/internal/subjective/panel_orchestrator.go:78
+07-ai-grading.drawio	02 已实现的三智能体内核：并行主评、盲仲裁	panel	GetOrCreatePanel	implemented	services/api-gateway/internal/subjective/panel_orchestrator.go:185
+07-ai-grading.drawio	02 已实现的三智能体内核：并行主评、盲仲裁	a	Primary A：独立盲评	implemented	services/api-gateway/internal/subjective/panel_orchestrator.go:206
+07-ai-grading.drawio	02 已实现的三智能体内核：并行主评、盲仲裁	b	Primary B：独立盲评	implemented	services/api-gateway/internal/subjective/panel_orchestrator.go:448
+07-ai-grading.drawio	02 已实现的三智能体内核：并行主评、盲仲裁	derive	各角色候选由服务端算分	implemented	services/api-gateway/internal/subjective/panel_orchestrator.go:405
+07-ai-grading.drawio	02 已实现的三智能体内核：并行主评、盲仲裁	compare	收齐 A/B：是否精确共识？	implemented	services/api-gateway/internal/subjective/panel_disagreement.go:22
+07-ai-grading.drawio	02 已实现的三智能体内核：并行主评、盲仲裁	consensus	resolved：primary_consensus	implemented	services/api-gateway/internal/subjective/panel_orchestrator.go:260
+07-ai-grading.drawio	02 已实现的三智能体内核：并行主评、盲仲裁	c	Arbiter C：更强且版本不同	implemented	services/api-gateway/internal/subjective/panel_orchestrator.go:267
+07-ai-grading.drawio	02 已实现的三智能体内核：并行主评、盲仲裁	safe	C 置信度 / 硬风险 / 加权量规一致性	implemented	services/api-gateway/internal/subjective/panel_orchestrator.go:281
+07-ai-grading.drawio	02 已实现的三智能体内核：并行主评、盲仲裁	human	human_review：review_task	partial	services/api-gateway/internal/subjective/panel_orchestrator.go:493
+07-ai-grading.drawio	02 已实现的三智能体内核：并行主评、盲仲裁	resolved	resolved：arbiter	implemented	services/api-gateway/internal/subjective/panel_orchestrator.go:287
+07-ai-grading.drawio	02 已实现的三智能体内核：并行主评、盲仲裁	boundary	部分实现边界：内核未自动挂接普通路由	partial	services/api-gateway/internal/subjective/panel_shadow_runner.go:80
+07-ai-grading.drawio	03 模型失败、幂等与成本边界	request	请求绑定版本与 idempotency_key	implemented	ai-services/grading_agent/app.py:125
+07-ai-grading.drawio	03 模型失败、幂等与成本边界	cache	进程内 TTL/LRU 成功缓存	partial	ai-services/grading_agent/app.py:56
+07-ai-grading.drawio	03 模型失败、幂等与成本边界	session	供应商 adapter session	infra	ai-services/grading_agent/model.py:482
+07-ai-grading.drawio	03 模型失败、幂等与成本边界	retry	Python：有限修复 / 重试	implemented	ai-services/grading_agent/app.py:176
+07-ai-grading.drawio	03 模型失败、幂等与成本边界	go_retry	Go：有限 HTTP 重试	implemented	services/api-gateway/internal/subjective/adapter_http.go:157
+07-ai-grading.drawio	03 模型失败、幂等与成本边界	worker_retry	worker：APIError → Retryable=True	partial	services/subjective-grading-worker/subjective_grading_worker/runner.py:51
+07-ai-grading.drawio	03 模型失败、幂等与成本边界	usage	遥测聚合 attempts / token usage	partial	ai-services/grading_agent/app.py:190
+07-ai-grading.drawio	03 模型失败、幂等与成本边界	gap	恢复缺口：主观完成分三步提交	issue	services/api-gateway/internal/subjective/worker_completion_service.go:57
+07-ai-grading.drawio	03 模型失败、幂等与成本边界	panel_gap	内核恢复缺口：human_review先落库	issue	services/api-gateway/internal/subjective/panel_orchestrator.go:493
+07-ai-grading.drawio	04 数学多模态输入与确定性结算	v1	普通 v1：题干 + AnswerText + rubric	implemented	services/api-gateway/internal/subjective/adapter_http.go:291
+07-ai-grading.drawio	04 数学多模态输入与确定性结算	v2_entry	数学 v2：配置开启 + 数学适用条件	implemented	services/api-gateway/internal/subjective/math_grading.go:53
+07-ai-grading.drawio	04 数学多模态输入与确定性结算	crop	ActiveCropResolver：读取有效 PNG	implemented	services/api-gateway/internal/subjective/active_crop_resolver.go:59
+07-ai-grading.drawio	04 数学多模态输入与确定性结算	build	Go v2 builder：media_evidence base64	implemented	services/api-gateway/internal/subjective/grading_agent_v2_builder.go:186
+07-ai-grading.drawio	04 数学多模态输入与确定性结算	app	POST /grading/grade-v2	implemented	ai-services/grading_agent/app_v2.py:365
+07-ai-grading.drawio	04 数学多模态输入与确定性结算	messages	math_candidate_messages	implemented	ai-services/grading_agent/app_v2.py:321
+07-ai-grading.drawio	04 数学多模态输入与确定性结算	local	Local adapter → /chat/completions	partial	ai-services/grading_agent/model.py:553
+07-ai-grading.drawio	04 数学多模态输入与确定性结算	native	DashScopeNative → text-generation 路径	unknown	ai-services/grading_agent/model.py:684
+07-ai-grading.drawio	04 数学多模态输入与确定性结算	candidate	模型输出 criteria/evidence candidate	implemented	services/api-gateway/internal/subjective/math_grading.go:120
+07-ai-grading.drawio	04 数学多模态输入与确定性结算	settle	Go 按冻结 rubric + 有效数学事实结算	implemented	services/api-gateway/internal/subjective/math_grading.go:139
+07-ai-grading.drawio	04 数学多模态输入与确定性结算	human	diagram/uncertain/歧义/关键质量低 → 人工	implemented	services/api-gateway/internal/subjective/math_grading.go:128
+07-ai-grading.drawio	04 数学多模态输入与确定性结算	empty	v2 也要求非空 AnswerText	unknown	services/api-gateway/internal/subjective/grading_agent_v2_builder.go:283
+08-api-data-flow.drawio	01 API 全局入口、统计口径与数据边界	web	Web 管理 / 教师 / 审计体验	implemented	apps/web-admin/src/router/routes.tsx;apps/web-admin/src/router/pageRendering.tsx
+08-api-data-flow.drawio	01 API 全局入口、统计口径与数据边界	student	独立学生门户	implemented	apps/student-portal/src/App.tsx;apps/student-portal/src/api.ts
+08-api-data-flow.drawio	01 API 全局入口、统计口径与数据边界	desktop	Windows 桌面客户端	partial	apps/desktop-client/src/App.tsx;apps/desktop-client/src/api/client.ts
+08-api-data-flow.drawio	01 API 全局入口、统计口径与数据边界	transport	共享契约 + 多种传输	infra	packages/sdk/src/generated/client.ts;apps/web-admin/src/api/client.ts;docs/architecture/evidence/api-catalog.json
+08-api-data-flow.drawio	01 API 全局入口、统计口径与数据边界	mux	Go ServeMux 与分域路由	infra	services/api-gateway/internal/server/routes_exam.go;docs/architecture/evidence/api-catalog.json
+08-api-data-flow.drawio	01 API 全局入口、统计口径与数据边界	business	业务 Handler / Service / Store	infra	services/api-gateway/internal/server/application_modules.go
+08-api-data-flow.drawio	01 API 全局入口、统计口径与数据边界	auth	鉴权与幂等位置需分入口看	partial	services/api-gateway/internal/server/router_guards.go
+08-api-data-flow.drawio	01 API 全局入口、统计口径与数据边界	persistence	数据库 + 文件对象	infra	services/api-gateway/internal/files/store_postgres.go;services/api-gateway/internal/files/storage_minio.go;apps/desktop-client/src-tauri/src/durable_store/mod.rs
+08-api-data-flow.drawio	01 API 全局入口、统计口径与数据边界	worker	worker / AI 请求另有边界	partial	services/api-gateway/internal/server/routes_worker.go;services/api-gateway/internal/subjective/handlers_worker.go
+08-api-data-flow.drawio	01 API 全局入口、统计口径与数据边界	catalog	完整目录与实测限制	infra	docs/architecture/evidence/api-catalog.json
+08-api-data-flow.drawio	01 API 全局入口、统计口径与数据边界	health	唯一静态未匹配项已有真实路由	infra	services/api-gateway/internal/server/routes_system.go;apps/desktop-client/src/api/client.ts
+08-api-data-flow.drawio	01 API 全局入口、统计口径与数据边界	edge-0	JSON / Cookie	infra	apps/web-admin/src/api/client.ts
+08-api-data-flow.drawio	01 API 全局入口、统计口径与数据边界	edge-1	SDK / Cookie	infra	apps/student-portal/src/api.ts
+08-api-data-flow.drawio	01 API 全局入口、统计口径与数据边界	edge-2	Token / 自定义API	infra	apps/desktop-client/src/api/client.ts
+08-api-data-flow.drawio	01 API 全局入口、统计口径与数据边界	edge-3	/api/v1	infra	docs/architecture/evidence/api-catalog.json
+08-api-data-flow.drawio	01 API 全局入口、统计口径与数据边界	edge-4	dispatch	infra	services/api-gateway/internal/server/application_modules.go
+08-api-data-flow.drawio	01 API 全局入口、统计口径与数据边界	edge-5	包裹已注册 handler	infra	services/api-gateway/internal/server/router_guards.go
+08-api-data-flow.drawio	01 API 全局入口、统计口径与数据边界	edge-6	Store / ObjectStorage	infra	services/api-gateway/internal/files/handlers.go
+08-api-data-flow.drawio	01 API 全局入口、统计口径与数据边界	edge-7	授权任务命令 / AI调用	infra	services/api-gateway/internal/server/routes_worker.go
+08-api-data-flow.drawio	02 身份、平台学校与组织成员	row0-page	登录 / 账户安全	implemented	apps/web-admin/src/api/auth.ts;apps/web-admin/src/pages/SessionManagementPage.tsx
+08-api-data-flow.drawio	02 身份、平台学校与组织成员	row0-api	会话与认证	implemented	services/api-gateway/internal/server/routes_auth.go
+08-api-data-flow.drawio	02 身份、平台学校与组织成员	row0-handler	AuthHandler	implemented	services/api-gateway/internal/auth/handlers.go
+08-api-data-flow.drawio	02 身份、平台学校与组织成员	row0-data	Auth Store	infra	services/api-gateway/internal/server/router_guards.go;services/api-gateway/internal/auth/store_postgres.go
+08-api-data-flow.drawio	02 身份、平台学校与组织成员	row1-page	平台学校 / 首次启用	implemented	apps/web-admin/src/pages/PlatformSchoolsPage.tsx;apps/web-admin/src/api/platformSchools.ts
+08-api-data-flow.drawio	02 身份、平台学校与组织成员	row1-api	平台学校管理	implemented	services/api-gateway/internal/server/routes_platform_schools.go
+08-api-data-flow.drawio	02 身份、平台学校与组织成员	row1-handler	PlatformSchoolsHandler	implemented	services/api-gateway/internal/server/routes_platform_schools.go;services/api-gateway/internal/platformschools/handlers.go
+08-api-data-flow.drawio	02 身份、平台学校与组织成员	row1-data	PlatformSchools Store	infra	services/api-gateway/internal/platformschools/store_postgres.go
+08-api-data-flow.drawio	02 身份、平台学校与组织成员	row2-page	学校初始化 / 年级班级 / 学生	implemented	apps/web-admin/src/api/org.ts;apps/web-admin/src/pages/OrganizationSetupPage.tsx
+08-api-data-flow.drawio	02 身份、平台学校与组织成员	row2-api	组织成员	implemented	services/api-gateway/internal/server/routes_org.go
+08-api-data-flow.drawio	02 身份、平台学校与组织成员	row2-handler	OrgHandler	implemented	services/api-gateway/internal/server/routes_org.go;services/api-gateway/internal/org/handlers.go
+08-api-data-flow.drawio	02 身份、平台学校与组织成员	row2-data	Org Store	infra	services/api-gateway/internal/org/store_postgres.go
+08-api-data-flow.drawio	02 身份、平台学校与组织成员	row3-page	人员与权限 / 审计	implemented	apps/web-admin/src/api/users.ts;apps/web-admin/src/api/audit.ts
+08-api-data-flow.drawio	02 身份、平台学校与组织成员	row3-api	账号访问与审计	implemented	services/api-gateway/internal/server/routes_auth.go
+08-api-data-flow.drawio	02 身份、平台学校与组织成员	row3-handler	AuthHandler	implemented	services/api-gateway/internal/server/routes_auth.go;services/api-gateway/internal/auth/handlers.go
+08-api-data-flow.drawio	02 身份、平台学校与组织成员	row3-data	Auth Store	infra	services/api-gateway/internal/server/router_guards.go;services/api-gateway/internal/auth/store_postgres.go
+08-api-data-flow.drawio	02 身份、平台学校与组织成员	edge-0	请求	infra	apps/web-admin/src/api/auth.ts;apps/web-admin/src/pages/SessionManagementPage.tsx
+08-api-data-flow.drawio	02 身份、平台学校与组织成员	edge-1	路由 / guard	infra	services/api-gateway/internal/server/routes_auth.go
+08-api-data-flow.drawio	02 身份、平台学校与组织成员	edge-2	读 / 写	infra	services/api-gateway/internal/server/router_guards.go;services/api-gateway/internal/auth/store_postgres.go
+08-api-data-flow.drawio	02 身份、平台学校与组织成员	edge-3	请求	infra	apps/web-admin/src/pages/PlatformSchoolsPage.tsx;apps/web-admin/src/api/platformSchools.ts
+08-api-data-flow.drawio	02 身份、平台学校与组织成员	edge-4	路由 / guard	infra	services/api-gateway/internal/server/routes_platform_schools.go
+08-api-data-flow.drawio	02 身份、平台学校与组织成员	edge-5	读 / 写	infra	services/api-gateway/internal/platformschools/store_postgres.go
+08-api-data-flow.drawio	02 身份、平台学校与组织成员	edge-6	请求	infra	apps/web-admin/src/api/org.ts;apps/web-admin/src/pages/OrganizationSetupPage.tsx
+08-api-data-flow.drawio	02 身份、平台学校与组织成员	edge-7	路由 / guard	infra	services/api-gateway/internal/server/routes_org.go
+08-api-data-flow.drawio	02 身份、平台学校与组织成员	edge-8	读 / 写	infra	services/api-gateway/internal/org/store_postgres.go
+08-api-data-flow.drawio	02 身份、平台学校与组织成员	edge-9	请求	infra	apps/web-admin/src/api/users.ts;apps/web-admin/src/api/audit.ts
+08-api-data-flow.drawio	02 身份、平台学校与组织成员	edge-10	路由 / guard	infra	services/api-gateway/internal/server/routes_auth.go
+08-api-data-flow.drawio	02 身份、平台学校与组织成员	edge-11	读 / 写	infra	services/api-gateway/internal/server/router_guards.go;services/api-gateway/internal/auth/store_postgres.go
+08-api-data-flow.drawio	03 考试、试卷、题库与模板	row0-page	考试列表 / 新建考试 / 管理总览	implemented	apps/web-admin/src/api/exams.ts;apps/web-admin/src/features/exams/create/CreateExamPage.tsx
+08-api-data-flow.drawio	03 考试、试卷、题库与模板	row0-api	考试与场次	implemented	services/api-gateway/internal/server/routes_exam.go
+08-api-data-flow.drawio	03 考试、试卷、题库与模板	row0-handler	ExamHandler	implemented	services/api-gateway/internal/exam/handlers.go;services/api-gateway/internal/exam/management_handlers.go
+08-api-data-flow.drawio	03 考试、试卷、题库与模板	row0-data	Exam Store	infra	services/api-gateway/internal/exam/store_postgres.go;services/api-gateway/internal/exam/session_postgres.go
+08-api-data-flow.drawio	03 考试、试卷、题库与模板	row1-page	题库页面 → 试卷题目工作区	implemented	apps/web-admin/src/api/questionBank.ts;apps/web-admin/src/features/question-bank/QuestionBankPage.tsx
+08-api-data-flow.drawio	03 考试、试卷、题库与模板	row1-api	题库实例化	implemented	services/api-gateway/internal/server/routes_paper.go
+08-api-data-flow.drawio	03 考试、试卷、题库与模板	row1-handler	QuestionBankHandler.Materialize	implemented	services/api-gateway/internal/server/routes_paper.go;services/api-gateway/internal/questionbank/handlers.go
+08-api-data-flow.drawio	03 考试、试卷、题库与模板	row1-data	QuestionBank / Paper Store	infra	services/api-gateway/internal/paper/materialize_bank.go;services/api-gateway/internal/paper/store_postgres.go
+08-api-data-flow.drawio	03 考试、试卷、题库与模板	row2-page	资料 / 题目编辑	implemented	apps/web-admin/src/api/papers.ts;apps/web-admin/src/pages/PaperRubricPage.tsx
+08-api-data-flow.drawio	03 考试、试卷、题库与模板	row2-api	导入与人工采纳	implemented	services/api-gateway/internal/server/routes_paper.go
+08-api-data-flow.drawio	03 考试、试卷、题库与模板	row2-handler	PaperHandler	implemented	services/api-gateway/internal/server/routes_paper.go;services/api-gateway/internal/paper/handlers.go
+08-api-data-flow.drawio	03 考试、试卷、题库与模板	row2-data	Paper Store + file_asset	infra	services/api-gateway/internal/paper/paper_import_postgres.go
+08-api-data-flow.drawio	03 考试、试卷、题库与模板	row3-page	模板编辑 / 考试设置	implemented	apps/web-admin/src/api/configuration.ts;apps/web-admin/src/pages/AnswerSheetTemplatePage.tsx
+08-api-data-flow.drawio	03 考试、试卷、题库与模板	row3-api	模板与准备确认	implemented	services/api-gateway/internal/server/routes_paper.go
+08-api-data-flow.drawio	03 考试、试卷、题库与模板	row3-handler	PaperHandler	implemented	services/api-gateway/internal/paper/configuration_handlers.go
+08-api-data-flow.drawio	03 考试、试卷、题库与模板	row3-data	Paper Store	infra	services/api-gateway/internal/paper/store_postgres_template_binding.go;services/api-gateway/internal/paper/store_postgres.go
+08-api-data-flow.drawio	03 考试、试卷、题库与模板	edge-0	请求	infra	apps/web-admin/src/api/exams.ts;apps/web-admin/src/features/exams/create/CreateExamPage.tsx
+08-api-data-flow.drawio	03 考试、试卷、题库与模板	edge-1	路由 / guard	infra	services/api-gateway/internal/server/routes_exam.go
+08-api-data-flow.drawio	03 考试、试卷、题库与模板	edge-2	读 / 写	infra	services/api-gateway/internal/exam/store_postgres.go;services/api-gateway/internal/exam/session_postgres.go
+08-api-data-flow.drawio	03 考试、试卷、题库与模板	edge-3	请求	infra	apps/web-admin/src/api/questionBank.ts;apps/web-admin/src/features/question-bank/QuestionBankPage.tsx
+08-api-data-flow.drawio	03 考试、试卷、题库与模板	edge-4	路由 / guard	infra	services/api-gateway/internal/server/routes_paper.go
+08-api-data-flow.drawio	03 考试、试卷、题库与模板	edge-5	读 / 写	infra	services/api-gateway/internal/paper/materialize_bank.go;services/api-gateway/internal/paper/store_postgres.go
+08-api-data-flow.drawio	03 考试、试卷、题库与模板	edge-6	请求	infra	apps/web-admin/src/api/papers.ts;apps/web-admin/src/pages/PaperRubricPage.tsx
+08-api-data-flow.drawio	03 考试、试卷、题库与模板	edge-7	路由 / guard	infra	services/api-gateway/internal/server/routes_paper.go
+08-api-data-flow.drawio	03 考试、试卷、题库与模板	edge-8	读 / 写	infra	services/api-gateway/internal/paper/paper_import_postgres.go
+08-api-data-flow.drawio	03 考试、试卷、题库与模板	edge-9	请求	infra	apps/web-admin/src/api/configuration.ts;apps/web-admin/src/pages/AnswerSheetTemplatePage.tsx
+08-api-data-flow.drawio	03 考试、试卷、题库与模板	edge-10	路由 / guard	infra	services/api-gateway/internal/server/routes_paper.go
+08-api-data-flow.drawio	03 考试、试卷、题库与模板	edge-11	读 / 写	infra	services/api-gateway/internal/paper/store_postgres_template_binding.go;services/api-gateway/internal/paper/store_postgres.go
+08-api-data-flow.drawio	04 采集、配准、OCR 与答案证据	row0-page	答卷导入 / 桌面采集工作站	implemented	apps/web-admin/src/api/capture.ts;apps/desktop-client/src/api/captureUploads.ts
+08-api-data-flow.drawio	04 采集、配准、OCR 与答案证据	row0-api	批次与处理命令	implemented	services/api-gateway/internal/server/routes_capture.go
+08-api-data-flow.drawio	04 采集、配准、OCR 与答案证据	row0-handler	CaptureHandler	implemented	services/api-gateway/internal/server/routes_capture.go;services/api-gateway/internal/capture/handlers.go
+08-api-data-flow.drawio	04 采集、配准、OCR 与答案证据	row0-data	Capture Store + WorkerRuntime	infra	services/api-gateway/internal/capture/store_postgres.go;services/api-gateway/internal/files/storage_minio.go
+08-api-data-flow.drawio	04 采集、配准、OCR 与答案证据	row1-page	质量 / 匹配 / 配准纠正界面	partial	apps/web-admin/src/api/processing.ts;apps/web-admin/src/features/capture/MatchingWorkspace.tsx
+08-api-data-flow.drawio	04 采集、配准、OCR 与答案证据	row1-api	质量与配准	implemented	services/api-gateway/internal/server/routes_capture.go
+08-api-data-flow.drawio	04 采集、配准、OCR 与答案证据	row1-handler	ImageQuality / CaptureHandler	partial	services/api-gateway/internal/server/routes_capture.go;services/api-gateway/internal/imagequality/handlers.go
+08-api-data-flow.drawio	04 采集、配准、OCR 与答案证据	row1-data	quality / registration run + segment	infra	services/api-gateway/internal/capture/registration_store_postgres.go;services/api-gateway/internal/imagequality/coordinator_postgres.go
+08-api-data-flow.drawio	04 采集、配准、OCR 与答案证据	row2-page	处理 / OCR 任务界面	implemented	apps/web-admin/src/api/submissions.ts;apps/web-admin/src/pages/SubmissionCapturePage.tsx
+08-api-data-flow.drawio	04 采集、配准、OCR 与答案证据	row2-api	OCR 与分段	implemented	services/api-gateway/internal/server/routes_processing.go
+08-api-data-flow.drawio	04 采集、配准、OCR 与答案证据	row2-handler	OCRHandler / SegmentHandler	implemented	services/api-gateway/internal/server/routes_processing.go
+08-api-data-flow.drawio	04 采集、配准、OCR 与答案证据	row2-data	OCR / Segment Store	infra	services/api-gateway/internal/ocr/runtime_coordinator_postgres.go;services/api-gateway/internal/segment/store_postgres.go
+08-api-data-flow.drawio	04 采集、配准、OCR 与答案证据	row3-page	阅卷证据区 / 数学证据检查器	implemented	apps/web-admin/src/api/mathUnderstanding.ts;apps/web-admin/src/features/grading/workbench/MathEvidenceInspector.tsx
+08-api-data-flow.drawio	04 采集、配准、OCR 与答案证据	row3-api	授权裁片读取	implemented	services/api-gateway/internal/server/routes_processing.go;services/api-gateway/internal/server/routes_review.go
+08-api-data-flow.drawio	04 采集、配准、OCR 与答案证据	row3-handler	SegmentHandler / ReviewHandler	implemented	services/api-gateway/internal/server/router_guards.go;services/api-gateway/internal/server/routes_review.go
+08-api-data-flow.drawio	04 采集、配准、OCR 与答案证据	row3-data	当前 segment + 证据 + 私有对象	infra	services/api-gateway/internal/review/workbench_postgres.go;services/api-gateway/internal/segment/store_postgres.go
+08-api-data-flow.drawio	04 采集、配准、OCR 与答案证据	edge-0	请求	infra	apps/web-admin/src/api/capture.ts;apps/desktop-client/src/api/captureUploads.ts
+08-api-data-flow.drawio	04 采集、配准、OCR 与答案证据	edge-1	路由 / guard	infra	services/api-gateway/internal/server/routes_capture.go
+08-api-data-flow.drawio	04 采集、配准、OCR 与答案证据	edge-2	读 / 写	infra	services/api-gateway/internal/capture/store_postgres.go;services/api-gateway/internal/files/storage_minio.go
+08-api-data-flow.drawio	04 采集、配准、OCR 与答案证据	edge-3	请求	infra	apps/web-admin/src/api/processing.ts;apps/web-admin/src/features/capture/MatchingWorkspace.tsx
+08-api-data-flow.drawio	04 采集、配准、OCR 与答案证据	edge-4	路由 / guard	infra	services/api-gateway/internal/server/routes_capture.go
+08-api-data-flow.drawio	04 采集、配准、OCR 与答案证据	edge-5	读 / 写	infra	services/api-gateway/internal/capture/registration_store_postgres.go;services/api-gateway/internal/imagequality/coordinator_postgres.go
+08-api-data-flow.drawio	04 采集、配准、OCR 与答案证据	edge-6	请求	infra	apps/web-admin/src/api/submissions.ts;apps/web-admin/src/pages/SubmissionCapturePage.tsx
+08-api-data-flow.drawio	04 采集、配准、OCR 与答案证据	edge-7	路由 / guard	infra	services/api-gateway/internal/server/routes_processing.go
+08-api-data-flow.drawio	04 采集、配准、OCR 与答案证据	edge-8	读 / 写	infra	services/api-gateway/internal/ocr/runtime_coordinator_postgres.go;services/api-gateway/internal/segment/store_postgres.go
+08-api-data-flow.drawio	04 采集、配准、OCR 与答案证据	edge-9	请求	infra	apps/web-admin/src/api/mathUnderstanding.ts;apps/web-admin/src/features/grading/workbench/MathEvidenceInspector.tsx
+08-api-data-flow.drawio	04 采集、配准、OCR 与答案证据	edge-10	路由 / guard	infra	services/api-gateway/internal/server/routes_processing.go;services/api-gateway/internal/server/routes_review.go
+08-api-data-flow.drawio	04 采集、配准、OCR 与答案证据	edge-11	读 / 写	infra	services/api-gateway/internal/review/workbench_postgres.go;services/api-gateway/internal/segment/store_postgres.go
+08-api-data-flow.drawio	05 评分、复核、发布与学生数据	row0-page	阅卷管理 / 主观题批次	partial	apps/web-admin/src/api/subjectiveGrading.ts;apps/web-admin/src/api/scores.ts
+08-api-data-flow.drawio	05 评分、复核、发布与学生数据	row0-api	评分运行与 AI 建议	implemented	services/api-gateway/internal/server/routes_grading.go
+08-api-data-flow.drawio	05 评分、复核、发布与学生数据	row0-handler	GradingHandler / SubjectiveHandler	partial	services/api-gateway/internal/server/routes_grading.go;services/api-gateway/internal/subjective/grade_settlement_pipeline.go
+08-api-data-flow.drawio	05 评分、复核、发布与学生数据	row0-data	scoring_run / ai_grade / review_task	infra	services/api-gateway/internal/grading/scoring_run_routing.go;services/api-gateway/internal/subjective/store_postgres.go
+08-api-data-flow.drawio	05 评分、复核、发布与学生数据	row1-page	教师匿名工作台 / 仲裁工作台	implemented	apps/web-admin/src/api/review.ts;apps/web-admin/src/features/grading/workbench/GradingWorkbench.tsx
+08-api-data-flow.drawio	05 评分、复核、发布与学生数据	row1-api	人工任务与分差仲裁	implemented	services/api-gateway/internal/server/routes_grading.go;services/api-gateway/internal/server/routes_review.go
+08-api-data-flow.drawio	05 评分、复核、发布与学生数据	row1-handler	ReviewHandler	implemented	services/api-gateway/internal/server/routes_review.go;services/api-gateway/internal/server/routes_grading.go
+08-api-data-flow.drawio	05 评分、复核、发布与学生数据	row1-data	review_task / human_grade	infra	services/api-gateway/internal/review/store_postgres_resolution.go;services/api-gateway/internal/review/store_postgres_tasks.go
+08-api-data-flow.drawio	05 评分、复核、发布与学生数据	row2-page	成绩发布 / 成绩分析 / 复核	partial	apps/web-admin/src/api/scoreReleases.ts;apps/web-admin/src/api/reports.ts
+08-api-data-flow.drawio	05 评分、复核、发布与学生数据	row2-api	成绩确认与公开发布	implemented	services/api-gateway/internal/server/routes_release.go;services/api-gateway/internal/scorerelease/handlers.go
+08-api-data-flow.drawio	05 评分、复核、发布与学生数据	row2-handler	Score / ScoreRelease / Report	partial	services/api-gateway/internal/server/routes_release.go;services/api-gateway/internal/score/handlers.go;services/api-gateway/internal/scorerelease/handlers.go
+08-api-data-flow.drawio	05 评分、复核、发布与学生数据	row2-data	旧 submission_grade 状态发布	infra	services/api-gateway/internal/score/store_postgres.go;services/api-gateway/internal/scorerelease/store_postgres.go;services/api-gateway/internal/report/store_postgres.go
+08-api-data-flow.drawio	05 评分、复核、发布与学生数据	row3-page	学生成绩 / 答题图片 / 申诉	implemented	apps/student-portal/src/api.ts;apps/student-portal/src/App.tsx
+08-api-data-flow.drawio	05 评分、复核、发布与学生数据	row3-api	本人发布数据与申诉	implemented	services/api-gateway/internal/studentportal/handlers.go;services/api-gateway/internal/server/routes_release.go;services/api-gateway/internal/server/routes_review.go
+08-api-data-flow.drawio	05 评分、复核、发布与学生数据	row3-handler	StudentPortal / PublishedQuestionAppeal	implemented	services/api-gateway/internal/server/routes_release.go;services/api-gateway/internal/studentportal/handlers.go
+08-api-data-flow.drawio	05 评分、复核、发布与学生数据	row3-data	score_release 快照 / 公开批注	infra	services/api-gateway/internal/scorerelease/student_release_version.go;services/api-gateway/internal/reviewannotation/store_postgres.go
+08-api-data-flow.drawio	05 评分、复核、发布与学生数据	edge-0	请求	infra	apps/web-admin/src/api/subjectiveGrading.ts;apps/web-admin/src/api/scores.ts
+08-api-data-flow.drawio	05 评分、复核、发布与学生数据	edge-1	路由 / guard	infra	services/api-gateway/internal/server/routes_grading.go
+08-api-data-flow.drawio	05 评分、复核、发布与学生数据	edge-2	读 / 写	infra	services/api-gateway/internal/grading/scoring_run_routing.go;services/api-gateway/internal/subjective/store_postgres.go
+08-api-data-flow.drawio	05 评分、复核、发布与学生数据	edge-3	请求	infra	apps/web-admin/src/api/review.ts;apps/web-admin/src/features/grading/workbench/GradingWorkbench.tsx
+08-api-data-flow.drawio	05 评分、复核、发布与学生数据	edge-4	路由 / guard	infra	services/api-gateway/internal/server/routes_grading.go;services/api-gateway/internal/server/routes_review.go
+08-api-data-flow.drawio	05 评分、复核、发布与学生数据	edge-5	读 / 写	infra	services/api-gateway/internal/review/store_postgres_resolution.go;services/api-gateway/internal/review/store_postgres_tasks.go
+08-api-data-flow.drawio	05 评分、复核、发布与学生数据	edge-6	请求	infra	apps/web-admin/src/api/scoreReleases.ts;apps/web-admin/src/api/reports.ts
+08-api-data-flow.drawio	05 评分、复核、发布与学生数据	edge-7	路由 / guard	infra	services/api-gateway/internal/server/routes_release.go;services/api-gateway/internal/scorerelease/handlers.go
+08-api-data-flow.drawio	05 评分、复核、发布与学生数据	edge-8	读 / 写	infra	services/api-gateway/internal/score/store_postgres.go;services/api-gateway/internal/scorerelease/store_postgres.go;services/api-gateway/internal/report/store_postgres.go
+08-api-data-flow.drawio	05 评分、复核、发布与学生数据	edge-9	请求	infra	apps/student-portal/src/api.ts;apps/student-portal/src/App.tsx
+08-api-data-flow.drawio	05 评分、复核、发布与学生数据	edge-10	路由 / guard	infra	services/api-gateway/internal/studentportal/handlers.go;services/api-gateway/internal/server/routes_release.go;services/api-gateway/internal/server/routes_review.go
+08-api-data-flow.drawio	05 评分、复核、发布与学生数据	edge-11	读 / 写	infra	services/api-gateway/internal/scorerelease/student_release_version.go;services/api-gateway/internal/reviewannotation/store_postgres.go
+08-api-data-flow.drawio	06 模型治理、质量工具与 AI 外部调用	row0-page	平台模型配置 / 治理页面	implemented	apps/web-admin/src/api/modelApiConfig.ts;apps/web-admin/src/api/modelGovernance.ts
+08-api-data-flow.drawio	06 模型治理、质量工具与 AI 外部调用	row0-api	托管 API 与角色绑定	implemented	services/api-gateway/internal/server/routes_governance.go
+08-api-data-flow.drawio	06 模型治理、质量工具与 AI 外部调用	row0-handler	ModelGovernanceHandler	implemented	services/api-gateway/internal/server/routes_governance.go
+08-api-data-flow.drawio	06 模型治理、质量工具与 AI 外部调用	row0-data	治理 Store + SecretCipher	infra	services/api-gateway/internal/modelgovernance/store_postgres.go;services/api-gateway/internal/modelgovernance/secrets.go
+08-api-data-flow.drawio	06 模型治理、质量工具与 AI 外部调用	row1-page	学校 AI 助手 / SSE 对话	implemented	apps/web-admin/src/api/schoolAiChat.ts;apps/web-admin/src/pages/SchoolAIChatPage.tsx
+08-api-data-flow.drawio	06 模型治理、质量工具与 AI 外部调用	row1-api	受控聊天与工具上下文	implemented	services/api-gateway/internal/server/routes_governance.go;services/api-gateway/internal/schoolassistant/handlers.go
+08-api-data-flow.drawio	06 模型治理、质量工具与 AI 外部调用	row1-handler	ModelGovernance / SchoolAssistant	implemented	services/api-gateway/internal/server/routes_governance.go;services/api-gateway/internal/schoolassistant/handlers.go
+08-api-data-flow.drawio	06 模型治理、质量工具与 AI 外部调用	row1-data	聊天模型配置 + 业务只读投影	infra	services/api-gateway/internal/modelgovernance/managed_agent_stream.go;services/api-gateway/internal/server/router_guards.go
+08-api-data-flow.drawio	06 模型治理、质量工具与 AI 外部调用	row2-page	AI 模型评估 / 校准 / 准入	partial	apps/web-admin/src/api/modelGovernance.ts;apps/web-admin/src/api/scoringAssurance.ts
+08-api-data-flow.drawio	06 模型治理、质量工具与 AI 外部调用	row2-api	评估与批准	implemented	services/api-gateway/internal/server/routes_governance.go
+08-api-data-flow.drawio	06 模型治理、质量工具与 AI 外部调用	row2-handler	治理 + Evaluation / Calibration	partial	services/api-gateway/internal/server/routes_governance.go
+08-api-data-flow.drawio	06 模型治理、质量工具与 AI 外部调用	row2-data	评估、候选、批准与策略记录	infra	services/api-gateway/internal/modelgovernance/store_postgres.go
+08-api-data-flow.drawio	06 模型治理、质量工具与 AI 外部调用	row3-page	主观题评分命令 → worker 执行	partial	apps/web-admin/src/api/subjectiveGrading.ts;services/subjective-grading-worker/subjective_grading_worker/runner.py
+08-api-data-flow.drawio	06 模型治理、质量工具与 AI 外部调用	row3-api	真实生产评分链	implemented	services/api-gateway/internal/server/routes_grading.go
+08-api-data-flow.drawio	06 模型治理、质量工具与 AI 外部调用	row3-handler	SubjectiveHandler	partial	services/api-gateway/internal/subjective/handlers_worker.go;services/api-gateway/internal/subjective/adapter_http.go;ai-services/grading_agent/app.py
+08-api-data-flow.drawio	06 模型治理、质量工具与 AI 外部调用	row3-data	冻结答案 / 量规 / 模型 / 提示	infra	services/api-gateway/internal/subjective/grade_settlement_pipeline.go;services/api-gateway/internal/subjective/panel_orchestrator.go
+08-api-data-flow.drawio	06 模型治理、质量工具与 AI 外部调用	edge-0	请求	infra	apps/web-admin/src/api/modelApiConfig.ts;apps/web-admin/src/api/modelGovernance.ts
+08-api-data-flow.drawio	06 模型治理、质量工具与 AI 外部调用	edge-1	路由 / guard	infra	services/api-gateway/internal/server/routes_governance.go
+08-api-data-flow.drawio	06 模型治理、质量工具与 AI 外部调用	edge-2	读 / 写	infra	services/api-gateway/internal/modelgovernance/store_postgres.go;services/api-gateway/internal/modelgovernance/secrets.go
+08-api-data-flow.drawio	06 模型治理、质量工具与 AI 外部调用	edge-3	请求	infra	apps/web-admin/src/api/schoolAiChat.ts;apps/web-admin/src/pages/SchoolAIChatPage.tsx
+08-api-data-flow.drawio	06 模型治理、质量工具与 AI 外部调用	edge-4	路由 / guard	infra	services/api-gateway/internal/server/routes_governance.go;services/api-gateway/internal/schoolassistant/handlers.go
+08-api-data-flow.drawio	06 模型治理、质量工具与 AI 外部调用	edge-5	读 / 写	infra	services/api-gateway/internal/modelgovernance/managed_agent_stream.go;services/api-gateway/internal/server/router_guards.go
+08-api-data-flow.drawio	06 模型治理、质量工具与 AI 外部调用	edge-6	请求	infra	apps/web-admin/src/api/modelGovernance.ts;apps/web-admin/src/api/scoringAssurance.ts
+08-api-data-flow.drawio	06 模型治理、质量工具与 AI 外部调用	edge-7	路由 / guard	infra	services/api-gateway/internal/server/routes_governance.go
+08-api-data-flow.drawio	06 模型治理、质量工具与 AI 外部调用	edge-8	读 / 写	infra	services/api-gateway/internal/modelgovernance/store_postgres.go
+08-api-data-flow.drawio	06 模型治理、质量工具与 AI 外部调用	edge-9	请求	infra	apps/web-admin/src/api/subjectiveGrading.ts;services/subjective-grading-worker/subjective_grading_worker/runner.py
+08-api-data-flow.drawio	06 模型治理、质量工具与 AI 外部调用	edge-10	路由 / guard	infra	services/api-gateway/internal/server/routes_grading.go
+08-api-data-flow.drawio	06 模型治理、质量工具与 AI 外部调用	edge-11	读 / 写	infra	services/api-gateway/internal/subjective/grade_settlement_pipeline.go;services/api-gateway/internal/subjective/panel_orchestrator.go
+08-api-data-flow.drawio	07 文件、对象存储与后台任务的数据流	browser	页面 / 桌面上传	implemented	apps/web-admin/src/api/files.ts;apps/desktop-client/src/api/files.ts
+08-api-data-flow.drawio	07 文件、对象存储与后台任务的数据流	upload	files.Handler.Upload	implemented	services/api-gateway/internal/files/handlers.go
+08-api-data-flow.drawio	07 文件、对象存储与后台任务的数据流	metadata	PostgreSQL file_asset	infra	services/api-gateway/internal/files/store_postgres.go;services/api-gateway/internal/files/reconciliation.go
+08-api-data-flow.drawio	07 文件、对象存储与后台任务的数据流	objects	MinIO ObjectStorage	infra	services/api-gateway/internal/files/storage_minio.go
+08-api-data-flow.drawio	07 文件、对象存储与后台任务的数据流	intake	领域登记与排任务	implemented	services/api-gateway/internal/server/routes_capture.go;services/api-gateway/internal/capture/store_postgres.go
+08-api-data-flow.drawio	07 文件、对象存储与后台任务的数据流	runtime	持久 worker runtime	implemented	services/api-gateway/internal/workerruntime/store_postgres.go;services/api-gateway/internal/server/routes_worker.go
+08-api-data-flow.drawio	07 文件、对象存储与后台任务的数据流	scope	Worker 文件读取	implemented	services/api-gateway/internal/server/router_guards.go
+08-api-data-flow.drawio	07 文件、对象存储与后台任务的数据流	worker	worker 处理二进制	implemented	services/page-processing-worker/page_processing/runner.py;services/ocr-worker/ocr_worker/runner.py
+08-api-data-flow.drawio	07 文件、对象存储与后台任务的数据流	download	用户下载 / 图像接口	implemented	services/api-gateway/internal/files/downloads.go;services/api-gateway/internal/server/routes_review.go
+08-api-data-flow.drawio	07 文件、对象存储与后台任务的数据流	preview	浏览器 Blob / 图片预览	infra	apps/web-admin/src/api/files.ts;apps/student-portal/src/api.ts
+08-api-data-flow.drawio	07 文件、对象存储与后台任务的数据流	local	桌面本地权威状态	partial	apps/desktop-client/src-tauri/src/durable_store/mod.rs;apps/desktop-client/src/components/OfflineWorkbench.tsx
+08-api-data-flow.drawio	07 文件、对象存储与后台任务的数据流	boundary	失败恢复边界	partial	services/api-gateway/internal/files/handlers.go;docs/architecture/specs/09-task-state-machine.json
+08-api-data-flow.drawio	07 文件、对象存储与后台任务的数据流	edge-0	multipart	infra	apps/web-admin/src/api/files.ts
+08-api-data-flow.drawio	07 文件、对象存储与后台任务的数据流	edge-1	pending / activate	infra	services/api-gateway/internal/files/handlers.go
+08-api-data-flow.drawio	07 文件、对象存储与后台任务的数据流	edge-2	Put + 验证	infra	services/api-gateway/internal/files/handlers.go
+08-api-data-flow.drawio	07 文件、对象存储与后台任务的数据流	edge-3	file ID 另行登记	infra	apps/web-admin/src/api/capture.ts
+08-api-data-flow.drawio	07 文件、对象存储与后台任务的数据流	edge-4	排领域任务	infra	services/api-gateway/internal/capture/store_postgres.go
+08-api-data-flow.drawio	07 文件、对象存储与后台任务的数据流	edge-5	来源 / 载荷 / 租约	infra	services/api-gateway/internal/server/router_guards.go
+08-api-data-flow.drawio	07 文件、对象存储与后台任务的数据流	edge-6	授权原件输入	infra	services/page-processing-worker/page_processing/runner.py
+08-api-data-flow.drawio	07 文件、对象存储与后台任务的数据流	edge-7	下载对象经 API	infra	services/api-gateway/internal/files/downloads.go
+08-api-data-flow.drawio	07 文件、对象存储与后台任务的数据流	edge-8	私有对象流	infra	services/api-gateway/internal/files/downloads.go
+08-api-data-flow.drawio	07 文件、对象存储与后台任务的数据流	edge-9	Blob / PNG / PDF	infra	apps/web-admin/src/api/files.ts
+08-api-data-flow.drawio	07 文件、对象存储与后台任务的数据流	edge-10	联网队列恢复	infra	apps/desktop-client/src/api/captureUploads.ts
+08-api-data-flow.drawio	08 重要 API 的鉴权顺序与缓存重放	request	页面操作 / 深链接	implemented	apps/web-admin/src/router/routes.tsx;apps/web-admin/src/router/pageRendering.tsx
+08-api-data-flow.drawio	08 重要 API 的鉴权顺序与缓存重放	session	authenticate	implemented	services/api-gateway/internal/server/router_guards.go;services/api-gateway/internal/auth/middleware.go
+08-api-data-flow.drawio	08 重要 API 的鉴权顺序与缓存重放	generic	通用 requireAuth	partial	services/api-gateway/internal/server/router_guards.go
+08-api-data-flow.drawio	08 重要 API 的鉴权顺序与缓存重放	cache	同键已完成收据？	issue	services/api-gateway/internal/idempotency/middleware.go
+08-api-data-flow.drawio	08 重要 API 的鉴权顺序与缓存重放	resource	未命中：资源边界	implemented	services/api-gateway/internal/auth/resource_scope.go;services/api-gateway/internal/server/router_guards.go
+08-api-data-flow.drawio	08 重要 API 的鉴权顺序与缓存重放	permission	业务权限 / 角色	implemented	services/api-gateway/internal/server/router_guards.go;services/api-gateway/internal/review/handlers.go
+08-api-data-flow.drawio	08 重要 API 的鉴权顺序与缓存重放	strict	requirePermission / RecentPermission	implemented	services/api-gateway/internal/server/router_guards.go
+08-api-data-flow.drawio	08 重要 API 的鉴权顺序与缓存重放	qbank	题库专用 guard	implemented	services/api-gateway/internal/server/router_guards.go;services/api-gateway/internal/server/routes_questionbank.go
+08-api-data-flow.drawio	08 重要 API 的鉴权顺序与缓存重放	mfa	MFA / 学校助手专用入口	implemented	services/api-gateway/internal/server/router_guards.go;services/api-gateway/internal/server/routes_school_assistant.go
+08-api-data-flow.drawio	08 重要 API 的鉴权顺序与缓存重放	worker	worker 专用约束	implemented	services/api-gateway/internal/server/router_guards.go;services/api-gateway/internal/server/routes_worker.go
+08-api-data-flow.drawio	08 重要 API 的鉴权顺序与缓存重放	risk	P1：通用收据重放绕过内层当前授权	issue	services/api-gateway/internal/server/router_guards.go:103;services/api-gateway/internal/idempotency/middleware.go
+08-api-data-flow.drawio	08 重要 API 的鉴权顺序与缓存重放	edge-0	请求	infra	apps/web-admin/src/api/client.ts
+08-api-data-flow.drawio	08 重要 API 的鉴权顺序与缓存重放	edge-1	通用业务 guard	infra	services/api-gateway/internal/server/router_guards.go
+08-api-data-flow.drawio	08 重要 API 的鉴权顺序与缓存重放	edge-2	查收据	infra	services/api-gateway/internal/idempotency/middleware.go
+08-api-data-flow.drawio	08 重要 API 的鉴权顺序与缓存重放	edge-3	未命中再进入	infra	services/api-gateway/internal/server/router_guards.go
+08-api-data-flow.drawio	08 重要 API 的鉴权顺序与缓存重放	edge-4	允许资源后继续	infra	services/api-gateway/internal/server/router_guards.go
+09-task-state-machine.drawio	01 agent_worker_task 的真实状态机	queued	queued	implemented	services/api-gateway/internal/workerruntime/store_postgres.go:45
+09-task-state-machine.drawio	01 agent_worker_task 的真实状态机	leased	leased	implemented	services/api-gateway/internal/workerruntime/store_postgres.go:212
+09-task-state-machine.drawio	01 agent_worker_task 的真实状态机	running	running	implemented	services/api-gateway/internal/workerruntime/store_postgres.go:296
+09-task-state-machine.drawio	01 agent_worker_task 的真实状态机	success	succeeded：Store 支持同 token/schema/hash重放	implemented	services/api-gateway/internal/workerruntime/store_postgres.go:381
+09-task-state-machine.drawio	01 agent_worker_task 的真实状态机	retry	可重试且 attempt < max？	implemented	services/api-gateway/internal/workerruntime/store_postgres.go:452
+09-task-state-machine.drawio	01 agent_worker_task 的真实状态机	failed	failed	implemented	services/api-gateway/internal/workerruntime/store_postgres.go:473
+09-task-state-machine.drawio	01 agent_worker_task 的真实状态机	dead	dead_letter	implemented	services/api-gateway/internal/workerruntime/store_postgres.go:143
+09-task-state-machine.drawio	01 agent_worker_task 的真实状态机	expired	lease_expired 是 attempt 记录状态	infra	services/api-gateway/internal/workerruntime/store_postgres.go:255
+09-task-state-machine.drawio	01 agent_worker_task 的真实状态机	cancel	cancelled	implemented	services/api-gateway/internal/workerruntime/store_postgres.go:679
+09-task-state-machine.drawio	01 agent_worker_task 的真实状态机	manual	显式 Requeue	implemented	services/api-gateway/internal/workerruntime/store_postgres.go:530
+09-task-state-machine.drawio	01 agent_worker_task 的真实状态机	boundary	入口与 runtime 最后提交均检查租约；领域是否同事务见第三页	infra	services/api-gateway/internal/workerruntime/store_postgres.go:156
+09-task-state-machine.drawio	02 评分编排与人工双评的领域状态	start	scoring_run 新命令	implemented	services/api-gateway/internal/grading/scoring_run_start.go:56
+09-task-state-machine.drawio	02 评分编排与人工双评的领域状态	processing	processing	implemented	services/api-gateway/internal/grading/scoring_run_lifecycle.go:243
+09-task-state-machine.drawio	02 评分编排与人工双评的领域状态	review	needs_review	implemented	services/api-gateway/internal/grading/scoring_run_lifecycle.go:266
+09-task-state-machine.drawio	02 评分编排与人工双评的领域状态	failed	failed	implemented	services/api-gateway/internal/grading/scoring_run_lifecycle.go:262
+09-task-state-machine.drawio	02 评分编排与人工双评的领域状态	done	completed	implemented	services/api-gateway/internal/grading/scoring_run_lifecycle.go:268
+09-task-state-machine.drawio	02 评分编排与人工双评的领域状态	cancelling	cancelling	implemented	services/api-gateway/internal/grading/scoring_run_lifecycle.go:9
+09-task-state-machine.drawio	02 评分编排与人工双评的领域状态	cancelled	cancelled	implemented	services/api-gateway/internal/grading/scoring_run_lifecycle.go:70
+09-task-state-machine.drawio	02 评分编排与人工双评的领域状态	first	double_mark_session	implemented	services/api-gateway/internal/review/store_postgres_resolution.go:73
+09-task-state-machine.drawio	02 评分编排与人工双评的领域状态	diff	|first-second| ≤ threshold？	implemented	services/api-gateway/internal/review/store_postgres_resolution.go:92
+09-task-state-machine.drawio	02 评分编排与人工双评的领域状态	auto	auto_finalized	implemented	services/api-gateway/internal/review/store_postgres_resolution.go:95
+09-task-state-machine.drawio	02 评分编排与人工双评的领域状态	arb	needs_arbitration	implemented	services/api-gateway/internal/review/store_postgres_resolution.go:120
+09-task-state-machine.drawio	02 评分编排与人工双评的领域状态	notice	人工双评 ≠ AI A/B/C Panel	infra	services/api-gateway/internal/exam/status.go:49
+09-task-state-machine.drawio	03 提交边界与已确认恢复缺口	quality	质量结果：同事务	implemented	services/api-gateway/internal/imagequality/coordinator_postgres.go:49
+09-task-state-machine.drawio	03 提交边界与已确认恢复缺口	match	模板匹配：同事务	implemented	services/api-gateway/internal/capture/template_match_store_postgres.go:210
+09-task-state-machine.drawio	03 提交边界与已确认恢复缺口	ocr	OCR：同事务	implemented	services/api-gateway/internal/ocr/runtime_coordinator_postgres.go:32
+09-task-state-machine.drawio	03 提交边界与已确认恢复缺口	reg_write	入口 TaskScope 已校验租约/来源	implemented	services/api-gateway/internal/capture/handlers.go:760
+09-task-state-machine.drawio	03 提交边界与已确认恢复缺口	reg_finish	随后独立 runtime.Complete	issue	services/api-gateway/internal/capture/handlers.go:766
+09-task-state-machine.drawio	03 提交边界与已确认恢复缺口	reg_effect	P1：领域成功与 runtime 分裂	issue	services/api-gateway/internal/capture/registration_store_postgres.go:444
+09-task-state-machine.drawio	03 提交边界与已确认恢复缺口	ai_grade	主观完成：先 ai_grade 写入	partial	services/api-gateway/internal/subjective/worker_completion_service.go:49
+09-task-state-machine.drawio	03 提交边界与已确认恢复缺口	ai_run	最后 run → succeeded	issue	services/api-gateway/internal/subjective/worker_execution_service.go:91
+09-task-state-machine.drawio	03 提交边界与已确认恢复缺口	ai_effect	P1：末步失败缺完成恢复路径	issue	services/api-gateway/internal/subjective/worker_completion_service.go:64
+09-task-state-machine.drawio	03 提交边界与已确认恢复缺口	panel_state	Panel先写 human_review 终态	partial	services/api-gateway/internal/subjective/panel_orchestrator.go:493
+09-task-state-machine.drawio	03 提交边界与已确认恢复缺口	panel_replay	建任务/关联失败后再次 Grade	issue	services/api-gateway/internal/subjective/panel_orchestrator.go:193
+09-task-state-machine.drawio	03 提交边界与已确认恢复缺口	panel_effect	P2：内核恢复缺口	issue	services/api-gateway/internal/subjective/panel_store_postgres.go:103
+10-security-deployment.drawio	身份、权限、幂等与学校数据边界	human	实际人类角色	implemented	services/api-gateway/internal/auth/role_policy.go:19
+10-security-deployment.drawio	身份、权限、幂等与学校数据边界	service	实际服务身份	implemented	services/api-gateway/internal/auth/role_policy.go:28;services/api-gateway/internal/server/router_guards.go:295
+10-security-deployment.drawio	身份、权限、幂等与学校数据边界	auth	AuthMiddleware	implemented	services/api-gateway/internal/auth/middleware.go:36;services/api-gateway/internal/auth/store_postgres.go:180
+10-security-deployment.drawio	身份、权限、幂等与学校数据边界	idem	requireAuth中的幂等收据	issue	services/api-gateway/internal/server/router_guards.go:98;services/api-gateway/internal/idempotency/middleware.go:144
+10-security-deployment.drawio	身份、权限、幂等与学校数据边界	resource	资源边界 + Permission	implemented	services/api-gateway/internal/auth/resource_scope.go:37;services/api-gateway/internal/server/router_guards.go:130
+10-security-deployment.drawio	身份、权限、幂等与学校数据边界	recent	受保护关键guard顺序	implemented	services/api-gateway/internal/server/router_guards.go:116;services/api-gateway/internal/server/recent_auth_test.go:67
+10-security-deployment.drawio	身份、权限、幂等与学校数据边界	task	Worker作用域与能力	implemented	services/api-gateway/internal/server/router_guards.go:182;services/api-gateway/internal/server/router_guards.go:307
+10-security-deployment.drawio	身份、权限、幂等与学校数据边界	rls	DB第二道防线	implemented	services/api-gateway/internal/db/tenant_context.go:55;services/api-gateway/migrations/000139_high_risk_tenant_rls.sql
+10-security-deployment.drawio	身份、权限、幂等与学校数据边界	boundary	审计边界	partial	services/api-gateway/internal/auth/managed_access_store.go:154;docs/architecture/evidence/database-audit.md
+10-security-deployment.drawio	凭据加密、使用与会话安全	admin	平台模型配置操作	implemented	services/api-gateway/internal/server/router_guards.go:310;services/api-gateway/internal/modelgovernance/managed_config_store_postgres.go:34
+10-security-deployment.drawio	凭据加密、使用与会话安全	cipher	CredentialCipher	implemented	services/api-gateway/internal/modelgovernance/managed_config.go:208
+10-security-deployment.drawio	凭据加密、使用与会话安全	store	PostgreSQL托管配置	infra	services/api-gateway/internal/modelgovernance/managed_config_store_postgres.go:44
+10-security-deployment.drawio	凭据加密、使用与会话安全	resolve	运行时解析 / 解密	implemented	services/api-gateway/internal/modelgovernance/managed_config.go:183;services/api-gateway/internal/modelgovernance/managed_config_store_postgres.go:211
+10-security-deployment.drawio	凭据加密、使用与会话安全	go	Go业务处理器 / 托管Agent	implemented	services/api-gateway/internal/server/application_modules.go:126;services/api-gateway/internal/modelgovernance/managed_agent_http.go
+10-security-deployment.drawio	凭据加密、使用与会话安全	external	本地或外部模型	infra	ai-services/grading_agent/provider_adapter.py;ai-services/grading_agent/model.py
+10-security-deployment.drawio	凭据加密、使用与会话安全	session	用户会话与密码	implemented	services/api-gateway/internal/auth/password.go:36;services/api-gateway/internal/auth/token.go:11;services/api-gateway/internal/auth/managed_access_store.go:154
+10-security-deployment.drawio	凭据加密、使用与会话安全	protect	HTTP与审计控制	implemented	services/api-gateway/internal/server/server.go:183;services/api-gateway/internal/server/infrastructure.go:84;services/api-gateway/internal/server/routes_auth.go
+10-security-deployment.drawio	物理部署：Compose定义与客户端宿主机	client	浏览器 / 桌面宿主机	infra	apps/student-portal/package.json;apps/desktop-client/src-tauri/tauri.conf.json
+10-security-deployment.drawio	物理部署：Compose定义与客户端宿主机	nginx	nginx :80 → 宿主8088	infra	infra/docker-compose/nginx/nginx.conf:45;infra/docker-compose/docker-compose.yml:753
+10-security-deployment.drawio	物理部署：Compose定义与客户端宿主机	web	web-admin Nginx容器	infra	infra/docker-compose/docker-compose.yml:408;apps/web-admin/Dockerfile
+10-security-deployment.drawio	物理部署：Compose定义与客户端宿主机	api	api-gateway Go容器	infra	infra/docker-compose/docker-compose.yml:264;infra/docker-compose/docker-compose.yml:314;infra/docker-compose/.env.example;services/api-gateway/cmd/api-gateway/main.go:62
+10-security-deployment.drawio	物理部署：Compose定义与客户端宿主机	data	持久数据服务容器	infra	infra/docker-compose/docker-compose.yml:10;infra/docker-compose/docker-compose.yml:817
+10-security-deployment.drawio	物理部署：Compose定义与客户端宿主机	workers	按profile启用Python Worker	infra	infra/docker-compose/docker-compose.yml:490;infra/docker-compose/docker-compose.yml:518;infra/docker-compose/docker-compose.yml:687;infra/docker-compose/docker-compose.yml:701
+10-security-deployment.drawio	物理部署：Compose定义与客户端宿主机	agent	grading-agent容器 :8100	infra	infra/docker-compose/docker-compose.yml:430;infra/docker-compose/docker-compose.yml:459;ai-services/grading_agent/server.py
+10-security-deployment.drawio	物理部署：Compose定义与客户端宿主机	model	宿主llama.cpp / 外部模型	infra	scripts/launch-local.ps1;infra/docker-compose/docker-compose.yml:443
+10-security-deployment.drawio	物理部署：Compose定义与客户端宿主机	ops	部署工具与维护	infra	infra/docker-compose/docker-compose.yml:122;infra/docker-compose/scripts/restore-drill.ps1
+10-security-deployment.drawio	物理部署：Compose定义与客户端宿主机	observe	observability可选profile	infra	infra/docker-compose/docker-compose.yml:773;.github/workflows/ci.yml
+10-security-deployment.drawio	物理部署：Compose定义与客户端宿主机	edge-5	模型调用 HTTPS	infra	infra/docker-compose/.env.example;infra/docker-compose/scripts/preflight.ps1

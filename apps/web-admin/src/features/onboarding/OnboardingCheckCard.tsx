@@ -9,7 +9,7 @@ function statePresentation(check: OnboardingCheck) {
   return { icon: <Circle size={17} />, label: check.severity === "blocking" ? "待完成" : "建议", tone: "pending" };
 }
 
-export function OnboardingCheckCard({ check, action, children }: { check: OnboardingCheck; action?: ReactNode; children?: ReactNode }) {
+export function OnboardingCheckCard({ check, action, children }: Readonly<{ check: OnboardingCheck; action?: ReactNode; children?: ReactNode }>) {
   const presentation = statePresentation(check);
   return (
     <section className={`onboarding-check ${presentation.tone}`} data-check-key={check.key}>

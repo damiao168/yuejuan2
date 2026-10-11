@@ -20,10 +20,10 @@ type completeRecoveryRequest struct {
 }
 
 func (h *Handler) AdminCreateRecovery(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set(authCacheControlHeader, authNoStore)
 	actor, ok := UserFromContext(r.Context())
 	if !ok {
-		httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", "authentication required")
+		httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", authRequiredMessage)
 		return
 	}
 	actorScope, ok := AccessScopeFromContext(r.Context())
@@ -68,7 +68,7 @@ func (h *Handler) AdminCreateRecovery(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) VerifyRecovery(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set(authCacheControlHeader, authNoStore)
 	var input recoveryRequest
 	if err := decodeAuthJSON(w, r, &input, true); err != nil {
 		writeRecoveryDecodeError(w, r, err)
@@ -76,23 +76,23 @@ func (h *Handler) VerifyRecovery(w http.ResponseWriter, r *http.Request) {
 	}
 	input.Token = strings.TrimSpace(input.Token)
 	if input.Token == "" || len(input.Token) > 512 {
-		httpx.Error(w, r, http.StatusBadRequest, "recovery_invalid", "recovery link is invalid or expired")
+		httpx.Error(w, r, http.StatusBadRequest, "recovery_invalid", recoveryInvalidMsg)
 		return
 	}
 	preview, err := h.store.FindRecovery(r.Context(), HashToken(input.Token), time.Now().UTC())
 	if errors.Is(err, ErrRecoveryInvalid) {
-		httpx.Error(w, r, http.StatusBadRequest, "recovery_invalid", "recovery link is invalid or expired")
+		httpx.Error(w, r, http.StatusBadRequest, "recovery_invalid", recoveryInvalidMsg)
 		return
 	}
 	if err != nil {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "auth_service_unavailable", "authentication service temporarily unavailable")
+		httpx.Error(w, r, http.StatusServiceUnavailable, "auth_service_unavailable", authServiceUnavailable)
 		return
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"recovery": preview})
 }
 
 func (h *Handler) CompleteRecovery(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set(authCacheControlHeader, authNoStore)
 	var input completeRecoveryRequest
 	if err := decodeAuthJSON(w, r, &input, true); err != nil {
 		writeRecoveryDecodeError(w, r, err)
@@ -107,10 +107,10 @@ func (h *Handler) CompleteRecovery(w http.ResponseWriter, r *http.Request) {
 	// 预检只减少无效请求的哈希开销；是否仍可消费令牌，由最终的 CompleteRecovery 再确认。
 	if _, err := h.store.FindRecovery(r.Context(), tokenHash, time.Now().UTC()); err != nil {
 		if errors.Is(err, ErrRecoveryInvalid) {
-			httpx.Error(w, r, http.StatusBadRequest, "recovery_invalid", "recovery link is invalid or expired")
+			httpx.Error(w, r, http.StatusBadRequest, "recovery_invalid", recoveryInvalidMsg)
 			return
 		}
-		httpx.Error(w, r, http.StatusServiceUnavailable, "auth_service_unavailable", "authentication service temporarily unavailable")
+		httpx.Error(w, r, http.StatusServiceUnavailable, "auth_service_unavailable", authServiceUnavailable)
 		return
 	}
 	if !StrongPassword(input.Password) {
@@ -119,12 +119,12 @@ func (h *Handler) CompleteRecovery(w http.ResponseWriter, r *http.Request) {
 	}
 	passwordHash, err := HashPassword(input.Password)
 	if err != nil {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "auth_service_unavailable", "authentication service temporarily unavailable")
+		httpx.Error(w, r, http.StatusServiceUnavailable, "auth_service_unavailable", authServiceUnavailable)
 		return
 	}
 	result, err := h.store.CompleteRecovery(r.Context(), tokenHash, passwordHash, time.Now().UTC())
 	if errors.Is(err, ErrRecoveryInvalid) {
-		httpx.Error(w, r, http.StatusBadRequest, "recovery_invalid", "recovery link is invalid or expired")
+		httpx.Error(w, r, http.StatusBadRequest, "recovery_invalid", recoveryInvalidMsg)
 		return
 	}
 	if err != nil {

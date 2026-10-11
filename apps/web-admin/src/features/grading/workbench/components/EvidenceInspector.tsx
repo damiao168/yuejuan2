@@ -33,6 +33,7 @@ export interface EvidenceInspectorProps {
   onRefreshMath: () => void;
   onSelectMathStep: (stepId: string) => void;
   canRequestMath: boolean;
+  mathDisabledReason?: string;
   requestingMath: boolean;
   onRequestMath: () => void;
   mathRequestNotice: string;
@@ -47,8 +48,8 @@ export function EvidenceInspector({
   canVerifyEvidence,
   actioning,
   onVerifyEvidence,
-  math, onRefreshMath, onSelectMathStep, canRequestMath, requestingMath, onRequestMath, mathRequestNotice
-}: EvidenceInspectorProps) {
+  math, onRefreshMath, onSelectMathStep, canRequestMath, mathDisabledReason, requestingMath, onRequestMath, mathRequestNotice
+}: Readonly<EvidenceInspectorProps>) {
   const automationSummary = () => {
     const result = context.automationResult;
     if (!result) {
@@ -75,6 +76,11 @@ export function EvidenceInspector({
     if (!selectedGrade) return <div className="ai-empty-state"><strong>暂无 AI 建议</strong><span>请按评分细则人工判定。</span></div>;
     const confidenceCalibrated = selectedGrade.confidence > 0;
     const mathState = context.reviewContext.subject_tool_hints.subject_code === "mathematics" ? mathSuggestionState(selectedGrade, math.state, math.dirty) : null;
+    const decisionTone = selectedGrade.needs_human_review || selectedGrade.mock ? "warning" : confidenceTone(selectedGrade.confidence);
+    let decisionLabel = "未标记风险";
+    // 历史数学建议先说明不可采纳的原因；风险颜色仍按原人工复核与模拟标记判断。
+    if (mathState && !mathState.current) decisionLabel = mathState.label;
+    else if (selectedGrade.needs_human_review) decisionLabel = "需人工复核";
     return (
       <div className="evidence-stack">
         <div className="ai-score-strip">
@@ -87,8 +93,8 @@ export function EvidenceInspector({
           </div>
           <div>
             <span>判定</span>
-            <StatusTag tone={selectedGrade.needs_human_review ? "warning" : selectedGrade.mock ? "warning" : confidenceTone(selectedGrade.confidence)}>
-              {mathState && !mathState.current ? mathState.label : selectedGrade.needs_human_review ? "需人工复核" : "未标记风险"}
+            <StatusTag tone={decisionTone}>
+              {decisionLabel}
             </StatusTag>
           </div>
         </div>
@@ -135,8 +141,8 @@ export function EvidenceInspector({
   return (
     <>
       <ReviewContextInspector key={context.task.id} context={context.reviewContext} />
-      {context.reviewContext.subject_tool_hints.subject_code === "mathematics" && !requiresExplicitSecondOpinion(context.reviewContext) ? <MathRubricMatrix evidence={math.state} grades={context.aiGrades.filter((grade) => grade.delivery_mode !== "shadow_only")} points={context.question?.rubric?.points ?? []} dirty={math.dirty} requesting={requestingMath} canRequest={canRequestMath} onRequest={onRequestMath} onSelectStep={onSelectMathStep} /> : null}
-      {mathRequestNotice ? <p role="status" className="math-suggestion-note">{mathRequestNotice}</p> : null}
+      {context.reviewContext.subject_tool_hints.subject_code === "mathematics" && !requiresExplicitSecondOpinion(context.reviewContext) ? <MathRubricMatrix evidence={math.state} grades={context.aiGrades.filter((grade) => grade.delivery_mode !== "shadow_only")} points={context.question?.rubric?.points ?? []} dirty={math.dirty} requesting={requestingMath} canRequest={canRequestMath} disabledReason={mathDisabledReason} onRequest={onRequestMath} onSelectStep={onSelectMathStep} /> : null}
+      {mathRequestNotice ? <output className="math-suggestion-note">{mathRequestNotice}</output> : null}
       <MathEvidenceInspector key={`math-${context.task.id}`} segmentId={context.task.answer_segment_id} subjectCode={context.reviewContext.subject_tool_hints.subject_code} disabled={!canEditDraft || math.state.phase === "conflict" || math.state.phase === "unavailable"} data={math.state.understanding} loading={math.state.phase === "loading"} onRefresh={onRefreshMath} onCorrectionSaved={math.correctionSaved} onDirtyChange={math.setDirty} onSelectStep={onSelectMathStep} />
       {!requiresExplicitSecondOpinion(context.reviewContext) ? automationSummary() : null}
       {selectedGrade ? evidence() : null}

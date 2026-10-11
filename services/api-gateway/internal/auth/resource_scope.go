@@ -34,26 +34,60 @@ func AllowsResourceBoundary(scope AccessScope, boundary ResourceBoundary) bool {
 	if strings.TrimSpace(boundary.TenantID) == "" || boundary.TenantID != scope.TenantID {
 		return false
 	}
-	if scope.syntheticUnbounded {
+	if allowed, decided := allowsSpecialBoundary(scope, boundary); decided {
+		return allowed
+	}
+	if allowed, decided := allowsAssignedTaskBoundary(scope, boundary); decided {
+		return allowed
+	}
+	if allowsExplicitResourceBoundary(scope, boundary) {
 		return true
 	}
-	// Hidden tasks use the workbench URLs, but their assignment is held in
-	// seed_task rather than the ordinary review-task scope list.
-	if boundary.ResourceType == "seed_task" {
-		return scope.ActorID != "" && boundary.AssignedTo == scope.ActorID
-	}
-	if scope.IsPlatform || scope.TenantWide {
-		return true
-	}
-	if boundary.ResourceType == "review_task" && scope.AllowsReviewTask(boundary.ResourceID) {
-		return boundary.AssignedTo == scope.ActorID
-	}
-	if boundary.ResourceType == "arbitration_task" && scope.AllowsArbitrationTask(boundary.ResourceID) {
-		return boundary.AssignedTo == scope.ActorID
-	}
-	if (boundary.ResourceType == "review_task" || boundary.ResourceType == "arbitration_task") && !scope.schoolWide {
+	if requiresAssignedBoundary(boundary.ResourceType) && !scope.schoolWide {
 		return false
 	}
+	if boundary.StudentID != "" && scope.StudentID != "" && boundary.StudentID == scope.StudentID {
+		return true
+	}
+	if scope.AssignedOnly && !scope.schoolWide && isSubmissionDescendant(boundary.ResourceType) {
+		return false
+	}
+	return allowsOrganizationBoundary(scope, boundary)
+}
+
+func allowsSpecialBoundary(scope AccessScope, boundary ResourceBoundary) (allowed, decided bool) {
+	if scope.syntheticUnbounded {
+		return true, true
+	}
+	// 隐藏种子任务必须先校验具体分派，租户或学校级管理权限不能跳过这条规则。
+	if boundary.ResourceType == "seed_task" {
+		return scope.ActorID != "" && boundary.AssignedTo == scope.ActorID, true
+	}
+	if scope.IsPlatform || scope.TenantWide {
+		return true, true
+	}
+	return false, false
+}
+
+// decided 表示已按任务规则得出最终结论，拒绝后不能继续尝试考试或组织关系。
+func allowsAssignedTaskBoundary(scope AccessScope, boundary ResourceBoundary) (allowed, decided bool) {
+	switch boundary.ResourceType {
+	case "review_task":
+		if scope.AllowsReviewTask(boundary.ResourceID) {
+			return boundary.AssignedTo == scope.ActorID, true
+		}
+		return false, !scope.schoolWide
+	case "arbitration_task":
+		if scope.AllowsArbitrationTask(boundary.ResourceID) {
+			return boundary.AssignedTo == scope.ActorID, true
+		}
+		return false, !scope.schoolWide
+	default:
+		return false, false
+	}
+}
+
+func allowsExplicitResourceBoundary(scope AccessScope, boundary ResourceBoundary) bool {
 	if boundary.SubmissionID != "" && scope.AllowsSubmission(boundary.SubmissionID) {
 		return true
 	}
@@ -69,21 +103,23 @@ func AllowsResourceBoundary(scope AccessScope, boundary ResourceBoundary) bool {
 	if (boundary.ResourceType == "backmark_item" || boundary.ResourceType == "regrade_item") && boundary.AssignedTo == scope.ActorID {
 		return true
 	}
-	if (boundary.ResourceType == "review_annotation" || boundary.ResourceType == "backmark_item" || boundary.ResourceType == "regrade_item") && !scope.schoolWide {
-		return false
-	}
-	if boundary.StudentID != "" && scope.StudentID != "" && boundary.StudentID == scope.StudentID {
+	return false
+}
+
+func requiresAssignedBoundary(resourceType string) bool {
+	switch resourceType {
+	case "review_annotation", "backmark_item", "regrade_item":
 		return true
-	}
-	if scope.AssignedOnly && !scope.schoolWide && isSubmissionDescendant(boundary.ResourceType) {
+	default:
 		return false
 	}
+}
+
+func allowsOrganizationBoundary(scope AccessScope, boundary ResourceBoundary) bool {
 	if boundary.ExamID != "" && scope.AllowsExam(boundary.ExamID) {
 		return true
 	}
-	// Class-scoped roles inherit parent school/grade IDs so the organization
-	// tree can be rendered. Those navigation IDs must not become descendant
-	// object access; only a real school-scoped role has that authority.
+	// 班级角色继承的学校、年级 ID 仅供组织导航，不能据此读取其他班级的对象。
 	if boundary.SchoolID != "" && scope.AllowsSchool(boundary.SchoolID) && (scope.schoolWide || boundary.ResourceType == "" || boundary.ResourceType == "school") {
 		return true
 	}
@@ -127,9 +163,8 @@ var resourceSegmentTypes = map[string]string{
 	"math-understanding": "math_understanding", "ai-human-disagreements": "ai_human_disagreement",
 }
 
-// RequireRequestResourceBoundary applies one uniform object-boundary check to
-// every recognized path variable registered by ServeMux. Collection routes and
-// worker-internal routes are intentionally not interpreted as object IDs.
+// RequireRequestResourceBoundary 对 ServeMux 注册且可识别的路径变量统一执行对象边界检查；
+// 集合路由和工作器内部路由不解释为对象 ID。
 func RequireRequestResourceBoundary(resolver ResourceBoundaryResolver) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -142,24 +177,35 @@ func RequireRequestResourceBoundary(resolver ResourceBoundaryResolver) func(http
 				httpx.Error(w, r, http.StatusForbidden, "access_scope_forbidden", "resource is outside the current data access scope")
 				return
 			}
-			for _, target := range requestBoundaryTargets(r) {
-				boundary, err := resolver.ResolveResourceBoundary(r.Context(), scope, target.resourceType, target.resourceID)
-				if errors.Is(err, ErrResourceBoundaryNotFound) {
-					httpx.Error(w, r, http.StatusNotFound, "resource_not_found", "resource not found")
-					return
-				}
-				if err != nil {
-					httpx.Error(w, r, http.StatusInternalServerError, "resource_scope_lookup_failed", "failed to resolve resource data scope")
-					return
-				}
-				if !AllowsResourceBoundary(scope, boundary) {
-					httpx.Error(w, r, http.StatusForbidden, "access_scope_forbidden", "resource is outside the current data access scope")
-					return
-				}
+			if !checkRequestResourceBoundaries(resolver, w, r, scope) {
+				return
 			}
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+func checkRequestResourceBoundaries(resolver ResourceBoundaryResolver, w http.ResponseWriter, r *http.Request, scope AccessScope) bool {
+	for _, target := range requestBoundaryTargets(r) {
+		boundary, err := resolver.ResolveResourceBoundary(r.Context(), scope, target.resourceType, target.resourceID)
+		if errors.Is(err, ErrResourceBoundaryNotFound) {
+			httpx.Error(w, r, http.StatusNotFound, "resource_not_found", "resource not found")
+			return false
+		}
+		if err != nil {
+			httpx.Error(w, r, http.StatusInternalServerError, "resource_scope_lookup_failed", "failed to resolve resource data scope")
+			return false
+		}
+		if !AllowsResourceBoundary(scope, boundary) {
+			httpx.Error(w, r, http.StatusForbidden, "access_scope_forbidden", "resource is outside the current data access scope")
+			return false
+		}
+		// 先检查访问权限再读取归档事实，不能向越权请求泄露考试是否已归档。
+		if !checkExamArchiveBoundary(resolver, w, r, scope, boundary) {
+			return false
+		}
+	}
+	return true
 }
 
 type requestBoundaryTarget struct{ resourceType, resourceID string }
@@ -223,8 +269,26 @@ WHERE st.tenant_id=$1::uuid AND st.id=$2::uuid GROUP BY st.id,e.id`, scope.Tenan
 	return boundary, err
 }
 
+const examProjection = `e.tenant_id::text,COALESCE(e.school_id::text,''),''::text,COALESCE(array_agg(DISTINCT ec.class_id::text) FILTER(WHERE ec.class_id IS NOT NULL),'{}'),e.id::text,COALESCE((SELECT $3 WHERE $3<>'' AND EXISTS(SELECT 1 FROM student st LEFT JOIN exam_class x ON x.tenant_id=st.tenant_id AND x.class_id=st.class_id AND x.exam_id=e.id WHERE st.tenant_id=e.tenant_id AND st.id::text=$3 AND (x.id IS NOT NULL OR EXISTS(SELECT 1 FROM submission sx WHERE sx.tenant_id=e.tenant_id AND sx.exam_id=e.id AND sx.student_id=st.id AND sx.deleted_at IS NULL)) AND st.deleted_at IS NULL)),''),''::text,''::text`
+
+// 每个资源族保留独立查询，未知类型返回空串，由解析入口按资源不存在处理。
+// 查询均使用认证租户作为 $1；考试材料还保留 $3 的学生关系校验。
 func resourceBoundaryQuery(resourceType string) string {
-	const examProjection = `e.tenant_id::text,COALESCE(e.school_id::text,''),''::text,COALESCE(array_agg(DISTINCT ec.class_id::text) FILTER(WHERE ec.class_id IS NOT NULL),'{}'),e.id::text,COALESCE((SELECT $3 WHERE $3<>'' AND EXISTS(SELECT 1 FROM student st LEFT JOIN exam_class x ON x.tenant_id=st.tenant_id AND x.class_id=st.class_id AND x.exam_id=e.id WHERE st.tenant_id=e.tenant_id AND st.id::text=$3 AND (x.id IS NOT NULL OR EXISTS(SELECT 1 FROM submission sx WHERE sx.tenant_id=e.tenant_id AND sx.exam_id=e.id AND sx.student_id=st.id AND sx.deleted_at IS NULL)) AND st.deleted_at IS NULL)),''),''::text,''::text`
+	for _, query := range []func(string) string{
+		examMaterialBoundaryQuery,
+		submissionResourceBoundaryQuery,
+		gradingResourceBoundaryQuery,
+		organizationResourceBoundaryQuery,
+		operationsResourceBoundaryQuery,
+	} {
+		if result := query(resourceType); result != "" {
+			return result
+		}
+	}
+	return ""
+}
+
+func examMaterialBoundaryQuery(resourceType string) string {
 	switch resourceType {
 	case "exam":
 		return `SELECT ` + examProjection + ` FROM exam e LEFT JOIN exam_class ec ON ec.tenant_id=e.tenant_id AND ec.exam_id=e.id AND ec.deleted_at IS NULL WHERE e.tenant_id=$1::uuid AND e.id=$2::uuid AND e.deleted_at IS NULL GROUP BY e.id`
@@ -240,6 +304,17 @@ func resourceBoundaryQuery(resourceType string) string {
 		return `SELECT ` + examProjection + ` FROM answer_sheet_print_batch b JOIN exam e ON e.tenant_id=b.tenant_id AND e.id=b.exam_id LEFT JOIN exam_class ec ON ec.tenant_id=e.tenant_id AND ec.exam_id=e.id AND ec.deleted_at IS NULL WHERE b.tenant_id=$1::uuid AND b.id=$2::uuid GROUP BY e.id`
 	case "answer_sheet_print_sheet":
 		return `SELECT e.tenant_id::text,COALESCE(e.school_id::text,''),''::text,COALESCE(array_agg(DISTINCT ec.class_id::text) FILTER(WHERE ec.class_id IS NOT NULL),'{}'),e.id::text,s.student_id::text,''::text,''::text FROM answer_sheet_print_sheet s JOIN exam e ON e.tenant_id=s.tenant_id AND e.id=s.exam_id LEFT JOIN exam_class ec ON ec.tenant_id=e.tenant_id AND ec.exam_id=e.id AND ec.deleted_at IS NULL WHERE s.tenant_id=$1::uuid AND s.id=$2::uuid GROUP BY e.id,s.student_id`
+	case "capture_batch":
+		return `SELECT ` + examProjection + ` FROM capture_batch b JOIN exam e ON e.tenant_id=b.tenant_id AND e.id=b.exam_id LEFT JOIN exam_class ec ON ec.tenant_id=e.tenant_id AND ec.exam_id=e.id AND ec.deleted_at IS NULL WHERE b.tenant_id=$1::uuid AND b.id=$2::uuid AND b.deleted_at IS NULL GROUP BY e.id`
+	case "omr_calibration":
+		return `SELECT ` + examProjection + ` FROM omr_calibration_session c JOIN answer_sheet_template t ON t.tenant_id=c.tenant_id AND t.id=c.template_id JOIN exam e ON e.tenant_id=t.tenant_id AND e.id=t.exam_id LEFT JOIN exam_class ec ON ec.tenant_id=e.tenant_id AND ec.exam_id=e.id AND ec.deleted_at IS NULL WHERE c.tenant_id=$1::uuid AND c.id=$2::uuid AND c.deleted_at IS NULL GROUP BY e.id`
+	default:
+		return ""
+	}
+}
+
+func submissionResourceBoundaryQuery(resourceType string) string {
+	switch resourceType {
 	case "file_asset":
 		return `SELECT f.tenant_id::text,COALESCE(f.school_id::text,e.school_id::text,''),''::text,COALESCE(array_agg(DISTINCT ec.class_id::text) FILTER(WHERE ec.class_id IS NOT NULL),'{}'),COALESCE(e.id::text,''),COALESCE(sub.student_id::text,''),COALESCE(sub.id::text,''),''::text FROM file_asset f LEFT JOIN submission sub ON sub.tenant_id=f.tenant_id AND sub.id=f.submission_id LEFT JOIN exam e ON e.tenant_id=f.tenant_id AND e.id=COALESCE(f.exam_id,sub.exam_id) LEFT JOIN exam_class ec ON ec.tenant_id=e.tenant_id AND ec.exam_id=e.id AND ec.deleted_at IS NULL WHERE f.tenant_id=$1::uuid AND f.id=$2::uuid AND f.deleted_at IS NULL GROUP BY f.id,e.id,sub.id`
 	case "submission":
@@ -248,14 +323,27 @@ func resourceBoundaryQuery(resourceType string) string {
 		return submissionBoundaryQuery(`EXISTS(SELECT 1 FROM submission_page sp WHERE sp.tenant_id=s.tenant_id AND sp.submission_id=s.id AND sp.id=$2::uuid AND sp.deleted_at IS NULL)`)
 	case "answer_segment":
 		return submissionBoundaryQuery(`EXISTS(SELECT 1 FROM answer_segment seg WHERE seg.tenant_id=s.tenant_id AND seg.submission_id=s.id AND seg.id=$2::uuid AND seg.deleted_at IS NULL)`)
-	case "capture_batch":
-		return `SELECT ` + examProjection + ` FROM capture_batch b JOIN exam e ON e.tenant_id=b.tenant_id AND e.id=b.exam_id LEFT JOIN exam_class ec ON ec.tenant_id=e.tenant_id AND ec.exam_id=e.id AND ec.deleted_at IS NULL WHERE b.tenant_id=$1::uuid AND b.id=$2::uuid AND b.deleted_at IS NULL GROUP BY e.id`
 	case "capture_page":
 		return capturePageBoundaryQuery(`cp.id=$2::uuid`)
 	case "page_registration_run":
 		return capturePageBoundaryQuery(`EXISTS(SELECT 1 FROM page_registration_run pr WHERE pr.tenant_id=cp.tenant_id AND pr.capture_page_id=cp.id AND pr.id=$2::uuid AND pr.deleted_at IS NULL)`)
 	case "page_registration_correction":
 		return capturePageBoundaryQuery(`EXISTS(SELECT 1 FROM page_registration_correction pc WHERE pc.tenant_id=cp.tenant_id AND pc.capture_page_id=cp.id AND pc.id=$2::uuid AND pc.deleted_at IS NULL)`)
+	case "ocr_task":
+		return submissionBoundaryQuery(`EXISTS(SELECT 1 FROM ocr_task ot WHERE ot.tenant_id=s.tenant_id AND ot.submission_id=s.id AND ot.id=$2::uuid AND ot.deleted_at IS NULL)`)
+	case "ai_grade":
+		return submissionBoundaryQuery(`EXISTS(SELECT 1 FROM ai_grade ag JOIN answer_segment aseg ON aseg.tenant_id=ag.tenant_id AND aseg.id=ag.answer_segment_id AND aseg.deleted_at IS NULL WHERE ag.tenant_id=s.tenant_id AND aseg.submission_id=s.id AND ag.id=$2::uuid AND ag.deleted_at IS NULL)`)
+	case "math_understanding":
+		return submissionBoundaryQuery(`EXISTS(SELECT 1 FROM math_understanding_artifact ma JOIN answer_segment aseg ON aseg.tenant_id=ma.tenant_id AND aseg.id=ma.answer_segment_id AND aseg.deleted_at IS NULL WHERE ma.tenant_id=s.tenant_id AND aseg.submission_id=s.id AND ma.id=$2::uuid)`)
+	case "ai_human_disagreement":
+		return submissionBoundaryQuery(`EXISTS(SELECT 1 FROM ai_human_disagreement d WHERE d.tenant_id=s.tenant_id AND d.submission_id=s.id AND d.id=$2::uuid)`)
+	default:
+		return ""
+	}
+}
+
+func gradingResourceBoundaryQuery(resourceType string) string {
+	switch resourceType {
 	case "review_task":
 		return taskBoundaryQuery("review_task")
 	case "arbitration_task":
@@ -266,34 +354,42 @@ func resourceBoundaryQuery(resourceType string) string {
 		return examOwnedBoundaryQuery("scoring_rule")
 	case "scoring_run":
 		return examOwnedBoundaryQuery("scoring_run")
-	case "student":
-		return `SELECT st.tenant_id::text,st.school_id::text,''::text,ARRAY[COALESCE(st.class_id::text,'')],''::text,st.id::text,''::text,''::text FROM student st WHERE st.tenant_id=$1::uuid AND st.id=$2::uuid AND st.deleted_at IS NULL`
-	case "school_class":
-		return `SELECT c.tenant_id::text,c.school_id::text,c.grade_id::text,ARRAY[c.id::text],''::text,''::text,''::text,''::text FROM school_class c WHERE c.tenant_id=$1::uuid AND c.id=$2::uuid AND c.deleted_at IS NULL`
-	case "grade":
-		return `SELECT g.tenant_id::text,g.school_id::text,g.id::text,'{}'::text[],''::text,''::text,''::text,''::text FROM grade g WHERE g.tenant_id=$1::uuid AND g.id=$2::uuid AND g.deleted_at IS NULL`
 	case "appeal":
 		return `SELECT a.tenant_id::text,e.school_id::text,''::text,COALESCE(array_agg(DISTINCT ec.class_id::text) FILTER(WHERE ec.class_id IS NOT NULL),'{}'),a.exam_id::text,a.student_id::text,a.submission_id::text,COALESCE(a.assigned_to::text,'') FROM appeal a JOIN exam e ON e.tenant_id=a.tenant_id AND e.id=a.exam_id LEFT JOIN exam_class ec ON ec.tenant_id=e.tenant_id AND ec.exam_id=e.id AND ec.deleted_at IS NULL WHERE a.tenant_id=$1::uuid AND a.id=$2::uuid AND a.deleted_at IS NULL GROUP BY a.id,e.id`
 	case "question_appeal":
 		return `SELECT qa.tenant_id::text,e.school_id::text,''::text,COALESCE(array_agg(DISTINCT ec.class_id::text) FILTER(WHERE ec.class_id IS NOT NULL),'{}'),qa.exam_id::text,qa.student_id::text,qa.submission_id::text,''::text FROM question_appeal qa JOIN exam e ON e.tenant_id=qa.tenant_id AND e.id=qa.exam_id LEFT JOIN exam_class ec ON ec.tenant_id=e.tenant_id AND ec.exam_id=e.id AND ec.deleted_at IS NULL WHERE qa.tenant_id=$1::uuid AND qa.id=$2::uuid AND qa.deleted_at IS NULL GROUP BY qa.id,e.id`
 	case "score_release":
 		return examOwnedBoundaryQueryWithoutSoftDelete("score_release")
-	case "ocr_task":
-		return submissionBoundaryQuery(`EXISTS(SELECT 1 FROM ocr_task ot WHERE ot.tenant_id=s.tenant_id AND ot.submission_id=s.id AND ot.id=$2::uuid AND ot.deleted_at IS NULL)`)
-	case "omr_calibration":
-		return `SELECT ` + examProjection + ` FROM omr_calibration_session c JOIN answer_sheet_template t ON t.tenant_id=c.tenant_id AND t.id=c.template_id JOIN exam e ON e.tenant_id=t.tenant_id AND e.id=t.exam_id LEFT JOIN exam_class ec ON ec.tenant_id=e.tenant_id AND ec.exam_id=e.id AND ec.deleted_at IS NULL WHERE c.tenant_id=$1::uuid AND c.id=$2::uuid AND c.deleted_at IS NULL GROUP BY e.id`
-	case "ai_grade":
-		return submissionBoundaryQuery(`EXISTS(SELECT 1 FROM ai_grade ag JOIN answer_segment aseg ON aseg.tenant_id=ag.tenant_id AND aseg.id=ag.answer_segment_id AND aseg.deleted_at IS NULL WHERE ag.tenant_id=s.tenant_id AND aseg.submission_id=s.id AND ag.id=$2::uuid AND ag.deleted_at IS NULL)`)
 	case "subjective_grading_batch":
 		return `SELECT MIN(b.tenant_id::text),MIN(e.school_id::text),''::text,COALESCE(array_agg(DISTINCT ec.class_id::text) FILTER(WHERE ec.class_id IS NOT NULL),'{}'),MIN(e.id::text),''::text,''::text,''::text FROM subjective_grading_batch b JOIN LATERAL jsonb_array_elements_text(b.segment_ids) ids(id) ON true JOIN answer_segment seg ON seg.tenant_id=b.tenant_id AND seg.id::text=ids.id AND seg.deleted_at IS NULL JOIN submission s ON s.tenant_id=seg.tenant_id AND s.id=seg.submission_id AND s.deleted_at IS NULL JOIN exam e ON e.tenant_id=s.tenant_id AND e.id=s.exam_id AND e.deleted_at IS NULL LEFT JOIN exam_class ec ON ec.tenant_id=e.tenant_id AND ec.exam_id=e.id AND ec.deleted_at IS NULL WHERE b.tenant_id=$1::uuid AND b.id=$2::uuid AND b.deleted_at IS NULL GROUP BY b.id HAVING COUNT(DISTINCT e.id)=1`
 	case "review_annotation":
 		return `SELECT t.tenant_id::text,e.school_id::text,''::text,COALESCE(array_agg(DISTINCT ec.class_id::text) FILTER(WHERE ec.class_id IS NOT NULL),'{}'),t.exam_id::text,COALESCE(s.student_id::text,''),t.submission_id::text,COALESCE(t.assigned_to::text,'') FROM review_annotation a JOIN review_task t ON t.tenant_id=a.tenant_id AND t.id=a.review_task_id JOIN exam e ON e.tenant_id=t.tenant_id AND e.id=t.exam_id LEFT JOIN submission s ON s.tenant_id=t.tenant_id AND s.id=t.submission_id LEFT JOIN exam_class ec ON ec.tenant_id=e.tenant_id AND ec.exam_id=e.id AND ec.deleted_at IS NULL WHERE a.tenant_id=$1::uuid AND a.id=$2::uuid AND a.deleted_at IS NULL AND t.deleted_at IS NULL GROUP BY a.id,t.id,e.id,s.id`
+	case "answer_group":
+		return examOwnedBoundaryQueryWithoutSoftDelete("answer_group")
+	default:
+		return ""
+	}
+}
+
+func organizationResourceBoundaryQuery(resourceType string) string {
+	switch resourceType {
+	case "student":
+		return `SELECT st.tenant_id::text,st.school_id::text,''::text,ARRAY[COALESCE(st.class_id::text,'')],''::text,st.id::text,''::text,''::text FROM student st WHERE st.tenant_id=$1::uuid AND st.id=$2::uuid AND st.deleted_at IS NULL`
+	case "school_class":
+		return `SELECT c.tenant_id::text,c.school_id::text,c.grade_id::text,ARRAY[c.id::text],''::text,''::text,''::text,''::text FROM school_class c WHERE c.tenant_id=$1::uuid AND c.id=$2::uuid AND c.deleted_at IS NULL`
+	case "grade":
+		return `SELECT g.tenant_id::text,g.school_id::text,g.id::text,'{}'::text[],''::text,''::text,''::text,''::text FROM grade g WHERE g.tenant_id=$1::uuid AND g.id=$2::uuid AND g.deleted_at IS NULL`
+	default:
+		return ""
+	}
+}
+
+func operationsResourceBoundaryQuery(resourceType string) string {
+	switch resourceType {
 	case "orchestration_run":
 		return orchestrationBoundaryQuery(`o.id=$2::uuid`)
 	case "agent_task":
 		return orchestrationBoundaryQuery(`EXISTS(SELECT 1 FROM agent_task at WHERE at.tenant_id=o.tenant_id AND at.orchestration_run_id=o.id AND at.id=$2::uuid AND at.deleted_at IS NULL)`)
-	case "answer_group":
-		return examOwnedBoundaryQueryWithoutSoftDelete("answer_group")
 	case "backmark_batch":
 		return examOwnedBoundaryQueryWithoutSoftDelete("backmark_batch")
 	case "backmark_item":
@@ -316,10 +412,6 @@ func resourceBoundaryQuery(resourceType string) string {
 		return examOwnedBoundaryQueryWithoutSoftDelete("release_gate_waiver_request")
 	case "capture_upload":
 		return examOwnedBoundaryQueryWithoutSoftDelete("capture_upload_session")
-	case "math_understanding":
-		return submissionBoundaryQuery(`EXISTS(SELECT 1 FROM math_understanding_artifact ma JOIN answer_segment aseg ON aseg.tenant_id=ma.tenant_id AND aseg.id=ma.answer_segment_id AND aseg.deleted_at IS NULL WHERE ma.tenant_id=s.tenant_id AND aseg.submission_id=s.id AND ma.id=$2::uuid)`)
-	case "ai_human_disagreement":
-		return submissionBoundaryQuery(`EXISTS(SELECT 1 FROM ai_human_disagreement d WHERE d.tenant_id=s.tenant_id AND d.submission_id=s.id AND d.id=$2::uuid)`)
 	default:
 		return ""
 	}

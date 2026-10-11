@@ -14,7 +14,7 @@ for (const viewport of viewports) {
     test.setTimeout(90_000);
     await page.setViewportSize(viewport);
     await installApiMocks(page, { role: "school_admin", initiallyAuthenticated: true });
-    await page.goto("/#/admin/exams/new", { waitUntil: "networkidle" });
+    await page.goto("/#/admin/exams/new", { waitUntil: "domcontentloaded" });
     await expect(page.locator(".exam-composer")).toBeVisible({ timeout: 30_000 });
     await expect(page.locator(".sidebar")).toHaveCount(0);
     await expect(page.locator(".ant-steps")).toHaveCount(0);

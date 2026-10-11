@@ -9,9 +9,8 @@ import (
 
 const maxIdempotencyKeyLength = 200
 
-// PrepareCreateInput normalizes the OCR configuration and supplies a stable
-// key when callers do not provide one. A deliberate re-run can use a new key;
-// a transport retry with the same request reuses the original source task.
+// PrepareCreateInput 规范化 OCR 配置，并在调用方未提供键时补充稳定的键。
+// 主动重新运行可使用新键；同一请求的传输重试复用原来源任务。
 func PrepareCreateInput(submissionID string, input CreateTaskInput) (CreateTaskInput, error) {
 	input = NormalizeCreateInput(input)
 	input.IdempotencyKey = strings.TrimSpace(input.IdempotencyKey)

@@ -1,8 +1,8 @@
 ARG OCR_PYTHON_IMAGE=python:3.11.15-slim-trixie
 FROM ${OCR_PYTHON_IMAGE}
 
-# A locally cached OCR image can be used as the base for fast rebuilds. Its
-# final stage runs as nobody, so explicitly restore build-time privileges.
+# 本地缓存的 OCR 镜像可作为快速重建的基础镜像。它的
+# 最终阶段使用 nobody 用户，因此需显式恢复构建阶段权限。
 USER root
 
 ARG INSTALL_PADDLEOCR=true
@@ -16,6 +16,9 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
+# FormulaRecognition 在 LaTeX 后处理中延迟导入 ftfy，
+# 受保护的公式路径使用 MathText 回渲染验证。这两项必须在
+# Paddle 条件分支外安装，以支持 INSTALL_PADDLEOCR=false。
 RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked \
     python -m pip install --index-url "$PIP_INDEX_URL" \
       "pip==26.1.2" "setuptools==83.0.0" \
@@ -25,18 +28,12 @@ RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked \
       if [ "$INSTALL_PADDLEOCR_HPI" = "true" ]; then \
         paddlex --install hpi-cpu; \
       fi; \
-    fi
+    fi \
+    && python -m pip install --index-url "$PIP_INDEX_URL" "ftfy==6.3.1" "matplotlib>=3.9,<4"
 
-# FormulaRecognition imports ftfy lazily during LaTeX post-processing, and the
-# guarded formula path uses MathText for render-back validation. Keep these in
-# the always-installed layer so a dependency-complete base image can be reused
-# with INSTALL_PADDLEOCR=false.
-RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked \
-    python -m pip install --index-url "$PIP_INDEX_URL" "ftfy==6.3.1" "matplotlib>=3.9,<4"
-
-# System libraries change far less often than application source. Keep this
-# before the source COPY so editing the OCR worker does not invalidate apt's
-# layer and download the same Debian packages again.
+# 系统库的变化频率远低于应用源码。把此步骤
+# 放在源码 COPY 前，避免修改 OCR 工作进程时使 apt 层缓存失效，
+# 从而重复下载相同的 Debian 软件包。
 RUN sed -i \
       -e "s|http://deb.debian.org/debian-security|$DEBIAN_SECURITY_MIRROR|g" \
       -e "s|http://deb.debian.org/debian|$DEBIAN_MIRROR|g" \
@@ -45,17 +42,16 @@ RUN sed -i \
     && apt-get install -y --no-install-recommends libgomp1 libgl1 libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy frequently changed shared/runtime source only after the large Paddle and
-# operating-system dependency layers. Normal worker code edits can now reuse
-# those layers without downloading the same packages again.
+# 在大型 Paddle 和操作系统依赖层之后，
+# 再复制经常变化的共享代码和运行时代码。常规工作进程代码修改
+# 就能复用这些依赖层，无需再次下载相同的软件包。
 COPY packages/worker-runtime-python /tmp/worker-runtime-python
 COPY services/ocr-worker/pyproject.toml ./pyproject.toml
 COPY services/ocr-worker/ocr_worker ./ocr_worker
-# setuptools is already pinned above. Avoid creating two isolated build
-# environments (and downloading setuptools twice) on every source rebuild.
-RUN python -m pip install --no-cache-dir --no-deps --no-build-isolation /tmp/worker-runtime-python .
-
-RUN install -d -o nobody -g nogroup \
+# 上方已固定 setuptools 版本，避免每次源码重建时创建两个
+# 隔离构建环境，并重复下载 setuptools。
+RUN python -m pip install --no-cache-dir --no-deps --no-build-isolation /tmp/worker-runtime-python . \
+    && install -d -o nobody -g nogroup \
       /home/ocr-worker/.paddlex \
       /home/ocr-worker/.modelscope \
       /home/ocr-worker/.cache \
@@ -63,18 +59,18 @@ RUN install -d -o nobody -g nogroup \
       /home/ocr-worker/.config \
       /home/ocr-worker/.config/matplotlib
 
-# PaddleX initializes its cache while importing PaddleOCR. The runtime user is
-# intentionally non-root, so give it a stable writable cache location. Keep
-# these runtime-only variables after dependency installation so changing them
-# does not invalidate the large Paddle image layer.
+# PaddleX 在导入 PaddleOCR 时初始化缓存。运行时用户
+# 有意使用非 root 账号，因此要提供稳定且可写的缓存目录。
+# 这些仅供运行时使用的变量放在依赖安装后，避免修改变量时
+# 使大型 Paddle 镜像层缓存失效。
 ENV HOME=/home/ocr-worker
 ENV PADDLE_PDX_CACHE_HOME=/home/ocr-worker/.paddlex
 ENV MPLCONFIGDIR=/home/ocr-worker/.config/matplotlib
 
 USER nobody
 
-# Generate the font index once in the image. Runtime render validation then
-# starts without a permission warning or an avoidable per-container scan.
+# 在镜像中一次性生成字体索引。运行时渲染验证启动时
+# 就不会出现权限警告，也无需每个容器重复扫描。
 RUN python -c "from matplotlib import font_manager; font_manager._load_fontmanager()"
 
 CMD ["python", "-m", "ocr_worker"]

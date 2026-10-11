@@ -62,8 +62,7 @@ func AssessStoredSandboxAdmission(
 	return decision
 }
 
-// AssessSandboxAdmission is the final offline gate before a future native
-// provider sandbox invocation. It does not resolve credentials or perform I/O.
+// AssessSandboxAdmission 是未来调用原生提供方沙箱前的最终离线门禁，不解析凭据，也不执行 I/O。
 func AssessSandboxAdmission(
 	provider Provider,
 	deployment Deployment,
@@ -93,6 +92,33 @@ func AssessSandboxAdmission(
 	if modality != "text" && modality != "image" {
 		block("modality_invalid")
 	}
+	// 汇总全部阻断原因，不能在某一阶段失败后提前返回。
+	collectSandboxRuntimeBlockers(provider, deployment, policy, secret, evidence, modality, block)
+	collectSandboxEvidenceBlockers(provider, deployment, evidence, block)
+	if now.IsZero() ||
+		evidence.ExpiresAt.IsZero() ||
+		!evidence.ExpiresAt.After(now) ||
+		evidence.ExpiresAt.Sub(now) > maxSandboxApprovalLifetime {
+		block("approval_expired_or_unbounded")
+	}
+
+	codes := make([]string, 0, len(blockers))
+	for code := range blockers {
+		codes = append(codes, code)
+	}
+	sort.Strings(codes)
+	return SandboxAdmissionDecision{Allowed: len(codes) == 0, Blockers: codes}
+}
+
+func collectSandboxRuntimeBlockers(
+	provider Provider,
+	deployment Deployment,
+	policy TenantPolicy,
+	secret SecretProbe,
+	evidence SandboxAdmissionEvidence,
+	modality string,
+	block func(string),
+) {
 	if provider.Status != "active" ||
 		deployment.Status != "shadow_only" ||
 		deployment.HealthState != "available" {
@@ -119,6 +145,14 @@ func AssessSandboxAdmission(
 	if !secret.ResolverSupported || !secret.Configured || !secret.MeetsMinimumStrength {
 		block("credential_not_ready")
 	}
+}
+
+func collectSandboxEvidenceBlockers(
+	provider Provider,
+	deployment Deployment,
+	evidence SandboxAdmissionEvidence,
+	block func(string),
+) {
 	if evidence.Protocol != SandboxProtocolDashScopeNative {
 		block("native_protocol_not_approved")
 	}
@@ -153,17 +187,4 @@ func AssessSandboxAdmission(
 	if !evidence.SyntheticDataOnly {
 		block("synthetic_data_only_required")
 	}
-	if now.IsZero() ||
-		evidence.ExpiresAt.IsZero() ||
-		!evidence.ExpiresAt.After(now) ||
-		evidence.ExpiresAt.Sub(now) > maxSandboxApprovalLifetime {
-		block("approval_expired_or_unbounded")
-	}
-
-	codes := make([]string, 0, len(blockers))
-	for code := range blockers {
-		codes = append(codes, code)
-	}
-	sort.Strings(codes)
-	return SandboxAdmissionDecision{Allowed: len(codes) == 0, Blockers: codes}
 }

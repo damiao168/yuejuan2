@@ -145,8 +145,7 @@ func findPaperImportCommandInTx(ctx context.Context, tx *sql.Tx, tenantID, actor
 	if commandID == "" || actorID == "" {
 		return "", "", ErrNotFound
 	}
-	// Serialize the same command before checking its receipt, including the
-	// first insert where there is no business row to lock yet.
+	// 检查收据前先串行化同一命令，包括尚无业务行可锁的首次插入。
 	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1,0))`, "paper-import-command:"+tenantID+":"+actorID+":"+commandID); err != nil {
 		return "", "", err
 	}
@@ -244,15 +243,21 @@ FROM agent_worker_task WHERE tenant_id=$1 AND id=$2::uuid`, tenantID, taskID).Sc
 	return nil
 }
 
-// The run identity alone cannot authorize a stage result: a valid decode lease
-// must never complete a parse task, nor may a parse lease publish another input.
-func validatePaperImportStageBinding(ctx context.Context, tx *sql.Tx, tenantID, taskID, runID string, generation int64, taskType, sourceType, sourceID string) error {
+// 阶段类型和来源身份必须成组核对，不能让其他阶段的有效租约发布这份输入。
+type paperImportTaskStage struct {
+	taskType   string
+	sourceType string
+	sourceID   string
+}
+
+// 仅凭运行身份不能授权阶段结果：有效解码租约绝不能完成解析任务，解析租约也不能发布其他输入。
+func validatePaperImportStageBinding(ctx context.Context, tx *sql.Tx, tenantID, taskID, runID string, generation int64, stage paperImportTaskStage) error {
 	if err := validatePaperImportTaskBinding(ctx, tx, tenantID, taskID, runID, generation); err != nil {
 		return err
 	}
 	var matches bool
 	err := tx.QueryRowContext(ctx, `SELECT task_type=$3 AND source_type=$4 AND source_id=$5::uuid
-FROM agent_worker_task WHERE tenant_id=$1 AND id=$2::uuid FOR UPDATE`, tenantID, taskID, taskType, sourceType, sourceID).Scan(&matches)
+FROM agent_worker_task WHERE tenant_id=$1 AND id=$2::uuid FOR UPDATE`, tenantID, taskID, stage.taskType, stage.sourceType, stage.sourceID).Scan(&matches)
 	if err != nil {
 		return err
 	}

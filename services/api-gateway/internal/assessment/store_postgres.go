@@ -448,8 +448,23 @@ func validateAllowedEvidence(selected []EvidenceType, profile SubjectProfile, ar
 	if requireEvidence && len(selected) == 0 {
 		return ErrInvalidInput
 	}
+	profileAllowed := profileEvidenceTypes(profile.EvidencePolicy["allowed_types"])
+	archetypeAllowed := map[EvidenceType]bool{}
+	for _, value := range archetype.EvidenceTypes {
+		archetypeAllowed[value] = true
+	}
+	for _, value := range selected {
+		if !profileAllowed[value] || !archetypeAllowed[value] {
+			return ErrInvalidInput
+		}
+	}
+	return nil
+}
+
+// 数据库 JSON 使用 []any，内存配置也可使用两种类型明确的切片；其他值不提供可用证据类型。
+func profileEvidenceTypes(rawTypes any) map[EvidenceType]bool {
 	profileAllowed := map[EvidenceType]bool{}
-	switch raw := profile.EvidencePolicy["allowed_types"].(type) {
+	switch raw := rawTypes.(type) {
 	case []any:
 		for _, value := range raw {
 			if text, ok := value.(string); ok {
@@ -465,16 +480,7 @@ func validateAllowedEvidence(selected []EvidenceType, profile SubjectProfile, ar
 			profileAllowed[value] = true
 		}
 	}
-	archetypeAllowed := map[EvidenceType]bool{}
-	for _, value := range archetype.EvidenceTypes {
-		archetypeAllowed[value] = true
-	}
-	for _, value := range selected {
-		if !profileAllowed[value] || !archetypeAllowed[value] {
-			return ErrInvalidInput
-		}
-	}
-	return nil
+	return profileAllowed
 }
 
 func mapStoreError(err error) error {

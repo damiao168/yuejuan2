@@ -3,7 +3,30 @@
   flex-direction: column;
   gap: 12px;
   min-width: 0;
+  container: score-shell / inline-size;
 }
+
+.score-publication-status {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.score-publication-status > div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--primary);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.score-publication-status > div + div { border-left-color: var(--success-text); }
+.score-publication-eyebrow { color: var(--text-muted); font-size: var(--eg-font-caption); font-weight: 600; }
+.score-publication-status strong { font-size: var(--eg-font-reading); }
+.score-publication-status p { margin: 0; color: var(--text-muted); line-height: 1.55; }
 
 .score-summary-strip,
 .score-quality-panel,
@@ -79,11 +102,20 @@
 
 .score-workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px;
   gap: 12px;
   align-items: start;
   min-width: 0;
 }
+
+/* 宽屏并列展示两条发布流程，窄屏将操作区提到长表格前。 */
+.score-workspace:not(.read-only) {
+  grid-template-columns: minmax(0, 1fr) 340px;
+  grid-template-areas: "release actions" "main actions";
+}
+
+.score-workspace:not(.read-only) .score-main { grid-area: main; }
+.score-workspace:not(.read-only) .score-actions-panel { grid-area: actions; }
+.score-workspace:not(.read-only) .score-release-workspace { grid-area: release; }
 
 .score-main {
   min-width: 0;
@@ -281,13 +313,13 @@
 
 .score-release-columns {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 20px;
+  grid-template-columns: 1fr;
+  gap: 16px;
 }
 
 .score-release-columns > section + section {
-  padding-left: 20px;
-  border-left: 1px solid var(--border);
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
 }
 
 .score-release-row,
@@ -320,5 +352,51 @@
   gap: 6px;
   color: var(--text-muted);
   font-size: var(--eg-font-body);
+}
+
+@container score-shell (max-width: 1180px) {
+  .score-workspace:not(.read-only) {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "actions" "release" "main";
+  }
+
+  .score-actions-panel {
+    position: static;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: start;
+    gap: 16px;
+  }
+
+  .score-actions-panel > .panel-head,
+  .score-actions-panel > .ant-alert,
+  .score-actions-panel > .score-step-divider,
+  .score-actions-panel > .score-advanced-details {
+    grid-column: 1 / -1;
+  }
+
+  .score-summary-strip { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+@container score-shell (max-width: 760px) {
+  .score-actions-panel { grid-template-columns: 1fr; }
+  .score-summary-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .score-release-heading,
+  .score-release-subhead,
+  .score-release-row,
+  .score-release-gate-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .score-release-gate-row > .ant-btn { margin-left: 0; }
+}
+
+@container score-shell (max-width: 560px) {
+  .score-publication-status { grid-template-columns: 1fr; }
+  .score-exam-select { width: 100%; }
+}
+
+@container score-shell (max-width: 420px) {
+  .score-summary-strip { grid-template-columns: 1fr; }
 }
 

@@ -67,40 +67,8 @@ func NewHandler(store Store, sessionTTL time.Duration, options ...HandlerOptions
 		DeviceBindingTTL:   DefaultDeviceBindingTTL,
 	}
 	if len(options) > 0 {
-		if options[0].LoginFailureLimit > 0 {
-			cfg.LoginFailureLimit = options[0].LoginFailureLimit
-		}
-		if options[0].LoginFailureWindow > 0 {
-			cfg.LoginFailureWindow = options[0].LoginFailureWindow
-		}
-		if options[0].RememberedSessionTTL > 0 {
-			cfg.RememberedSessionTTL = options[0].RememberedSessionTTL
-		}
-		if options[0].PublicSessionTTL > 0 {
-			cfg.PublicSessionTTL = options[0].PublicSessionTTL
-		}
-		if strings.TrimSpace(options[0].CookieName) != "" {
-			cfg.CookieName = strings.TrimSpace(options[0].CookieName)
-		}
-		if strings.TrimSpace(options[0].DeviceCookieName) != "" {
-			cfg.DeviceCookieName = strings.TrimSpace(options[0].DeviceCookieName)
-		}
-		cfg.CookieSecure = options[0].CookieSecure
-		cfg.RiskMode = normalizeRiskMode(options[0].RiskMode)
-		if options[0].DeviceBindingTTL > 0 {
-			cfg.DeviceBindingTTL = options[0].DeviceBindingTTL
-		}
-		cfg.LoginLimiter = options[0].LoginLimiter
-		cfg.LoginGuard = options[0].LoginGuard
-		cfg.LoginLimiterFailClosed = options[0].LoginLimiterFailClosed
-		cfg.TrustedProxyCIDRs = options[0].TrustedProxyCIDRs
-		cfg.MFAEnabled = options[0].MFAEnabled
-		cfg.MFAMasterKey = options[0].MFAMasterKey
-		cfg.WechatEnabled = options[0].WechatEnabled
-		cfg.WechatAppID = strings.TrimSpace(options[0].WechatAppID)
-		cfg.WechatAppSecret = strings.TrimSpace(options[0].WechatAppSecret)
-		cfg.WechatRedirectURL = strings.TrimSpace(options[0].WechatRedirectURL)
-		cfg.WechatChallengeTTL = options[0].WechatChallengeTTL
+		// 沿用第一份可选配置；非正数限额不覆盖默认值，后续配置不参与合并。
+		cfg = mergeHandlerOptions(cfg, options[0])
 	}
 	if cfg.CookieName == "" {
 		cfg.CookieName = DefaultSessionCookieName
@@ -130,7 +98,7 @@ func NewHandler(store Store, sessionTTL time.Duration, options ...HandlerOptions
 	}
 	var credentialCipher *mfaCipher
 	if cfg.MFAEnabled {
-		credentialCipher, _ = newMFACipher(cfg.MFAMasterKey) // Invalid configuration fails closed.
+		credentialCipher, _ = newMFACipher(cfg.MFAMasterKey) // 配置无效时拒绝放行。
 	}
 	handler := &Handler{
 		store:                  store,
@@ -170,6 +138,44 @@ func NewHandler(store Store, sessionTTL time.Duration, options ...HandlerOptions
 		},
 	)
 	return handler
+}
+
+func mergeHandlerOptions(cfg HandlerOptions, option HandlerOptions) HandlerOptions {
+	if option.LoginFailureLimit > 0 {
+		cfg.LoginFailureLimit = option.LoginFailureLimit
+	}
+	if option.LoginFailureWindow > 0 {
+		cfg.LoginFailureWindow = option.LoginFailureWindow
+	}
+	if option.RememberedSessionTTL > 0 {
+		cfg.RememberedSessionTTL = option.RememberedSessionTTL
+	}
+	if option.PublicSessionTTL > 0 {
+		cfg.PublicSessionTTL = option.PublicSessionTTL
+	}
+	if strings.TrimSpace(option.CookieName) != "" {
+		cfg.CookieName = strings.TrimSpace(option.CookieName)
+	}
+	if strings.TrimSpace(option.DeviceCookieName) != "" {
+		cfg.DeviceCookieName = strings.TrimSpace(option.DeviceCookieName)
+	}
+	cfg.CookieSecure = option.CookieSecure
+	cfg.RiskMode = normalizeRiskMode(option.RiskMode)
+	if option.DeviceBindingTTL > 0 {
+		cfg.DeviceBindingTTL = option.DeviceBindingTTL
+	}
+	cfg.LoginLimiter = option.LoginLimiter
+	cfg.LoginGuard = option.LoginGuard
+	cfg.LoginLimiterFailClosed = option.LoginLimiterFailClosed
+	cfg.TrustedProxyCIDRs = option.TrustedProxyCIDRs
+	cfg.MFAEnabled = option.MFAEnabled
+	cfg.MFAMasterKey = option.MFAMasterKey
+	cfg.WechatEnabled = option.WechatEnabled
+	cfg.WechatAppID = strings.TrimSpace(option.WechatAppID)
+	cfg.WechatAppSecret = strings.TrimSpace(option.WechatAppSecret)
+	cfg.WechatRedirectURL = strings.TrimSpace(option.WechatRedirectURL)
+	cfg.WechatChallengeTTL = option.WechatChallengeTTL
+	return cfg
 }
 
 type loginRequest struct {
@@ -249,7 +255,7 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request, tokenResponse bo
 func (h *Handler) writeLoginError(w http.ResponseWriter, r *http.Request, err error) {
 	var loginErr *LoginServiceError
 	if !errors.As(err, &loginErr) {
-		httpx.Error(w, r, http.StatusInternalServerError, "session_create_failed", "failed to create session")
+		httpx.Error(w, r, http.StatusInternalServerError, "session_create_failed", authSessionCreateFailed)
 		return
 	}
 	switch loginErr.Kind {
@@ -283,11 +289,11 @@ func (h *Handler) writeLoginError(w http.ResponseWriter, r *http.Request, err er
 	case LoginFailureClientTypeRequired:
 		httpx.Error(w, r, http.StatusBadRequest, "client_type_required", "client_type must be desktop or service")
 	case LoginFailureTokenGeneration:
-		httpx.Error(w, r, http.StatusInternalServerError, "token_generation_failed", "failed to create session")
+		httpx.Error(w, r, http.StatusInternalServerError, "token_generation_failed", authSessionCreateFailed)
 	case LoginFailureSessionCreate:
-		httpx.Error(w, r, http.StatusInternalServerError, "session_create_failed", "failed to create session")
+		httpx.Error(w, r, http.StatusInternalServerError, "session_create_failed", authSessionCreateFailed)
 	default:
-		httpx.Error(w, r, http.StatusInternalServerError, "session_create_failed", "failed to create session")
+		httpx.Error(w, r, http.StatusInternalServerError, "session_create_failed", authSessionCreateFailed)
 	}
 }
 

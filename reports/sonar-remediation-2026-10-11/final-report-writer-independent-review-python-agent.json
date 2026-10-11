@@ -1,0 +1,119 @@
+{
+  "reviewed_at_utc": "2026-10-11T11:41:57.080346+00:00",
+  "reviewer": "/root/sonar_python_fix",
+  "writer": "D:\\project\\yuejuan\\reports\\sonar-remediation-2026-10-11\\write_final_report.py",
+  "writer_sha256": "3f61c082f21f015b44aa0fc29f2075d960f709cd39d48daa596ace633bbe5ce2",
+  "review_scope": "write_final_report.py 整份源码和全部报告文案全文审读；统计口径对照原平台 JSON、已核对执行证据、独立E2E/动态源SHA报告。未执行其main，未修改该文件。",
+  "original_counts_independently_computed": {
+    "type": {
+      "CODE_SMELL": 560,
+      "VULNERABILITY": 10,
+      "BUG": 1653
+    },
+    "severity": {
+      "MAJOR": 1829,
+      "MINOR": 164,
+      "CRITICAL": 230
+    }
+  },
+  "hardcoded_original_counts_match": true,
+  "report_logic_review": [
+    "先要求final-audit all_issue_work_complete true，保留旧final报告；逐key输出唯一2270及原源码/规则/严重度。",
+    "源码FIXED、人工FALSE_POSITIVE、唯一ACCEPTED分别计数，没有把35人工处置算作源码修复。",
+    "平台度量、生产ncloc、维护文件和测试输入口径分开；文件自动枚举不等于全文人工审读。",
+    "质量门禁仍按实际ERROR显示；new_coverage 0因没有导入，不声称实测0%或降低80%门槛。",
+    "Web单测416、类型检查、Node生产契约17和SDK18分别列出；没有相加成唯一全仓测试数量。",
+    "server188pass与61PGskip+1helper严格区分；题库PG0pass5skip不是业务集成通过。",
+    "模型治理366旧动态证明仅依据117实际编译输入SHA仍一致；fresh45补验为重叠批次，不追加到旧1006唯一测试总数。",
+    "E2E47请求、23启动标记后中断及10失败真实保留：2原有UI/快照不一致、2资源阻断断言、6基础设施失败；未更新快照，不把基线差异当作验收通过。",
+    "图纸浏览器QA、Docker和Rust Clippy未实际运行的边界明确，历史CodeQL/Rust只作历史证据。",
+    "本轮当前全仓只复扫Sonar；历史Semgrep/CodeQL/Actions/覆盖率不绑定到最新版本，云端Actions/Codecov未执行。"
+  ],
+  "fixed_input_api_catalog_counts_verified": {
+    "frontend_source_inventory": 854,
+    "non_test_ts_source_files": 485,
+    "production_frontend_routes": 24,
+    "mock_frontend_routes": 4,
+    "registered_backend_routes": 536,
+    "registered_with_openapi": 288,
+    "registered_exception_routes": 248,
+    "openapi_operations": 298,
+    "openapi_parameter_name_aliases": 10,
+    "generated_sdk_unique_used_operations": 139,
+    "frontend_call_sites": 405,
+    "frontend_matched_unique_registered_routes": 376,
+    "frontend_matched_openapi_routes": 217,
+    "frontend_matched_exception_routes": 159,
+    "unresolved_static_call_sites": 1
+  },
+  "evidence_references": [
+    {
+      "file": "frontend-web-retry-01-execution.json",
+      "exists": true,
+      "sha256": "1630b647bdd4433e2f986c461add8e76a999b5be58bf7d29ffaddba61fcf62ca"
+    },
+    {
+      "file": "frontend-web-current-typecheck-02.json",
+      "exists": true,
+      "sha256": "186a0d213ee8a67b571c8280e0b81fdb5e9eda08b9abeb70c1a0e9d5141bf2b6"
+    },
+    {
+      "file": "frontend-production-contracts-current-01.json",
+      "exists": true,
+      "sha256": "e7893507ab2bbc69ae541ef7e83df0f448182a155e686712163b9a991f73a2bf"
+    },
+    {
+      "file": "go-final-validation-audit.md",
+      "exists": true,
+      "sha256": "f0429d7e1415441c99eb5d90517e72518e01d977cfaa8999a9b71e27bd044f88"
+    },
+    {
+      "file": "go-server-batch04-tests.json",
+      "exists": true,
+      "sha256": "9ea3e380614f581b895775a46f0f2e69aa8923d8b6614c52d3462147741b94e5"
+    },
+    {
+      "file": "go-server-question-bank-progress.md",
+      "exists": true,
+      "sha256": "e458fa624b3058fbbe939fcd3c24d104004940483e6a1239265ef10805f24e08"
+    },
+    {
+      "file": "delivery-independent-fresh-followup-audit-python-agent.md",
+      "exists": true,
+      "sha256": "8932f818b6ff9660770c2f0998a67d3cf406c40441e0599601aeebb5d934be52"
+    },
+    {
+      "file": "fresh-python-dynamic-01/execution.json",
+      "exists": true,
+      "sha256": "54bf182e8270119d55a93639bf332fcc344e9ceecee940072738287f94965b95"
+    },
+    {
+      "file": "root-new-js-tests-02.json",
+      "exists": true,
+      "sha256": "a1da7b80216b366f6f180f2e0c19bc5177bfd3b0e97589afa2d7f0ce186b3887"
+    },
+    {
+      "file": "frontend-api-scope-equivalence-02.json",
+      "exists": true,
+      "sha256": "34833387e5b92a381a6bc46eb6a970b7768461a204d34887bbf1daaa5d68c12f"
+    },
+    {
+      "file": "python-tls-platform-evidence.md",
+      "exists": true,
+      "sha256": "4a528cac8964cd1c46d2366d5c16e97ea4213d7f1747a38a4a47f49bd4954ca0"
+    },
+    {
+      "file": "root-go-final-02-progress.md",
+      "exists": true,
+      "sha256": "cb6898192df77fcfe78f7e35838919e194a40ab14e3d2f9e02423d4b29ee78a0"
+    },
+    {
+      "file": "go-server-reliability-independent-review.md",
+      "exists": true,
+      "sha256": "bc6758fb4fcfbb72976e330faa1a03a912ee0ae2e7d55a200cee1b282a5b6676"
+    }
+  ],
+  "issues": [],
+  "pending_final_check": "full04 尚待CE分析ID与最终状态导出；本次审读不提前声称所有2270已关闭或最终平台ERROR的唯一条件。输出最终报告后需核对文字/CSV/JSON实际产物。",
+  "overall": "content_and_counting_scope_supported"
+}

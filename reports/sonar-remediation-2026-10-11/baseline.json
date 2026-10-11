@@ -1,0 +1,2346 @@
+{
+  "recorded_at": "2026-10-11T16:52:45.240137+08:00",
+  "workspace": "D:\\project\\yuejuan",
+  "backup_root": "D:\\tools\\sonar-remediation-20261011\\baseline",
+  "original_issues_sha256": "d8d5948f1f6694d45419cdfd4abcd98f3c321fb4d844c42bc6aebd66e2198cd8",
+  "issue_count": 2223,
+  "files": [
+    {
+      "path": "ai-services/grading_agent/paper_compact/anchors.py",
+      "exists": true,
+      "bytes": 24793,
+      "sha256": "7c0280d45533f9411587c5116bf0d46cb9a91c9614707cc801abf3dafa0b6251",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\ai-services\\grading_agent\\paper_compact\\anchors.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "ai-services/grading_agent/paper_compact/layout.py",
+      "exists": true,
+      "bytes": 6829,
+      "sha256": "27f26e4177784b8849943b9dd84439be5bab766c92363983324052bb7d77791c",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\ai-services\\grading_agent\\paper_compact\\layout.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "ai-services/grading_agent/paper_validation.py",
+      "exists": true,
+      "bytes": 12773,
+      "sha256": "c348d45ea41b46aef2fe900c667eebb859ab1905cda53e79bf4c4dbb490c20d3",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\ai-services\\grading_agent\\paper_validation.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "ai-services/grading_agent/paper_visual.py",
+      "exists": true,
+      "bytes": 17395,
+      "sha256": "79db5147de6c10be006a2ecb6ebff05c5bf378a0b63b9ad483627b62427275da",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\ai-services\\grading_agent\\paper_visual.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "ai-services/grading_agent/server.py",
+      "exists": true,
+      "bytes": 12310,
+      "sha256": "62c2b234657f1f29d444968d8ce815647f820b1b8c7b3eb7d6a6db6d617c637e",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\ai-services\\grading_agent\\server.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "ai-services/tests/test_application.py",
+      "exists": true,
+      "bytes": 5381,
+      "sha256": "dab4fb74bb3575190bd4000cdf5feead21866e1dbb0524e0da665cd561560d67",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\ai-services\\tests\\test_application.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "ai-services/tests/test_application_v2.py",
+      "exists": true,
+      "bytes": 6991,
+      "sha256": "6047889184957a6826585124f71ccb78792dd6adf06b0cfc969f8f6b8b46ffa8",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\ai-services\\tests\\test_application_v2.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "ai-services/tests/test_contract.py",
+      "exists": true,
+      "bytes": 8891,
+      "sha256": "7bb63ac360d99ddf29fe7f694818b839a320d953c17444cd0e8b0d112952feb3",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\ai-services\\tests\\test_contract.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "ai-services/tests/test_contract_v2.py",
+      "exists": true,
+      "bytes": 6798,
+      "sha256": "2d16a255c269889545761209b92d3f5ee63e1e682196a61dd51a14811a4cff1b",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\ai-services\\tests\\test_contract_v2.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "ai-services/tests/test_dashscope_multimodal_contract.py",
+      "exists": true,
+      "bytes": 9895,
+      "sha256": "b95c66c047e22c3391f6a5784aaee9cffb2b4ce4ebd7071544638756a79d10c1",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\ai-services\\tests\\test_dashscope_multimodal_contract.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "ai-services/tests/test_dashscope_native_transport.py",
+      "exists": true,
+      "bytes": 10365,
+      "sha256": "207862365fd2f98b98eed96d7c1b0dc9977a943fd842a74f020f40dd921ae806",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\ai-services\\tests\\test_dashscope_native_transport.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "ai-services/tests/test_managed_model.py",
+      "exists": true,
+      "bytes": 10760,
+      "sha256": "97a78c7d8eee259e25af5e3bcd29b47ed27387dea55a70394489d68138d60cbe",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\ai-services\\tests\\test_managed_model.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "ai-services/tests/test_math_rubric_draft.py",
+      "exists": true,
+      "bytes": 5035,
+      "sha256": "1c5c4f0686b1dceae32c68c3ffee3f9785e920a03e78eb8e0d6cd5f1975e77da",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\ai-services\\tests\\test_math_rubric_draft.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "ai-services/tests/test_model.py",
+      "exists": true,
+      "bytes": 15228,
+      "sha256": "b306b0efbd426fcb26911f2fe3c784acccc992e31d0c84ea292e5f39efb47817",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\ai-services\\tests\\test_model.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "ai-services/tests/test_paper_input.py",
+      "exists": true,
+      "bytes": 3249,
+      "sha256": "a106525a42181a7a12a944b7bce78cbdaaf634cf87dace6bd6dc58a1172866ee",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\ai-services\\tests\\test_paper_input.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "ai-services/tests/test_paper_parser.py",
+      "exists": true,
+      "bytes": 26109,
+      "sha256": "2c59a442d9a494143bc813dca86fc20862d7f3d87d53e8efd34ba3b3ac0847a2",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\ai-services\\tests\\test_paper_parser.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "ai-services/tests/test_paper_validation.py",
+      "exists": true,
+      "bytes": 3612,
+      "sha256": "dc8fd979c5d460d9539a099a079cbb7b69847e74a474395dbcf65cce79148335",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\ai-services\\tests\\test_paper_validation.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "ai-services/tests/test_paper_visual.py",
+      "exists": true,
+      "bytes": 3018,
+      "sha256": "5f21345f527e159e3173bd83ea85069b6a54d382acc0403e4d8102ba4492dd6b",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\ai-services\\tests\\test_paper_visual.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "ai-services/tests/test_provider_adapter.py",
+      "exists": true,
+      "bytes": 4456,
+      "sha256": "6e964ee41f8cbdadd8177e09b94b572be4d0a86bfa8223ff0cfe3da8442c3fc4",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\ai-services\\tests\\test_provider_adapter.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/desktop-client/src/components/OfflineWorkbench.tsx",
+      "exists": true,
+      "bytes": 64542,
+      "sha256": "d4bc67fb9e21a876a18f3d92daa63bb23c7a0f00d7d40c062db9e44b0f345fe3",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\desktop-client\\src\\components\\OfflineWorkbench.tsx",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/desktop-client/src/features/capture/useExamCaptureContext.ts",
+      "exists": true,
+      "bytes": 12960,
+      "sha256": "1c572e234b911aafca38583f310af7c368f00a120ff0dc56375d2cd749944aeb",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\desktop-client\\src\\features\\capture\\useExamCaptureContext.ts",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/desktop-client/src/features/upload/useUploadSync.ts",
+      "exists": true,
+      "bytes": 12479,
+      "sha256": "407226746892f9cce5cbfbbf92c3c1e9eeb46fc8c4cf9ae1a286f1a0a4f41400",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\desktop-client\\src\\features\\upload\\useUploadSync.ts",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/student-portal/src/App.paperRecovery.test.tsx",
+      "exists": true,
+      "bytes": 11166,
+      "sha256": "201af25b5019bfe0747d3f043c35a776bb1c4b4b7c93ed0c294882069bd05521",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\student-portal\\src\\App.paperRecovery.test.tsx",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/student-portal/src/App.releaseConsistency.test.tsx",
+      "exists": true,
+      "bytes": 14234,
+      "sha256": "95c238c303b005740b70f697455bcbad2f83005f05f6486b7b47bca613e23469",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\student-portal\\src\\App.releaseConsistency.test.tsx",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/student-portal/src/App.submissionReceipt.test.tsx",
+      "exists": true,
+      "bytes": 29185,
+      "sha256": "0e42cd9b976a1fd22fb236fa0df96962abbc5214b221a36b19cf361b2c6c5de3",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\student-portal\\src\\App.submissionReceipt.test.tsx",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/student-portal/src/App.tsx",
+      "exists": true,
+      "bytes": 74496,
+      "sha256": "0052d450540f9d921a9786359420ca9dcd0a2c5614a4f7a800f4af470e963295",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\student-portal\\src\\App.tsx",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/web-admin/scripts/check-production-routes.mjs",
+      "exists": true,
+      "bytes": 11075,
+      "sha256": "396aac28dba8ce350c1d4d1838fcc647aec282746a08132b03bf212f140e090b",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\scripts\\check-production-routes.mjs",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/web-admin/scripts/measure-build.mjs",
+      "exists": true,
+      "bytes": 6280,
+      "sha256": "3e26289121039634d4ee1fd42e58ed0d4d4ad03e775d497cd6c59682390cbf06",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\scripts\\measure-build.mjs",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/web-admin/scripts/production-route-contracts.mjs",
+      "exists": true,
+      "bytes": 4278,
+      "sha256": "b7be34d6c385b9cb1147b08488e7fdaad60a54ed1761796a23859047524abe74",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\scripts\\production-route-contracts.mjs",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/web-admin/src/auth/stepUpContext.tsx",
+      "exists": true,
+      "bytes": 8095,
+      "sha256": "25b0067f9d7b602cc917e17b0a32b118b5b63ec5a99c43dfec9cd6167f7b0884",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\auth\\stepUpContext.tsx",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/web-admin/src/components/AppLayout.tsx",
+      "exists": true,
+      "bytes": 15697,
+      "sha256": "3333ea8d4d7152c3f07c7d8795eaee6942553e965c16b8108ec0c0281cfa646d",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\components\\AppLayout.tsx",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/web-admin/src/components/ResponsiveTable.tsx",
+      "exists": true,
+      "bytes": 9444,
+      "sha256": "e8ab3eb6b691987592928693a3308684ac9f6471333a1d6c802cf4d953312170",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\components\\ResponsiveTable.tsx",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/web-admin/src/components/appLayoutPresentation.test.tsx",
+      "exists": true,
+      "bytes": 5483,
+      "sha256": "b3fcc0dc42e2c10c91a0d85e88fde344c326b38dfdd5b23bc4ed657ba960e799",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\components\\appLayoutPresentation.test.tsx",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/web-admin/src/components/features/review-annotation/CommentTemplateManager.tsx",
+      "exists": true,
+      "bytes": 6305,
+      "sha256": "0eac25279a6d0aaf4c44389355478d6905e30832b93968c0d9add00c2f38978a",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\components\\features\\review-annotation\\CommentTemplateManager.tsx",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/ModelApprovalWorkspace.tsx",
+      "exists": true,
+      "bytes": 11833,
+      "sha256": "602b3c76a20b99dcaf18bcfb1328f09c459d534e9d65c90bf55e3215b1602ecc",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\components\\model-governance\\ModelApprovalWorkspace.tsx",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-groups/AnswerGroupSampleEvidence.tsx",
+      "exists": true,
+      "bytes": 3686,
+      "sha256": "fc61499e0a8f78b642380d28583fddc163f6a209bc364e25b1792f54c5493a47",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\features\\answer-groups\\AnswerGroupSampleEvidence.tsx",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-groups/AnswerGroupingDrawer.test.tsx",
+      "exists": true,
+      "bytes": 32799,
+      "sha256": "76f5ff7cdb0495320acf013c791a1d3f1224b1037512658f3f192fabb93aa60f",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\features\\answer-groups\\AnswerGroupingDrawer.test.tsx",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/calibration/useOMRCalibration.batch7.test.tsx",
+      "exists": true,
+      "bytes": 5567,
+      "sha256": "de599ac4fe8997bd4ba08dc1ea1dfae4381052aa7aa290e37a987c8ca03ab417",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\features\\answer-sheet-template\\calibration\\useOMRCalibration.batch7.test.tsx",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/useRegionSuggestion.ts",
+      "exists": true,
+      "bytes": 4651,
+      "sha256": "2bec58141fe74842dc950ba5b0c12f46d3be7157c4d088d4a584720888661998",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\features\\answer-sheet-template\\editor\\useRegionSuggestion.ts",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/useTemplateEditor.ts",
+      "exists": true,
+      "bytes": 3002,
+      "sha256": "7f1afe1cc3c3fd234df152170128c7cda442022ddf033cf80974ec29b250fe38",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\features\\answer-sheet-template\\editor\\useTemplateEditor.ts",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/view/OMRCalibrationView.tsx",
+      "exists": true,
+      "bytes": 22026,
+      "sha256": "d5bf5097ec052db2f9577335adb19b13b34df0db6e3294b2a5be01f1fb4edc95",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\features\\answer-sheet-template\\view\\OMRCalibrationView.tsx",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/view/TemplateWorkspaceView.tsx",
+      "exists": true,
+      "bytes": 21113,
+      "sha256": "2641c4095524594035bbad53e22713899f4f02a06f3beefe03e1fd4722d7c609",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\features\\answer-sheet-template\\view\\TemplateWorkspaceView.tsx",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/captureColumns.tsx",
+      "exists": true,
+      "bytes": 5756,
+      "sha256": "05ffca16d96961d7de05d4e6a38b321c6847b1ed0d095983211122a606c1eb76",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\features\\capture\\captureColumns.tsx",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/create/CreateExamComposer.tsx",
+      "exists": true,
+      "bytes": 20186,
+      "sha256": "0713403671989c490acb3fa3a14abefc572acb51217fecb56ec44174470e25e9",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\features\\exams\\create\\CreateExamComposer.tsx",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/management/ManagementExamArchiveDialog.tsx",
+      "exists": true,
+      "bytes": 10554,
+      "sha256": "2cf67ece6cb94c7c0b841015b71cbcd2b5be652ac19b5f46b1d2569ce5c55839",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\features\\exams\\management\\ManagementExamArchiveDialog.tsx",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/management/ManagementExamEditDrawer.tsx",
+      "exists": true,
+      "bytes": 5880,
+      "sha256": "ef90ad2bef7bcd377e99f800b58ef472fd75082ff0d62bc37c3e09801f2bd09f",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\features\\exams\\management\\ManagementExamEditDrawer.tsx",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/web-admin/src/features/gold-papers/GoldPaperManagerDrawer.tsx",
+      "exists": true,
+      "bytes": 9633,
+      "sha256": "68db35e14f18e6a8b58263bb919437089a599b5b343c11818f52ab11e73b37bb",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\features\\gold-papers\\GoldPaperManagerDrawer.tsx",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/AnswerEvidencePane.tsx",
+      "exists": true,
+      "bytes": 8897,
+      "sha256": "df421f04e819b4a010e535bbc47bcde17b9b80432be5ab6c1b1d73d7c8ab2815",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\features\\grading\\workbench\\components\\AnswerEvidencePane.tsx",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/ExamScoringDialogs.tsx",
+      "exists": true,
+      "bytes": 7900,
+      "sha256": "b009ceb81bd07cbda38b1d4d22c90cffd2f1d5ca60e83e0534d5b3549b83507e",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\features\\grading\\workbench\\components\\ExamScoringDialogs.tsx",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/FastConfirmDrawer.tsx",
+      "exists": true,
+      "bytes": 11816,
+      "sha256": "67891fb499680420737e6bf0b8542b01ffd6161e8298833c1e6dcfb8c16d5f6c",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\features\\grading\\workbench\\components\\FastConfirmDrawer.tsx",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/MathRubricMatrix.tsx",
+      "exists": true,
+      "bytes": 6769,
+      "sha256": "20ef4750921719ef897c500a4a421fbac12edfd7f0cbb40c3c49925d55b4ba31",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\features\\grading\\workbench\\components\\MathRubricMatrix.tsx",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useAnswerViewer.ts",
+      "exists": true,
+      "bytes": 9140,
+      "sha256": "96a2d1fd217a020a5080951e019e0126b47b88905bd2e6227f14ad68cbe38417",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\features\\grading\\workbench\\hooks\\useAnswerViewer.ts",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useGradingMathActions.ts",
+      "exists": true,
+      "bytes": 5487,
+      "sha256": "f21636a8407802f79ebcc21592c06a1a30e1cbbed1c784afc43cdbcb07f43951",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\features\\grading\\workbench\\hooks\\useGradingMathActions.ts",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useGradingQueueActions.ts",
+      "exists": true,
+      "bytes": 9564,
+      "sha256": "e9bbd164298ecce1b2398b7550681d6dfff7dfdcc27046938698a1b2ff4a4f5f",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\features\\grading\\workbench\\hooks\\useGradingQueueActions.ts",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useGradingReviewActions.ts",
+      "exists": true,
+      "bytes": 16962,
+      "sha256": "355b13bf0f495b54b492c6bb60e4a3452b434d3044131408742fbdccba9b23e2",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\features\\grading\\workbench\\hooks\\useGradingReviewActions.ts",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/reviewContext.ts",
+      "exists": true,
+      "bytes": 4724,
+      "sha256": "060d0745fd4abd2c6619a2ecfc35e75d851f6236c2117b07d9755a7e0196d14e",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\features\\grading\\workbench\\reviewContext.ts",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/workbenchDraftLifecycle.ts",
+      "exists": true,
+      "bytes": 8971,
+      "sha256": "a25219d2029fb15ecee3dcdde1f60f02f3a992578366b2583d90f330101c0bfd",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\features\\grading\\workbench\\workbenchDraftLifecycle.ts",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/web-admin/src/features/members/teachers/TeacherManagementPage.tsx",
+      "exists": true,
+      "bytes": 18561,
+      "sha256": "26b9ce6c69d0d6f5fd524c6fa22317ce2160ca44a490f3c2b9397bc5234ed69a",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\features\\members\\teachers\\TeacherManagementPage.tsx",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/PaperStructurePanel.tsx",
+      "exists": true,
+      "bytes": 6312,
+      "sha256": "3d667a0fac4abe13af35a210f73a2551427ea6e8ca9460d84d135a30fae8bffd",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\features\\paper-import\\PaperStructurePanel.tsx",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/QuestionBankPage.batch45.test.tsx",
+      "exists": true,
+      "bytes": 9621,
+      "sha256": "df043c83963f1a023c0d9cb6347ba188e4b8ea283a66786baab9a3da2e9eb8ab",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\features\\question-bank\\QuestionBankPage.batch45.test.tsx",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/QuestionBankPage.tsx",
+      "exists": true,
+      "bytes": 35411,
+      "sha256": "4619218bc56eaccc58b8b94491ce145cbc28764a14145e4fd1b23fdff494eb8c",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\features\\question-bank\\QuestionBankPage.tsx",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/web-admin/src/features/school-assistant/SchoolConversation.tsx",
+      "exists": true,
+      "bytes": 21108,
+      "sha256": "48de9e37e6843aba11ab00e74eab4eb71e25dd9c944970cdb9bd89ceb74c4478",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\features\\school-assistant\\SchoolConversation.tsx",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/hooks/useRegradeWorkflow.tsx",
+      "exists": true,
+      "bytes": 10235,
+      "sha256": "e0fc9f3f53226a33f91c9cd1c0cdb6b813ae53b1922354161ed0714b50b4807c",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\features\\score-management\\hooks\\useRegradeWorkflow.tsx",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/web-admin/src/pages/AppealCenterPage.tsx",
+      "exists": true,
+      "bytes": 20798,
+      "sha256": "63ca9724fe9541f6e6286ad22fe17975ffc196a99081634f7a3adbfed19c4ae3",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\pages\\AppealCenterPage.tsx",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/web-admin/src/pages/ArbitrationTaskRail.tsx",
+      "exists": true,
+      "bytes": 4211,
+      "sha256": "205bf807531e5ace73d596bdd071f4761ad7ab18e9cb3bd4282eef8eb59ce4ba",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\pages\\ArbitrationTaskRail.tsx",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/web-admin/src/pages/CaptureBatchPage.tsx",
+      "exists": true,
+      "bytes": 35650,
+      "sha256": "6b363cc5f0c4af79ae0246e31b69628a4e255c14b69d779e0b4b32e228c5e945",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\pages\\CaptureBatchPage.tsx",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/web-admin/src/pages/ExamPreparationPage.tsx",
+      "exists": true,
+      "bytes": 24193,
+      "sha256": "83f2be44166ec66a78886f9fe6e2019d364ac996be51a5d1a80b9d9d5f727d37",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\pages\\ExamPreparationPage.tsx",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/web-admin/src/pages/PaperRubricPage.tsx",
+      "exists": true,
+      "bytes": 25391,
+      "sha256": "829e4932f654093a60f68e496fed9defb14b49de996d472714b2f46fe8af57d9",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\pages\\PaperRubricPage.tsx",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/web-admin/src/pages/PlatformModelConfigPage.test.tsx",
+      "exists": true,
+      "bytes": 25063,
+      "sha256": "2a98de7aa2a2bb274e77589f5a75f2dbd8830cb107c078b829081ed30953969c",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\pages\\PlatformModelConfigPage.test.tsx",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/web-admin/src/pages/PlatformModelConfigPage.tsx",
+      "exists": true,
+      "bytes": 37890,
+      "sha256": "ffb475f12f1b158762c88b39a9b58dedac2dbd2c942ba88b0ae90c1c036afaf1",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\pages\\PlatformModelConfigPage.tsx",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/web-admin/src/pages/QualityDashboardPage.tsx",
+      "exists": true,
+      "bytes": 34520,
+      "sha256": "640aa9e877365ffa6595bcd34c53c7a3816323509903113be99c0a850403eaa7",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\pages\\QualityDashboardPage.tsx",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/web-admin/src/pages/SubjectiveGradingBatchPage.tsx",
+      "exists": true,
+      "bytes": 9058,
+      "sha256": "82c9b54adc3514aa55829c6134428e8cde59f6b8db8426f76dec143ce7454bea",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\pages\\SubjectiveGradingBatchPage.tsx",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "apps/web-admin/src/pages/SubmissionCapturePage.tsx",
+      "exists": true,
+      "bytes": 21727,
+      "sha256": "724702f5c059f9de9e39f3f037f975c4e629c9f28783cacc2b2f8c2eaa318a40",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\apps\\web-admin\\src\\pages\\SubmissionCapturePage.tsx",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "docs/architecture/evidence/extract-frontend-api.mjs",
+      "exists": true,
+      "bytes": 15079,
+      "sha256": "f1e49b4fc45b7905c5007966a835410efd23d64cb40fef691dd906e6bc45a9ff",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\docs\\architecture\\evidence\\extract-frontend-api.mjs",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "docs/architecture/previews/index.html",
+      "exists": true,
+      "bytes": 2531762,
+      "sha256": "36072452cddac9e658ae119c003065d155a09375bc3d8747e3c9fb1bc84734a2",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\docs\\architecture\\previews\\index.html",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "docs/architecture/tools/build_database_specs.py",
+      "exists": true,
+      "bytes": 14960,
+      "sha256": "8cf12b2171204cda24c2bb6d84ada02ef7c185446b5c4bbbed1fa26465263339",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\docs\\architecture\\tools\\build_database_specs.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "docs/architecture/tools/build_diagrams.py",
+      "exists": true,
+      "bytes": 10528,
+      "sha256": "ff48d34d9280dbdc0c01824b76b678d43f237f2ae5276bd1b3994b8276cbf2ee",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\docs\\architecture\\tools\\build_diagrams.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "docs/architecture/tools/build_module_catalog.py",
+      "exists": true,
+      "bytes": 7213,
+      "sha256": "045fc62acb69411267f3985297ba9118252916b0b758bfef58e87c9b735effa9",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\docs\\architecture\\tools\\build_module_catalog.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "docs/architecture/tools/build_preview.py",
+      "exists": true,
+      "bytes": 5687,
+      "sha256": "c312b419c29126f9c9d103a4b28958097dc4df7cb5d42e81d3475796e651e00d",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\docs\\architecture\\tools\\build_preview.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "docs/architecture/tools/capture_preview_qa.js",
+      "exists": true,
+      "bytes": 2287,
+      "sha256": "0606fe358d6e5a275781c02942c3207afb845616b21bf5f1d42dfbb419527eb1",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\docs\\architecture\\tools\\capture_preview_qa.js",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "docs/architecture/tools/extract-frontend-api-recheck.mjs",
+      "exists": true,
+      "bytes": 15097,
+      "sha256": "dcd91aa6f3cf3da001e7e20dabd0fc59e3ef513f7c734a84af5e24c74d91e349",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\docs\\architecture\\tools\\extract-frontend-api-recheck.mjs",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "docs/architecture/tools/extract_database_catalog.py",
+      "exists": true,
+      "bytes": 12032,
+      "sha256": "04bde85fc0db5c039ba93a68720d814366d778c8514d2f0a9f857c285eca3088",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\docs\\architecture\\tools\\extract_database_catalog.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "docs/architecture/tools/merge_review_ledger.py",
+      "exists": true,
+      "bytes": 6994,
+      "sha256": "39900ebdf0882c83d177e2c8ed39fc49c9b0f152e0359994221798ef1fdcb617",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\docs\\architecture\\tools\\merge_review_ledger.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "docs/architecture/tools/preview_server.py",
+      "exists": true,
+      "bytes": 1336,
+      "sha256": "4fef834f6f2785e9ca07e21581bff4a48c28fefb84839c92698d806b88fa2a6f",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\docs\\architecture\\tools\\preview_server.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "docs/architecture/tools/render_native.js",
+      "exists": true,
+      "bytes": 5171,
+      "sha256": "55871091d09172fc45a7c5dc493109fcbea53f3bf44e7a5e7061799843e5f6a4",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\docs\\architecture\\tools\\render_native.js",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "docs/architecture/tools/route_obstructions.py",
+      "exists": true,
+      "bytes": 5222,
+      "sha256": "58128a5c22451e319357513b07ee72738c9ae307d1b924ce3880b3654225b8c6",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\docs\\architecture\\tools\\route_obstructions.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "docs/architecture/tools/scan_repository.py",
+      "exists": true,
+      "bytes": 3203,
+      "sha256": "66c4cd573924a36bb9ebbb897c0684082255daca44b170376a59430fac8b9bd2",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\docs\\architecture\\tools\\scan_repository.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "docs/architecture/tools/simplify_diagrams.py",
+      "exists": true,
+      "bytes": 20344,
+      "sha256": "d06c4ce2852953069c269716edcdd5a6183eb6f6bbb719cedd9ada0d11730a35",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\docs\\architecture\\tools\\simplify_diagrams.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "docs/architecture/tools/verify_delivery.py",
+      "exists": true,
+      "bytes": 7422,
+      "sha256": "db7a6e7b8924cf4eaf67d352dd2cdc2e7a8619f11096069d934b8630d7e87e78",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\docs\\architecture\\tools\\verify_delivery.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "docs/architecture/tools/write_frontend_audit.py",
+      "exists": true,
+      "bytes": 34360,
+      "sha256": "1484677788e540fa415cf3e9d0e42307b1c807acab43000ea43049be4be8a6d7",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\docs\\architecture\\tools\\write_frontend_audit.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "docs/architecture/tools/write_frontend_specs.py",
+      "exists": true,
+      "bytes": 48582,
+      "sha256": "a7e54ddb53d092bffee58e535aabe1b6e79a4758d55e175dddc4de6eaa0ccce4",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\docs\\architecture\\tools\\write_frontend_specs.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "docs/architecture/tools/write_root_review.py",
+      "exists": true,
+      "bytes": 4764,
+      "sha256": "7ee6552b361435f4607aaec863d6a25f69447e67a368f4fb9cbfc899ae22e170",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\docs\\architecture\\tools\\write_root_review.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "docs/architecture/tools/write_root_specs.py",
+      "exists": true,
+      "bytes": 22895,
+      "sha256": "c578d6167721e5de6b97b61b9a3e2ccb560496f7bbca34916efc0e468ee28970",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\docs\\architecture\\tools\\write_root_specs.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "frontend-review-report/前端UI优化方案-对标成熟产品.html",
+      "exists": true,
+      "bytes": 40082,
+      "sha256": "15cc1798f1aeba8d461990eb55a1bf9f3420ee70c2661faa038f5c65eb37f0f6",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\frontend-review-report\\前端UI优化方案-对标成熟产品.html",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "frontend-review-report/前端UI设计分析.html",
+      "exists": true,
+      "bytes": 31856,
+      "sha256": "68c136d6df346c846892d30ca0c7c822584c415332a4f5ffc0ee0ac0bc96ee0f",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\frontend-review-report\\前端UI设计分析.html",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "frontend-review-report/前端代码审查报告.html",
+      "exists": true,
+      "bytes": 46617,
+      "sha256": "7f418e96bce0940e1586913b0c7156fa3d411bd0be0d2bcb35f2144402d4b6c7",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\frontend-review-report\\前端代码审查报告.html",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "lab/evals/math-recognition/test_math_batch28.py",
+      "exists": true,
+      "bytes": 13475,
+      "sha256": "5ffbac77aa04048b16ef8f6b71bd1a28de13a9e0d9f778842f97ef7208c24a25",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\lab\\evals\\math-recognition\\test_math_batch28.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "lab/evals/math-recognition/test_math_bench.py",
+      "exists": true,
+      "bytes": 7312,
+      "sha256": "abad457df58233ff230060f461aff98bfd9a1c05bc597ba6a494279f84ff369a",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\lab\\evals\\math-recognition\\test_math_bench.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "lab/scripts/govern-dataset.js",
+      "exists": true,
+      "bytes": 3575,
+      "sha256": "4d1abf39a80fbe8d6f9901baaaebb5254fe680f04f4ef2811db116e3d328e11c",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\lab\\scripts\\govern-dataset.js",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "scripts/check-story049-ocr-worker.mjs",
+      "exists": true,
+      "bytes": 2227,
+      "sha256": "f9f40b3addf394473b7cd24a9011e25885169ace1a8aca49f18e407afdcaf51f",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\scripts\\check-story049-ocr-worker.mjs",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "scripts/check-story052-production-deployment.mjs",
+      "exists": true,
+      "bytes": 3974,
+      "sha256": "ba2e83ee759673cf40e67f7a3e7c057f9624991bc5bf0524261cb02b17733098",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\scripts\\check-story052-production-deployment.mjs",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "scripts/ci/schema-version.mjs",
+      "exists": true,
+      "bytes": 2227,
+      "sha256": "e76b4de114f1500c66506c28604e013c2bd857a04a8ee8a973ce5d320c25e032",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\scripts\\ci\\schema-version.mjs",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "scripts/generate-fujian-2024-math-simulation.py",
+      "exists": true,
+      "bytes": 27144,
+      "sha256": "1eaf5a87ea828f9e6069cbec7445b62889497720528ba74506becc01970790bd",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\scripts\\generate-fujian-2024-math-simulation.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/cmd/reliability-repair/main_batch50_test.go",
+      "exists": true,
+      "bytes": 12919,
+      "sha256": "432babd1b8cd664b4ef4c3750f6e086e5802694965d07e5eabc3858a2900fc18",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\cmd\\reliability-repair\\main_batch50_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/cmd/reliability-repair/main_batch51_coverage_test.go",
+      "exists": true,
+      "bytes": 18521,
+      "sha256": "e900b4aa8ddf78a26557d0b8988a5a45c04d6cad42021af185fc09ba2ea91c61",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\cmd\\reliability-repair\\main_batch51_coverage_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/answergroup/store_test.go",
+      "exists": true,
+      "bytes": 7060,
+      "sha256": "1df75cf8e3466819c848a8f75fe2f2c97518ffd74ecc39949540b9ea4059cd92",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\answergroup\\store_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/apicontract/a14_a24_openapi_test.go",
+      "exists": true,
+      "bytes": 6047,
+      "sha256": "c888033f22ebcbecad15ba99e0c8ae75e6ea65af5ef864d8060f1dbb91a6925d",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\apicontract\\a14_a24_openapi_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/apicontract/exam_command_handler_schema_test.go",
+      "exists": true,
+      "bytes": 7125,
+      "sha256": "3a09dd3ea9aae22035facdee19fd82394caa604486d1dcfb3d4ee752b95ba20e",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\apicontract\\exam_command_handler_schema_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/apicontract/math_understanding_openapi_test.go",
+      "exists": true,
+      "bytes": 6203,
+      "sha256": "87c0097778d4ca9886d256574fda5b9a8e01d724867cb368afe9d566831ddf1a",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\apicontract\\math_understanding_openapi_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/apicontract/platform_schools_openapi_test.go",
+      "exists": true,
+      "bytes": 4982,
+      "sha256": "ea40f83d4857174df7cf3d124ef823bbe8e1cb32196d265d080e28c670f728d8",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\apicontract\\platform_schools_openapi_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/apicontract/reliability_handler_schema_test.go",
+      "exists": true,
+      "bytes": 14335,
+      "sha256": "76a933e731cb8d33f238f2032f316f5f340eab48050705a4102ceffca0b6333f",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\apicontract\\reliability_handler_schema_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/handlers_test.go",
+      "exists": true,
+      "bytes": 7402,
+      "sha256": "4f004beaad9e56fdbcf25ecc2f3a164086539e94f747a0c0abd0daf3fd575e30",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\appeal\\handlers_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/published_question_opinion_test.go",
+      "exists": true,
+      "bytes": 16571,
+      "sha256": "adcd2eaeb40a80b4f7e04a239d39400898bfb34f87c73647803c3fc02f09f34b",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\appeal\\published_question_opinion_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/published_question_summary_test.go",
+      "exists": true,
+      "bytes": 7230,
+      "sha256": "b33ebbf9ed021becede28990877e0b18f688d3e939d7d6cb274a23a25f43c193",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\appeal\\published_question_summary_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/store_memory_batch27_test.go",
+      "exists": true,
+      "bytes": 11186,
+      "sha256": "cc4e4f4008a232a7b79e67c1e23f5febc35904a6a59eafce955579e037999832",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\appeal\\store_memory_batch27_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/unicode_test.go",
+      "exists": true,
+      "bytes": 1757,
+      "sha256": "d9a96e83dbcc2b6687001b13aba97fffe2934f607b00e68439644735f7a29f0c",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\appeal\\unicode_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/authorization_contract_postgres_test.go",
+      "exists": true,
+      "bytes": 6530,
+      "sha256": "5c5dc0997544e825afb4ba935c5220ae0c96f792bd0d7769e0ae0851beeb7eb3",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\auth\\authorization_contract_postgres_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/handlers_test.go",
+      "exists": true,
+      "bytes": 59767,
+      "sha256": "71813f86ed705738a82b6bb806daea746d79474136dceff60d29093df97a3511",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\auth\\handlers_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/lifecycle_test.go",
+      "exists": true,
+      "bytes": 13406,
+      "sha256": "6de953885eba432ee8b9510fc88b70c7b0862a1918dda82b2976f7aa86c75da5",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\auth\\lifecycle_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/login_service_batch21_test.go",
+      "exists": true,
+      "bytes": 8625,
+      "sha256": "c765d90ec2a755ebe2dbbf4e8b8b2489a6931a858c17c67bcb00d5e692519ee6",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\auth\\login_service_batch21_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/mfa_security_changes_test.go",
+      "exists": true,
+      "bytes": 9701,
+      "sha256": "7aa077543ffe51f9dee254e5ce1a70c85c4ef11ba6ab4ee8d4df1f6f2b6a3975",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\auth\\mfa_security_changes_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/mfa_test.go",
+      "exists": true,
+      "bytes": 14352,
+      "sha256": "cc9d6492bea3c2c560115c87d2c491a58cb760f61ffdce7cfa61b03d52c0a5fa",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\auth\\mfa_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/migrations_test.go",
+      "exists": true,
+      "bytes": 13938,
+      "sha256": "29a7d725dd92e5b0d30f143de8d9bbfafff7dd1a057bc3af56c74d1637f0c67a",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\auth\\migrations_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/store_postgres_batch50_test.go",
+      "exists": true,
+      "bytes": 6239,
+      "sha256": "19935de4099e4e9d4ff7474106887421d46c00f302a34ce02e394cb7a2fd5bc7",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\auth\\store_postgres_batch50_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/backmark/handlers_test.go",
+      "exists": true,
+      "bytes": 6136,
+      "sha256": "3d39809c37854963bfb5fb60b050aaddcace41931497a8b7a7f92acc8b660498",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\backmark\\handlers_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/backmark/service_batch19_test.go",
+      "exists": true,
+      "bytes": 10917,
+      "sha256": "8e5ec0de8de341478cf627a22d57d1645e97baa6be7da4f9b0d27d3c95b9ad23",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\backmark\\service_batch19_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/backmark/validation_test.go",
+      "exists": true,
+      "bytes": 8994,
+      "sha256": "05fd1ab5ec02fdfa3a85dd6973b904140c7bd7fc034cc7440057fbb07466f775",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\backmark\\validation_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/calibration/service_batch41_test.go",
+      "exists": true,
+      "bytes": 3078,
+      "sha256": "6fb2c5af0ce2f4919b041f3bcb0b298af7b1aff87fadd66cd65bec6ab434865a",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\calibration\\service_batch41_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/captureupload/service_test.go",
+      "exists": true,
+      "bytes": 12075,
+      "sha256": "65eabd328d479cfcf827e38a8452ab4c06e5b3918abce1a93ff1f579d7582175",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\captureupload\\service_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/dashboard/service_test.go",
+      "exists": true,
+      "bytes": 6314,
+      "sha256": "1d1176e308e3cb66b7aeb650a78cc3483e8a13a5510afa8bdefd021d36818923",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\dashboard\\service_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/exam/archive_release_policy_batch30_test.go",
+      "exists": true,
+      "bytes": 2434,
+      "sha256": "a2440e11ab678fa10b6e0393a9849c786a3da70b5cef3bef833165c2506f4495",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\exam\\archive_release_policy_batch30_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/exam/management_archive_test.go",
+      "exists": true,
+      "bytes": 7863,
+      "sha256": "3e48b275f922b104805823b230a93223b5bc13637447b946f591c9cc6bf41b5a",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\exam\\management_archive_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/exam/session_postgres_batch49_test.go",
+      "exists": true,
+      "bytes": 9977,
+      "sha256": "57ab9a1ecab89a9c8c5b3b51886e83de4fe98e2943d6d8bc64057000225283a0",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\exam\\session_postgres_batch49_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/files/reconciliation_batch21_test.go",
+      "exists": true,
+      "bytes": 11159,
+      "sha256": "0bdb238437e23717eb8be319a7ead521b948aae001ffc9129a7acb926b4c137e",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\files\\reconciliation_batch21_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/files/upload_batch31_test.go",
+      "exists": true,
+      "bytes": 3531,
+      "sha256": "8db89f6f09dcd71ab58272e7c57ac130d0538b4c9e3829b63869c6cb54430b2f",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\files\\upload_batch31_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/graderdrift/service_batch18_test.go",
+      "exists": true,
+      "bytes": 11990,
+      "sha256": "83830b8847fed78d9f8c8f212dfca506abf9f3cf45850442fdc8bb8041bb8541",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\graderdrift\\service_batch18_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/grading/engine_test.go",
+      "exists": true,
+      "bytes": 6920,
+      "sha256": "b2b2cf33d4928787612e2be1c10b4e82a3d7a641044204834b2adc1bf48d2267",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\grading\\engine_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/grading/handlers_test.go",
+      "exists": true,
+      "bytes": 20033,
+      "sha256": "fd22854b34ffda7321ae5f34bc18784e3822029fd46fe8474f27cbb76f41f828",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\grading\\handlers_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/grading/rules_batch47_test.go",
+      "exists": true,
+      "bytes": 5046,
+      "sha256": "d590abdb129b69eb69edff083e04a344e0c7d199a9bb8477aab4f8eb5938b5b2",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\grading\\rules_batch47_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/grading/scoring_assessment_mode_contract_test.go",
+      "exists": true,
+      "bytes": 3880,
+      "sha256": "40ebd54b853a8acfa58315ddb5fcb6f9523f2a39671b47b409a4d9fdf445c56b",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\grading\\scoring_assessment_mode_contract_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/grading/scoring_capability_matrix_contract_test.go",
+      "exists": true,
+      "bytes": 7927,
+      "sha256": "f64a11ad80d2e66c3807763c75f6e26eeab82afe8c7f032446632ff97d6a8505",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\grading\\scoring_capability_matrix_contract_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/gradingevaluation/service_test.go",
+      "exists": true,
+      "bytes": 9171,
+      "sha256": "4033d03900b18ceded9ff0af261f56919258072ae1d0cef4cef5865b73bebb9f",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\gradingevaluation\\service_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/idempotency/middleware_batch29_test.go",
+      "exists": true,
+      "bytes": 8963,
+      "sha256": "d609a8bed6688e1b85fd9817c2ee5a4a55ea67ffd1d6a0ed82f0bb2d88f9b63f",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\idempotency\\middleware_batch29_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/imagequality/result_order_batch30_test.go",
+      "exists": true,
+      "bytes": 7913,
+      "sha256": "6bcf40a6b3d1bd11b3378b3c27e56da91ea19c8f6dbb4608e2fe16a130dd76b3",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\imagequality\\result_order_batch30_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/scorer_test.go",
+      "exists": true,
+      "bytes": 17040,
+      "sha256": "204f1809384a636c9f57feeb7da2373f2790d3d9129c8ce7e71b97c9cbc7ca01",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\mathunderstanding\\scorer_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/verification_runtime_test.go",
+      "exists": true,
+      "bytes": 7713,
+      "sha256": "fb760cdd0bb4c3eec6e7c58c1568ed2b32ea343799dc5e93b4c8d7d5578ca670",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\mathunderstanding\\verification_runtime_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/workbench_preview_test.go",
+      "exists": true,
+      "bytes": 5236,
+      "sha256": "9b804aa75282b1e8ce410b4eb70fe9c0cd2f97dd964c4fe70337805d257e2903",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\mathunderstanding\\workbench_preview_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/modelcalibration/service_test.go",
+      "exists": true,
+      "bytes": 6685,
+      "sha256": "c5e74b22f9857998b1838a1ea1c03c506153b4b66e654723176f7f6d33c7c4bb",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\modelcalibration\\service_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/governance_routing_state_refactor_test.go",
+      "exists": true,
+      "bytes": 22424,
+      "sha256": "9638351127bf13c6ff46f6a8b6b97b0cd46f65e32de74f9723915756981c9775",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\modelgovernance\\governance_routing_state_refactor_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/managed_agent_http_test.go",
+      "exists": true,
+      "bytes": 20265,
+      "sha256": "e118d8951e4a67860ff841b12839cc94e182391baeb591ef6ca179e81c5d276c",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\modelgovernance\\managed_agent_http_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/managed_chat_test.go",
+      "exists": true,
+      "bytes": 9050,
+      "sha256": "ce530ef8f35ef8a1713b32836d2e3b182dd6963d87947e4146b79f0cc6fafa7c",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\modelgovernance\\managed_chat_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/managed_config_probe_http_test.go",
+      "exists": true,
+      "bytes": 27929,
+      "sha256": "9b70a95056ad98ba69e35f536fb2dd1c12231eb57844440410ee87932ce113c9",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\modelgovernance\\managed_config_probe_http_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/managed_governance_refactor_test.go",
+      "exists": true,
+      "bytes": 26131,
+      "sha256": "6e3bd6be19c04450c0f0870b04f6c78d8a82c2a9e99fc5467ffc72d19bab31d8",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\modelgovernance\\managed_governance_refactor_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/role_binding_test.go",
+      "exists": true,
+      "bytes": 10786,
+      "sha256": "3a28b6d0c8995e1c4458df30f36b455898cf37d0745929d99f3bbd184bb2f1b2",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\modelgovernance\\role_binding_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/ocr/runtime_coordinator_batch24_test.go",
+      "exists": true,
+      "bytes": 3120,
+      "sha256": "a5f706a50e28a9017a78e391dcbbd8b2c725c4d695007e229b668c38fb2ac73c",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\ocr\\runtime_coordinator_batch24_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/org/handlers_test.go",
+      "exists": true,
+      "bytes": 13339,
+      "sha256": "3644541df3568ec3772f46cb2acfd2b9f3986adb3331d97d92b7fcbf9ec5a57e",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\org\\handlers_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/paper/document_import_batch23_test.go",
+      "exists": true,
+      "bytes": 5695,
+      "sha256": "8fcd6d3a58f9e9be57974c6f37ba90da278b7a863c274cedaf227c1c2e52a999",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\paper\\document_import_batch23_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/paper/document_rubric_draft_batch42_test.go",
+      "exists": true,
+      "bytes": 2132,
+      "sha256": "f6f7b6126bd187c48325318b5b5162ebd10bad80d6ffb3b11f51ce2b8c1c5df2",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\paper\\document_rubric_draft_batch42_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/paper/document_rubric_draft_test.go",
+      "exists": true,
+      "bytes": 8563,
+      "sha256": "eca3de2567a45fb31562750d37e8d5d7bd64054ef5e0be373ff4755757237296",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\paper\\document_rubric_draft_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/paper/paper_import_candidates_test.go",
+      "exists": true,
+      "bytes": 33920,
+      "sha256": "8e66bf75ccb0e7a40d9eed5430ac77bb1e33f1189017dfa4da51995803d248fb",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\paper\\paper_import_candidates_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/paper/paper_import_content_batch32_test.go",
+      "exists": true,
+      "bytes": 8993,
+      "sha256": "50287960fdf8c0fee3a19ba6b09fa1a1220e8a637638f5eda305d0ea5fc29bea",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\paper\\paper_import_content_batch32_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/paper/paper_import_content_test.go",
+      "exists": true,
+      "bytes": 5643,
+      "sha256": "4b5a8dfaaac1ebafdc05909e8210a9b4450b977d9d5ebb4b5a6db4f4dc5038e8",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\paper\\paper_import_content_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/paper/paper_import_parse_batch33_test.go",
+      "exists": true,
+      "bytes": 9253,
+      "sha256": "82d4265e100c0b8d3ade25b787d252d3033004cab01c74c2612842ed0ba0e223",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\paper\\paper_import_parse_batch33_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/paper/paper_import_runtime_batch11_test.go",
+      "exists": true,
+      "bytes": 10230,
+      "sha256": "c9453a2a5b07c8ed2bf4314321c1961a834896fd5669427c212e93100d38e82e",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\paper\\paper_import_runtime_batch11_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/paper/paper_import_structure_batch37_test.go",
+      "exists": true,
+      "bytes": 41031,
+      "sha256": "bdfdb7819b429e15ace5c6fea1ed8b306ee78f6cd694200911278fe8bec0bbfa",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\paper\\paper_import_structure_batch37_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/platformschools/handlers_test.go",
+      "exists": true,
+      "bytes": 5958,
+      "sha256": "bbbe3c9839f2db189db12dd35cb89c1f974728bd949a0b9a169fcc39394b0e61",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\platformschools\\handlers_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/processing/store_memory_batch28_test.go",
+      "exists": true,
+      "bytes": 4654,
+      "sha256": "051993ef8e0721b884f3f36c7a2ca3675f6eb366dc283765a8f10ff816eb8e7d",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\processing\\store_memory_batch28_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/qualitydashboard/adapters_batch47_test.go",
+      "exists": true,
+      "bytes": 8498,
+      "sha256": "6b361f05a5b63a8a9d6bcbc9f363a58ce626f33f53ab1dcc6f2ab605ae759af7",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\qualitydashboard\\adapters_batch47_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/questionbank/acl_preservation_ux_test.go",
+      "exists": true,
+      "bytes": 6294,
+      "sha256": "c3bad2649da9f037332023278e4f5d2632505467bf3147253def3f3918b01517",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\questionbank\\acl_preservation_ux_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/questionbank/content_acl_scoring_batch25_test.go",
+      "exists": true,
+      "bytes": 15177,
+      "sha256": "a89f993127b16d2c18e4193000c27cfdb371cc70ab2866d1a7eda182b77058ae",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\questionbank\\content_acl_scoring_batch25_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/questionbank/metadata_batch23_test.go",
+      "exists": true,
+      "bytes": 12940,
+      "sha256": "3d176db0ed93584d31a14ee6157284bfb1c94fa90dc32749ab8d274268d7b375",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\questionbank\\metadata_batch23_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/questionbank/postgres_batch22_test.go",
+      "exists": true,
+      "bytes": 15487,
+      "sha256": "91279eab3e50870f653977fbdd3f4150a9e5b83cedddcc4030ac6a60753959b2",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\questionbank\\postgres_batch22_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/questionbank/questionbank_test.go",
+      "exists": true,
+      "bytes": 4446,
+      "sha256": "b9f098e702874a1d25293cbc72924e9553df7cf88ba72e9f14b3fc96d70c6bd5",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\questionbank\\questionbank_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/questionbank/scoring_batch19_test.go",
+      "exists": true,
+      "bytes": 9505,
+      "sha256": "7ebf65ea4b8158dd31957aee0e73693ee26cde0957526eb03ac33d2b5c5d3760",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\questionbank\\scoring_batch19_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/regrade/grader_context_test.go",
+      "exists": true,
+      "bytes": 4899,
+      "sha256": "574dc9d062a5de412119a3c7a8bbc947052c64d44e9d88cfd2172677c510e58e",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\regrade\\grader_context_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/regrade/service_test.go",
+      "exists": true,
+      "bytes": 7549,
+      "sha256": "49973ca3a3e7e5c2cf990d2ffc1b5de2eb7c5c48c4fc3be243166f19fd8cf9ac",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\regrade\\service_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/regrade/store_postgres_batch48_test.go",
+      "exists": true,
+      "bytes": 8978,
+      "sha256": "71b5f68761bbeccbffeb88efcb770470ce5a7c749c9a8d91b18525e7c9106ef2",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\regrade\\store_postgres_batch48_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/review/review_workbench_batch38_test.go",
+      "exists": true,
+      "bytes": 13745,
+      "sha256": "58b1b3477ef71b6ab683b1ce6fe435d76f3f2cc735253d1370a5837ec43ba3ff",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\review\\review_workbench_batch38_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/review/store_postgres_batch34_test.go",
+      "exists": true,
+      "bytes": 16207,
+      "sha256": "67f20daa0a5598f4dd81a21219a40384b78fbdc2f1f9d03045ca6efa4bae7cc3",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\review\\store_postgres_batch34_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/review/store_test.go",
+      "exists": true,
+      "bytes": 34423,
+      "sha256": "0c177de4429ab70a4b49c80af8c38c50426fbbf1103914ce9eeb7c7e49888f64",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\review\\store_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/review/task_aggregate_test.go",
+      "exists": true,
+      "bytes": 4023,
+      "sha256": "922f10c57458aada378ce3b97fa10cc97e2de90c45987b601ee53d134de94d7c",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\review\\task_aggregate_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/schoolassistant/adapters_test.go",
+      "exists": true,
+      "bytes": 3285,
+      "sha256": "530491dc99c27970f5a7ee86ff2dbb35f9f7ef5233588993fcb9a8c29f554756",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\schoolassistant\\adapters_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/schoolassistant/conversation_test.go",
+      "exists": true,
+      "bytes": 14917,
+      "sha256": "3f342dd9d06a4c4fc0835d2b7c6af94249194f0b689d50d50f4dfe491b73f485",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\schoolassistant\\conversation_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/schoolassistant/schoolassistant_batch40_test.go",
+      "exists": true,
+      "bytes": 4093,
+      "sha256": "d534aa3653008bb04f78fdc8d6dbeaf467fa22ce6163a5eb0e3bad5354022652",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\schoolassistant\\schoolassistant_batch40_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/scorerelease/anonymous_paper_test.go",
+      "exists": true,
+      "bytes": 2554,
+      "sha256": "c13df3d9a16ca0db4bff514a1c7409490629f8fb667b6ee8b8bf9714b525b904",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\scorerelease\\anonymous_paper_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/scorerelease/store_postgres_batch48_test.go",
+      "exists": true,
+      "bytes": 5468,
+      "sha256": "9e04135bfdbd3f64c11b3aaa7e2e9db0d48f1ec7aeda24f8b7f7694086ddea52",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\scorerelease\\store_postgres_batch48_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/scorerelease/store_postgres_batch50_test.go",
+      "exists": true,
+      "bytes": 7558,
+      "sha256": "d22ee4c071ff97dd3d451878848a4b8b9b9008eb95f93a1bab5384307ac87c42",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\scorerelease\\store_postgres_batch50_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/scorerelease/student_session_integration_test.go",
+      "exists": true,
+      "bytes": 5739,
+      "sha256": "696136b50ae25f429e99801b01fa90fccf0dfda79d383592e1d0a3d0c3d90a4f",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\scorerelease\\student_session_integration_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/seedquality/service_test.go",
+      "exists": true,
+      "bytes": 11244,
+      "sha256": "e1998b74a30ae4519b812f9ac1f770ae010cb0ca738f4598ad64a0e30ba26dcd",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\seedquality\\service_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/appeal_route_test.go",
+      "exists": true,
+      "bytes": 16015,
+      "sha256": "3ae77cb571e0f240dd7af8faf845a8c13b3213008f668daad00b50ee4fcf11bc",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\server\\appeal_route_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_anonymous_paper_test.go",
+      "exists": true,
+      "bytes": 9358,
+      "sha256": "7bd426940707d1142687e6d8fe1c21daec01f33e231a388f7143f63b28a58692",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\server\\e2e_anonymous_paper_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_auth_security_test.go",
+      "exists": true,
+      "bytes": 21531,
+      "sha256": "696cf8131ecbfcef88e412b22b608289003f1412e752b8fb3fce70d479bf1fb2",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\server\\e2e_auth_security_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_business_command_test.go",
+      "exists": true,
+      "bytes": 24649,
+      "sha256": "3628336be913f4237e5a56c5bbab84960e14ad306b86c2297d618116f95a252d",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\server\\e2e_business_command_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_core_workflow_test.go",
+      "exists": true,
+      "bytes": 30906,
+      "sha256": "aa8e13b0a2657f721c6c865dcc3e20056c35c74aec5b356d8d528f22b9b3b43f",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\server\\e2e_core_workflow_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_exam_archive_commands_test.go",
+      "exists": true,
+      "bytes": 12589,
+      "sha256": "ff2b5ca2cdfa55a35fd6be8293647e0de91ff938034118c3729c4dfb3d7b8efa",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\server\\e2e_exam_archive_commands_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_exam_management_test.go",
+      "exists": true,
+      "bytes": 16289,
+      "sha256": "1fa3ddcfeb72b931a814f961b8b74cc5c8d3eb27643e0ae2b18df8193d1cb5c0",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\server\\e2e_exam_management_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_file_reconciliation_test.go",
+      "exists": true,
+      "bytes": 4308,
+      "sha256": "3c62a7bb58e3ebea5b039b18dc14da1ec0d4d2c9aac9a703edb9378d3365b5a3",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\server\\e2e_file_reconciliation_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_idempotency_test.go",
+      "exists": true,
+      "bytes": 5621,
+      "sha256": "386ad517c77f68f2e6ec22c84d853ac3e6c778e606b09919621b638aec09d55e",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\server\\e2e_idempotency_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_math_effective_evidence_test.go",
+      "exists": true,
+      "bytes": 7391,
+      "sha256": "4e21ab3b259612debd173cbf2cba3ac624f3d4c0f6ac05221f2b51049dfb8bb3",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\server\\e2e_math_effective_evidence_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_math_grading_binding_test.go",
+      "exists": true,
+      "bytes": 9593,
+      "sha256": "7500ea843d838bb60f2cc8c58ea153462f07f07b69d5f0cfa384779f9f54a439",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\server\\e2e_math_grading_binding_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_math_rubric_score_test.go",
+      "exists": true,
+      "bytes": 9333,
+      "sha256": "d6d70d2bc963fab97c8b8f9f6357bd4831e19d55d4187e9fae3e2931a2abc3bc",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\server\\e2e_math_rubric_score_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_math_verification_runtime_test.go",
+      "exists": true,
+      "bytes": 9312,
+      "sha256": "40d7a4d8805aaf05029513f3b4d4c31e5d74eed79d114a86423871a360247452",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\server\\e2e_math_verification_runtime_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_mfa_test.go",
+      "exists": true,
+      "bytes": 17221,
+      "sha256": "711197018ef203f85552ab2b685789e5ddda91f7952b6fbbc2122be3b3ab0ac6",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\server\\e2e_mfa_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_paper_import_reconciliation_test.go",
+      "exists": true,
+      "bytes": 32088,
+      "sha256": "a1ebd561f491b96b9cb86b36b6c3864a39ca508a63407ad23bccc978bcc615b7",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\server\\e2e_paper_import_reconciliation_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+      "exists": true,
+      "bytes": 55833,
+      "sha256": "8714cb21ec147a9aee97c922c80e03ad020af15f2302d6f684c7781d094503a0",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\server\\e2e_postgres_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_question_bank_acl_ux_test.go",
+      "exists": true,
+      "bytes": 10401,
+      "sha256": "4c3bf3ae247c679875a481fa1da5dadd913b54ce68b5911aa5c709bc2d478b09",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\server\\e2e_question_bank_acl_ux_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_question_bank_import_test.go",
+      "exists": true,
+      "bytes": 15398,
+      "sha256": "d5f7756150d5784e28eba49db0e51b5ad59e17b9691cc5af3b4e2262cd7c689e",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\server\\e2e_question_bank_import_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_question_bank_metadata_acl_search_test.go",
+      "exists": true,
+      "bytes": 11208,
+      "sha256": "da3d785b18e17d6100323aadd3e414eae851dac5b4868418aaac9ce857d98a9c",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\server\\e2e_question_bank_metadata_acl_search_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_question_bank_publication_test.go",
+      "exists": true,
+      "bytes": 16480,
+      "sha256": "a860ad10f4ae2dca940b486c918fb4441bc6f420b13b15966d9b82957aff7891",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\server\\e2e_question_bank_publication_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_question_bank_test.go",
+      "exists": true,
+      "bytes": 18063,
+      "sha256": "a579dc5783afbf6de6f8b5394c829a73330db2969ba745bdb53c7f4c5c6ce56b",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\server\\e2e_question_bank_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+      "exists": true,
+      "bytes": 77813,
+      "sha256": "1102570eceaf0811b5f010e82e7357818abe3ff4eac1aaccaaa54c1a5d5a65f3",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\server\\e2e_reliability_command_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_review_recovery_test.go",
+      "exists": true,
+      "bytes": 11420,
+      "sha256": "d93b8cdcabc21a260842bb1d536520fde9b2c76cb8bb55e62155b847e2cebd18",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\server\\e2e_review_recovery_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_review_repairs_test.go",
+      "exists": true,
+      "bytes": 33011,
+      "sha256": "0082e7f03cf8aabe2a773feaf0fbbef109cf15fbd46409d87e43fae6bbbe7ee4",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\server\\e2e_review_repairs_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_scoring_command_test.go",
+      "exists": true,
+      "bytes": 4279,
+      "sha256": "10945159e171e156f1a33f9b698d5c38c525308892ec63ea5d4f7df3a2059baa",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\server\\e2e_scoring_command_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_scoring_double_mark_test.go",
+      "exists": true,
+      "bytes": 8974,
+      "sha256": "9f3de5e8834076fb5c63f8d3075ba857270eec12e0323a398cd56ec94685b23f",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\server\\e2e_scoring_double_mark_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_story056_calibration_test.go",
+      "exists": true,
+      "bytes": 29793,
+      "sha256": "9fc052a0a209ae660ae2e46715d2e44bf6546ff1eceae2ad967dc34401cfbc17",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\server\\e2e_story056_calibration_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_story056_lease_test.go",
+      "exists": true,
+      "bytes": 34594,
+      "sha256": "64a13d6243eece73942adbf5e0f11811f413e12c243acbd2e82b6ff7f31f24fb",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\server\\e2e_story056_lease_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+      "exists": true,
+      "bytes": 39086,
+      "sha256": "c33d9cefd514f362085e5b746c0d1e209ca096903e85a35d270861e40da0862c",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\server\\e2e_story056_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_story060_capture_recovery_test.go",
+      "exists": true,
+      "bytes": 14821,
+      "sha256": "38249f224f3594c0f18cdb4401ee24afe10576e1c4d84e47c969dc3bd9a549a8",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\server\\e2e_story060_capture_recovery_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_story060_provision_test.go",
+      "exists": true,
+      "bytes": 2943,
+      "sha256": "7a455f53464f58473caebb8989173c211e05fadf97eca8b30ea477932fd603d1",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\server\\e2e_story060_provision_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_story060_roster_test.go",
+      "exists": true,
+      "bytes": 19652,
+      "sha256": "7a399902f25f96c7fee78a4c4825073432440059f1b18b12aa32d4491d1c9917",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\server\\e2e_story060_roster_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_story060_sheet_identity_test.go",
+      "exists": true,
+      "bytes": 32046,
+      "sha256": "ae3702b07975c3a4707de7bdb7681f3337d0dce13f787a1cbc7822ff8534d3d7",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\server\\e2e_story060_sheet_identity_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_story061_governance_test.go",
+      "exists": true,
+      "bytes": 22870,
+      "sha256": "324279c79a566a627fa4dfc721a8c37b03579ee50e405d8fe813f045ded17105",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\server\\e2e_story061_governance_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_subjective_command_test.go",
+      "exists": true,
+      "bytes": 5580,
+      "sha256": "c99cc23eec7a9c439850484eb02b1f93b701fce683f03681b0f5c656179105c0",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\server\\e2e_subjective_command_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_subjective_panel_test.go",
+      "exists": true,
+      "bytes": 22760,
+      "sha256": "13c3d1c852a870357f6af14f57ca41dedee448bea89fec2834124b6741c1bd8e",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\server\\e2e_subjective_panel_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_worker_runtime_reliability_test.go",
+      "exists": true,
+      "bytes": 11947,
+      "sha256": "ad3276ac60064d8ea31ee41ad0aaee3170f60b67fcc811d931ee305088c91d80",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\server\\e2e_worker_runtime_reliability_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/managed_config_postgres_test.go",
+      "exists": true,
+      "bytes": 4023,
+      "sha256": "be7c2d7d11de8820c98d962c3ec06d31f67a4e877a95f601c38318e2f388fdf4",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\server\\managed_config_postgres_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/migration_upgrade_test.go",
+      "exists": true,
+      "bytes": 17895,
+      "sha256": "dced09b067bff18cd073da0cf52dfa74d1db86176ab71a3f871bb8945e448c23",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\server\\migration_upgrade_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/platform_schools_route_test.go",
+      "exists": true,
+      "bytes": 4228,
+      "sha256": "52f06023f944b0a2e599efcf66ba581ba93b6a80d55cc10c54e15be929643b4e",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\server\\platform_schools_route_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/readers_batch47_test.go",
+      "exists": true,
+      "bytes": 11488,
+      "sha256": "f1d7fa8ffbf949f311f9efaf47dbdb0d5c9ecd18922aa3d7ba661e1c769b05f1",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\server\\readers_batch47_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/review_route_test.go",
+      "exists": true,
+      "bytes": 65189,
+      "sha256": "00e58c18126fff38c0ff1425521ef47c154e31e92ab8c95308da9bd54b11c76c",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\server\\review_route_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/score_route_test.go",
+      "exists": true,
+      "bytes": 12225,
+      "sha256": "574fc499cfb555bc73419a8f2d7a7e09e46848c12bf74c516e2cc84a05bb7e68",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\server\\score_route_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/server/server_test.go",
+      "exists": true,
+      "bytes": 28649,
+      "sha256": "85c7b7353f8ac2e9ff95b5bf44e8b703633969cf53c24886d0c11c651aa4b407",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\server\\server_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/adapter_http_test.go",
+      "exists": true,
+      "bytes": 12392,
+      "sha256": "34d5a4f3c7240384474d4d5fd39ba9e04510c2b757dbb5cc3a6d471cbb07dfdf",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\subjective\\adapter_http_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/grade_settlement_pipeline_test.go",
+      "exists": true,
+      "bytes": 5085,
+      "sha256": "7c607502d4e2dbeeda9294a4d9bfe732076f748bec0469fd4cd20a5cf30241e2",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\subjective\\grade_settlement_pipeline_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/grading_agent_v2_builder_batch35_test.go",
+      "exists": true,
+      "bytes": 7815,
+      "sha256": "fdd41766464597771670ba2872450df1bf8cdfc703f0aa829b75eefdc163a39e",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\subjective\\grading_agent_v2_builder_batch35_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/grading_agent_v2_contract_test.go",
+      "exists": true,
+      "bytes": 13078,
+      "sha256": "5f4f3e386608ed6f6ba9d039553c6ec3d37d34b3e24893e353a2da17fd00bf40",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\subjective\\grading_agent_v2_contract_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/handlers_test.go",
+      "exists": true,
+      "bytes": 35059,
+      "sha256": "10555c1b690139e4e314f65d5a48e751ecc3cdc5220d226ae1b5f39f132a5cd9",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\subjective\\handlers_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/math_evidence_batch35_test.go",
+      "exists": true,
+      "bytes": 6668,
+      "sha256": "5207b0a82cc13c662ba7e27a53d18f0e347d8b8af0909e9aacf62888b7b886cf",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\subjective\\math_evidence_batch35_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/math_grading_handler_test.go",
+      "exists": true,
+      "bytes": 13645,
+      "sha256": "e8f7d91f5bbf1c6073eeff1a2373addf94d1a78c335f328d4928c1cac42f3418",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\subjective\\math_grading_handler_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/panel_agent_binding_batch48_test.go",
+      "exists": true,
+      "bytes": 6036,
+      "sha256": "5c40dd0e796739a747634fbb5e245fb7f5b1527a88eb9853cbbfe8466a357756",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\subjective\\panel_agent_binding_batch48_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/panel_policy_test.go",
+      "exists": true,
+      "bytes": 14841,
+      "sha256": "7d4bf93a1f36e35a0dbd3def93244a18b0df6f78370b8649468ccf67b2fa1b3f",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\subjective\\panel_policy_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/panel_shadow_runner_test.go",
+      "exists": true,
+      "bytes": 11071,
+      "sha256": "89e3e7725c99b59da370e5c24cbba6eddf56c594e0e3dc038904e91fe01181e7",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\subjective\\panel_shadow_runner_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/panel_store_test.go",
+      "exists": true,
+      "bytes": 4199,
+      "sha256": "3862f18ade175588b28329ffabb99d3aa97a3777027be3837c42e6c129001754",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\subjective\\panel_store_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/scoring_run_batch_test.go",
+      "exists": true,
+      "bytes": 8449,
+      "sha256": "9c06ffbd78d82cfa3f693163307205299a795db1a83c922a24d4759df7644d1d",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\subjective\\scoring_run_batch_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/worker_execution_service_test.go",
+      "exists": true,
+      "bytes": 7907,
+      "sha256": "ddbd3e297ced9d861f5578f4eb57015f9977666a9df4434a42b2a9a504870828",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\subjective\\worker_execution_service_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/taskmaterials/management_scope_test.go",
+      "exists": true,
+      "bytes": 9827,
+      "sha256": "37072bd6017d6ae8c94d12c8b6af9909b72b8f879ee599b70422d6fc514f3337",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\taskmaterials\\management_scope_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/workerruntime/handlers_test.go",
+      "exists": true,
+      "bytes": 9317,
+      "sha256": "bbf4702a50b71f0e587a1fa7b1fdec626dd2392bcce8b882e2d3ed3ad1b3d179",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\workerruntime\\handlers_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/workerruntime/scope_claim_metrics_batch26_test.go",
+      "exists": true,
+      "bytes": 15561,
+      "sha256": "bae975233a8db64e92c91cfb3ad065671bb016728f4865af7f7ef36554951a98",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\workerruntime\\scope_claim_metrics_batch26_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/workerruntime/store_memory_test.go",
+      "exists": true,
+      "bytes": 17054,
+      "sha256": "1bf5a878c1ff885df04592c64d17f3e6d3b285f91ca1eb3e9f0bed403cd87be7",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\workerruntime\\store_memory_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/workerruntime/store_postgres_batch48_test.go",
+      "exists": true,
+      "bytes": 8382,
+      "sha256": "e4692362d4313905708510a91001f316281471ab2658e175af97809fa61f1ad3",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\workerruntime\\store_postgres_batch48_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/workspace/service_batch24_test.go",
+      "exists": true,
+      "bytes": 15584,
+      "sha256": "bf5cec733e33242362d80a4b185df164a76ce94440dc9656adb5c145642efaf9",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\workspace\\service_batch24_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/internal/workspace/service_test.go",
+      "exists": true,
+      "bytes": 14943,
+      "sha256": "e32f9fe73149512c13c3a91345519f0dfd16fa5ad082856bf1615ad21f50ed51",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\internal\\workspace\\service_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/tools/import-fujian-2024-math-simulation/main_batch9_test.go",
+      "exists": true,
+      "bytes": 32308,
+      "sha256": "d29aab2f1ab8f1fe5e19958e98f9dcac35742c29f82b3fc98fc09bc3681162b5",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\tools\\import-fujian-2024-math-simulation\\main_batch9_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/api-gateway/tools/story056-real-worker-e2e/main_batch50_test.go",
+      "exists": true,
+      "bytes": 6640,
+      "sha256": "c9911653fcad8c851bd9659227a871eb68f0ec0e8ce331d6b710d47348729a72",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\api-gateway\\tools\\story056-real-worker-e2e\\main_batch50_test.go",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/image-quality-worker/image_quality/geometry.py",
+      "exists": true,
+      "bytes": 15586,
+      "sha256": "03e0ba6c7c21e4646bbfdb4da281114b893bf4bf774cebb694adf9fa0711e129",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\image-quality-worker\\image_quality\\geometry.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/math-verification-worker/math_verification_worker/server.py",
+      "exists": true,
+      "bytes": 8744,
+      "sha256": "d9d6a02c89cea615738f507e3462e185e4c9992537acdb6b93ce28427f9a4f1f",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\math-verification-worker\\math_verification_worker\\server.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/formula_validation.py",
+      "exists": true,
+      "bytes": 17493,
+      "sha256": "51ffd42ae6dc7fbb99a3077075ca0f38b38f651fa97a8b1143300fd39815641e",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\ocr-worker\\ocr_worker\\formula_validation.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/math_layout.py",
+      "exists": true,
+      "bytes": 10108,
+      "sha256": "3d05ca211492c96a33c1ad534ec9cf306a470054187cc22513c328a8432993cb",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\ocr-worker\\ocr_worker\\math_layout.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/paper_formula.py",
+      "exists": true,
+      "bytes": 26694,
+      "sha256": "547e2ffc4d91dd3e67d91c72a81fb833444353f88353c0593c91f0408385e2f5",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\ocr-worker\\ocr_worker\\paper_formula.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/symbolic_runner.py",
+      "exists": true,
+      "bytes": 9661,
+      "sha256": "13abbbb6d5695c5df85d4c2c3505decb2f406528f225ec75d162b9684c801929",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\ocr-worker\\ocr_worker\\symbolic_runner.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/ocr-worker/tests/test_api_batch51.py",
+      "exists": true,
+      "bytes": 10237,
+      "sha256": "1e81ff5d819e0764535cbeb33a57cb4deffbaf45ae1d2384e2364a3253b0a9f4",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\ocr-worker\\tests\\test_api_batch51.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/ocr-worker/tests/test_benchmark.py",
+      "exists": true,
+      "bytes": 3491,
+      "sha256": "95789ef840b8a2cc7fb0301e12578942e31a4ab1e5ef8a97cc5ef046f08af7c8",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\ocr-worker\\tests\\test_benchmark.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/ocr-worker/tests/test_formula_calibration.py",
+      "exists": true,
+      "bytes": 3043,
+      "sha256": "9968b99e93a1751fbb8eaad53c64d3027b918c5b559312e292104b875b461f70",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\ocr-worker\\tests\\test_formula_calibration.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/ocr-worker/tests/test_http_response.py",
+      "exists": true,
+      "bytes": 1802,
+      "sha256": "3981aceb2933e7e5141e392352e1f9c7c62a286c5a0c42b534f7415c1b057c33",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\ocr-worker\\tests\\test_http_response.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/ocr-worker/tests/test_ocr_artifacts_batch39.py",
+      "exists": true,
+      "bytes": 8830,
+      "sha256": "e84085b4e1868bf3ab5c0e32d3e40d18887a699d6f3065c1dfc4729faa2b75de",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\ocr-worker\\tests\\test_ocr_artifacts_batch39.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/ocr-worker/tests/test_ocr_workflows_batch37.py",
+      "exists": true,
+      "bytes": 25400,
+      "sha256": "3a7a63d75096030fcbfd1ba0e15cca21669a96cbbf6f482f6d43ddb07ef8606a",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\ocr-worker\\tests\\test_ocr_workflows_batch37.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/ocr-worker/tests/test_paper_formula.py",
+      "exists": true,
+      "bytes": 5431,
+      "sha256": "4de4a8dbd6c813dd93a2a7886bba1d80f9e8229c5447cce3dca393b077818dfc",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\ocr-worker\\tests\\test_paper_formula.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/ocr-worker/tests/test_paper_formula_batch35.py",
+      "exists": true,
+      "bytes": 17937,
+      "sha256": "999c92010aede93fe83170b22deac825a1c04719431a788e50b0c374b954d668",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\ocr-worker\\tests\\test_paper_formula_batch35.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/ocr-worker/tests/test_recognition_router.py",
+      "exists": true,
+      "bytes": 5392,
+      "sha256": "7a4b36fc9a092527e9f571cf4d85d74df75bf25490092eba89d375fff537f6c2",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\ocr-worker\\tests\\test_recognition_router.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/ocr-worker/tests/test_recognition_router_batch32.py",
+      "exists": true,
+      "bytes": 11494,
+      "sha256": "aabe4c6be3eea2f76d799a4bb1ab541ae1fa7ddfb25914204b382b7f4668b18c",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\ocr-worker\\tests\\test_recognition_router_batch32.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/ocr-worker/tests/test_startup_batch36.py",
+      "exists": true,
+      "bytes": 28212,
+      "sha256": "cd7b9032a685d25b2c39b9a57d96ccaa18ad136af15f4aaed1cbec0005802cde",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\ocr-worker\\tests\\test_startup_batch36.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/ocr-worker/tests/test_symbolic_runner.py",
+      "exists": true,
+      "bytes": 6271,
+      "sha256": "aa00876e3e937a583c930b9af9b34238ecf8f2b9d1d9ad7d06d8c77735dc8d87",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\ocr-worker\\tests\\test_symbolic_runner.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/page-processing-worker/page_processing/config.py",
+      "exists": true,
+      "bytes": 4173,
+      "sha256": "65e6299c54efbfa79f2479a4ffcc06a0c028364955ae32ac446fec3fd45f74d4",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\page-processing-worker\\page_processing\\config.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/page-processing-worker/page_processing/omr.py",
+      "exists": true,
+      "bytes": 14182,
+      "sha256": "2abd891a47f7d46e4298900f20a62e642c1772e33f10fe8e2c808cca00ab6808",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\page-processing-worker\\page_processing\\omr.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/page-processing-worker/page_processing/omr_acceptance.py",
+      "exists": true,
+      "bytes": 8132,
+      "sha256": "895fc941df4007b0a0af4b26e6cac72a858a4b83db2fc440652afed3b84d38ed",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\page-processing-worker\\page_processing\\omr_acceptance.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/page-processing-worker/page_processing/runner.py",
+      "exists": true,
+      "bytes": 29358,
+      "sha256": "32d236c9d4fa337d61ac403cd1d9b8e3a05d5f5dcbd0a1330284ad778694041e",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\page-processing-worker\\page_processing\\runner.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/page-processing-worker/tests/test_decoder.py",
+      "exists": true,
+      "bytes": 4233,
+      "sha256": "80af9531f06e007ade1489e7b3baafbf5b338d91e8b1ced3f00ee82596fb4d5d",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\page-processing-worker\\tests\\test_decoder.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/page-processing-worker/tests/test_omr.py",
+      "exists": true,
+      "bytes": 3902,
+      "sha256": "da447966d9ab39e1b0c70a73f6ee642ce4824a90d98dc733660f22cd59de4ab7",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\page-processing-worker\\tests\\test_omr.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/page-processing-worker/tests/test_registration.py",
+      "exists": true,
+      "bytes": 6286,
+      "sha256": "974b3246c67589ad4ab2b0760aab49f294b4c58f3e9767f8fff2bd465bb1fdd1",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\page-processing-worker\\tests\\test_registration.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/page-processing-worker/tests/test_runner_state_boundaries.py",
+      "exists": true,
+      "bytes": 16813,
+      "sha256": "9c16039a9dcc501728f3a066e3558172abf08aa1390d4bf8efbc002356f7612d",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\page-processing-worker\\tests\\test_runner_state_boundaries.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "services/subjective-grading-worker/tests/test_api_integration.py",
+      "exists": true,
+      "bytes": 4287,
+      "sha256": "7893deccacc9c6926fc631588dcb912eb2429ca818edac4b75a149d4c7b3e583",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\services\\subjective-grading-worker\\tests\\test_api_integration.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "tests/ai-evaluation/test_evaluate.py",
+      "exists": true,
+      "bytes": 5509,
+      "sha256": "2210d2f8b73d6e7fc527289e582fed570abd3e2024aa45f4372efa00ea89d57e",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\tests\\ai-evaluation\\test_evaluate.py",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "tests/e2e/specs/account-security.spec.ts",
+      "exists": true,
+      "bytes": 3024,
+      "sha256": "0ce6e86d3c7de712854c123b96f8e9c602e9f0b016afb87752eb6ac0819cab91",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\tests\\e2e\\specs\\account-security.spec.ts",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "tests/e2e/specs/dashboard-workbench.spec.ts",
+      "exists": true,
+      "bytes": 6604,
+      "sha256": "0091dc3d2baa7808abfb1cc71ca916bd1c04de9e3f582048196b11e776c06ff3",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\tests\\e2e\\specs\\dashboard-workbench.spec.ts",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "tests/e2e/specs/exam-create-flow.spec.ts",
+      "exists": true,
+      "bytes": 2368,
+      "sha256": "b514aadc874ab2a15275fe0a4bf276193563f50cbd84046199a52068e4faaf8d",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\tests\\e2e\\specs\\exam-create-flow.spec.ts",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "tests/e2e/specs/exam-create.visual.spec.ts",
+      "exists": true,
+      "bytes": 1914,
+      "sha256": "ed7accd3f6cb08edcab494c2ca84f5253bdb6e753c53427ec9a78ec6a7d7f4b4",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\tests\\e2e\\specs\\exam-create.visual.spec.ts",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "tests/e2e/specs/exam-workspace.spec.ts",
+      "exists": true,
+      "bytes": 7737,
+      "sha256": "8c8d1055c0288ca1c74d806f083bdefb3dcb11c8a4df767b60de51cbabdade95",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\tests\\e2e\\specs\\exam-workspace.spec.ts",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "tests/e2e/specs/exam-workspace.visual.spec.ts",
+      "exists": true,
+      "bytes": 3732,
+      "sha256": "fb1c19fdeddc4f474825d00746b9046788844969512472571610c94f2d048eee",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\tests\\e2e\\specs\\exam-workspace.visual.spec.ts",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "tests/e2e/specs/grading-workbench-keyboard.spec.ts",
+      "exists": true,
+      "bytes": 6962,
+      "sha256": "273678982c5a6adee75e1c1387137d51b448e915c5051496df9b2f4c83ed7d86",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\tests\\e2e\\specs\\grading-workbench-keyboard.spec.ts",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "tests/e2e/specs/platform-model-config.spec.ts",
+      "exists": true,
+      "bytes": 36858,
+      "sha256": "4e9fc12432002439ce5414ad98129b9fefad4fbb05485d50b39d87f12456ee58",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\tests\\e2e\\specs\\platform-model-config.spec.ts",
+      "file_review_status": "pending"
+    },
+    {
+      "path": "tests/e2e/specs/platform-model-management.spec.ts",
+      "exists": true,
+      "bytes": 23100,
+      "sha256": "1ee6fec3d63e31066d8180a38b46c7dee812011d3d1d1489c17f87bf2fdbe344",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\baseline\\tests\\e2e\\specs\\platform-model-management.spec.ts",
+      "file_review_status": "pending"
+    }
+  ],
+  "note": "当前工作区基线，不是Git HEAD；未审读文件仍为pending，原扫描报告不修改。"
+}

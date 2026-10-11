@@ -3,9 +3,11 @@
 import math
 import re
 import unicodedata
+from dataclasses import dataclass, field
 
 from .layout import _box, _reading_order
 from .schema import (
+    MAX_PAGE_FOOTER_TEXT_CHARS,
     _ANSWER_MARKER,
     _DISTRIBUTION_MARKER,
     _OPTION,
@@ -18,8 +20,8 @@ from .schema import (
 )
 
 _NUMBER = r"\d+(?:\.\d+)?"
-# Exam marks must be attached to the question header or section instructions.
-# A bare "4分" in a stem may describe a game, not the value of the question.
+# 考试分值必须关联题目标题或分节说明。
+# 题干中单独出现的“4分”可能是游戏得分，不是该题的分值。
 _QUESTION_MARK = re.compile(
     rf"(?:本(?:小)?题|此题)\s*(?:满分|共|计|为)?\s*[:：]?\s*({_NUMBER})\s*分"
 )
@@ -45,46 +47,10 @@ def anchored_paper_result(documents):
     solutions = []
     rubrics = []
     for document in documents:
-        blocks = document.get("blocks")
-        direct_text = not isinstance(blocks, list) or not blocks
-        if not isinstance(blocks, list) or not blocks:
-            blocks = _direct_text_blocks(document.get("content"))
-        if not blocks:
+        parsed = _anchored_document(document, len(questions))
+        if parsed is None:
             return None
-        segments, _ = _anchored_segments(document, blocks)
-        if len(segments) < (1 if direct_text else 2):
-            return None
-        answer_count = sum(
-            any(_ANSWER_MARKER.match(_block_text(entry[1])) for entry in segment[3])
-            for segment in segments
-        )
-        if answer_count * 2 < len(segments):
-            return None
-        document_questions = []
-        document_answers = []
-        document_solutions = []
-        document_rubrics = []
-        for question_no, section, section_entry, entries in segments:
-            question, answer, solution = _anchored_candidate(
-                document,
-                question_no,
-                section,
-                entries,
-                len(questions) + len(document_questions) + 1,
-                section_entry,
-            )
-            document_questions.append(question)
-            if answer:
-                document_answers.append(answer)
-            if solution:
-                document_solutions.append(solution)
-            rubric = _explicit_rubric(document, question_no, entries, question)
-            if rubric:
-                document_rubrics.append(rubric)
-            elif any(_RUBRIC_HEADING.match(_block_text(entry[1])) for entry in entries):
-                # Preserve an explicit but non-tabular marking scheme through
-                # the model path instead of declaring the fast path complete.
-                return None
+        document_questions, document_answers, document_solutions, document_rubrics = parsed
         questions.extend(document_questions)
         answers.extend(document_answers)
         solutions.extend(document_solutions)
@@ -109,7 +75,46 @@ def anchored_paper_result(documents):
     }
 
 
-def _anchored_segments(document, blocks):
+def _anchored_document(document, question_offset):
+    blocks = document.get("blocks")
+    direct_text = not isinstance(blocks, list) or not blocks
+    if direct_text:
+        blocks = _direct_text_blocks(document.get("content"))
+    if not blocks:
+        return None
+    segments, _ = _anchored_segments(blocks)
+    if len(segments) < (1 if direct_text else 2):
+        return None
+    answer_count = sum(
+        any(_ANSWER_MARKER.match(_block_text(entry[1])) for entry in segment[3])
+        for segment in segments
+    )
+    if answer_count * 2 < len(segments):
+        return None
+    return _anchored_document_candidates(document, segments, question_offset)
+
+
+def _anchored_document_candidates(document, segments, question_offset):
+    questions, answers, solutions, rubrics = [], [], [], []
+    for question_no, section, section_entry, entries in segments:
+        question, answer, solution = _anchored_candidate(
+            document, question_no, section, entries, question_offset + len(questions) + 1, section_entry,
+        )
+        questions.append(question)
+        if answer:
+            answers.append(answer)
+        if solution:
+            solutions.append(solution)
+        rubric = _explicit_rubric(document, question_no, entries, question)
+        if rubric:
+            rubrics.append(rubric)
+        elif any(_RUBRIC_HEADING.match(_block_text(entry[1])) for entry in entries):
+            # 任一明确评分段无法完整解析时整份资料回到模型路径，不能返回部分采分点。
+            return None
+    return questions, answers, solutions, rubrics
+
+
+def _ordered_anchor_entries(blocks):
     ordered = []
     by_page = {}
     retained = {id(block) for block in _without_page_furniture(blocks)}
@@ -128,94 +133,108 @@ def _anchored_segments(document, blocks):
             if id(entry[1]) in retained
         )
 
-    segments = []
-    current = []
-    current_number = 0
-    current_section = None
-    current_section_entry = None
-    segment_section = None
-    segment_section_entry = None
-    in_solution = False
-    section_seen = False
-    for entry in ordered:
+    return ordered
+
+
+def _anchored_segments(blocks):
+    builder = _AnchorSegmentBuilder()
+    for entry in _ordered_anchor_entries(blocks):
+        builder.add(entry)
+    return builder.finish()
+
+
+@dataclass
+class _AnchorSegmentBuilder:
+    segments: list = field(default_factory=list)
+    current: list = field(default_factory=list)
+    current_number: int = 0
+    current_section: str | None = None
+    current_section_entry: tuple | None = None
+    segment_section: str | None = None
+    segment_section_entry: tuple | None = None
+    in_solution: bool = False
+    section_seen: bool = False
+
+    def add(self, entry):
         text = _block_text(entry[1])
         if _SECTION_START.match(text):
-            if current:
-                segments.append((current_number, segment_section, segment_section_entry, current))
-                current = []
-                current_number = 0
-                in_solution = False
-            current_section = text
-            current_section_entry = entry
-            section_seen = True
-            continue
-        if not current and _SECTION_MARK.search(text):
-            # Printed papers often put "每小题 N 分" on a line below the
-            # section title. Keep the score-bearing block as provenance.
-            current_section = f"{current_section}\n{text}" if current_section else text
-            current_section_entry = entry
-            continue
+            self._start_section(entry, text)
+            return
+        if not self.current and _SECTION_MARK.search(text):
+            # 独立的每题分值行属于章节来源；保留这行引用，不能只引用没有分值的标题。
+            self.current_section = f"{self.current_section}\n{text}" if self.current_section else text
+            self.current_section_entry = entry
+            return
         match = _QUESTION_NUMBER.match(text)
         if match:
             number = int(match.group(1))
-            # Numbered solution steps are not new exam questions. A real next
-            # question advances the monotonic paper sequence.
-            if not current or (
-                number > current_number
-                and not (in_solution and number <= current_number)
+            # 编号的解题步骤不是新题目。真正的下一题
+            # 会推进试卷中单调递增的题号序列。
+            if not self.current or (
+                number > self.current_number
+                and not (self.in_solution and number <= self.current_number)
             ):
-                if current:
-                    segments.append((current_number, segment_section, segment_section_entry, current))
-                current = [entry]
-                current_number = number
-                segment_section = current_section
-                segment_section_entry = current_section_entry
-                in_solution = False
-                continue
-        if current:
-            current.append(entry)
-            in_solution = in_solution or bool(_SOLUTION_MARKER.match(text))
-    if current:
-        segments.append((current_number, segment_section, segment_section_entry, current))
-    numbers = [segment[0] for segment in segments]
-    if len(numbers) != len(set(numbers)) or numbers != sorted(numbers):
-        return [], section_seen
-    return segments, section_seen
+                self._start_question(entry, number)
+                return
+        if self.current:
+            self.current.append(entry)
+            self.in_solution = self.in_solution or bool(_SOLUTION_MARKER.match(text))
+
+    def _append_current(self):
+        if self.current:
+            self.segments.append((self.current_number, self.segment_section, self.segment_section_entry, self.current))
+
+    def _start_section(self, entry, text):
+        if self.current:
+            self._append_current()
+            self.current = []
+            self.current_number = 0
+            self.in_solution = False
+        self.current_section = text
+        self.current_section_entry = entry
+        self.section_seen = True
+
+    def _start_question(self, entry, number):
+        self._append_current()
+        self.current = [entry]
+        self.current_number = number
+        self.segment_section = self.current_section
+        self.segment_section_entry = self.current_section_entry
+        self.in_solution = False
+
+    def finish(self):
+        self._append_current()
+        numbers = [segment[0] for segment in self.segments]
+        if len(numbers) != len(set(numbers)) or numbers != sorted(numbers):
+            return [], self.section_seen
+        return self.segments, self.section_seen
 
 
 def _anchored_candidate(document, question_no, section, entries, sequence, section_entry=None):
     source_identity = re.sub(
         r"[^A-Za-z0-9]", "", str(document.get("source_id", ""))
     )[:12] or str(document.get("document_index", 0))
-    answer_index = next(
-        (
-            index
-            for index, entry in enumerate(entries)
-            if _ANSWER_MARKER.match(_block_text(entry[1]))
-        ),
-        None,
-    )
-    solution_index = next(
-        (
-            index
-            for index, entry in enumerate(entries)
-            if _SOLUTION_MARKER.match(_block_text(entry[1]))
-        ),
-        None,
-    )
-    rubric_index = next(
-        (
-            index
-            for index, entry in enumerate(entries)
-            if _RUBRIC_HEADING.match(_block_text(entry[1]))
-        ),
-        None,
-    )
+    suffix = f"{source_identity}-{sequence:03d}"
+    answer_index = _first_marker_index(entries, _ANSWER_MARKER)
+    solution_index = _first_marker_index(entries, _SOLUTION_MARKER)
+    rubric_index = _first_marker_index(entries, _RUBRIC_HEADING)
     boundaries = [
         value for value in (answer_index, solution_index, rubric_index) if value is not None
     ]
     question_end = min(boundaries) if boundaries else len(entries)
     question_entries = entries[:question_end]
+    normalized = str(question_no)
+    question = _anchored_question(document, normalized, section, question_entries, suffix, section_entry, answer_index)
+    answer = _anchored_answer(document, normalized, entries, suffix, answer_index, (solution_index, rubric_index))
+    solution = _anchored_solution(document, normalized, entries, suffix, solution_index, (answer_index, rubric_index))
+    return question, answer, solution
+
+
+def _first_marker_index(entries, pattern):
+    return next((index for index, entry in enumerate(entries) if pattern.match(_block_text(entry[1]))), None)
+
+
+def _anchored_question(document, normalized, section, question_entries, suffix, section_entry, answer_index):
     question_refs = [
         _trusted_block_ref(document, entry[1]) for entry in question_entries
     ]
@@ -229,9 +248,8 @@ def _anchored_candidate(document, question_no, section, entries, sequence, secti
     if section_sourced and section_entry is not None:
         question_refs.append(_trusted_block_ref(document, section_entry[1]))
     question_type = _question_type(section, options)
-    normalized = str(question_no)
-    question = {
-        "candidate_id": f"q-rule-{source_identity}-{sequence:03d}",
+    return {
+        "candidate_id": f"q-rule-{suffix}",
         "question_no_raw": normalized,
         "question_no_normalized": normalized,
         "parent_question_no": None,
@@ -249,67 +267,62 @@ def _anchored_candidate(document, question_no, section, entries, sequence, secti
         "issues": [],
     }
 
-    answer = None
-    if answer_index is not None:
-        marker = _ANSWER_MARKER.match(_block_text(entries[answer_index][1]))
-        value = marker.group(1).strip() if marker else ""
-        answer_end = min(
-            (index for index in (solution_index, rubric_index) if index is not None and index > answer_index),
-            default=len(entries),
-        )
-        answer_entries = entries[answer_index:answer_end]
-        if not value:
-            value = " ".join(
-                _block_text(entry[1]) for entry in answer_entries[1:4]
-            ).strip()
-        if value:
-            answer = {
-                "candidate_id": f"a-rule-{source_identity}-{sequence:03d}",
-                "question_no_hint": normalized,
-                "question_no_normalized": normalized,
-                "subquestion_no_hint": None,
-                "standard_answer": value,
-                "equivalent_answers": [],
-                "tolerance": None,
-                "confidence": _evidence_confidence(answer_entries, 0.98),
-                "source_refs": [
-                    _trusted_block_ref(document, entry[1]) for entry in answer_entries
-                ],
-                "issues": [],
-            }
 
-    solution = None
-    if solution_index is not None:
-        solution_end = min(
-            (index for index in (answer_index, rubric_index) if index is not None and index > solution_index),
-            default=len(entries),
-        )
-        solution_entries = entries[solution_index:solution_end]
-        contents = []
-        for offset, entry in enumerate(solution_entries):
-            text = _block_text(entry[1])
-            marker = _SOLUTION_MARKER.match(text) if offset == 0 else None
-            text = marker.group(1).strip() if marker else text
-            if text:
-                contents.append(text)
-        if contents:
-            solution = {
-                "candidate_id": f"s-rule-{source_identity}-{sequence:03d}",
-                "question_no_hint": normalized,
-                "question_no_normalized": normalized,
-                "subquestion_no_hint": None,
-                "raw_text": "\n".join(contents),
-                "steps": [
-                    {"step_no": index, "content": content}
-                    for index, content in enumerate(contents, 1)
-                ],
-                "confidence": _evidence_confidence(solution_entries, 0.93),
-                "source_refs": [
-                    _trusted_block_ref(document, entry[1]) for entry in solution_entries
-                ],
-                "issues": [],
-            }
-    return question, answer, solution
+
+def _anchored_answer(document, normalized, entries, suffix, answer_index, boundaries):
+    if answer_index is None:
+        return None
+    marker = _ANSWER_MARKER.match(_block_text(entries[answer_index][1]))
+    value = marker.group(1).strip() if marker else ""
+    answer_entries = _entries_until_next_marker(entries, answer_index, boundaries)
+    if not value:
+        value = " ".join(_block_text(entry[1]) for entry in answer_entries[1:4]).strip()
+    if not value:
+        return None
+    return {
+        "candidate_id": f"a-rule-{suffix}",
+        "question_no_hint": normalized,
+        "question_no_normalized": normalized,
+        "subquestion_no_hint": None,
+        "standard_answer": value,
+        "equivalent_answers": [],
+        "tolerance": None,
+        "confidence": _evidence_confidence(answer_entries, 0.98),
+        "source_refs": [_trusted_block_ref(document, entry[1]) for entry in answer_entries],
+        "issues": [],
+    }
+
+
+def _entries_until_next_marker(entries, start, boundaries):
+    # 答案、解析和评分段各自止于后面的第一个标记，不能吞入另一个段落的内容。
+    end = min((index for index in boundaries if index is not None and index > start), default=len(entries))
+    return entries[start:end]
+
+
+def _anchored_solution(document, normalized, entries, suffix, solution_index, boundaries):
+    if solution_index is None:
+        return None
+    solution_entries = _entries_until_next_marker(entries, solution_index, boundaries)
+    contents = []
+    for offset, entry in enumerate(solution_entries):
+        text = _block_text(entry[1])
+        marker = _SOLUTION_MARKER.match(text) if offset == 0 else None
+        text = marker.group(1).strip() if marker else text
+        if text:
+            contents.append(text)
+    if not contents:
+        return None
+    return {
+        "candidate_id": f"s-rule-{suffix}",
+        "question_no_hint": normalized,
+        "question_no_normalized": normalized,
+        "subquestion_no_hint": None,
+        "raw_text": "\n".join(contents),
+        "steps": [{"step_no": index, "content": content} for index, content in enumerate(contents, 1)],
+        "confidence": _evidence_confidence(solution_entries, 0.93),
+        "source_refs": [_trusted_block_ref(document, entry[1]) for entry in solution_entries],
+        "issues": [],
+    }
 
 
 def _explicit_question_score(lines, section):
@@ -338,36 +351,17 @@ def _explicit_rubric(document, question_no, entries, question):
     answer_or_solution_seen = False
     in_rubric = False
     for _, block in entries:
-        line = _block_text(block)
-        heading = _RUBRIC_HEADING.match(line)
-        if heading:
-            in_rubric = True
-            line = line[heading.end():]
-        else:
-            if _ANSWER_MARKER.match(line) or _SOLUTION_MARKER.match(line):
-                answer_or_solution_seen = True
-                in_rubric = False
-            marker = _SOLUTION_MARKER.match(line)
-            if marker:
-                line = marker.group(1)
-        for clause in re.split(r"[；;，,。]\s*", line):
-            if not clause.strip():
-                continue
-            match = _MARK_CLAUSE.match(clause)
-            if not match or (not heading and (not answer_or_solution_seen or not _MARK_ACTION.search(match.group(1)))):
-                if in_rubric:
-                    unparsed_heading_content = True
-                continue
-            description = match.group(1).strip()
-            if not description:
-                if in_rubric:
-                    unparsed_heading_content = True
-                continue
+        line, heading, in_rubric, answer_or_solution_seen = _rubric_line_state(
+            _block_text(block), in_rubric, answer_or_solution_seen,
+        )
+        clauses, unparsed = _explicit_mark_clauses(line, heading, answer_or_solution_seen)
+        unparsed_heading_content = unparsed_heading_content or (in_rubric and unparsed)
+        for description, score in clauses:
             points.append(
                 {
                     "id": f"rp-rule-{question['candidate_id']}-{len(points) + 1:02d}",
                     "description": description,
-                    "score": float(match.group(2)),
+                    "score": score,
                     "required": None,
                     "evidence_requirements": [],
                 }
@@ -392,6 +386,44 @@ def _explicit_rubric(document, question_no, entries, question):
         "source_refs": refs,
         "issues": [] if question["score"] is not None else ["题目满分未明确标注，评分点分值合计需核对"],
     }
+
+
+def _rubric_line_state(line, in_rubric, answer_or_solution_seen):
+    heading = _RUBRIC_HEADING.match(line)
+    if heading:
+        return line[heading.end():], heading, True, answer_or_solution_seen
+    if _ANSWER_MARKER.match(line) or _SOLUTION_MARKER.match(line):
+        answer_or_solution_seen = True
+        in_rubric = False
+    marker = _SOLUTION_MARKER.match(line)
+    if marker:
+        line = marker.group(1)
+    return line, heading, in_rubric, answer_or_solution_seen
+
+
+def _explicit_mark_clauses(line, heading, answer_or_solution_seen):
+    points = []
+    unparsed = False
+    for clause in re.split(r"[；;，,。]\s*", line):
+        if not clause.strip():
+            continue
+        parsed = _explicit_mark_clause(clause, heading, answer_or_solution_seen)
+        if parsed is None:
+            unparsed = True
+        else:
+            points.append(parsed)
+    return points, unparsed
+
+
+def _explicit_mark_clause(clause, heading, answer_or_solution_seen):
+    match = _MARK_CLAUSE.match(clause)
+    # 非评分标题下的分值必须出现在答案或解析之后，并带明确采分动作，避免把题干比赛得分当标准。
+    if not match or (not heading and (not answer_or_solution_seen or not _MARK_ACTION.search(match.group(1)))):
+        return None
+    description = match.group(1).strip()
+    if not description:
+        return None
+    return description, float(match.group(2))
 
 
 def _stem_and_options(lines):
@@ -501,9 +533,9 @@ def _direct_text_blocks(content):
 def _markdown_anchor_text(value):
     text = str(value or "").strip()
     text = re.sub(r"^(?:#{1,6}\s+|>\s*)", "", text).strip()
-    # Markdown emphasis commonly wraps the complete question/answer line.
-    # Removing the delimiter, rather than interpreting the content, preserves
-    # LaTeX commands such as \frac and all mathematical punctuation verbatim.
+    # Markdown 强调标记通常包住完整的题目或答案行。
+    # 只移除分隔符，不解释内容，可以原样保留
+    # LaTeX 命令（如 \frac）和所有数学标点。
     text = text.replace("**", "").replace("__", "").strip()
     return text
 
@@ -537,9 +569,15 @@ def _without_page_furniture(blocks):
     """
 
     valid = [block for block in blocks if isinstance(block, dict)]
+    page_bounds, signatures = _furniture_page_context(valid)
+    repeated = {signature for signature, pages in signatures.items() if len(pages) >= 2}
+    return [block for block in valid if not _is_page_furniture(block, page_bounds, repeated)]
+
+
+def _furniture_page_context(blocks):
     page_bounds = {}
     signatures = {}
-    for block in valid:
+    for block in blocks:
         box = _box((0, block))
         if box is None:
             continue
@@ -557,40 +595,37 @@ def _without_page_furniture(blocks):
         if len(signature) >= 6:
             signatures.setdefault(signature, set()).add(page_no)
 
-    repeated = {
-        signature for signature, pages in signatures.items() if len(pages) >= 2
-    }
-    result = []
-    for block in valid:
-        text = _block_text(block)
-        box = _box((0, block))
-        try:
-            page_no = int(block.get("page_no", 0))
-        except (TypeError, ValueError):
-            page_no = 0
-        bounds = page_bounds.get(page_no)
-        if box is None or bounds is None or bounds[1] <= bounds[0]:
-            result.append(block)
-            continue
-        page_height = bounds[1] - bounds[0]
-        center = box[1] + box[3] / 2
-        near_top = center <= bounds[0] + page_height * 0.08
-        near_bottom = center >= bounds[0] + page_height * 0.90
-        protected_anchor = any(
-            pattern.match(text)
-            for pattern in (_QUESTION_START, _ANSWER_MARKER, _SOLUTION_MARKER, _OPTION)
-        )
-        strong_footer = not protected_anchor and near_bottom and (
-            _PAGE_FOOTER.fullmatch(text.strip()) is not None
-            or (len(text) <= 80 and _DISTRIBUTION_MARKER.search(text) is not None)
-        )
-        repeated_edge = not protected_anchor and (near_top or near_bottom) and (
-            _furniture_signature(text) in repeated
-            and _REPEATED_FURNITURE_MARKER.search(text) is not None
-        )
-        if not strong_footer and not repeated_edge:
-            result.append(block)
-    return result
+    return page_bounds, signatures
+
+
+def _is_page_furniture(block, page_bounds, repeated):
+    text = _block_text(block)
+    box = _box((0, block))
+    try:
+        page_no = int(block.get("page_no", 0))
+    except (TypeError, ValueError):
+        page_no = 0
+    bounds = page_bounds.get(page_no)
+    if box is None or bounds is None or bounds[1] <= bounds[0]:
+        return False
+    page_height = bounds[1] - bounds[0]
+    center = box[1] + box[3] / 2
+    near_top = center <= bounds[0] + page_height * 0.08
+    near_bottom = center >= bounds[0] + page_height * 0.90
+    protected_anchor = any(
+        pattern.match(text)
+        for pattern in (_QUESTION_START, _ANSWER_MARKER, _SOLUTION_MARKER, _OPTION)
+    )
+    # 长度预算必须先于正则调用；后续分块上限不能保护此处的原始 OCR 文本。
+    strong_footer = not protected_anchor and near_bottom and len(text) <= MAX_PAGE_FOOTER_TEXT_CHARS and (
+        _PAGE_FOOTER.fullmatch(text) is not None
+        or _DISTRIBUTION_MARKER.search(text) is not None
+    )
+    repeated_edge = not protected_anchor and (near_top or near_bottom) and (
+        _furniture_signature(text) in repeated
+        and _REPEATED_FURNITURE_MARKER.search(text) is not None
+    )
+    return strong_footer or repeated_edge
 
 
 def page_furniture_issues(documents):

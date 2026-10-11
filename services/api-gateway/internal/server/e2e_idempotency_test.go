@@ -44,6 +44,45 @@ LIMIT 1`).Scan(&tenantID, &actorID); err != nil {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
+	assertConcurrentIdempotencyOwnership(t, ctx, store, input)
+
+	body := []byte(`{"exam":{"id":"stable-result"}}`)
+	if err := store.Complete(ctx, input, 201, map[string]string{"Content-Type": "application/json"}, body); err != nil {
+		t.Fatalf("complete idempotent operation: %v", err)
+	}
+	record, execute, err := store.Begin(ctx, input)
+	if err != nil || execute {
+		t.Fatalf("expected completed replay, execute=%v err=%v", execute, err)
+	}
+	if record.ResponseStatus != 201 || string(record.ResponseBody) != string(body) {
+		t.Fatalf("unexpected replay record: %#v", record)
+	}
+
+	conflict := input
+	conflict.RequestHash = "request-hash-b"
+	if _, _, err := store.Begin(ctx, conflict); !errors.Is(err, idempotency.ErrKeyConflict) {
+		t.Fatalf("changed request with reused key must conflict, got %v", err)
+	}
+
+	recovery := input
+	recovery.Key += "-recovery"
+	if _, execute, err := store.Begin(ctx, recovery); err != nil || !execute {
+		t.Fatalf("reserve recoverable operation: execute=%v err=%v", execute, err)
+	}
+	if _, err := db.ExecContext(ctx, `UPDATE idempotency_record SET updated_at=now()-interval '10 minutes'
+	WHERE tenant_id=$1::uuid AND actor_id=$2::uuid AND method=$3 AND route=$4 AND idempotency_key=$5`, recovery.TenantID, recovery.ActorID, recovery.Method, recovery.Route, recovery.Key); err != nil {
+		t.Fatalf("age interrupted reservation: %v", err)
+	}
+	recovery.AllowTakeover = true
+	recovery.StaleBefore = time.Now().UTC().Add(-2 * time.Minute)
+	if _, execute, err := store.Begin(ctx, recovery); err != nil || !execute {
+		t.Fatalf("stale interrupted operation should be reclaimed: execute=%v err=%v", execute, err)
+	}
+}
+
+// 完成回执前同时抢占同一请求，须只有一个执行者；等待 goroutine 结束后才读取结果。
+func assertConcurrentIdempotencyOwnership(t *testing.T, ctx context.Context, store *idempotency.PostgresStore, input idempotency.BeginInput) {
+	t.Helper()
 	start := make(chan struct{})
 	results := make(chan error, 2)
 	var wg sync.WaitGroup
@@ -78,38 +117,6 @@ LIMIT 1`).Scan(&tenantID, &actorID); err != nil {
 		t.Fatalf("expected one owner and one in-progress result, got owners=%d in_progress=%d", owners, inProgress)
 	}
 
-	body := []byte(`{"exam":{"id":"stable-result"}}`)
-	if err := store.Complete(ctx, input, 201, map[string]string{"Content-Type": "application/json"}, body); err != nil {
-		t.Fatalf("complete idempotent operation: %v", err)
-	}
-	record, execute, err := store.Begin(ctx, input)
-	if err != nil || execute {
-		t.Fatalf("expected completed replay, execute=%v err=%v", execute, err)
-	}
-	if record.ResponseStatus != 201 || string(record.ResponseBody) != string(body) {
-		t.Fatalf("unexpected replay record: %#v", record)
-	}
-
-	conflict := input
-	conflict.RequestHash = "request-hash-b"
-	if _, _, err := store.Begin(ctx, conflict); !errors.Is(err, idempotency.ErrKeyConflict) {
-		t.Fatalf("changed request with reused key must conflict, got %v", err)
-	}
-
-	recovery := input
-	recovery.Key += "-recovery"
-	if _, execute, err := store.Begin(ctx, recovery); err != nil || !execute {
-		t.Fatalf("reserve recoverable operation: execute=%v err=%v", execute, err)
-	}
-	if _, err := db.ExecContext(ctx, `UPDATE idempotency_record SET updated_at=now()-interval '10 minutes'
-	WHERE tenant_id=$1::uuid AND actor_id=$2::uuid AND method=$3 AND route=$4 AND idempotency_key=$5`, recovery.TenantID, recovery.ActorID, recovery.Method, recovery.Route, recovery.Key); err != nil {
-		t.Fatalf("age interrupted reservation: %v", err)
-	}
-	recovery.AllowTakeover = true
-	recovery.StaleBefore = time.Now().UTC().Add(-2 * time.Minute)
-	if _, execute, err := store.Begin(ctx, recovery); err != nil || !execute {
-		t.Fatalf("stale interrupted operation should be reclaimed: execute=%v err=%v", execute, err)
-	}
 }
 
 func TestOutboxLeaseRecoveryWithPostgresTestDatabase(t *testing.T) {

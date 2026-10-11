@@ -44,8 +44,30 @@ def verify_equivalence(left_ast: dict[str, Any], right_ast: dict[str, Any], doma
         _validate_real_constants(right_ast, assumptions)
     except VerificationError:
         return VerificationResult("uncertain", "expression_not_defined", domain_name, constraints, ())
-    left = ast_to_sympy(left_ast, assumptions); right = ast_to_sympy(right_ast, assumptions)
+    left = ast_to_sympy(left_ast, assumptions)
+    right = ast_to_sympy(right_ast, assumptions)
     variables = sorted(_ast_symbols(left_ast, assumptions) | _ast_symbols(right_ast, assumptions), key=str)
+    domains = _equivalence_domains(left_ast, right_ast, variables, assumptions, domain_name, constraints)
+    if isinstance(domains, VerificationResult):
+        return domains
+    left_domain, right_domain = domains
+    if left == right or (not isinstance(left, Relational) and not isinstance(right, Relational)):
+        domain_result = _compare_defined_domains(left_domain, right_domain, domain_name, constraints)
+        if domain_result:
+            return domain_result
+    if left == right:
+        return VerificationResult("verified", "exact_ast_equivalent", domain_name, constraints, ("exact_sympy_match",))
+    if isinstance(left, sympy.Equality) and isinstance(right, sympy.Equality) and len(variables) == 1:
+        return _verify_equation_sets(left, right, variables[0], left_domain, right_domain, domain_name, constraints)
+    if not isinstance(left, Relational) and not isinstance(right, Relational):
+        return _verify_algebraic_expressions(left, right, left_domain, domain_name, constraints)
+    return VerificationResult("uncertain", "unknown", domain_name, constraints, ())
+
+
+def _equivalence_domains(
+    left_ast: dict[str, Any], right_ast: dict[str, Any], variables: list[sympy.Symbol],
+    assumptions: dict[str, Any], domain_name: str, constraints: tuple[str, ...],
+) -> tuple[sympy.Set, sympy.Set] | VerificationResult:
     left_domain = right_domain = S.Reals
     if len(variables) == 1:
         try:
@@ -57,34 +79,48 @@ def verify_equivalence(left_ast: dict[str, Any], right_ast: dict[str, Any], doma
         return VerificationResult("uncertain", "multivariable_domain_not_resolved", domain_name, constraints, ())
     if left_domain is S.EmptySet or right_domain is S.EmptySet:
         return VerificationResult("uncertain", "expression_not_defined", domain_name, constraints, ())
-    if left == right or (not isinstance(left, Relational) and not isinstance(right, Relational)):
-        domains_equal = _domains_equal(left_domain, right_domain)
-        if domains_equal is None:
-            return VerificationResult("uncertain", "domain_not_resolved", domain_name, constraints, ())
-        if not domains_equal:
-            return VerificationResult("contradicted", "defined_domain_changed", domain_name, constraints, (str(left_domain), str(right_domain)))
-    if left == right:
-        return VerificationResult("verified", "exact_ast_equivalent", domain_name, constraints, ("exact_sympy_match",))
+    return left_domain, right_domain
+
+
+def _compare_defined_domains(
+    left_domain: sympy.Set, right_domain: sympy.Set, domain_name: str, constraints: tuple[str, ...],
+) -> VerificationResult | None:
+    domains_equal = _domains_equal(left_domain, right_domain)
+    if domains_equal is None:
+        return VerificationResult("uncertain", "domain_not_resolved", domain_name, constraints, ())
+    if not domains_equal:
+        return VerificationResult("contradicted", "defined_domain_changed", domain_name, constraints, (str(left_domain), str(right_domain)))
+    return None
+
+
+def _verify_equation_sets(
+    left: sympy.Equality, right: sympy.Equality, variable: sympy.Symbol,
+    left_domain: sympy.Set, right_domain: sympy.Set, domain_name: str, constraints: tuple[str, ...],
+) -> VerificationResult:
     # 方程比较各自合法域内的完整解集；仅证明式子相似不能排除增根或丢根。
-    if isinstance(left, sympy.Equality) and isinstance(right, sympy.Equality) and len(variables) == 1:
-        left_set = sympy.solveset(left, variables[0], domain=left_domain)
-        right_set = sympy.solveset(right, variables[0], domain=right_domain)
-        if left_set.has(sympy.ConditionSet) or right_set.has(sympy.ConditionSet):
-            return VerificationResult("uncertain", "solution_set_not_resolved", domain_name, constraints, (str(left_set), str(right_set)))
-        if left_set == right_set:
-            return VerificationResult("verified", "solution_set_equivalent", domain_name, constraints, (str(left_set),))
-        if left_set.is_subset(right_set) is True:
-            return VerificationResult("contradicted", "extra_solutions_introduced", domain_name, constraints, (str(left_set), str(right_set)))
-        if right_set.is_subset(left_set) is True:
-            return VerificationResult("contradicted", "solutions_lost", domain_name, constraints, (str(left_set), str(right_set)))
-        return VerificationResult("contradicted", "different_solution_set", domain_name, constraints, (str(left_set), str(right_set)))
-    if not isinstance(left, Relational) and not isinstance(right, Relational):
-        difference = sympy.cancel(sympy.together(left - right))
-        if difference == 0:
-            return VerificationResult("verified", "algebraically_equivalent", domain_name, constraints, ("together_cancel",))
-        counterexample = _counterexample(left, right, left_domain)
-        if counterexample:
-            return VerificationResult("contradicted", "numeric_counterexample", domain_name, constraints, (counterexample,))
+    left_set = sympy.solveset(left, variable, domain=left_domain)
+    right_set = sympy.solveset(right, variable, domain=right_domain)
+    if left_set.has(sympy.ConditionSet) or right_set.has(sympy.ConditionSet):
+        return VerificationResult("uncertain", "solution_set_not_resolved", domain_name, constraints, (str(left_set), str(right_set)))
+    if left_set == right_set:
+        return VerificationResult("verified", "solution_set_equivalent", domain_name, constraints, (str(left_set),))
+    if left_set.is_subset(right_set) is True:
+        return VerificationResult("contradicted", "extra_solutions_introduced", domain_name, constraints, (str(left_set), str(right_set)))
+    if right_set.is_subset(left_set) is True:
+        return VerificationResult("contradicted", "solutions_lost", domain_name, constraints, (str(left_set), str(right_set)))
+    return VerificationResult("contradicted", "different_solution_set", domain_name, constraints, (str(left_set), str(right_set)))
+
+
+def _verify_algebraic_expressions(
+    left: sympy.Basic, right: sympy.Basic, left_domain: sympy.Set,
+    domain_name: str, constraints: tuple[str, ...],
+) -> VerificationResult:
+    difference = sympy.cancel(sympy.together(left - right))
+    if difference == 0:
+        return VerificationResult("verified", "algebraically_equivalent", domain_name, constraints, ("together_cancel",))
+    counterexample = _counterexample(left, right, left_domain)
+    if counterexample:
+        return VerificationResult("contradicted", "numeric_counterexample", domain_name, constraints, (counterexample,))
     return VerificationResult("uncertain", "unknown", domain_name, constraints, ())
 
 
@@ -120,30 +156,63 @@ def solve(ast: dict[str, Any], variable: str, domain: dict[str, Any] | None = No
 
 
 def ast_to_sympy(node: dict[str, Any], domain: dict[str, Any]) -> sympy.Basic:
-    if not isinstance(node, dict): raise VerificationError("AST node must be an object")
-    kind = node.get("kind"); value = str(node.get("value", "")); children = node.get("children", [])
-    if not isinstance(children, list) or len(children) > 64: raise VerificationError("invalid AST children")
+    if not isinstance(node, dict):
+        raise VerificationError("AST node must be an object")
+    kind = node.get("kind")
+    value = str(node.get("value", ""))
+    children = node.get("children", [])
+    if not isinstance(children, list) or len(children) > 64:
+        raise VerificationError("invalid AST children")
+    # 子节点先于父节点转换；父节点未知或元数错误时，仍保留原先遇到的首个子节点错误。
     parsed = [ast_to_sympy(child, domain) for child in children]
     # 书写的有限小数表示精确数学值，不能先转成二进制浮点数。
-    if kind == "number": return sympy.Rational(value)
+    if kind == "number":
+        return sympy.Rational(value)
     if kind == "symbol":
-        if not value.isalpha() or len(value) > 32: raise VerificationError("invalid symbol")
-        return _symbols(domain).get(value, sympy.Symbol(value, real=True))
-    if kind == "group" and len(parsed) == 1: return parsed[0]
-    if kind == "operator" and len(parsed) == 2:
-        if value == "+": return parsed[0] + parsed[1]
-        if value == "-": return parsed[0] - parsed[1]
-        if value == "*": return parsed[0] * parsed[1]
+        return _symbol_to_sympy(value, domain)
+    if len(parsed) == 1:
+        return _unary_ast_to_sympy(kind, value, parsed[0])
+    if len(parsed) == 2:
+        return _binary_ast_to_sympy(kind, value, parsed[0], parsed[1])
+    raise VerificationError(f"unsupported AST kind: {kind}")
+
+
+def _symbol_to_sympy(value: str, domain: dict[str, Any]) -> sympy.Symbol:
+    if not value.isalpha() or len(value) > 32:
+        raise VerificationError("invalid symbol")
+    return _symbols(domain).get(value, sympy.Symbol(value, real=True))
+
+
+def _unary_ast_to_sympy(kind: Any, value: str, operand: sympy.Basic) -> sympy.Basic:
+    if kind == "group":
+        return operand
+    if kind == "radical":
+        return sympy.sqrt(operand)
+    if kind == "function" and value in {"sin", "cos", "tan", "abs"}:
+        return {"sin": sympy.sin, "cos": sympy.cos, "tan": sympy.tan, "abs": sympy.Abs}[value](operand)
+    raise VerificationError(f"unsupported AST kind: {kind}")
+
+
+def _binary_ast_to_sympy(kind: Any, value: str, left: sympy.Basic, right: sympy.Basic) -> sympy.Basic:
+    if kind == "operator":
+        if value == "+":
+            return left + right
+        if value == "-":
+            return left - right
+        if value == "*":
+            return left * right
         raise VerificationError("unsupported operator")
-    if kind == "fraction" and len(parsed) == 2: return parsed[0] / parsed[1]
-    if kind == "power" and len(parsed) == 2: return parsed[0] ** parsed[1]
-    if kind == "radical" and len(parsed) == 1: return sympy.sqrt(parsed[0])
-    if kind == "function" and len(parsed) == 1 and value in {"sin", "cos", "tan", "abs"}:
-        return {"sin": sympy.sin, "cos": sympy.cos, "tan": sympy.tan, "abs": sympy.Abs}[value](parsed[0])
-    if kind == "equation" and len(parsed) == 2: return sympy.Eq(parsed[0], parsed[1], evaluate=False)
-    if kind == "inequality" and len(parsed) == 2:
+    if kind == "fraction":
+        return left / right
+    if kind == "power":
+        return left ** right
+    if kind == "equation":
+        # 恒真或恒假的方程也保留 Equality 对象，供后续完整解集比较使用。
+        return sympy.Eq(left, right, evaluate=False)
+    if kind == "inequality":
         operations = {"<": sympy.Lt, ">": sympy.Gt, "\\le": sympy.Le, "\\leq": sympy.Le, "\\ge": sympy.Ge, "\\geq": sympy.Ge, "\\neq": sympy.Ne}
-        if value in operations: return operations[value](parsed[0], parsed[1])
+        if value in operations:
+            return operations[value](left, right)
     raise VerificationError(f"unsupported AST kind: {kind}")
 
 

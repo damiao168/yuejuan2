@@ -1,0 +1,3495 @@
+{
+  "file": "08-api-data-flow.drawio",
+  "title": "核心 API 与数据流",
+  "pages": [
+    {
+      "id": "api-overview",
+      "title": "01 API 全局入口、统计口径与数据边界",
+      "width": 2340,
+      "height": 1950,
+      "note": "536 个 Handle 字面量注册是静态目录；另有 3 个健康 HandleFunc。目录不证明全部条件模块在每个环境启用。",
+      "nodes": [
+        {
+          "id": "web",
+          "label": "Web 管理 / 教师 / 审计体验\n24 个静态生产入口 + 4 个 mock\n动态考试工作区另计",
+          "x": 68,
+          "y": 308,
+          "w": 423,
+          "h": 87,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "apps/web-admin/src/router/routes.tsx;apps/web-admin/src/router/pageRendering.tsx",
+          "display_label": "Web 管理 / 教师",
+          "show_evidence": false,
+          "title_font_size": 52,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "student",
+          "label": "独立学生门户\n本人发布成绩、逐题证据、申诉\n页面校验 student 角色与读取权限",
+          "x": 124,
+          "y": 640,
+          "w": 312,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "apps/student-portal/src/App.tsx;apps/student-portal/src/api.ts",
+          "display_label": "学生门户",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "desktop",
+          "label": "Windows 桌面客户端\nToken、采集上传、匿名复核\n加密本机草稿与任务包",
+          "x": 88,
+          "y": 984,
+          "w": 384,
+          "h": 111,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "apps/desktop-client/src/App.tsx;apps/desktop-client/src/api/client.ts",
+          "display_label": "桌面客户端",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "transport",
+          "label": "共享契约 + 多种传输\nEduGradeApi 生成 SDK / 自定义 api/*.ts\nJSON、multipart、Blob、XHR、SSE\n405 个静态调用点；139 个 SDK 操作",
+          "x": 627,
+          "y": 685,
+          "w": 469,
+          "h": 99,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "packages/sdk/src/generated/client.ts;apps/web-admin/src/api/client.ts;docs/architecture/evidence/api-catalog.json",
+          "display_label": "SDK / API 包装",
+          "show_evidence": false,
+          "title_font_size": 62,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "mux",
+          "label": "Go ServeMux 与分域路由\n536 Handle：288 精确 OpenAPI\n248 例外；OpenAPI 共 298 操作\n10 处仅参数名不同，规范化后全匹配",
+          "x": 1238,
+          "y": 680,
+          "w": 455,
+          "h": 108,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_exam.go;docs/architecture/evidence/api-catalog.json",
+          "display_label": "路由 / Guard",
+          "show_evidence": false,
+          "title_font_size": 70,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "business",
+          "label": "业务 Handler / Service / Store\nIdentity、Exam、Capture、Grading\nRelease、AIGovernance、Assistant\n不是所有模块均经过独立 Service 层",
+          "x": 1837,
+          "y": 694,
+          "w": 421,
+          "h": 82,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/application_modules.go",
+          "display_label": "Handler → Store",
+          "show_evidence": false,
+          "title_font_size": 48,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "auth",
+          "label": "鉴权与幂等位置需分入口看\n会话 / 角色 / 权限 / 资源范围\n近期认证、worker 来源及任务租约\n通用缓存重放边界见第 08 页",
+          "x": 1238,
+          "y": 320,
+          "w": 456,
+          "h": 82,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/router_guards.go",
+          "display_label": "鉴权顺序有入口差异",
+          "show_evidence": false,
+          "title_font_size": 48,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "persistence",
+          "label": "数据库 + 文件对象\nPostgreSQL 领域记录与文件元数据\nMinIO 保存原件、页图与裁片\n桌面 SQLite / 加密 Spool",
+          "x": 1835,
+          "y": 1075,
+          "w": 425,
+          "h": 99,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/files/store_postgres.go;services/api-gateway/internal/files/storage_minio.go;apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+          "display_label": "PG / 文件对象",
+          "show_evidence": false,
+          "title_font_size": 62,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "worker",
+          "label": "worker / AI 请求另有边界\n持久任务 claim / heartbeat / 回调\nGo adapter → Python AI → 供应商\n生产主观题仍为单 activeAdapter",
+          "x": 1241,
+          "y": 1394,
+          "w": 449,
+          "h": 111,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_worker.go;services/api-gateway/internal/subjective/handlers_worker.go",
+          "display_label": "Worker / AI",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "catalog",
+          "label": "完整目录与实测限制\napi-catalog.json 保存全部注册与调用位置\n376 个注册路由有静态前端调用匹配\nimport 可达性不等于每个函数都会执行",
+          "x": 318,
+          "y": 1433,
+          "w": 528,
+          "h": 111,
+          "status": "infra",
+          "kind": "note",
+          "evidence": "docs/architecture/evidence/api-catalog.json",
+          "display_label": "完整接口见目录",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "health",
+          "label": "唯一静态未匹配项已有真实路由\n桌面 GET /health → mux.HandleFunc\n/health/live、/health/ready 同口径\n并非缺失 API",
+          "x": 1837,
+          "y": 1420,
+          "w": 421,
+          "h": 84,
+          "status": "infra",
+          "kind": "note",
+          "evidence": "services/api-gateway/internal/server/routes_system.go;apps/desktop-client/src/api/client.ts",
+          "display_label": "/health 直接注册",
+          "show_evidence": false,
+          "title_font_size": 50,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        }
+      ],
+      "edges": [
+        {
+          "source": "web",
+          "target": "transport",
+          "label": "JSON / Cookie",
+          "evidence": "apps/web-admin/src/api/client.ts",
+          "points": [
+            [
+              552,
+              351
+            ],
+            [
+              552,
+              734
+            ]
+          ],
+          "display_label": "JSON / Cookie"
+        },
+        {
+          "source": "student",
+          "target": "transport",
+          "label": "SDK / Cookie",
+          "evidence": "apps/student-portal/src/api.ts",
+          "display_label": "SDK / Cookie"
+        },
+        {
+          "source": "desktop",
+          "target": "transport",
+          "label": "Token / 自定义API",
+          "evidence": "apps/desktop-client/src/api/client.ts",
+          "points": [
+            [
+              552,
+              1040
+            ],
+            [
+              552,
+              734
+            ]
+          ],
+          "display_label": "Token / 自定义API"
+        },
+        {
+          "source": "transport",
+          "target": "mux",
+          "label": "/api/v1",
+          "evidence": "docs/architecture/evidence/api-catalog.json",
+          "display_label": "/api/v1"
+        },
+        {
+          "source": "mux",
+          "target": "business",
+          "label": "dispatch",
+          "evidence": "services/api-gateway/internal/server/application_modules.go",
+          "display_label": "dispatch"
+        },
+        {
+          "source": "auth",
+          "target": "mux",
+          "label": "包裹已注册 handler",
+          "evidence": "services/api-gateway/internal/server/router_guards.go",
+          "display_label": "包裹已注册 handler"
+        },
+        {
+          "source": "business",
+          "target": "persistence",
+          "label": "Store / ObjectStorage",
+          "evidence": "services/api-gateway/internal/files/handlers.go",
+          "display_label": "Store / ObjectStorage"
+        },
+        {
+          "source": "worker",
+          "target": "business",
+          "label": "授权任务命令 / AI调用",
+          "evidence": "services/api-gateway/internal/server/routes_worker.go",
+          "points": [
+            [
+              1755,
+              1450
+            ],
+            [
+              1755,
+              734
+            ]
+          ],
+          "display_label": "授权任务命令 / AI调用"
+        }
+      ],
+      "display_note": "",
+      "typography_layout_base": {
+        "width": 1800,
+        "height": 1500,
+        "nodes": {
+          "web": {
+            "x": 50,
+            "y": 185,
+            "w": 330,
+            "h": 170
+          },
+          "student": {
+            "x": 50,
+            "y": 450,
+            "w": 330,
+            "h": 170
+          },
+          "desktop": {
+            "x": 50,
+            "y": 715,
+            "w": 330,
+            "h": 170
+          },
+          "transport": {
+            "x": 480,
+            "y": 450,
+            "w": 365,
+            "h": 230
+          },
+          "mux": {
+            "x": 950,
+            "y": 450,
+            "w": 355,
+            "h": 230
+          },
+          "business": {
+            "x": 1410,
+            "y": 450,
+            "w": 330,
+            "h": 230
+          },
+          "auth": {
+            "x": 950,
+            "y": 185,
+            "w": 355,
+            "h": 185
+          },
+          "persistence": {
+            "x": 1410,
+            "y": 770,
+            "w": 330,
+            "h": 190
+          },
+          "worker": {
+            "x": 950,
+            "y": 1020,
+            "w": 355,
+            "h": 190
+          },
+          "catalog": {
+            "x": 50,
+            "y": 1050,
+            "w": 795,
+            "h": 190
+          },
+          "health": {
+            "x": 1410,
+            "y": 1030,
+            "w": 330,
+            "h": 190
+          }
+        },
+        "points": {
+          "0": [
+            [
+              425,
+              270
+            ],
+            [
+              425,
+              565
+            ]
+          ],
+          "2": [
+            [
+              425,
+              800
+            ],
+            [
+              425,
+              565
+            ]
+          ],
+          "7": [
+            [
+              1350,
+              1115
+            ],
+            [
+              1350,
+              565
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "identity-org",
+      "title": "02 身份、平台学校与组织成员",
+      "width": 2340,
+      "height": 1716,
+      "note": "路径均以 /api/v1 为前缀；横向读取：实际页面 → API / 权限 → handler / 业务模块 → 持久化。返回数据沿请求链反向回到页面。",
+      "nodes": [
+        {
+          "id": "row0-page",
+          "label": "登录 / 账户安全\n登录组件、SessionManagementPage",
+          "x": 58,
+          "y": 290,
+          "w": 403,
+          "h": 175,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "apps/web-admin/src/api/auth.ts;apps/web-admin/src/pages/SessionManagementPage.tsx",
+          "display_label": "登录 / 账户安全\n登录组件、SessionManagementPage",
+          "show_evidence": false,
+          "title_font_size": 53,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row0-api",
+          "label": "会话与认证\nPOST /auth/login\nGET /auth/me\nGET /auth/sessions\n权限：公开登录；其余 account",
+          "x": 650,
+          "y": 278,
+          "w": 384,
+          "h": 198,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_auth.go",
+          "display_label": "会话与认证\nPOST /auth/login\nGET /auth/me",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row0-handler",
+          "label": "AuthHandler\nLogin / Me / ListSessions\n密码、状态与会话边界",
+          "x": 1236,
+          "y": 302,
+          "w": 452,
+          "h": 150,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/auth/handlers.go",
+          "display_label": "AuthHandler\nLogin / Me / ListSessions",
+          "show_evidence": false,
+          "title_font_size": 66,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row0-data",
+          "label": "Auth Store\n用户、角色、会话与安全事件\n一次性 MFA 不走通用收据",
+          "x": 1818,
+          "y": 298,
+          "w": 440,
+          "h": 157,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/router_guards.go;services/api-gateway/internal/auth/store_postgres.go",
+          "display_label": "Auth Store\n用户、角色、会话与安全事件",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row1-page",
+          "label": "平台学校 / 首次启用\nPlatformSchoolsPage",
+          "x": 62,
+          "y": 636,
+          "w": 395,
+          "h": 120,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "apps/web-admin/src/pages/PlatformSchoolsPage.tsx;apps/web-admin/src/api/platformSchools.ts",
+          "display_label": "平台学校 / 首次启用\nPlatformSchoolsPage",
+          "show_evidence": false,
+          "title_font_size": 41,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row1-api",
+          "label": "平台学校管理\nGET /platform/schools\nGET /platform/schools/{tenant_id}\n权限：platform_admin + tenant:manage",
+          "x": 568,
+          "y": 596,
+          "w": 547,
+          "h": 198,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_platform_schools.go",
+          "display_label": "平台学校管理\nGET /platform/schools\nGET /platform/schools/{tenant_id}",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row1-handler",
+          "label": "PlatformSchoolsHandler\n平台管理员目标学校汇总查询",
+          "x": 1237,
+          "y": 624,
+          "w": 451,
+          "h": 144,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_platform_schools.go;services/api-gateway/internal/platformschools/handlers.go",
+          "display_label": "平台学校处理器\n平台管理员目标学校汇总查询",
+          "show_evidence": false,
+          "title_font_size": 61,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row1-data",
+          "label": "PlatformSchools Store\n学校、学校管理员与成员事实",
+          "x": 1810,
+          "y": 617,
+          "w": 456,
+          "h": 157,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/platformschools/store_postgres.go",
+          "display_label": "平台学校数据\n学校、学校管理员与成员事实",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row2-page",
+          "label": "学校初始化 / 年级班级 / 学生\nOrganizationSetupPage / StudentManagementPage",
+          "x": 25,
+          "y": 934,
+          "w": 470,
+          "h": 159,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "apps/web-admin/src/api/org.ts;apps/web-admin/src/pages/OrganizationSetupPage.tsx",
+          "display_label": "学校初始化 / 班级 / 学生\nOrganizationSetupPage / StudentManagementPage",
+          "show_evidence": false,
+          "title_font_size": 40,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row2-api",
+          "label": "组织成员\nGET /classes\nGET /students\n权限：org:manage",
+          "x": 686,
+          "y": 915,
+          "w": 312,
+          "h": 198,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_org.go",
+          "display_label": "组织成员\nGET /classes\nGET /students",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row2-handler",
+          "label": "OrgHandler\n列表、导入、组织作用域",
+          "x": 1236,
+          "y": 936,
+          "w": 452,
+          "h": 157,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_org.go;services/api-gateway/internal/org/handlers.go",
+          "display_label": "OrgHandler\n列表、导入、组织作用域",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row2-data",
+          "label": "Org Store\n学校、年级、班级、学生、教师\n租户 / 学校字段限制查询",
+          "x": 1802,
+          "y": 936,
+          "w": 472,
+          "h": 157,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/org/store_postgres.go",
+          "display_label": "Org Store\n学校、年级、班级、学生、教师",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row3-page",
+          "label": "人员与权限 / 审计\nTeacherManagementPage / AuditLogPage",
+          "x": 58,
+          "y": 1250,
+          "w": 403,
+          "h": 166,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "apps/web-admin/src/api/users.ts;apps/web-admin/src/api/audit.ts",
+          "display_label": "人员与权限 / 审计\nTeacherManagementPage / AuditLogPage",
+          "show_evidence": false,
+          "title_font_size": 46,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row3-api",
+          "label": "账号访问与审计\nPATCH /users/{id}/access\nGET /audit-logs\n权限：org:manage + recent；audit:read",
+          "x": 578,
+          "y": 1234,
+          "w": 528,
+          "h": 198,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_auth.go",
+          "display_label": "账号访问与审计\nPATCH /users/{id}/access\nGET /audit-logs",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row3-handler",
+          "label": "AuthHandler\nUpdateManagedUserAccess / ListAudits\n访问变更撤销已有会话",
+          "x": 1235,
+          "y": 1238,
+          "w": 455,
+          "h": 190,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_auth.go;services/api-gateway/internal/auth/handlers.go",
+          "display_label": "AuthHandler\nUpdateManagedUserAccess / ListAudits",
+          "show_evidence": false,
+          "title_font_size": 66,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row3-data",
+          "label": "Auth Store\n用户访问策略与审计记录\n访问变更要求近期认证",
+          "x": 1830,
+          "y": 1254,
+          "w": 415,
+          "h": 157,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/router_guards.go;services/api-gateway/internal/auth/store_postgres.go",
+          "display_label": "Auth Store\n用户访问策略与审计记录",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        }
+      ],
+      "edges": [
+        {
+          "source": "row0-page",
+          "target": "row0-api",
+          "label": "请求",
+          "evidence": "apps/web-admin/src/api/auth.ts;apps/web-admin/src/pages/SessionManagementPage.tsx",
+          "display_label": "请求"
+        },
+        {
+          "source": "row0-api",
+          "target": "row0-handler",
+          "label": "路由 / guard",
+          "evidence": "services/api-gateway/internal/server/routes_auth.go",
+          "display_label": "路由 / guard"
+        },
+        {
+          "source": "row0-handler",
+          "target": "row0-data",
+          "label": "读 / 写",
+          "evidence": "services/api-gateway/internal/server/router_guards.go;services/api-gateway/internal/auth/store_postgres.go",
+          "display_label": "读 / 写"
+        },
+        {
+          "source": "row1-page",
+          "target": "row1-api",
+          "label": "请求",
+          "evidence": "apps/web-admin/src/pages/PlatformSchoolsPage.tsx;apps/web-admin/src/api/platformSchools.ts",
+          "display_label": "请求"
+        },
+        {
+          "source": "row1-api",
+          "target": "row1-handler",
+          "label": "路由 / guard",
+          "evidence": "services/api-gateway/internal/server/routes_platform_schools.go",
+          "display_label": "路由 / guard"
+        },
+        {
+          "source": "row1-handler",
+          "target": "row1-data",
+          "label": "读 / 写",
+          "evidence": "services/api-gateway/internal/platformschools/store_postgres.go",
+          "display_label": "读 / 写"
+        },
+        {
+          "source": "row2-page",
+          "target": "row2-api",
+          "label": "请求",
+          "evidence": "apps/web-admin/src/api/org.ts;apps/web-admin/src/pages/OrganizationSetupPage.tsx",
+          "display_label": "请求"
+        },
+        {
+          "source": "row2-api",
+          "target": "row2-handler",
+          "label": "路由 / guard",
+          "evidence": "services/api-gateway/internal/server/routes_org.go",
+          "display_label": "路由 / guard"
+        },
+        {
+          "source": "row2-handler",
+          "target": "row2-data",
+          "label": "读 / 写",
+          "evidence": "services/api-gateway/internal/org/store_postgres.go",
+          "display_label": "读 / 写"
+        },
+        {
+          "source": "row3-page",
+          "target": "row3-api",
+          "label": "请求",
+          "evidence": "apps/web-admin/src/api/users.ts;apps/web-admin/src/api/audit.ts",
+          "display_label": "请求"
+        },
+        {
+          "source": "row3-api",
+          "target": "row3-handler",
+          "label": "路由 / guard",
+          "evidence": "services/api-gateway/internal/server/routes_auth.go",
+          "display_label": "路由 / guard"
+        },
+        {
+          "source": "row3-handler",
+          "target": "row3-data",
+          "label": "读 / 写",
+          "evidence": "services/api-gateway/internal/server/router_guards.go;services/api-gateway/internal/auth/store_postgres.go",
+          "display_label": "读 / 写"
+        }
+      ],
+      "display_note": "",
+      "typography_layout_base": {
+        "width": 1800,
+        "height": 1320,
+        "nodes": {
+          "row0-page": {
+            "x": 45,
+            "y": 190,
+            "w": 310,
+            "h": 200
+          },
+          "row0-api": {
+            "x": 420,
+            "y": 190,
+            "w": 455,
+            "h": 200
+          },
+          "row0-handler": {
+            "x": 950,
+            "y": 190,
+            "w": 350,
+            "h": 200
+          },
+          "row0-data": {
+            "x": 1380,
+            "y": 190,
+            "w": 375,
+            "h": 200
+          },
+          "row1-page": {
+            "x": 45,
+            "y": 435,
+            "w": 310,
+            "h": 200
+          },
+          "row1-api": {
+            "x": 420,
+            "y": 435,
+            "w": 455,
+            "h": 200
+          },
+          "row1-handler": {
+            "x": 950,
+            "y": 435,
+            "w": 350,
+            "h": 200
+          },
+          "row1-data": {
+            "x": 1380,
+            "y": 435,
+            "w": 375,
+            "h": 200
+          },
+          "row2-page": {
+            "x": 45,
+            "y": 680,
+            "w": 310,
+            "h": 200
+          },
+          "row2-api": {
+            "x": 420,
+            "y": 680,
+            "w": 455,
+            "h": 200
+          },
+          "row2-handler": {
+            "x": 950,
+            "y": 680,
+            "w": 350,
+            "h": 200
+          },
+          "row2-data": {
+            "x": 1380,
+            "y": 680,
+            "w": 375,
+            "h": 200
+          },
+          "row3-page": {
+            "x": 45,
+            "y": 925,
+            "w": 310,
+            "h": 200
+          },
+          "row3-api": {
+            "x": 420,
+            "y": 925,
+            "w": 455,
+            "h": 200
+          },
+          "row3-handler": {
+            "x": 950,
+            "y": 925,
+            "w": 350,
+            "h": 200
+          },
+          "row3-data": {
+            "x": 1380,
+            "y": 925,
+            "w": 375,
+            "h": 200
+          }
+        },
+        "points": {}
+      }
+    },
+    {
+      "id": "exam-paper",
+      "title": "03 考试、试卷、题库与模板",
+      "width": 2340,
+      "height": 1716,
+      "note": "路径均以 /api/v1 为前缀；横向读取：实际页面 → API / 权限 → handler / 业务模块 → 持久化。返回数据沿请求链反向回到页面。",
+      "nodes": [
+        {
+          "id": "row0-page",
+          "label": "考试列表 / 新建考试 / 管理总览",
+          "x": 45,
+          "y": 341,
+          "w": 430,
+          "h": 72,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "apps/web-admin/src/api/exams.ts;apps/web-admin/src/features/exams/create/CreateExamPage.tsx",
+          "display_label": "考试列表 / 新建 / 总览",
+          "show_evidence": false,
+          "title_font_size": 40,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row0-api",
+          "label": "考试与场次\nPOST /exams\nPOST /exam-sessions\nGET /exam-management/{kind}/{id}\n权限：exam:manage + 资源边界",
+          "x": 650,
+          "y": 278,
+          "w": 384,
+          "h": 198,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_exam.go",
+          "display_label": "考试与场次\nPOST /exams\nPOST /exam-sessions",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row0-handler",
+          "label": "ExamHandler\nCreateExam / CreateExamSession\nGetManagementExam",
+          "x": 1235,
+          "y": 283,
+          "w": 455,
+          "h": 188,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/exam/handlers.go;services/api-gateway/internal/exam/management_handlers.go",
+          "display_label": "ExamHandler\nCreateExam / CreateExamSession",
+          "show_evidence": false,
+          "title_font_size": 64,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row0-data",
+          "label": "Exam Store\n考试、场次、候选人与管理投影\n创建命令有回执恢复",
+          "x": 1802,
+          "y": 298,
+          "w": 472,
+          "h": 157,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/exam/store_postgres.go;services/api-gateway/internal/exam/session_postgres.go",
+          "display_label": "Exam Store\n考试、场次、候选人与管理投影",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row1-page",
+          "label": "题库页面 → 试卷题目工作区",
+          "x": 59,
+          "y": 657,
+          "w": 402,
+          "h": 77,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "apps/web-admin/src/api/questionBank.ts;apps/web-admin/src/features/question-bank/QuestionBankPage.tsx",
+          "display_label": "题库 → 试卷工作区",
+          "show_evidence": false,
+          "title_font_size": 44,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row1-api",
+          "label": "题库实例化\nPOST /exams/{examId}/questions/materialize-from-bank\nGET /exams/{examId}/questions\n权限：exam:manage + question_bank:read",
+          "x": 546,
+          "y": 576,
+          "w": 592,
+          "h": 238,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_paper.go",
+          "display_label": "题库实例化\nPOST /exams/{examId}/questions/materialize-from-bank\nGET /exams/{examId}/questions",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row1-handler",
+          "label": "QuestionBankHandler.Materialize\nPaperHandler.ListQuestions\n题库 ACL 与考试资源分开验证",
+          "x": 1237,
+          "y": 624,
+          "w": 451,
+          "h": 144,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_paper.go;services/api-gateway/internal/questionbank/handlers.go",
+          "display_label": "题库实例化处理\nPaperHandler.ListQuestions",
+          "show_evidence": false,
+          "title_font_size": 61,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row1-data",
+          "label": "QuestionBank / Paper Store\n题库来源引用、考试题目及量规\n不会直接共用题库可变评分结果",
+          "x": 1796,
+          "y": 621,
+          "w": 483,
+          "h": 149,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/paper/materialize_bank.go;services/api-gateway/internal/paper/store_postgres.go",
+          "display_label": "题库 / 试卷数据\n题库来源引用、考试题目及量规",
+          "show_evidence": false,
+          "title_font_size": 65,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row2-page",
+          "label": "资料 / 题目编辑\nPaperRubricPage",
+          "x": 60,
+          "y": 947,
+          "w": 399,
+          "h": 134,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "apps/web-admin/src/api/papers.ts;apps/web-admin/src/pages/PaperRubricPage.tsx",
+          "display_label": "资料 / 题目编辑\nPaperRubricPage",
+          "show_evidence": false,
+          "title_font_size": 53,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row2-api",
+          "label": "导入与人工采纳\nPOST /exams/{examId}/paper-imports\nPUT /paper-imports/{id}/review\nPOST /paper-imports/{id}/apply\n权限：exam:manage + 资源边界",
+          "x": 546,
+          "y": 895,
+          "w": 592,
+          "h": 238,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_paper.go",
+          "display_label": "导入与人工采纳\nPOST /exams/{examId}/paper-imports\nPUT /paper-imports/{id}/review",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row2-handler",
+          "label": "PaperHandler\n导入任务、review、apply\nparser/OCR 后人工确认结构",
+          "x": 1237,
+          "y": 942,
+          "w": 452,
+          "h": 145,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_paper.go;services/api-gateway/internal/paper/handlers.go",
+          "display_label": "PaperHandler\n导入任务、review、apply",
+          "show_evidence": false,
+          "title_font_size": 62,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row2-data",
+          "label": "Paper Store + file_asset\n导入来源、解析、题目 / 量规版本\n异步解析结果不是直接发布",
+          "x": 1794,
+          "y": 920,
+          "w": 488,
+          "h": 189,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/paper/paper_import_postgres.go",
+          "display_label": "试卷 / 文件数据\n导入来源、解析、题目 / 量规版本",
+          "show_evidence": false,
+          "title_font_size": 65,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row3-page",
+          "label": "模板编辑 / 考试设置\nAnswerSheetTemplatePage / ExamReadinessPage",
+          "x": 58,
+          "y": 1232,
+          "w": 403,
+          "h": 201,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "apps/web-admin/src/api/configuration.ts;apps/web-admin/src/pages/AnswerSheetTemplatePage.tsx",
+          "display_label": "模板编辑 / 考试设置\nAnswerSheetTemplatePage / ExamReadinessPage",
+          "show_evidence": false,
+          "title_font_size": 41,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row3-api",
+          "label": "模板与准备确认\nPOST /answer-sheet-templates/{id}/lock\nPOST /exams/{examId}/readiness/confirm\nPOST /exams/{examId}/start-collection\n权限：exam:manage；上传另需 file:manage",
+          "x": 546,
+          "y": 1194,
+          "w": 592,
+          "h": 278,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_paper.go",
+          "display_label": "模板与准备确认\nPOST /answer-sheet-templates/{id}/lock\nPOST /exams/{examId}/readiness/confirm",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row3-handler",
+          "label": "PaperHandler\nLockTemplate / ConfirmReadiness\nStartCollection 核对配置 hash",
+          "x": 1235,
+          "y": 1240,
+          "w": 455,
+          "h": 186,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/paper/configuration_handlers.go",
+          "display_label": "PaperHandler\nLockTemplate / ConfirmReadiness",
+          "show_evidence": false,
+          "title_font_size": 62,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row3-data",
+          "label": "Paper Store\n模板页 / ROI、绑定与准备确认\n有效模板 hash 用于后续配准",
+          "x": 1806,
+          "y": 1254,
+          "w": 464,
+          "h": 157,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/paper/store_postgres_template_binding.go;services/api-gateway/internal/paper/store_postgres.go",
+          "display_label": "Paper Store\n模板页 / ROI、绑定与准备确认",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        }
+      ],
+      "edges": [
+        {
+          "source": "row0-page",
+          "target": "row0-api",
+          "label": "请求",
+          "evidence": "apps/web-admin/src/api/exams.ts;apps/web-admin/src/features/exams/create/CreateExamPage.tsx",
+          "display_label": "请求"
+        },
+        {
+          "source": "row0-api",
+          "target": "row0-handler",
+          "label": "路由 / guard",
+          "evidence": "services/api-gateway/internal/server/routes_exam.go",
+          "display_label": "路由 / guard"
+        },
+        {
+          "source": "row0-handler",
+          "target": "row0-data",
+          "label": "读 / 写",
+          "evidence": "services/api-gateway/internal/exam/store_postgres.go;services/api-gateway/internal/exam/session_postgres.go",
+          "display_label": "读 / 写"
+        },
+        {
+          "source": "row1-page",
+          "target": "row1-api",
+          "label": "请求",
+          "evidence": "apps/web-admin/src/api/questionBank.ts;apps/web-admin/src/features/question-bank/QuestionBankPage.tsx",
+          "display_label": "请求"
+        },
+        {
+          "source": "row1-api",
+          "target": "row1-handler",
+          "label": "路由 / guard",
+          "evidence": "services/api-gateway/internal/server/routes_paper.go",
+          "display_label": "路由 / guard"
+        },
+        {
+          "source": "row1-handler",
+          "target": "row1-data",
+          "label": "读 / 写",
+          "evidence": "services/api-gateway/internal/paper/materialize_bank.go;services/api-gateway/internal/paper/store_postgres.go",
+          "display_label": "读 / 写"
+        },
+        {
+          "source": "row2-page",
+          "target": "row2-api",
+          "label": "请求",
+          "evidence": "apps/web-admin/src/api/papers.ts;apps/web-admin/src/pages/PaperRubricPage.tsx",
+          "display_label": "请求"
+        },
+        {
+          "source": "row2-api",
+          "target": "row2-handler",
+          "label": "路由 / guard",
+          "evidence": "services/api-gateway/internal/server/routes_paper.go",
+          "display_label": "路由 / guard"
+        },
+        {
+          "source": "row2-handler",
+          "target": "row2-data",
+          "label": "读 / 写",
+          "evidence": "services/api-gateway/internal/paper/paper_import_postgres.go",
+          "display_label": "读 / 写"
+        },
+        {
+          "source": "row3-page",
+          "target": "row3-api",
+          "label": "请求",
+          "evidence": "apps/web-admin/src/api/configuration.ts;apps/web-admin/src/pages/AnswerSheetTemplatePage.tsx",
+          "display_label": "请求"
+        },
+        {
+          "source": "row3-api",
+          "target": "row3-handler",
+          "label": "路由 / guard",
+          "evidence": "services/api-gateway/internal/server/routes_paper.go",
+          "display_label": "路由 / guard"
+        },
+        {
+          "source": "row3-handler",
+          "target": "row3-data",
+          "label": "读 / 写",
+          "evidence": "services/api-gateway/internal/paper/store_postgres_template_binding.go;services/api-gateway/internal/paper/store_postgres.go",
+          "display_label": "读 / 写"
+        }
+      ],
+      "display_note": "",
+      "typography_layout_base": {
+        "width": 1800,
+        "height": 1320,
+        "nodes": {
+          "row0-page": {
+            "x": 45,
+            "y": 190,
+            "w": 310,
+            "h": 200
+          },
+          "row0-api": {
+            "x": 420,
+            "y": 190,
+            "w": 455,
+            "h": 200
+          },
+          "row0-handler": {
+            "x": 950,
+            "y": 190,
+            "w": 350,
+            "h": 200
+          },
+          "row0-data": {
+            "x": 1380,
+            "y": 190,
+            "w": 375,
+            "h": 200
+          },
+          "row1-page": {
+            "x": 45,
+            "y": 435,
+            "w": 310,
+            "h": 200
+          },
+          "row1-api": {
+            "x": 420,
+            "y": 435,
+            "w": 455,
+            "h": 200
+          },
+          "row1-handler": {
+            "x": 950,
+            "y": 435,
+            "w": 350,
+            "h": 200
+          },
+          "row1-data": {
+            "x": 1380,
+            "y": 435,
+            "w": 375,
+            "h": 200
+          },
+          "row2-page": {
+            "x": 45,
+            "y": 680,
+            "w": 310,
+            "h": 200
+          },
+          "row2-api": {
+            "x": 420,
+            "y": 680,
+            "w": 455,
+            "h": 200
+          },
+          "row2-handler": {
+            "x": 950,
+            "y": 680,
+            "w": 350,
+            "h": 200
+          },
+          "row2-data": {
+            "x": 1380,
+            "y": 680,
+            "w": 375,
+            "h": 200
+          },
+          "row3-page": {
+            "x": 45,
+            "y": 925,
+            "w": 310,
+            "h": 200
+          },
+          "row3-api": {
+            "x": 420,
+            "y": 925,
+            "w": 455,
+            "h": 200
+          },
+          "row3-handler": {
+            "x": 950,
+            "y": 925,
+            "w": 350,
+            "h": 200
+          },
+          "row3-data": {
+            "x": 1380,
+            "y": 925,
+            "w": 375,
+            "h": 200
+          }
+        },
+        "points": {}
+      }
+    },
+    {
+      "id": "capture-ocr",
+      "title": "04 采集、配准、OCR 与答案证据",
+      "width": 2340,
+      "height": 1716,
+      "note": "路径均以 /api/v1 为前缀；横向读取：实际页面 → API / 权限 → handler / 业务模块 → 持久化。返回数据沿请求链反向回到页面。",
+      "nodes": [
+        {
+          "id": "row0-page",
+          "label": "答卷导入 / 桌面采集工作站",
+          "x": 6,
+          "y": 341,
+          "w": 507,
+          "h": 72,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "apps/web-admin/src/api/capture.ts;apps/desktop-client/src/api/captureUploads.ts",
+          "display_label": "答卷导入 / 桌面采集工作站",
+          "show_evidence": false,
+          "title_font_size": 40,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row0-api",
+          "label": "批次与处理命令\nPOST /exams/{examId}/capture-batches\nPOST /capture-batches/{id}/files\nPOST /capture-batches/{id}/process\n权限：capture:manage；上传 file:manage",
+          "x": 546,
+          "y": 258,
+          "w": 592,
+          "h": 238,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_capture.go",
+          "display_label": "批次与处理命令\nPOST /exams/{examId}/capture-batches\nPOST /capture-batches/{id}/files",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row0-handler",
+          "label": "CaptureHandler\nCreateBatch / RegisterFile / ProcessBatch\n解码、质量、模板匹配分任务",
+          "x": 1235,
+          "y": 290,
+          "w": 455,
+          "h": 175,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_capture.go;services/api-gateway/internal/capture/handlers.go",
+          "display_label": "CaptureHandler\nCreateBatch / RegisterFile / ProcessBatch",
+          "show_evidence": false,
+          "title_font_size": 53,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row0-data",
+          "label": "Capture Store + WorkerRuntime\n批次、采集文件、采集页、任务\n原件 / 页 PNG 存 MinIO",
+          "x": 1794,
+          "y": 314,
+          "w": 488,
+          "h": 126,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/capture/store_postgres.go;services/api-gateway/internal/files/storage_minio.go",
+          "display_label": "采集数据 / 任务运行时\n批次、采集文件、采集页、任务",
+          "show_evidence": false,
+          "title_font_size": 46,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row1-page",
+          "label": "质量 / 匹配 / 配准纠正界面",
+          "x": 5,
+          "y": 660,
+          "w": 510,
+          "h": 72,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "apps/web-admin/src/api/processing.ts;apps/web-admin/src/features/capture/MatchingWorkspace.tsx",
+          "display_label": "质量 / 匹配 / 配准纠正界面",
+          "show_evidence": false,
+          "title_font_size": 40,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row1-api",
+          "label": "质量与配准\nPOST /submissions/{id}/run-quality-check\nPOST /submissions/{id}/process-pages\nPOST /page-registration-runs/{id}/confirm\n权限：submission:manage / capture:manage",
+          "x": 546,
+          "y": 556,
+          "w": 592,
+          "h": 278,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_capture.go",
+          "display_label": "质量与配准\nPOST /submissions/{id}/run-quality-check\nPOST /submissions/{id}/process-pages",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row1-handler",
+          "label": "ImageQuality / CaptureHandler\n质量结果与已有模板路由\n配准结果需人工确认的分支",
+          "x": 1238,
+          "y": 632,
+          "w": 450,
+          "h": 127,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_capture.go;services/api-gateway/internal/imagequality/handlers.go",
+          "display_label": "图像质量 / 采集处理\n质量结果与已有模板路由",
+          "show_evidence": false,
+          "title_font_size": 47,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row1-data",
+          "label": "quality / registration run + segment\n质量通过才进入配准\n完成事务拆分问题见图 09",
+          "x": 1799,
+          "y": 633,
+          "w": 478,
+          "h": 125,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/capture/registration_store_postgres.go;services/api-gateway/internal/imagequality/coordinator_postgres.go",
+          "display_label": "质量 / 配准运行 / 分段\n质量通过才进入配准",
+          "show_evidence": false,
+          "title_font_size": 45,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row2-page",
+          "label": "处理 / OCR 任务界面\nSubmissionCapturePage",
+          "x": 56,
+          "y": 954,
+          "w": 407,
+          "h": 119,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "apps/web-admin/src/api/submissions.ts;apps/web-admin/src/pages/SubmissionCapturePage.tsx",
+          "display_label": "处理 / OCR 任务界面\nSubmissionCapturePage",
+          "show_evidence": false,
+          "title_font_size": 40,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row2-api",
+          "label": "OCR 与分段\nPOST /submissions/{id}/ocr-tasks\nPOST /ocr-tasks/{id}/results\nPOST /submissions/{id}/segment-answers\n权限：ocr:manage / segment:manage",
+          "x": 574,
+          "y": 895,
+          "w": 535,
+          "h": 238,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_processing.go",
+          "display_label": "OCR 与分段\nPOST /submissions/{id}/ocr-tasks\nPOST /ocr-tasks/{id}/results",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row2-handler",
+          "label": "OCRHandler / SegmentHandler\n结果回调绑定 source 与租约\n分段读取当前有效来源",
+          "x": 1236,
+          "y": 943,
+          "w": 453,
+          "h": 142,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_processing.go",
+          "display_label": "OCR / 分段处理\n结果回调绑定 source 与租约",
+          "show_evidence": false,
+          "title_font_size": 59,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row2-data",
+          "label": "OCR / Segment Store\n任务、识别产物、answer_segment\nruntime 与 OCR 结果事务协调",
+          "x": 1794,
+          "y": 932,
+          "w": 488,
+          "h": 163,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/ocr/runtime_coordinator_postgres.go;services/api-gateway/internal/segment/store_postgres.go",
+          "display_label": "OCR / Segment Store\n任务、识别产物、answer_segment",
+          "show_evidence": false,
+          "title_font_size": 43,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row3-page",
+          "label": "阅卷证据区 / 数学证据检查器",
+          "x": 60,
+          "y": 1288,
+          "w": 399,
+          "h": 88,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "apps/web-admin/src/api/mathUnderstanding.ts;apps/web-admin/src/features/grading/workbench/MathEvidenceInspector.tsx",
+          "display_label": "阅卷 / 数学证据",
+          "show_evidence": false,
+          "title_font_size": 53,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row3-api",
+          "label": "授权裁片读取\nGET /answer-segments/{id}/evidence\nGET /answer-segments/{id}/image\nGET /review-tasks/{id}/segment-image\n权限：证据角色组合 / review:work",
+          "x": 546,
+          "y": 1214,
+          "w": 592,
+          "h": 238,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_processing.go;services/api-gateway/internal/server/routes_review.go",
+          "display_label": "授权裁片读取\nGET /answer-segments/{id}/evidence\nGET /answer-segments/{id}/image",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row3-handler",
+          "label": "SegmentHandler / ReviewHandler\n按角色和任务权限返回图像\n教师常规复核走任务裁片入口",
+          "x": 1238,
+          "y": 1261,
+          "w": 448,
+          "h": 143,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/router_guards.go;services/api-gateway/internal/server/routes_review.go",
+          "display_label": "分段 / 阅卷处理\n按角色和任务权限返回图像",
+          "show_evidence": false,
+          "title_font_size": 60,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row3-data",
+          "label": "当前 segment + 证据 + 私有对象\n裁片 hash / 答案版本绑定\n原件有独立管理权限入口",
+          "x": 1783,
+          "y": 1273,
+          "w": 510,
+          "h": 119,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/review/workbench_postgres.go;services/api-gateway/internal/segment/store_postgres.go",
+          "display_label": "当前分段 / 证据 / 私有对象\n裁片 hash / 答案版本绑定",
+          "show_evidence": false,
+          "title_font_size": 40,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        }
+      ],
+      "edges": [
+        {
+          "source": "row0-page",
+          "target": "row0-api",
+          "label": "请求",
+          "evidence": "apps/web-admin/src/api/capture.ts;apps/desktop-client/src/api/captureUploads.ts",
+          "display_label": "请求"
+        },
+        {
+          "source": "row0-api",
+          "target": "row0-handler",
+          "label": "路由 / guard",
+          "evidence": "services/api-gateway/internal/server/routes_capture.go",
+          "display_label": "路由 / guard"
+        },
+        {
+          "source": "row0-handler",
+          "target": "row0-data",
+          "label": "读 / 写",
+          "evidence": "services/api-gateway/internal/capture/store_postgres.go;services/api-gateway/internal/files/storage_minio.go",
+          "display_label": "读 / 写"
+        },
+        {
+          "source": "row1-page",
+          "target": "row1-api",
+          "label": "请求",
+          "evidence": "apps/web-admin/src/api/processing.ts;apps/web-admin/src/features/capture/MatchingWorkspace.tsx",
+          "display_label": "请求"
+        },
+        {
+          "source": "row1-api",
+          "target": "row1-handler",
+          "label": "路由 / guard",
+          "evidence": "services/api-gateway/internal/server/routes_capture.go",
+          "display_label": "路由 / guard"
+        },
+        {
+          "source": "row1-handler",
+          "target": "row1-data",
+          "label": "读 / 写",
+          "evidence": "services/api-gateway/internal/capture/registration_store_postgres.go;services/api-gateway/internal/imagequality/coordinator_postgres.go",
+          "display_label": "读 / 写"
+        },
+        {
+          "source": "row2-page",
+          "target": "row2-api",
+          "label": "请求",
+          "evidence": "apps/web-admin/src/api/submissions.ts;apps/web-admin/src/pages/SubmissionCapturePage.tsx",
+          "display_label": "请求"
+        },
+        {
+          "source": "row2-api",
+          "target": "row2-handler",
+          "label": "路由 / guard",
+          "evidence": "services/api-gateway/internal/server/routes_processing.go",
+          "display_label": "路由 / guard"
+        },
+        {
+          "source": "row2-handler",
+          "target": "row2-data",
+          "label": "读 / 写",
+          "evidence": "services/api-gateway/internal/ocr/runtime_coordinator_postgres.go;services/api-gateway/internal/segment/store_postgres.go",
+          "display_label": "读 / 写"
+        },
+        {
+          "source": "row3-page",
+          "target": "row3-api",
+          "label": "请求",
+          "evidence": "apps/web-admin/src/api/mathUnderstanding.ts;apps/web-admin/src/features/grading/workbench/MathEvidenceInspector.tsx",
+          "display_label": "请求"
+        },
+        {
+          "source": "row3-api",
+          "target": "row3-handler",
+          "label": "路由 / guard",
+          "evidence": "services/api-gateway/internal/server/routes_processing.go;services/api-gateway/internal/server/routes_review.go",
+          "display_label": "路由 / guard"
+        },
+        {
+          "source": "row3-handler",
+          "target": "row3-data",
+          "label": "读 / 写",
+          "evidence": "services/api-gateway/internal/review/workbench_postgres.go;services/api-gateway/internal/segment/store_postgres.go",
+          "display_label": "读 / 写"
+        }
+      ],
+      "display_note": "",
+      "typography_layout_base": {
+        "width": 1800,
+        "height": 1320,
+        "nodes": {
+          "row0-page": {
+            "x": 45,
+            "y": 190,
+            "w": 310,
+            "h": 200
+          },
+          "row0-api": {
+            "x": 420,
+            "y": 190,
+            "w": 455,
+            "h": 200
+          },
+          "row0-handler": {
+            "x": 950,
+            "y": 190,
+            "w": 350,
+            "h": 200
+          },
+          "row0-data": {
+            "x": 1380,
+            "y": 190,
+            "w": 375,
+            "h": 200
+          },
+          "row1-page": {
+            "x": 45,
+            "y": 435,
+            "w": 310,
+            "h": 200
+          },
+          "row1-api": {
+            "x": 420,
+            "y": 435,
+            "w": 455,
+            "h": 200
+          },
+          "row1-handler": {
+            "x": 950,
+            "y": 435,
+            "w": 350,
+            "h": 200
+          },
+          "row1-data": {
+            "x": 1380,
+            "y": 435,
+            "w": 375,
+            "h": 200
+          },
+          "row2-page": {
+            "x": 45,
+            "y": 680,
+            "w": 310,
+            "h": 200
+          },
+          "row2-api": {
+            "x": 420,
+            "y": 680,
+            "w": 455,
+            "h": 200
+          },
+          "row2-handler": {
+            "x": 950,
+            "y": 680,
+            "w": 350,
+            "h": 200
+          },
+          "row2-data": {
+            "x": 1380,
+            "y": 680,
+            "w": 375,
+            "h": 200
+          },
+          "row3-page": {
+            "x": 45,
+            "y": 925,
+            "w": 310,
+            "h": 200
+          },
+          "row3-api": {
+            "x": 420,
+            "y": 925,
+            "w": 455,
+            "h": 200
+          },
+          "row3-handler": {
+            "x": 950,
+            "y": 925,
+            "w": 350,
+            "h": 200
+          },
+          "row3-data": {
+            "x": 1380,
+            "y": 925,
+            "w": 375,
+            "h": 200
+          }
+        },
+        "points": {}
+      }
+    },
+    {
+      "id": "grading-release",
+      "title": "05 评分、复核、发布与学生数据",
+      "width": 2340,
+      "height": 1716,
+      "note": "路径均以 /api/v1 为前缀；横向读取：实际页面 → API / 权限 → handler / 业务模块 → 持久化。返回数据沿请求链反向回到页面。",
+      "nodes": [
+        {
+          "id": "row0-page",
+          "label": "阅卷管理 / 主观题批次",
+          "x": 46,
+          "y": 341,
+          "w": 427,
+          "h": 72,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "apps/web-admin/src/api/subjectiveGrading.ts;apps/web-admin/src/api/scores.ts",
+          "display_label": "阅卷管理 / 主观题批次",
+          "show_evidence": false,
+          "title_font_size": 40,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row0-api",
+          "label": "评分运行与 AI 建议\nPOST /exams/{examId}/scoring-runs\nPOST /answer-segments/{id}/subjective-ai-grade\nPOST /subjective-grading-batches\n权限：grading:manage",
+          "x": 546,
+          "y": 262,
+          "w": 592,
+          "h": 229,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_grading.go",
+          "display_label": "评分运行与 AI 建议\nPOST /exams/{examId}/scoring-runs\nPOST /answer-segments/{id}/subjective-ai-grade",
+          "show_evidence": false,
+          "title_font_size": 65,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row0-handler",
+          "label": "GradingHandler / SubjectiveHandler\n规则、OMR 与单 adapter AI\n服务端结算 → 人工确认",
+          "x": 1236,
+          "y": 310,
+          "w": 452,
+          "h": 134,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_grading.go;services/api-gateway/internal/subjective/grade_settlement_pipeline.go",
+          "display_label": "评分 / 主观题处理\n规则、OMR 与单 adapter AI",
+          "show_evidence": false,
+          "title_font_size": 53,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row0-data",
+          "label": "scoring_run / ai_grade / review_task\n答案、量规、模型与提示版本\nAI 建议不直接写发布成绩",
+          "x": 1755,
+          "y": 318,
+          "w": 565,
+          "h": 119,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/grading/scoring_run_routing.go;services/api-gateway/internal/subjective/store_postgres.go",
+          "display_label": "评分运行 / AI 评分 / 阅卷任务\n答案、量规、模型与提示版本",
+          "show_evidence": false,
+          "title_font_size": 40,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row1-page",
+          "label": "教师匿名工作台 / 仲裁工作台",
+          "x": 60,
+          "y": 652,
+          "w": 399,
+          "h": 88,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "apps/web-admin/src/api/review.ts;apps/web-admin/src/features/grading/workbench/GradingWorkbench.tsx",
+          "display_label": "匿名阅卷 / 仲裁",
+          "show_evidence": false,
+          "title_font_size": 53,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row1-api",
+          "label": "人工任务与分差仲裁\nPOST /review-tasks/next\nPOST /review-tasks/{id}/submit\nPOST /arbitration-tasks/{id}/submit\n权限：review:work / arbitration:work",
+          "x": 546,
+          "y": 602,
+          "w": 591,
+          "h": 187,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_grading.go;services/api-gateway/internal/server/routes_review.go",
+          "display_label": "人工任务与分差仲裁\nPOST /review-tasks/next\nPOST /review-tasks/{id}/submit",
+          "show_evidence": false,
+          "title_font_size": 63,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row1-handler",
+          "label": "ReviewHandler\n分派 / claim / 租约 / 修订检查\n双评收齐后结算或人工仲裁",
+          "x": 1235,
+          "y": 606,
+          "w": 455,
+          "h": 178,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_review.go;services/api-gateway/internal/server/routes_grading.go",
+          "display_label": "ReviewHandler\n分派 / claim / 租约 / 修订检查",
+          "show_evidence": false,
+          "title_font_size": 56,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row1-data",
+          "label": "review_task / human_grade\ndouble_mark_session / final_grade\n草稿和批注不等于提交成绩",
+          "x": 1750,
+          "y": 636,
+          "w": 576,
+          "h": 119,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/review/store_postgres_resolution.go;services/api-gateway/internal/review/store_postgres_tasks.go",
+          "display_label": "review_task / human_grade\ndouble_mark_session / final_grade",
+          "show_evidence": false,
+          "title_font_size": 40,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row2-page",
+          "label": "成绩发布 / 成绩分析 / 复核",
+          "x": 5,
+          "y": 978,
+          "w": 510,
+          "h": 72,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "apps/web-admin/src/api/scoreReleases.ts;apps/web-admin/src/api/reports.ts",
+          "display_label": "成绩发布 / 成绩分析 / 复核",
+          "show_evidence": false,
+          "title_font_size": 40,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row2-api",
+          "label": "成绩确认与公开发布\nPOST /exams/{examId}/publish\nPOST /score-releases/{id}/publish\nGET /exams/{examId}/reports/overview\n权限：score:manage + recent；report:read",
+          "x": 546,
+          "y": 920,
+          "w": 591,
+          "h": 187,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_release.go;services/api-gateway/internal/scorerelease/handlers.go",
+          "display_label": "成绩确认与公开发布\nPOST /exams/{examId}/publish\nPOST /score-releases/{id}/publish",
+          "show_evidence": false,
+          "title_font_size": 63,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row2-handler",
+          "label": "Score / ScoreRelease / Report\n旧grade发布与新快照发布并存\n两个发布入口均需近期认证",
+          "x": 1235,
+          "y": 927,
+          "w": 455,
+          "h": 174,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_release.go;services/api-gateway/internal/score/handlers.go;services/api-gateway/internal/scorerelease/handlers.go",
+          "display_label": "成绩 / 发布 / 报告\n旧grade发布与新快照发布并存",
+          "show_evidence": false,
+          "title_font_size": 52,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row2-data",
+          "label": "旧 submission_grade 状态发布\n新版 score_release / current 快照\n旧质量检查不是新版策略门禁",
+          "x": 1794,
+          "y": 915,
+          "w": 488,
+          "h": 198,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/score/store_postgres.go;services/api-gateway/internal/scorerelease/store_postgres.go;services/api-gateway/internal/report/store_postgres.go",
+          "display_label": "旧状态发布\n新版 score_release / current 快照",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row3-page",
+          "label": "学生成绩 / 答题图片 / 申诉",
+          "x": 5,
+          "y": 1296,
+          "w": 510,
+          "h": 72,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "apps/student-portal/src/api.ts;apps/student-portal/src/App.tsx",
+          "display_label": "学生成绩 / 答题图片 / 申诉",
+          "show_evidence": false,
+          "title_font_size": 40,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row3-api",
+          "label": "本人发布数据与申诉\nGET /student/exams\nPOST /student/exams/{examId}/question-appeals\nGET /student/exams/{examId}/questions/{questionId}/annotations\n权限：student:grade:read / score:manage",
+          "x": 546,
+          "y": 1219,
+          "w": 592,
+          "h": 227,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/studentportal/handlers.go;services/api-gateway/internal/server/routes_release.go;services/api-gateway/internal/server/routes_review.go",
+          "display_label": "本人发布数据与申诉\nGET /student/exams\nPOST /student/exams/{examId}/question-appeals",
+          "show_evidence": false,
+          "title_font_size": 63,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row3-handler",
+          "label": "StudentPortal / PublishedQuestionAppeal\nrelease_id 锚定题目与原分\n学校与本人范围重新校验",
+          "x": 1229,
+          "y": 1273,
+          "w": 467,
+          "h": 119,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_release.go;services/api-gateway/internal/studentportal/handlers.go",
+          "display_label": "学生入口 / 已发布题申诉\nrelease_id 锚定题目与原分",
+          "show_evidence": false,
+          "title_font_size": 40,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row3-data",
+          "label": "score_release 快照 / 公开批注\nsource_release 与申诉记录\n浏览器分数不会成为服务端原分",
+          "x": 1795,
+          "y": 1266,
+          "w": 486,
+          "h": 132,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/scorerelease/student_release_version.go;services/api-gateway/internal/reviewannotation/store_postgres.go",
+          "display_label": "成绩快照 / 公开批注\nsource_release 与申诉记录",
+          "show_evidence": false,
+          "title_font_size": 51,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        }
+      ],
+      "edges": [
+        {
+          "source": "row0-page",
+          "target": "row0-api",
+          "label": "请求",
+          "evidence": "apps/web-admin/src/api/subjectiveGrading.ts;apps/web-admin/src/api/scores.ts",
+          "display_label": "请求"
+        },
+        {
+          "source": "row0-api",
+          "target": "row0-handler",
+          "label": "路由 / guard",
+          "evidence": "services/api-gateway/internal/server/routes_grading.go",
+          "display_label": "路由 / guard"
+        },
+        {
+          "source": "row0-handler",
+          "target": "row0-data",
+          "label": "读 / 写",
+          "evidence": "services/api-gateway/internal/grading/scoring_run_routing.go;services/api-gateway/internal/subjective/store_postgres.go",
+          "display_label": "读 / 写"
+        },
+        {
+          "source": "row1-page",
+          "target": "row1-api",
+          "label": "请求",
+          "evidence": "apps/web-admin/src/api/review.ts;apps/web-admin/src/features/grading/workbench/GradingWorkbench.tsx",
+          "display_label": "请求"
+        },
+        {
+          "source": "row1-api",
+          "target": "row1-handler",
+          "label": "路由 / guard",
+          "evidence": "services/api-gateway/internal/server/routes_grading.go;services/api-gateway/internal/server/routes_review.go",
+          "display_label": "路由 / guard"
+        },
+        {
+          "source": "row1-handler",
+          "target": "row1-data",
+          "label": "读 / 写",
+          "evidence": "services/api-gateway/internal/review/store_postgres_resolution.go;services/api-gateway/internal/review/store_postgres_tasks.go",
+          "display_label": "读 / 写"
+        },
+        {
+          "source": "row2-page",
+          "target": "row2-api",
+          "label": "请求",
+          "evidence": "apps/web-admin/src/api/scoreReleases.ts;apps/web-admin/src/api/reports.ts",
+          "display_label": "请求"
+        },
+        {
+          "source": "row2-api",
+          "target": "row2-handler",
+          "label": "路由 / guard",
+          "evidence": "services/api-gateway/internal/server/routes_release.go;services/api-gateway/internal/scorerelease/handlers.go",
+          "display_label": "路由 / guard"
+        },
+        {
+          "source": "row2-handler",
+          "target": "row2-data",
+          "label": "读 / 写",
+          "evidence": "services/api-gateway/internal/score/store_postgres.go;services/api-gateway/internal/scorerelease/store_postgres.go;services/api-gateway/internal/report/store_postgres.go",
+          "display_label": "读 / 写"
+        },
+        {
+          "source": "row3-page",
+          "target": "row3-api",
+          "label": "请求",
+          "evidence": "apps/student-portal/src/api.ts;apps/student-portal/src/App.tsx",
+          "display_label": "请求"
+        },
+        {
+          "source": "row3-api",
+          "target": "row3-handler",
+          "label": "路由 / guard",
+          "evidence": "services/api-gateway/internal/studentportal/handlers.go;services/api-gateway/internal/server/routes_release.go;services/api-gateway/internal/server/routes_review.go",
+          "display_label": "路由 / guard"
+        },
+        {
+          "source": "row3-handler",
+          "target": "row3-data",
+          "label": "读 / 写",
+          "evidence": "services/api-gateway/internal/scorerelease/student_release_version.go;services/api-gateway/internal/reviewannotation/store_postgres.go",
+          "display_label": "读 / 写"
+        }
+      ],
+      "display_note": "",
+      "typography_layout_base": {
+        "width": 1800,
+        "height": 1320,
+        "nodes": {
+          "row0-page": {
+            "x": 45,
+            "y": 190,
+            "w": 310,
+            "h": 200
+          },
+          "row0-api": {
+            "x": 420,
+            "y": 190,
+            "w": 455,
+            "h": 200
+          },
+          "row0-handler": {
+            "x": 950,
+            "y": 190,
+            "w": 350,
+            "h": 200
+          },
+          "row0-data": {
+            "x": 1380,
+            "y": 190,
+            "w": 375,
+            "h": 200
+          },
+          "row1-page": {
+            "x": 45,
+            "y": 435,
+            "w": 310,
+            "h": 200
+          },
+          "row1-api": {
+            "x": 420,
+            "y": 435,
+            "w": 455,
+            "h": 200
+          },
+          "row1-handler": {
+            "x": 950,
+            "y": 435,
+            "w": 350,
+            "h": 200
+          },
+          "row1-data": {
+            "x": 1380,
+            "y": 435,
+            "w": 375,
+            "h": 200
+          },
+          "row2-page": {
+            "x": 45,
+            "y": 680,
+            "w": 310,
+            "h": 200
+          },
+          "row2-api": {
+            "x": 420,
+            "y": 680,
+            "w": 455,
+            "h": 200
+          },
+          "row2-handler": {
+            "x": 950,
+            "y": 680,
+            "w": 350,
+            "h": 200
+          },
+          "row2-data": {
+            "x": 1380,
+            "y": 680,
+            "w": 375,
+            "h": 200
+          },
+          "row3-page": {
+            "x": 45,
+            "y": 925,
+            "w": 310,
+            "h": 200
+          },
+          "row3-api": {
+            "x": 420,
+            "y": 925,
+            "w": 455,
+            "h": 200
+          },
+          "row3-handler": {
+            "x": 950,
+            "y": 925,
+            "w": 350,
+            "h": 200
+          },
+          "row3-data": {
+            "x": 1380,
+            "y": 925,
+            "w": 375,
+            "h": 200
+          }
+        },
+        "points": {}
+      }
+    },
+    {
+      "id": "governance-chat",
+      "title": "06 模型治理、质量工具与 AI 外部调用",
+      "width": 2340,
+      "height": 1716,
+      "note": "路径均以 /api/v1 为前缀；横向读取：实际页面 → API / 权限 → handler / 业务模块 → 持久化。返回数据沿请求链反向回到页面。",
+      "nodes": [
+        {
+          "id": "row0-page",
+          "label": "平台模型配置 / 治理页面",
+          "x": 26,
+          "y": 341,
+          "w": 467,
+          "h": 72,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "apps/web-admin/src/api/modelApiConfig.ts;apps/web-admin/src/api/modelGovernance.ts",
+          "display_label": "平台模型配置 / 治理页面",
+          "show_evidence": false,
+          "title_font_size": 40,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row0-api",
+          "label": "托管 API 与角色绑定\nGET /platform/model-api-configs\nPOST /platform/model-api-configs/{id}/probe\nPUT /platform/panel-model-bindings\n权限：platform_admin + 模型权限",
+          "x": 546,
+          "y": 266,
+          "w": 592,
+          "h": 223,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_governance.go",
+          "display_label": "托管 API 与角色绑定\nGET /platform/model-api-configs\nPOST /platform/model-api-configs/{id}/probe",
+          "show_evidence": false,
+          "title_font_size": 60,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row0-handler",
+          "label": "ModelGovernanceHandler\n配置 / 探测 / A/B/C 角色绑定\n旧 provider / deployment 写入 410",
+          "x": 1238,
+          "y": 299,
+          "w": 450,
+          "h": 156,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_governance.go",
+          "display_label": "模型治理处理\n配置 / 探测 / A/B/C 角色绑定",
+          "show_evidence": false,
+          "title_font_size": 71,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row0-data",
+          "label": "治理 Store + SecretCipher\n模型配置、版本与学校授权\n密钥只在后端使用；图中不展示",
+          "x": 1771,
+          "y": 318,
+          "w": 534,
+          "h": 119,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/modelgovernance/store_postgres.go;services/api-gateway/internal/modelgovernance/secrets.go",
+          "display_label": "治理 Store + SecretCipher\n模型配置、版本与学校授权",
+          "show_evidence": false,
+          "title_font_size": 40,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row1-page",
+          "label": "学校 AI 助手 / SSE 对话",
+          "x": 32,
+          "y": 660,
+          "w": 457,
+          "h": 72,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "apps/web-admin/src/api/schoolAiChat.ts;apps/web-admin/src/pages/SchoolAIChatPage.tsx",
+          "display_label": "学校 AI 助手 / SSE 对话",
+          "show_evidence": false,
+          "title_font_size": 40,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row1-api",
+          "label": "受控聊天与工具上下文\nGET /ai-chat/model\nPOST /ai-chat/completions/stream\nPOST /school-assistant/conversations/stream\n权限：school_admin；工具另查业务权限",
+          "x": 550,
+          "y": 606,
+          "w": 584,
+          "h": 178,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_governance.go;services/api-gateway/internal/schoolassistant/handlers.go",
+          "display_label": "受控聊天与工具上下文\nGET /ai-chat/model\nPOST /ai-chat/completions/stream",
+          "show_evidence": false,
+          "title_font_size": 56,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row1-handler",
+          "label": "ModelGovernance / SchoolAssistant\n先解析授权上下文与查询工具\n再调用批准的学校聊天模型",
+          "x": 1238,
+          "y": 632,
+          "w": 450,
+          "h": 127,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_governance.go;services/api-gateway/internal/schoolassistant/handlers.go",
+          "display_label": "模型治理 / 学校助手\n先解析授权上下文与查询工具",
+          "show_evidence": false,
+          "title_font_size": 47,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row1-data",
+          "label": "聊天模型配置 + 业务只读投影\n外部模型流式返回经 API 透传\n不把正文存通用幂等收据",
+          "x": 1759,
+          "y": 636,
+          "w": 558,
+          "h": 119,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/modelgovernance/managed_agent_stream.go;services/api-gateway/internal/server/router_guards.go",
+          "display_label": "聊天模型配置 + 业务只读投影\n外部模型流式返回经 API 透传",
+          "show_evidence": false,
+          "title_font_size": 40,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row2-page",
+          "label": "AI 模型评估 / 校准 / 准入",
+          "x": 18,
+          "y": 978,
+          "w": 485,
+          "h": 72,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "apps/web-admin/src/api/modelGovernance.ts;apps/web-admin/src/api/scoringAssurance.ts",
+          "display_label": "AI 模型评估 / 校准 / 准入",
+          "show_evidence": false,
+          "title_font_size": 40,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row2-api",
+          "label": "评估与批准\nPOST /model-evaluation-runs\nPOST /model-approvals\nPOST /model-approvals/{id}/revoke\n权限：model:evaluation:manage",
+          "x": 601,
+          "y": 895,
+          "w": 482,
+          "h": 238,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_governance.go",
+          "display_label": "评估与批准\nPOST /model-evaluation-runs\nPOST /model-approvals",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row2-handler",
+          "label": "治理 + Evaluation / Calibration\n批准模型、提示和策略范围\n业务准入不等于效果已验收",
+          "x": 1236,
+          "y": 954,
+          "w": 452,
+          "h": 121,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_governance.go",
+          "display_label": "模型治理 / 评估 / 校准\n批准模型、提示和策略范围",
+          "show_evidence": false,
+          "title_font_size": 42,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row2-data",
+          "label": "评估、候选、批准与策略记录\n人工质量入口保留 Gold / Seed\n真实供应商效果需独立验收",
+          "x": 1766,
+          "y": 954,
+          "w": 544,
+          "h": 119,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/modelgovernance/store_postgres.go",
+          "display_label": "评估、候选、批准与策略记录\n人工质量入口保留 Gold / Seed",
+          "show_evidence": false,
+          "title_font_size": 40,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row3-page",
+          "label": "主观题评分命令 → worker 执行",
+          "x": 62,
+          "y": 1291,
+          "w": 397,
+          "h": 83,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "apps/web-admin/src/api/subjectiveGrading.ts;services/subjective-grading-worker/subjective_grading_worker/runner.py",
+          "display_label": "评分命令 → 执行",
+          "show_evidence": false,
+          "title_font_size": 49,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row3-api",
+          "label": "真实生产评分链\nPOST /answer-segments/{id}/subjective-ai-grade\n权限：grading:manage；worker 来源/租约",
+          "x": 546,
+          "y": 1194,
+          "w": 592,
+          "h": 278,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_grading.go",
+          "display_label": "真实生产评分链\nPOST /answer-segments/{id}/subjective-ai-grade\n权限：grading:manage；worker 来源/租约",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row3-handler",
+          "label": "SubjectiveHandler\nGo HTTPAdapter / HTTPAdapterV2\nPython grading_agent → provider",
+          "x": 1235,
+          "y": 1250,
+          "w": 455,
+          "h": 166,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/subjective/handlers_worker.go;services/api-gateway/internal/subjective/adapter_http.go;ai-services/grading_agent/app.py",
+          "display_label": "SubjectiveHandler\nGo HTTPAdapter / HTTPAdapterV2",
+          "show_evidence": false,
+          "title_font_size": 46,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "row3-data",
+          "label": "冻结答案 / 量规 / 模型 / 提示\nAPI 返回 AI 建议后服务端结算\nA/B/C 内核未自动挂接此入口",
+          "x": 1797,
+          "y": 1273,
+          "w": 481,
+          "h": 119,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/subjective/grade_settlement_pipeline.go;services/api-gateway/internal/subjective/panel_orchestrator.go",
+          "display_label": "冻结答案/量规/模型/提示\nAPI 返回 AI 建议后服务端结算",
+          "show_evidence": false,
+          "title_font_size": 40,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        }
+      ],
+      "edges": [
+        {
+          "source": "row0-page",
+          "target": "row0-api",
+          "label": "请求",
+          "evidence": "apps/web-admin/src/api/modelApiConfig.ts;apps/web-admin/src/api/modelGovernance.ts",
+          "display_label": "请求"
+        },
+        {
+          "source": "row0-api",
+          "target": "row0-handler",
+          "label": "路由 / guard",
+          "evidence": "services/api-gateway/internal/server/routes_governance.go",
+          "display_label": "路由 / guard"
+        },
+        {
+          "source": "row0-handler",
+          "target": "row0-data",
+          "label": "读 / 写",
+          "evidence": "services/api-gateway/internal/modelgovernance/store_postgres.go;services/api-gateway/internal/modelgovernance/secrets.go",
+          "display_label": "读 / 写"
+        },
+        {
+          "source": "row1-page",
+          "target": "row1-api",
+          "label": "请求",
+          "evidence": "apps/web-admin/src/api/schoolAiChat.ts;apps/web-admin/src/pages/SchoolAIChatPage.tsx",
+          "display_label": "请求"
+        },
+        {
+          "source": "row1-api",
+          "target": "row1-handler",
+          "label": "路由 / guard",
+          "evidence": "services/api-gateway/internal/server/routes_governance.go;services/api-gateway/internal/schoolassistant/handlers.go",
+          "display_label": "路由 / guard"
+        },
+        {
+          "source": "row1-handler",
+          "target": "row1-data",
+          "label": "读 / 写",
+          "evidence": "services/api-gateway/internal/modelgovernance/managed_agent_stream.go;services/api-gateway/internal/server/router_guards.go",
+          "display_label": "读 / 写"
+        },
+        {
+          "source": "row2-page",
+          "target": "row2-api",
+          "label": "请求",
+          "evidence": "apps/web-admin/src/api/modelGovernance.ts;apps/web-admin/src/api/scoringAssurance.ts",
+          "display_label": "请求"
+        },
+        {
+          "source": "row2-api",
+          "target": "row2-handler",
+          "label": "路由 / guard",
+          "evidence": "services/api-gateway/internal/server/routes_governance.go",
+          "display_label": "路由 / guard"
+        },
+        {
+          "source": "row2-handler",
+          "target": "row2-data",
+          "label": "读 / 写",
+          "evidence": "services/api-gateway/internal/modelgovernance/store_postgres.go",
+          "display_label": "读 / 写"
+        },
+        {
+          "source": "row3-page",
+          "target": "row3-api",
+          "label": "请求",
+          "evidence": "apps/web-admin/src/api/subjectiveGrading.ts;services/subjective-grading-worker/subjective_grading_worker/runner.py",
+          "display_label": "请求"
+        },
+        {
+          "source": "row3-api",
+          "target": "row3-handler",
+          "label": "路由 / guard",
+          "evidence": "services/api-gateway/internal/server/routes_grading.go",
+          "display_label": "路由 / guard"
+        },
+        {
+          "source": "row3-handler",
+          "target": "row3-data",
+          "label": "读 / 写",
+          "evidence": "services/api-gateway/internal/subjective/grade_settlement_pipeline.go;services/api-gateway/internal/subjective/panel_orchestrator.go",
+          "display_label": "读 / 写"
+        }
+      ],
+      "display_note": "",
+      "typography_layout_base": {
+        "width": 1800,
+        "height": 1320,
+        "nodes": {
+          "row0-page": {
+            "x": 45,
+            "y": 190,
+            "w": 310,
+            "h": 200
+          },
+          "row0-api": {
+            "x": 420,
+            "y": 190,
+            "w": 455,
+            "h": 200
+          },
+          "row0-handler": {
+            "x": 950,
+            "y": 190,
+            "w": 350,
+            "h": 200
+          },
+          "row0-data": {
+            "x": 1380,
+            "y": 190,
+            "w": 375,
+            "h": 200
+          },
+          "row1-page": {
+            "x": 45,
+            "y": 435,
+            "w": 310,
+            "h": 200
+          },
+          "row1-api": {
+            "x": 420,
+            "y": 435,
+            "w": 455,
+            "h": 200
+          },
+          "row1-handler": {
+            "x": 950,
+            "y": 435,
+            "w": 350,
+            "h": 200
+          },
+          "row1-data": {
+            "x": 1380,
+            "y": 435,
+            "w": 375,
+            "h": 200
+          },
+          "row2-page": {
+            "x": 45,
+            "y": 680,
+            "w": 310,
+            "h": 200
+          },
+          "row2-api": {
+            "x": 420,
+            "y": 680,
+            "w": 455,
+            "h": 200
+          },
+          "row2-handler": {
+            "x": 950,
+            "y": 680,
+            "w": 350,
+            "h": 200
+          },
+          "row2-data": {
+            "x": 1380,
+            "y": 680,
+            "w": 375,
+            "h": 200
+          },
+          "row3-page": {
+            "x": 45,
+            "y": 925,
+            "w": 310,
+            "h": 200
+          },
+          "row3-api": {
+            "x": 420,
+            "y": 925,
+            "w": 455,
+            "h": 200
+          },
+          "row3-handler": {
+            "x": 950,
+            "y": 925,
+            "w": 350,
+            "h": 200
+          },
+          "row3-data": {
+            "x": 1380,
+            "y": 925,
+            "w": 375,
+            "h": 200
+          }
+        },
+        "points": {}
+      }
+    },
+    {
+      "id": "files-workers",
+      "title": "07 文件、对象存储与后台任务的数据流",
+      "width": 2340,
+      "height": 1911,
+      "note": "文件元数据与二进制对象分开持久化；浏览器不直接获取 MinIO 密钥。worker 必须恢复持久任务作用域再下载。",
+      "nodes": [
+        {
+          "id": "browser",
+          "label": "页面 / 桌面上传\nPOST /api/v1/files\nmultipart + owner/exam/submission",
+          "x": 208,
+          "y": 308,
+          "w": 168,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "apps/web-admin/src/api/files.ts;apps/desktop-client/src/api/files.ts",
+          "display_label": "上传",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "upload",
+          "label": "files.Handler.Upload\n检查大小 / 类型 / hash / 所有者\n资源作用域与去重键\n写 pending 资源记录",
+          "x": 722,
+          "y": 308,
+          "w": 312,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/files/handlers.go",
+          "display_label": "文件接口",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "metadata",
+          "label": "PostgreSQL file_asset\n私有 bucket/key、hash、业务关联\n生命周期与激活 / 对账状态",
+          "x": 1236,
+          "y": 314,
+          "w": 454,
+          "h": 101,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/files/store_postgres.go;services/api-gateway/internal/files/reconciliation.go",
+          "display_label": "PG 文件元数据",
+          "show_evidence": false,
+          "title_font_size": 64,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "objects",
+          "label": "MinIO ObjectStorage\n原件 / 解码 PNG / normalized\n配准 PNG / ROI / 导出 PDF\n对象写入、Stat 校验与下载",
+          "x": 1820,
+          "y": 312,
+          "w": 454,
+          "h": 105,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/files/storage_minio.go",
+          "display_label": "MinIO 二进制",
+          "show_evidence": false,
+          "title_font_size": 67,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "intake",
+          "label": "领域登记与排任务\ncapture-batches/{id}/files → process\n领域记录引用 file_asset ID",
+          "x": 66,
+          "y": 752,
+          "w": 452,
+          "h": 88,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/routes_capture.go;services/api-gateway/internal/capture/store_postgres.go",
+          "display_label": "领域登记 / 排任务",
+          "show_evidence": false,
+          "title_font_size": 53,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "runtime",
+          "label": "持久 worker runtime\nagent_worker_task + attempt\nclaim → lease token → heartbeat\ncompleted/failed 回调限次数",
+          "x": 652,
+          "y": 745,
+          "w": 450,
+          "h": 102,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/workerruntime/store_postgres.go;services/api-gateway/internal/server/routes_worker.go",
+          "display_label": "Runtime 任务",
+          "show_evidence": false,
+          "title_font_size": 65,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "scope",
+          "label": "Worker 文件读取\nGET /api/v1/files/{id}/download\nTaskScope → RequireTaskFile\n任务载荷文件 + file:manage",
+          "x": 1238,
+          "y": 756,
+          "w": 450,
+          "h": 81,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/router_guards.go",
+          "display_label": "任务范围 / 租约校验",
+          "show_evidence": false,
+          "title_font_size": 47,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "worker",
+          "label": "worker 处理二进制\n解码 / 质量 / 配准 / OCR\n新产物经文件 API 上传\n领域结果引用新 file ID",
+          "x": 1821,
+          "y": 741,
+          "w": 453,
+          "h": 110,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/page-processing-worker/page_processing/runner.py;services/ocr-worker/ocr_worker/runner.py",
+          "display_label": "Worker 计算",
+          "show_evidence": false,
+          "title_font_size": 71,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "download",
+          "label": "用户下载 / 图像接口\nGET /files/{id}/download\n任务裁片 / 学生 release 图像\n权限通过才输出二进制",
+          "x": 1306,
+          "y": 1170,
+          "w": 312,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/files/downloads.go;services/api-gateway/internal/server/routes_review.go",
+          "display_label": "受控下载",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "preview",
+          "label": "浏览器 Blob / 图片预览\n同源 Cookie 或 Token\n展示 filename / watermark\n无公开对象桶地址假设",
+          "x": 650,
+          "y": 1179,
+          "w": 454,
+          "h": 92,
+          "status": "infra",
+          "kind": "box",
+          "evidence": "apps/web-admin/src/api/files.ts;apps/student-portal/src/api.ts",
+          "display_label": "图片 / Blob 预览",
+          "show_evidence": false,
+          "title_font_size": 56,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "local",
+          "label": "桌面本地权威状态\nSQLite 队列与加密载荷 / Spool\nReact 列表为状态投影\n在线请求与本机操作权限分开",
+          "x": 69,
+          "y": 1157,
+          "w": 447,
+          "h": 136,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "apps/desktop-client/src-tauri/src/durable_store/mod.rs;apps/desktop-client/src/components/OfflineWorkbench.tsx",
+          "display_label": "本地 SQLite 队列\n加密载荷 / Spool",
+          "show_evidence": false,
+          "title_font_size": 54,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "boundary",
+          "label": "失败恢复边界\n对象存储和 PostgreSQL 不是单一事务，上传使用生命周期及对账补偿。\nOCR/质量/模板匹配各有协调器；配准和主观评分存在分步完成缺口，不能画成统一原子完成。",
+          "x": 834,
+          "y": 1553,
+          "w": 672,
+          "h": 157,
+          "status": "partial",
+          "kind": "note",
+          "evidence": "services/api-gateway/internal/files/handlers.go;docs/architecture/specs/09-task-state-machine.json",
+          "display_label": "对象写入与 PG 分离\n失败由对账恢复",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        }
+      ],
+      "edges": [
+        {
+          "source": "browser",
+          "target": "upload",
+          "label": "multipart",
+          "evidence": "apps/web-admin/src/api/files.ts",
+          "display_label": "multipart"
+        },
+        {
+          "source": "upload",
+          "target": "metadata",
+          "label": "pending / activate",
+          "evidence": "services/api-gateway/internal/files/handlers.go",
+          "display_label": "pending / activate"
+        },
+        {
+          "source": "upload",
+          "target": "objects",
+          "label": "Put + 验证",
+          "evidence": "services/api-gateway/internal/files/handlers.go",
+          "points": [
+            [
+              1157,
+              559
+            ],
+            [
+              1755,
+              559
+            ],
+            [
+              1755,
+              364
+            ]
+          ],
+          "display_label": "Put + 验证"
+        },
+        {
+          "source": "browser",
+          "target": "intake",
+          "label": "file ID 另行登记",
+          "evidence": "apps/web-admin/src/api/capture.ts",
+          "display_label": "file ID 另行登记"
+        },
+        {
+          "source": "intake",
+          "target": "runtime",
+          "label": "排领域任务",
+          "evidence": "services/api-gateway/internal/capture/store_postgres.go",
+          "display_label": "排领域任务"
+        },
+        {
+          "source": "runtime",
+          "target": "scope",
+          "label": "来源 / 载荷 / 租约",
+          "evidence": "services/api-gateway/internal/server/router_guards.go",
+          "display_label": "来源 / 载荷 / 租约"
+        },
+        {
+          "source": "scope",
+          "target": "worker",
+          "label": "授权原件输入",
+          "evidence": "services/page-processing-worker/page_processing/runner.py",
+          "display_label": "授权原件输入"
+        },
+        {
+          "source": "objects",
+          "target": "worker",
+          "label": "下载对象经 API",
+          "evidence": "services/api-gateway/internal/files/downloads.go",
+          "display_label": "下载对象经 API"
+        },
+        {
+          "source": "objects",
+          "target": "download",
+          "label": "私有对象流",
+          "evidence": "services/api-gateway/internal/files/downloads.go",
+          "points": [
+            [
+              2308,
+              364
+            ],
+            [
+              2308,
+              1014
+            ],
+            [
+              1755,
+              1014
+            ],
+            [
+              1755,
+              1222
+            ]
+          ],
+          "display_label": "私有对象流"
+        },
+        {
+          "source": "download",
+          "target": "preview",
+          "label": "Blob / PNG / PDF",
+          "evidence": "apps/web-admin/src/api/files.ts",
+          "display_label": "Blob / PNG / PDF"
+        },
+        {
+          "source": "local",
+          "target": "intake",
+          "label": "联网队列恢复",
+          "evidence": "apps/desktop-client/src/api/captureUploads.ts",
+          "display_label": "联网队列恢复"
+        }
+      ],
+      "display_note": "",
+      "typography_layout_base": {
+        "width": 1800,
+        "height": 1470,
+        "nodes": {
+          "browser": {
+            "x": 50,
+            "y": 190,
+            "w": 350,
+            "h": 180
+          },
+          "upload": {
+            "x": 500,
+            "y": 190,
+            "w": 350,
+            "h": 180
+          },
+          "metadata": {
+            "x": 950,
+            "y": 190,
+            "w": 350,
+            "h": 180
+          },
+          "objects": {
+            "x": 1400,
+            "y": 190,
+            "w": 350,
+            "h": 180
+          },
+          "intake": {
+            "x": 50,
+            "y": 520,
+            "w": 350,
+            "h": 185
+          },
+          "runtime": {
+            "x": 500,
+            "y": 520,
+            "w": 350,
+            "h": 185
+          },
+          "scope": {
+            "x": 950,
+            "y": 520,
+            "w": 350,
+            "h": 185
+          },
+          "worker": {
+            "x": 1400,
+            "y": 520,
+            "w": 350,
+            "h": 185
+          },
+          "download": {
+            "x": 950,
+            "y": 850,
+            "w": 350,
+            "h": 185
+          },
+          "preview": {
+            "x": 500,
+            "y": 850,
+            "w": 350,
+            "h": 185
+          },
+          "local": {
+            "x": 50,
+            "y": 850,
+            "w": 350,
+            "h": 185
+          },
+          "boundary": {
+            "x": 50,
+            "y": 1170,
+            "w": 1700,
+            "h": 170
+          }
+        },
+        "points": {
+          "2": [
+            [
+              890,
+              430
+            ],
+            [
+              1350,
+              430
+            ],
+            [
+              1350,
+              280
+            ]
+          ],
+          "8": [
+            [
+              1775,
+              280
+            ],
+            [
+              1775,
+              780
+            ],
+            [
+              1350,
+              780
+            ],
+            [
+              1350,
+              940
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "auth-order",
+      "title": "08 重要 API 的鉴权顺序与缓存重放",
+      "width": 2340,
+      "height": 1950,
+      "note": "顺序从左至右。权限检查位置因 guard 不同而不同；浏览器导航授权不能替代服务端授权。",
+      "nodes": [
+        {
+          "id": "request",
+          "label": "页面操作 / 深链接\nexperience + role/permissions\nworkspaces + section + readOnly",
+          "x": 208,
+          "y": 302,
+          "w": 168,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "apps/web-admin/src/router/routes.tsx;apps/web-admin/src/router/pageRendering.tsx",
+          "display_label": "请求",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "session",
+          "label": "authenticate\nCookie 或 Bearer session\n服务端读取当前账号与 scope\n停用 / 撤销 / 过期会被拒绝",
+          "x": 794,
+          "y": 302,
+          "w": 168,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/router_guards.go;services/api-gateway/internal/auth/middleware.go",
+          "display_label": "认证",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "generic",
+          "label": "通用 requireAuth\nauthenticate\n→ idempotent\n→ resource boundary\n→ permission / handler",
+          "x": 1256,
+          "y": 302,
+          "w": 412,
+          "h": 111,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/router_guards.go",
+          "display_label": "通用 Guard",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "cache",
+          "label": "同键已完成收据？\n命中可提前返回\n跳过内层资源 / 权限\n仍需合法 session 与请求键匹配",
+          "x": 1856,
+          "y": 302,
+          "w": 384,
+          "h": 111,
+          "status": "issue",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/idempotency/middleware.go",
+          "display_label": "收据命中？",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "resource",
+          "label": "未命中：资源边界\n从路径 / 请求体解析真实资源\n租户、学校与数据 scope 约束\nwithScopedExam 本身是透传",
+          "x": 1306,
+          "y": 744,
+          "w": 312,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/auth/resource_scope.go;services/api-gateway/internal/server/router_guards.go",
+          "display_label": "资源范围",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "permission",
+          "label": "业务权限 / 角色\nexam:manage、capture:manage 等\n任务分派、修订及状态\n还由业务 handler / Store 核对",
+          "x": 1892,
+          "y": 744,
+          "w": 312,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/router_guards.go;services/api-gateway/internal/review/handlers.go",
+          "display_label": "业务权限",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "strict",
+          "label": "requirePermission / RecentPermission\nAuth → Resource → Permission\n→ RecentAuth（关键操作）\n→ idempotent → handler",
+          "x": 86,
+          "y": 721,
+          "w": 412,
+          "h": 157,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/router_guards.go",
+          "display_label": "关键 Guard\n授权后重放",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "qbank",
+          "label": "题库专用 guard\nAuth → question_bank 权限\n→ CommandIdentity → handler\nACL 与命令恢复由领域维护",
+          "x": 651,
+          "y": 752,
+          "w": 453,
+          "h": 94,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/router_guards.go;services/api-gateway/internal/server/routes_questionbank.go",
+          "display_label": "题库专用 Guard",
+          "show_evidence": false,
+          "title_font_size": 58,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "mfa",
+          "label": "MFA / 学校助手专用入口\n一次性 MFA 不走通用收据\nschool_admin 聊天不持久化正文\n工具查询再校验业务范围",
+          "x": 185,
+          "y": 1176,
+          "w": 800,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/router_guards.go;services/api-gateway/internal/server/routes_school_assistant.go",
+          "display_label": "MFA / 助手专用 Guard",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "worker",
+          "label": "worker 专用约束\nTaskScope 恢复持久任务来源 / 租约\nRequireTaskSource / Payload / File\n不能信任服务身份的空浏览器 scope",
+          "x": 1416,
+          "y": 1176,
+          "w": 678,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/server/router_guards.go;services/api-gateway/internal/server/routes_worker.go",
+          "display_label": "Worker Capability",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "risk",
+          "label": "P1：通用收据重放绕过内层当前授权\n同一 actor 的新合法会话仍可用原键读取缓存结果，当前数据 scope 收窄后的资源 / 权限判断未重新执行。\n角色或访问变更会废止旧会话，故不能解释为未认证可访问；近期认证和平台模型专用 guard 已将授权放在收据前。",
+          "x": 690,
+          "y": 1592,
+          "w": 960,
+          "h": 111,
+          "status": "issue",
+          "kind": "note",
+          "evidence": "services/api-gateway/internal/server/router_guards.go:103;services/api-gateway/internal/idempotency/middleware.go",
+          "display_label": "问题：通用重放先于当前授权",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        }
+      ],
+      "edges": [
+        {
+          "source": "request",
+          "target": "session",
+          "label": "请求",
+          "evidence": "apps/web-admin/src/api/client.ts",
+          "display_label": "请求"
+        },
+        {
+          "source": "session",
+          "target": "generic",
+          "label": "通用业务 guard",
+          "evidence": "services/api-gateway/internal/server/router_guards.go",
+          "display_label": "通用业务 guard"
+        },
+        {
+          "source": "generic",
+          "target": "cache",
+          "label": "查收据",
+          "evidence": "services/api-gateway/internal/idempotency/middleware.go",
+          "display_label": "查收据"
+        },
+        {
+          "source": "generic",
+          "target": "resource",
+          "label": "未命中再进入",
+          "evidence": "services/api-gateway/internal/server/router_guards.go",
+          "display_label": "未命中再进入"
+        },
+        {
+          "source": "resource",
+          "target": "permission",
+          "label": "允许资源后继续",
+          "evidence": "services/api-gateway/internal/server/router_guards.go",
+          "display_label": "允许资源后继续"
+        }
+      ],
+      "display_note": "",
+      "typography_layout_base": {
+        "width": 1800,
+        "height": 1500,
+        "nodes": {
+          "request": {
+            "x": 50,
+            "y": 180,
+            "w": 350,
+            "h": 190
+          },
+          "session": {
+            "x": 500,
+            "y": 180,
+            "w": 350,
+            "h": 190
+          },
+          "generic": {
+            "x": 950,
+            "y": 180,
+            "w": 350,
+            "h": 190
+          },
+          "cache": {
+            "x": 1400,
+            "y": 180,
+            "w": 350,
+            "h": 190
+          },
+          "resource": {
+            "x": 950,
+            "y": 520,
+            "w": 350,
+            "h": 190
+          },
+          "permission": {
+            "x": 1400,
+            "y": 520,
+            "w": 350,
+            "h": 190
+          },
+          "strict": {
+            "x": 50,
+            "y": 520,
+            "w": 350,
+            "h": 190
+          },
+          "qbank": {
+            "x": 500,
+            "y": 520,
+            "w": 350,
+            "h": 190
+          },
+          "mfa": {
+            "x": 50,
+            "y": 860,
+            "w": 800,
+            "h": 175
+          },
+          "worker": {
+            "x": 950,
+            "y": 860,
+            "w": 800,
+            "h": 175
+          },
+          "risk": {
+            "x": 50,
+            "y": 1170,
+            "w": 1700,
+            "h": 195
+          }
+        },
+        "points": {}
+      }
+    }
+  ],
+  "compact": true
+}

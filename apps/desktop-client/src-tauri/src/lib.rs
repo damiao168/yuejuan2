@@ -371,6 +371,43 @@ fn clear_durable_session() -> Result<(), String> {
 }
 
 #[tauri::command]
+fn remove_unstarted_scan_queue_item(app: AppHandle, session_id: String, id: String) -> Result<(), String> {
+    durable_store::with_session(&session_id, || durable_store::remove_unstarted_scan_queue_item(app, id))
+}
+
+#[tauri::command]
+fn durable_storage_usage(app: AppHandle, session_id: String) -> Result<durable_store::storage::StorageUsage, String> {
+    durable_store::with_session(&session_id, || durable_store::storage::storage_usage(app))
+}
+
+#[tauri::command]
+fn list_archived_cleanup_candidates(app: AppHandle, session_id: String, retain_days: i64) -> Result<Vec<durable_store::storage::CleanupCandidate>, String> {
+    durable_store::with_session(&session_id, || durable_store::storage::cleanup_candidates(app, retain_days))
+}
+
+#[tauri::command]
+fn cleanup_archived_originals(app: AppHandle, session_id: String, retain_days: i64, ids: Vec<String>) -> Result<durable_store::storage::CleanupResult, String> {
+    durable_store::with_session(&session_id, || durable_store::storage::cleanup_archived(app, retain_days, ids))
+}
+
+#[tauri::command]
+fn authorize_offline_access(session_id: String, access: durable_store::offline_access::OfflineAccess) -> Result<durable_store::offline_access::OfflineAccess, String> {
+    durable_store::offline_access::authorize(&session_id, access)
+}
+#[tauri::command]
+fn read_offline_access() -> Result<Option<durable_store::offline_access::OfflineAccess>, String> {
+    durable_store::offline_access::read_access()
+}
+#[tauri::command]
+fn unlock_offline_access(server: String, tenant_id: String, actor_id: String) -> Result<(String, durable_store::offline_access::OfflineAccess), String> {
+    durable_store::offline_access::unlock(&server, &tenant_id, &actor_id)
+}
+#[tauri::command]
+fn revoke_offline_access(session_id: Option<String>) -> Result<(), String> {
+    match session_id { Some(id) => durable_store::with_session(&id, durable_store::offline_access::revoke), None => durable_store::offline_access::revoke() }
+}
+
+#[tauri::command]
 fn begin_spool_local_asset(
     app: AppHandle,
     session_id: String,
@@ -525,6 +562,14 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             bind_durable_session,
             clear_durable_session,
+            remove_unstarted_scan_queue_item,
+            durable_storage_usage,
+            list_archived_cleanup_candidates,
+            cleanup_archived_originals,
+            authorize_offline_access,
+            read_offline_access,
+            unlock_offline_access,
+            revoke_offline_access,
             capability_statuses,
             claim_legacy_durable_store,
             begin_spool_local_asset,

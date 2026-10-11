@@ -1,0 +1,23 @@
+{
+  "scope": "4 HTML files only in separate validation project; not the final full repository rescan",
+  "project": "yuejuan-remediation-html-20261011",
+  "files": [
+    {
+      "path": "docs/architecture/previews/index.html",
+      "sha256": "adb664ee588f7d18564269b00f40d375547b87ed7fc31cd0fc9c2ac5bd32dca2"
+    },
+    {
+      "path": "frontend-review-report/前端UI优化方案-对标成熟产品.html",
+      "sha256": "97360676595203db31a3135233e0276082334225f28e200fe9ca0737e1fb208a"
+    },
+    {
+      "path": "frontend-review-report/前端UI设计分析.html",
+      "sha256": "dc8e69da9207e2d40604096f02f736d020f92487dd6313c5534e0a49d238c078"
+    },
+    {
+      "path": "frontend-review-report/前端代码审查报告.html",
+      "sha256": "df32d279b41f80027b049f564763253f61fc3067de6ee5917b49a056a631f553"
+    }
+  ],
+  "original_project_changed": false
+}

@@ -1,0 +1,4519 @@
+{
+  "requested": 47,
+  "returned": 47,
+  "issues": [
+    {
+      "key": "f2fcdb03-5d4f-454e-a909-0d702893428b",
+      "rule": "python:S5778",
+      "severity": "MAJOR",
+      "component": "yuejuan-local-workspace-20261010:ai-services/tests/test_model_transport_security.py",
+      "project": "yuejuan-local-workspace-20261010",
+      "hash": "fc7d7a90a3bc758528878f08d47be90c",
+      "textRange": {
+        "startLine": 169,
+        "endLine": 169,
+        "startOffset": 16,
+        "endOffset": 107
+      },
+      "flows": [
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:ai-services/tests/test_model_transport_security.py",
+              "textRange": {
+                "startLine": 170,
+                "endLine": 170,
+                "startOffset": 28,
+                "endOffset": 52
+              },
+              "msg": "Invocation possibly throwing an exception.",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:ai-services/tests/test_model_transport_security.py",
+              "textRange": {
+                "startLine": 170,
+                "endLine": 170,
+                "startOffset": 36,
+                "endOffset": 51
+              },
+              "msg": "Invocation possibly throwing an exception.",
+              "msgFormattings": []
+            }
+          ]
+        }
+      ],
+      "resolution": "FIXED",
+      "status": "CLOSED",
+      "message": "Refactor this exception test to have only one invocation possibly throwing an exception.",
+      "effort": "5min",
+      "debt": "5min",
+      "author": "",
+      "tags": [
+        "tests",
+        "pytest",
+        "unittest"
+      ],
+      "transitions": [],
+      "actions": [
+        "set_tags",
+        "comment"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T19:18:04+0800",
+      "closeDate": "2026-10-11T19:18:04+0800",
+      "type": "CODE_SMELL",
+      "scope": "TEST",
+      "quickFixAvailable": false,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "CLEAR",
+      "cleanCodeAttributeCategory": "INTENTIONAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ],
+      "issueStatus": "FIXED",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "0dbe8090-525c-4ef2-ac35-9793f8eca03c",
+      "rule": "python:S5778",
+      "severity": "MAJOR",
+      "component": "yuejuan-local-workspace-20261010:ai-services/tests/test_server_tls_handshake.py",
+      "project": "yuejuan-local-workspace-20261010",
+      "hash": "032cee7c83bae59e51cd8401b2b52caa",
+      "textRange": {
+        "startLine": 255,
+        "endLine": 255,
+        "startOffset": 16,
+        "endOffset": 51
+      },
+      "flows": [
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:ai-services/tests/test_server_tls_handshake.py",
+              "textRange": {
+                "startLine": 256,
+                "endLine": 256,
+                "startOffset": 20,
+                "endOffset": 94
+              },
+              "msg": "Invocation possibly throwing an exception.",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:ai-services/tests/test_server_tls_handshake.py",
+              "textRange": {
+                "startLine": 256,
+                "endLine": 256,
+                "startOffset": 26,
+                "endOffset": 93
+              },
+              "msg": "Invocation possibly throwing an exception.",
+              "msgFormattings": []
+            }
+          ]
+        }
+      ],
+      "resolution": "FIXED",
+      "status": "CLOSED",
+      "message": "Refactor this exception test to have only one invocation possibly throwing an exception.",
+      "effort": "5min",
+      "debt": "5min",
+      "author": "",
+      "tags": [
+        "tests",
+        "pytest",
+        "unittest"
+      ],
+      "transitions": [],
+      "actions": [
+        "set_tags",
+        "comment"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T19:18:04+0800",
+      "closeDate": "2026-10-11T19:18:04+0800",
+      "type": "CODE_SMELL",
+      "scope": "TEST",
+      "quickFixAvailable": false,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "CLEAR",
+      "cleanCodeAttributeCategory": "INTENTIONAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ],
+      "issueStatus": "FIXED",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "821e82a0-2c20-4239-8efa-32982d052bbe",
+      "rule": "python:S5778",
+      "severity": "MAJOR",
+      "component": "yuejuan-local-workspace-20261010:ai-services/tests/test_server_tls_handshake.py",
+      "project": "yuejuan-local-workspace-20261010",
+      "hash": "4e7e29cd2332a5b8e59f8bbd63785e43",
+      "textRange": {
+        "startLine": 213,
+        "endLine": 213,
+        "startOffset": 16,
+        "endOffset": 79
+      },
+      "flows": [
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:ai-services/tests/test_server_tls_handshake.py",
+              "textRange": {
+                "startLine": 214,
+                "endLine": 214,
+                "startOffset": 44,
+                "endOffset": 112
+              },
+              "msg": "Invocation possibly throwing an exception.",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:ai-services/tests/test_server_tls_handshake.py",
+              "textRange": {
+                "startLine": 214,
+                "endLine": 214,
+                "startOffset": 25,
+                "endOffset": 43
+              },
+              "msg": "Invocation possibly throwing an exception.",
+              "msgFormattings": []
+            }
+          ]
+        }
+      ],
+      "resolution": "FIXED",
+      "status": "CLOSED",
+      "message": "Refactor this exception test to have only one invocation possibly throwing an exception.",
+      "effort": "5min",
+      "debt": "5min",
+      "author": "",
+      "tags": [
+        "tests",
+        "pytest",
+        "unittest"
+      ],
+      "transitions": [],
+      "actions": [
+        "set_tags",
+        "comment"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T19:18:04+0800",
+      "closeDate": "2026-10-11T19:18:04+0800",
+      "type": "CODE_SMELL",
+      "scope": "TEST",
+      "quickFixAvailable": false,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "CLEAR",
+      "cleanCodeAttributeCategory": "INTENTIONAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ],
+      "issueStatus": "FIXED",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "9174a6ed-e229-42cf-bb75-bc5232b4eec4",
+      "rule": "python:S5778",
+      "severity": "MAJOR",
+      "component": "yuejuan-local-workspace-20261010:ai-services/tests/test_server_tls_handshake.py",
+      "project": "yuejuan-local-workspace-20261010",
+      "hash": "c50eb3f0c8fbd83b75c2cb4e12534be5",
+      "textRange": {
+        "startLine": 153,
+        "endLine": 153,
+        "startOffset": 8,
+        "endOffset": 40
+      },
+      "flows": [
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:ai-services/tests/test_server_tls_handshake.py",
+              "textRange": {
+                "startLine": 154,
+                "endLine": 154,
+                "startOffset": 24,
+                "endOffset": 75
+              },
+              "msg": "Invocation possibly throwing an exception.",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:ai-services/tests/test_server_tls_handshake.py",
+              "textRange": {
+                "startLine": 155,
+                "endLine": 155,
+                "startOffset": 21,
+                "endOffset": 72
+              },
+              "msg": "Invocation possibly throwing an exception.",
+              "msgFormattings": []
+            }
+          ]
+        }
+      ],
+      "resolution": "FIXED",
+      "status": "CLOSED",
+      "message": "Refactor this exception test to have only one invocation possibly throwing an exception.",
+      "effort": "5min",
+      "debt": "5min",
+      "author": "",
+      "tags": [
+        "tests",
+        "pytest",
+        "unittest"
+      ],
+      "transitions": [],
+      "actions": [
+        "set_tags",
+        "comment"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T19:18:04+0800",
+      "closeDate": "2026-10-11T19:18:04+0800",
+      "type": "CODE_SMELL",
+      "scope": "TEST",
+      "quickFixAvailable": false,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "CLEAR",
+      "cleanCodeAttributeCategory": "INTENTIONAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ],
+      "issueStatus": "FIXED",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "ead07595-6c96-47f2-a1e8-b480c4a1731d",
+      "rule": "python:S5778",
+      "severity": "MAJOR",
+      "component": "yuejuan-local-workspace-20261010:ai-services/tests/test_server_tls_handshake.py",
+      "project": "yuejuan-local-workspace-20261010",
+      "hash": "79f0e06d9a009d6715f4d3e8d601d877",
+      "textRange": {
+        "startLine": 229,
+        "endLine": 229,
+        "startOffset": 16,
+        "endOffset": 83
+      },
+      "flows": [
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:ai-services/tests/test_server_tls_handshake.py",
+              "textRange": {
+                "startLine": 230,
+                "endLine": 230,
+                "startOffset": 25,
+                "endOffset": 56
+              },
+              "msg": "Invocation possibly throwing an exception.",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:ai-services/tests/test_server_tls_handshake.py",
+              "textRange": {
+                "startLine": 230,
+                "endLine": 230,
+                "startOffset": 40,
+                "endOffset": 55
+              },
+              "msg": "Invocation possibly throwing an exception.",
+              "msgFormattings": []
+            }
+          ]
+        }
+      ],
+      "resolution": "FIXED",
+      "status": "CLOSED",
+      "message": "Refactor this exception test to have only one invocation possibly throwing an exception.",
+      "effort": "5min",
+      "debt": "5min",
+      "author": "",
+      "tags": [
+        "tests",
+        "pytest",
+        "unittest"
+      ],
+      "transitions": [],
+      "actions": [
+        "set_tags",
+        "comment"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T19:18:04+0800",
+      "closeDate": "2026-10-11T19:18:04+0800",
+      "type": "CODE_SMELL",
+      "scope": "TEST",
+      "quickFixAvailable": false,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "CLEAR",
+      "cleanCodeAttributeCategory": "INTENTIONAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ],
+      "issueStatus": "FIXED",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "eb390af3-af14-4c27-b33c-0b1442f95181",
+      "rule": "python:S125",
+      "severity": "MAJOR",
+      "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/build_preview.py",
+      "project": "yuejuan-local-workspace-20261010",
+      "line": 17,
+      "hash": "6d9b501dacddba24dba88c7c1b744996",
+      "textRange": {
+        "startLine": 17,
+        "endLine": 17,
+        "startOffset": 8,
+        "endOffset": 44
+      },
+      "flows": [],
+      "resolution": "FALSE-POSITIVE",
+      "status": "RESOLVED",
+      "message": "Remove this commented out code.",
+      "effort": "5min",
+      "debt": "5min",
+      "author": "",
+      "tags": [
+        "unused"
+      ],
+      "transitions": [
+        "reopen"
+      ],
+      "actions": [
+        "set_tags",
+        "comment"
+      ],
+      "comments": [
+        {
+          "key": "2016205c-c795-4f7e-a348-8d618327cc64",
+          "login": "admin",
+          "htmlText": "本地逐项复核：命中的两行是中文维护说明：离线阅读机缺少微软雅黑时补通用无衬线字体，仅修改HTML内嵌副本。该说明准确对应紧接的svg.replace调用，不是被注释停用的代码；误判由说明中HTML/SVG标识等文本触发。<br/>源码 SHA256：56d94138d0123f4ae3f7beba356fbde9703403ba955aa85638871ed6e9bdc9bd<br/>扫描分析：a741715d-5427-49a6-ac74-7dd92ad5cfa1<br/>复核记录：reports/sonar-remediation-2026-10-11/root-platform-disposition-phase03-plan.json。当前SHA与full03冻结源码一致；已有另外XML解析加固保留，本项没有改动运行输入或删去必要中文说明。",
+          "markdown": "本地逐项复核：命中的两行是中文维护说明：离线阅读机缺少微软雅黑时补通用无衬线字体，仅修改HTML内嵌副本。该说明准确对应紧接的svg.replace调用，不是被注释停用的代码；误判由说明中HTML/SVG标识等文本触发。\n源码 SHA256：56d94138d0123f4ae3f7beba356fbde9703403ba955aa85638871ed6e9bdc9bd\n扫描分析：a741715d-5427-49a6-ac74-7dd92ad5cfa1\n复核记录：reports/sonar-remediation-2026-10-11/root-platform-disposition-phase03-plan.json。当前SHA与full03冻结源码一致；已有另外XML解析加固保留，本项没有改动运行输入或删去必要中文说明。",
+          "updatable": true,
+          "createdAt": "2026-10-11T19:33:37+0800"
+        }
+      ],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T19:33:38+0800",
+      "type": "CODE_SMELL",
+      "scope": "MAIN",
+      "quickFixAvailable": false,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "CLEAR",
+      "cleanCodeAttributeCategory": "INTENTIONAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ],
+      "issueStatus": "FALSE_POSITIVE",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "11f4ff09-a505-464c-8997-f10a9ff4a9dc",
+      "rule": "javascript:S7723",
+      "severity": "MINOR",
+      "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/check_preview_typography.js",
+      "project": "yuejuan-local-workspace-20261010",
+      "hash": "70f712b731d8d9d57748d84eb068d229",
+      "textRange": {
+        "startLine": 32,
+        "endLine": 32,
+        "startOffset": 96,
+        "endOffset": 112
+      },
+      "flows": [],
+      "resolution": "FIXED",
+      "status": "CLOSED",
+      "message": "Use `new Error()` instead of `Error()`.",
+      "effort": "5min",
+      "debt": "5min",
+      "author": "",
+      "tags": [
+        "convention"
+      ],
+      "transitions": [],
+      "actions": [
+        "set_tags",
+        "comment"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T19:18:04+0800",
+      "closeDate": "2026-10-11T19:18:04+0800",
+      "type": "CODE_SMELL",
+      "scope": "MAIN",
+      "quickFixAvailable": true,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "CONVENTIONAL",
+      "cleanCodeAttributeCategory": "CONSISTENT",
+      "impacts": [
+        {
+          "softwareQuality": "RELIABILITY",
+          "severity": "LOW"
+        },
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "LOW"
+        }
+      ],
+      "issueStatus": "FIXED",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "2e016610-69ca-4d27-bba1-168afefc9575",
+      "rule": "javascript:S7723",
+      "severity": "MINOR",
+      "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/check_preview_typography.js",
+      "project": "yuejuan-local-workspace-20261010",
+      "hash": "fc25a4f33202993b2690244130665188",
+      "textRange": {
+        "startLine": 25,
+        "endLine": 25,
+        "startOffset": 88,
+        "endOffset": 107
+      },
+      "flows": [],
+      "resolution": "FIXED",
+      "status": "CLOSED",
+      "message": "Use `new Error()` instead of `Error()`.",
+      "effort": "5min",
+      "debt": "5min",
+      "author": "",
+      "tags": [
+        "convention"
+      ],
+      "transitions": [],
+      "actions": [
+        "set_tags",
+        "comment"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T19:18:04+0800",
+      "closeDate": "2026-10-11T19:18:04+0800",
+      "type": "CODE_SMELL",
+      "scope": "MAIN",
+      "quickFixAvailable": true,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "CONVENTIONAL",
+      "cleanCodeAttributeCategory": "CONSISTENT",
+      "impacts": [
+        {
+          "softwareQuality": "RELIABILITY",
+          "severity": "LOW"
+        },
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "LOW"
+        }
+      ],
+      "issueStatus": "FIXED",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "3e0ff2dc-7579-4597-b79d-473f08119cb4",
+      "rule": "javascript:S7723",
+      "severity": "MINOR",
+      "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/check_preview_typography.js",
+      "project": "yuejuan-local-workspace-20261010",
+      "hash": "1c3d5fd503389be0e81e6c9636528846",
+      "textRange": {
+        "startLine": 35,
+        "endLine": 35,
+        "startOffset": 23,
+        "endOffset": 42
+      },
+      "flows": [],
+      "resolution": "FIXED",
+      "status": "CLOSED",
+      "message": "Use `new Error()` instead of `Error()`.",
+      "effort": "5min",
+      "debt": "5min",
+      "author": "",
+      "tags": [
+        "convention"
+      ],
+      "transitions": [],
+      "actions": [
+        "set_tags",
+        "comment"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T19:18:04+0800",
+      "closeDate": "2026-10-11T19:18:04+0800",
+      "type": "CODE_SMELL",
+      "scope": "MAIN",
+      "quickFixAvailable": true,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "CONVENTIONAL",
+      "cleanCodeAttributeCategory": "CONSISTENT",
+      "impacts": [
+        {
+          "softwareQuality": "RELIABILITY",
+          "severity": "LOW"
+        },
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "LOW"
+        }
+      ],
+      "issueStatus": "FIXED",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "6a3cdaff-8a12-4050-902f-c1c38234ccad",
+      "rule": "javascript:S7723",
+      "severity": "MINOR",
+      "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/check_preview_typography.js",
+      "project": "yuejuan-local-workspace-20261010",
+      "hash": "251b10e735f428fe92750ac94b229383",
+      "textRange": {
+        "startLine": 22,
+        "endLine": 22,
+        "startOffset": 88,
+        "endOffset": 108
+      },
+      "flows": [],
+      "resolution": "FIXED",
+      "status": "CLOSED",
+      "message": "Use `new Error()` instead of `Error()`.",
+      "effort": "5min",
+      "debt": "5min",
+      "author": "",
+      "tags": [
+        "convention"
+      ],
+      "transitions": [],
+      "actions": [
+        "set_tags",
+        "comment"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T19:18:04+0800",
+      "closeDate": "2026-10-11T19:18:04+0800",
+      "type": "CODE_SMELL",
+      "scope": "MAIN",
+      "quickFixAvailable": true,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "CONVENTIONAL",
+      "cleanCodeAttributeCategory": "CONSISTENT",
+      "impacts": [
+        {
+          "softwareQuality": "RELIABILITY",
+          "severity": "LOW"
+        },
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "LOW"
+        }
+      ],
+      "issueStatus": "FIXED",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "8febb06f-cab8-43cd-86ab-46f92e136812",
+      "rule": "javascript:S7723",
+      "severity": "MINOR",
+      "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/check_preview_typography.js",
+      "project": "yuejuan-local-workspace-20261010",
+      "hash": "fb31d8b34839ce62c44e78cb6b974c2b",
+      "textRange": {
+        "startLine": 17,
+        "endLine": 17,
+        "startOffset": 76,
+        "endOffset": 96
+      },
+      "flows": [],
+      "resolution": "FIXED",
+      "status": "CLOSED",
+      "message": "Use `new Error()` instead of `Error()`.",
+      "effort": "5min",
+      "debt": "5min",
+      "author": "",
+      "tags": [
+        "convention"
+      ],
+      "transitions": [],
+      "actions": [
+        "set_tags",
+        "comment"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T19:18:04+0800",
+      "closeDate": "2026-10-11T19:18:04+0800",
+      "type": "CODE_SMELL",
+      "scope": "MAIN",
+      "quickFixAvailable": true,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "CONVENTIONAL",
+      "cleanCodeAttributeCategory": "CONSISTENT",
+      "impacts": [
+        {
+          "softwareQuality": "RELIABILITY",
+          "severity": "LOW"
+        },
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "LOW"
+        }
+      ],
+      "issueStatus": "FIXED",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "98f70be4-6910-4366-863a-5abc7700606c",
+      "rule": "javascript:S7723",
+      "severity": "MINOR",
+      "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/check_preview_typography.js",
+      "project": "yuejuan-local-workspace-20261010",
+      "hash": "4f8e77a3d1136f54c97b8901eb4fae24",
+      "textRange": {
+        "startLine": 10,
+        "endLine": 10,
+        "startOffset": 73,
+        "endOffset": 94
+      },
+      "flows": [],
+      "resolution": "FIXED",
+      "status": "CLOSED",
+      "message": "Use `new Error()` instead of `Error()`.",
+      "effort": "5min",
+      "debt": "5min",
+      "author": "",
+      "tags": [
+        "convention"
+      ],
+      "transitions": [],
+      "actions": [
+        "set_tags",
+        "comment"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T19:18:04+0800",
+      "closeDate": "2026-10-11T19:18:04+0800",
+      "type": "CODE_SMELL",
+      "scope": "MAIN",
+      "quickFixAvailable": true,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "CONVENTIONAL",
+      "cleanCodeAttributeCategory": "CONSISTENT",
+      "impacts": [
+        {
+          "softwareQuality": "RELIABILITY",
+          "severity": "LOW"
+        },
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "LOW"
+        }
+      ],
+      "issueStatus": "FIXED",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "98688ff8-f75e-4bbb-897a-2eaf11ee1c8f",
+      "rule": "javascript:S905",
+      "severity": "MAJOR",
+      "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/check_preview_typography.js",
+      "project": "yuejuan-local-workspace-20261010",
+      "line": 2,
+      "hash": "a0e8204a6e0a217cb7d6cccdf0e9b8a2",
+      "textRange": {
+        "startLine": 2,
+        "endLine": 37,
+        "startOffset": 0,
+        "endOffset": 1
+      },
+      "flows": [],
+      "resolution": "FALSE-POSITIVE",
+      "status": "RESOLVED",
+      "message": "Expected an assignment or function call and instead saw an expression.",
+      "effort": "10min",
+      "debt": "10min",
+      "author": "",
+      "tags": [
+        "cwe",
+        "unused"
+      ],
+      "transitions": [
+        "reopen"
+      ],
+      "actions": [
+        "set_tags",
+        "comment"
+      ],
+      "comments": [
+        {
+          "key": "dd926624-b807-4c20-9d02-358c3e3512c3",
+          "login": "admin",
+          "htmlText": "本地逐项复核：整个文件中的async(page)=&gt;函数表达式是playwright-cli run-code工具的函数输入。实际本机loader从filename读取代码，runInContext('(' + code + ')')保存函数为__fn__，再await __fn__(page)调用并注入page；不是业务模块中无人使用的表达式。改变为模块导出或自行调用会违反现有工具输入协议。<br/>源码 SHA256：1ef9d115d07883936333d8c4b77cbd46832e3a01f563b4c5da45e3a7841714b2<br/>扫描分析：a741715d-5427-49a6-ac74-7dd92ad5cfa1<br/>复核记录：reports/sonar-remediation-2026-10-11/root-platform-disposition-phase03-plan.json。当前SHA与full03冻结源码一致。本次仅进行语法验证和执行协议审读，没有把Node桩或只读loader检查说成真实浏览器图纸检查。",
+          "markdown": "本地逐项复核：整个文件中的async(page)=>函数表达式是playwright-cli run-code工具的函数输入。实际本机loader从filename读取代码，runInContext('(' + code + ')')保存函数为__fn__，再await __fn__(page)调用并注入page；不是业务模块中无人使用的表达式。改变为模块导出或自行调用会违反现有工具输入协议。\n源码 SHA256：1ef9d115d07883936333d8c4b77cbd46832e3a01f563b4c5da45e3a7841714b2\n扫描分析：a741715d-5427-49a6-ac74-7dd92ad5cfa1\n复核记录：reports/sonar-remediation-2026-10-11/root-platform-disposition-phase03-plan.json。当前SHA与full03冻结源码一致。本次仅进行语法验证和执行协议审读，没有把Node桩或只读loader检查说成真实浏览器图纸检查。",
+          "updatable": true,
+          "createdAt": "2026-10-11T19:33:40+0800"
+        }
+      ],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T19:33:41+0800",
+      "type": "BUG",
+      "scope": "MAIN",
+      "quickFixAvailable": false,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "CLEAR",
+      "cleanCodeAttributeCategory": "INTENTIONAL",
+      "impacts": [
+        {
+          "softwareQuality": "RELIABILITY",
+          "severity": "MEDIUM"
+        }
+      ],
+      "issueStatus": "FALSE_POSITIVE",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "1f77c921-711f-487d-8848-2f09bb3003f4",
+      "rule": "python:S7498",
+      "severity": "MINOR",
+      "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/finalize_delivery_records.py",
+      "project": "yuejuan-local-workspace-20261010",
+      "hash": "1dcd66bf2d9c8480e8968798d457a5d2",
+      "textRange": {
+        "startLine": 81,
+        "endLine": 81,
+        "startOffset": 21,
+        "endOffset": 25
+      },
+      "flows": [],
+      "resolution": "FIXED",
+      "status": "CLOSED",
+      "message": "Replace this constructor call with a literal.",
+      "effort": "5min",
+      "debt": "5min",
+      "author": "",
+      "tags": [],
+      "transitions": [],
+      "actions": [
+        "set_tags",
+        "comment"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T19:18:04+0800",
+      "closeDate": "2026-10-11T19:18:04+0800",
+      "type": "CODE_SMELL",
+      "scope": "MAIN",
+      "quickFixAvailable": false,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "CONVENTIONAL",
+      "cleanCodeAttributeCategory": "CONSISTENT",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "LOW"
+        }
+      ],
+      "issueStatus": "FIXED",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "3e6e4231-098d-492a-8d3e-fc9a26f6589a",
+      "rule": "python:S7498",
+      "severity": "MINOR",
+      "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/finalize_delivery_records.py",
+      "project": "yuejuan-local-workspace-20261010",
+      "hash": "40764a5d2e13042644a6f40d428b66ed",
+      "textRange": {
+        "startLine": 53,
+        "endLine": 53,
+        "startOffset": 19,
+        "endOffset": 23
+      },
+      "flows": [],
+      "resolution": "FIXED",
+      "status": "CLOSED",
+      "message": "Replace this constructor call with a literal.",
+      "effort": "5min",
+      "debt": "5min",
+      "author": "",
+      "tags": [],
+      "transitions": [],
+      "actions": [
+        "set_tags",
+        "comment"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T19:18:04+0800",
+      "closeDate": "2026-10-11T19:18:04+0800",
+      "type": "CODE_SMELL",
+      "scope": "MAIN",
+      "quickFixAvailable": false,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "CONVENTIONAL",
+      "cleanCodeAttributeCategory": "CONSISTENT",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "LOW"
+        }
+      ],
+      "issueStatus": "FIXED",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "52b383e7-afce-4aab-99d4-18fba060d8a4",
+      "rule": "python:S3776",
+      "severity": "CRITICAL",
+      "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/finalize_delivery_records.py",
+      "project": "yuejuan-local-workspace-20261010",
+      "hash": "36999f0b7d2b4dd75cc52066ae8a601f",
+      "textRange": {
+        "startLine": 37,
+        "endLine": 37,
+        "startOffset": 4,
+        "endOffset": 8
+      },
+      "flows": [
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/finalize_delivery_records.py",
+              "textRange": {
+                "startLine": 40,
+                "endLine": 40,
+                "startOffset": 4,
+                "endOffset": 7
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/finalize_delivery_records.py",
+              "textRange": {
+                "startLine": 46,
+                "endLine": 46,
+                "startOffset": 8,
+                "endOffset": 10
+              },
+              "msg": "+2 (incl 1 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/finalize_delivery_records.py",
+              "textRange": {
+                "startLine": 50,
+                "endLine": 50,
+                "startOffset": 8,
+                "endOffset": 10
+              },
+              "msg": "+2 (incl 1 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/finalize_delivery_records.py",
+              "textRange": {
+                "startLine": 50,
+                "endLine": 50,
+                "startOffset": 18,
+                "endOffset": 21
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/finalize_delivery_records.py",
+              "textRange": {
+                "startLine": 52,
+                "endLine": 52,
+                "startOffset": 8,
+                "endOffset": 10
+              },
+              "msg": "+2 (incl 1 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/finalize_delivery_records.py",
+              "textRange": {
+                "startLine": 55,
+                "endLine": 55,
+                "startOffset": 8,
+                "endOffset": 11
+              },
+              "msg": "+2 (incl 1 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/finalize_delivery_records.py",
+              "textRange": {
+                "startLine": 57,
+                "endLine": 57,
+                "startOffset": 12,
+                "endOffset": 14
+              },
+              "msg": "+3 (incl 2 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/finalize_delivery_records.py",
+              "textRange": {
+                "startLine": 69,
+                "endLine": 69,
+                "startOffset": 4,
+                "endOffset": 7
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/finalize_delivery_records.py",
+              "textRange": {
+                "startLine": 71,
+                "endLine": 71,
+                "startOffset": 8,
+                "endOffset": 10
+              },
+              "msg": "+2 (incl 1 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        }
+      ],
+      "resolution": "FIXED",
+      "status": "CLOSED",
+      "message": "Refactor this function to reduce its Cognitive Complexity from 16 to the 15 allowed.",
+      "effort": "6min",
+      "debt": "6min",
+      "author": "",
+      "tags": [
+        "brain-overload"
+      ],
+      "transitions": [],
+      "actions": [
+        "set_tags",
+        "comment"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T19:18:04+0800",
+      "closeDate": "2026-10-11T19:18:04+0800",
+      "type": "CODE_SMELL",
+      "scope": "MAIN",
+      "quickFixAvailable": false,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "FOCUSED",
+      "cleanCodeAttributeCategory": "ADAPTABLE",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ],
+      "issueStatus": "FIXED",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "62ff6fb6-69a9-4e74-966a-5fabc9c97966",
+      "rule": "python:S7498",
+      "severity": "MINOR",
+      "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/finalize_delivery_records.py",
+      "project": "yuejuan-local-workspace-20261010",
+      "hash": "9c369f440e29d3df2f5da83ac5b8c4d9",
+      "textRange": {
+        "startLine": 72,
+        "endLine": 72,
+        "startOffset": 18,
+        "endOffset": 22
+      },
+      "flows": [],
+      "resolution": "FIXED",
+      "status": "CLOSED",
+      "message": "Replace this constructor call with a literal.",
+      "effort": "5min",
+      "debt": "5min",
+      "author": "",
+      "tags": [],
+      "transitions": [],
+      "actions": [
+        "set_tags",
+        "comment"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T19:18:04+0800",
+      "closeDate": "2026-10-11T19:18:04+0800",
+      "type": "CODE_SMELL",
+      "scope": "MAIN",
+      "quickFixAvailable": false,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "CONVENTIONAL",
+      "cleanCodeAttributeCategory": "CONSISTENT",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "LOW"
+        }
+      ],
+      "issueStatus": "FIXED",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "f1912c02-01b9-4658-b729-66c418f8cf62",
+      "rule": "python:S7498",
+      "severity": "MINOR",
+      "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/finalize_delivery_records.py",
+      "project": "yuejuan-local-workspace-20261010",
+      "hash": "f02f3c5c08418749caccc1156eba7f39",
+      "textRange": {
+        "startLine": 56,
+        "endLine": 56,
+        "startOffset": 18,
+        "endOffset": 22
+      },
+      "flows": [],
+      "resolution": "FIXED",
+      "status": "CLOSED",
+      "message": "Replace this constructor call with a literal.",
+      "effort": "5min",
+      "debt": "5min",
+      "author": "",
+      "tags": [],
+      "transitions": [],
+      "actions": [
+        "set_tags",
+        "comment"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T19:18:04+0800",
+      "closeDate": "2026-10-11T19:18:04+0800",
+      "type": "CODE_SMELL",
+      "scope": "MAIN",
+      "quickFixAvailable": false,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "CONVENTIONAL",
+      "cleanCodeAttributeCategory": "CONSISTENT",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "LOW"
+        }
+      ],
+      "issueStatus": "FIXED",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "1c1527ae-c2f0-4edf-a04f-b8a48bda3362",
+      "rule": "python:S3776",
+      "severity": "CRITICAL",
+      "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/fit_box_typography.py",
+      "project": "yuejuan-local-workspace-20261010",
+      "hash": "36999f0b7d2b4dd75cc52066ae8a601f",
+      "textRange": {
+        "startLine": 40,
+        "endLine": 40,
+        "startOffset": 4,
+        "endOffset": 8
+      },
+      "flows": [
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/fit_box_typography.py",
+              "textRange": {
+                "startLine": 42,
+                "endLine": 42,
+                "startOffset": 4,
+                "endOffset": 7
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/fit_box_typography.py",
+              "textRange": {
+                "startLine": 44,
+                "endLine": 44,
+                "startOffset": 8,
+                "endOffset": 11
+              },
+              "msg": "+2 (incl 1 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/fit_box_typography.py",
+              "textRange": {
+                "startLine": 46,
+                "endLine": 46,
+                "startOffset": 24,
+                "endOffset": 26
+              },
+              "msg": "+3 (incl 2 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/fit_box_typography.py",
+              "textRange": {
+                "startLine": 48,
+                "endLine": 48,
+                "startOffset": 12,
+                "endOffset": 14
+              },
+              "msg": "+3 (incl 2 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/fit_box_typography.py",
+              "textRange": {
+                "startLine": 56,
+                "endLine": 56,
+                "startOffset": 12,
+                "endOffset": 15
+              },
+              "msg": "+3 (incl 2 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/fit_box_typography.py",
+              "textRange": {
+                "startLine": 57,
+                "endLine": 57,
+                "startOffset": 16,
+                "endOffset": 18
+              },
+              "msg": "+4 (incl 3 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/fit_box_typography.py",
+              "textRange": {
+                "startLine": 59,
+                "endLine": 59,
+                "startOffset": 12,
+                "endOffset": 15
+              },
+              "msg": "+3 (incl 2 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/fit_box_typography.py",
+              "textRange": {
+                "startLine": 64,
+                "endLine": 64,
+                "startOffset": 16,
+                "endOffset": 18
+              },
+              "msg": "+4 (incl 3 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/fit_box_typography.py",
+              "textRange": {
+                "startLine": 68,
+                "endLine": 68,
+                "startOffset": 35,
+                "endOffset": 37
+              },
+              "msg": "+4 (incl 3 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/fit_box_typography.py",
+              "textRange": {
+                "startLine": 70,
+                "endLine": 70,
+                "startOffset": 16,
+                "endOffset": 18
+              },
+              "msg": "+4 (incl 3 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/fit_box_typography.py",
+              "textRange": {
+                "startLine": 73,
+                "endLine": 73,
+                "startOffset": 16,
+                "endOffset": 20
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/fit_box_typography.py",
+              "textRange": {
+                "startLine": 82,
+                "endLine": 82,
+                "startOffset": 78,
+                "endOffset": 80
+              },
+              "msg": "+4 (incl 3 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/fit_box_typography.py",
+              "textRange": {
+                "startLine": 87,
+                "endLine": 87,
+                "startOffset": 88,
+                "endOffset": 90
+              },
+              "msg": "+4 (incl 3 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        }
+      ],
+      "resolution": "FIXED",
+      "status": "CLOSED",
+      "message": "Refactor this function to reduce its Cognitive Complexity from 40 to the 15 allowed.",
+      "effort": "30min",
+      "debt": "30min",
+      "author": "",
+      "tags": [
+        "brain-overload"
+      ],
+      "transitions": [],
+      "actions": [
+        "set_tags",
+        "comment"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T19:18:04+0800",
+      "closeDate": "2026-10-11T19:18:04+0800",
+      "type": "CODE_SMELL",
+      "scope": "MAIN",
+      "quickFixAvailable": false,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "FOCUSED",
+      "cleanCodeAttributeCategory": "ADAPTABLE",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ],
+      "issueStatus": "FIXED",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "2ee484a5-dc71-4fa6-b44f-92596aaeddd4",
+      "rule": "javascript:S7721",
+      "severity": "MAJOR",
+      "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/frontend-api-scan.mjs",
+      "project": "yuejuan-local-workspace-20261010",
+      "hash": "fc956eaf0cccda22e3351fcd9d2b5f56",
+      "textRange": {
+        "startLine": 63,
+        "endLine": 63,
+        "startOffset": 2,
+        "endOffset": 28
+      },
+      "flows": [],
+      "resolution": "FIXED",
+      "status": "CLOSED",
+      "message": "Move function 'templatePathValue' to the outer scope.",
+      "effort": "5min",
+      "debt": "5min",
+      "author": "",
+      "tags": [
+        "performance",
+        "optimization",
+        "editable-source",
+        "javascript"
+      ],
+      "transitions": [],
+      "actions": [
+        "set_tags",
+        "comment"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T19:18:04+0800",
+      "closeDate": "2026-10-11T19:18:04+0800",
+      "type": "CODE_SMELL",
+      "scope": "MAIN",
+      "quickFixAvailable": false,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "EFFICIENT",
+      "cleanCodeAttributeCategory": "INTENTIONAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ],
+      "issueStatus": "FIXED",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "531deed5-59d4-4340-8206-00f36d6bd876",
+      "rule": "javascript:S7721",
+      "severity": "MAJOR",
+      "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/frontend-api-scan.mjs",
+      "project": "yuejuan-local-workspace-20261010",
+      "hash": "e418e8994c5c7933a4544aee8f4740f7",
+      "textRange": {
+        "startLine": 68,
+        "endLine": 68,
+        "startOffset": 2,
+        "endOffset": 26
+      },
+      "flows": [],
+      "resolution": "FIXED",
+      "status": "CLOSED",
+      "message": "Move function 'binaryPathValue' to the outer scope.",
+      "effort": "5min",
+      "debt": "5min",
+      "author": "",
+      "tags": [
+        "performance",
+        "optimization",
+        "editable-source",
+        "javascript"
+      ],
+      "transitions": [],
+      "actions": [
+        "set_tags",
+        "comment"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T19:18:04+0800",
+      "closeDate": "2026-10-11T19:18:04+0800",
+      "type": "CODE_SMELL",
+      "scope": "MAIN",
+      "quickFixAvailable": false,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "EFFICIENT",
+      "cleanCodeAttributeCategory": "INTENTIONAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ],
+      "issueStatus": "FIXED",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "af537f0e-bb13-4310-821f-1528022d1cff",
+      "rule": "javascript:S7721",
+      "severity": "MAJOR",
+      "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/frontend-api-scan.mjs",
+      "project": "yuejuan-local-workspace-20261010",
+      "hash": "9715fe8f2e01e96ec672536ca4b1488e",
+      "textRange": {
+        "startLine": 159,
+        "endLine": 159,
+        "startOffset": 2,
+        "endOffset": 16
+      },
+      "flows": [],
+      "resolution": "FIXED",
+      "status": "CLOSED",
+      "message": "Move function 'visit' to the outer scope.",
+      "effort": "5min",
+      "debt": "5min",
+      "author": "",
+      "tags": [
+        "performance",
+        "optimization",
+        "editable-source",
+        "javascript"
+      ],
+      "transitions": [],
+      "actions": [
+        "set_tags",
+        "comment"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T19:18:04+0800",
+      "closeDate": "2026-10-11T19:18:04+0800",
+      "type": "CODE_SMELL",
+      "scope": "MAIN",
+      "quickFixAvailable": false,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "EFFICIENT",
+      "cleanCodeAttributeCategory": "INTENTIONAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ],
+      "issueStatus": "FIXED",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "b9c007e6-f680-474b-b7a4-9140eaccf39f",
+      "rule": "javascript:S7721",
+      "severity": "MAJOR",
+      "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/frontend-api-scan.mjs",
+      "project": "yuejuan-local-workspace-20261010",
+      "hash": "273aeec8bdf102ffac58447a7285b529",
+      "textRange": {
+        "startLine": 72,
+        "endLine": 72,
+        "startOffset": 2,
+        "endOffset": 28
+      },
+      "flows": [],
+      "resolution": "FIXED",
+      "status": "CLOSED",
+      "message": "Move function 'returnedPathValue' to the outer scope.",
+      "effort": "5min",
+      "debt": "5min",
+      "author": "",
+      "tags": [
+        "performance",
+        "optimization",
+        "editable-source",
+        "javascript"
+      ],
+      "transitions": [],
+      "actions": [
+        "set_tags",
+        "comment"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T19:18:04+0800",
+      "closeDate": "2026-10-11T19:18:04+0800",
+      "type": "CODE_SMELL",
+      "scope": "MAIN",
+      "quickFixAvailable": false,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "EFFICIENT",
+      "cleanCodeAttributeCategory": "INTENTIONAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ],
+      "issueStatus": "FIXED",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "c500cfe3-80be-44ab-a6c9-61d245f1dd3d",
+      "rule": "javascript:S7721",
+      "severity": "MAJOR",
+      "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/frontend-api-scan.mjs",
+      "project": "yuejuan-local-workspace-20261010",
+      "hash": "b306cb5a6235b1d42d36b062553f0e00",
+      "textRange": {
+        "startLine": 104,
+        "endLine": 104,
+        "startOffset": 2,
+        "endOffset": 31
+      },
+      "flows": [],
+      "resolution": "FIXED",
+      "status": "CLOSED",
+      "message": "Move function 'collectImageResource' to the outer scope.",
+      "effort": "5min",
+      "debt": "5min",
+      "author": "",
+      "tags": [
+        "performance",
+        "optimization",
+        "editable-source",
+        "javascript"
+      ],
+      "transitions": [],
+      "actions": [
+        "set_tags",
+        "comment"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T19:18:04+0800",
+      "closeDate": "2026-10-11T19:18:04+0800",
+      "type": "CODE_SMELL",
+      "scope": "MAIN",
+      "quickFixAvailable": false,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "EFFICIENT",
+      "cleanCodeAttributeCategory": "INTENTIONAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ],
+      "issueStatus": "FIXED",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "d159b35e-7804-43d4-ab28-035850e2f995",
+      "rule": "javascript:S7721",
+      "severity": "MAJOR",
+      "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/frontend-api-scan.mjs",
+      "project": "yuejuan-local-workspace-20261010",
+      "hash": "1eee1ddd0133da3673777b3fc10799ff",
+      "textRange": {
+        "startLine": 90,
+        "endLine": 90,
+        "startOffset": 2,
+        "endOffset": 20
+      },
+      "flows": [],
+      "resolution": "FIXED",
+      "status": "CLOSED",
+      "message": "Move function 'pathValue' to the outer scope.",
+      "effort": "5min",
+      "debt": "5min",
+      "author": "",
+      "tags": [
+        "performance",
+        "optimization",
+        "editable-source",
+        "javascript"
+      ],
+      "transitions": [],
+      "actions": [
+        "set_tags",
+        "comment"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T19:18:04+0800",
+      "closeDate": "2026-10-11T19:18:04+0800",
+      "type": "CODE_SMELL",
+      "scope": "MAIN",
+      "quickFixAvailable": false,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "EFFICIENT",
+      "cleanCodeAttributeCategory": "INTENTIONAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ],
+      "issueStatus": "FIXED",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "ddfb8621-2e53-4458-b521-a975be48f4e0",
+      "rule": "javascript:S7721",
+      "severity": "MAJOR",
+      "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/frontend-api-scan.mjs",
+      "project": "yuejuan-local-workspace-20261010",
+      "hash": "866449571051c03dc137c4ecbf86ffa9",
+      "textRange": {
+        "startLine": 137,
+        "endLine": 137,
+        "startOffset": 2,
+        "endOffset": 28
+      },
+      "flows": [],
+      "resolution": "FIXED",
+      "status": "CLOSED",
+      "message": "Move function 'isDirectTransport' to the outer scope.",
+      "effort": "5min",
+      "debt": "5min",
+      "author": "",
+      "tags": [
+        "performance",
+        "optimization",
+        "editable-source",
+        "javascript"
+      ],
+      "transitions": [],
+      "actions": [
+        "set_tags",
+        "comment"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T19:18:04+0800",
+      "closeDate": "2026-10-11T19:18:04+0800",
+      "type": "CODE_SMELL",
+      "scope": "MAIN",
+      "quickFixAvailable": false,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "EFFICIENT",
+      "cleanCodeAttributeCategory": "INTENTIONAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ],
+      "issueStatus": "FIXED",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "e2bfffe6-f04e-4675-aa35-d9df1da68f36",
+      "rule": "javascript:S7721",
+      "severity": "MAJOR",
+      "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/frontend-api-scan.mjs",
+      "project": "yuejuan-local-workspace-20261010",
+      "hash": "ad3209cc7367a3af3dcf5c9a4a6c9587",
+      "textRange": {
+        "startLine": 141,
+        "endLine": 141,
+        "startOffset": 2,
+        "endOffset": 28
+      },
+      "flows": [],
+      "resolution": "FIXED",
+      "status": "CLOSED",
+      "message": "Move function 'collectDirectCall' to the outer scope.",
+      "effort": "5min",
+      "debt": "5min",
+      "author": "",
+      "tags": [
+        "performance",
+        "optimization",
+        "editable-source",
+        "javascript"
+      ],
+      "transitions": [],
+      "actions": [
+        "set_tags",
+        "comment"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T19:18:04+0800",
+      "closeDate": "2026-10-11T19:18:04+0800",
+      "type": "CODE_SMELL",
+      "scope": "MAIN",
+      "quickFixAvailable": false,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "EFFICIENT",
+      "cleanCodeAttributeCategory": "INTENTIONAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ],
+      "issueStatus": "FIXED",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "ae9bde8c-38e1-458d-9216-cdd5998fc7d5",
+      "rule": "javascript:S7721",
+      "severity": "MAJOR",
+      "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/render_native.js",
+      "project": "yuejuan-local-workspace-20261010",
+      "line": 62,
+      "hash": "6372981c1e70fe46821123b54cc6c7ef",
+      "textRange": {
+        "startLine": 62,
+        "endLine": 62,
+        "startOffset": 8,
+        "endOffset": 34
+      },
+      "flows": [],
+      "resolution": "FALSE-POSITIVE",
+      "status": "RESOLVED",
+      "message": "Move function 'crossesHorizontal' to the outer scope.",
+      "effort": "5min",
+      "debt": "5min",
+      "author": "",
+      "tags": [
+        "performance",
+        "optimization",
+        "editable-source",
+        "javascript"
+      ],
+      "transitions": [
+        "reopen"
+      ],
+      "actions": [
+        "set_tags",
+        "comment"
+      ],
+      "comments": [
+        {
+          "key": "37d9f2c2-1cfb-4b1b-a457-7a24c97158eb",
+          "login": "admin",
+          "htmlText": "本地逐项复核：几何判定函数处于 page.evaluate 的浏览器回调内。Playwright 将该回调序列化到浏览器执行，外部Node闭包不会一并序列化；提升到文件或外部循环作用域会令浏览器缺少这两个函数。当前位置已是该浏览器执行单元内可用的最高作用域。<br/>源码 SHA256：85e0b8d9604713f3506c56758a3af02977ef66e35bc66ff7d3136e129eefac65<br/>扫描分析：5686bdb3-be93-4c4f-b4e6-79c47031022d<br/>复核记录：reports/sonar-remediation-2026-10-11/root-platform-disposition-phase02-plan.json。保留作用域边界，未转成箭头函数躲避规则、未禁用S7721、未排除文件。",
+          "markdown": "本地逐项复核：几何判定函数处于 page.evaluate 的浏览器回调内。Playwright 将该回调序列化到浏览器执行，外部Node闭包不会一并序列化；提升到文件或外部循环作用域会令浏览器缺少这两个函数。当前位置已是该浏览器执行单元内可用的最高作用域。\n源码 SHA256：85e0b8d9604713f3506c56758a3af02977ef66e35bc66ff7d3136e129eefac65\n扫描分析：5686bdb3-be93-4c4f-b4e6-79c47031022d\n复核记录：reports/sonar-remediation-2026-10-11/root-platform-disposition-phase02-plan.json。保留作用域边界，未转成箭头函数躲避规则、未禁用S7721、未排除文件。",
+          "updatable": true,
+          "createdAt": "2026-10-11T18:38:36+0800"
+        }
+      ],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T18:38:37+0800",
+      "type": "CODE_SMELL",
+      "scope": "MAIN",
+      "quickFixAvailable": false,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "EFFICIENT",
+      "cleanCodeAttributeCategory": "INTENTIONAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ],
+      "issueStatus": "FALSE_POSITIVE",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "90763f53-5107-4902-9ea6-e4c6b6d7607e",
+      "rule": "javascript:S7721",
+      "severity": "MAJOR",
+      "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/render_native.js",
+      "project": "yuejuan-local-workspace-20261010",
+      "line": 66,
+      "hash": "d517284ee3fc1d01f985e00699a2fe64",
+      "textRange": {
+        "startLine": 66,
+        "endLine": 66,
+        "startOffset": 8,
+        "endOffset": 32
+      },
+      "flows": [],
+      "resolution": "FALSE-POSITIVE",
+      "status": "RESOLVED",
+      "message": "Move function 'crossesVertical' to the outer scope.",
+      "effort": "5min",
+      "debt": "5min",
+      "author": "",
+      "tags": [
+        "performance",
+        "optimization",
+        "editable-source",
+        "javascript"
+      ],
+      "transitions": [
+        "reopen"
+      ],
+      "actions": [
+        "set_tags",
+        "comment"
+      ],
+      "comments": [
+        {
+          "key": "88e92fb8-c3a7-4526-b07e-e97ebc28cfd0",
+          "login": "admin",
+          "htmlText": "本地逐项复核：几何判定函数处于 page.evaluate 的浏览器回调内。Playwright 将该回调序列化到浏览器执行，外部Node闭包不会一并序列化；提升到文件或外部循环作用域会令浏览器缺少这两个函数。当前位置已是该浏览器执行单元内可用的最高作用域。<br/>源码 SHA256：85e0b8d9604713f3506c56758a3af02977ef66e35bc66ff7d3136e129eefac65<br/>扫描分析：5686bdb3-be93-4c4f-b4e6-79c47031022d<br/>复核记录：reports/sonar-remediation-2026-10-11/root-platform-disposition-phase02-plan.json。保留作用域边界，未转成箭头函数躲避规则、未禁用S7721、未排除文件。",
+          "markdown": "本地逐项复核：几何判定函数处于 page.evaluate 的浏览器回调内。Playwright 将该回调序列化到浏览器执行，外部Node闭包不会一并序列化；提升到文件或外部循环作用域会令浏览器缺少这两个函数。当前位置已是该浏览器执行单元内可用的最高作用域。\n源码 SHA256：85e0b8d9604713f3506c56758a3af02977ef66e35bc66ff7d3136e129eefac65\n扫描分析：5686bdb3-be93-4c4f-b4e6-79c47031022d\n复核记录：reports/sonar-remediation-2026-10-11/root-platform-disposition-phase02-plan.json。保留作用域边界，未转成箭头函数躲避规则、未禁用S7721、未排除文件。",
+          "updatable": true,
+          "createdAt": "2026-10-11T18:38:39+0800"
+        }
+      ],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T18:38:40+0800",
+      "type": "CODE_SMELL",
+      "scope": "MAIN",
+      "quickFixAvailable": false,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "EFFICIENT",
+      "cleanCodeAttributeCategory": "INTENTIONAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ],
+      "issueStatus": "FALSE_POSITIVE",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "a4a46a6b-9c41-4d91-891a-a08ad4fdbe46",
+      "rule": "python:S3776",
+      "severity": "CRITICAL",
+      "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/retire_stale_reviews.py",
+      "project": "yuejuan-local-workspace-20261010",
+      "hash": "36999f0b7d2b4dd75cc52066ae8a601f",
+      "textRange": {
+        "startLine": 11,
+        "endLine": 11,
+        "startOffset": 4,
+        "endOffset": 8
+      },
+      "flows": [
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/retire_stale_reviews.py",
+              "textRange": {
+                "startLine": 13,
+                "endLine": 13,
+                "startOffset": 4,
+                "endOffset": 7
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/retire_stale_reviews.py",
+              "textRange": {
+                "startLine": 15,
+                "endLine": 15,
+                "startOffset": 44,
+                "endOffset": 46
+              },
+              "msg": "+2 (incl 1 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/retire_stale_reviews.py",
+              "textRange": {
+                "startLine": 17,
+                "endLine": 17,
+                "startOffset": 8,
+                "endOffset": 11
+              },
+              "msg": "+2 (incl 1 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/retire_stale_reviews.py",
+              "textRange": {
+                "startLine": 18,
+                "endLine": 18,
+                "startOffset": 12,
+                "endOffset": 14
+              },
+              "msg": "+3 (incl 2 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/retire_stale_reviews.py",
+              "textRange": {
+                "startLine": 21,
+                "endLine": 21,
+                "startOffset": 69,
+                "endOffset": 71
+              },
+              "msg": "+3 (incl 2 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/retire_stale_reviews.py",
+              "textRange": {
+                "startLine": 22,
+                "endLine": 22,
+                "startOffset": 12,
+                "endOffset": 14
+              },
+              "msg": "+3 (incl 2 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/retire_stale_reviews.py",
+              "textRange": {
+                "startLine": 37,
+                "endLine": 37,
+                "startOffset": 8,
+                "endOffset": 10
+              },
+              "msg": "+2 (incl 1 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        }
+      ],
+      "resolution": "FIXED",
+      "status": "CLOSED",
+      "message": "Refactor this function to reduce its Cognitive Complexity from 16 to the 15 allowed.",
+      "effort": "6min",
+      "debt": "6min",
+      "author": "",
+      "tags": [
+        "brain-overload"
+      ],
+      "transitions": [],
+      "actions": [
+        "set_tags",
+        "comment"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T19:18:04+0800",
+      "closeDate": "2026-10-11T19:18:04+0800",
+      "type": "CODE_SMELL",
+      "scope": "MAIN",
+      "quickFixAvailable": false,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "FOCUSED",
+      "cleanCodeAttributeCategory": "ADAPTABLE",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ],
+      "issueStatus": "FIXED",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "20be2f43-bae8-4be8-aab2-510e954d2e85",
+      "rule": "python:S7498",
+      "severity": "MINOR",
+      "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/verify_typography.py",
+      "project": "yuejuan-local-workspace-20261010",
+      "hash": "1771e3bf7edb22c099408d51b0297dd4",
+      "textRange": {
+        "startLine": 40,
+        "endLine": 40,
+        "startOffset": 19,
+        "endOffset": 23
+      },
+      "flows": [],
+      "resolution": "FIXED",
+      "status": "CLOSED",
+      "message": "Replace this constructor call with a literal.",
+      "effort": "5min",
+      "debt": "5min",
+      "author": "",
+      "tags": [],
+      "transitions": [],
+      "actions": [
+        "set_tags",
+        "comment"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T19:18:04+0800",
+      "closeDate": "2026-10-11T19:18:04+0800",
+      "type": "CODE_SMELL",
+      "scope": "MAIN",
+      "quickFixAvailable": false,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "CONVENTIONAL",
+      "cleanCodeAttributeCategory": "CONSISTENT",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "LOW"
+        }
+      ],
+      "issueStatus": "FIXED",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "9c64a937-6ff7-4c05-ae68-f279043238a6",
+      "rule": "python:S7498",
+      "severity": "MINOR",
+      "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/verify_typography.py",
+      "project": "yuejuan-local-workspace-20261010",
+      "hash": "641fa5a6e3152b657e9449d7150ded65",
+      "textRange": {
+        "startLine": 38,
+        "endLine": 38,
+        "startOffset": 13,
+        "endOffset": 17
+      },
+      "flows": [],
+      "resolution": "FIXED",
+      "status": "CLOSED",
+      "message": "Replace this constructor call with a literal.",
+      "effort": "5min",
+      "debt": "5min",
+      "author": "",
+      "tags": [],
+      "transitions": [],
+      "actions": [
+        "set_tags",
+        "comment"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T19:18:04+0800",
+      "closeDate": "2026-10-11T19:18:04+0800",
+      "type": "CODE_SMELL",
+      "scope": "MAIN",
+      "quickFixAvailable": false,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "CONVENTIONAL",
+      "cleanCodeAttributeCategory": "CONSISTENT",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "LOW"
+        }
+      ],
+      "issueStatus": "FIXED",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "0f3d55da-1188-4581-8dac-2499c0709621",
+      "rule": "python:S1192",
+      "severity": "CRITICAL",
+      "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/write_frontend_specs.py",
+      "project": "yuejuan-local-workspace-20261010",
+      "hash": "8b88d594857ad8a8d94f2d18e1321231",
+      "textRange": {
+        "startLine": 9,
+        "endLine": 9,
+        "startOffset": 23,
+        "endOffset": 78
+      },
+      "flows": [
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/write_frontend_specs.py",
+              "textRange": {
+                "startLine": 175,
+                "endLine": 175,
+                "startOffset": 43,
+                "endOffset": 98
+              },
+              "msg": "Duplication",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/write_frontend_specs.py",
+              "textRange": {
+                "startLine": 220,
+                "endLine": 220,
+                "startOffset": 136,
+                "endOffset": 191
+              },
+              "msg": "Duplication",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/write_frontend_specs.py",
+              "textRange": {
+                "startLine": 233,
+                "endLine": 233,
+                "startOffset": 47,
+                "endOffset": 102
+              },
+              "msg": "Duplication",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/write_frontend_specs.py",
+              "textRange": {
+                "startLine": 249,
+                "endLine": 249,
+                "startOffset": 151,
+                "endOffset": 206
+              },
+              "msg": "Duplication",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/write_frontend_specs.py",
+              "textRange": {
+                "startLine": 255,
+                "endLine": 255,
+                "startOffset": 131,
+                "endOffset": 186
+              },
+              "msg": "Duplication",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/write_frontend_specs.py",
+              "textRange": {
+                "startLine": 255,
+                "endLine": 255,
+                "startOffset": 313,
+                "endOffset": 368
+              },
+              "msg": "Duplication",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/write_frontend_specs.py",
+              "textRange": {
+                "startLine": 255,
+                "endLine": 255,
+                "startOffset": 410,
+                "endOffset": 465
+              },
+              "msg": "Duplication",
+              "msgFormattings": []
+            }
+          ]
+        }
+      ],
+      "resolution": "FIXED",
+      "status": "CLOSED",
+      "message": "Define a constant instead of duplicating this literal \"services/api-gateway/internal/server/router_guards.go\" 8 times.",
+      "effort": "16min",
+      "debt": "16min",
+      "author": "",
+      "tags": [
+        "design"
+      ],
+      "transitions": [],
+      "actions": [
+        "set_tags",
+        "comment"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T19:18:04+0800",
+      "closeDate": "2026-10-11T19:18:04+0800",
+      "type": "CODE_SMELL",
+      "scope": "MAIN",
+      "quickFixAvailable": false,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "DISTINCT",
+      "cleanCodeAttributeCategory": "ADAPTABLE",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ],
+      "issueStatus": "FIXED",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "5b6b5d0e-fb6e-4719-ae68-d3cc47b6818b",
+      "rule": "python:S1192",
+      "severity": "CRITICAL",
+      "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/write_frontend_specs.py",
+      "project": "yuejuan-local-workspace-20261010",
+      "hash": "73dbd21fe578ffab496e224bd1ce30aa",
+      "textRange": {
+        "startLine": 10,
+        "endLine": 10,
+        "startOffset": 23,
+        "endOffset": 72
+      },
+      "flows": [
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/write_frontend_specs.py",
+              "textRange": {
+                "startLine": 176,
+                "endLine": 176,
+                "startOffset": 63,
+                "endOffset": 112
+              },
+              "msg": "Duplication",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/write_frontend_specs.py",
+              "textRange": {
+                "startLine": 215,
+                "endLine": 215,
+                "startOffset": 113,
+                "endOffset": 162
+              },
+              "msg": "Duplication",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/write_frontend_specs.py",
+              "textRange": {
+                "startLine": 229,
+                "endLine": 229,
+                "startOffset": 55,
+                "endOffset": 104
+              },
+              "msg": "Duplication",
+              "msgFormattings": []
+            }
+          ]
+        }
+      ],
+      "resolution": "FIXED",
+      "status": "CLOSED",
+      "message": "Define a constant instead of duplicating this literal \"services/api-gateway/internal/files/handlers.go\" 4 times.",
+      "effort": "8min",
+      "debt": "8min",
+      "author": "",
+      "tags": [
+        "design"
+      ],
+      "transitions": [],
+      "actions": [
+        "set_tags",
+        "comment"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T19:18:04+0800",
+      "closeDate": "2026-10-11T19:18:04+0800",
+      "type": "CODE_SMELL",
+      "scope": "MAIN",
+      "quickFixAvailable": false,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "DISTINCT",
+      "cleanCodeAttributeCategory": "ADAPTABLE",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ],
+      "issueStatus": "FIXED",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "94179e65-b9dc-432d-b598-248933881477",
+      "rule": "javascript:S3782",
+      "severity": "MAJOR",
+      "component": "yuejuan-local-workspace-20261010:scripts/check-story052-production-deployment.mjs",
+      "project": "yuejuan-local-workspace-20261010",
+      "hash": "c41de79fb70cb98efc5bb14caba0d246",
+      "textRange": {
+        "startLine": 70,
+        "endLine": 70,
+        "startOffset": 44,
+        "endOffset": 49
+      },
+      "flows": [],
+      "resolution": "FIXED",
+      "status": "CLOSED",
+      "message": "Verify that argument is of correct type: expected 'string' instead of 'string | undefined'.",
+      "effort": "5min",
+      "debt": "5min",
+      "author": "",
+      "tags": [
+        "type-dependent"
+      ],
+      "transitions": [],
+      "actions": [
+        "set_tags",
+        "comment"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T19:18:04+0800",
+      "closeDate": "2026-10-11T19:18:04+0800",
+      "type": "CODE_SMELL",
+      "scope": "MAIN",
+      "quickFixAvailable": false,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "LOGICAL",
+      "cleanCodeAttributeCategory": "INTENTIONAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ],
+      "issueStatus": "FIXED",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "ac150e87-db4d-4100-9366-4c2d00788c18",
+      "rule": "javascript:S4043",
+      "severity": "MAJOR",
+      "component": "yuejuan-local-workspace-20261010:scripts/ci/check-generated-contracts.mjs",
+      "project": "yuejuan-local-workspace-20261010",
+      "hash": "812997035fff7d0fec4db53b4c97ce14",
+      "textRange": {
+        "startLine": 38,
+        "endLine": 38,
+        "startOffset": 23,
+        "endOffset": 77
+      },
+      "flows": [],
+      "resolution": "FIXED",
+      "status": "CLOSED",
+      "message": "Move this array \"sort\" operation to a separate statement or replace it with \"toSorted\".",
+      "effort": "5min",
+      "debt": "5min",
+      "author": "",
+      "tags": [
+        "editable-source",
+        "type-dependent"
+      ],
+      "transitions": [],
+      "actions": [
+        "set_tags",
+        "comment"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T19:18:04+0800",
+      "closeDate": "2026-10-11T19:18:04+0800",
+      "type": "CODE_SMELL",
+      "scope": "MAIN",
+      "quickFixAvailable": true,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "CLEAR",
+      "cleanCodeAttributeCategory": "INTENTIONAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ],
+      "issueStatus": "FIXED",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "b1bfde62-2641-4a54-b363-94a6e135a57d",
+      "rule": "javascript:S1994",
+      "severity": "CRITICAL",
+      "component": "yuejuan-local-workspace-20261010:scripts/lib/openapi-sdk.mjs",
+      "project": "yuejuan-local-workspace-20261010",
+      "hash": "0feb70f2bfd4f9ee0ca57768a0ed11ca",
+      "textRange": {
+        "startLine": 258,
+        "endLine": 258,
+        "startOffset": 2,
+        "endOffset": 5
+      },
+      "flows": [],
+      "resolution": "FIXED",
+      "status": "CLOSED",
+      "message": "This loop's stop condition tests \"descriptor, undefined\" but the incrementer updates \"attempt\".",
+      "effort": "20min",
+      "debt": "20min",
+      "author": "",
+      "tags": [
+        "editable-source",
+        "confusing"
+      ],
+      "transitions": [],
+      "actions": [
+        "set_tags",
+        "comment"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T19:18:04+0800",
+      "closeDate": "2026-10-11T19:18:04+0800",
+      "type": "CODE_SMELL",
+      "scope": "MAIN",
+      "quickFixAvailable": false,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "CLEAR",
+      "cleanCodeAttributeCategory": "INTENTIONAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ],
+      "issueStatus": "FIXED",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "f62a5b8f-53e8-4e5d-9a00-3f0c56c777d2",
+      "rule": "javascript:S3776",
+      "severity": "CRITICAL",
+      "component": "yuejuan-local-workspace-20261010:scripts/lib/openapi-sdk.mjs",
+      "project": "yuejuan-local-workspace-20261010",
+      "hash": "ca88386595f878ae6f3d4ea33f529735",
+      "textRange": {
+        "startLine": 253,
+        "endLine": 253,
+        "startOffset": 16,
+        "endOffset": 30
+      },
+      "flows": [
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:scripts/lib/openapi-sdk.mjs",
+              "textRange": {
+                "startLine": 258,
+                "endLine": 258,
+                "startOffset": 2,
+                "endOffset": 5
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:scripts/lib/openapi-sdk.mjs",
+              "textRange": {
+                "startLine": 261,
+                "endLine": 261,
+                "startOffset": 6,
+                "endOffset": 11
+              },
+              "msg": "+2 (incl. 1 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:scripts/lib/openapi-sdk.mjs",
+              "textRange": {
+                "startLine": 262,
+                "endLine": 262,
+                "startOffset": 6,
+                "endOffset": 8
+              },
+              "msg": "+3 (incl. 2 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:scripts/lib/openapi-sdk.mjs",
+              "textRange": {
+                "startLine": 267,
+                "endLine": 267,
+                "startOffset": 10,
+                "endOffset": 12
+              },
+              "msg": "+4 (incl. 3 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:scripts/lib/openapi-sdk.mjs",
+              "textRange": {
+                "startLine": 268,
+                "endLine": 268,
+                "startOffset": 10,
+                "endOffset": 12
+              },
+              "msg": "+4 (incl. 3 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:scripts/lib/openapi-sdk.mjs",
+              "textRange": {
+                "startLine": 272,
+                "endLine": 272,
+                "startOffset": 6,
+                "endOffset": 8
+              },
+              "msg": "+3 (incl. 2 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:scripts/lib/openapi-sdk.mjs",
+              "textRange": {
+                "startLine": 274,
+                "endLine": 274,
+                "startOffset": 6,
+                "endOffset": 11
+              },
+              "msg": "+3 (incl. 2 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:scripts/lib/openapi-sdk.mjs",
+              "textRange": {
+                "startLine": 275,
+                "endLine": 275,
+                "startOffset": 8,
+                "endOffset": 10
+              },
+              "msg": "+4 (incl. 3 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:scripts/lib/openapi-sdk.mjs",
+              "textRange": {
+                "startLine": 282,
+                "endLine": 282,
+                "startOffset": 4,
+                "endOffset": 6
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:scripts/lib/openapi-sdk.mjs",
+              "textRange": {
+                "startLine": 283,
+                "endLine": 283,
+                "startOffset": 4,
+                "endOffset": 6
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:scripts/lib/openapi-sdk.mjs",
+              "textRange": {
+                "startLine": 286,
+                "endLine": 286,
+                "startOffset": 4,
+                "endOffset": 7
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:scripts/lib/openapi-sdk.mjs",
+              "textRange": {
+                "startLine": 288,
+                "endLine": 288,
+                "startOffset": 6,
+                "endOffset": 8
+              },
+              "msg": "+2 (incl. 1 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        }
+      ],
+      "resolution": "FIXED",
+      "status": "CLOSED",
+      "message": "Refactor this function to reduce its Cognitive Complexity from 29 to the 15 allowed.",
+      "effort": "19min",
+      "debt": "19min",
+      "author": "",
+      "tags": [
+        "brain-overload",
+        "editable-source"
+      ],
+      "transitions": [],
+      "actions": [
+        "set_tags",
+        "comment"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T19:18:04+0800",
+      "closeDate": "2026-10-11T19:18:04+0800",
+      "type": "CODE_SMELL",
+      "scope": "MAIN",
+      "quickFixAvailable": false,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "FOCUSED",
+      "cleanCodeAttributeCategory": "ADAPTABLE",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ],
+      "issueStatus": "FIXED",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "b3e8303d-8aee-467f-af64-817d4527cf2f",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/mathunderstanding/handlers.go",
+      "project": "yuejuan-local-workspace-20261010",
+      "hash": "b7651b75ea22459b7a5ec14832c56481",
+      "textRange": {
+        "startLine": 359,
+        "endLine": 359,
+        "startOffset": 5,
+        "endOffset": 30
+      },
+      "flows": [
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/mathunderstanding/handlers.go",
+              "textRange": {
+                "startLine": 360,
+                "endLine": 360,
+                "startOffset": 1,
+                "endOffset": 3
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/mathunderstanding/handlers.go",
+              "textRange": {
+                "startLine": 360,
+                "endLine": 360,
+                "startOffset": 63,
+                "endOffset": 65
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/mathunderstanding/handlers.go",
+              "textRange": {
+                "startLine": 364,
+                "endLine": 364,
+                "startOffset": 1,
+                "endOffset": 4
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/mathunderstanding/handlers.go",
+              "textRange": {
+                "startLine": 365,
+                "endLine": 365,
+                "startOffset": 2,
+                "endOffset": 4
+              },
+              "msg": "+2 (incl 1 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/mathunderstanding/handlers.go",
+              "textRange": {
+                "startLine": 370,
+                "endLine": 370,
+                "startOffset": 1,
+                "endOffset": 3
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/mathunderstanding/handlers.go",
+              "textRange": {
+                "startLine": 378,
+                "endLine": 378,
+                "startOffset": 1,
+                "endOffset": 4
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/mathunderstanding/handlers.go",
+              "textRange": {
+                "startLine": 379,
+                "endLine": 379,
+                "startOffset": 2,
+                "endOffset": 4
+              },
+              "msg": "+2 (incl 1 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/mathunderstanding/handlers.go",
+              "textRange": {
+                "startLine": 382,
+                "endLine": 382,
+                "startOffset": 3,
+                "endOffset": 5
+              },
+              "msg": "+3 (incl 2 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/mathunderstanding/handlers.go",
+              "textRange": {
+                "startLine": 382,
+                "endLine": 382,
+                "startOffset": 34,
+                "endOffset": 36
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/mathunderstanding/handlers.go",
+              "textRange": {
+                "startLine": 384,
+                "endLine": 384,
+                "startOffset": 4,
+                "endOffset": 6
+              },
+              "msg": "+4 (incl 3 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        }
+      ],
+      "resolution": "FIXED",
+      "status": "CLOSED",
+      "message": "Refactor this method to reduce its Cognitive Complexity from 17 to the 15 allowed.",
+      "effort": "7min",
+      "debt": "7min",
+      "author": "",
+      "tags": [
+        "brain-overload"
+      ],
+      "transitions": [],
+      "actions": [
+        "set_tags",
+        "comment"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T19:18:04+0800",
+      "closeDate": "2026-10-11T19:18:04+0800",
+      "type": "CODE_SMELL",
+      "scope": "MAIN",
+      "quickFixAvailable": false,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "FOCUSED",
+      "cleanCodeAttributeCategory": "ADAPTABLE",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ],
+      "issueStatus": "FIXED",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "8d6ddd13-214b-4202-9449-af8fe432a9e9",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/releasegate/service_batch54_test.go",
+      "project": "yuejuan-local-workspace-20261010",
+      "hash": "cd8b4eef2a980b64e7c83484f14304fc",
+      "textRange": {
+        "startLine": 39,
+        "endLine": 39,
+        "startOffset": 5,
+        "endOffset": 69
+      },
+      "flows": [
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/releasegate/service_batch54_test.go",
+              "textRange": {
+                "startLine": 48,
+                "endLine": 48,
+                "startOffset": 1,
+                "endOffset": 3
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/releasegate/service_batch54_test.go",
+              "textRange": {
+                "startLine": 48,
+                "endLine": 48,
+                "startOffset": 15,
+                "endOffset": 17
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/releasegate/service_batch54_test.go",
+              "textRange": {
+                "startLine": 55,
+                "endLine": 55,
+                "startOffset": 1,
+                "endOffset": 3
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/releasegate/service_batch54_test.go",
+              "textRange": {
+                "startLine": 58,
+                "endLine": 58,
+                "startOffset": 1,
+                "endOffset": 3
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/releasegate/service_batch54_test.go",
+              "textRange": {
+                "startLine": 61,
+                "endLine": 61,
+                "startOffset": 1,
+                "endOffset": 3
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/releasegate/service_batch54_test.go",
+              "textRange": {
+                "startLine": 61,
+                "endLine": 61,
+                "startOffset": 21,
+                "endOffset": 23
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/releasegate/service_batch54_test.go",
+              "textRange": {
+                "startLine": 64,
+                "endLine": 64,
+                "startOffset": 1,
+                "endOffset": 3
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/releasegate/service_batch54_test.go",
+              "textRange": {
+                "startLine": 68,
+                "endLine": 68,
+                "startOffset": 1,
+                "endOffset": 3
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/releasegate/service_batch54_test.go",
+              "textRange": {
+                "startLine": 68,
+                "endLine": 68,
+                "startOffset": 46,
+                "endOffset": 48
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/releasegate/service_batch54_test.go",
+              "textRange": {
+                "startLine": 71,
+                "endLine": 71,
+                "startOffset": 1,
+                "endOffset": 3
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/releasegate/service_batch54_test.go",
+              "textRange": {
+                "startLine": 71,
+                "endLine": 71,
+                "startOffset": 39,
+                "endOffset": 41
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/releasegate/service_batch54_test.go",
+              "textRange": {
+                "startLine": 74,
+                "endLine": 74,
+                "startOffset": 1,
+                "endOffset": 3
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/releasegate/service_batch54_test.go",
+              "textRange": {
+                "startLine": 74,
+                "endLine": 74,
+                "startOffset": 28,
+                "endOffset": 30
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/releasegate/service_batch54_test.go",
+              "textRange": {
+                "startLine": 78,
+                "endLine": 78,
+                "startOffset": 1,
+                "endOffset": 3
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/releasegate/service_batch54_test.go",
+              "textRange": {
+                "startLine": 78,
+                "endLine": 78,
+                "startOffset": 15,
+                "endOffset": 17
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/releasegate/service_batch54_test.go",
+              "textRange": {
+                "startLine": 82,
+                "endLine": 82,
+                "startOffset": 1,
+                "endOffset": 3
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/releasegate/service_batch54_test.go",
+              "textRange": {
+                "startLine": 82,
+                "endLine": 82,
+                "startOffset": 15,
+                "endOffset": 17
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/releasegate/service_batch54_test.go",
+              "textRange": {
+                "startLine": 88,
+                "endLine": 88,
+                "startOffset": 1,
+                "endOffset": 3
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/releasegate/service_batch54_test.go",
+              "textRange": {
+                "startLine": 88,
+                "endLine": 88,
+                "startOffset": 15,
+                "endOffset": 17
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        }
+      ],
+      "resolution": "FIXED",
+      "status": "CLOSED",
+      "message": "Refactor this method to reduce its Cognitive Complexity from 19 to the 15 allowed.",
+      "effort": "9min",
+      "debt": "9min",
+      "author": "",
+      "tags": [
+        "brain-overload"
+      ],
+      "transitions": [],
+      "actions": [
+        "set_tags",
+        "comment"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T19:18:04+0800",
+      "closeDate": "2026-10-11T19:18:04+0800",
+      "type": "CODE_SMELL",
+      "scope": "TEST",
+      "quickFixAvailable": false,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "FOCUSED",
+      "cleanCodeAttributeCategory": "ADAPTABLE",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ],
+      "issueStatus": "FIXED",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "5e8c2af6-af96-4016-8bee-7732512442d1",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/releasegate/service_coverage_remediation_test.go",
+      "project": "yuejuan-local-workspace-20261010",
+      "hash": "78e9f6eb736fea1564e76be2cef953bb",
+      "textRange": {
+        "startLine": 136,
+        "endLine": 136,
+        "startOffset": 5,
+        "endOffset": 67
+      },
+      "flows": [
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/releasegate/service_coverage_remediation_test.go",
+              "textRange": {
+                "startLine": 138,
+                "endLine": 138,
+                "startOffset": 1,
+                "endOffset": 4
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/releasegate/service_coverage_remediation_test.go",
+              "textRange": {
+                "startLine": 152,
+                "endLine": 152,
+                "startOffset": 4,
+                "endOffset": 6
+              },
+              "msg": "+4 (incl 3 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/releasegate/service_coverage_remediation_test.go",
+              "textRange": {
+                "startLine": 152,
+                "endLine": 152,
+                "startOffset": 37,
+                "endOffset": 39
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/releasegate/service_coverage_remediation_test.go",
+              "textRange": {
+                "startLine": 157,
+                "endLine": 157,
+                "startOffset": 3,
+                "endOffset": 5
+              },
+              "msg": "+3 (incl 2 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/releasegate/service_coverage_remediation_test.go",
+              "textRange": {
+                "startLine": 157,
+                "endLine": 157,
+                "startOffset": 32,
+                "endOffset": 34
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/releasegate/service_coverage_remediation_test.go",
+              "textRange": {
+                "startLine": 160,
+                "endLine": 160,
+                "startOffset": 3,
+                "endOffset": 5
+              },
+              "msg": "+3 (incl 2 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/releasegate/service_coverage_remediation_test.go",
+              "textRange": {
+                "startLine": 160,
+                "endLine": 160,
+                "startOffset": 22,
+                "endOffset": 24
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/releasegate/service_coverage_remediation_test.go",
+              "textRange": {
+                "startLine": 163,
+                "endLine": 163,
+                "startOffset": 3,
+                "endOffset": 5
+              },
+              "msg": "+3 (incl 2 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/releasegate/service_coverage_remediation_test.go",
+              "textRange": {
+                "startLine": 163,
+                "endLine": 163,
+                "startOffset": 22,
+                "endOffset": 24
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/releasegate/service_coverage_remediation_test.go",
+              "textRange": {
+                "startLine": 167,
+                "endLine": 167,
+                "startOffset": 3,
+                "endOffset": 5
+              },
+              "msg": "+3 (incl 2 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/releasegate/service_coverage_remediation_test.go",
+              "textRange": {
+                "startLine": 167,
+                "endLine": 167,
+                "startOffset": 21,
+                "endOffset": 23
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        }
+      ],
+      "resolution": "FIXED",
+      "status": "CLOSED",
+      "message": "Refactor this method to reduce its Cognitive Complexity from 22 to the 15 allowed.",
+      "effort": "12min",
+      "debt": "12min",
+      "author": "",
+      "tags": [
+        "brain-overload"
+      ],
+      "transitions": [],
+      "actions": [
+        "set_tags",
+        "comment"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T19:18:04+0800",
+      "closeDate": "2026-10-11T19:18:04+0800",
+      "type": "CODE_SMELL",
+      "scope": "TEST",
+      "quickFixAvailable": false,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "FOCUSED",
+      "cleanCodeAttributeCategory": "ADAPTABLE",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ],
+      "issueStatus": "FIXED",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "7b28d661-b791-47e4-bd42-86aefd295157",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/releasegate/service_coverage_remediation_test.go",
+      "project": "yuejuan-local-workspace-20261010",
+      "hash": "b9692bdf4cde6defa7f80220ce877f32",
+      "textRange": {
+        "startLine": 174,
+        "endLine": 174,
+        "startOffset": 5,
+        "endOffset": 59
+      },
+      "flows": [
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/releasegate/service_coverage_remediation_test.go",
+              "textRange": {
+                "startLine": 176,
+                "endLine": 176,
+                "startOffset": 1,
+                "endOffset": 4
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/releasegate/service_coverage_remediation_test.go",
+              "textRange": {
+                "startLine": 187,
+                "endLine": 187,
+                "startOffset": 3,
+                "endOffset": 9
+              },
+              "msg": "+3 (incl 2 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/releasegate/service_coverage_remediation_test.go",
+              "textRange": {
+                "startLine": 200,
+                "endLine": 200,
+                "startOffset": 3,
+                "endOffset": 5
+              },
+              "msg": "+3 (incl 2 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/releasegate/service_coverage_remediation_test.go",
+              "textRange": {
+                "startLine": 200,
+                "endLine": 200,
+                "startOffset": 41,
+                "endOffset": 43
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/releasegate/service_coverage_remediation_test.go",
+              "textRange": {
+                "startLine": 203,
+                "endLine": 203,
+                "startOffset": 3,
+                "endOffset": 5
+              },
+              "msg": "+3 (incl 2 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/releasegate/service_coverage_remediation_test.go",
+              "textRange": {
+                "startLine": 203,
+                "endLine": 203,
+                "startOffset": 27,
+                "endOffset": 29
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/releasegate/service_coverage_remediation_test.go",
+              "textRange": {
+                "startLine": 203,
+                "endLine": 203,
+                "startOffset": 64,
+                "endOffset": 66
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/releasegate/service_coverage_remediation_test.go",
+              "textRange": {
+                "startLine": 206,
+                "endLine": 206,
+                "startOffset": 3,
+                "endOffset": 5
+              },
+              "msg": "+3 (incl 2 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/releasegate/service_coverage_remediation_test.go",
+              "textRange": {
+                "startLine": 206,
+                "endLine": 206,
+                "startOffset": 24,
+                "endOffset": 26
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/releasegate/service_coverage_remediation_test.go",
+              "textRange": {
+                "startLine": 210,
+                "endLine": 210,
+                "startOffset": 3,
+                "endOffset": 5
+              },
+              "msg": "+3 (incl 2 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/releasegate/service_coverage_remediation_test.go",
+              "textRange": {
+                "startLine": 213,
+                "endLine": 213,
+                "startOffset": 3,
+                "endOffset": 5
+              },
+              "msg": "+3 (incl 2 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/releasegate/service_coverage_remediation_test.go",
+              "textRange": {
+                "startLine": 217,
+                "endLine": 217,
+                "startOffset": 3,
+                "endOffset": 5
+              },
+              "msg": "+3 (incl 2 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/releasegate/service_coverage_remediation_test.go",
+              "textRange": {
+                "startLine": 217,
+                "endLine": 217,
+                "startOffset": 21,
+                "endOffset": 23
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        }
+      ],
+      "resolution": "FIXED",
+      "status": "CLOSED",
+      "message": "Refactor this method to reduce its Cognitive Complexity from 27 to the 15 allowed.",
+      "effort": "17min",
+      "debt": "17min",
+      "author": "",
+      "tags": [
+        "brain-overload"
+      ],
+      "transitions": [],
+      "actions": [
+        "set_tags",
+        "comment"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T19:18:04+0800",
+      "closeDate": "2026-10-11T19:18:04+0800",
+      "type": "CODE_SMELL",
+      "scope": "TEST",
+      "quickFixAvailable": false,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "FOCUSED",
+      "cleanCodeAttributeCategory": "ADAPTABLE",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ],
+      "issueStatus": "FIXED",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "60f4e41c-095d-4c79-a021-25d8a76a527d",
+      "rule": "go:S3776",
+      "severity": "CRITICAL",
+      "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/review/review_workbench_batch38_test.go",
+      "project": "yuejuan-local-workspace-20261010",
+      "hash": "485017237383600c9a7590da69114dbf",
+      "textRange": {
+        "startLine": 273,
+        "endLine": 273,
+        "startOffset": 5,
+        "endOffset": 37
+      },
+      "flows": [
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/review/review_workbench_batch38_test.go",
+              "textRange": {
+                "startLine": 275,
+                "endLine": 275,
+                "startOffset": 1,
+                "endOffset": 3
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/review/review_workbench_batch38_test.go",
+              "textRange": {
+                "startLine": 275,
+                "endLine": 275,
+                "startOffset": 19,
+                "endOffset": 21
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/review/review_workbench_batch38_test.go",
+              "textRange": {
+                "startLine": 278,
+                "endLine": 278,
+                "startOffset": 1,
+                "endOffset": 3
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/review/review_workbench_batch38_test.go",
+              "textRange": {
+                "startLine": 281,
+                "endLine": 281,
+                "startOffset": 1,
+                "endOffset": 3
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/review/review_workbench_batch38_test.go",
+              "textRange": {
+                "startLine": 281,
+                "endLine": 281,
+                "startOffset": 27,
+                "endOffset": 29
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/review/review_workbench_batch38_test.go",
+              "textRange": {
+                "startLine": 285,
+                "endLine": 285,
+                "startOffset": 1,
+                "endOffset": 4
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/review/review_workbench_batch38_test.go",
+              "textRange": {
+                "startLine": 286,
+                "endLine": 286,
+                "startOffset": 2,
+                "endOffset": 4
+              },
+              "msg": "+2 (incl 1 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/review/review_workbench_batch38_test.go",
+              "textRange": {
+                "startLine": 289,
+                "endLine": 289,
+                "startOffset": 36,
+                "endOffset": 38
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/review/review_workbench_batch38_test.go",
+              "textRange": {
+                "startLine": 291,
+                "endLine": 291,
+                "startOffset": 1,
+                "endOffset": 3
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/review/review_workbench_batch38_test.go",
+              "textRange": {
+                "startLine": 291,
+                "endLine": 291,
+                "startOffset": 57,
+                "endOffset": 59
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/review/review_workbench_batch38_test.go",
+              "textRange": {
+                "startLine": 291,
+                "endLine": 291,
+                "startOffset": 95,
+                "endOffset": 97
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/review/review_workbench_batch38_test.go",
+              "textRange": {
+                "startLine": 294,
+                "endLine": 294,
+                "startOffset": 1,
+                "endOffset": 3
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/review/review_workbench_batch38_test.go",
+              "textRange": {
+                "startLine": 296,
+                "endLine": 296,
+                "startOffset": 2,
+                "endOffset": 4
+              },
+              "msg": "+2 (incl 1 for nesting)",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/internal/review/review_workbench_batch38_test.go",
+              "textRange": {
+                "startLine": 296,
+                "endLine": 296,
+                "startOffset": 16,
+                "endOffset": 18
+              },
+              "msg": "+1",
+              "msgFormattings": []
+            }
+          ]
+        }
+      ],
+      "resolution": "FIXED",
+      "status": "CLOSED",
+      "message": "Refactor this method to reduce its Cognitive Complexity from 16 to the 15 allowed.",
+      "effort": "6min",
+      "debt": "6min",
+      "author": "",
+      "tags": [
+        "brain-overload"
+      ],
+      "transitions": [],
+      "actions": [
+        "set_tags",
+        "comment"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T19:18:04+0800",
+      "closeDate": "2026-10-11T19:18:04+0800",
+      "type": "CODE_SMELL",
+      "scope": "TEST",
+      "quickFixAvailable": false,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "FOCUSED",
+      "cleanCodeAttributeCategory": "ADAPTABLE",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ],
+      "issueStatus": "FIXED",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "b8dffefc-d89c-4721-8a3a-0816b76d9631",
+      "rule": "docker:S7031",
+      "severity": "MINOR",
+      "component": "yuejuan-local-workspace-20261010:services/api-gateway/tools/story056-real-worker-e2e/Dockerfile",
+      "project": "yuejuan-local-workspace-20261010",
+      "hash": "d9da49638793f2f39284db7d0ee8fe7e",
+      "textRange": {
+        "startLine": 16,
+        "endLine": 16,
+        "startOffset": 0,
+        "endOffset": 3
+      },
+      "flows": [
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/api-gateway/tools/story056-real-worker-e2e/Dockerfile",
+              "textRange": {
+                "startLine": 17,
+                "endLine": 17,
+                "startOffset": 0,
+                "endOffset": 3
+              },
+              "msg": "consecutive RUN instruction",
+              "msgFormattings": []
+            }
+          ]
+        }
+      ],
+      "resolution": "FIXED",
+      "status": "CLOSED",
+      "message": "Merge this RUN instruction with the consecutive ones.",
+      "effort": "5min",
+      "debt": "5min",
+      "author": "",
+      "tags": [],
+      "transitions": [],
+      "actions": [
+        "set_tags",
+        "comment"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T19:18:04+0800",
+      "closeDate": "2026-10-11T19:18:04+0800",
+      "type": "CODE_SMELL",
+      "scope": "MAIN",
+      "quickFixAvailable": false,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "CONVENTIONAL",
+      "cleanCodeAttributeCategory": "CONSISTENT",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "LOW"
+        }
+      ],
+      "issueStatus": "FIXED",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "05751b2e-4f9d-439b-8076-c16b596cffc4",
+      "rule": "python:S5778",
+      "severity": "MAJOR",
+      "component": "yuejuan-local-workspace-20261010:services/math-verification-worker/tests/test_server_tls_batch54.py",
+      "project": "yuejuan-local-workspace-20261010",
+      "hash": "7330ba9397134240d8c996bb4ae5f6db",
+      "textRange": {
+        "startLine": 162,
+        "endLine": 162,
+        "startOffset": 8,
+        "endOffset": 56
+      },
+      "flows": [
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/math-verification-worker/tests/test_server_tls_batch54.py",
+              "textRange": {
+                "startLine": 163,
+                "endLine": 163,
+                "startOffset": 20,
+                "endOffset": 81
+              },
+              "msg": "Invocation possibly throwing an exception.",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/math-verification-worker/tests/test_server_tls_batch54.py",
+              "textRange": {
+                "startLine": 163,
+                "endLine": 163,
+                "startOffset": 41,
+                "endOffset": 68
+              },
+              "msg": "Invocation possibly throwing an exception.",
+              "msgFormattings": []
+            }
+          ]
+        }
+      ],
+      "resolution": "FIXED",
+      "status": "CLOSED",
+      "message": "Refactor this exception test to have only one invocation possibly throwing an exception.",
+      "effort": "5min",
+      "debt": "5min",
+      "author": "",
+      "tags": [
+        "tests",
+        "pytest",
+        "unittest"
+      ],
+      "transitions": [],
+      "actions": [
+        "set_tags",
+        "comment"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T19:18:04+0800",
+      "closeDate": "2026-10-11T19:18:04+0800",
+      "type": "CODE_SMELL",
+      "scope": "TEST",
+      "quickFixAvailable": false,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "CLEAR",
+      "cleanCodeAttributeCategory": "INTENTIONAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ],
+      "issueStatus": "FIXED",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "d594d48e-5fba-4e0f-9d58-06617ab93fc8",
+      "rule": "python:S5778",
+      "severity": "MAJOR",
+      "component": "yuejuan-local-workspace-20261010:services/math-verification-worker/tests/test_server_tls_batch54.py",
+      "project": "yuejuan-local-workspace-20261010",
+      "hash": "1bdca903bbc693e4760f0beb3723cd9b",
+      "textRange": {
+        "startLine": 183,
+        "endLine": 183,
+        "startOffset": 8,
+        "endOffset": 55
+      },
+      "flows": [
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/math-verification-worker/tests/test_server_tls_batch54.py",
+              "textRange": {
+                "startLine": 184,
+                "endLine": 184,
+                "startOffset": 12,
+                "endOffset": 54
+              },
+              "msg": "Invocation possibly throwing an exception.",
+              "msgFormattings": []
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "yuejuan-local-workspace-20261010:services/math-verification-worker/tests/test_server_tls_batch54.py",
+              "textRange": {
+                "startLine": 184,
+                "endLine": 184,
+                "startOffset": 26,
+                "endOffset": 53
+              },
+              "msg": "Invocation possibly throwing an exception.",
+              "msgFormattings": []
+            }
+          ]
+        }
+      ],
+      "resolution": "FIXED",
+      "status": "CLOSED",
+      "message": "Refactor this exception test to have only one invocation possibly throwing an exception.",
+      "effort": "5min",
+      "debt": "5min",
+      "author": "",
+      "tags": [
+        "tests",
+        "pytest",
+        "unittest"
+      ],
+      "transitions": [],
+      "actions": [
+        "set_tags",
+        "comment"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T19:18:04+0800",
+      "closeDate": "2026-10-11T19:18:04+0800",
+      "type": "CODE_SMELL",
+      "scope": "TEST",
+      "quickFixAvailable": false,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "CLEAR",
+      "cleanCodeAttributeCategory": "INTENTIONAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ],
+      "issueStatus": "FIXED",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    },
+    {
+      "key": "91c32d4c-9dc7-4158-b8be-ac18462db392",
+      "rule": "python:S9073",
+      "severity": "MAJOR",
+      "component": "yuejuan-local-workspace-20261010:tests/infra/test_internal_test_certificates.py",
+      "project": "yuejuan-local-workspace-20261010",
+      "hash": "01a212f310fae18f16247af2f5b23a5f",
+      "textRange": {
+        "startLine": 26,
+        "endLine": 26,
+        "startOffset": 4,
+        "endOffset": 55
+      },
+      "flows": [],
+      "resolution": "FIXED",
+      "status": "CLOSED",
+      "message": "Split this composite assertion into separate assertions.",
+      "effort": "5min",
+      "debt": "5min",
+      "author": "",
+      "tags": [
+        "pytest"
+      ],
+      "transitions": [],
+      "actions": [
+        "set_tags",
+        "comment"
+      ],
+      "comments": [],
+      "creationDate": "2026-10-11T18:01:26+0800",
+      "updateDate": "2026-10-11T19:18:04+0800",
+      "closeDate": "2026-10-11T19:18:04+0800",
+      "type": "CODE_SMELL",
+      "scope": "TEST",
+      "quickFixAvailable": false,
+      "messageFormattings": [],
+      "codeVariants": [],
+      "cleanCodeAttribute": "CLEAR",
+      "cleanCodeAttributeCategory": "INTENTIONAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ],
+      "issueStatus": "FIXED",
+      "prioritizedRule": false,
+      "fromSonarQubeUpdate": false,
+      "internalTags": [],
+      "linkedTicketStatus": "NOT_LINKED"
+    }
+  ]
+}

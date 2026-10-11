@@ -30,10 +30,7 @@ func TestPlatformSchoolHandlersExposeSeparateReadModels(t *testing.T) {
 	mux.HandleFunc("GET /api/v1/platform/schools/{tenant_id}/model-health", handler.ModelHealth)
 	mux.HandleFunc("GET /api/v1/platform/schools/{tenant_id}/activity", handler.Activity)
 
-	tests := []struct {
-		path string
-		keys []string
-	}{
+	tests := []platformSchoolReadModelCase{
 		{"/api/v1/platform/schools?q=zhang&usage_window=7d", []string{"schools", "summary", "next_cursor", "has_more"}},
 		{"/api/v1/platform/schools/tenant-a", []string{"school"}},
 		{"/api/v1/platform/schools/tenant-a/members?role=teacher", []string{"members", "summary"}},
@@ -43,26 +40,7 @@ func TestPlatformSchoolHandlersExposeSeparateReadModels(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.path, func(t *testing.T) {
-			response := httptest.NewRecorder()
-			mux.ServeHTTP(response, httptest.NewRequest(http.MethodGet, test.path, nil))
-			if response.Code != http.StatusOK {
-				t.Fatalf("status %d: %s", response.Code, response.Body.String())
-			}
-			var data map[string]json.RawMessage
-			if err := json.Unmarshal(response.Body.Bytes(), &data); err != nil {
-				t.Fatal(err)
-			}
-			for _, key := range test.keys {
-				if _, ok := data[key]; !ok {
-					t.Errorf("missing JSON key %q in %s", key, response.Body.String())
-				}
-			}
-			if strings.Contains(response.Body.String(), "password") || strings.Contains(response.Body.String(), "credential_ciphertext") || strings.Contains(response.Body.String(), "totp_secret") {
-				t.Fatalf("sensitive account/model data leaked: %s", response.Body.String())
-			}
-			if (strings.HasPrefix(test.path, "/api/v1/platform/schools?") || strings.Contains(test.path, "/usage?")) && !strings.Contains(response.Body.String(), `"arbitration_requests":`) {
-				t.Fatalf("usage response is missing arbitration_requests: %s", response.Body.String())
-			}
+			assertPlatformSchoolReadModel(t, test, mux)
 		})
 	}
 }
@@ -105,5 +83,34 @@ func TestPlatformSchoolHandlersRejectBadQueriesAndUnknownSchool(t *testing.T) {
 		if response.Code != http.StatusNotFound || !strings.Contains(response.Body.String(), "platform_school_not_found") {
 			t.Errorf("%s: status %d body %s", path, response.Code, response.Body.String())
 		}
+	}
+}
+
+type platformSchoolReadModelCase struct {
+	path string
+	keys []string
+}
+
+func assertPlatformSchoolReadModel(t *testing.T, test platformSchoolReadModelCase, mux *http.ServeMux) {
+	t.Helper()
+	response := httptest.NewRecorder()
+	mux.ServeHTTP(response, httptest.NewRequest(http.MethodGet, test.path, nil))
+	if response.Code != http.StatusOK {
+		t.Fatalf("status %d: %s", response.Code, response.Body.String())
+	}
+	var data map[string]json.RawMessage
+	if err := json.Unmarshal(response.Body.Bytes(), &data); err != nil {
+		t.Fatal(err)
+	}
+	for _, key := range test.keys {
+		if _, ok := data[key]; !ok {
+			t.Errorf("missing JSON key %q in %s", key, response.Body.String())
+		}
+	}
+	if strings.Contains(response.Body.String(), "password") || strings.Contains(response.Body.String(), "credential_ciphertext") || strings.Contains(response.Body.String(), "totp_secret") {
+		t.Fatalf("sensitive account/model data leaked: %s", response.Body.String())
+	}
+	if (strings.HasPrefix(test.path, "/api/v1/platform/schools?") || strings.Contains(test.path, "/usage?")) && !strings.Contains(response.Body.String(), `"arbitration_requests":`) {
+		t.Fatalf("usage response is missing arbitration_requests: %s", response.Body.String())
 	}
 }

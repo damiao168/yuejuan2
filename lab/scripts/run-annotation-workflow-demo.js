@@ -98,7 +98,7 @@ const report = {
     adjudication_assignments: state.adjudication_assignments.length,
     independent_adjudicators: state.adjudication_assignments.every((assignment) => {
       const bundle = state.pending_adjudication_bundles.find((item) => item.bundle_id === assignment.bundle_id);
-      return bundle && bundle.labels.every((label) => label.labeler_id !== assignment.adjudicator_id);
+      return bundle?.labels.every((label) => label.labeler_id !== assignment.adjudicator_id);
     }),
     adjudicator_packet_hashes_valid: state.adjudicator_packets.every((item) => sha256(artifactText(adjudicatorPackets.get(item.adjudicator_id))) === item.sha256)
   },

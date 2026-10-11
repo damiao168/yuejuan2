@@ -1,0 +1,18 @@
+{
+  "verified_at": "2026-10-11T19:57:00.238018+08:00",
+  "analysis_id": "07c1210c-b44c-49f6-a3fe-c2bb211a0ce3",
+  "execution_exit": 0,
+  "tracked_rows": 2270,
+  "csv_json_unique_identity_status_matches_platform": true,
+  "local_report_links_valid": 25,
+  "current_maintained_sha_matches": 2654,
+  "current_type_support_matches": 2,
+  "original_issue_platform_confirmed": 2223,
+  "active_issues": 0,
+  "quality_gate": "ERROR",
+  "only_failed_gate_condition": [
+    "new_coverage"
+  ],
+  "coverage_imported": false,
+  "short_lived_scan_token_revoked": true
+}

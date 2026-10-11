@@ -3,9 +3,6 @@ import {
   type CreateReviewAnnotationRequest,
   type CreateReviewCommentTemplateRequest,
   type DeleteRevisionRequest,
-  type ReviewAnnotation,
-  type ReviewCommentTemplate,
-  type StudentReviewAnnotation,
   type UpdateReviewAnnotationRequest,
   type UpdateReviewCommentTemplateRequest
 } from "@edugrade/sdk";
@@ -22,7 +19,7 @@ export type {
   StudentReviewAnnotation,
   UpdateReviewAnnotationRequest,
   UpdateReviewCommentTemplateRequest
-};
+} from "@edugrade/sdk";
 
 export async function listReviewAnnotations(taskId: string, signal?: AbortSignal) {
   return generatedApi.listReviewAnnotations({ path: { taskId }, signal });

@@ -12,13 +12,12 @@ import (
 	submissionpkg "edugrade-enterprise/services/api-gateway/internal/submission"
 )
 
-// CropImageReader is the narrow application capability used by review,
-// regrade, backmark and appeal after their own resource authorization.
+// CropImageReader 是 review、regrade、backmark 和 appeal 在完成自身资源授权后使用的受限应用能力。
 type CropImageReader interface {
 	ReadCropImage(context.Context, string, string) (binaryresource.Resource, error)
 }
 
-// PageImageReader exposes the page associated with a validated segment.
+// PageImageReader 提供与已校验分段关联的页面。
 type PageImageReader interface {
 	ReadPageImage(context.Context, string, string) (binaryresource.Resource, error)
 }

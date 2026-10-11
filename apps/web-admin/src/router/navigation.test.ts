@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { SessionUser } from "../auth/session";
-import { hasPathAccess, legacyRedirectForPath } from "./navigation";
+import { examWorkspaceNavigationPath, hasPathAccess, legacyRedirectForPath } from "./navigation";
 
 function user(roles: string[], permissions: string[]): SessionUser {
   return {
@@ -39,5 +39,16 @@ describe("router compatibility and access", () => {
     expect(hasPathAccess(grader, "/teacher/grading")).toBe(true);
     expect(hasPathAccess(grader, "/admin/exams/exam-1/overview")).toBe(false);
     expect(hasPathAccess(administrator, "/admin/exams/exam-1/not-a-section")).toBe(false);
+  });
+});
+
+describe("exam module navigation ownership", () => {
+  it.each([
+    ["students", "/exams"], ["paper", "/exams"], ["questions", "/exams"],
+    ["template", "/exams"], ["settings", "/exams"],
+    ["capture", "/grading"], ["processing", "/grading"], ["grading", "/grading"],
+    ["quality", "/arbitration"], ["scores", "/scores"], ["reports", "/reports"], ["appeals", "/appeals"]
+  ])("highlights the owning module for %s", (section, expected) => {
+    expect(examWorkspaceNavigationPath(section)).toBe(expected);
   });
 });

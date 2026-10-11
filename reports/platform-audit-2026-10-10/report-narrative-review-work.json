@@ -1,0 +1,186 @@
+{
+  "recorded_at_utc": "2026-10-11T07:53:22.808635+00:00",
+  "review_stage": "before_final_rust_rescan_delivery",
+  "reports": [
+    {
+      "path": "README.md",
+      "sha256": "57a9e9c2876a12addfb3144e7c6dde781b01090ee6d1c102e9edc6aa2a65dd1f",
+      "lines": 79
+    },
+    {
+      "path": "actions/report.md",
+      "sha256": "383c1ce97530ab0ae233224843c697d81c41c1ec8188435f13d3bad761e78802",
+      "lines": 38
+    },
+    {
+      "path": "coverage/report.md",
+      "sha256": "4a8df0391ab62afd16d316940f90d703db1f9eda0712f8d741ab8a006239bd47",
+      "lines": 79
+    },
+    {
+      "path": "sonar/REPORT.md",
+      "sha256": "4a14133a67449fdd94adc23f6270d0fb3c35e74145d7c393b37152926f9bd9e4",
+      "lines": 387
+    },
+    {
+      "path": "semgrep/REPORT.md",
+      "sha256": "147b6f2a5d0eeb6fddfc0cdec0ca83ca73d8ff5d5dee895b6fbaf04e315869ad",
+      "lines": 315
+    }
+  ],
+  "local_markdown_links": [
+    {
+      "report": "README.md",
+      "line": 17,
+      "target": "sonar/REPORT.md",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/sonar/REPORT.md",
+      "exists": true
+    },
+    {
+      "report": "README.md",
+      "line": 18,
+      "target": "semgrep/REPORT.md",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/semgrep/REPORT.md",
+      "exists": true
+    },
+    {
+      "report": "README.md",
+      "line": 19,
+      "target": "codeql/README.md",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/codeql/README.md",
+      "exists": true
+    },
+    {
+      "report": "README.md",
+      "line": 20,
+      "target": "actions/report.md",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/actions/report.md",
+      "exists": true
+    },
+    {
+      "report": "README.md",
+      "line": 21,
+      "target": "coverage/report.md",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/coverage/report.md",
+      "exists": true
+    },
+    {
+      "report": "README.md",
+      "line": 27,
+      "target": "sonar/issues.csv",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/sonar/issues.csv",
+      "exists": true
+    },
+    {
+      "report": "README.md",
+      "line": 27,
+      "target": "semgrep/findings.csv",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/semgrep/findings.csv",
+      "exists": true
+    },
+    {
+      "report": "README.md",
+      "line": 27,
+      "target": "codeql/alerts.csv",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/codeql/alerts.csv",
+      "exists": true
+    },
+    {
+      "report": "README.md",
+      "line": 39,
+      "target": "coverage/report.md",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/coverage/report.md",
+      "exists": true
+    },
+    {
+      "report": "README.md",
+      "line": 49,
+      "target": "architecture-appendix.md",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/architecture-appendix.md",
+      "exists": true
+    },
+    {
+      "report": "README.md",
+      "line": 53,
+      "target": "codeql/security-review.md",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/codeql/security-review.md",
+      "exists": true
+    },
+    {
+      "report": "README.md",
+      "line": 59,
+      "target": "codeql/python-quality-review.md",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/codeql/python-quality-review.md",
+      "exists": true
+    },
+    {
+      "report": "README.md",
+      "line": 61,
+      "target": "sonar/finding-review.md",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/sonar/finding-review.md",
+      "exists": true
+    },
+    {
+      "report": "README.md",
+      "line": 63,
+      "target": "codeql/javascript-finding-review.md",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/codeql/javascript-finding-review.md",
+      "exists": true
+    },
+    {
+      "report": "README.md",
+      "line": 65,
+      "target": "codeql/go-finding-review.md",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/codeql/go-finding-review.md",
+      "exists": true
+    },
+    {
+      "report": "README.md",
+      "line": 67,
+      "target": "codeql/rust-finding-review.md",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/codeql/rust-finding-review.md",
+      "exists": true
+    },
+    {
+      "report": "sonar/REPORT.md",
+      "line": 385,
+      "target": "complexity-context-review.md",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/sonar/complexity-context-review.md",
+      "exists": true
+    },
+    {
+      "report": "sonar/REPORT.md",
+      "line": 387,
+      "target": "finding-review.md",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/sonar/finding-review.md",
+      "exists": true
+    },
+    {
+      "report": "sonar/REPORT.md",
+      "line": 387,
+      "target": "finding-review.json",
+      "resolved": "D:/project/yuejuan/reports/platform-audit-2026-10-10/sonar/finding-review.json",
+      "exists": true
+    }
+  ],
+  "actions_source_hash_checks": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "execution_sha256": "0080fdb3fd7ff33c24b3c48e51374687cde7a8b8694b7b7ce8bc32bf74e53e47",
+      "current_sha256": "0080fdb3fd7ff33c24b3c48e51374687cde7a8b8694b7b7ce8bc32bf74e53e47",
+      "unchanged": true
+    },
+    {
+      "path": ".github/workflows/release-images.yml",
+      "execution_sha256": "936608db58d1a739fc01d89f3f7d5b267f9895ce62d58f44377e76ca8311e4d5",
+      "current_sha256": "936608db58d1a739fc01d89f3f7d5b267f9895ce62d58f44377e76ca8311e4d5",
+      "unchanged": true
+    },
+    {
+      "path": ".github/workflows/workflow-lint.yml",
+      "execution_sha256": "78b11344eb52021a60246e3d74d80fd376986d2650ab6bc8c273e738cc760e58",
+      "current_sha256": "78b11344eb52021a60246e3d74d80fd376986d2650ab6bc8c273e738cc760e58",
+      "unchanged": true
+    }
+  ]
+}

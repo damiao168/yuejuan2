@@ -6,13 +6,15 @@ import pytest
 
 MODULE_PATH = Path(__file__).with_name("run_math_bench.py")
 SPEC = importlib.util.spec_from_file_location("run_math_bench", MODULE_PATH)
-assert SPEC and SPEC.loader
+assert SPEC
+assert SPEC.loader
 MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
 
 GENERATOR_PATH = Path(__file__).with_name("generate_synthetic_fixtures.py")
 GEN_SPEC = importlib.util.spec_from_file_location("generate_synthetic_fixtures", GENERATOR_PATH)
-assert GEN_SPEC and GEN_SPEC.loader
+assert GEN_SPEC
+assert GEN_SPEC.loader
 GEN = importlib.util.module_from_spec(GEN_SPEC)
 GEN_SPEC.loader.exec_module(GEN)
 
@@ -20,8 +22,8 @@ FIXTURES = Path(__file__).parent / "fixtures"
 SYNTHETIC_V2_PREDICTIONS = FIXTURES / "predictions" / "synthetic-v2"
 ORIGINAL_ENTRY_ID = "synthetic-equation-001"
 
-# Every metric key the runner can emit, and the subset that the synthetic-v2
-# corpus must keep strictly between 0 and 1 (both hits and misses observed).
+# 列出执行器可能输出的所有指标键，以及 synthetic-v2
+# 语料必须保持严格介于 0 与 1 之间的子集（同时观察到命中和未命中）。
 DISCRIMINATING_METRICS = (
     "formula_exact_accuracy",
     "ast_exact_accuracy",
@@ -74,7 +76,7 @@ def test_smoke_fixture_is_reproducible(tmp_path: Path) -> None:
     assert first["metrics"]["formula_exact_accuracy"] == 1.0
     assert first["metrics"]["rubric_evidence_f1"] == 1.0
     assert first["metrics"]["equivalence_precision"] == 1.0
-    # The smoke corpus exercises empty-relation denominators too.
+    # 冒烟测试语料也覆盖关系为空时的分母处理。
     assert first["metrics"]["relations_f1"] is None
     assert first["metrics"]["edges_f1"] is None
     assert first["metrics"]["risky_case_recall"] is None
@@ -165,7 +167,7 @@ def test_synthetic_v2_report_is_labelled_and_discriminating() -> None:
         value = report["metrics"][name]
         assert value is not None, f"{name} has no denominator in the corpus"
         assert 0.0 < value < 1.0, f"{name}={value} does not discriminate"
-    # The report must carry no real-data claim.
+    # 报告不得声称使用了真实数据。
     assert report["samples"][0]["sample_id"] == ORIGINAL_ENTRY_ID
 
 

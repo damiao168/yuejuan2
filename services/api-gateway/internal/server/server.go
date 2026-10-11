@@ -26,9 +26,8 @@ type Server struct {
 	handler http.Handler
 }
 
-// releaseGatePublisher adapts A20's evidence-producing coordinator to A18's
-// narrow publish seam. Evidence stays append-only in A20 and is retrieved
-// through its scoped endpoint, not echoed as mutable publish input.
+// releaseGatePublisher 将 A20 生成证据的协调器适配到 A18 的受限发布接口。
+// 证据在 A20 中保持只追加，通过其受作用域限制的端点读取，不作为可变发布输入原样传回。
 type releaseGatePublisher struct {
 	coordinator *releasegate.PublicationCoordinator
 }
@@ -38,9 +37,8 @@ func (p releaseGatePublisher) PublishPublication(ctx context.Context, tenantID, 
 	return release, err
 }
 
-// regradeBlocker projects only publication-relevant state. A20 does not need
-// regrade scores, reviewers, or answer material to decide whether publishing
-// must wait for a correction plan.
+// regradeBlocker 只投影与发布相关的状态。
+// A20 无需重评分数、复核人员或答案材料，就能判断发布是否必须等待修正计划。
 type regradeBlocker struct{ service *regrade.Service }
 
 func (b regradeBlocker) BlockingRegradeCount(ctx context.Context, tenantID, examID string) (int, error) {
@@ -50,9 +48,8 @@ func (b regradeBlocker) BlockingRegradeCount(ctx context.Context, tenantID, exam
 	}
 	count := 0
 	for _, job := range jobs {
-		// A ready plan is frozen and can safely be materialised as its own
-		// successor release. All earlier states are still changing evidence and
-		// must block public publication.
+		// ready 计划已冻结，可安全地实例化为独立的后续发布。
+		// 更早状态的证据仍在变化，必须阻断公开发布。
 		if job.Status != regrade.StatusCancelled && job.Status != regrade.StatusReadyForRelease {
 			count++
 		}
@@ -93,20 +90,23 @@ type RouterDependencies struct {
 }
 
 func NewRouter(cfg config.Config, logg *logger.Logger, checkers []deps.Checker, authStore auth.Store, orgStore org.Store, examStore exam.Store, paperStore paper.Store) http.Handler {
-	return NewRouterWithFiles(cfg, logg, checkers, authStore, orgStore, examStore, paperStore, files.NewMemoryStore(), files.NewMemoryObjectStorage())
+	return NewRouterWithFiles(cfg, logg, checkers, IdentityStores{Auth: authStore, Org: orgStore}, ExamPreparationStores{Exam: examStore, Paper: paperStore, Files: files.NewMemoryStore()}, files.NewMemoryObjectStorage())
 }
 
-func NewRouterWithFiles(cfg config.Config, logg *logger.Logger, checkers []deps.Checker, authStore auth.Store, orgStore org.Store, examStore exam.Store, paperStore paper.Store, fileStore files.Store, objectStore files.ObjectStorage) http.Handler {
-	return NewRouterFull(cfg, logg, checkers, authStore, orgStore, examStore, paperStore, fileStore, objectStore, submission.NewMemoryStore())
+// NewRouterWithFiles 沿用文件路由的内存提交存储，不使用 preparation 中传入的 Submissions。
+func NewRouterWithFiles(cfg config.Config, logg *logger.Logger, checkers []deps.Checker, identity IdentityStores, preparation ExamPreparationStores, objectStore files.ObjectStorage) http.Handler {
+	preparation.Submissions = submission.NewMemoryStore()
+	return NewRouterFull(cfg, logg, checkers, identity, preparation, objectStore)
 }
 
-func NewRouterFull(cfg config.Config, logg *logger.Logger, checkers []deps.Checker, authStore auth.Store, orgStore org.Store, examStore exam.Store, paperStore paper.Store, fileStore files.Store, objectStore files.ObjectStorage, submissionStore submission.Store) http.Handler {
+// NewRouterFull 只替换身份、考试、试卷、文件和提交依赖；其他模块继续使用完整内存图中的默认依赖。
+func NewRouterFull(cfg config.Config, logg *logger.Logger, checkers []deps.Checker, identity IdentityStores, preparation ExamPreparationStores, objectStore files.ObjectStorage) http.Handler {
 	stores := NewMemoryApplicationStores()
-	stores.Identity = IdentityStores{Auth: authStore, Org: orgStore}
-	stores.Exam.Exam = examStore
-	stores.Exam.Paper = paperStore
-	stores.Exam.Files = fileStore
-	stores.Exam.Submissions = submissionStore
+	stores.Identity = identity
+	stores.Exam.Exam = preparation.Exam
+	stores.Exam.Paper = preparation.Paper
+	stores.Exam.Files = preparation.Files
+	stores.Exam.Submissions = preparation.Submissions
 	return NewRouterWithApplicationStores(cfg, logg, checkers, objectStore, stores)
 }
 
@@ -137,6 +137,7 @@ func NewRouterComplete(dependencies RouterDependencies) http.Handler {
 	registerAuthRoutes(mux, ctx)
 	registerOnboardingRoutes(mux, ctx)
 	registerGovernanceRoutes(mux, ctx)
+	registerSchoolAssistantRoutes(mux, ctx)
 	registerPlatformSchoolRoutes(mux, ctx)
 	registerOrganizationRoutes(mux, ctx)
 	registerExamRoutes(mux, ctx)
@@ -159,9 +160,10 @@ func NewRouterComplete(dependencies RouterDependencies) http.Handler {
 	})
 	return middleware.Chain(
 		rootHandler,
-		middleware.Recover(dependencies.Logger),
 		middleware.RequestID(),
 		middleware.AccessLog(dependencies.Logger, ctx.cfg.Observability.SlowRequestThreshold),
+		// RequestID 在最外层，AccessLog 包住 Recover，确保 panic 也带关联标识并记录访问结果。
+		middleware.Recover(dependencies.Logger),
 		ctx.metrics.Middleware(),
 		middleware.SecurityHeaders(),
 		middleware.CORS(ctx.cfg.Security.CORSAllowedOrigins, ctx.cfg.Security.CORSAllowedMethods, ctx.cfg.Security.CORSAllowedHeaders),

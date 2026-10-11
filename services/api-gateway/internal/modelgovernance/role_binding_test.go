@@ -29,9 +29,9 @@ func TestResolvePanelRoleBindingsUsesCanonicalScopeAndStrongerDistinctArbiter(t 
 		store.managedConfigs[id] = ManagedAPIConfig{ID: id, TenantID: "tenant-1", Status: "active", LastCapabilityStatus: "success", LastCapabilityVersion: ManagedCapabilityProbeVersion}
 	}
 	inputs := []SaveModelRoleBindingInput{
-		{EducationStage: "senior", SubjectCode: "math", ArchetypeCode: "structured_steps", AgentRole: ModelRolePrimaryA, ManagedModelAPIConfigID: "config-a", PromptVersion: "p1", StrengthRank: 1},
-		{EducationStage: "senior", SubjectCode: "mathematics", ArchetypeCode: "structured_steps", AgentRole: ModelRolePrimaryB, ManagedModelAPIConfigID: "config-b", PromptVersion: "p1", StrengthRank: 1},
-		{EducationStage: "senior", SubjectCode: "mathematics", ArchetypeCode: "structured_steps", AgentRole: ModelRoleArbiter, ManagedModelAPIConfigID: "config-c", PromptVersion: "p-arbiter", StrengthRank: 2},
+		{ExpectedRevision: ModelRoleBindingAbsent, EducationStage: "senior", SubjectCode: "math", ArchetypeCode: "structured_steps", AgentRole: ModelRolePrimaryA, ManagedModelAPIConfigID: "config-a", PromptVersion: "p1", StrengthRank: 1},
+		{ExpectedRevision: ModelRoleBindingAbsent, EducationStage: "senior", SubjectCode: "mathematics", ArchetypeCode: "structured_steps", AgentRole: ModelRolePrimaryB, ManagedModelAPIConfigID: "config-b", PromptVersion: "p1", StrengthRank: 1},
+		{ExpectedRevision: ModelRoleBindingAbsent, EducationStage: "senior", SubjectCode: "mathematics", ArchetypeCode: "structured_steps", AgentRole: ModelRoleArbiter, ManagedModelAPIConfigID: "config-c", PromptVersion: "p-arbiter", StrengthRank: 2},
 	}
 	for _, input := range inputs {
 		if _, err := store.SaveModelRoleBinding(context.Background(), "tenant-1", "actor-1", input); err != nil {
@@ -49,25 +49,83 @@ func TestResolvePanelRoleBindingsUsesCanonicalScopeAndStrongerDistinctArbiter(t 
 	}
 }
 
-func TestResolvePanelRoleBindingsRequiresCompleteGovernedRolesAndIndependentArbiter(t *testing.T) {
-	newInputs := func() []SaveModelRoleBindingInput {
-		return []SaveModelRoleBindingInput{
-			{EducationStage: "senior", SubjectCode: "physics", ArchetypeCode: "structured_steps", AgentRole: ModelRolePrimaryA, ManagedModelAPIConfigID: "config-a", PromptVersion: "p1", StrengthRank: 1},
-			{EducationStage: "senior", SubjectCode: "physics", ArchetypeCode: "structured_steps", AgentRole: ModelRolePrimaryB, ManagedModelAPIConfigID: "config-b", PromptVersion: "p1", StrengthRank: 2},
-			{EducationStage: "senior", SubjectCode: "physics", ArchetypeCode: "structured_steps", AgentRole: ModelRoleArbiter, ManagedModelAPIConfigID: "config-c", PromptVersion: "p2", StrengthRank: 3},
+type panelRoleFailureCase struct {
+	name             string
+	omitRole         string
+	arbiterModel     string
+	primaryARank     int
+	primaryBRank     int
+	arbiterRank      int
+	arbiterStatus    string
+	unverifiedConfig string
+}
+
+func panelRoleFailureInputs() []SaveModelRoleBindingInput {
+	return []SaveModelRoleBindingInput{
+		{ExpectedRevision: ModelRoleBindingAbsent, EducationStage: "senior", SubjectCode: "physics", ArchetypeCode: "structured_steps", AgentRole: ModelRolePrimaryA, ManagedModelAPIConfigID: "config-a", PromptVersion: "p1", StrengthRank: 1},
+		{ExpectedRevision: ModelRoleBindingAbsent, EducationStage: "senior", SubjectCode: "physics", ArchetypeCode: "structured_steps", AgentRole: ModelRolePrimaryB, ManagedModelAPIConfigID: "config-b", PromptVersion: "p1", StrengthRank: 2},
+		{ExpectedRevision: ModelRoleBindingAbsent, EducationStage: "senior", SubjectCode: "physics", ArchetypeCode: "structured_steps", AgentRole: ModelRoleArbiter, ManagedModelAPIConfigID: "config-c", PromptVersion: "p2", StrengthRank: 3},
+	}
+}
+
+func configurePanelRoleFailureInput(input *SaveModelRoleBindingInput, tt panelRoleFailureCase) {
+	switch input.AgentRole {
+	case ModelRolePrimaryA:
+		if tt.primaryARank != 0 {
+			input.StrengthRank = tt.primaryARank
+		}
+	case ModelRolePrimaryB:
+		if tt.primaryBRank != 0 {
+			input.StrengthRank = tt.primaryBRank
+		}
+	case ModelRoleArbiter:
+		if tt.arbiterModel != "" {
+			input.ManagedModelAPIConfigID = tt.arbiterModel
+		}
+		if tt.arbiterRank != 0 {
+			input.StrengthRank = tt.arbiterRank
+		}
+		if tt.arbiterStatus != "" {
+			input.Status = tt.arbiterStatus
 		}
 	}
+}
 
-	tests := []struct {
-		name             string
-		omitRole         string
-		arbiterModel     string
-		primaryARank     int
-		primaryBRank     int
-		arbiterRank      int
-		arbiterStatus    string
-		unverifiedConfig string
-	}{
+// 每个案例单独配置三角色，保护缺席、模型复用、强度不足与未验证模型的拒绝边界。
+func exercisePanelRoleFailure(t *testing.T, tt panelRoleFailureCase) {
+	t.Helper()
+	store := NewMemoryStore()
+	for _, id := range []string{"config-a", "config-b", "config-c"} {
+		store.managedConfigs[id] = ManagedAPIConfig{ID: id, TenantID: "tenant-1", Status: "active", LastCapabilityStatus: "success", LastCapabilityVersion: ManagedCapabilityProbeVersion}
+	}
+
+	inputs := panelRoleFailureInputs()
+	for i := range inputs {
+		configurePanelRoleFailureInput(&inputs[i], tt)
+	}
+
+	for _, input := range inputs {
+		if input.AgentRole == tt.omitRole {
+			continue
+		}
+		if _, err := store.SaveModelRoleBinding(context.Background(), "tenant-1", "actor-1", input); err != nil {
+			t.Fatalf("save %s binding: %v", input.AgentRole, err)
+		}
+	}
+	if tt.unverifiedConfig != "" {
+		config := store.managedConfigs[tt.unverifiedConfig]
+		config.LastCapabilityStatus = "failed"
+		store.managedConfigs[tt.unverifiedConfig] = config
+	}
+
+	if _, err := ResolvePanelRoleBindings(context.Background(), store, "tenant-1", "senior", "physics", "structured_steps"); err != ErrManagedCapabilityRequired {
+		t.Fatalf("expected ErrManagedCapabilityRequired, got %v", err)
+	}
+}
+
+func TestResolvePanelRoleBindingsRequiresCompleteGovernedRolesAndIndependentArbiter(t *testing.T) {
+
+	tests := []panelRoleFailureCase{
 		{name: "missing primary A", omitRole: ModelRolePrimaryA},
 		{name: "missing primary B", omitRole: ModelRolePrimaryB},
 		{name: "missing arbiter", omitRole: ModelRoleArbiter},
@@ -82,52 +140,7 @@ func TestResolvePanelRoleBindingsRequiresCompleteGovernedRolesAndIndependentArbi
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			store := NewMemoryStore()
-			for _, id := range []string{"config-a", "config-b", "config-c"} {
-				store.managedConfigs[id] = ManagedAPIConfig{ID: id, TenantID: "tenant-1", Status: "active", LastCapabilityStatus: "success", LastCapabilityVersion: ManagedCapabilityProbeVersion}
-			}
-
-			inputs := newInputs()
-			for i := range inputs {
-				switch inputs[i].AgentRole {
-				case ModelRolePrimaryA:
-					if tt.primaryARank != 0 {
-						inputs[i].StrengthRank = tt.primaryARank
-					}
-				case ModelRolePrimaryB:
-					if tt.primaryBRank != 0 {
-						inputs[i].StrengthRank = tt.primaryBRank
-					}
-				case ModelRoleArbiter:
-					if tt.arbiterModel != "" {
-						inputs[i].ManagedModelAPIConfigID = tt.arbiterModel
-					}
-					if tt.arbiterRank != 0 {
-						inputs[i].StrengthRank = tt.arbiterRank
-					}
-					if tt.arbiterStatus != "" {
-						inputs[i].Status = tt.arbiterStatus
-					}
-				}
-			}
-
-			for _, input := range inputs {
-				if input.AgentRole == tt.omitRole {
-					continue
-				}
-				if _, err := store.SaveModelRoleBinding(context.Background(), "tenant-1", "actor-1", input); err != nil {
-					t.Fatalf("save %s binding: %v", input.AgentRole, err)
-				}
-			}
-			if tt.unverifiedConfig != "" {
-				config := store.managedConfigs[tt.unverifiedConfig]
-				config.LastCapabilityStatus = "failed"
-				store.managedConfigs[tt.unverifiedConfig] = config
-			}
-
-			if _, err := ResolvePanelRoleBindings(context.Background(), store, "tenant-1", "senior", "physics", "structured_steps"); err != ErrManagedCapabilityRequired {
-				t.Fatalf("expected ErrManagedCapabilityRequired, got %v", err)
-			}
+			exercisePanelRoleFailure(t, tt)
 		})
 	}
 }
@@ -187,10 +200,10 @@ func TestResolvePanelRoleBindingsPrefersExactArchetypeBeforeWildcard(t *testing.
 	}
 
 	inputs := []SaveModelRoleBindingInput{
-		{EducationStage: "senior", SubjectCode: "physics", ArchetypeCode: "*", AgentRole: ModelRolePrimaryA, ManagedModelAPIConfigID: "config-a-wildcard", PromptVersion: "fallback", StrengthRank: 5},
-		{EducationStage: "senior", SubjectCode: "physics", ArchetypeCode: "structured_steps", AgentRole: ModelRolePrimaryA, ManagedModelAPIConfigID: "config-a-exact", PromptVersion: "exact", StrengthRank: 1},
-		{EducationStage: "senior", SubjectCode: "physics", ArchetypeCode: "structured_steps", AgentRole: ModelRolePrimaryB, ManagedModelAPIConfigID: "config-b", PromptVersion: "p1", StrengthRank: 1},
-		{EducationStage: "senior", SubjectCode: "physics", ArchetypeCode: "structured_steps", AgentRole: ModelRoleArbiter, ManagedModelAPIConfigID: "config-c", PromptVersion: "p2", StrengthRank: 2},
+		{ExpectedRevision: ModelRoleBindingAbsent, EducationStage: "senior", SubjectCode: "physics", ArchetypeCode: "*", AgentRole: ModelRolePrimaryA, ManagedModelAPIConfigID: "config-a-wildcard", PromptVersion: "fallback", StrengthRank: 5},
+		{ExpectedRevision: ModelRoleBindingAbsent, EducationStage: "senior", SubjectCode: "physics", ArchetypeCode: "structured_steps", AgentRole: ModelRolePrimaryA, ManagedModelAPIConfigID: "config-a-exact", PromptVersion: "exact", StrengthRank: 1},
+		{ExpectedRevision: ModelRoleBindingAbsent, EducationStage: "senior", SubjectCode: "physics", ArchetypeCode: "structured_steps", AgentRole: ModelRolePrimaryB, ManagedModelAPIConfigID: "config-b", PromptVersion: "p1", StrengthRank: 1},
+		{ExpectedRevision: ModelRoleBindingAbsent, EducationStage: "senior", SubjectCode: "physics", ArchetypeCode: "structured_steps", AgentRole: ModelRoleArbiter, ManagedModelAPIConfigID: "config-c", PromptVersion: "p2", StrengthRank: 2},
 	}
 	var exactPrimaryA ModelRoleBinding
 	for _, input := range inputs {

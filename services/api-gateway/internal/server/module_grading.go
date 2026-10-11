@@ -23,6 +23,7 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/seedquality"
 	"edugrade-enterprise/services/api-gateway/internal/segment"
 	"edugrade-enterprise/services/api-gateway/internal/subjective"
+	"edugrade-enterprise/services/api-gateway/internal/taskmaterials"
 	"edugrade-enterprise/services/api-gateway/internal/workerruntime"
 )
 
@@ -103,6 +104,9 @@ func NewGradingQualityModule(cfg config.Config, stores GradingQualityStores, dep
 	}
 
 	calibrationService := calibration.NewService(stores.Calibration, stores.GoldPaper)
+	if dependencies.DB != nil {
+		calibrationService.WithQuestionSource(taskmaterials.PostgresReader{DB: dependencies.DB})
+	}
 	seedQualityService := seedquality.NewService(stores.SeedQuality, stores.GoldPaper, calibrationService, dependencies.Assessments)
 	graderDriftService := graderdrift.NewService(stores.GraderDrift, seedQualityService, calibrationService)
 	backmarkService := backmark.NewService(stores.Backmark)
@@ -140,7 +144,7 @@ func NewGradingQualityModule(cfg config.Config, stores GradingQualityStores, dep
 		ReviewAnnotationHandler: reviewannotation.NewHandler(stores.ReviewAnnotation, dependencies.Auth),
 		GoldPaperHandler:        goldpaper.NewHandler(stores.GoldPaper, dependencies.Auth),
 		CalibrationHandler:      calibration.NewHandler(calibrationService, dependencies.Auth),
-		AnswerGroupHandler:      answergroup.NewHandlerWithReferences(stores.AnswerGroup, dependencies.Auth, stores.GoldPaper),
+		AnswerGroupHandler:      answergroup.NewHandlerWithReferences(stores.AnswerGroup, dependencies.Auth, stores.GoldPaper).WithSegmentImage(dependencies.SegmentImage),
 		BackmarkHandler:         backmarkHandler,
 		RegradeHandler:          regradeHandler,
 		GraderDriftHandler:      graderdrift.NewHandler(graderDriftService, dependencies.Auth),

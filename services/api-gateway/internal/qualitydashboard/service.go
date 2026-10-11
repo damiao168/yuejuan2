@@ -23,9 +23,8 @@ func NewService(sources Sources) *Service {
 	return &Service{sources: sources, now: func() time.Time { return time.Now().UTC() }}
 }
 
-// Get assembles only question-level, aggregate quality facts. A missing
-// optional source is represented as insufficient data instead of pretending a
-// quality check passed. A dependency failure remains visible to the caller.
+// Get 只汇总题目级聚合质量事实。可选来源缺失时显示数据不足，不假装质量检查已通过。
+// 依赖失败仍向调用方暴露。
 func (s *Service) Get(ctx context.Context, tenantID, examID string) (Dashboard, error) {
 	if strings.TrimSpace(tenantID) == "" || strings.TrimSpace(examID) == "" || s.sources.Questions == nil {
 		return Dashboard{}, ErrInvalidInput
@@ -75,10 +74,42 @@ func (s *Service) question(ctx context.Context, tenantID, examID string, questio
 		Findings:       []Finding{},
 	}
 
+	// 来源按业务顺序投影；非预期读取错误立即返回，缺失的可选证据由各来源形成 finding。
+	if err := s.projectGold(ctx, tenantID, examID, &quality); err != nil {
+		return QuestionQuality{}, err
+	}
+	if err := s.projectCalibration(ctx, tenantID, examID, &quality); err != nil {
+		return QuestionQuality{}, err
+	}
+	if err := s.projectSeed(ctx, tenantID, examID, &quality); err != nil {
+		return QuestionQuality{}, err
+	}
+	if s.sources.Review != nil {
+		agreement, err := s.humanAgreement(ctx, tenantID, examID, question.ID)
+		if err != nil {
+			return QuestionQuality{}, err
+		}
+		quality.HumanAgreement = agreement
+	}
+	if err := s.projectAnswerGroups(ctx, tenantID, examID, &quality); err != nil {
+		return QuestionQuality{}, err
+	}
+	if err := s.projectDrift(ctx, tenantID, examID, &quality); err != nil {
+		return QuestionQuality{}, err
+	}
+	if err := s.projectBackmark(ctx, tenantID, examID, &quality); err != nil {
+		return QuestionQuality{}, err
+	}
+	quality.Gate = gateFor(quality.Findings)
+	return quality, nil
+}
+
+func (s *Service) projectGold(ctx context.Context, tenantID, examID string, quality *QuestionQuality) error {
+	question := quality.Question
 	if s.sources.Gold != nil {
 		coverage, err := s.sources.Gold.Coverage(ctx, tenantID, examID, question.ID)
 		if err != nil && !errors.Is(err, goldpaper.ErrNotFound) {
-			return QuestionQuality{}, err
+			return err
 		}
 		if err == nil {
 			quality.Gold = GoldSummary{ActiveApproved: coverage.ActiveApprovedCount, Ready: coverage.Ready, Gaps: append([]string(nil), coverage.Gaps...), ScoreBands: make([]Band, 0, len(coverage.ScoreBands))}
@@ -91,11 +122,15 @@ func (s *Service) question(ctx context.Context, tenantID, examID string, questio
 		quality.Findings = append(quality.Findings, finding(question, "gold_coverage_incomplete", GateWarning,
 			"标准卷覆盖不足，当前不能将其视为可靠质量证据", "阅卷负责人", "补充并批准缺失分档或特征的标准卷"))
 	}
+	return nil
+}
 
+func (s *Service) projectCalibration(ctx context.Context, tenantID, examID string, quality *QuestionQuality) error {
+	question := quality.Question
 	if s.sources.Calibration != nil {
 		calibration, err := s.sources.Calibration.GetCalibrationSummary(ctx, tenantID, examID, question.ID)
 		if err != nil && !errors.Is(err, ErrNotFound) {
-			return QuestionQuality{}, err
+			return err
 		}
 		if err == nil {
 			quality.Calibration = calibration
@@ -111,10 +146,14 @@ func (s *Service) question(ctx context.Context, tenantID, examID string, questio
 		quality.Findings = append(quality.Findings, finding(question, "calibration_failed", GateWarning,
 			"存在未通过的阅卷员标定，不能仅凭总量判断质量", "阅卷负责人", "安排未通过人员复训并重新标定"))
 	}
+	return nil
+}
 
+func (s *Service) projectSeed(ctx context.Context, tenantID, examID string, quality *QuestionQuality) error {
+	question := quality.Question
 	seed, err := s.seed(ctx, tenantID, examID, question.ID)
 	if err != nil {
-		return QuestionQuality{}, err
+		return err
 	}
 	quality.Seed = seed
 	if seed.PolicyStatus == "" || seed.PolicyStatus == string(seedquality.PolicyPaused) {
@@ -124,72 +163,76 @@ func (s *Service) question(ctx context.Context, tenantID, examID string, questio
 		quality.Findings = append(quality.Findings, finding(question, "seed_samples_missing", GateInsufficientData,
 			"盲测策略已启用，但还没有可用的质量观察", "质量负责人", "等待或安排足量盲测后复核质量状态"))
 	}
+	return nil
+}
 
-	if s.sources.Review != nil {
-		agreement, err := s.humanAgreement(ctx, tenantID, examID, question.ID)
-		if err != nil {
-			return QuestionQuality{}, err
-		}
-		quality.HumanAgreement = agreement
+func (s *Service) projectAnswerGroups(ctx context.Context, tenantID, examID string, quality *QuestionQuality) error {
+	question := quality.Question
+	if s.sources.Groups == nil {
+		return nil
 	}
-
-	if s.sources.Groups != nil {
-		metrics, err := s.sources.Groups.Metrics(ctx, tenantID, examID, question.ID)
-		if err != nil && !errors.Is(err, answergroup.ErrNotFound) {
-			return QuestionQuality{}, err
-		}
-		if err == nil {
-			quality.AnswerGroups = groupSummary(metrics)
-		}
-		groups, err := s.sources.Groups.List(ctx, tenantID, examID, question.ID)
-		if err != nil && !errors.Is(err, answergroup.ErrNotFound) {
-			return QuestionQuality{}, err
-		}
-		for _, group := range groups {
-			if group.Status == answergroup.StatusSampling || group.Status == answergroup.StatusReady {
-				quality.AnswerGroups.OpenSampleGroups++
-			}
+	metrics, err := s.sources.Groups.Metrics(ctx, tenantID, examID, question.ID)
+	if err != nil && !errors.Is(err, answergroup.ErrNotFound) {
+		return err
+	}
+	if err == nil {
+		quality.AnswerGroups = groupSummary(metrics)
+	}
+	groups, err := s.sources.Groups.List(ctx, tenantID, examID, question.ID)
+	if err != nil && !errors.Is(err, answergroup.ErrNotFound) {
+		return err
+	}
+	for _, group := range groups {
+		if group.Status == answergroup.StatusSampling || group.Status == answergroup.StatusReady {
+			quality.AnswerGroups.OpenSampleGroups++
 		}
 	}
 	if quality.AnswerGroups.OpenSampleGroups > 0 {
 		quality.Findings = append(quality.Findings, finding(question, "answer_group_sampling_pending", GateWarning,
 			"存在尚未完成抽样确认的相似答案组", "阅卷负责人", "完成边界与离群样本复核，或撤销该分组候选"))
 	}
+	return nil
+}
 
-	if s.sources.Drift != nil {
-		drift, err := s.sources.Drift.GetDriftSummary(ctx, tenantID, examID, question.ID)
-		if err != nil {
-			return QuestionQuality{}, err
-		}
-		quality.Drift = drift
-		for _, incident := range drift.Incidents {
-			if incident.Status != "open" {
-				continue
-			}
-			status := GateWarning
-			if incident.Severity == "critical" && question.RiskTier == "R3" {
-				status = GateBlocked
-			}
-			quality.Findings = append(quality.Findings, Finding{
-				Code: "quality_incident_" + incident.Type, Status: status,
-				Reason: "存在未解决的阅卷质量事件：" + incident.Type,
-				Owner:  "质量负责人", Resolution: "处置事件并完成必要的回标或仲裁",
-				QuestionID: question.ID, QuestionNo: question.QuestionNo, GraderRef: incident.GraderRef, IncidentRef: incident.ID,
-			})
-		}
-		// A reader may intentionally omit incident references when retaining
-		// only a pre-aggregated read model. The R3 release rule must still be
-		// enforced from the aggregate count.
-		if question.RiskTier == "R3" && drift.OpenCritical > 0 && !hasOpenCritical(drift.Incidents) {
-			quality.Findings = append(quality.Findings, finding(question, "quality_incident_critical", GateBlocked,
-				"存在未解决的严重阅卷质量事件", "质量负责人", "处置严重事件并完成必要的回标或仲裁"))
-		}
+func (s *Service) projectDrift(ctx context.Context, tenantID, examID string, quality *QuestionQuality) error {
+	question := quality.Question
+	if s.sources.Drift == nil {
+		return nil
 	}
+	drift, err := s.sources.Drift.GetDriftSummary(ctx, tenantID, examID, question.ID)
+	if err != nil {
+		return err
+	}
+	quality.Drift = drift
+	for _, incident := range drift.Incidents {
+		if incident.Status != "open" {
+			continue
+		}
+		status := GateWarning
+		if incident.Severity == "critical" && question.RiskTier == "R3" {
+			status = GateBlocked
+		}
+		quality.Findings = append(quality.Findings, Finding{
+			Code: "quality_incident_" + incident.Type, Status: status,
+			Reason: "存在未解决的阅卷质量事件：" + incident.Type,
+			Owner:  "质量负责人", Resolution: "处置事件并完成必要的回标或仲裁",
+			QuestionID: question.ID, QuestionNo: question.QuestionNo, GraderRef: incident.GraderRef, IncidentRef: incident.ID,
+		})
+	}
+	// 读取器仅保留预聚合读模型时，可省略事件引用。仍必须根据聚合数量执行 R3 发布规则。
+	if question.RiskTier == "R3" && drift.OpenCritical > 0 && !hasOpenCritical(drift.Incidents) {
+		quality.Findings = append(quality.Findings, finding(question, "quality_incident_critical", GateBlocked,
+			"存在未解决的严重阅卷质量事件", "质量负责人", "处置严重事件并完成必要的回标或仲裁"))
+	}
+	return nil
+}
 
+func (s *Service) projectBackmark(ctx context.Context, tenantID, examID string, quality *QuestionQuality) error {
+	question := quality.Question
 	if s.sources.Backmark != nil {
 		backmark, err := s.sources.Backmark.GetBackmarkSummary(ctx, tenantID, examID, question.ID)
 		if err != nil {
-			return QuestionQuality{}, err
+			return err
 		}
 		quality.Backmark = backmark
 		if backmark.OpenBatches > 0 || backmark.PendingItems > 0 {
@@ -197,9 +240,7 @@ func (s *Service) question(ctx context.Context, tenantID, examID string, questio
 				"存在尚未完成的回标批次或回标任务", "质量负责人", "完成回标差异处置，再确认是否需要重新发布成绩"))
 		}
 	}
-
-	quality.Gate = gateFor(quality.Findings)
-	return quality, nil
+	return nil
 }
 
 func (s *Service) seed(ctx context.Context, tenantID, examID, questionID string) (SeedSummary, error) {
@@ -303,8 +344,7 @@ func groupSummary(metrics answergroup.Metrics) GroupSummary {
 		override := metrics.BatchOverrideRate
 		result.OverrideRate = &override
 	}
-	// The current A07 metrics contain no per-state counts. Keep the field
-	// explicit at zero until the A07 reader exposes it rather than guessing.
+	// 当前 A07 指标没有各状态数量。在 A07 读取器提供它们之前，该字段明确保持零，不作猜测。
 	return result
 }
 

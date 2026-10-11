@@ -10,6 +10,19 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/workerruntime"
 )
 
+const (
+	permissionExamManage         = "exam:manage"
+	permissionReviewManage       = "review:manage"
+	permissionReviewWork         = "review:work"
+	permissionOCRManage          = "ocr:manage"
+	permissionGradingManage      = "grading:manage"
+	permissionArbitrationManage  = "arbitration:manage"
+	permissionEvidenceManage     = "evidence:manage"
+	permissionOrchestratorManage = "orchestrator:manage"
+	permissionScoreManage        = "score:manage"
+	permissionSystemRead         = "system:read"
+)
+
 type routerGuards struct {
 	authenticate                    func(http.Handler) http.Handler
 	requireAuth                     func(http.Handler) http.Handler
@@ -88,9 +101,8 @@ func buildRouterGuards(cfg config.Config, modules ApplicationModules) routerGuar
 	requireAccount := func(handler http.HandlerFunc) http.Handler {
 		return authenticateAccount(idempotent(handler))
 	}
-	// One-time enrollment secrets, recovery codes and scoped grants must never
-	// be persisted or replayed by generic idempotency receipts, even if a
-	// client supplies Idempotency-Key. MFAStore owns atomic consumption.
+	// 一次性注册秘密、恢复码和作用域授权绝不能被通用幂等收据持久化或重放，即使客户端提供 Idempotency-Key。
+	// MFAStore 负责原子消费。
 	requireMFAAccount := func(handler http.HandlerFunc) http.Handler {
 		return authenticateAccount(handler)
 	}
@@ -102,8 +114,7 @@ func buildRouterGuards(cfg config.Config, modules ApplicationModules) routerGuar
 			auth.RequirePermission(permission)(idempotent(handler))))
 	}
 	requireRecentPermission := func(permission string, handler http.HandlerFunc) http.Handler {
-		// Check current authorization and authentication freshness before serving
-		// a cached command receipt, not only before executing a new command.
+		// 返回缓存命令收据之前也需检查当前授权和认证时效，不能只在执行新命令前检查。
 		return authenticate(auth.RequireRequestResourceBoundary(resourceResolver)(
 			auth.RequirePermission(permission)(auth.RequireRecentAuth(cfg.Auth.RecentAuthTTL)(idempotent(handler)))))
 	}
@@ -114,10 +125,10 @@ func buildRouterGuards(cfg config.Config, modules ApplicationModules) routerGuar
 		return requireAuth(auth.RequirePermission("student:import")(handler))
 	}
 	requireExamManage := func(handler http.HandlerFunc) http.Handler {
-		return requireAuth(auth.RequirePermission("exam:manage")(handler))
+		return requireAuth(auth.RequirePermission(permissionExamManage)(handler))
 	}
 	requireAssessmentRead := func(handler http.HandlerFunc) http.Handler {
-		return requireAuth(auth.RequireAnyPermission("exam:manage", "review:manage", "review:work")(handler))
+		return requireAuth(auth.RequireAnyPermission(permissionExamManage, permissionReviewManage, permissionReviewWork)(handler))
 	}
 	requireDashboardRead := func(handler http.HandlerFunc) http.Handler {
 		return requireAuth(auth.RequirePermission("dashboard:read")(handler))
@@ -137,7 +148,7 @@ func buildRouterGuards(cfg config.Config, modules ApplicationModules) routerGuar
 		if command {
 			guarded = idempotency.CommandIdentity(guarded)
 		}
-		guarded = auth.RequireAnyPermission("exam:manage", "review:manage", "review:work")(guarded)
+		guarded = auth.RequireAnyPermission(permissionExamManage, permissionReviewManage, permissionReviewWork)(guarded)
 		guarded = auth.RequirePermission("question_bank:edit")(guarded)
 		guarded = auth.RequirePermission("question_bank:create")(guarded)
 		return authenticate(guarded)
@@ -146,10 +157,9 @@ func buildRouterGuards(cfg config.Config, modules ApplicationModules) routerGuar
 		return requireAuth(auth.RequirePermission("file:manage")(handler))
 	}
 	requireTaskScopedFileManage := func(pathParam string, handler http.HandlerFunc) http.Handler {
-		// The durable task scope must be derived before file authorization. The
-		// normal request-boundary middleware sees a service account's declared
-		// (empty) browser scope and would reject legitimate worker downloads
-		// before the task capability can authorize its payload files.
+		// 文件授权前必须先取得持久化任务作用域。
+		// 普通请求边界中间件看到服务账户声明的空浏览器作用域，
+		// 会在任务能力授权其载荷文件之前拒绝合法 worker 下载。
 		guarded := workerruntime.RequireTaskFile(pathParam)(auth.RequirePermission("file:manage")(handler))
 		return authenticate(idempotent(workerruntime.TaskScope(workerRuntimeStore)(guarded)))
 	}
@@ -160,52 +170,52 @@ func buildRouterGuards(cfg config.Config, modules ApplicationModules) routerGuar
 		return requireAuth(auth.RequirePermission("capture:manage")(handler))
 	}
 	requireOCRManage := func(handler http.HandlerFunc) http.Handler {
-		return requireAuth(auth.RequirePermission("ocr:manage")(handler))
+		return requireAuth(auth.RequirePermission(permissionOCRManage)(handler))
 	}
 	requireSegmentManage := func(handler http.HandlerFunc) http.Handler {
 		return requireAuth(auth.RequirePermission("segment:manage")(handler))
 	}
 	requireSegmentEvidenceRead := func(handler http.HandlerFunc) http.Handler {
 		return requireAuth(auth.RequireAnyRole("platform_admin", "tenant_admin", "school_admin", "page_processing_worker")(
-			auth.RequireAnyPermission("segment:manage", "ocr:manage", "grading:manage", "evidence:manage", "review:manage", "arbitration:manage")(handler),
+			auth.RequireAnyPermission("segment:manage", permissionOCRManage, permissionGradingManage, permissionEvidenceManage, permissionReviewManage, permissionArbitrationManage)(handler),
 		))
 	}
 	requireOrchestratorManage := func(handler http.HandlerFunc) http.Handler {
-		return requireAuth(auth.RequirePermission("orchestrator:manage")(handler))
+		return requireAuth(auth.RequirePermission(permissionOrchestratorManage)(handler))
 	}
 	requireGradingManage := func(handler http.HandlerFunc) http.Handler {
-		return requireAuth(auth.RequirePermission("grading:manage")(handler))
+		return requireAuth(auth.RequirePermission(permissionGradingManage)(handler))
 	}
 	requireEvidenceManage := func(handler http.HandlerFunc) http.Handler {
-		return requireAuth(auth.RequirePermission("evidence:manage")(handler))
+		return requireAuth(auth.RequirePermission(permissionEvidenceManage)(handler))
 	}
 	requireReviewManage := func(handler http.HandlerFunc) http.Handler {
-		return requireAuth(auth.RequirePermission("review:manage")(handler))
+		return requireAuth(auth.RequirePermission(permissionReviewManage)(handler))
 	}
 	requireReviewWork := func(handler http.HandlerFunc) http.Handler {
-		return requireAuth(auth.RequireAnyPermission("review:manage", "review:work")(handler))
+		return requireAuth(auth.RequireAnyPermission(permissionReviewManage, permissionReviewWork)(handler))
 	}
 	requireOriginalReviewImage := func(handler http.HandlerFunc) http.Handler {
 		return requireAuth(auth.RequireAnyRole("platform_admin", "tenant_admin", "school_admin")(
-			auth.RequireAnyPermission("review:manage", "evidence:manage", "tenant:manage")(handler),
+			auth.RequireAnyPermission(permissionReviewManage, permissionEvidenceManage, "tenant:manage")(handler),
 		))
 	}
 	requireArbitrationManage := func(handler http.HandlerFunc) http.Handler {
-		return requireAuth(auth.RequirePermission("arbitration:manage")(handler))
+		return requireAuth(auth.RequirePermission(permissionArbitrationManage)(handler))
 	}
 	requireArbitrationWork := func(handler http.HandlerFunc) http.Handler {
-		return requireAuth(auth.RequireAnyPermission("arbitration:manage", "arbitration:work")(handler))
+		return requireAuth(auth.RequireAnyPermission(permissionArbitrationManage, "arbitration:work")(handler))
 	}
 	requireScoreManage := func(handler http.HandlerFunc) http.Handler {
-		return requireAuth(auth.RequirePermission("score:manage")(handler))
+		return requireAuth(auth.RequirePermission(permissionScoreManage)(handler))
 	}
 	requireRosterManage := func(handler http.HandlerFunc) http.Handler {
 		return requireAuth(auth.RequireAnyRole("platform_admin", "tenant_admin", "school_admin")(
-			auth.RequirePermission("score:manage")(handler),
+			auth.RequirePermission(permissionScoreManage)(handler),
 		))
 	}
 	requireStudentGradeAccess := func(handler http.HandlerFunc) http.Handler {
-		return requireAuth(auth.RequireAnyPermission("student:grade:read", "score:manage")(handler))
+		return requireAuth(auth.RequireAnyPermission("student:grade:read", permissionScoreManage)(handler))
 	}
 	requireAppealCreate := func(handler http.HandlerFunc) http.Handler {
 		return requireAuth(auth.RequirePermission("appeal:create")(handler))
@@ -229,13 +239,13 @@ func buildRouterGuards(cfg config.Config, modules ApplicationModules) routerGuar
 		return requireAuth(auth.RequirePermission("report:read")(handler))
 	}
 	requireSystemRead := func(handler http.HandlerFunc) http.Handler {
-		return requireAuth(auth.RequirePermission("system:read")(handler))
+		return requireAuth(auth.RequirePermission(permissionSystemRead)(handler))
 	}
 	requireOnboardingRead := func(handler http.HandlerFunc) http.Handler {
 		return requireAuth(auth.RequireAnyRole("platform_admin", "tenant_admin", "school_admin")(handler))
 	}
 	requireSchoolAdmin := func(handler http.HandlerFunc) http.Handler {
-		// Chat bodies and model answers must not be persisted in idempotency receipts.
+		// 聊天正文和模型答案不得持久化到幂等收据中。
 		return authenticate(auth.RequireRequestResourceBoundary(resourceResolver)(auth.RequireAnyRole("school_admin")(handler)))
 	}
 	requireModelRead := func(handler http.HandlerFunc) http.Handler {
@@ -243,8 +253,7 @@ func buildRouterGuards(cfg config.Config, modules ApplicationModules) routerGuar
 	}
 	requirePlatformModelPermission := func(permission string, handler http.HandlerFunc) http.Handler {
 		return authenticate(auth.RequireRequestResourceBoundary(resourceResolver)(auth.RequireAnyRole("platform_admin")(
-			// Role, permission and resource checks run on every request. The
-			// model-governance store keeps the audit trail for writes.
+			// 每次请求都执行角色、权限和资源检查。模型治理存储保留写入审计轨迹。
 			auth.RequireAnyPermission(permission, "model:config:manage")(idempotent(handler)),
 		)))
 	}
@@ -273,21 +282,21 @@ func buildRouterGuards(cfg config.Config, modules ApplicationModules) routerGuar
 	}
 	requireOCRAvailabilityRead := func(handler http.HandlerFunc) http.Handler {
 		return requireAuth(auth.RequireAnyPermission(
-			"review:work",
-			"review:manage",
+			permissionReviewWork,
+			permissionReviewManage,
 			"submission:manage",
 			"capture:manage",
-			"ocr:manage",
-			"grading:manage",
-			"system:read",
+			permissionOCRManage,
+			permissionGradingManage,
+			permissionSystemRead,
 		)(handler))
 	}
 	// worker 写接口只接受具备 OCR 或编排权限的服务身份，具体任务的租户、来源和租约仍由 withWorkerTask* 再核验。
 	requireWorkerExecute := func(handler http.HandlerFunc) http.Handler {
-		return requireAuth(auth.RequireAnyPermission("ocr:manage", "orchestrator:manage")(handler))
+		return requireAuth(auth.RequireAnyPermission(permissionOCRManage, permissionOrchestratorManage)(handler))
 	}
 	requireWorkerRead := func(handler http.HandlerFunc) http.Handler {
-		return requireAuth(auth.RequireAnyPermission("ocr:manage", "orchestrator:manage", "system:read")(handler))
+		return requireAuth(auth.RequireAnyPermission(permissionOCRManage, permissionOrchestratorManage, permissionSystemRead)(handler))
 	}
 	withScopedExam := func(handler http.HandlerFunc) http.HandlerFunc {
 		return handler

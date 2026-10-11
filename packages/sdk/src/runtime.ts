@@ -3,14 +3,45 @@ export interface ApiTransport {
 }
 
 export function fillPath(template: string, values: Record<string, string | number>): string {
-  return template.replace(/\{([^}]+)\}/g, (_, key: string) => {
+  const parts: string[] = [];
+  let copied = 0;
+  let cursor = 0;
+  while (cursor < template.length) {
+    const start = template.indexOf("{", cursor);
+    if (start === -1) break;
+    const end = template.indexOf("}", start + 1);
+    if (end === -1) break;
+    cursor = end + 1;
+    if (end === start + 1) continue;
+    // 首个右括号结束参数；没有右括号时保留原文，不反复尝试同一段未闭合文本。
+    const key = template.slice(start + 1, end);
     const value = values[key];
     if (value === undefined || value === null || value === "") {
       throw new Error(`Missing path parameter: ${key}`);
     }
     // 只编码参数值，避免值里的斜杠变成新的路由层级。
-    return encodeURIComponent(String(value));
-  });
+    parts.push(template.slice(copied, start), encodeURIComponent(String(value)));
+    copied = cursor;
+  }
+  parts.push(template.slice(copied));
+  return parts.join("");
+}
+
+function queryValue(value: unknown, key: string): string {
+  if (value === null) return "null";
+  switch (typeof value) {
+    case "string":
+      return value;
+    case "number":
+    case "boolean":
+    case "bigint":
+    case "undefined":
+    case "symbol":
+      return String(value);
+    default:
+      // 当前 SDK 查询契约只传标量或标量数组；对象不能静默变成 [object Object] 发给服务端。
+      throw new TypeError(`Unsupported query parameter: ${key}`);
+  }
 }
 
 export function appendQuery(path: string, values: Record<string, unknown> | undefined): string {
@@ -20,9 +51,9 @@ export function appendQuery(path: string, values: Record<string, unknown> | unde
   for (const [key, value] of Object.entries(values)) {
     if (value === undefined || value === null || value === "") continue;
     if (Array.isArray(value)) {
-      for (const item of value) params.append(key, String(item));
+      for (const item of value) params.append(key, queryValue(item, key));
     } else {
-      params.set(key, String(value));
+      params.set(key, queryValue(value, key));
     }
   }
   const query = params.toString();

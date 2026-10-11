@@ -6,6 +6,7 @@ import sys
 import threading
 import time
 import traceback
+from typing import Protocol
 
 from edugrade_worker_runtime import LeaseHeartbeat
 
@@ -16,6 +17,7 @@ from page_processing.decoder import DecodeError, decode_document
 from page_processing.omr import OMRExtractionError, OMRProfile, extract_marks
 from page_processing.registration import (
     RegistrationError,
+    RegistrationOutput,
     TemplateMatchCandidate,
     TemplateRoutingError,
     crop_regions,
@@ -25,21 +27,65 @@ from page_processing.registration import (
     register_page_manual,
 )
 
+_RESULT_HASH_PREFIX = "sha256:"
+_PNG_CONTENT_TYPE = "image/png"
 
-class _NullHeartbeat:
-    """No-op stand-in so handlers can run without a live lease (direct calls in tests)."""
+
+class _Heartbeat(Protocol):
+    """处理器只依赖这三项能力；直接调用时可使用不持有租约的空实现。"""
+
+    def raise_if_failed(self) -> None:
+        ...
+
+    def stop(self, raise_on_error: bool = True) -> None:
+        ...
+
+    def set_progress(self, progress: dict, *, flush: bool = False) -> None:
+        ...
+
+
+class _NullHeartbeat(_Heartbeat):
+    """直接调用处理器时不持有租约，保留真实心跳的调用接口。"""
 
     def raise_if_failed(self) -> None:
         return None
 
     def stop(self, raise_on_error: bool = True) -> None:
-        return None
+        """raise_on_error 保持停止接口兼容；空心跳没有续租错误可重抛。"""
 
     def set_progress(self, progress: dict, *, flush: bool = False) -> None:
-        return None
+        """progress 和 flush 保持关键词兼容；空心跳不发送远端进度。"""
 
 
 _NULL_HEARTBEAT = _NullHeartbeat()
+
+
+def _failure_details(exc: Exception) -> tuple[str, dict]:
+    known_error = isinstance(exc, (DecodeError, RegistrationError, OMRExtractionError, APIError))
+    code = str(exc) if known_error else "page_processing_failed"
+    detail = {"error_type": type(exc).__name__, "message": str(exc)[:200]}
+    error_detail = getattr(exc, "detail", None)
+    if isinstance(error_detail, dict):
+        detail.update(error_detail)
+    return code, detail
+
+
+def _omr_profile(payload: dict) -> tuple[OMRProfile, str]:
+    profile_data = payload.get("profile") or {}
+    if not isinstance(profile_data, dict):
+        raise OMRExtractionError("omr_profile_invalid")
+    profile_hash = str(payload.get("profile_hash") or "").strip()
+    if not profile_hash:
+        raise OMRExtractionError("omr_profile_hash_missing")
+    return OMRProfile(
+        mode=str(profile_data.get("mode") or "manual_only"),
+        marked_threshold=profile_data.get("marked_threshold", 0.18),
+        ambiguous_threshold=profile_data.get("ambiguous_threshold", 0.10),
+        minimum_margin=profile_data.get("minimum_margin", 0.06),
+        border_fraction=profile_data.get("border_fraction", 0.12),
+        version=str(profile_data.get("version") or "opencv-fill-v1"),
+        reference_mask_dilation_pixels=profile_data.get("reference_mask_dilation_pixels", 0),
+    ), profile_hash
 
 
 class Runner:
@@ -75,14 +121,14 @@ class Runner:
                     request_timeout=self.config.heartbeat_timeout,
                 ) as heartbeat:
                     handler(task, heartbeat)
-            except Exception as exc:  # noqa: BLE001 - each task must be isolated and reported before the loop continues.
+            except Exception as exc:  # noqa: BLE001 - 每个任务必须隔离处理并报告结果，再继续循环。
                 try:
                     self._fail(task, exc)
-                except Exception as fail_exc:  # noqa: BLE001 - reporting can fail after a lease or gateway outage.
-                    # A lost lease or gateway outage must not crash the worker loop:
-                    # the runtime re-assigns the task once the lease expires. Log
-                    # the original failure too — it is the only remaining record
-                    # of why the task failed, since the report never landed.
+                except Exception as fail_exc:  # noqa: BLE001 - 租约失效或网关故障后，报告也可能失败。
+                    # 租约丢失或网关故障不能导致工作进程循环崩溃：
+                    # 租约过期后，运行时会重新分配任务。也要记录
+                    # 原始失败，因为报告没有送达，日志就成了
+                    # 任务失败原因仅存的记录。
                     print(
                         f"page-processing task {task.get('id')} failed: {type(exc).__name__}: {exc}; "
                         f"fail-report also failed: {type(fail_exc).__name__}: {fail_exc}",
@@ -92,7 +138,7 @@ class Runner:
                     traceback.print_exception(exc, file=sys.stderr)
         return len(tasks)
 
-    def _process_paper_import_decode(self, task: dict, heartbeat: _LeaseHeartbeat | _NullHeartbeat = _NULL_HEARTBEAT) -> None:
+    def _process_paper_import_decode(self, task: dict, heartbeat: _Heartbeat = _NULL_HEARTBEAT) -> None:
         started = time.perf_counter()
         payload = task.get("payload") or {}
         if str(task.get("source_type") or "") != "paper_import_job" or not isinstance(payload.get("documents"), list):
@@ -133,7 +179,7 @@ class Runner:
             if self.run_once() == 0:
                 time.sleep(self.config.poll_interval)
 
-    def _process_capture(self, task: dict, heartbeat: _LeaseHeartbeat | _NullHeartbeat = _NULL_HEARTBEAT) -> None:
+    def _process_capture(self, task: dict, heartbeat: _Heartbeat = _NULL_HEARTBEAT) -> None:
         started = time.perf_counter()
         payload = task.get("payload") or {}
         source = self.client.download(str(payload["download_url"]))
@@ -152,86 +198,21 @@ class Runner:
             heartbeat.raise_if_failed()
             uploaded = self.client.upload_page(task, page.index, page.png)
             page_results.append({"source_index": page.index, "file_asset_id": uploaded["id"], "sha256": uploaded["hash_sha256"], "width": page.width, "height": page.height, "barcodes": detect_barcodes(page.png)})
-        result_version = "sha256:" + hashlib.sha256(json.dumps(page_results, sort_keys=True).encode("utf-8")).hexdigest()
+        result_version = _RESULT_HASH_PREFIX + hashlib.sha256(json.dumps(page_results, sort_keys=True).encode("utf-8")).hexdigest()
         heartbeat.stop(raise_on_error=False)
         self.client.complete(str(payload["capture_file_id"]), {"task_id": task["id"], "lease_token": task["lease_token"], "result_version": result_version, "duration_ms": int((time.perf_counter() - started) * 1000), "decoder_profile": "pdfium-pillow-v1", "pages": page_results, "original_page_count": len(pages), "detected_content_type": detected_type})
 
-    def _process_registration(self, task: dict, heartbeat: _LeaseHeartbeat | _NullHeartbeat = _NULL_HEARTBEAT) -> None:
+    def _process_registration(self, task: dict, heartbeat: _Heartbeat = _NULL_HEARTBEAT) -> None:
         started = time.perf_counter()
         payload = task.get("payload") or {}
         source = self.client.download(str(payload["source_download_url"]))
         template = self.client.download(str(payload["template_download_url"]))
         heartbeat.raise_if_failed()
-        guard_report = {}
-        output = None
-        if str(payload.get("routing_mode") or "") in {"bound_auto", "locked_with_guard"}:
-            guard = inspect_template_guard(
-                source,
-                str(payload.get("source_content_type") or "image/png"),
-                template,
-                str(payload.get("template_content_type") or ""),
-                question_regions=list(payload.get("question_regions") or []),
-                render_dpi=int(payload.get("render_dpi") or 300),
-                template_page_index=int(payload.get("template_page_index") or 1),
-            )
-            guard_report = {
-                "passed": guard.passed,
-                "orientation_match": guard.orientation_match,
-                "aspect_ratio_delta": guard.aspect_ratio_delta,
-                "perceptual_hash_score": guard.perceptual_hash_score,
-                "layout_score": guard.layout_score,
-                "score": guard.score,
-                "profile_version": guard.profile_version,
-            }
-            if not guard.passed:
-                candidates = [TemplateMatchCandidate(
-                    template_id=str(payload["template_id"]),
-                    template_content_hash=str(payload["template_content_hash"]),
-                    data=template,
-                    content_type=str(payload.get("template_content_type") or ""),
-                    page_index=int(payload.get("template_page_index") or 1),
-                    question_regions=list(payload.get("question_regions") or []),
-                )]
-                for candidate in list(payload.get("fallback_templates") or []):
-                    if not isinstance(candidate, dict):
-                        continue
-                    candidates.append(TemplateMatchCandidate(
-                        template_id=str(candidate.get("template_id") or ""),
-                        template_content_hash=str(candidate.get("template_content_hash") or ""),
-                        data=self.client.download(str(candidate.get("template_download_url") or "")),
-                        content_type=str(candidate.get("template_content_type") or ""),
-                        page_index=int(candidate.get("template_page_index") or 1),
-                        question_regions=list(candidate.get("question_regions") or []),
-                        template_name=str(candidate.get("template_name") or ""),
-                        version_no=int(candidate.get("version_no") or 0),
-                    ))
-                    heartbeat.raise_if_failed()
-                match = match_template_candidates(
-                    source,
-                    str(payload.get("source_content_type") or "image/png"),
-                    candidates,
-                    render_dpi=int(payload.get("render_dpi") or 300),
-                )
-                guard_report["fallback_decision"] = match.decision
-                guard_report["fallback_candidates"] = match.candidates
-                guard_report["fallback_margin"] = match.margin
-                if match.decision != "matched":
-                    code = "ambiguous_template_match" if match.decision == "ambiguous" else "no_template_match"
-                    raise TemplateRoutingError(code, {"guard": guard_report, "candidates": match.candidates})
-                # 重匹配只用于诊断与验证；候选更匹配也不能在任务内覆盖考试锁定的模板及哈希。
-                if match.selected_template_id != str(payload["template_id"]) or match.selected_template_content_hash != str(payload["template_content_hash"]):
-                    raise TemplateRoutingError("template_conflict_with_exam_lock", {
-                        "locked_template_id": str(payload["template_id"]),
-                        "matched_template_id": match.selected_template_id,
-                        "score": match.score,
-                        "margin": match.margin,
-                        "candidates": match.candidates,
-                    })
-                output = match.registration
+        output, guard_report = self._guarded_registration(payload, source, template, heartbeat)
         if output is None:
             output = register_page(
                 source,
-                str(payload.get("source_content_type") or "image/png"),
+                str(payload.get("source_content_type") or _PNG_CONTENT_TYPE),
                 template,
                 str(payload.get("template_content_type") or ""),
                 render_dpi=int(payload.get("render_dpi") or 300),
@@ -245,7 +226,8 @@ class Runner:
             asset = self.client.upload_asset(task, "answer_segment_crop", run_id, f"segment-{index:04d}.png", crop.pop("png"))
             segments.append({**crop, "file_asset_id": asset["id"], "sha256": asset["hash_sha256"]})
         evidence = output.evidence
-        result_version = "sha256:" + hashlib.sha256(json.dumps({"registered": registered["hash_sha256"], "segments": segments}, sort_keys=True).encode()).hexdigest()
+        result_version = _RESULT_HASH_PREFIX + hashlib.sha256(json.dumps({"registered": registered["hash_sha256"], "segments": segments}, sort_keys=True).encode()).hexdigest()
+        # 先停止后台续租，再提交结果；已停止的续租错误不在这里重抛，提交仍由服务端校验租约。
         heartbeat.stop(raise_on_error=False)
         self.client.complete_registration(run_id, {
             "task_id": task["id"], "lease_token": task["lease_token"], "result_version": result_version,
@@ -258,33 +240,116 @@ class Runner:
             "segments": segments,
         })
 
-    def _process_template_match(self, task: dict, heartbeat: _LeaseHeartbeat | _NullHeartbeat = _NULL_HEARTBEAT) -> None:
+    def _guarded_registration(
+        self, payload: dict, source: bytes, template: bytes,
+        heartbeat: _Heartbeat,
+    ) -> tuple[RegistrationOutput | None, dict]:
+        if str(payload.get("routing_mode") or "") not in {"bound_auto", "locked_with_guard"}:
+            return None, {}
+        guard = inspect_template_guard(
+            source,
+            str(payload.get("source_content_type") or _PNG_CONTENT_TYPE),
+            template,
+            str(payload.get("template_content_type") or ""),
+            question_regions=list(payload.get("question_regions") or []),
+            render_dpi=int(payload.get("render_dpi") or 300),
+            template_page_index=int(payload.get("template_page_index") or 1),
+        )
+        report = {
+            "passed": guard.passed,
+            "orientation_match": guard.orientation_match,
+            "aspect_ratio_delta": guard.aspect_ratio_delta,
+            "perceptual_hash_score": guard.perceptual_hash_score,
+            "layout_score": guard.layout_score,
+            "score": guard.score,
+            "profile_version": guard.profile_version,
+        }
+        if guard.passed:
+            return None, report
+        return self._match_locked_registration(payload, source, template, heartbeat, report), report
+
+    def _registration_candidates(
+        self, payload: dict, template: bytes, heartbeat: _Heartbeat,
+    ) -> list[TemplateMatchCandidate]:
+        candidates = [TemplateMatchCandidate(
+            template_id=str(payload["template_id"]),
+            template_content_hash=str(payload["template_content_hash"]),
+            data=template,
+            content_type=str(payload.get("template_content_type") or ""),
+            page_index=int(payload.get("template_page_index") or 1),
+            question_regions=list(payload.get("question_regions") or []),
+        )]
+        for raw in payload.get("fallback_templates") or []:
+            if not isinstance(raw, dict):
+                continue
+            candidates.append(self._download_template_candidate(raw))
+            heartbeat.raise_if_failed()
+        return candidates
+
+    def _match_locked_registration(
+        self, payload: dict, source: bytes, template: bytes,
+        heartbeat: _Heartbeat, guard_report: dict,
+    ) -> RegistrationOutput | None:
+        candidates = self._registration_candidates(payload, template, heartbeat)
+        match = match_template_candidates(
+            source,
+            str(payload.get("source_content_type") or _PNG_CONTENT_TYPE),
+            candidates,
+            render_dpi=int(payload.get("render_dpi") or 300),
+        )
+        guard_report["fallback_decision"] = match.decision
+        guard_report["fallback_candidates"] = match.candidates
+        guard_report["fallback_margin"] = match.margin
+        if match.decision != "matched":
+            code = "ambiguous_template_match" if match.decision == "ambiguous" else "no_template_match"
+            raise TemplateRoutingError(code, {"guard": guard_report, "candidates": match.candidates})
+        # 重匹配只用于诊断与验证；候选更匹配也不能在任务内覆盖考试锁定的模板及哈希。
+        if match.selected_template_id != str(payload["template_id"]) or match.selected_template_content_hash != str(payload["template_content_hash"]):
+            raise TemplateRoutingError("template_conflict_with_exam_lock", {
+                "locked_template_id": str(payload["template_id"]),
+                "matched_template_id": match.selected_template_id,
+                "score": match.score,
+                "margin": match.margin,
+                "candidates": match.candidates,
+            })
+        return match.registration
+
+    def _download_template_candidate(self, raw: dict) -> TemplateMatchCandidate:
+        return TemplateMatchCandidate(
+            template_id=str(raw.get("template_id") or ""),
+            template_content_hash=str(raw.get("template_content_hash") or ""),
+            data=self.client.download(str(raw.get("template_download_url") or "")),
+            content_type=str(raw.get("template_content_type") or ""),
+            page_index=int(raw.get("template_page_index") or 1),
+            question_regions=list(raw.get("question_regions") or []),
+            template_name=str(raw.get("template_name") or ""),
+            version_no=int(raw.get("version_no") or 0),
+        )
+
+    def _template_match_candidates(
+        self, payload: dict, heartbeat: _Heartbeat,
+    ) -> list[TemplateMatchCandidate]:
+        candidates = []
+        for raw in payload.get("candidates") or []:
+            if not isinstance(raw, dict) or not raw.get("template_id") or not raw.get("template_download_url"):
+                raise RegistrationError("template_match_candidate_invalid")
+            candidates.append(self._download_template_candidate(raw))
+            heartbeat.raise_if_failed()
+        return candidates
+
+    def _process_template_match(self, task: dict, heartbeat: _Heartbeat = _NULL_HEARTBEAT) -> None:
         started = time.perf_counter()
         payload = task.get("payload") or {}
         source = self.client.download(str(payload["source_download_url"]))
         heartbeat.raise_if_failed()
-        candidates = []
-        for raw in list(payload.get("candidates") or []):
-            if not isinstance(raw, dict) or not raw.get("template_id") or not raw.get("template_download_url"):
-                raise RegistrationError("template_match_candidate_invalid")
-            candidates.append(TemplateMatchCandidate(
-                template_id=str(raw["template_id"]),
-                template_content_hash=str(raw.get("template_content_hash") or ""),
-                data=self.client.download(str(raw["template_download_url"])),
-                content_type=str(raw.get("template_content_type") or ""),
-                page_index=int(raw.get("template_page_index") or 1),
-                question_regions=list(raw.get("question_regions") or []),
-                template_name=str(raw.get("template_name") or ""),
-                version_no=int(raw.get("version_no") or 0),
-            ))
-            heartbeat.raise_if_failed()
+        candidates = self._template_match_candidates(payload, heartbeat)
         outcome = match_template_candidates(
             source,
-            str(payload.get("source_content_type") or "image/png"),
+            str(payload.get("source_content_type") or _PNG_CONTENT_TYPE),
             candidates,
             render_dpi=int(payload.get("render_dpi") or 300),
         )
-        result_version = "sha256:" + hashlib.sha256(json.dumps({
+        result_version = _RESULT_HASH_PREFIX + hashlib.sha256(json.dumps({
             "source": str(payload.get("source_download_url") or ""),
             "decision": outcome.decision,
             "selected_template_id": outcome.selected_template_id,
@@ -306,14 +371,14 @@ class Runner:
             "candidates": outcome.candidates,
         })
 
-    def _process_correction(self, task: dict, heartbeat: _LeaseHeartbeat | _NullHeartbeat = _NULL_HEARTBEAT) -> None:
+    def _process_correction(self, task: dict, heartbeat: _Heartbeat = _NULL_HEARTBEAT) -> None:
         started = time.perf_counter()
         payload = task.get("payload") or {}
         source = self.client.download(str(payload["source_download_url"]))
         template = self.client.download(str(payload["template_download_url"]))
         heartbeat.raise_if_failed()
         output = register_page_manual(
-            source, str(payload.get("source_content_type") or "image/png"),
+            source, str(payload.get("source_content_type") or _PNG_CONTENT_TYPE),
             template, str(payload.get("template_content_type") or ""),
             list(payload.get("source_points") or []), list(payload.get("template_points") or []),
             render_dpi=int(payload.get("render_dpi") or 300),
@@ -327,7 +392,7 @@ class Runner:
             asset = self.client.upload_asset(task, "page_registration_correction_preview", correction_id, f"segment-preview-{index:04d}.png", crop.pop("png"))
             segments.append({**crop, "file_asset_id": asset["id"], "sha256": asset["hash_sha256"]})
         evidence = output.evidence
-        result_version = "sha256:" + hashlib.sha256(json.dumps({"registered": registered["hash_sha256"], "segments": segments}, sort_keys=True).encode()).hexdigest()
+        result_version = _RESULT_HASH_PREFIX + hashlib.sha256(json.dumps({"registered": registered["hash_sha256"], "segments": segments}, sort_keys=True).encode()).hexdigest()
         heartbeat.stop(raise_on_error=False)
         self.client.complete_correction(correction_id, {
             "task_id": task["id"], "lease_token": task["lease_token"], "result_version": result_version,
@@ -341,26 +406,7 @@ class Runner:
             "segments": segments,
         })
 
-    def _process_omr(self, task: dict, heartbeat: _LeaseHeartbeat | _NullHeartbeat = _NULL_HEARTBEAT) -> None:
-        started = time.perf_counter()
-        payload = task.get("payload") or {}
-        source = self.client.download(str(payload["source_download_url"]))
-        heartbeat.raise_if_failed()
-        profile_data = payload.get("profile") or {}
-        if not isinstance(profile_data, dict):
-            raise OMRExtractionError("omr_profile_invalid")
-        profile_hash = str(payload.get("profile_hash") or "").strip()
-        if not profile_hash:
-            raise OMRExtractionError("omr_profile_hash_missing")
-        profile = OMRProfile(
-            mode=str(profile_data.get("mode") or "manual_only"),
-            marked_threshold=profile_data.get("marked_threshold", 0.18),
-            ambiguous_threshold=profile_data.get("ambiguous_threshold", 0.10),
-            minimum_margin=profile_data.get("minimum_margin", 0.06),
-            border_fraction=profile_data.get("border_fraction", 0.12),
-            version=str(profile_data.get("version") or "opencv-fill-v1"),
-            reference_mask_dilation_pixels=profile_data.get("reference_mask_dilation_pixels", 0),
-        )
+    def _omr_reference(self, payload: dict, profile: OMRProfile) -> tuple[dict, bytes | None, str]:
         reference_data = payload.get("reference")
         reference = reference_data if isinstance(reference_data, dict) else {}
         reference_bytes: bytes | None = None
@@ -374,6 +420,15 @@ class Runner:
             # 差分识别必须使用任务绑定的空白参考字节，不能只信任同一个下载地址。
             if hashlib.sha256(reference_bytes).hexdigest().lower() != reference_sha256:
                 raise OMRExtractionError("omr_reference_hash_mismatch")
+        return reference, reference_bytes, reference_sha256
+
+    def _process_omr(self, task: dict, heartbeat: _Heartbeat = _NULL_HEARTBEAT) -> None:
+        started = time.perf_counter()
+        payload = task.get("payload") or {}
+        source = self.client.download(str(payload["source_download_url"]))
+        heartbeat.raise_if_failed()
+        profile, profile_hash = _omr_profile(payload)
+        reference, reference_bytes, reference_sha256 = self._omr_reference(payload, profile)
         result = extract_marks(
             source,
             list(payload.get("option_regions") or []),
@@ -390,7 +445,7 @@ class Runner:
         run_id = str(payload["omr_run_id"])
         heartbeat.raise_if_failed()
         overlay = self.client.upload_asset(task, "omr_evidence", run_id, "omr-overlay.png", result.pop("overlay_png"))
-        result_version = "sha256:" + hashlib.sha256(json.dumps({**result, "profile_hash": profile_hash}, sort_keys=True).encode()).hexdigest()
+        result_version = _RESULT_HASH_PREFIX + hashlib.sha256(json.dumps({**result, "profile_hash": profile_hash}, sort_keys=True).encode()).hexdigest()
         heartbeat.stop(raise_on_error=False)
         self.client.complete_omr(run_id, {
             "task_id": task["id"], "lease_token": task["lease_token"],
@@ -407,17 +462,12 @@ class Runner:
 
     def _fail(self, task: dict, exc: Exception) -> None:
         payload = task.get("payload") or {}
-        known_error = isinstance(exc, (DecodeError, RegistrationError, OMRExtractionError, APIError))
-        code = str(exc) if known_error else "page_processing_failed"
-        detail = {"error_type": type(exc).__name__, "message": str(exc)[:200]}
-        error_detail = getattr(exc, "detail", None)
-        if isinstance(error_detail, dict):
-            detail.update(error_detail)
+        code, detail = _failure_details(exc)
         retryable = not isinstance(exc, (DecodeError, RegistrationError, OMRExtractionError))
         if isinstance(exc, APIError):
-            # A missing/forbidden source is deterministic. Other API failures,
-            # including a lost lease while reporting, retain the worker
-            # runtime's existing retry behavior.
+            # 源文件不存在或禁止访问属于确定性失败。其他 API 失败，
+            # 包括报告时租约丢失，仍沿用工作进程
+            # 运行时现有的重试行为。
             retryable = code not in {"source_download_forbidden", "source_not_found"}
         if task.get("task_type") == "capture_file_decode":
             self.client.fail(str(payload["capture_file_id"]), {"task_id": task["id"], "lease_token": task["lease_token"], "retryable": retryable, "error_code": code, "error_detail": detail, "duration_ms": 0})
@@ -435,7 +485,7 @@ class Runner:
             self.client.fail_task(task, code, detail)
 
 
-class _LeaseHeartbeat(LeaseHeartbeat):
+class _LeaseHeartbeat(LeaseHeartbeat, _Heartbeat):
     def __init__(
         self,
         *,

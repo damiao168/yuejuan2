@@ -17,7 +17,7 @@ for (const viewport of desktopViewports) {
   test(`exam workspace showcase is stable at ${viewport.name}`, async ({ page }, testInfo) => {
     await page.setViewportSize(viewport);
     await installApiMocks(page, { role: "school_admin", initiallyAuthenticated: true });
-    await page.goto("/#/admin/exams/exam-1/settings", { waitUntil: "networkidle" });
+    await page.goto("/#/admin/exams/exam-1/settings", { waitUntil: "domcontentloaded" });
 
     const workspace = page.locator(".eg-workspace-layout");
     await expect(workspace).toBeVisible({ timeout: 30_000 });
@@ -41,9 +41,9 @@ for (const viewport of desktopViewports) {
       body: image,
       contentType: "image/png"
     });
-    // Pixel rendering differs between the checked-in Windows showcase host
-    // and Linux CI (fonts and rasterization). CI still exercises every layout
-    // assertion above and publishes the actual screenshot attachment.
+    // 仓库中的 Windows 展示主机与 Linux CI 在字体和栅格化方面
+    // 存在像素渲染差异。CI 仍会执行上面的所有布局断言，
+    // 并发布实际截图附件。
     if (process.platform === "win32") {
       await expect(page).toHaveScreenshot(`exam-workspace-${viewport.name}.png`, {
         animations: "disabled",
@@ -60,7 +60,7 @@ test("new exam opens a focused paper-upload first screen", async ({ page }, test
   await page.route("**/api/v1/exams/exam-created-math/papers", (route) => route.fulfill({ json: { papers: [] } }));
   await page.route("**/api/v1/exams/exam-created-math/questions", (route) => route.fulfill({ json: { questions: [] } }));
   await page.route("**/api/v1/exams/exam-created-math/paper-imports", (route) => route.fulfill({ json: { imports: [] } }));
-  await page.goto("/#/admin/exams/exam-created-math/paper", { waitUntil: "networkidle" });
+  await page.goto("/#/admin/exams/exam-created-math/paper", { waitUntil: "domcontentloaded" });
 
   await expect(page.getByRole("heading", { name: "添加试卷资料" })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole("navigation", { name: "考试准备" })).toBeVisible();

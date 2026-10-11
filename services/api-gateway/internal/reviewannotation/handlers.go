@@ -78,7 +78,7 @@ func (h *Handler) ListStudentQuestionAnnotations(w http.ResponseWriter, r *http.
 		httpx.Error(w, r, http.StatusForbidden, "student_score_scope_required", "student scope is required for published annotations")
 		return
 	}
-	items, err := h.store.ListStudentQuestionAnnotations(r.Context(), user.TenantID, r.PathValue("examId"), studentID, r.PathValue("questionId"))
+	items, err := h.store.ListStudentQuestionAnnotations(r.Context(), user.TenantID, r.PathValue("examId"), studentID, r.PathValue("questionId"), r.URL.Query().Get("expected_release_id"))
 	if err != nil {
 		writeStoreError(w, r, err)
 		return
@@ -210,6 +210,8 @@ func decodeStrictJSON(w http.ResponseWriter, r *http.Request, target any) bool {
 
 func writeStoreError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
+	case errors.Is(err, ErrStudentReleaseChanged):
+		httpx.Error(w, r, http.StatusConflict, "student_release_changed", "published scores changed; review the current result before filing an appeal")
 	case errors.Is(err, ErrNotFound):
 		httpx.Error(w, r, http.StatusNotFound, "review_annotation_not_found", "review annotation resource was not found")
 	case errors.Is(err, ErrInvalidInput):

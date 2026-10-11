@@ -56,35 +56,53 @@ class PaddleFormulaLayoutDetector:
             path = tmp.name
         try:
             raw = self._model.predict(input=path)
-            outputs = list(raw) if not isinstance(raw, (dict, list)) else (raw if isinstance(raw, list) else [raw])
+            if not isinstance(raw, (dict, list)):
+                outputs = list(raw)
+            elif isinstance(raw, list):
+                outputs = raw
+            else:
+                outputs = [raw]
         finally:
             Path(path).unlink(missing_ok=True)
         boxes: list[tuple[list[float], float]] = []
         for output in outputs:
-            payload = getattr(output, "json", output)
-            payload = payload() if callable(payload) else payload
-            if not isinstance(payload, dict):
-                continue
-            payload = payload.get("res", payload)
-            items = payload.get("boxes", payload.get("layout_det_res", [])) if isinstance(payload, dict) else []
-            for item in items:
-                if not isinstance(item, dict):
-                    continue
-                label = str(item.get("label", item.get("category_name", ""))).lower().replace("_", " ")
-                # Formula numbers are ordinary text anchors; recognizing them
-                # as standalone formulas adds calls and harms reading order.
-                if label != "formula":
-                    continue
-                score = float(item.get("score", item.get("confidence", 0)) or 0)
-                coords = item.get("coordinate", item.get("bbox"))
-                if score < min_score or not isinstance(coords, (list, tuple)) or len(coords) != 4:
-                    continue
-                x1, y1, a, b = map(float, coords)
-                # Paddle 通常给出 x1,y1,x2,y2；后两值未同时大于起点时，兼容分支按宽高解释。
-                width, height = (a - x1, b - y1) if a > x1 and b > y1 else (a, b)
-                if width > 1 and height > 1:
-                    boxes.append(([x1, y1, width, height], score))
+            boxes.extend(_formula_boxes_from_output(output, min_score))
         return merge_formula_boxes(boxes)
+
+
+def _formula_boxes_from_output(output: Any, min_score: float) -> list[tuple[list[float], float]]:
+    # Paddle 的 json 属性或方法优先于原对象；res 不是字典时不产生检测框。
+    payload = getattr(output, "json", output)
+    payload = payload() if callable(payload) else payload
+    if not isinstance(payload, dict):
+        return []
+    payload = payload.get("res", payload)
+    items = payload.get("boxes", payload.get("layout_det_res", [])) if isinstance(payload, dict) else []
+    boxes: list[tuple[list[float], float]] = []
+    for item in items:
+        box = _formula_box_from_item(item, min_score)
+        if box is not None:
+            boxes.append(box)
+    return boxes
+
+
+def _formula_box_from_item(item: Any, min_score: float) -> tuple[list[float], float] | None:
+    if not isinstance(item, dict):
+        return None
+    label = str(item.get("label", item.get("category_name", ""))).lower().replace("_", " ")
+    # 公式编号是普通文本锚点；将其识别为独立公式会增加调用次数，并扰乱阅读顺序。
+    if label != "formula":
+        return None
+    score = float(item.get("score", item.get("confidence", 0)) or 0)
+    coords = item.get("coordinate", item.get("bbox"))
+    if score < min_score or not isinstance(coords, (list, tuple)) or len(coords) != 4:
+        return None
+    x1, y1, a, b = map(float, coords)
+    # Paddle 通常给出 x1,y1,x2,y2；后两值未同时大于起点时，兼容分支按宽高解释。
+    width, height = (a - x1, b - y1) if a > x1 and b > y1 else (a, b)
+    if width > 1 and height > 1:
+        return [x1, y1, width, height], score
+    return None
 
 
 def open_image(data: bytes) -> Any:
@@ -143,9 +161,9 @@ def adaptive_crop_formula(
     edge_threshold: float = FORMULA_EDGE_INK_THRESHOLD,
 ) -> tuple[bytes, list[float], float, int, bool]:
     current_padding = max(0, padding)
-    # An absolute allowance that is safe for a large display expression can
-    # pull neighbouring prose into a small inline expression. Bound expansion
-    # by both the configured ceiling and detector-box height.
+    # 对大型独立公式适用的绝对扩展量，可能会
+    # 把周围文字纳入小型行内公式。扩展范围应同时
+    # 受配置上限和检测框高度约束。
     detected_height = max(1.0, abs(float(bbox[3])))
     proportional_limit = math.ceil(detected_height * max(0.25, max_padding_height_ratio))
     max_padding = max(current_padding, min(max_padding, proportional_limit))
@@ -221,8 +239,8 @@ def intersection_area(left: list[float] | tuple[float, ...], right: list[float] 
     return max(0.0, width) * max(0.0, height)
 
 
-# Compatibility aliases for existing paper-formula imports and tests. New code
-# should use the public names above.
+# 为现有 paper-formula 导入和测试保留兼容别名。新代码
+# 应使用上面的公开名称。
 _adaptive_crop_formula = adaptive_crop_formula
 _crop_formula = crop_formula
 _merge_formula_boxes = merge_formula_boxes

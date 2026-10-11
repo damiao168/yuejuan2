@@ -68,8 +68,7 @@ func (s *WorkerCompletionService) Complete(ctx context.Context, tenantID, actorI
 	return WorkerCompletionResult{Run: updated, Grade: grade, Task: completed}, nil
 }
 
-// Reject records a non-retryable settlement failure. Its callers preserve the
-// former best-effort behavior by intentionally ignoring storage failures here.
+// Reject 记录不可重试的结算失败。调用方在此有意忽略存储失败，保留此前的尽力而为行为。
 func (s *WorkerCompletionService) Reject(ctx context.Context, tenantID string, prepared WorkerExecutionContext, input WorkerResultInput, runStatus, code string, cause error) {
 	detail := map[string]any{}
 	if cause != nil {

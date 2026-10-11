@@ -1,0 +1,78 @@
+{
+  "head": "d002c7b1f928e938b841e1203976c763b03e8485",
+  "repository_remote_not_queried": true,
+  "source_inventory_files": 2502,
+  "physical_text_lines": 409667,
+  "source_bytes": 21870208,
+  "inventory_is_not_manual_review": true,
+  "extensions": {
+    ".yml": {
+      "files": 9,
+      "text_lines": 2517
+    },
+    "Dockerfile": {
+      "files": 10,
+      "text_lines": 297
+    },
+    ".py": {
+      "files": 182,
+      "text_lines": 34319
+    },
+    ".html": {
+      "files": 7,
+      "text_lines": 1415
+    },
+    ".json": {
+      "files": 9,
+      "text_lines": 262
+    },
+    ".mjs": {
+      "files": 46,
+      "text_lines": 4301
+    },
+    ".toml": {
+      "files": 7,
+      "text_lines": 150
+    },
+    ".rs": {
+      "files": 16,
+      "text_lines": 4797
+    },
+    ".tsx": {
+      "files": 418,
+      "text_lines": 69539
+    },
+    ".ts": {
+      "files": 414,
+      "text_lines": 39306
+    },
+    ".css": {
+      "files": 61,
+      "text_lines": 12330
+    },
+    ".js": {
+      "files": 76,
+      "text_lines": 8895
+    },
+    ".ps1": {
+      "files": 25,
+      "text_lines": 2585
+    },
+    ".sh": {
+      "files": 1,
+      "text_lines": 4
+    },
+    ".go": {
+      "files": 1026,
+      "text_lines": 213707
+    },
+    ".mod": {
+      "files": 1,
+      "text_lines": 39
+    },
+    ".sql": {
+      "files": 194,
+      "text_lines": 15204
+    }
+  }
+}

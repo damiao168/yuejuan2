@@ -1,6 +1,7 @@
 package ocr
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -68,20 +69,12 @@ func (h *Handler) CreateTask(w http.ResponseWriter, r *http.Request) {
 			input.SourceFileAssetIDs = append(input.SourceFileAssetIDs, fileAssetID)
 		}
 	}
-	var task Task
-	if h.runtime != nil {
-		if h.atomic == nil {
-			writeStoreError(w, r, errAtomicRuntimeUnavailable)
-			return
-		}
-		task, err = h.atomic.CreateTask(r.Context(), user.TenantID, submissionID, user.ID, input)
-	} else {
-		task, err = h.store.CreateTask(r.Context(), user.TenantID, submissionID, user.ID, input)
-	}
+	task, err := h.createSourceTask(r.Context(), user.TenantID, submissionID, user.ID, input)
 	if err != nil {
 		writeStoreError(w, r, err)
 		return
 	}
+	// 旧队列在来源任务创建之后入队；入队失败仍返回错误，不在这里撤销已创建的来源任务。
 	if h.runtime == nil {
 		if err = h.queue.Enqueue(r.Context(), task); err != nil {
 			httpx.Error(w, r, http.StatusInternalServerError, "ocr_enqueue_failed", "failed to enqueue ocr task")
@@ -90,6 +83,17 @@ func (h *Handler) CreateTask(w http.ResponseWriter, r *http.Request) {
 	}
 	h.auditAction(r, "ocr.task_created", "ocr_task", task.ID, "create ocr task")
 	httpx.JSON(w, http.StatusCreated, map[string]any{"task": task})
+}
+
+func (h *Handler) createSourceTask(ctx context.Context, tenantID, submissionID, actorID string, input CreateTaskInput) (Task, error) {
+	if h.runtime != nil {
+		// 配置了 Runtime 就必须原子创建两侧任务；协调器不可用时不能退回独立写入或旧队列。
+		if h.atomic == nil {
+			return Task{}, errAtomicRuntimeUnavailable
+		}
+		return h.atomic.CreateTask(ctx, tenantID, submissionID, actorID, input)
+	}
+	return h.store.CreateTask(ctx, tenantID, submissionID, actorID, input)
 }
 
 func (h *Handler) ListBySubmission(w http.ResponseWriter, r *http.Request) {

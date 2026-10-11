@@ -1,7 +1,4 @@
-// Package backmark owns the safe re-marking queue produced by a quality
-// incident.  It intentionally stores candidate grades separately from the
-// current grade facts: completing a backmark item can never publish or replace
-// a student's score.
+// Package backmark 负责质量事件产生的安全回评队列。候选成绩与当前成绩事实分开存储；完成回评条目不能发布或替换学生分数。
 package backmark
 
 import (
@@ -51,7 +48,7 @@ const (
 	DispositionRegrade   = "regrade"
 )
 
-// TimeRange is inclusive. Empty endpoints mean unbounded.
+// TimeRange 包含两端；端点为空表示该方向无界。
 type TimeRange struct {
 	From *time.Time `json:"from,omitempty"`
 	To   *time.Time `json:"to,omitempty"`
@@ -62,9 +59,7 @@ type ScoreBand struct {
 	Max *float64 `json:"max,omitempty"`
 }
 
-// Selector operates over the immutable original human-grade/task facts. The
-// four supported fields are deliberately explicit rather than a free-form SQL
-// filter, so a quality incident has a reproducible affected population.
+// Selector 基于不可变的原始人工评分及任务事实操作。四个支持字段均明确列出，不接受自由形式的 SQL 筛选，使质量事件的受影响集合可复现。
 type Selector struct {
 	TimeRange *TimeRange `json:"time_range,omitempty"`
 	TaskIDs   []string   `json:"task_ids,omitempty"`
@@ -72,8 +67,7 @@ type Selector struct {
 	ScoreBand *ScoreBand `json:"score_band,omitempty"`
 }
 
-// Policy selects the next *workflow* only. Even a regrade_required result does
-// not modify the released/current score; A19/A18 own that transition.
+// Policy 只选择下一步工作流。即使结果为 regrade_required，也不会修改已发布或当前分数；该转换由 A19/A18 负责。
 type Policy struct {
 	Disposition      string  `json:"disposition"`
 	ArbitrationDelta float64 `json:"arbitration_delta,omitempty"`
@@ -112,13 +106,10 @@ type Item struct {
 	UpdatedAt        time.Time `json:"updated_at"`
 }
 
-// GraderItem is the deliberately blind queue shape. It contains enough data
-// to claim and submit an independently judged score, but not the old score,
-// original grader, or original grade identifier that could anchor a re-mark.
+// GraderItem 是盲评队列的数据结构，包含领取任务和提交独立评分所需的数据，不包含可能影响回评判断的旧分数、原阅卷者或原成绩标识。
 type GraderItem struct {
 	ID string `json:"id"`
-	// ReviewTaskID is retained only inside the server-side context bridge. A
-	// client must not be able to traverse into the original review workflow.
+	// ReviewTaskID 只保留在服务端上下文连接内，客户端不能通过它访问原始复核工作流。
 	ReviewTaskID string    `json:"-"`
 	Status       string    `json:"status"`
 	MaxScore     float64   `json:"max_score"`
@@ -126,11 +117,8 @@ type GraderItem struct {
 	CreatedAt    time.Time `json:"created_at"`
 }
 
-// GraderContext is the deliberately blind work surface for a back-marking
-// item.  The source review task is only an internal lookup key: neither its
-// score, reviewer, submission identity nor identifiers are serialised here.
-// A back-marker receives the frozen rubric and the answer evidence needed to
-// make an independent judgement, then submits a separate backmark_grade.
+// GraderContext 是回评条目的盲评工作上下文。来源复核任务仅作为内部查询键，其分数、复核者、提交身份及标识均不在此序列化。
+// 回评者接收冻结的评分细则和独立判断所需答案证据，再提交独立的 backmark_grade。
 type GraderContext struct {
 	Item             GraderItem     `json:"item"`
 	ExpectedRevision int64          `json:"expected_revision"`
@@ -140,12 +128,15 @@ type GraderContext struct {
 }
 
 type GraderQuestion struct {
-	ID              string   `json:"id"`
-	QuestionNo      string   `json:"question_no"`
-	QuestionType    string   `json:"question_type"`
-	Score           float64  `json:"score"`
-	Stem            string   `json:"stem,omitempty"`
-	KnowledgePoints []string `json:"knowledge_points,omitempty"`
+	Options         []string                `json:"options,omitempty"`
+	AnswerKey       *paper.AnswerKey        `json:"answer_key,omitempty"`
+	Solution        *paper.QuestionSolution `json:"solution,omitempty"`
+	ID              string                  `json:"id"`
+	QuestionNo      string                  `json:"question_no"`
+	QuestionType    string                  `json:"question_type"`
+	Score           float64                 `json:"score"`
+	Stem            string                  `json:"stem,omitempty"`
+	KnowledgePoints []string                `json:"knowledge_points,omitempty"`
 }
 
 type GraderAnswer struct {
@@ -218,8 +209,7 @@ type PageOptions struct {
 }
 
 type CreateInput struct {
-	// Optional for existing API clients; the quality dashboard always submits
-	// the hash returned by Preview to bind creation to its confirmed snapshot.
+	// 现有 API 客户端可省略；质量看板始终提交 Preview 返回的哈希，使创建操作绑定已确认快照。
 	SelectorHash     string   `json:"selector_hash,omitempty"`
 	SourceIncidentID string   `json:"source_incident_id"`
 	Selector         Selector `json:"selector"`

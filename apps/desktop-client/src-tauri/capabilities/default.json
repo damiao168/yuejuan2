@@ -1,9 +1,9 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Allow the local main window to invoke only application-owned commands; no Tauri core or plugin permissions are required.",
+  "description": "Local main window application commands and the event/window permissions required for confirmed closing after durable draft saving.",
   "local": true,
   "windows": ["main"],
   "platforms": ["windows"],
-  "permissions": []
+  "permissions": ["core:event:allow-listen", "core:event:allow-unlisten", "core:window:allow-destroy"]
 }

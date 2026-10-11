@@ -1,0 +1,299 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-10-11T08:01:21.993269+00:00",
+  "scope": "Read-only local CodeQL 2.27.2 help, RAM argument resolver without a dataset, saved failure evidence and public official documentation. No query evaluator, scan, compile or test was started; no current database/process/system/source was modified.",
+  "current_run_policy": "Current 3072MiB/one-thread rescan is actively progressing according to its owner; no hot adjustment or interruption is recommended.",
+  "codeql_version": "2.27.2",
+  "rust_queries_pack": "codeql/rust-queries/0.1.44",
+  "query_manifest": {
+    "path": "rust-query-manifest.json",
+    "sha256": "0bc33a3a3efc30ccae423a1048635d902868e585e4cc25bc472756f0edc19916",
+    "query_count": 41,
+    "distinct_query_count": 41
+  },
+  "saved_failure_evidence": {
+    "path": "rust-analyze-context-attempt1-resource-diagnosis.json",
+    "sha256": "d89829a001178580d73658adb47a4f2b76453fa85e970869a1f9e7814ca6b37c",
+    "summary": "Saved new-context create exit0; analyze requested4096MiB exit99 before query loading, resolved JVM heap1800MiB/offheap1108MiB, Unsafe.allocateMemory failed for1161822208 bytes. Resource failure, not a code finding."
+  },
+  "help_only_execution": {
+    "read_only_help_only": true,
+    "records": [
+      {
+        "command": [
+          "D:\\tools\\audit-codeql-20261010\\codeql\\codeql.exe",
+          "resolve",
+          "ram",
+          "--help",
+          "-v"
+        ],
+        "started_at_utc": "2026-10-11T07:55:48.690911+00:00",
+        "ended_at_utc": "2026-10-11T07:55:49.991593+00:00",
+        "exit_code": 0,
+        "log": "rust-fallback-resolve-ram-help.log",
+        "bytes": 3686,
+        "sha256": "fc0ab6730f9dcc793bb0bac5309d88f785fe6f0095db2d47a09fac329a64a070"
+      },
+      {
+        "command": [
+          "D:\\tools\\audit-codeql-20261010\\codeql\\codeql.exe",
+          "query",
+          "run",
+          "--help",
+          "-v"
+        ],
+        "started_at_utc": "2026-10-11T07:55:49.991593+00:00",
+        "ended_at_utc": "2026-10-11T07:55:51.015098+00:00",
+        "exit_code": 0,
+        "log": "rust-fallback-query-run-help.log",
+        "bytes": 19537,
+        "sha256": "05e5d4769d312688c4596fc40b3c9876784fd807d678e33025456605ec4b8a4f"
+      },
+      {
+        "command": [
+          "D:\\tools\\audit-codeql-20261010\\codeql\\codeql.exe",
+          "database",
+          "interpret-results",
+          "--help",
+          "-v"
+        ],
+        "started_at_utc": "2026-10-11T07:55:51.015098+00:00",
+        "ended_at_utc": "2026-10-11T07:55:52.497636+00:00",
+        "exit_code": 0,
+        "log": "rust-fallback-interpret-results-help.log",
+        "bytes": 17144,
+        "sha256": "955847def29503a53557bc942cd79984a0b99f6a3a69de8a3929a41356ca534c"
+      },
+      {
+        "command": [
+          "D:\\tools\\audit-codeql-20261010\\codeql\\codeql.exe",
+          "execute",
+          "queries",
+          "--help",
+          "-vv"
+        ],
+        "started_at_utc": "2026-10-11T07:56:31.637890+00:00",
+        "ended_at_utc": "2026-10-11T07:56:33.205876+00:00",
+        "exit_code": 0,
+        "log": "rust-fallback-execute-queries-help-full.log",
+        "bytes": 31871,
+        "sha256": "0ae8e514694a9e1a1f4ccc231887484a7b23670adf42e1eefab9a46a3c10ba20"
+      },
+      {
+        "command": [
+          "D:\\tools\\audit-codeql-20261010\\codeql\\codeql.exe",
+          "database",
+          "run-queries",
+          "--help",
+          "-vv"
+        ],
+        "started_at_utc": "2026-10-11T07:56:33.206387+00:00",
+        "ended_at_utc": "2026-10-11T07:56:34.704173+00:00",
+        "exit_code": 0,
+        "log": "rust-fallback-run-queries-help-full.log",
+        "bytes": 33429,
+        "sha256": "852aa053253726edf3c0b3f75e01fc450877f261d6dac4d05f7579f35d813db6"
+      },
+      {
+        "command": [
+          "D:\\tools\\audit-codeql-20261010\\codeql\\codeql.exe",
+          "execute",
+          "query-server",
+          "--help",
+          "-vv"
+        ],
+        "started_at_utc": "2026-10-11T07:56:34.704173+00:00",
+        "ended_at_utc": "2026-10-11T07:56:36.058695+00:00",
+        "exit_code": 0,
+        "log": "rust-fallback-query-server-help-full.log",
+        "bytes": 2589,
+        "sha256": "8b8e129403473283ddb881fb018439a3021ddb260dc8253476cca8cdfe4563ed"
+      },
+      {
+        "command": [
+          "D:\\tools\\audit-codeql-20261010\\codeql\\codeql.exe",
+          "resolve",
+          "ram",
+          "--help",
+          "-vv"
+        ],
+        "started_at_utc": "2026-10-11T07:58:26.061620+00:00",
+        "ended_at_utc": "2026-10-11T07:58:27.048103+00:00",
+        "exit_code": 0,
+        "log": "rust-fallback-resolve-ram-help-full.log",
+        "bytes": 4607,
+        "sha256": "a84a567a9f044310d79544d793fd2103b518393df014c9913678fa9c0732e66d"
+      }
+    ]
+  },
+  "generic_ram_argument_resolution": {
+    "read_only_ram_argument_resolution_only": true,
+    "no_database_read": true,
+    "generic_default_dataset_size_only": true,
+    "records": [
+      {
+        "command": [
+          "D:\\tools\\audit-codeql-20261010\\codeql\\codeql.exe",
+          "resolve",
+          "ram",
+          "--ram=3072",
+          "--off-heap-ram=0",
+          "--format=json"
+        ],
+        "started_at_utc": "2026-10-11T07:59:07.350264+00:00",
+        "ended_at_utc": "2026-10-11T07:59:08.692956+00:00",
+        "exit_code": 0,
+        "output_log": "rust-fallback-generic-ram3072-offheap0.log",
+        "output_sha256": "b2d04674bf1f553ee360441f5fb9a27a69eb1c1f4e550ed7d8eac0fb29a15090",
+        "output_text": "[\r\n  \"-J-Xmx1964M\"\r\n]\r\n",
+        "dataset_argument_supplied": false,
+        "query_evaluator_or_scan_started": false
+      },
+      {
+        "command": [
+          "D:\\tools\\audit-codeql-20261010\\codeql\\codeql.exe",
+          "resolve",
+          "ram",
+          "--ram=3072",
+          "--off-heap-ram=256",
+          "--format=json"
+        ],
+        "started_at_utc": "2026-10-11T07:59:08.692956+00:00",
+        "ended_at_utc": "2026-10-11T07:59:10.233142+00:00",
+        "exit_code": 0,
+        "output_log": "rust-fallback-generic-ram3072-offheap256.log",
+        "output_sha256": "7e410e490dbc062dea3a458bbc413b01d1dfc4cbae6fd6ddf4e5828f9bee6c53",
+        "output_text": "WARNING: Ignoring --off-heap-ram=256 because that would leave too little space for the Java heap.\r\n[\r\n  \"-J-Xmx1964M\"\r\n]\r\n",
+        "dataset_argument_supplied": false,
+        "query_evaluator_or_scan_started": false
+      }
+    ]
+  },
+  "findings": [
+    {
+      "id": "official_high_level_offheap_override",
+      "status": "supported_advanced",
+      "evidence": {
+        "path": "rust-fallback-run-queries-help-full.log",
+        "lines": [
+          267,
+          275,
+          282
+        ]
+      },
+      "statement": "High-level database run-queries officially exposes --off-heap-ram in local --help -vv. It is deducted from total --ram. The --heap-ram value is evaluator-cache heap, not the JVM maximum heap."
+    },
+    {
+      "id": "zero_offheap_semantics",
+      "status": "supported_by_local_help_and_generic_resolution",
+      "evidence": {
+        "path": "rust-fallback-execute-queries-help-full.log",
+        "lines": [
+          218,
+          219,
+          220,
+          221
+        ]
+      },
+      "statement": "At execute-queries level, absent or zero offheap uses only Java heap. Generic resolve ram --ram3072 --off-heap-ram0 returns only -J-Xmx1964M, with no offheap option. This does not establish the exact value for the real Rust dataset or prove query success."
+    },
+    {
+      "id": "positive_override_can_be_ignored",
+      "status": "actual_resolver_warning",
+      "statement": "Generic resolve ram --ram3072 --off-heap-ram256 exits0 but warns it ignores256 because too little space would remain for Java heap. Exit0 alone does not mean the requested offheap override was honored."
+    },
+    {
+      "id": "ram_floor",
+      "status": "supported",
+      "statement": "--ram below2048MiB is transparently rounded up. --ram is a target total footprint rather than a hard process/OS limit; file-backed mappings can exceed it."
+    },
+    {
+      "id": "stepwise_standard_result_storage",
+      "status": "supported_workflow_not_executed",
+      "statement": "database run-queries stores BQRS in the database results subtree, and interpret-results expects those computed results plus the same full query specification. Partitioning the41 selected queries into separate run-queries invocations is an official workflow; its memory improvement is not measured and recomputation or lower cache reuse is possible."
+    }
+  ],
+  "fallback_plan_only": [
+    "Continue the currently progressing run unchanged. Activate any fallback only after a real process failure or a deliberate later retry, preserving completed valid BQRS and original evidence.",
+    "For a later offheap allocation failure, prefer the high-level database run-queries command, explicit --off-heap-ram=0, a measured affordable --ram budget at least2048, --threads=1 and preserved disk-cache controls. Resolve and save the actual RAM arguments for the real dataset at that future time; inspect warnings. Do not use the generic1964MiB as a dataset-specific guarantee.",
+    "If a full-suite process still fails, execute every member of the existing41-query manifest via sequential database run-queries on the same new-context database, with identical official pack/model/threat settings, --no-rerun and --keep-full-cache. Record commands/exits and reconcile the distinct completed-query union against the original manifest. Do not reduce rules or source scope.",
+    "After all41 have valid completed same-database results, run database interpret-results with the same full suite/query selection and local SARIF output. No upload is involved. This research did not execute that workflow.",
+    "Never reuse BQRS from the earlier database lacking restored build context as evidence for the new-context rescan; --no-rerun checks result presence, not source equivalence. Do not rely on arbitrary query-run/execute-queries output files being discovered by full-suite interpretation without verified standard locations."
+  ],
+  "limitations": [
+    "No demonstrated speedup, lower peak memory or success at any fallback budget.",
+    "Disabling offheap transfers intermediate data pressure to Java heap and can worsen GC or heap exhaustion.",
+    "High-level --off-heap-ram=0 is a supported resource control, not a safety proof or workaround that removes all native allocations.",
+    "Direct execute queries is documented as plumbing that should not normally be invoked; it requires manual JVM/cache/result-location handling, so high-level run-queries is preferred.",
+    "No live run polling or process manipulation was performed."
+  ],
+  "official_references": [
+    {
+      "title": "GitHub resolve ram",
+      "url": "https://docs.github.com/en/code-security/reference/code-scanning/codeql/codeql-cli-manual/resolve-ram"
+    },
+    {
+      "title": "GitHub execute queries",
+      "url": "https://docs.github.com/en/code-security/reference/code-scanning/codeql/codeql-cli-manual/execute-queries"
+    },
+    {
+      "title": "GitHub query run",
+      "url": "https://docs.github.com/en/code-security/reference/code-scanning/codeql/codeql-cli-manual/query-run"
+    },
+    {
+      "title": "GitHub database interpret-results",
+      "url": "https://docs.github.com/en/code-security/reference/code-scanning/codeql/codeql-cli-manual/database-interpret-results"
+    }
+  ],
+  "local_help_evidence": [
+    {
+      "path": "rust-fallback-run-queries-help-full.log",
+      "sha256": "852aa053253726edf3c0b3f75e01fc450877f261d6dac4d05f7579f35d813db6",
+      "start_line": 267,
+      "end_line": 283,
+      "text": "  -M, --ram=<MB>             The query evaluator will try hard to keep its\n                               total memory footprint below this value.\n                               (However, for large databases it is possible\n                               that the threshold may be broken by file-backed\n                               memory maps, which can be swapped to disk in\n                               case of memory pressure).\n                             The value should be at least 2048 MB; smaller\n                               values will be transparently rounded up.\n      --heap-ram=<MB>        [Wizards only!] Explicitly specify the amount of\n                               RAM from the Java heap the evaluator cache will\n                               use. This will be taken from the total --ram\n                               amount. Be sure to leave some RAM for non-cache\n                               purposes. Beware that it does not make much\n                               sense to specify this without also giving --ram\n                               explicitly.\n      --off-heap-ram=<MB>    [Wizards only!] Set amount of off-heap RAM. This\n                               will be taken from the total --ram amount."
+    },
+    {
+      "path": "rust-fallback-run-queries-help-full.log",
+      "sha256": "852aa053253726edf3c0b3f75e01fc450877f261d6dac4d05f7579f35d813db6",
+      "start_line": 1,
+      "end_line": 20,
+      "text": "Usage: codeql database run-queries [OPTIONS] -- <database> [<query|dir|suite|pack>...]\n[Plumbing] Run a set of queries together.\n\nRun one or more queries against a CodeQL database, saving the results to the\nresults subdirectory of the database directory.\n\nThe results can later be converted to readable formats by codeql database\ninterpret-results, or query-for-query by with codeql bqrs decode or codeql bqrs\ninterpret.\n\nIf your queries produce results in a form that can be interpreted as\nsource-code alerts, you may find codeql database analyze a more convenient way\nto run them. codeql database analyze combines codeql database run-queries with\ncodeql database interpret-results in a single step. In particular, codeql\ndatabase analyze can produce output in the SARIF format, which can be used with\nan variety of alert viewers.\n\nAlternatively, if you have only a single query to run, you might prefer codeql\nquery run, which can display human-readable output for quick inspection of\nresults while you're debugging."
+    },
+    {
+      "path": "rust-fallback-run-queries-help-full.log",
+      "sha256": "852aa053253726edf3c0b3f75e01fc450877f261d6dac4d05f7579f35d813db6",
+      "start_line": 59,
+      "end_line": 60,
+      "text": "      --no-rerun             Omit evaluation of queries that already seem to\n                               have a BQRS result stored in the output location."
+    },
+    {
+      "path": "rust-fallback-execute-queries-help-full.log",
+      "sha256": "0ae8e514694a9e1a1f4ccc231887484a7b23670adf42e1eefab9a46a3c10ba20",
+      "start_line": 4,
+      "end_line": 6,
+      "text": "This command should not normally be invoked directly. Instead use either codeql\ndatabase run-queries or codeql query run, which will start codeql execute\nqueries with specific JVM options to tune the performance of the QL evaluator."
+    },
+    {
+      "path": "rust-fallback-execute-queries-help-full.log",
+      "sha256": "0ae8e514694a9e1a1f4ccc231887484a7b23670adf42e1eefab9a46a3c10ba20",
+      "start_line": 209,
+      "end_line": 221,
+      "text": "      --heap-ram=<MB>        [Wizards only!] Set the amount of RAM from the\n                               Java heap the evaluator will use for\n                               intermediate results. It is your responsibility\n                               to also give appropriate JVM options to make\n                               sure the JVM will let the evaluator use that\n                               much heap. Usually you don't want to give this\n                               option (or set it to 0), in which case a\n                               heuristic fraction of the JVM's heap limit will\n                               be used.\n      --off-heap-ram=<MB>    [Wizards only!] Set amount of off-heap RAM. This\n                               is in addition to the heap limit configued by\n                               --heap-ram. If not given (or set to 0), the\n                               evaluator will use the Java heap exclusively"
+    },
+    {
+      "path": "rust-fallback-resolve-ram-help-full.log",
+      "sha256": "a84a567a9f044310d79544d793fd2103b518393df014c9913678fa9c0732e66d",
+      "start_line": 18,
+      "end_line": 39,
+      "text": "  -M, --ram=<MB>             The query evaluator will try hard to keep its\n                               total memory footprint below this value.\n                               (However, for large databases it is possible\n                               that the threshold may be broken by file-backed\n                               memory maps, which can be swapped to disk in\n                               case of memory pressure).\n                             The value should be at least 2048 MB; smaller\n                               values will be transparently rounded up.\n      --heap-ram=<MB>        [Wizards only!] Explicitly specify the amount of\n                               RAM from the Java heap the evaluator cache will\n                               use. This will be taken from the total --ram\n                               amount. Be sure to leave some RAM for non-cache\n                               purposes. Beware that it does not make much\n                               sense to specify this without also giving --ram\n                               explicitly.\n      --off-heap-ram=<MB>    [Wizards only!] Set amount of off-heap RAM. This\n                               will be taken from the total --ram amount.\n      --dataset=<directory>  [Advanced] Tune the RAM settings appropriately for\n                               querying the given dataset, taking into account\n                               components of RAM usage that scale with the size\n                               of the database. If this is not given, a generic\n                               default size will be assumed."
+    },
+    {
+      "path": "rust-fallback-interpret-results-help.log",
+      "sha256": "955847def29503a53557bc942cd79984a0b99f6a3a69de8a3929a41356ca534c",
+      "start_line": 1,
+      "end_line": 19,
+      "text": "Usage: codeql database interpret-results [OPTIONS] -- <database> [<file|dir|suite>...]\n[Plumbing] Interpret computed query results into meaningful formats such as\nSARIF or CSV.\n\nThe results should have been computed and stored in a CodeQL database directory\nusing codeql database run-queries. (Usually you'd want to do these steps\ntogether, by using codeql database analyze).\n\n      <database>             [Mandatory] Path to the CodeQL database that has\n                               been queried.\n      [<file|dir|suite>...]  Repeat the specification of which queries were\n                               executed here.\n                             If omitted, the CLI will determine a suitable set\n                               of queries using the same logic as codeql\n                               database run-queries.\n                             (In a future version it ought to be possible to\n                               omit this and instead interpret all results that\n                               are found in the database. That glorious future\n                               is not yet. Sorry.)"
+    }
+  ]
+}

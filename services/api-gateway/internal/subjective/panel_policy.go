@@ -13,6 +13,10 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/gradingevaluation"
 )
 
+const (
+	panelModelSetReferencePrefix = "panel:"
+)
+
 type PanelPolicyStatus string
 
 const (
@@ -23,9 +27,8 @@ const (
 
 var ErrPanelPolicyNotReady = errors.New("subjective panel policy evaluation is not ready")
 
-// PanelPolicy freezes both runtime disagreement thresholds and the empirical
-// gates used to approve them. An approved policy remains configuration only:
-// A/B/C still return rubric/evidence judgments and never own the final score.
+// PanelPolicy 冻结运行时分歧阈值与批准阈值所用的经验门禁。
+// 已批准策略仍只是配置：A/B/C 只返回评分细则和证据判断，绝不负责最终分数。
 type PanelPolicy struct {
 	ID                 string                                 `json:"id"`
 	TenantID           string                                 `json:"tenant_id"`
@@ -92,8 +95,8 @@ func (s *PanelPolicyService) Create(ctx context.Context, tenantID, actorID strin
 	return s.store.CreatePanelPolicy(ctx, tenantID, actorID, input)
 }
 
-// EvaluateAndApprove recomputes readiness from the immutable, de-identified
-// panel observations. The caller cannot submit a pre-computed "ready" flag.
+// EvaluateAndApprove 根据不可变、已去标识的评审组观察重新计算准备度。
+// 调用方不能提交预先算好的“ready”标记。
 func (s *PanelPolicyService) EvaluateAndApprove(ctx context.Context, tenantID, actorID, policyID, evaluationRunID string) (PanelPolicy, gradingevaluation.PanelSliceReadiness, error) {
 	if s == nil || s.store == nil || s.evaluations == nil || strings.TrimSpace(tenantID) == "" || strings.TrimSpace(actorID) == "" ||
 		strings.TrimSpace(policyID) == "" || strings.TrimSpace(evaluationRunID) == "" {
@@ -178,10 +181,10 @@ func normalizeCreatePanelPolicy(input CreatePanelPolicyInput) (CreatePanelPolicy
 }
 
 func validPanelModelSetReference(value string) bool {
-	if len(value) != len("panel:")+sha256.Size*2 || !strings.HasPrefix(value, "panel:") {
+	if len(value) != len(panelModelSetReferencePrefix)+sha256.Size*2 || !strings.HasPrefix(value, panelModelSetReferencePrefix) {
 		return false
 	}
-	_, err := hex.DecodeString(strings.TrimPrefix(value, "panel:"))
+	_, err := hex.DecodeString(strings.TrimPrefix(value, panelModelSetReferencePrefix))
 	return err == nil && value == strings.ToLower(value)
 }
 
@@ -209,16 +212,22 @@ func normalizedRiskCodes(values []string) []string {
 	return result
 }
 
+// 版本长度按原始字节计算；首字符只能是 ASCII 字母数字，后续才允许四种标点。
 func validPanelPolicyVersion(value string) bool {
 	if len(value) == 0 || len(value) > 128 {
 		return false
 	}
 	for index, character := range value {
-		valid := character >= 'A' && character <= 'Z' || character >= 'a' && character <= 'z' || character >= '0' && character <= '9' ||
+		alphanumeric := panelPolicyASCIIAlphanumeric(character)
+		valid := alphanumeric ||
 			character == '.' || character == '_' || character == ':' || character == '-'
-		if !valid || index == 0 && !(character >= 'A' && character <= 'Z' || character >= 'a' && character <= 'z' || character >= '0' && character <= '9') {
+		if !valid || index == 0 && !alphanumeric {
 			return false
 		}
 	}
 	return true
+}
+
+func panelPolicyASCIIAlphanumeric(character rune) bool {
+	return character >= 'A' && character <= 'Z' || character >= 'a' && character <= 'z' || character >= '0' && character <= '9'
 }

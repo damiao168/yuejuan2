@@ -11,6 +11,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"edugrade-enterprise/services/api-gateway/internal/aieligibility"
 	"edugrade-enterprise/services/api-gateway/internal/mathunderstanding"
 	"edugrade-enterprise/services/api-gateway/internal/paper"
 )
@@ -30,8 +31,7 @@ var gradingAgentV2QuestionTypes = map[string]bool{
 	"short_answer": true, "calculation": true, "essay": true, "discussion": true,
 }
 
-// BuiltGradingAgentV2Request exposes only the internal request body and
-// non-sensitive idempotency facts to the production v2 transport.
+// BuiltGradingAgentV2Request 只向生产 v2 传输提供内部请求体和非敏感幂等事实。
 type BuiltGradingAgentV2Request struct {
 	RequestID         string
 	Body              []byte
@@ -40,8 +40,7 @@ type BuiltGradingAgentV2Request struct {
 	MediaByteSize     int64
 }
 
-// Clear releases the only retained encoded request body and overwrites its
-// backing bytes so callers can shorten the lifetime of answer images.
+// Clear 释放唯一保留的编码请求体，并覆盖其底层字节，使调用方能缩短答案图像的留存时间。
 func (r *BuiltGradingAgentV2Request) Clear() {
 	if r == nil {
 		return
@@ -123,9 +122,8 @@ type gradingAgentV2DigestEvidence struct {
 	BindingHash    string         `json:"binding_hash"`
 }
 
-// BuildGradingAgentV2Request assembles one verified active crop and one
-// version-bound mathematical evidence projection into the internal v2
-// contract. It performs no I/O.
+// BuildGradingAgentV2Request 将一个已核验的有效裁剪图与一个绑定版本的数学证据投影组装为内部 v2 契约。
+// 它不执行 I/O。
 func BuildGradingAgentV2Request(
 	requestID string,
 	input AdapterInput,
@@ -149,37 +147,8 @@ func BuildGradingAgentV2Request(
 		!gradingAgentV2InternalID.MatchString(questionID) {
 		return BuiltGradingAgentV2Request{}, &GradingAgentError{Code: "grading_v2_identifier_invalid"}
 	}
-	if !gradingAgentV2Subjects[subject] ||
-		!gradingAgentV2GradeLevels[gradeLevel] ||
-		!gradingAgentV2QuestionTypes[questionType] ||
-		!boundedNonBlank(input.Question.Stem, 12_000) ||
-		!boundedNonBlank(input.AnswerText, 20_000) ||
-		math.IsNaN(input.Question.Score) ||
-		math.IsInf(input.Question.Score, 0) ||
-		input.Question.Score <= 0 ||
-		input.Question.Score > 1_000 {
-		return BuiltGradingAgentV2Request{}, &GradingAgentError{Code: "grading_context_incomplete"}
-	}
-	if !boundedNonBlank(rubricID, 128) ||
-		!boundedNonBlank(rubricVersion, 128) ||
-		len(input.Rubric.Points) == 0 ||
-		len(input.Rubric.Points) > 100 ||
-		len(input.Rubric.Deductions) > 100 ||
-		len(input.Rubric.Examples) > 100 ||
-		math.IsNaN(input.Rubric.MaxScore) ||
-		math.IsInf(input.Rubric.MaxScore, 0) ||
-		input.Rubric.MaxScore <= 0 ||
-		input.Rubric.MaxScore > 1_000 ||
-		!almostEqual(input.Rubric.MaxScore, input.Question.Score) {
-		return BuiltGradingAgentV2Request{}, &GradingAgentError{Code: "rubric_context_incomplete"}
-	}
-	if !boundedNonBlank(modelVersion, 256) ||
-		!boundedNonBlank(promptVersion, 128) ||
-		math.IsNaN(policy.MinConfidence) ||
-		math.IsInf(policy.MinConfidence, 0) ||
-		policy.MinConfidence <= 0 ||
-		policy.MinConfidence > 1 {
-		return BuiltGradingAgentV2Request{}, &GradingAgentError{Code: "grading_v2_policy_invalid"}
+	if err := validateGradingAgentV2Context(input, policy); err != nil {
+		return BuiltGradingAgentV2Request{}, err
 	}
 	if !validMathEvidenceForV2(input.MathEvidence, input) {
 		return BuiltGradingAgentV2Request{}, &GradingAgentError{Code: "math_evidence_invalid"}
@@ -187,15 +156,7 @@ func BuildGradingAgentV2Request(
 	if !validGradingReferenceContext(input.ReferenceContext) {
 		return BuiltGradingAgentV2Request{}, &GradingAgentError{Code: "grading_reference_invalid"}
 	}
-	var reference *GradingReferenceContext
-	if input.ReferenceContext != nil {
-		copyReference := *input.ReferenceContext
-		copyReference.EquivalentAnswers = nonNilAny(copyReference.EquivalentAnswers)
-		if copyReference.SolutionSteps == nil {
-			copyReference.SolutionSteps = []paper.SolutionStep{}
-		}
-		reference = &copyReference
-	}
+	reference := normalizedGradingReferenceForV2(input.ReferenceContext)
 	if err := validateResolvedActiveCropForV2(crop); err != nil {
 		return BuiltGradingAgentV2Request{}, err
 	}
@@ -207,46 +168,12 @@ func BuildGradingAgentV2Request(
 	if math.IsNaN(ocrConfidence) || math.IsInf(ocrConfidence, 0) || ocrConfidence < 0 || ocrConfidence > 1 {
 		return BuiltGradingAgentV2Request{}, &GradingAgentError{Code: "grading_v2_ocr_confidence_invalid"}
 	}
-	if len(input.PromptGuard.Signals) > 32 {
-		return BuiltGradingAgentV2Request{}, &GradingAgentError{Code: "grading_v2_prompt_guard_invalid"}
+	if err := validateGradingAgentV2OutputRules(input.PromptGuard, input.OutputConstraint); err != nil {
+		return BuiltGradingAgentV2Request{}, err
 	}
-	if !input.OutputConstraint.CriteriaEvidenceOnly || input.OutputConstraint.AllowModelFinalScore ||
-		input.OutputConstraint.FinalScoreAuthority != "server_rubric_or_human_confirmation" {
-		return BuiltGradingAgentV2Request{}, &GradingAgentError{Code: "grading_v2_output_constraint_invalid"}
-	}
-	for _, signal := range input.PromptGuard.Signals {
-		if !boundedNonBlank(signal, 128) {
-			return BuiltGradingAgentV2Request{}, &GradingAgentError{Code: "grading_v2_prompt_guard_invalid"}
-		}
-	}
-	points := make([]gradingAgentRubricPoint, 0, len(input.Rubric.Points))
-	pointIDs := make(map[string]bool, len(input.Rubric.Points))
-	pointTotal := 0.0
-	for _, point := range input.Rubric.Points {
-		pointID := strings.TrimSpace(point.ID)
-		if !boundedNonBlank(pointID, 128) ||
-			!boundedNonBlank(point.Description, 4_000) ||
-			pointIDs[pointID] ||
-			math.IsNaN(point.Score) ||
-			math.IsInf(point.Score, 0) ||
-			point.Score <= 0 ||
-			point.Score > 1_000 {
-			return BuiltGradingAgentV2Request{}, &GradingAgentError{Code: "rubric_context_invalid"}
-		}
-		pointIDs[pointID] = true
-		pointTotal += point.Score
-		points = append(points, gradingAgentRubricPoint{
-			ID:               pointID,
-			Description:      point.Description,
-			Score:            point.Score,
-			Required:         point.Required,
-			Aliases:          []string{},
-			EvidenceRequired: true,
-			MatchPolicy:      "semantic",
-		})
-	}
-	if !almostEqual(pointTotal, input.Rubric.MaxScore) {
-		return BuiltGradingAgentV2Request{}, &GradingAgentError{Code: "rubric_context_invalid"}
+	points, err := gradingAgentV2RubricPoints(input.Rubric)
+	if err != nil {
+		return BuiltGradingAgentV2Request{}, err
 	}
 
 	bindingHash := computeGradingAgentV2BindingHash(
@@ -339,6 +266,114 @@ func BuildGradingAgentV2Request(
 		MediaSHA256:       crop.SHA256,
 		MediaByteSize:     crop.ByteSize,
 	}, nil
+}
+
+// 标识检查后按题目、细则、模型策略的顺序检查评分上下文，多个缺陷仍返回原来的首个错误。
+func validateGradingAgentV2Context(input AdapterInput, policy ModelPolicy) error {
+	subject := gradingAgentSubject(input.Subject)
+	gradeLevel := gradingAgentGradeLevel(input.GradeLevel)
+	questionType := strings.ToLower(strings.TrimSpace(input.Question.QuestionType))
+	rubricID := strings.TrimSpace(input.Rubric.ID)
+	rubricVersion := strings.TrimSpace(input.Rubric.Version)
+	modelVersion := strings.TrimSpace(policy.ModelVersion)
+	promptVersion := strings.TrimSpace(policy.PromptVersion)
+	if !gradingAgentV2Subjects[subject] ||
+		!gradingAgentV2GradeLevels[gradeLevel] ||
+		!gradingAgentV2QuestionTypes[questionType] ||
+		!boundedNonBlank(input.Question.Stem, 12_000) ||
+		!boundedNonBlank(input.AnswerText, 20_000) ||
+		math.IsNaN(input.Question.Score) ||
+		math.IsInf(input.Question.Score, 0) ||
+		input.Question.Score <= 0 ||
+		input.Question.Score > 1_000 {
+		return &GradingAgentError{Code: "grading_context_incomplete"}
+	}
+	if !boundedNonBlank(rubricID, 128) ||
+		!boundedNonBlank(rubricVersion, 128) ||
+		len(input.Rubric.Points) == 0 ||
+		len(input.Rubric.Points) > 100 ||
+		len(input.Rubric.Deductions) > 100 ||
+		len(input.Rubric.Examples) > 100 ||
+		math.IsNaN(input.Rubric.MaxScore) ||
+		math.IsInf(input.Rubric.MaxScore, 0) ||
+		input.Rubric.MaxScore <= 0 ||
+		input.Rubric.MaxScore > 1_000 ||
+		!almostEqual(input.Rubric.MaxScore, input.Question.Score) {
+		return &GradingAgentError{Code: "rubric_context_incomplete"}
+	}
+	if !boundedNonBlank(modelVersion, 256) ||
+		!boundedNonBlank(promptVersion, 128) ||
+		math.IsNaN(policy.MinConfidence) ||
+		math.IsInf(policy.MinConfidence, 0) ||
+		policy.MinConfidence <= 0 ||
+		policy.MinConfidence > 1 {
+		return &GradingAgentError{Code: "grading_v2_policy_invalid"}
+	}
+	return nil
+}
+
+// 只在副本上把缺失数组归一为空数组；nil参考沿用历史考试的省略方式。
+func normalizedGradingReferenceForV2(reference *GradingReferenceContext) *GradingReferenceContext {
+	if reference == nil {
+		return nil
+	}
+	copyReference := *reference
+	copyReference.EquivalentAnswers = nonNilAny(copyReference.EquivalentAnswers)
+	if copyReference.SolutionSteps == nil {
+		copyReference.SolutionSteps = []paper.SolutionStep{}
+	}
+	return &copyReference
+}
+
+// 数量超限先于输出权限报错，单条信号检查随后执行；保留调用方既有的错误优先级。
+func validateGradingAgentV2OutputRules(guard PromptGuard, constraint aieligibility.OutputConstraint) error {
+	if len(guard.Signals) > 32 {
+		return &GradingAgentError{Code: "grading_v2_prompt_guard_invalid"}
+	}
+	if !constraint.CriteriaEvidenceOnly || constraint.AllowModelFinalScore ||
+		constraint.FinalScoreAuthority != "server_rubric_or_human_confirmation" {
+		return &GradingAgentError{Code: "grading_v2_output_constraint_invalid"}
+	}
+	for _, signal := range guard.Signals {
+		if !boundedNonBlank(signal, 128) {
+			return &GradingAgentError{Code: "grading_v2_prompt_guard_invalid"}
+		}
+	}
+	return nil
+}
+
+// 细则点按原顺序投影；ID去空白后判重，各点分值相加仍须等于冻结细则的满分。
+func gradingAgentV2RubricPoints(rubric paper.Rubric) ([]gradingAgentRubricPoint, error) {
+	points := make([]gradingAgentRubricPoint, 0, len(rubric.Points))
+	pointIDs := make(map[string]bool, len(rubric.Points))
+	pointTotal := 0.0
+	for _, point := range rubric.Points {
+		pointID := strings.TrimSpace(point.ID)
+		if !boundedNonBlank(pointID, 128) ||
+			!boundedNonBlank(point.Description, 4_000) ||
+			pointIDs[pointID] ||
+			math.IsNaN(point.Score) ||
+			math.IsInf(point.Score, 0) ||
+			point.Score <= 0 ||
+			point.Score > 1_000 {
+			return nil, &GradingAgentError{Code: "rubric_context_invalid"}
+		}
+		pointIDs[pointID] = true
+		pointTotal += point.Score
+		points = append(points, gradingAgentRubricPoint{
+			ID:               pointID,
+			Description:      point.Description,
+			Score:            point.Score,
+			Required:         point.Required,
+			Aliases:          []string{},
+			EvidenceRequired: true,
+			MatchPolicy:      "semantic",
+		})
+	}
+	if !almostEqual(pointTotal, rubric.MaxScore) {
+		return nil, &GradingAgentError{Code: "rubric_context_invalid"}
+	}
+	return points, nil
 }
 
 func boundedNonBlank(value string, maximum int) bool {
@@ -446,12 +481,33 @@ func gradingAgentV2IdempotencyDigest(request gradingAgentV2Request) (string, err
 
 func validGradingReferenceContext(reference *GradingReferenceContext) bool {
 	if reference == nil {
-		return true // Historical exams can predate confirmed import snapshots.
+		return true // 历史考试可能早于已确认导入快照机制。
 	}
 	if reference.Source != "confirmed_exam_import_snapshot" || !validLowerSHA256(reference.SnapshotHash) ||
 		len(reference.EquivalentAnswers) > 100 || len(reference.SolutionSteps) > 100 ||
 		len(reference.SolutionText) > 20_000 {
 		return false
+	}
+	if !validGradingReferenceAnswers(reference) {
+		return false
+	}
+	for _, step := range reference.SolutionSteps {
+		if step.StepNo <= 0 || len(step.Content) > 4_000 {
+			return false
+		}
+	}
+	return reference.StandardAnswer != nil || strings.TrimSpace(reference.SolutionText) != "" || len(reference.SolutionSteps) > 0
+}
+
+// 上层已处理nil和来源限制；答案部分按原文字节数，标准/等价答案按JSON编码字节数限制。
+func validGradingReferenceAnswers(reference *GradingReferenceContext) bool {
+	if len(reference.AnswerParts) > 100 {
+		return false
+	}
+	for index, part := range reference.AnswerParts {
+		if part.PartNo != index+1 || strings.TrimSpace(part.AnswerText) == "" || len(part.AnswerText) > 20_000 {
+			return false
+		}
 	}
 	answer, err := json.Marshal(reference.StandardAnswer)
 	if err != nil || len(answer) > 20_000 {
@@ -463,12 +519,7 @@ func validGradingReferenceContext(reference *GradingReferenceContext) bool {
 			return false
 		}
 	}
-	for _, step := range reference.SolutionSteps {
-		if step.StepNo <= 0 || len(step.Content) > 4_000 {
-			return false
-		}
-	}
-	return reference.StandardAnswer != nil || strings.TrimSpace(reference.SolutionText) != "" || len(reference.SolutionSteps) > 0
+	return true
 }
 
 func validMathEvidenceForV2(evidence *MathEvidenceContext, input AdapterInput) bool {

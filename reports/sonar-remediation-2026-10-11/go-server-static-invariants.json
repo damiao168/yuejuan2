@@ -1,0 +1,641 @@
+{
+  "files": [
+    {
+      "path": "services/api-gateway/internal/server/appeal_route_test.go",
+      "before_sha256": "3ae77cb571e0f240dd7af8faf845a8c13b3213008f668daad00b50ee4fcf11bc",
+      "after_sha256": "e3b7f2408ecf974ef18d16a5c898d49078fbbe97b9cb68c395146cc16ba81602",
+      "literal_removed": [],
+      "literal_added": [],
+      "original_t_run_count": 0,
+      "current_t_run_count": 0,
+      "literal_difference_classification": [],
+      "unexplained_literals_removed": [],
+      "unexplained_literals_added": []
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_anonymous_paper_test.go",
+      "before_sha256": "7bd426940707d1142687e6d8fe1c21daec01f33e231a388f7143f63b28a58692",
+      "after_sha256": "a293cf350b6fe3cc53a64b1ea3480a80cfa951de88836e2d3b5534286213e97d",
+      "literal_removed": [],
+      "literal_added": [
+        "\"database/sql\""
+      ],
+      "original_t_run_count": 0,
+      "current_t_run_count": 0,
+      "literal_difference_classification": [
+        "new database/sql import for concrete fixture DB types"
+      ],
+      "unexplained_literals_removed": [],
+      "unexplained_literals_added": []
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_auth_security_test.go",
+      "before_sha256": "696cf8131ecbfcef88e412b22b608289003f1412e752b8fb3fce70d479bf1fb2",
+      "after_sha256": "3faa3c15e856c604383cf6d5d25f556fbfa710ffe7a42f07b2d5108b46399b5c",
+      "literal_removed": [],
+      "literal_added": [
+        "\"database/sql\""
+      ],
+      "original_t_run_count": 3,
+      "current_t_run_count": 3,
+      "literal_difference_classification": [
+        "new database/sql import for concrete fixture DB types"
+      ],
+      "unexplained_literals_removed": [],
+      "unexplained_literals_added": []
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_business_command_test.go",
+      "before_sha256": "3628336be913f4237e5a56c5bbab84960e14ad306b86c2297d618116f95a252d",
+      "after_sha256": "704dfeb9bdee1b96f4c59900f06966a2d738f48b261aeaf6bbceb045b032fc61",
+      "literal_removed": [],
+      "literal_added": [],
+      "original_t_run_count": 0,
+      "current_t_run_count": 0,
+      "literal_difference_classification": [],
+      "unexplained_literals_removed": [],
+      "unexplained_literals_added": []
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_core_workflow_test.go",
+      "before_sha256": "aa8e13b0a2657f721c6c865dcc3e20056c35c74aec5b356d8d528f22b9b3b43f",
+      "after_sha256": "743bb2f8b5951b775ce0908bb22c8911e5370350d6331c7d659eb01594bc609b",
+      "literal_removed": [],
+      "literal_added": [],
+      "original_t_run_count": 0,
+      "current_t_run_count": 0,
+      "literal_difference_classification": [],
+      "unexplained_literals_removed": [],
+      "unexplained_literals_added": []
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_exam_archive_commands_test.go",
+      "before_sha256": "ff2b5ca2cdfa55a35fd6be8293647e0de91ff938034118c3729c4dfb3d7b8efa",
+      "after_sha256": "524341a71af27e533bafb0dcafec13e47e9f7cdcfbbea3007040949648c130f9",
+      "literal_removed": [],
+      "literal_added": [
+        "\"database/sql\""
+      ],
+      "original_t_run_count": 0,
+      "current_t_run_count": 0,
+      "literal_difference_classification": [
+        "new database/sql import for concrete fixture DB types"
+      ],
+      "unexplained_literals_removed": [],
+      "unexplained_literals_added": []
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_exam_management_test.go",
+      "before_sha256": "1fa3ddcfeb72b931a814f961b8b74cc5c8d3eb27643e0ae2b18df8193d1cb5c0",
+      "after_sha256": "1896988b1f9533e4614611e7b7c7a4c7754ad0665ae5208f8723d7397180f7e6",
+      "literal_removed": [],
+      "literal_added": [
+        "\"database/sql\""
+      ],
+      "original_t_run_count": 0,
+      "current_t_run_count": 0,
+      "literal_difference_classification": [
+        "new database/sql import for concrete fixture DB types"
+      ],
+      "unexplained_literals_removed": [],
+      "unexplained_literals_added": []
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_file_reconciliation_test.go",
+      "before_sha256": "3c62a7bb58e3ebea5b039b18dc14da1ec0d4d2c9aac9a703edb9378d3365b5a3",
+      "after_sha256": "60dce163591d25988172238f01083f18998b5bd5579452595ec41c201a5613d4",
+      "literal_removed": [],
+      "literal_added": [],
+      "original_t_run_count": 0,
+      "current_t_run_count": 0,
+      "literal_difference_classification": [],
+      "unexplained_literals_removed": [],
+      "unexplained_literals_added": []
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_idempotency_test.go",
+      "before_sha256": "386ad517c77f68f2e6ec22c84d853ac3e6c778e606b09919621b638aec09d55e",
+      "after_sha256": "579444fb7bb25e302b4153f1a40c0da1b368fcf4fdae0706248de69c2afc42d2",
+      "literal_removed": [],
+      "literal_added": [],
+      "original_t_run_count": 0,
+      "current_t_run_count": 0,
+      "literal_difference_classification": [],
+      "unexplained_literals_removed": [],
+      "unexplained_literals_added": []
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_math_effective_evidence_test.go",
+      "before_sha256": "4e21ab3b259612debd173cbf2cba3ac624f3d4c0f6ac05221f2b51049dfb8bb3",
+      "after_sha256": "cd79fa693af6c89f078afc9db248ab63ed845f7d331771f6f7c8b68b9e478cf4",
+      "literal_removed": [],
+      "literal_added": [
+        "\"database/sql\""
+      ],
+      "original_t_run_count": 0,
+      "current_t_run_count": 0,
+      "literal_difference_classification": [
+        "new database/sql import for concrete fixture DB types"
+      ],
+      "unexplained_literals_removed": [],
+      "unexplained_literals_added": []
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_math_grading_binding_test.go",
+      "before_sha256": "7500ea843d838bb60f2cc8c58ea153462f07f07b69d5f0cfa384779f9f54a439",
+      "after_sha256": "94274051224e2355959f918c6354dd43441124271062e16e9703047d6c878880",
+      "literal_removed": [],
+      "literal_added": [
+        "\"database/sql\""
+      ],
+      "original_t_run_count": 1,
+      "current_t_run_count": 1,
+      "literal_difference_classification": [
+        "new database/sql import for concrete fixture DB types"
+      ],
+      "unexplained_literals_removed": [],
+      "unexplained_literals_added": []
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_math_rubric_score_test.go",
+      "before_sha256": "d6d70d2bc963fab97c8b8f9f6357bd4831e19d55d4187e9fae3e2931a2abc3bc",
+      "after_sha256": "a6d723c18f9263b76b3bea446797cf603c062acd448ebb17cca9d9beeb10b152",
+      "literal_removed": [],
+      "literal_added": [
+        "\"database/sql\""
+      ],
+      "original_t_run_count": 0,
+      "current_t_run_count": 0,
+      "literal_difference_classification": [
+        "new database/sql import for concrete fixture DB types"
+      ],
+      "unexplained_literals_removed": [],
+      "unexplained_literals_added": []
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_math_verification_runtime_test.go",
+      "before_sha256": "40d7a4d8805aaf05029513f3b4d4c31e5d74eed79d114a86423871a360247452",
+      "after_sha256": "e11fa25682d81a491e4574c4473f834933cfb7a3aa49f6a7bf6a960b2b3ad75b",
+      "literal_removed": [],
+      "literal_added": [
+        "\"database/sql\""
+      ],
+      "original_t_run_count": 1,
+      "current_t_run_count": 1,
+      "literal_difference_classification": [
+        "new database/sql import for concrete fixture DB types"
+      ],
+      "unexplained_literals_removed": [],
+      "unexplained_literals_added": []
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_mfa_test.go",
+      "before_sha256": "711197018ef203f85552ab2b685789e5ddda91f7952b6fbbc2122be3b3ab0ac6",
+      "after_sha256": "d96120d9299f453d22441a852eb7c476c34feba291727c07c79a794012f8e9f0",
+      "literal_removed": [],
+      "literal_added": [],
+      "original_t_run_count": 0,
+      "current_t_run_count": 0,
+      "literal_difference_classification": [],
+      "unexplained_literals_removed": [],
+      "unexplained_literals_added": []
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_paper_import_reconciliation_test.go",
+      "before_sha256": "a1ebd561f491b96b9cb86b36b6c3864a39ca508a63407ad23bccc978bcc615b7",
+      "after_sha256": "32dcfc45e8f721bf214fa1babbf60460d5702d9868f147d470663ef3b1fe76b6",
+      "literal_removed": [
+        "`SELECT\n\t\t  count(*) FILTER (WHERE task_type='ocr' AND status='succeeded'),\n\t\t  count(*) FILTER (WHERE task_type='paper_parse' AND status='queued')\n\t\tFROM agent_worker_task WHERE tenant_id=$1::uuid AND\n\t\t  ((source_type='paper_import_job' AND source_id=$2::uuid) OR\n\t\t   (source_type='paper_import_parse' AND source_id IN\n\t\t     (SELECT id FROM paper_import_parse_input WHERE tenant_id=$1::uuid AND paper_import_id=$2::uuid)))`"
+      ],
+      "literal_added": [
+        "\"database/sql\"",
+        "`SELECT\n\t  count(*) FILTER (WHERE task_type='ocr' AND status='succeeded'),\n\t  count(*) FILTER (WHERE task_type='paper_parse' AND status='queued')\n\tFROM agent_worker_task WHERE tenant_id=$1::uuid AND\n\t  ((source_type='paper_import_job' AND source_id=$2::uuid) OR\n\t   (source_type='paper_import_parse' AND source_id IN\n\t     (SELECT id FROM paper_import_parse_input WHERE tenant_id=$1::uuid AND paper_import_id=$2::uuid)))`"
+      ],
+      "original_t_run_count": 8,
+      "current_t_run_count": 8,
+      "literal_difference_classification": [
+        "new database/sql import for concrete fixture DB types",
+        "one OCR/parse handoff SQL literal changed indentation only; text and placeholders retained"
+      ],
+      "unexplained_literals_removed": [],
+      "unexplained_literals_added": []
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+      "before_sha256": "8714cb21ec147a9aee97c922c80e03ad020af15f2302d6f684c7781d094503a0",
+      "after_sha256": "3f8697a78bcfd1c2081bf1b95bd73556f705c8d085d58b6701f75db855ceecbf",
+      "literal_removed": [
+        "\"\"",
+        "\"\""
+      ],
+      "literal_added": [],
+      "original_t_run_count": 0,
+      "current_t_run_count": 0,
+      "literal_difference_classification": [
+        "SQL splitter uses zero-value dollar tag and a single shared finishStatement guard, replacing two repeated empty-string literals"
+      ],
+      "unexplained_literals_removed": [],
+      "unexplained_literals_added": []
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+      "before_sha256": "1102570eceaf0811b5f010e82e7357818abe3ff4eac1aaccaaa54c1a5d5a65f3",
+      "after_sha256": "cc32f33ac7a8244037e3ea59dc0d3ad481c697fc278583ff50164544a65407a4",
+      "literal_removed": [],
+      "literal_added": [
+        "\"database/sql\""
+      ],
+      "original_t_run_count": 8,
+      "current_t_run_count": 8,
+      "literal_difference_classification": [
+        "new database/sql import for concrete fixture DB types"
+      ],
+      "unexplained_literals_removed": [],
+      "unexplained_literals_added": []
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_review_recovery_test.go",
+      "before_sha256": "d93b8cdcabc21a260842bb1d536520fde9b2c76cb8bb55e62155b847e2cebd18",
+      "after_sha256": "62bfdb101547b6044d361b007d18c1ceea01329bc1000568850b16ebdc94bee2",
+      "literal_removed": [],
+      "literal_added": [
+        "\"database/sql\""
+      ],
+      "original_t_run_count": 3,
+      "current_t_run_count": 3,
+      "literal_difference_classification": [
+        "new database/sql import for concrete fixture DB types"
+      ],
+      "unexplained_literals_removed": [],
+      "unexplained_literals_added": []
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_review_repairs_test.go",
+      "before_sha256": "0082e7f03cf8aabe2a773feaf0fbbef109cf15fbd46409d87e43fae6bbbe7ee4",
+      "after_sha256": "afd24da1ed9fd595146407c8572f7f7904cbf080c00abd53271826896d9c2642",
+      "literal_removed": [],
+      "literal_added": [],
+      "original_t_run_count": 0,
+      "current_t_run_count": 0,
+      "literal_difference_classification": [],
+      "unexplained_literals_removed": [],
+      "unexplained_literals_added": []
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_scoring_command_test.go",
+      "before_sha256": "10945159e171e156f1a33f9b698d5c38c525308892ec63ea5d4f7df3a2059baa",
+      "after_sha256": "9f0788701c366459f54d0519a79428e7f3396bbe8366b4feb4b19a69e08e74e4",
+      "literal_removed": [],
+      "literal_added": [
+        "\"database/sql\""
+      ],
+      "original_t_run_count": 0,
+      "current_t_run_count": 0,
+      "literal_difference_classification": [
+        "new database/sql import for concrete fixture DB types"
+      ],
+      "unexplained_literals_removed": [],
+      "unexplained_literals_added": []
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_scoring_double_mark_test.go",
+      "before_sha256": "9f3de5e8834076fb5c63f8d3075ba857270eec12e0323a398cd56ec94685b23f",
+      "after_sha256": "d062a59c3ad1d1b42552878f3216482db05bf8e72294af2243fb95f5a2bbbf53",
+      "literal_removed": [],
+      "literal_added": [
+        "\"database/sql\""
+      ],
+      "original_t_run_count": 0,
+      "current_t_run_count": 0,
+      "literal_difference_classification": [
+        "new database/sql import for concrete fixture DB types"
+      ],
+      "unexplained_literals_removed": [],
+      "unexplained_literals_added": []
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_story056_calibration_test.go",
+      "before_sha256": "9fc052a0a209ae660ae2e46715d2e44bf6546ff1eceae2ad967dc34401cfbc17",
+      "after_sha256": "21cc68f45394ffc9aca70891fd648ad2cb25ca24352d41076b6f84f9a9e3953a",
+      "literal_removed": [],
+      "literal_added": [],
+      "original_t_run_count": 0,
+      "current_t_run_count": 0,
+      "literal_difference_classification": [],
+      "unexplained_literals_removed": [],
+      "unexplained_literals_added": []
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_story056_lease_test.go",
+      "before_sha256": "64a13d6243eece73942adbf5e0f11811f413e12c243acbd2e82b6ff7f31f24fb",
+      "after_sha256": "acc0ccce26a92826da6e41d720e42e81c8786f0dd0a8870e2977da759aaae42b",
+      "literal_removed": [],
+      "literal_added": [],
+      "original_t_run_count": 0,
+      "current_t_run_count": 0,
+      "literal_difference_classification": [],
+      "unexplained_literals_removed": [],
+      "unexplained_literals_added": []
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+      "before_sha256": "c33d9cefd514f362085e5b746c0d1e209ca096903e85a35d270861e40da0862c",
+      "after_sha256": "72e1f6190e2e8ae1f1e8cb8f81efee3d4a056904662500282a1e0a3e33313f79",
+      "literal_removed": [],
+      "literal_added": [],
+      "original_t_run_count": 0,
+      "current_t_run_count": 0,
+      "literal_difference_classification": [],
+      "unexplained_literals_removed": [],
+      "unexplained_literals_added": []
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_story060_capture_recovery_test.go",
+      "before_sha256": "38249f224f3594c0f18cdb4401ee24afe10576e1c4d84e47c969dc3bd9a549a8",
+      "after_sha256": "5fb26c465effc8ae0398e317eb94b24187484acb0a7e494c217ccbd828f53fd3",
+      "literal_removed": [],
+      "literal_added": [
+        "\"database/sql\""
+      ],
+      "original_t_run_count": 0,
+      "current_t_run_count": 0,
+      "literal_difference_classification": [
+        "new database/sql import for concrete fixture DB types"
+      ],
+      "unexplained_literals_removed": [],
+      "unexplained_literals_added": []
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_story060_provision_test.go",
+      "before_sha256": "7a455f53464f58473caebb8989173c211e05fadf97eca8b30ea477932fd603d1",
+      "after_sha256": "8f5d5208f9cd828f42e4d467a9508d305f733fc659d4302362e3609d79905c95",
+      "literal_removed": [],
+      "literal_added": [
+        "\"database/sql\""
+      ],
+      "original_t_run_count": 1,
+      "current_t_run_count": 1,
+      "literal_difference_classification": [
+        "new database/sql import for concrete fixture DB types"
+      ],
+      "unexplained_literals_removed": [],
+      "unexplained_literals_added": []
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_story060_roster_test.go",
+      "before_sha256": "7a399902f25f96c7fee78a4c4825073432440059f1b18b12aa32d4491d1c9917",
+      "after_sha256": "0cc5ffd6b12e538f44a0a7b3e2da3778ee09ec87cf05edbb976f7ad5b3bbb16c",
+      "literal_removed": [],
+      "literal_added": [
+        "\"database/sql\""
+      ],
+      "original_t_run_count": 0,
+      "current_t_run_count": 0,
+      "literal_difference_classification": [
+        "new database/sql import for concrete fixture DB types"
+      ],
+      "unexplained_literals_removed": [],
+      "unexplained_literals_added": []
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_story060_sheet_identity_test.go",
+      "before_sha256": "ae3702b07975c3a4707de7bdb7681f3337d0dce13f787a1cbc7822ff8534d3d7",
+      "after_sha256": "998e63de0ba7b18da38cf920981fd6526935b7b788301a6a857a9949f8ff9d63",
+      "literal_removed": [],
+      "literal_added": [
+        "\"database/sql\""
+      ],
+      "original_t_run_count": 0,
+      "current_t_run_count": 0,
+      "literal_difference_classification": [
+        "new database/sql import for concrete fixture DB types"
+      ],
+      "unexplained_literals_removed": [],
+      "unexplained_literals_added": []
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_story061_governance_test.go",
+      "before_sha256": "324279c79a566a627fa4dfc721a8c37b03579ee50e405d8fe813f045ded17105",
+      "after_sha256": "895dd9d693a1eb2bdef1b7a49255c2e2028a1ca790ffd990b5ee7c189b75e68b",
+      "literal_removed": [],
+      "literal_added": [
+        "\"database/sql\""
+      ],
+      "original_t_run_count": 0,
+      "current_t_run_count": 0,
+      "literal_difference_classification": [
+        "new database/sql import for concrete fixture DB types"
+      ],
+      "unexplained_literals_removed": [],
+      "unexplained_literals_added": []
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_subjective_command_test.go",
+      "before_sha256": "c99cc23eec7a9c439850484eb02b1f93b701fce683f03681b0f5c656179105c0",
+      "after_sha256": "fb913d3f09ac5cc550dcbddf6cfeb03689e8aa701981fbf9bde6934e3f984a6f",
+      "literal_removed": [],
+      "literal_added": [
+        "\"database/sql\""
+      ],
+      "original_t_run_count": 0,
+      "current_t_run_count": 0,
+      "literal_difference_classification": [
+        "new database/sql import for concrete fixture DB types"
+      ],
+      "unexplained_literals_removed": [],
+      "unexplained_literals_added": []
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_subjective_panel_test.go",
+      "before_sha256": "13c3d1c852a870357f6af14f57ca41dedee448bea89fec2834124b6741c1bd8e",
+      "after_sha256": "309b55569bd209172366cc9a56b957a5f2eb87159fd4ac04dfbb906290f74e5f",
+      "literal_removed": [],
+      "literal_added": [
+        "\"database/sql\""
+      ],
+      "original_t_run_count": 0,
+      "current_t_run_count": 0,
+      "literal_difference_classification": [
+        "new database/sql import for concrete fixture DB types"
+      ],
+      "unexplained_literals_removed": [],
+      "unexplained_literals_added": []
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_worker_runtime_reliability_test.go",
+      "before_sha256": "ad3276ac60064d8ea31ee41ad0aaee3170f60b67fcc811d931ee305088c91d80",
+      "after_sha256": "4ebed662d22232c5e8188410c705339c2a86bbebeed570571cc2dcd18baca912",
+      "literal_removed": [],
+      "literal_added": [],
+      "original_t_run_count": 4,
+      "current_t_run_count": 4,
+      "literal_difference_classification": [],
+      "unexplained_literals_removed": [],
+      "unexplained_literals_added": []
+    },
+    {
+      "path": "services/api-gateway/internal/server/managed_config_postgres_test.go",
+      "before_sha256": "be7c2d7d11de8820c98d962c3ec06d31f67a4e877a95f601c38318e2f388fdf4",
+      "after_sha256": "71a5793a7b0670497c8b85329a6e7665dc7e96750c3fd5b0fe5ffcf54f187b50",
+      "literal_removed": [],
+      "literal_added": [],
+      "original_t_run_count": 1,
+      "current_t_run_count": 1,
+      "literal_difference_classification": [],
+      "unexplained_literals_removed": [],
+      "unexplained_literals_added": []
+    },
+    {
+      "path": "services/api-gateway/internal/server/migration_upgrade_test.go",
+      "before_sha256": "dced09b067bff18cd073da0cf52dfa74d1db86176ab71a3f871bb8945e448c23",
+      "after_sha256": "256090547f893d3209853c1744ea1787b47ade409ffb4598a3873aced023a63e",
+      "literal_removed": [],
+      "literal_added": [],
+      "original_t_run_count": 0,
+      "current_t_run_count": 0,
+      "literal_difference_classification": [],
+      "unexplained_literals_removed": [],
+      "unexplained_literals_added": []
+    },
+    {
+      "path": "services/api-gateway/internal/server/platform_schools_route_test.go",
+      "before_sha256": "52f06023f944b0a2e599efcf66ba581ba93b6a80d55cc10c54e15be929643b4e",
+      "after_sha256": "e4c8319995dab1d6b760ea521606f512d23590f6195cfbf0763dd4853e095932",
+      "literal_removed": [],
+      "literal_added": [],
+      "original_t_run_count": 2,
+      "current_t_run_count": 2,
+      "literal_difference_classification": [],
+      "unexplained_literals_removed": [],
+      "unexplained_literals_added": []
+    },
+    {
+      "path": "services/api-gateway/internal/server/readers_batch47_test.go",
+      "before_sha256": "f1d7fa8ffbf949f311f9efaf47dbdb0d5c9ecd18922aa3d7ba661e1c769b05f1",
+      "after_sha256": "148b459927d7434409a6315577d4a516cbb10b5e2cccca60df7f42e1df62242c",
+      "literal_removed": [],
+      "literal_added": [],
+      "original_t_run_count": 3,
+      "current_t_run_count": 3,
+      "literal_difference_classification": [],
+      "unexplained_literals_removed": [],
+      "unexplained_literals_added": []
+    },
+    {
+      "path": "services/api-gateway/internal/server/review_route_test.go",
+      "before_sha256": "00e58c18126fff38c0ff1425521ef47c154e31e92ab8c95308da9bd54b11c76c",
+      "after_sha256": "d0f7dcbe8dba37803ce6e1d756b3210dd9f8f56118cb660f3f405b5e030b7772",
+      "literal_removed": [],
+      "literal_added": [],
+      "original_t_run_count": 5,
+      "current_t_run_count": 5,
+      "literal_difference_classification": [],
+      "unexplained_literals_removed": [],
+      "unexplained_literals_added": []
+    },
+    {
+      "path": "services/api-gateway/internal/server/score_route_test.go",
+      "before_sha256": "574fc499cfb555bc73419a8f2d7a7e09e46848c12bf74c516e2cc84a05bb7e68",
+      "after_sha256": "29326381599a687731a597de4296fceba5d778699c150cea7df2a895f8fa3de2",
+      "literal_removed": [],
+      "literal_added": [],
+      "original_t_run_count": 0,
+      "current_t_run_count": 0,
+      "literal_difference_classification": [],
+      "unexplained_literals_removed": [],
+      "unexplained_literals_added": []
+    },
+    {
+      "path": "services/api-gateway/internal/server/server_test.go",
+      "before_sha256": "85c7b7353f8ac2e9ff95b5bf44e8b703633969cf53c24886d0c11c651aa4b407",
+      "after_sha256": "763b99f5bd12dbe603521be3f231d264e3ceda2fc681063e11041720a015e084",
+      "literal_removed": [],
+      "literal_added": [],
+      "original_t_run_count": 1,
+      "current_t_run_count": 1,
+      "literal_difference_classification": [],
+      "unexplained_literals_removed": [],
+      "unexplained_literals_added": []
+    }
+  ],
+  "estimate_over_threshold": [
+    {
+      "path": "services/api-gateway/internal/server/e2e_business_command_test.go",
+      "name": "e2eReportExportUsesSingleSnapshot",
+      "line": 236,
+      "cognitive_estimate": 20,
+      "parameters": 5,
+      "same_preexisting_code_tokens": true,
+      "preexisting_control_tokens_equal": true,
+      "preexisting_literal_counts_equal": true,
+      "limit": "本地估算可能与安装插件不同；真实平台结果决定处理。"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_file_reconciliation_test.go",
+      "name": "TestFileReconciliationWithPostgresTestDatabase",
+      "line": 17,
+      "cognitive_estimate": 16,
+      "parameters": 1,
+      "same_preexisting_code_tokens": false,
+      "preexisting_control_tokens_equal": true,
+      "preexisting_literal_counts_equal": true,
+      "limit": "本地估算可能与安装插件不同；真实平台结果决定处理。"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+      "name": "e2eAssertSchoolAdminRBACBackfill",
+      "line": 550,
+      "cognitive_estimate": 19,
+      "parameters": 2,
+      "same_preexisting_code_tokens": true,
+      "preexisting_control_tokens_equal": true,
+      "preexisting_literal_counts_equal": true,
+      "limit": "本地估算可能与安装插件不同；真实平台结果决定处理。"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+      "name": "e2eApplyPostgresMigrationsThrough",
+      "line": 816,
+      "cognitive_estimate": 20,
+      "parameters": 3,
+      "same_preexisting_code_tokens": true,
+      "preexisting_control_tokens_equal": true,
+      "preexisting_literal_counts_equal": true,
+      "limit": "本地估算可能与安装插件不同；真实平台结果决定处理。"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_review_repairs_test.go",
+      "name": "repairFixture",
+      "line": 28,
+      "cognitive_estimate": 26,
+      "parameters": 1,
+      "same_preexisting_code_tokens": true,
+      "preexisting_control_tokens_equal": true,
+      "preexisting_literal_counts_equal": true,
+      "limit": "本地估算可能与安装插件不同；真实平台结果决定处理。"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_review_repairs_test.go",
+      "name": "TestScoringAIBatchCancellationBlocksNewTasks",
+      "line": 539,
+      "cognitive_estimate": 22,
+      "parameters": 1,
+      "same_preexisting_code_tokens": true,
+      "preexisting_control_tokens_equal": true,
+      "preexisting_literal_counts_equal": true,
+      "limit": "本地估算可能与安装插件不同；真实平台结果决定处理。"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_story056_lease_test.go",
+      "name": "TestStory056ExpiredOMRLeaseLeavesScoringFactsUntouchedE2E",
+      "line": 465,
+      "cognitive_estimate": 19,
+      "parameters": 1,
+      "same_preexisting_code_tokens": true,
+      "preexisting_control_tokens_equal": true,
+      "preexisting_literal_counts_equal": true,
+      "limit": "本地估算可能与安装插件不同；真实平台结果决定处理。"
+    }
+  ],
+  "limit": "字面量及子测试计数用于辅助检查，不能证明业务行为等价。"
+}

@@ -114,7 +114,7 @@ func TestACLPresetsGroupRevocationSearchAndRetire(t *testing.T) {
 	if _, err = s.GetVersion(ctx, author, item.Version.ID); err != nil {
 		t.Fatalf("group read: %v", err)
 	}
-	doc, err = s.UpdateACL(commandreceipt.WithID(ctx, "revoke"), manager, bank.ID, UpdateACLInput{ExpectedRevision: doc.Revision, Bindings: []ACLBinding{{UserID: publisherID, Preset: "Publisher"}}, Groups: []ACLGroup{{Name: "managers", Preset: "Manager", MemberIDs: []string{managerID}}}})
+	_, err = s.UpdateACL(commandreceipt.WithID(ctx, "revoke"), manager, bank.ID, UpdateACLInput{ExpectedRevision: doc.Revision, Bindings: []ACLBinding{{UserID: publisherID, Preset: "Publisher"}}, Groups: []ACLGroup{{Name: "managers", Preset: "Manager", MemberIDs: []string{managerID}}}})
 	if err != nil {
 		t.Fatal(err)
 	}

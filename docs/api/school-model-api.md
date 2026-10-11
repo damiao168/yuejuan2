@@ -17,10 +17,15 @@
 | GET | `/api/v1/platform/model-api-configs?tenant_id=...` | 查看学校配置，不返回密钥 |
 | POST | `/api/v1/platform/model-api-configs` | 创建配置，正文包含 `tenant_id` |
 | PATCH | `/api/v1/platform/model-api-configs/{id}?tenant_id=...` | 编辑配置，密钥留空表示保留 |
-| POST | `/api/v1/platform/model-api-configs/{id}/probe?tenant_id=...` | 连接测试 |
+| POST | `/api/v1/platform/model-api-configs/{id}/probe?tenant_id=...&mode=quick` | 快速连接检查；省略 `mode` 也使用此模式 |
+| POST | `/api/v1/platform/model-api-configs/{id}/probe?tenant_id=...&mode=capability` | 结构化能力检测；有效的既有结果可复用，`force=true` 强制重新检测 |
 | POST | `/api/v1/paper-imports/{id}/cancel` | 停止当前识别并保留已上传资料 |
 
-OpenAI 兼容协议连接测试访问 `/models`，仅证明接口可访问，不保证指定模型具备完整 JSON 提取能力。DashScope 原生协议固定使用 `https://dashscope.aliyuncs.com/api/v1`，连接测试发送一条最小生成请求，可能消耗少量供应商额度。
+快速检查访问 `/models`，确认密钥和指定模型可用，不发送生成请求，也不能替代结构化能力检测。单次请求默认超时为 8 秒；网络失败最多重试一次，两次请求与等待合计最多 12 秒。
+
+能力检测在 OpenAI 兼容协议下先执行上述模型列表检查，再发送固定 JSON 样例并验证返回结构及字段值。DashScope 原生协议固定使用 `https://dashscope.aliyuncs.com/api/v1`，直接发送最小生成请求进行检测。生成阶段单独使用 60 秒超时，覆盖等待响应头和读取完整正文；客户端取消请求仍会中止检测。生成请求可能消耗供应商额度，失败后不自动重试。
+
+`provider_timeout` 表示本次等待供应商响应超时，不能据此认定密钥无效或模型不支持 JSON。临时网络故障保留此前通过的能力验证结果；未收到供应商用量时，返回的零值不代表实际扣费为零。
 
 解析请求使用当前学校的默认配置，逐请求创建模型适配器，不修改共享全局模型。兼容协议使用 JSON 模式并在本地严格验证结构；供应商仍须支持 JSON 模式和足够长的输出。
 

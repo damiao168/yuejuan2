@@ -221,9 +221,8 @@ func (s *PostgresStore) ListScoringRunBatches(ctx context.Context, tenantID, sco
 	return batches, rows.Err()
 }
 
-// FailedBatchSegments returns only model runs that failed or conflicted and
-// still have an open human task in the active scoring run. A retry gets a new
-// batch/request identity so historical AI evidence remains immutable.
+// FailedBatchSegments 只返回失败或冲突、且在当前评分运行中仍有开放人工任务的模型运行。
+// 重试使用新的批次和请求身份，使历史 AI 证据保持不可变。
 func (s *PostgresStore) FailedBatchSegments(ctx context.Context, tenantID, batchID string) ([]string, error) {
 	batch, err := s.GetBatch(ctx, tenantID, batchID)
 	if err != nil {
@@ -606,9 +605,8 @@ RETURNING id::text, tenant_id::text, answer_segment_id::text, question_id::text,
 		out.ProviderKey != "" &&
 		(out.DeploymentKey != "" || grade.ModelConfigID != "") &&
 		out.DeploymentRegion != "" {
-		// Record the provider's complete usage in the same transaction as the
-		// grade. The model_call_fact trigger is a fallback for older callers;
-		// inserting first lets its ON CONFLICT preserve cached/reasoning tokens.
+		// 在成绩事务内同时记录供应商的完整用量。model_call_fact 触发器为旧调用方提供回退；
+		// 先插入让其 ON CONFLICT 保留缓存和推理 token。
 		if _, err := tx.ExecContext(ctx, `
 INSERT INTO model_usage_event (
   tenant_id, school_id, request_id, feature, agent_role, provider_key, model_name,

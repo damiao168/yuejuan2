@@ -1,10 +1,13 @@
 package middleware
 
 import (
+	"bytes"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"edugrade-enterprise/services/api-gateway/internal/logger"
 )
 
 func TestCORSAllowsCredentialsForAllowedOrigin(t *testing.T) {
@@ -29,6 +32,27 @@ func TestCORSAllowsCredentialsForAllowedOrigin(t *testing.T) {
 	}
 	if got := rec.Header().Get("Access-Control-Allow-Headers"); got != "Content-Type, "+CSRFHeaderName {
 		t.Fatalf("CORS must always advertise the browser CSRF header, got %q", got)
+	}
+}
+
+func TestAccessLogKeepsCorrelationIDsWhenRecoverHandlesPanic(t *testing.T) {
+	var logs bytes.Buffer
+	logg := logger.New(&logs, "info")
+	handler := Chain(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		panic("test panic")
+	}), RequestID(), AccessLog(logg), Recover(logg))
+	request := httptest.NewRequest(http.MethodGet, "/panic", nil)
+	response := httptest.NewRecorder()
+
+	handler.ServeHTTP(response, request)
+
+	if response.Code != http.StatusInternalServerError {
+		t.Fatalf("recovered panic should return 500, got %d", response.Code)
+	}
+	if !bytes.Contains(logs.Bytes(), []byte(`"event":"panic_recovered"`)) ||
+		!bytes.Contains(logs.Bytes(), []byte(`"event":"api_request"`)) ||
+		!bytes.Contains(logs.Bytes(), []byte(`"request_id":"`)) {
+		t.Fatalf("panic and access logs must include the request context: %s", logs.String())
 	}
 }
 

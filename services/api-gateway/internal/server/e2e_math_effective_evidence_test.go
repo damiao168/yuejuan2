@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"os"
@@ -12,8 +13,8 @@ import (
 	"github.com/google/uuid"
 )
 
-// This is a real PostgreSQL query/locking regression, not a full migration or
-// grading-workflow test. It uses an isolated database and the production stores.
+// 这是使用隔离数据库与生产存储的真实 PostgreSQL 查询和锁回归测试，
+// 不覆盖完整迁移或评分流程。
 func TestPostgresMathEffectiveEvidenceProjection(t *testing.T) {
 	dsn := os.Getenv("EDUGRADE_E2E_DATABASE_URL")
 	if dsn == "" {
@@ -92,6 +93,53 @@ VALUES($1::uuid,$2::uuid,$3,$4::uuid,$5::uuid,1,$6,$7,true,$8::jsonb,$9::jsonb,$
 		t.Fatalf("stale revision accepted: %v", err)
 	}
 	revision = 1
+	assertConcurrentMathCorrectionRevision(t, ctx, corrections, tenantID, artifactID, actorID, input)
+	assertMathCorrectionHistoryProjection(t, ctx, db, artifacts, corrections, mathCorrectionHistoryFixture{TenantID: tenantID, SegmentID: segmentID, ArtifactID: artifactID, ActorID: actorID, Contract: contract, Input: input}, encode)
+}
+
+type mathCorrectionHistoryFixture struct {
+	TenantID, SegmentID, ArtifactID, ActorID string
+	Contract                                 mathunderstanding.CreateArtifactInput
+	Input                                    mathunderstanding.CreateCorrectionInput
+}
+
+// 历史列表最多返回 500 条，最新有效修订仍须读到第 503 条；随后检验租户隔离和过时产物拒绝。
+func assertMathCorrectionHistoryProjection(t *testing.T, ctx context.Context, db *sql.DB, artifacts *mathunderstanding.PostgresStore, corrections *mathunderstanding.PostgresCorrectionStore, fixture mathCorrectionHistoryFixture, encode func(any) []byte) {
+	t.Helper()
+	tenantID, segmentID, artifactID, actorID := fixture.TenantID, fixture.SegmentID, fixture.ArtifactID, fixture.ActorID
+	contract, input := fixture.Contract, fixture.Input
+	contract.SolutionGraph.Steps[0].NormalizedText = "latest correction beyond history cap"
+	_, err := db.ExecContext(ctx, `INSERT INTO math_understanding_correction(tenant_id,artifact_id,answer_segment_id,revision,operations_json,corrected_contract_json,created_by)
+SELECT $1::uuid,$2::uuid,$3::uuid,r,$4::jsonb,$5::jsonb,$6::uuid FROM generate_series(3,503) AS r`, tenantID, artifactID, segmentID, encode(input.Operations), encode(contract), actorID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	history, err := corrections.ListCorrections(ctx, tenantID, artifactID)
+	if err != nil || len(history) != 500 {
+		t.Fatalf("bounded history: %d %v", len(history), err)
+	}
+	effective, err := mathunderstanding.ResolveEffectiveArtifact(ctx, artifacts, corrections, tenantID, segmentID)
+	if err != nil || effective.CorrectionRevision != 503 || effective.EffectiveContract.SolutionGraph.Steps[0].NormalizedText != "latest correction beyond history cap" {
+		t.Fatalf("latest projection fell back to capped history: %#v %v", effective, err)
+	}
+	if effective.BaseArtifact.SolutionGraph.Steps[0].NormalizedText != "" {
+		t.Fatal("projection changed immutable base graph")
+	}
+	if _, err = corrections.GetLatestCorrection(ctx, uuid.NewString(), artifactID); !errors.Is(err, mathunderstanding.ErrNotFound) {
+		t.Fatalf("cross-tenant correction leaked: %v", err)
+	}
+	if _, err = db.ExecContext(ctx, `UPDATE math_understanding_artifact SET is_current=false WHERE tenant_id=$1::uuid AND id=$2::uuid`, tenantID, artifactID); err != nil {
+		t.Fatal(err)
+	}
+	input.ExpectedCorrectionRevision = nil // 旧版客户端遇到过时产物也必须失败。
+	if _, err = corrections.CreateCorrection(ctx, tenantID, artifactID, actorID, input); !errors.Is(err, mathunderstanding.ErrRevisionConflict) {
+		t.Fatalf("obsolete artifact correction accepted: %v", err)
+	}
+}
+
+// 两个请求共用预期修订号，等待全部写入结束后必须只有一次提交和一次版本冲突。
+func assertConcurrentMathCorrectionRevision(t *testing.T, ctx context.Context, corrections *mathunderstanding.PostgresCorrectionStore, tenantID, artifactID, actorID string, input mathunderstanding.CreateCorrectionInput) {
+	t.Helper()
 	results := make(chan error, 2)
 	var wg sync.WaitGroup
 	for i := 0; i < 2; i++ {
@@ -117,32 +165,5 @@ VALUES($1::uuid,$2::uuid,$3,$4::uuid,$5::uuid,1,$6,$7,true,$8::jsonb,$9::jsonb,$
 	}
 	if accepted != 1 || conflicted != 1 {
 		t.Fatalf("PostgreSQL lock allowed %d edits / %d conflicts", accepted, conflicted)
-	}
-	contract.SolutionGraph.Steps[0].NormalizedText = "latest correction beyond history cap"
-	_, err = db.ExecContext(ctx, `INSERT INTO math_understanding_correction(tenant_id,artifact_id,answer_segment_id,revision,operations_json,corrected_contract_json,created_by)
-SELECT $1::uuid,$2::uuid,$3::uuid,r,$4::jsonb,$5::jsonb,$6::uuid FROM generate_series(3,503) AS r`, tenantID, artifactID, segmentID, encode(input.Operations), encode(contract), actorID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	history, err := corrections.ListCorrections(ctx, tenantID, artifactID)
-	if err != nil || len(history) != 500 {
-		t.Fatalf("bounded history: %d %v", len(history), err)
-	}
-	effective, err = mathunderstanding.ResolveEffectiveArtifact(ctx, artifacts, corrections, tenantID, segmentID)
-	if err != nil || effective.CorrectionRevision != 503 || effective.EffectiveContract.SolutionGraph.Steps[0].NormalizedText != "latest correction beyond history cap" {
-		t.Fatalf("latest projection fell back to capped history: %#v %v", effective, err)
-	}
-	if effective.BaseArtifact.SolutionGraph.Steps[0].NormalizedText != "" {
-		t.Fatal("projection changed immutable base graph")
-	}
-	if _, err = corrections.GetLatestCorrection(ctx, uuid.NewString(), artifactID); !errors.Is(err, mathunderstanding.ErrNotFound) {
-		t.Fatalf("cross-tenant correction leaked: %v", err)
-	}
-	if _, err = db.ExecContext(ctx, `UPDATE math_understanding_artifact SET is_current=false WHERE tenant_id=$1::uuid AND id=$2::uuid`, tenantID, artifactID); err != nil {
-		t.Fatal(err)
-	}
-	input.ExpectedCorrectionRevision = nil // Legacy clients must also fail for an obsolete artifact.
-	if _, err = corrections.CreateCorrection(ctx, tenantID, artifactID, actorID, input); !errors.Is(err, mathunderstanding.ErrRevisionConflict) {
-		t.Fatalf("obsolete artifact correction accepted: %v", err)
 	}
 }

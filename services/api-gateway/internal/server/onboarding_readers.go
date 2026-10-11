@@ -48,46 +48,63 @@ func (r onboardingOrganizationReader) Summary(ctx context.Context, tenantID stri
 	if err != nil {
 		return summary, err
 	}
-	for _, school := range schools {
-		if school.Status == "active" && allowsOnboardingSchool(scope, school.ID) {
-			summary.HasSchool = true
-			break
-		}
-	}
+	summary.HasSchool = hasActiveOnboardingSchool(schools, scope)
 
+	// 四次读取保留原顺序和已累计的结果；即使没有年级，也要观察班级查询的错误。
 	grades, err := r.store.ListGrades(ctx, tenantID, "")
 	if err != nil {
 		return summary, err
 	}
-	hasGrade := false
-	for _, grade := range grades {
-		if grade.Status == "active" && allowsOnboardingSchool(scope, grade.SchoolID) {
-			hasGrade = true
-			break
-		}
-	}
+	hasGrade := hasActiveOnboardingGrade(grades, scope)
 	classes, err := r.store.ListClasses(ctx, tenantID, "")
 	if err != nil {
 		return summary, err
 	}
-	for _, class := range classes {
-		if class.Status == "active" && allowsOnboardingSchool(scope, class.SchoolID) {
-			summary.HasTeachingStructure = hasGrade
-			break
-		}
-	}
+	// 年级和班级分别满足同一 scope 即可，不要求它们来自同一所学校。
+	summary.HasTeachingStructure = hasGrade && hasActiveOnboardingClass(classes, scope)
 
 	students, err := r.store.ListStudents(ctx, tenantID, org.StudentListFilter{})
 	if err != nil {
 		return summary, err
 	}
-	for _, student := range students {
-		if student.Status == "active" && allowsOnboardingSchool(scope, student.SchoolID) {
-			summary.HasStudents = true
-			break
+	summary.HasStudents = hasActiveOnboardingStudent(students, scope)
+	return summary, nil
+}
+
+func hasActiveOnboardingSchool(items []org.School, scope onboarding.ResourceScope) bool {
+	for _, item := range items {
+		if item.Status == "active" && allowsOnboardingSchool(scope, item.ID) {
+			return true
 		}
 	}
-	return summary, nil
+	return false
+}
+
+func hasActiveOnboardingGrade(items []org.Grade, scope onboarding.ResourceScope) bool {
+	for _, item := range items {
+		if item.Status == "active" && allowsOnboardingSchool(scope, item.SchoolID) {
+			return true
+		}
+	}
+	return false
+}
+
+func hasActiveOnboardingClass(items []org.Class, scope onboarding.ResourceScope) bool {
+	for _, item := range items {
+		if item.Status == "active" && allowsOnboardingSchool(scope, item.SchoolID) {
+			return true
+		}
+	}
+	return false
+}
+
+func hasActiveOnboardingStudent(items []org.Student, scope onboarding.ResourceScope) bool {
+	for _, item := range items {
+		if item.Status == "active" && allowsOnboardingSchool(scope, item.SchoolID) {
+			return true
+		}
+	}
+	return false
 }
 
 type onboardingUserReader struct{ store auth.Store }

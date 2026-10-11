@@ -1,0 +1,17 @@
+[
+  {
+    "file": "apps/web-admin/src/features/members/teachers/TeacherManagementPage.batch10.test.tsx",
+    "sha256": "81d5fd810dd4ac57f348e9c0456a987061c4489d191d5ff0f1e7156d039ae178",
+    "backup": "D:\\tools\\sonar-remediation-20261011\\frontend-extra-baseline\\apps\\web-admin\\src\\features\\members\\teachers\\TeacherManagementPage.batch10.test.tsx"
+  },
+  {
+    "file": "apps/web-admin/src/features/grading/workbench/components/ExamScoringPanel.batch8.test.tsx",
+    "sha256": "fcbfe03b4f5027f9ccc25b3df8d2fbb32d6e40f94ac2c3ca47f304be55ccf956",
+    "backup": "D:\\tools\\sonar-remediation-20261011\\frontend-extra-baseline\\apps\\web-admin\\src\\features\\grading\\workbench\\components\\ExamScoringPanel.batch8.test.tsx"
+  },
+  {
+    "file": "apps/web-admin/src/components/model-governance/ScoringAssuranceWorkspace.batch11.test.tsx",
+    "sha256": "913b4e82bb34b9de58d12498c8c1054aaa76b07f0dcb2f63a5bbced60ba9468f",
+    "backup": "D:\\tools\\sonar-remediation-20261011\\frontend-extra-baseline\\apps\\web-admin\\src\\components\\model-governance\\ScoringAssuranceWorkspace.batch11.test.tsx"
+  }
+]

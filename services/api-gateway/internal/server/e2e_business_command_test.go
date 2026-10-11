@@ -43,9 +43,8 @@ func (s *blockAfterBeginStore) Begin(ctx context.Context, input idempotency.Begi
 	return record, execute, err
 }
 
-// TestBusinessCommandReservationCrashHelper runs only as a child process. It
-// announces that the transport reservation committed, then deliberately waits
-// inside Begin so the parent can kill the process before the handler starts.
+// TestBusinessCommandReservationCrashHelper 只作为子进程运行。
+// 它先通知传输预留已提交，再有意停留在 Begin 内，让父进程能在 handler 启动前杀死该进程。
 func TestBusinessCommandReservationCrashHelper(t *testing.T) {
 	if os.Getenv("EDUGRADE_E2E_CRASH_HELPER") != "1" {
 		t.Skip("child-process crash helper")
@@ -71,8 +70,8 @@ func TestBusinessCommandReservationCrashHelper(t *testing.T) {
 	t.Fatal("crash helper unexpectedly returned")
 }
 
-// Use the actual authenticated handler twice, beyond its target's initial state.
-// The core PostgreSQL fixture calls this at the original business transition.
+// 通过实际认证 handler 调用两次，第二次已越过目标的初始状态。
+// 核心 PostgreSQL 夹具在原始业务转换时调用此处。
 func e2eBusinessCommandReplay(t *testing.T, router http.Handler, path, token, body, domain string, want int) map[string]any {
 	t.Helper()
 	command := uuid.NewString()
@@ -115,8 +114,27 @@ func e2eBusinessCommandReplay(t *testing.T, router http.Handler, path, token, bo
 	return result
 }
 
-func e2eArbitrationAndExportCommands(t *testing.T, db *sql.DB, tenant, exam, segment, firstActor, secondActor, arbitrator string) {
+// 仲裁夹具把同一场双评的租户、考试、答题片段与角色身份一起传入；每个角色仍保持独立。
+type arbitrationCommandFixture struct {
+	Tenant, Exam, Segment, FirstActor, SecondActor, Arbitrator string
+}
+
+func e2eArbitrationAndExportCommands(t *testing.T, db *sql.DB, fixture arbitrationCommandFixture) {
 	t.Helper()
+	tenant, exam, arbitrator := fixture.Tenant, fixture.Exam, fixture.Arbitrator
+	e2eArbitrationReceiptAfterDeletion(t, db, fixture)
+	e2eConcurrentExportReceipts(t, db, fixture)
+	e2eReportExportUsesSingleSnapshot(t, db, tenant, exam, arbitrator)
+	e2eReportExportRollsBackWithoutReceipt(t, db, tenant, exam, arbitrator)
+	e2eBusinessCommandRecoveryStates(t, db, tenant, arbitrator)
+	e2eInterruptedBusinessCommandRecovery(t, db, tenant, exam, arbitrator)
+	t.Log("arbitration replay/conflict plus report concurrency, snapshot, rollback, and crash recovery passed")
+}
+
+// 双评产生仲裁后先提交，再删除任务；同一命令仍须重放原成绩并拒绝改分。
+func e2eArbitrationReceiptAfterDeletion(t *testing.T, db *sql.DB, fixture arbitrationCommandFixture) {
+	t.Helper()
+	tenant, exam, segment, firstActor, secondActor, arbitrator := fixture.Tenant, fixture.Exam, fixture.Segment, fixture.FirstActor, fixture.SecondActor, fixture.Arbitrator
 	ctx := context.Background()
 	store := review.NewPostgresStore(db)
 	if _, err := store.SetExamDoubleMarkPolicy(ctx, tenant, exam, arbitrator, review.SetDoubleMarkPolicyInput{Enabled: true, Threshold: 1, ResolutionStrategy: "average"}); err != nil {
@@ -162,6 +180,13 @@ func e2eArbitrationAndExportCommands(t *testing.T, db *sql.DB, tenant, exam, seg
 	if _, _, err = store.SubmitArbitration(commandCtx, tenant, task.ID, arbitrator, input); !errors.Is(err, commandreceipt.ErrConflict) {
 		t.Fatalf("changed arbitration: %v", err)
 	}
+}
+
+// 并发共用命令键；收齐两份响应并恢复连接上限后，才验证删除后的回执重放。
+func e2eConcurrentExportReceipts(t *testing.T, db *sql.DB, fixture arbitrationCommandFixture) {
+	t.Helper()
+	tenant, exam, arbitrator := fixture.Tenant, fixture.Exam, fixture.Arbitrator
+	ctx := context.Background()
 	exports := report.NewPostgresStore(db)
 	concurrentCtx, cancelConcurrent := context.WithTimeout(ctx, 10*time.Second)
 	exportCommandID := uuid.NewString()
@@ -186,7 +211,7 @@ func e2eArbitrationAndExportCommands(t *testing.T, db *sql.DB, tenant, exam, seg
 	if a.err != nil || b.err != nil || a.result.ReportID != b.result.ReportID || !bytes.Equal(a.result.Content, b.result.Content) {
 		t.Fatalf("export concurrency: a.report=%s a.err=%T %v b.report=%s b.err=%T %v", a.result.ReportID, a.err, a.err, b.result.ReportID, b.err, b.err)
 	}
-	if _, err = db.Exec(`UPDATE report SET deleted_at=now() WHERE id=$1::uuid`, a.result.ReportID); err != nil {
+	if _, err := db.Exec(`UPDATE report SET deleted_at=now() WHERE id=$1::uuid`, a.result.ReportID); err != nil {
 		t.Fatal(err)
 	}
 	recovered, err := report.NewPostgresStore(db).Export(commandreceipt.WithID(ctx, exportCommandID), tenant, exam, arbitrator)
@@ -206,11 +231,6 @@ func e2eArbitrationAndExportCommands(t *testing.T, db *sql.DB, tenant, exam, seg
 			t.Fatalf("single-connection export: %v (wait count=%d)", err, db.Stats().WaitCount)
 		}
 	}()
-	e2eReportExportUsesSingleSnapshot(t, db, tenant, exam, arbitrator)
-	e2eReportExportRollsBackWithoutReceipt(t, db, tenant, exam, arbitrator)
-	e2eBusinessCommandRecoveryStates(t, db, tenant, arbitrator)
-	e2eInterruptedBusinessCommandRecovery(t, db, tenant, exam, arbitrator)
-	t.Log("arbitration replay/conflict plus report concurrency, snapshot, rollback, and crash recovery passed")
 }
 
 func e2eReportExportUsesSingleSnapshot(t *testing.T, db *sql.DB, tenant, exam, actor string) {
@@ -405,6 +425,23 @@ WHERE tenant_id=$1::uuid AND actor_id=$2::uuid AND method='POST' AND route='POST
 	if err != nil || ready.Status != "takeover_ready" {
 		t.Fatalf("abandoned command not resumable=%#v err=%v", ready, err)
 	}
+	e2eAssertConcurrentReportTakeover(t, request)
+	var after int
+	if err := db.QueryRow(`SELECT count(*) FROM report WHERE tenant_id=$1::uuid AND exam_id=$2::uuid AND generated_by=$3::uuid AND report_type='export'`, tenant, exam, actor).Scan(&after); err != nil {
+		t.Fatal(err)
+	}
+	if after != before+1 {
+		t.Fatalf("interrupted command created %d reports, want one", after-before)
+	}
+	receipt, err := commandreceipt.Recover(ctx, db, tenant, actor, commandID, "report.")
+	if err != nil || receipt.Status != "succeeded" {
+		t.Fatalf("resumed business receipt=%#v err=%v", receipt, err)
+	}
+}
+
+// 同一过期命令同时接管，至少一份完成；其余只允许 operation_in_progress，之后重放必须成功。
+func e2eAssertConcurrentReportTakeover(t *testing.T, request func() *httptest.ResponseRecorder) {
+	t.Helper()
 	responses := make(chan *httptest.ResponseRecorder, 2)
 	start := make(chan struct{})
 	for range 2 {
@@ -434,17 +471,6 @@ WHERE tenant_id=$1::uuid AND actor_id=$2::uuid AND method='POST' AND route='POST
 	replay := request()
 	if replay.Code != http.StatusOK || replay.Header().Get("Idempotency-Replayed") != "true" {
 		t.Fatalf("resumed command did not replay: %d %s", replay.Code, replay.Body.String())
-	}
-	var after int
-	if err := db.QueryRow(`SELECT count(*) FROM report WHERE tenant_id=$1::uuid AND exam_id=$2::uuid AND generated_by=$3::uuid AND report_type='export'`, tenant, exam, actor).Scan(&after); err != nil {
-		t.Fatal(err)
-	}
-	if after != before+1 {
-		t.Fatalf("interrupted command created %d reports, want one", after-before)
-	}
-	receipt, err := commandreceipt.Recover(ctx, db, tenant, actor, commandID, "report.")
-	if err != nil || receipt.Status != "succeeded" {
-		t.Fatalf("resumed business receipt=%#v err=%v", receipt, err)
 	}
 }
 
@@ -521,6 +547,14 @@ VALUES($1::uuid,$2::uuid,'POST',$3,$4,$5,$6,$7,$8,$9,now()+interval '1 day')`,
 		}
 	}
 
+	e2eAssertProcessingCommandRecovery(t, db, tenant, actor, insert)
+	e2eAssertTerminalCommandRecovery(t, db, tenant, actor, insert)
+	t.Log("business command processing/rejected/unknown/domain-isolation recovery passed")
+}
+
+// 有效占位仍在处理中；过期占位带回服务器冻结载荷，别的租户或操作者不能接管。
+func e2eAssertProcessingCommandRecovery(t *testing.T, db *sql.DB, tenant, actor string, insert func(string, string, string, int, string)) {
+	t.Helper()
 	processingID := "processing-" + uuid.NewString()
 	insert(processingID, "/api/v1/review-tasks/{id}/submit", "processing", 0, "")
 	processing, err := commandreceipt.Recover(context.Background(), db, tenant, actor, processingID, "review.")
@@ -547,6 +581,11 @@ VALUES($1::uuid,$2::uuid,'POST',$3,$4,$5,$6,$7,$8,$9,now()+interval '1 day')`,
 		}
 	}
 
+}
+
+// 已拒绝、缺失业务回执、跨领域与身份歧义分别返回原终态，不能假定传输完成等于业务成功。
+func e2eAssertTerminalCommandRecovery(t *testing.T, db *sql.DB, tenant, actor string, insert func(string, string, string, int, string)) {
+	t.Helper()
 	rejectedID := "rejected-" + uuid.NewString()
 	insert(rejectedID, "/api/v1/exams/{examId}/publish", "completed", http.StatusBadRequest, `{"error":{"code":"publish_input_rejected"}}`)
 	rejected, err := commandreceipt.Recover(context.Background(), db, tenant, actor, rejectedID, "score.")
@@ -575,5 +614,4 @@ VALUES($1::uuid,$2::uuid,'POST',$3,$4,$5,$6,$7,$8,$9,now()+interval '1 day')`,
 	if err != nil || ambiguous.Status != "unknown" || ambiguous.ErrorCode != "ambiguous_command_identity" {
 		t.Fatalf("ambiguous recovery=%#v err=%v", ambiguous, err)
 	}
-	t.Log("business command processing/rejected/unknown/domain-isolation recovery passed")
 }

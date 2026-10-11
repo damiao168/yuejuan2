@@ -25,8 +25,8 @@ assert(/ocr-worker:/.test(compose), "Docker Compose must define an optional ocr-
 assert(/profiles:\s*\[\s*["']ocr["']\s*\]/.test(compose), "ocr-worker service must be behind an ocr profile.");
 
 const systemInfo = read("services/api-gateway/internal/handlers/handlers.go");
-const capabilities = systemInfo.match(/"capabilities": \[]string\{([\s\S]*?)\}/)?.[1] ?? "";
-const notImplemented = systemInfo.match(/"not_implemented": \[]string\{([\s\S]*?)\}/)?.[1] ?? "";
+const capabilities = /"capabilities": \[]string\{([\s\S]*?)\}/.exec(systemInfo)?.[1] ?? "";
+const notImplemented = /"not_implemented": \[]string\{([\s\S]*?)\}/.exec(systemInfo)?.[1] ?? "";
 assert(capabilities.includes('"ocr_engine_inference"'), "system/info must explicitly declare OCR inference capability.");
 assert(!notImplemented.includes('"ocr_engine_inference"'), "ocr_engine_inference must not remain in not_implemented.");
 

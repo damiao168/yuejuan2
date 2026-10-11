@@ -1,7 +1,5 @@
-// Package qualitydashboard builds the exam-level quality projection used by
-// school administrators.  It is deliberately aggregate-only: it never
-// returns answer content, Gold reference scores, candidate identities or
-// reviewer comments.
+// Package qualitydashboard 构建学校管理员所用的考试级质量投影。
+// 它只提供聚合结果，绝不返回答案内容、Gold 参考分数、考生身份或复核意见。
 package qualitydashboard
 
 import (
@@ -29,8 +27,7 @@ const (
 	GateInsufficientData GateStatus = "insufficient_data"
 )
 
-// Ratio always carries the count basis.  A zero denominator means that the
-// rate is intentionally unavailable, not zero.
+// Ratio 始终携带计数基数。分母为零表示该比率有意保持不可用，不表示比率为零。
 type Ratio struct {
 	Numerator   int      `json:"numerator"`
 	Denominator int      `json:"denominator"`
@@ -115,9 +112,8 @@ type GroupSummary struct {
 	OpenSampleGroups int      `json:"open_sample_groups"`
 }
 
-// DriftSummary and BackmarkSummary are narrow extension contracts.  A11/A12
-// can be attached without making this package depend on their concrete store
-// APIs or migration order.
+// DriftSummary 和 BackmarkSummary 是范围受限的扩展契约。
+// 可接入 A11/A12，而无需本包依赖其具体存储 API 或迁移顺序。
 type DriftSummary struct {
 	OpenWarnings int        `json:"open_warnings"`
 	OpenCritical int        `json:"open_critical"`

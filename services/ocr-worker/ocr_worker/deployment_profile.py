@@ -35,16 +35,7 @@ def resolve_formula_runtime_plan(settings: Any, profile_payload: dict[str, Any] 
     requested_lifecycle = str(settings.formula_model_lifecycle)
     explicit_batch = settings.formula_recognition_batch_size
 
-    payload = profile_payload
-    profile_sha256 = ""
-    if payload is None and (requested_lifecycle == "auto" or explicit_batch is None):
-        profile_path = Path(str(settings.formula_deployment_profile_path))
-        try:
-            raw = profile_path.read_bytes()
-            payload = json.loads(raw)
-            profile_sha256 = hashlib.sha256(raw).hexdigest()
-        except (OSError, json.JSONDecodeError, TypeError):
-            payload = None
+    payload, profile_sha256 = _load_formula_profile(settings, profile_payload, requested_lifecycle, explicit_batch)
 
     recommendation, profile_reason = _validated_recommendation(
         payload,
@@ -82,6 +73,26 @@ def resolve_formula_runtime_plan(settings: Any, profile_payload: dict[str, Any] 
         hardware_fingerprint=fingerprint,
         profile_sha256=profile_sha256 if recommendation else "",
     )
+
+
+def _load_formula_profile(
+    settings: Any,
+    profile_payload: dict[str, Any] | None,
+    requested_lifecycle: str,
+    explicit_batch: int | None,
+) -> tuple[object, str]:
+    payload = profile_payload
+    profile_sha256 = ""
+    # 显式给定两项设置时不读档案；只缺其中一项时仍需读取实测建议。
+    if payload is None and (requested_lifecycle == "auto" or explicit_batch is None):
+        profile_path = Path(str(settings.formula_deployment_profile_path))
+        try:
+            raw = profile_path.read_bytes()
+            payload = json.loads(raw)
+            profile_sha256 = hashlib.sha256(raw).hexdigest()
+        except (OSError, json.JSONDecodeError, TypeError):
+            payload = None
+    return payload, profile_sha256
 
 
 def _validated_recommendation(
@@ -156,6 +167,7 @@ def _cpu_model() -> str:
                 if line.lower().startswith(("model name", "hardware")) and ":" in line:
                     return " ".join(line.split(":", 1)[1].split()).lower()
         except OSError:
+            # /proc 在非 Linux 或受限容器中可能不可读，后续使用平台描述或 unknown。
             pass
     return " ".join((platform.processor() or "unknown").split()).lower()
 
@@ -166,6 +178,7 @@ def _cpu_quota() -> float | None:
         if quota != "max":
             return round(int(quota) / int(period), 4)
     except (OSError, ValueError, IndexError, ZeroDivisionError):
+        # cgroup v2 缺失或格式无效时继续尝试 v1，不能把探测失败当作已知限额。
         pass
     try:
         quota = int(Path("/sys/fs/cgroup/cpu/cpu.cfs_quota_us").read_text(encoding="utf-8"))
@@ -173,6 +186,7 @@ def _cpu_quota() -> float | None:
         if quota > 0 and period > 0:
             return round(quota / period, 4)
     except (OSError, ValueError, ZeroDivisionError):
+        # v1 也不可用时返回 None，表示 CPU 限额未知。
         pass
     return None
 
@@ -187,6 +201,7 @@ def _visible_memory_limit_bytes() -> int:
                 if 0 < value < 1 << 60:
                     candidates.append(value)
         except (OSError, ValueError):
+            # 某种 cgroup 内存文件不可用时继续其他来源，只采纳读出的有效上限。
             pass
     try:
         for line in Path("/proc/meminfo").read_text(encoding="utf-8").splitlines():
@@ -194,5 +209,6 @@ def _visible_memory_limit_bytes() -> int:
                 candidates.append(int(line.split()[1]) * 1024)
                 break
     except (OSError, ValueError, IndexError):
+        # 物理内存描述也可能不可读；没有任何有效来源时以 0 表示未知。
         pass
     return min(candidates) if candidates else 0

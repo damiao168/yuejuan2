@@ -10,7 +10,7 @@ interface ActivationFormValues {
   confirmPassword: string;
 }
 
-export function ActivationPage({ onComplete }: { onComplete: (tenantCode?: string) => void }) {
+export function ActivationPage({ onComplete }: Readonly<{ onComplete: (tenantCode?: string) => void }>) {
   const [token] = useState(() => new URLSearchParams(window.location.search).get("token")?.trim() ?? "");
   const [preview, setPreview] = useState<ActivationPreview>();
   const [loading, setLoading] = useState(true);

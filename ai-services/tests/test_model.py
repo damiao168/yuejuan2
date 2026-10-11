@@ -10,6 +10,7 @@ from grading_agent.model import (
     DashScopeNativeAdapter,
     LocalLlamaCppAdapter,
     PromptRegistry,
+    _openai_usage,
     grading_output_schema,
 )
 from grading_agent.paper_parser import PaperParser
@@ -132,10 +133,9 @@ class ModelAdapterTests(unittest.TestCase):
             for provider in ("local", "dashscope"):
                 with self.subTest(case=case, provider=provider):
                     adapter = self.structured_adapter(provider, output)
+                    schema = self.structured_schema()
                     with self.assertRaises(AgentError) as raised:
-                        adapter.request_structured(
-                            "request-1", [], self.structured_schema(), "fixture"
-                        )
+                        adapter.request_structured('request-1', [], schema, 'fixture')
                     self.assertEqual(raised.exception.code, "model_output_invalid")
                     self.assertEqual(raised.exception.status, 502)
                     self.assertFalse(raised.exception.retryable)
@@ -145,12 +145,58 @@ class ModelAdapterTests(unittest.TestCase):
         for provider in ("local", "dashscope"):
             with self.subTest(provider=provider):
                 adapter = self.structured_adapter(provider, "{not-json")
+                schema = self.structured_schema()
                 with self.assertRaises(AgentError) as raised:
-                    adapter.request_structured(
-                        "request-1", [], self.structured_schema(), "fixture"
-                    )
+                    adapter.request_structured('request-1', [], schema, 'fixture')
                 self.assertEqual(raised.exception.code, "model_output_invalid")
                 self.assertEqual(raised.exception.status, 502)
+
+    def test_wrapped_json_selects_longest_object_and_keeps_first_equal_length_candidate(self):
+        accepted = {"kind": "accepted", "count": 1, "items": [{"id": "one"}]}
+        for provider in ("local", "dashscope"):
+            with self.subTest(provider=provider):
+                adapter = self.structured_adapter(
+                    provider, '{broken prefix {}\n' + json.dumps(accepted) + '\n{"short":true}'
+                )
+                self.assertEqual(
+                    adapter.request_structured("wrapped", [], self.structured_schema(), "fixture"),
+                    accepted,
+                )
+        schema = {"type": "object", "required": ["n"]}
+        adapter = self.structured_adapter("local", 'prefix {"n":1} {"n":2}')
+        self.assertEqual(adapter.request_structured("tie", [], schema, "fixture"), {"n": 1})
+
+    def test_usage_aliases_reject_boolean_fractional_and_negative_counts(self):
+        cases = (
+            ({"prompt_tokens": True, "input_tokens": 7, "completion_tokens": -2,
+              "output_tokens": 3, "total_tokens": 0, "prompt_tokens_details": {"cached_tokens": -9},
+              "prompt_cache_hit_tokens": 4, "completion_tokens_details": {"reasoning_tokens": 1.5}},
+             {"input_tokens": 7, "cached_input_tokens": 4, "output_tokens": 3,
+              "reasoning_tokens": 0, "total_tokens": 10}),
+            ({"prompt_tokens": 10, "input_tokens": 90, "completion_tokens": 2, "output_tokens": 20,
+              "total_tokens": 99, "prompt_tokens_details": {"cached_tokens": 8},
+              "prompt_cache_hit_tokens": 5, "completion_tokens_details": {"reasoning_tokens": 2}},
+             {"input_tokens": 10, "cached_input_tokens": 8, "output_tokens": 2,
+              "reasoning_tokens": 2, "total_tokens": 99}),
+            ({"input_tokens": 2.5, "output_tokens": False, "total_tokens": -1,
+              "prompt_tokens_details": [], "prompt_cache_hit_tokens": True,
+              "completion_tokens_details": "unknown"},
+             {"input_tokens": 0, "cached_input_tokens": 0, "output_tokens": 0,
+              "reasoning_tokens": 0, "total_tokens": 0}),
+        )
+        for usage, expected in cases:
+            with self.subTest(usage=usage):
+                self.assertEqual(_openai_usage({"usage": usage}), expected)
+        self.assertEqual(_openai_usage({"usage": []}), {})
+
+    def test_native_strict_json_rejects_nested_duplicates_and_nonfinite_constants(self):
+        cases = (b'{"nested":{"same":1,"same":2}}', b'{"value":NaN}',
+                 b'{"value":Infinity}', b'{"value":-Infinity}', b'{"value":"\xff"}')
+        for raw in cases:
+            with self.subTest(raw=raw), self.assertRaises(ValueError):
+                DashScopeNativeAdapter._strict_json(raw)
+        self.assertEqual(DashScopeNativeAdapter._strict_json(b'{"nested":{"value":1}}'),
+                         {"nested": {"value": 1}})
 
     def test_grading_output_uses_local_schema_validation_for_every_provider(self):
         output = valid_raw_output()
@@ -158,8 +204,9 @@ class ModelAdapterTests(unittest.TestCase):
         for provider in ("local", "dashscope"):
             with self.subTest(provider=provider):
                 adapter = self.structured_adapter(provider, output)
+                request = valid_request()
                 with self.assertRaises(AgentError) as raised:
-                    adapter.request(valid_request())
+                    adapter.request(request)
                 self.assertEqual(raised.exception.code, "model_output_invalid")
 
     def test_paper_parser_uses_provider_local_schema_validation(self):
@@ -174,12 +221,9 @@ class ModelAdapterTests(unittest.TestCase):
             "issues": [],
         }
         adapter = self.structured_adapter("local", invalid_paper)
+        parser = PaperParser(adapter)
         with self.assertRaises(AgentError) as raised:
-            PaperParser(adapter).parse({
-                "request_id": "paper-1", "subject": "数学",
-                "paper_text": "第一题，请计算函数结果。" * 3,
-                "answer_text": "第一题答案为2。",
-            })
+            parser.parse({'request_id': 'paper-1', 'subject': '数学', 'paper_text': '第一题，请计算函数结果。' * 3, 'answer_text': '第一题答案为2。'})
         self.assertEqual(raised.exception.code, "model_output_invalid")
 
     def test_local_model_maps_request_rejection_without_claiming_unavailability(self):
@@ -187,8 +231,9 @@ class ModelAdapterTests(unittest.TestCase):
             raise urlerror.HTTPError("http://model", 400, "bad request", {}, None)
 
         adapter = LocalLlamaCppAdapter(settings(), transport=transport)
+        request = valid_request()
         with self.assertRaises(AgentError) as raised:
-            adapter.request(valid_request())
+            adapter.request(request)
 
         self.assertEqual(raised.exception.code, "model_request_rejected")
         self.assertEqual(raised.exception.status, 502)
@@ -199,8 +244,9 @@ class ModelAdapterTests(unittest.TestCase):
             raise urlerror.HTTPError("http://model", 429, "rate limited", {}, None)
 
         adapter = LocalLlamaCppAdapter(settings(), transport=transport)
+        request = valid_request()
         with self.assertRaises(AgentError) as raised:
-            adapter.request(valid_request())
+            adapter.request(request)
 
         self.assertEqual(raised.exception.code, "model_rate_limited")
         self.assertTrue(raised.exception.retryable)
@@ -211,8 +257,9 @@ class ModelAdapterTests(unittest.TestCase):
             target = Path(temporary)
             shutil.copytree(source, target, dirs_exist_ok=True)
             target.joinpath("base_grading.md").write_text("changed", encoding="utf-8")
-            with self.assertRaisesRegex(ValueError, "checksum mismatch"):
-                PromptRegistry(target, settings().prompt_version)
+            test_settings = settings()
+            with self.assertRaisesRegex(ValueError, 'checksum mismatch'):
+                PromptRegistry(target, test_settings.prompt_version)
 
     def test_prompt_registry_routes_by_subject_and_question_type(self):
         registry = PromptRegistry(settings().prompt_root, settings().prompt_version)

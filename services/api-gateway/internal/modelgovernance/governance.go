@@ -91,6 +91,7 @@ type TenantPolicy struct {
 	ImageExportEnabled       bool      `json:"image_export_enabled"`
 	AllowedDeployments       []string  `json:"allowed_deployments"`
 	AllowedModelConfigIDs    []string  `json:"allowed_model_config_ids"`
+	// 预算与调用账本统一为微美元；0 表示未配置，不表示无限额。
 	MaxCostMicrosPerQuestion int64     `json:"max_cost_micros_per_question"`
 	MaxCostMicrosPerExam     int64     `json:"max_cost_micros_per_exam"`
 	FallbackMode             string    `json:"fallback_mode"`
@@ -280,7 +281,7 @@ func ValidateTenantPolicy(policy TenantPolicy) error {
 	return nil
 }
 
-// 先按稳定键排序再筛选，保证同一策略下的路由结果可复现；外部模型还要同时满足租户授权和模态开关。
+// SelectDeployment 在候选副本上按供应商键和部署键排序；外部模型还要同时满足租户授权和模态开关。
 func SelectDeployment(
 	policy TenantPolicy,
 	request RouteRequest,
@@ -293,41 +294,21 @@ func SelectDeployment(
 	if request.Modality != "text" && request.Modality != "image" {
 		return RouteDecision{}, ErrInvalidPolicy
 	}
-	providerByKey := make(map[string]Provider, len(providers))
-	for _, provider := range providers {
-		if err := ValidateProvider(provider); err != nil {
-			return RouteDecision{}, err
-		}
-		providerByKey[provider.Key] = provider
+	providerByKey, err := validatedRouteProviders(providers)
+	if err != nil {
+		return RouteDecision{}, err
 	}
 	allowed := make(map[string]bool, len(policy.AllowedDeployments))
 	for _, deployment := range policy.AllowedDeployments {
 		allowed[deployment] = true
 	}
-	candidates := append([]Deployment(nil), deployments...)
-	sort.Slice(candidates, func(left, right int) bool {
-		if candidates[left].ProviderKey == candidates[right].ProviderKey {
-			return candidates[left].Key < candidates[right].Key
-		}
-		return candidates[left].ProviderKey < candidates[right].ProviderKey
-	})
-	for _, deployment := range candidates {
+	for _, deployment := range sortedRouteDeployments(deployments) {
 		provider, exists := providerByKey[deployment.ProviderKey]
-		if !exists || ValidateDeployment(deployment, provider) != nil {
-			continue
-		}
-		if provider.Status != "active" ||
-			deployment.Status != "shadow_only" ||
-			deployment.HealthState != "available" ||
-			!contains(deployment.Modalities, request.Modality) {
+		if !exists || !deploymentEligibleForRoute(deployment, provider, request.Modality) {
 			continue
 		}
 		if provider.Kind == ProviderExternal {
-			if !policy.ExternalEnabled ||
-				!allowed[deployment.Key] ||
-				(request.Modality == "text" && !policy.TextExportEnabled) ||
-				(request.Modality == "image" && !policy.ImageExportEnabled) ||
-				policy.Mode == ModeLocalOnly {
+			if !externalRouteAuthorized(policy, request.Modality) || !allowed[deployment.Key] {
 				continue
 			}
 			return RouteDecision{
@@ -345,23 +326,69 @@ func SelectDeployment(
 	return RouteDecision{}, ErrNoDeployment
 }
 
-// SelectManagedModel resolves current policy authorization through the school
-// model inventory. Callers must still record the returned identity snapshot in
-// the grading run and call ledger before dispatch.
+// 全部供应商先按输入顺序校验；重复键仍由后项覆盖，不能在候选筛选时跳过无效供应商。
+func validatedRouteProviders(providers []Provider) (map[string]Provider, error) {
+	byKey := make(map[string]Provider, len(providers))
+	for _, provider := range providers {
+		if err := ValidateProvider(provider); err != nil {
+			return nil, err
+		}
+		byKey[provider.Key] = provider
+	}
+	return byKey, nil
+}
+
+func sortedRouteDeployments(deployments []Deployment) []Deployment {
+	candidates := append([]Deployment(nil), deployments...)
+	sort.Slice(candidates, func(left, right int) bool {
+		if candidates[left].ProviderKey == candidates[right].ProviderKey {
+			return candidates[left].Key < candidates[right].Key
+		}
+		return candidates[left].ProviderKey < candidates[right].ProviderKey
+	})
+	return candidates
+}
+
+func deploymentEligibleForRoute(deployment Deployment, provider Provider, modality string) bool {
+	return ValidateDeployment(deployment, provider) == nil &&
+		provider.Status == "active" && deployment.Status == "shadow_only" &&
+		deployment.HealthState == "available" && contains(deployment.Modalities, modality)
+}
+
+// 外部路由须同时满足租户总开关、模式及当前模态授权；目标白名单由各自的选择流程检查。
+func externalRouteAuthorized(policy TenantPolicy, modality string) bool {
+	return policy.ExternalEnabled && policy.Mode != ModeLocalOnly &&
+		(modality != "text" || policy.TextExportEnabled) &&
+		(modality != "image" || policy.ImageExportEnabled)
+}
+
+// SelectManagedModel 通过学校模型清单解析当前策略授权。派发前，调用方仍须将返回的身份快照记录到评分运行及调用台账。
 func SelectManagedModel(policy TenantPolicy, request RouteRequest, configs []ManagedAPIConfig) (ManagedRouteDecision, error) {
 	if err := ValidateTenantPolicy(policy); err != nil ||
 		(request.Modality != "text" && request.Modality != "image") {
 		return ManagedRouteDecision{}, ErrInvalidPolicy
 	}
-	if !policy.ExternalEnabled || policy.Mode == ModeLocalOnly ||
-		(request.Modality == "text" && !policy.TextExportEnabled) ||
-		(request.Modality == "image" && !policy.ImageExportEnabled) {
+	if !externalRouteAuthorized(policy, request.Modality) {
 		return ManagedRouteDecision{}, ErrNoDeployment
 	}
 	allowed := make(map[string]bool, len(policy.AllowedModelConfigIDs))
 	for _, id := range policy.AllowedModelConfigIDs {
 		allowed[id] = true
 	}
+	for _, config := range sortedManagedRouteConfigs(configs) {
+		if !managedConfigEligibleForRoute(config, policy.TenantID, allowed, request.Modality) {
+			continue
+		}
+		return ManagedRouteDecision{
+			ModelConfigID: config.ID, ProviderKey: config.ProviderKey,
+			ModelName: config.ModelName, ModelVersion: config.ModelVersion,
+			AdapterType: config.AdapterType, Region: config.Region,
+		}, nil
+	}
+	return ManagedRouteDecision{}, ErrNoDeployment
+}
+
+func sortedManagedRouteConfigs(configs []ManagedAPIConfig) []ManagedAPIConfig {
 	candidates := append([]ManagedAPIConfig(nil), configs...)
 	sort.Slice(candidates, func(i, j int) bool {
 		if candidates[i].ProviderKey != candidates[j].ProviderKey {
@@ -372,21 +399,15 @@ func SelectManagedModel(policy TenantPolicy, request RouteRequest, configs []Man
 		}
 		return candidates[i].ID < candidates[j].ID
 	})
-	for _, config := range candidates {
-		if config.TenantID != policy.TenantID || !allowed[config.ID] ||
-			config.Status != "active" || config.LastTestStatus != "success" ||
-			config.LastCapabilityStatus != "success" ||
-			config.LastCapabilityVersion != "structured-json-v3" ||
-			!contains(config.Modalities, request.Modality) {
-			continue
-		}
-		return ManagedRouteDecision{
-			ModelConfigID: config.ID, ProviderKey: config.ProviderKey,
-			ModelName: config.ModelName, ModelVersion: config.ModelVersion,
-			AdapterType: config.AdapterType, Region: config.Region,
-		}, nil
-	}
-	return ManagedRouteDecision{}, ErrNoDeployment
+	return candidates
+}
+
+func managedConfigEligibleForRoute(config ManagedAPIConfig, tenantID string, allowed map[string]bool, modality string) bool {
+	return config.TenantID == tenantID && allowed[config.ID] &&
+		config.Status == "active" && config.LastTestStatus == "success" &&
+		config.LastCapabilityStatus == "success" &&
+		config.LastCapabilityVersion == "structured-json-v3" &&
+		contains(config.Modalities, modality)
 }
 
 func validCredentialReference(value string) bool {

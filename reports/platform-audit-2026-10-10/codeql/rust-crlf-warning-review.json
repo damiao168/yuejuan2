@@ -1,0 +1,294 @@
+{
+  "verified_at": "2026-10-11T14:09:50+08:00",
+  "source_log": "rust-create-attempt2.log",
+  "escape_warning_count": 28,
+  "per_file_counts": {
+    "apps/desktop-client/src-tauri/src/durable_store/queue.rs": 15,
+    "apps/desktop-client/src-tauri/src/durable_store/spool.rs": 13
+  },
+  "warning_locations": [
+    {
+      "path": "apps/desktop-client/src-tauri/src/durable_store/queue.rs",
+      "line": 25,
+      "column": 46,
+      "source_sha256": "79b4d81762a36dafa7ce3e0b20fbc32fd58178c1c4d9b23047a9451efd9b2ae5",
+      "reported_byte": 13,
+      "line_ends_with_cr": true,
+      "reported_column_equals_trailing_cr_position": true,
+      "contains_sql_literal": true
+    },
+    {
+      "path": "apps/desktop-client/src-tauri/src/durable_store/queue.rs",
+      "line": 26,
+      "column": 69,
+      "source_sha256": "79b4d81762a36dafa7ce3e0b20fbc32fd58178c1c4d9b23047a9451efd9b2ae5",
+      "reported_byte": 13,
+      "line_ends_with_cr": true,
+      "reported_column_equals_trailing_cr_position": true,
+      "contains_sql_literal": true
+    },
+    {
+      "path": "apps/desktop-client/src-tauri/src/durable_store/queue.rs",
+      "line": 42,
+      "column": 27,
+      "source_sha256": "79b4d81762a36dafa7ce3e0b20fbc32fd58178c1c4d9b23047a9451efd9b2ae5",
+      "reported_byte": 13,
+      "line_ends_with_cr": true,
+      "reported_column_equals_trailing_cr_position": true,
+      "contains_sql_literal": true
+    },
+    {
+      "path": "apps/desktop-client/src-tauri/src/durable_store/queue.rs",
+      "line": 43,
+      "column": 48,
+      "source_sha256": "79b4d81762a36dafa7ce3e0b20fbc32fd58178c1c4d9b23047a9451efd9b2ae5",
+      "reported_byte": 13,
+      "line_ends_with_cr": true,
+      "reported_column_equals_trailing_cr_position": true,
+      "contains_sql_literal": true
+    },
+    {
+      "path": "apps/desktop-client/src-tauri/src/durable_store/queue.rs",
+      "line": 49,
+      "column": 28,
+      "source_sha256": "79b4d81762a36dafa7ce3e0b20fbc32fd58178c1c4d9b23047a9451efd9b2ae5",
+      "reported_byte": 13,
+      "line_ends_with_cr": true,
+      "reported_column_equals_trailing_cr_position": true,
+      "contains_sql_literal": true
+    },
+    {
+      "path": "apps/desktop-client/src-tauri/src/durable_store/queue.rs",
+      "line": 50,
+      "column": 47,
+      "source_sha256": "79b4d81762a36dafa7ce3e0b20fbc32fd58178c1c4d9b23047a9451efd9b2ae5",
+      "reported_byte": 13,
+      "line_ends_with_cr": true,
+      "reported_column_equals_trailing_cr_position": true,
+      "contains_sql_literal": true
+    },
+    {
+      "path": "apps/desktop-client/src-tauri/src/durable_store/queue.rs",
+      "line": 91,
+      "column": 31,
+      "source_sha256": "79b4d81762a36dafa7ce3e0b20fbc32fd58178c1c4d9b23047a9451efd9b2ae5",
+      "reported_byte": 13,
+      "line_ends_with_cr": true,
+      "reported_column_equals_trailing_cr_position": true,
+      "contains_sql_literal": true
+    },
+    {
+      "path": "apps/desktop-client/src-tauri/src/durable_store/queue.rs",
+      "line": 92,
+      "column": 125,
+      "source_sha256": "79b4d81762a36dafa7ce3e0b20fbc32fd58178c1c4d9b23047a9451efd9b2ae5",
+      "reported_byte": 13,
+      "line_ends_with_cr": true,
+      "reported_column_equals_trailing_cr_position": true,
+      "contains_sql_literal": true
+    },
+    {
+      "path": "apps/desktop-client/src-tauri/src/durable_store/queue.rs",
+      "line": 108,
+      "column": 139,
+      "source_sha256": "79b4d81762a36dafa7ce3e0b20fbc32fd58178c1c4d9b23047a9451efd9b2ae5",
+      "reported_byte": 13,
+      "line_ends_with_cr": true,
+      "reported_column_equals_trailing_cr_position": true,
+      "contains_sql_literal": true
+    },
+    {
+      "path": "apps/desktop-client/src-tauri/src/durable_store/queue.rs",
+      "line": 109,
+      "column": 55,
+      "source_sha256": "79b4d81762a36dafa7ce3e0b20fbc32fd58178c1c4d9b23047a9451efd9b2ae5",
+      "reported_byte": 13,
+      "line_ends_with_cr": true,
+      "reported_column_equals_trailing_cr_position": true,
+      "contains_sql_literal": true
+    },
+    {
+      "path": "apps/desktop-client/src-tauri/src/durable_store/queue.rs",
+      "line": 110,
+      "column": 91,
+      "source_sha256": "79b4d81762a36dafa7ce3e0b20fbc32fd58178c1c4d9b23047a9451efd9b2ae5",
+      "reported_byte": 13,
+      "line_ends_with_cr": true,
+      "reported_column_equals_trailing_cr_position": true,
+      "contains_sql_literal": true
+    },
+    {
+      "path": "apps/desktop-client/src-tauri/src/durable_store/queue.rs",
+      "line": 111,
+      "column": 101,
+      "source_sha256": "79b4d81762a36dafa7ce3e0b20fbc32fd58178c1c4d9b23047a9451efd9b2ae5",
+      "reported_byte": 13,
+      "line_ends_with_cr": true,
+      "reported_column_equals_trailing_cr_position": true,
+      "contains_sql_literal": false
+    },
+    {
+      "path": "apps/desktop-client/src-tauri/src/durable_store/queue.rs",
+      "line": 133,
+      "column": 32,
+      "source_sha256": "79b4d81762a36dafa7ce3e0b20fbc32fd58178c1c4d9b23047a9451efd9b2ae5",
+      "reported_byte": 13,
+      "line_ends_with_cr": true,
+      "reported_column_equals_trailing_cr_position": true,
+      "contains_sql_literal": true
+    },
+    {
+      "path": "apps/desktop-client/src-tauri/src/durable_store/queue.rs",
+      "line": 134,
+      "column": 118,
+      "source_sha256": "79b4d81762a36dafa7ce3e0b20fbc32fd58178c1c4d9b23047a9451efd9b2ae5",
+      "reported_byte": 13,
+      "line_ends_with_cr": true,
+      "reported_column_equals_trailing_cr_position": true,
+      "contains_sql_literal": true
+    },
+    {
+      "path": "apps/desktop-client/src-tauri/src/durable_store/queue.rs",
+      "line": 202,
+      "column": 74,
+      "source_sha256": "79b4d81762a36dafa7ce3e0b20fbc32fd58178c1c4d9b23047a9451efd9b2ae5",
+      "reported_byte": 13,
+      "line_ends_with_cr": true,
+      "reported_column_equals_trailing_cr_position": true,
+      "contains_sql_literal": true
+    },
+    {
+      "path": "apps/desktop-client/src-tauri/src/durable_store/spool.rs",
+      "line": 118,
+      "column": 123,
+      "source_sha256": "c53aebcb8b3e09c5adc80316aa98b9635181a7b999ca52461c26e9bd7cd16399",
+      "reported_byte": 13,
+      "line_ends_with_cr": true,
+      "reported_column_equals_trailing_cr_position": true,
+      "contains_sql_literal": true
+    },
+    {
+      "path": "apps/desktop-client/src-tauri/src/durable_store/spool.rs",
+      "line": 133,
+      "column": 167,
+      "source_sha256": "c53aebcb8b3e09c5adc80316aa98b9635181a7b999ca52461c26e9bd7cd16399",
+      "reported_byte": 13,
+      "line_ends_with_cr": true,
+      "reported_column_equals_trailing_cr_position": true,
+      "contains_sql_literal": true
+    },
+    {
+      "path": "apps/desktop-client/src-tauri/src/durable_store/spool.rs",
+      "line": 162,
+      "column": 65,
+      "source_sha256": "c53aebcb8b3e09c5adc80316aa98b9635181a7b999ca52461c26e9bd7cd16399",
+      "reported_byte": 13,
+      "line_ends_with_cr": true,
+      "reported_column_equals_trailing_cr_position": true,
+      "contains_sql_literal": true
+    },
+    {
+      "path": "apps/desktop-client/src-tauri/src/durable_store/spool.rs",
+      "line": 163,
+      "column": 83,
+      "source_sha256": "c53aebcb8b3e09c5adc80316aa98b9635181a7b999ca52461c26e9bd7cd16399",
+      "reported_byte": 13,
+      "line_ends_with_cr": true,
+      "reported_column_equals_trailing_cr_position": true,
+      "contains_sql_literal": true
+    },
+    {
+      "path": "apps/desktop-client/src-tauri/src/durable_store/spool.rs",
+      "line": 191,
+      "column": 112,
+      "source_sha256": "c53aebcb8b3e09c5adc80316aa98b9635181a7b999ca52461c26e9bd7cd16399",
+      "reported_byte": 13,
+      "line_ends_with_cr": true,
+      "reported_column_equals_trailing_cr_position": true,
+      "contains_sql_literal": true
+    },
+    {
+      "path": "apps/desktop-client/src-tauri/src/durable_store/spool.rs",
+      "line": 198,
+      "column": 78,
+      "source_sha256": "c53aebcb8b3e09c5adc80316aa98b9635181a7b999ca52461c26e9bd7cd16399",
+      "reported_byte": 13,
+      "line_ends_with_cr": true,
+      "reported_column_equals_trailing_cr_position": true,
+      "contains_sql_literal": true
+    },
+    {
+      "path": "apps/desktop-client/src-tauri/src/durable_store/spool.rs",
+      "line": 224,
+      "column": 116,
+      "source_sha256": "c53aebcb8b3e09c5adc80316aa98b9635181a7b999ca52461c26e9bd7cd16399",
+      "reported_byte": 13,
+      "line_ends_with_cr": true,
+      "reported_column_equals_trailing_cr_position": true,
+      "contains_sql_literal": true
+    },
+    {
+      "path": "apps/desktop-client/src-tauri/src/durable_store/spool.rs",
+      "line": 225,
+      "column": 83,
+      "source_sha256": "c53aebcb8b3e09c5adc80316aa98b9635181a7b999ca52461c26e9bd7cd16399",
+      "reported_byte": 13,
+      "line_ends_with_cr": true,
+      "reported_column_equals_trailing_cr_position": true,
+      "contains_sql_literal": true
+    },
+    {
+      "path": "apps/desktop-client/src-tauri/src/durable_store/spool.rs",
+      "line": 252,
+      "column": 171,
+      "source_sha256": "c53aebcb8b3e09c5adc80316aa98b9635181a7b999ca52461c26e9bd7cd16399",
+      "reported_byte": 13,
+      "line_ends_with_cr": true,
+      "reported_column_equals_trailing_cr_position": true,
+      "contains_sql_literal": true
+    },
+    {
+      "path": "apps/desktop-client/src-tauri/src/durable_store/spool.rs",
+      "line": 351,
+      "column": 68,
+      "source_sha256": "c53aebcb8b3e09c5adc80316aa98b9635181a7b999ca52461c26e9bd7cd16399",
+      "reported_byte": 13,
+      "line_ends_with_cr": true,
+      "reported_column_equals_trailing_cr_position": true,
+      "contains_sql_literal": true
+    },
+    {
+      "path": "apps/desktop-client/src-tauri/src/durable_store/spool.rs",
+      "line": 352,
+      "column": 36,
+      "source_sha256": "c53aebcb8b3e09c5adc80316aa98b9635181a7b999ca52461c26e9bd7cd16399",
+      "reported_byte": 13,
+      "line_ends_with_cr": true,
+      "reported_column_equals_trailing_cr_position": true,
+      "contains_sql_literal": true
+    },
+    {
+      "path": "apps/desktop-client/src-tauri/src/durable_store/spool.rs",
+      "line": 353,
+      "column": 94,
+      "source_sha256": "c53aebcb8b3e09c5adc80316aa98b9635181a7b999ca52461c26e9bd7cd16399",
+      "reported_byte": 13,
+      "line_ends_with_cr": true,
+      "reported_column_equals_trailing_cr_position": true,
+      "contains_sql_literal": true
+    },
+    {
+      "path": "apps/desktop-client/src-tauri/src/durable_store/spool.rs",
+      "line": 421,
+      "column": 68,
+      "source_sha256": "c53aebcb8b3e09c5adc80316aa98b9635181a7b999ca52461c26e9bd7cd16399",
+      "reported_byte": 13,
+      "line_ends_with_cr": true,
+      "reported_column_equals_trailing_cr_position": true,
+      "contains_sql_literal": true
+    }
+  ],
+  "all_reported_positions_are_cr": true,
+  "interpretation": "28 个位置逐字节均为多行 SQL 字面量的 CRLF 行尾；Rust 官方输入规范在词法分析前将 CRLF 归一化。未证明是应用语法/SQL 漏洞，但不能保证提取器完整解码了这些字面量，须作为扫描限制保留。",
+  "official_reference": "https://doc.rust-lang.org/reference/input-format.html#crlf-normalization"
+}

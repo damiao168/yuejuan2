@@ -12,6 +12,10 @@ from .managed_model import paper_model
 from .math_rubric_draft import MathRubricDraftGenerator
 from .paper_parser import PaperParser
 
+PAPER_PARSE_PATH = "/paper/parse"
+PAPER_RUBRIC_DRAFT_PATH = "/paper/rubric-draft"
+GRADE_V2_PATH = "/grading/grade-v2"
+
 
 class GradingAgentHTTPServer(ThreadingHTTPServer):
     daemon_threads = True
@@ -77,56 +81,16 @@ class GradingAgentHandler(BaseHTTPRequestHandler):
         self._error(AgentError("invalid_request", "route not found", status=404))
 
     def do_POST(self):
-        if self.path not in {"/grading/grade", "/grading/grade-v2", "/paper/parse", "/paper/rubric-draft"}:
+        if self.path not in {"/grading/grade", GRADE_V2_PATH, PAPER_PARSE_PATH, PAPER_RUBRIC_DRAFT_PATH}:
             self._error(AgentError("invalid_request", "route not found", status=404))
             return
         try:
             self._authorize()
             payload = self._read_json()
-            request_id = payload.get("request_id", "") if isinstance(payload, dict) else ""
-            if self.path == "/paper/parse":
-                parser = PaperParser(paper_model(self.server.application, payload))
-                if "application/x-ndjson" in self.headers.get("Accept", "").lower():
-                    self._paper_parse_stream(parser, payload)
-                    return
-                self._json(200, parser.parse(payload))
-                return
-            if self.path == "/paper/rubric-draft":
-                if not isinstance(payload, dict) or set(payload) - {
-                    "request_id", "subject", "question_candidate", "answer_candidate", "solution_candidate", "managed_model"
-                } or payload.get("subject") not in {"数学", "mathematics"}:
-                    raise AgentError("invalid_request", "math rubric draft request is invalid", status=400, request_id=request_id)
-                if not isinstance(request_id, str) or not 8 <= len(request_id) <= 128:
-                    raise AgentError("invalid_request", "request_id is invalid", status=400)
-                draft = MathRubricDraftGenerator(paper_model(self.server.application, payload)).generate(
-                    request_id,
-                    payload.get("question_candidate"),
-                    payload.get("answer_candidate"),
-                    payload.get("solution_candidate"),
-                )
-                self._json(200, draft)
-                return
-            idempotency_key = self.headers.get("Idempotency-Key", "").strip()
-            if not idempotency_key:
-                raise AgentError(
-                    "invalid_request",
-                    "Idempotency-Key header is required",
-                    status=400,
-                    request_id=request_id,
-                )
-            if self.path == "/grading/grade-v2":
-                suggestion, replayed = self.server.application.grade_v2(
-                    payload,
-                    idempotency_key,
-                    body_size=int(self.headers.get("Content-Length", "0")),
-                    content_encoding=self.headers.get("Content-Encoding", ""),
-                )
-            else:
-                suggestion, replayed = self.server.application.grade(payload, idempotency_key)
-            self._json(200, suggestion, extra_headers={"Idempotent-Replay": "true" if replayed else "false"})
+            self._dispatch_post(payload)
         except AgentError as exc:
             self._error(exc)
-        except Exception as exc:  # noqa: BLE001 - HTTP boundary must convert unexpected failures to a safe response.
+        except Exception as exc:  # noqa: BLE001 - HTTP 边界必须把意外失败转换为安全响应。
             print(
                 json.dumps(
                     {
@@ -139,6 +103,57 @@ class GradingAgentHandler(BaseHTTPRequestHandler):
                 flush=True,
             )
             self._error(AgentError("internal_error", "grading-agent operation failed", status=500))
+
+    def _dispatch_post(self, payload):
+        if self.path == PAPER_PARSE_PATH:
+            parser = PaperParser(paper_model(self.server.application, payload))
+            if "application/x-ndjson" in self.headers.get("Accept", "").lower():
+                self._paper_parse_stream(parser, payload)
+                return
+            self._json(200, parser.parse(payload))
+            return
+        if self.path == PAPER_RUBRIC_DRAFT_PATH:
+            self._math_rubric_draft(payload)
+            return
+        self._grade(payload)
+
+    def _math_rubric_draft(self, payload):
+        request_id = payload.get("request_id", "") if isinstance(payload, dict) else ""
+        if not isinstance(payload, dict) or set(payload) - {
+            "request_id", "subject", "question_candidate", "answer_candidate", "solution_candidate", "managed_model"
+        } or payload.get("subject") not in {"数学", "mathematics"}:
+            raise AgentError("invalid_request", "math rubric draft request is invalid", status=400, request_id=request_id)
+        if not isinstance(request_id, str) or not 8 <= len(request_id) <= 128:
+            raise AgentError("invalid_request", "request_id is invalid", status=400)
+        draft = MathRubricDraftGenerator(paper_model(self.server.application, payload)).generate(
+            request_id,
+            payload.get("question_candidate"),
+            payload.get("answer_candidate"),
+            payload.get("solution_candidate"),
+        )
+        self._json(200, draft)
+
+    def _grade(self, payload):
+        request_id = payload.get("request_id", "") if isinstance(payload, dict) else ""
+        # 阅卷路由必须保留幂等键；试卷解析和评分细则草稿不共用这条重放边界。
+        idempotency_key = self.headers.get("Idempotency-Key", "").strip()
+        if not idempotency_key:
+            raise AgentError(
+                "invalid_request",
+                "Idempotency-Key header is required",
+                status=400,
+                request_id=request_id,
+            )
+        if self.path == GRADE_V2_PATH:
+            suggestion, replayed = self.server.application.grade_v2(
+                payload,
+                idempotency_key,
+                body_size=int(self.headers.get("Content-Length", "0")),
+                content_encoding=self.headers.get("Content-Encoding", ""),
+            )
+        else:
+            suggestion, replayed = self.server.application.grade(payload, idempotency_key)
+        self._json(200, suggestion, extra_headers={"Idempotent-Replay": "true" if replayed else "false"})
 
     def _paper_parse_stream(self, parser, payload):
         """Stream factual parser milestones; a heartbeat is not completion."""
@@ -182,7 +197,7 @@ class GradingAgentHandler(BaseHTTPRequestHandler):
             emit("error", {"status": exc.status, **exc.payload()})
         except (BrokenPipeError, ConnectionResetError):
             return
-        except Exception as exc:  # noqa: BLE001 - stream already has HTTP headers.
+        except Exception as exc:  # noqa: BLE001 - 流式响应已经发送 HTTP 响应头。
             print(
                 json.dumps(
                     {
@@ -223,14 +238,14 @@ class GradingAgentHandler(BaseHTTPRequestHandler):
             length = int(raw_length)
         except ValueError as exc:
             raise AgentError("invalid_request", "Content-Length is required", status=411) from exc
-        if self.path == "/grading/grade-v2":
+        if self.path == GRADE_V2_PATH:
             max_bytes = 8 * 1024 * 1024
-        elif self.path == "/paper/parse":
+        elif self.path == PAPER_PARSE_PATH:
             max_bytes = max(
                 self.server.application.settings.max_request_bytes,
                 48 * 1024 * 1024,
             )
-        elif self.path == "/paper/rubric-draft":
+        elif self.path == PAPER_RUBRIC_DRAFT_PATH:
             max_bytes = min(self.server.application.settings.max_request_bytes, 2 * 1024 * 1024)
         else:
             max_bytes = self.server.application.settings.max_request_bytes
@@ -263,11 +278,17 @@ class GradingAgentHandler(BaseHTTPRequestHandler):
 
 def serve(settings=None):
     settings = settings or Settings.from_env()
+    # 调用方直接传入 Settings 仍须检查监听边界，拒绝发生在加载应用和绑定端口之前。
+    settings._validate_credentials_and_listener()
     application = GradingAgentApplication(settings)
     server = GradingAgentHTTPServer((settings.host, settings.port), application)
-    if settings.tls_cert_file:
-        context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-        context.minimum_version = ssl.TLSVersion.TLSv1_2
-        context.load_cert_chain(settings.tls_cert_file, settings.tls_key_file)
-        server.socket = context.wrap_socket(server.socket, server_side=True)
-    server.serve_forever()
+    try:
+        if settings.tls_cert_file:
+            context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+            context.minimum_version = ssl.TLSVersion.TLSv1_2
+            context.load_cert_chain(settings.tls_cert_file, settings.tls_key_file)
+            server.socket = context.wrap_socket(server.socket, server_side=True)
+        server.serve_forever()
+    finally:
+        # 证书加载失败或服务退出时也要清理；就绪线程先收到退出信号，再关闭监听。
+        server.server_close()

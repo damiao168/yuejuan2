@@ -50,15 +50,45 @@ function riskFlagLabel(value: string): string {
   return labels[value] ?? "其他风险";
 }
 
+function AICandidatePanel({ candidates, hasMetadata }: Readonly<{
+  candidates: ReviewTaskContext["ai_candidates"];
+  hasMetadata: boolean;
+}>) {
+  if (candidates.length) {
+    return (
+      <Collapse
+        ghost
+        size="small"
+        items={candidates.map((candidate) => ({
+          key: candidate.id,
+          label: `${candidateSourceLabel(candidate.source)} · ${candidate.engine_version || "版本未知"}`,
+          children: (
+            <Descriptions size="small" column={1} colon={false}>
+              <Descriptions.Item label="结论">{candidateDecisionLabel(candidate.display_text || candidate.decision)}</Descriptions.Item>
+              <Descriptions.Item label="配置版本">{candidate.profile_version || "—"}</Descriptions.Item>
+              <Descriptions.Item label="置信度">{candidate.confidence ?? "—"}</Descriptions.Item>
+              <Descriptions.Item label="当前候选">{candidate.is_current ? "是" : "否"}</Descriptions.Item>
+              <Descriptions.Item label="证据">{Object.keys(candidate.evidence).length ? `${Object.keys(candidate.evidence).length} 项` : "无"}</Descriptions.Item>
+            </Descriptions>
+          )
+        }))}
+      />
+    );
+  }
+  // 元数据可独立于候选存在；只有两者都缺失时才显示无候选提示。
+  if (hasMetadata) return null;
+  return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无 AI 候选，按评分细则人工评分" />;
+}
+
 export function AIContextPanel({
   context,
   visible,
   onReveal
-}: {
+}: Readonly<{
   context: ReviewTaskContext;
   visible: boolean;
   onReveal: () => void;
-}) {
+}>) {
   const explicit = requiresExplicitSecondOpinion(context);
   // 显式揭示前跳过整个候选与证据面板，避免只隐藏分数却提前透露 AI 结论。
   if (explicit && !visible) {
@@ -100,25 +130,7 @@ export function AIContextPanel({
           </Descriptions.Item>
         </Descriptions>
       ) : null}
-      {candidates.length ? (
-        <Collapse
-          ghost
-          size="small"
-          items={candidates.map((candidate) => ({
-            key: candidate.id,
-            label: `${candidateSourceLabel(candidate.source)} · ${candidate.engine_version || "版本未知"}`,
-            children: (
-              <Descriptions size="small" column={1} colon={false}>
-                <Descriptions.Item label="结论">{candidateDecisionLabel(candidate.display_text || candidate.decision)}</Descriptions.Item>
-                <Descriptions.Item label="配置版本">{candidate.profile_version || "—"}</Descriptions.Item>
-                <Descriptions.Item label="置信度">{candidate.confidence ?? "—"}</Descriptions.Item>
-                <Descriptions.Item label="当前候选">{candidate.is_current ? "是" : "否"}</Descriptions.Item>
-                <Descriptions.Item label="证据">{Object.keys(candidate.evidence).length ? `${Object.keys(candidate.evidence).length} 项` : "无"}</Descriptions.Item>
-              </Descriptions>
-            )
-          }))}
-        />
-      ) : metadata ? null : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无 AI 候选，按评分细则人工评分" />}
+      <AICandidatePanel candidates={candidates} hasMetadata={Boolean(metadata)} />
       {context.scoring_evidence.length ? (
         <div className="structured-evidence-list">
           {context.scoring_evidence.map((item) => (

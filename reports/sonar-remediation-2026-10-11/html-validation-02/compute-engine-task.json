@@ -1,0 +1,21 @@
+{
+  "task": {
+    "id": "57359d6b-3753-4dec-b7f2-d649b6d8e0c3",
+    "type": "REPORT",
+    "componentId": "085e1213-95cb-48d5-b6fc-0dbdfa70098e",
+    "componentKey": "yuejuan-remediation-html-20261011",
+    "componentName": "yuejuan remediation HTML verification 2026-10-11",
+    "componentQualifier": "TRK",
+    "analysisId": "cf6c9c96-59c2-4879-8faa-c4448de25b0c",
+    "status": "SUCCESS",
+    "submittedAt": "2026-10-11T17:21:59+0800",
+    "submitterLogin": "admin",
+    "startedAt": "2026-10-11T17:22:00+0800",
+    "executedAt": "2026-10-11T17:22:13+0800",
+    "executionTimeMs": 12769,
+    "hasScannerContext": true,
+    "warningCount": 0,
+    "warnings": [],
+    "infoMessages": []
+  }
+}

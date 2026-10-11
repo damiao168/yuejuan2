@@ -14,7 +14,7 @@ use super::{
         ensure_controlled_path, reject_symbolic_path, spool_path, store_root,
         write_new_private_file,
     },
-    queue::read_queue_item,
+    queue::{read_queue_item, existing_queue_item_for_import},
     schema::initialize_schema,
     types::{DurableQueueItem, DurableSpoolFile, SpoolAssetInput, SpoolAssetSession},
 };
@@ -56,7 +56,7 @@ pub fn begin_spool_local_asset(
             local_asset_id: existing_id.clone(),
             chunk_size: SPOOL_CHUNK_BYTES,
             confirmed_offset: input.size,
-            item: Some(read_queue_item(&conn, &key, &existing_id)?),
+            item: Some(existing_queue_item_for_import(&conn, &key, &existing_id)?),
         });
     }
 
@@ -92,8 +92,10 @@ pub fn begin_spool_local_asset(
         detail: "已安全写入本地扫描队列，等待上传".to_string(),
         updated_at: now.clone(),
         exam_id: input.exam_id,
-        exam_name: None,
+        exam_name: input.exam_name,
         capture_batch_id: input.capture_batch_id,
+        capture_batch_name: input.capture_batch_name,
+        capture_batch_created_at: input.capture_batch_created_at,
         submission_id: input.submission_id,
         page_no: input.page_no,
         file_name: Some(input.filename),
@@ -286,7 +288,7 @@ pub(crate) fn read_durable_local_asset_at(
     initialize_schema(&conn)?;
     let (sha256, mime, size_bytes) = conn
         .query_row(
-            "SELECT sha256, mime, size_bytes FROM local_asset WHERE id = ?1 AND state <> 'ingesting'",
+            "SELECT sha256, mime, size_bytes FROM local_asset WHERE id = ?1 AND state NOT IN ('ingesting','purging','purged')",
             params![local_asset_id],
             |row| {
                 Ok((
@@ -322,7 +324,7 @@ pub fn read_durable_local_asset_chunk(
     initialize_schema(&conn)?;
     let (size_bytes, local_path, file_nonce): (i64, String, String) = conn
         .query_row(
-            "SELECT size_bytes,local_path,file_nonce FROM local_asset WHERE id=?1 AND state <> 'ingesting'",
+            "SELECT size_bytes,local_path,file_nonce FROM local_asset WHERE id=?1 AND state NOT IN ('ingesting','purging','purged')",
             params![local_asset_id],
             |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
         )
@@ -337,8 +339,8 @@ pub fn read_durable_local_asset_chunk(
     let path = PathBuf::from(local_path);
     ensure_controlled_path(&root, &path)?;
     if file_nonce != CHUNKED_FILE_NONCE {
-        // Legacy whole-file records remain readable during the rolling
-        // desktop upgrade. Newly spooled files always use bounded chunks.
+        // 桌面端逐步升级期间仍可读取旧版整文件记录；
+        // 新写入的暂存文件一律使用大小受限的分块。
         let encrypted = fs::read(&path).map_err(|error| error.to_string())?;
         let bytes = decrypt_bytes(&key, &file_nonce, &encrypted)?;
         return Ok(bytes[offset as usize..end as usize].to_vec());

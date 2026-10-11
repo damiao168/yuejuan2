@@ -11,8 +11,7 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/logger"
 )
 
-// ManagedAPIProbeObserver receives only categories and timings; implementations
-// must not use model names, endpoint URLs or credential values as metric labels.
+// ManagedAPIProbeObserver 只接收类别和耗时；实现不得将模型名、端点 URL 或凭据值作为指标标签。
 type ManagedAPIProbeObserver interface {
 	ObserveManagedModelProbe(operation, provider, errorCode, failureStage string, ok bool)
 }
@@ -258,58 +257,16 @@ func (h *Handler) UpdateManagedAPIConfig(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	input = normalized
-	items, err := store.ListManagedAPIConfigs(r.Context(), tenantID)
+	current, connectionChanged, err := resolveManagedAPIUpdateTarget(r.Context(), store, tenantID, r.PathValue("id"), input)
 	if err != nil {
 		h.writeManagedAPIError(w, r, err)
 		return
 	}
-	var current *ManagedAPIConfig
-	for index := range items {
-		if items[index].ID == r.PathValue("id") {
-			current = &items[index]
-			break
-		}
-	}
-	if current == nil {
-		h.writeManagedAPIError(w, r, ErrNotFound)
-		return
-	}
-	connectionChanged := current.AdapterType != input.AdapterType || current.BaseURL != input.BaseURL ||
-		current.ModelName != input.ModelName || strings.TrimSpace(input.APIKey) != ""
-	capabilityVerified := current.LastCapabilityStatus == "success" && current.LastCapabilityVersion == ManagedCapabilityProbeVersion
-	if input.IsDefault && !current.IsDefault && (!capabilityVerified || connectionChanged) {
-		h.writeManagedAPIError(w, r, ErrManagedCapabilityRequired)
-		return
-	}
 	if connectionChanged {
-		connection, connectionErr := store.GetManagedAPIConnection(r.Context(), tenantID, r.PathValue("id"))
+		connection, result, connectionErr := h.probeManagedAPIUpdate(r, store, tenantID, current, input)
 		if connectionErr != nil {
 			h.writeManagedAPIError(w, r, connectionErr)
 			return
-		}
-		connection.Config.DisplayName = input.DisplayName
-		connection.Config.AdapterType = input.AdapterType
-		connection.Config.BaseURL = input.BaseURL
-		connection.Config.ModelName = input.ModelName
-		connection.Config.ModelVersion = input.ModelVersion
-		connection.Config.Region = input.Region
-		if input.APIKey != "" {
-			connection.APIKey = input.APIKey
-		}
-		prober := h.managedAPIProber
-		if prober == nil {
-			prober = NewHTTPManagedAPIProber(0)
-		}
-		var result ManagedAPIProbeResult
-		// Preserve the old working connection when the current model is edited:
-		// only a successful full check may replace it.
-		if current.IsDefault && input.IsDefault {
-			result = prober.Probe(r.Context(), connection)
-			if result.ProbeMode == "" {
-				result.ProbeMode = "capability"
-			}
-		} else {
-			result = managedQuickProbe(r.Context(), prober, connection)
 		}
 		h.observeManagedProbe("update", result)
 		h.recordManagedProbeUsage(r.Context(), tenantID, connection, "update", result)
@@ -327,6 +284,65 @@ func (h *Handler) UpdateManagedAPIConfig(w http.ResponseWriter, r *http.Request)
 	h.auditAction(r, "model.managed_api_updated", "managed_model_api_config", item.ID, "update school third-party model API assignment",
 		map[string]any{"tenant_id": tenantID, "provider_key": item.ProviderKey, "adapter_type": item.AdapterType, "base_url": item.BaseURL, "model_version": item.ModelVersion, "status": item.Status, "is_default": item.IsDefault, "credential_rotated": strings.TrimSpace(input.APIKey) != ""})
 	httpx.JSON(w, http.StatusOK, map[string]any{"config": item})
+}
+
+// 先查当前配置，再判断备份能否升为默认；未经能力验证的备份不能靠本次更新绕过晋升边界。
+func resolveManagedAPIUpdateTarget(ctx context.Context, store ManagedAPIConfigStore, tenantID, id string, input ManagedAPIConfigUpdateInput) (*ManagedAPIConfig, bool, error) {
+	items, err := store.ListManagedAPIConfigs(ctx, tenantID)
+	if err != nil {
+		return nil, false, err
+	}
+	current := managedAPIConfigByID(items, id)
+	if current == nil {
+		return nil, false, ErrNotFound
+	}
+	connectionChanged := current.AdapterType != input.AdapterType || current.BaseURL != input.BaseURL ||
+		current.ModelName != input.ModelName || strings.TrimSpace(input.APIKey) != ""
+	capabilityVerified := current.LastCapabilityStatus == "success" && current.LastCapabilityVersion == ManagedCapabilityProbeVersion
+	if input.IsDefault && !current.IsDefault && (!capabilityVerified || connectionChanged) {
+		return nil, false, ErrManagedCapabilityRequired
+	}
+	return current, connectionChanged, nil
+}
+
+func managedAPIConfigByID(items []ManagedAPIConfig, id string) *ManagedAPIConfig {
+	for index := range items {
+		if items[index].ID == id {
+			return &items[index]
+		}
+	}
+	return nil
+}
+
+func (h *Handler) probeManagedAPIUpdate(r *http.Request, store ManagedAPIConfigStore, tenantID string, current *ManagedAPIConfig, input ManagedAPIConfigUpdateInput) (ManagedAPIConnection, ManagedAPIProbeResult, error) {
+	connection, err := store.GetManagedAPIConnection(r.Context(), tenantID, r.PathValue("id"))
+	if err != nil {
+		return ManagedAPIConnection{}, ManagedAPIProbeResult{}, err
+	}
+	connection.Config.DisplayName = input.DisplayName
+	connection.Config.AdapterType = input.AdapterType
+	connection.Config.BaseURL = input.BaseURL
+	connection.Config.ModelName = input.ModelName
+	connection.Config.ModelVersion = input.ModelVersion
+	connection.Config.Region = input.Region
+	if input.APIKey != "" {
+		connection.APIKey = input.APIKey
+	}
+	prober := h.managedAPIProber
+	if prober == nil {
+		prober = NewHTTPManagedAPIProber(0)
+	}
+	var result ManagedAPIProbeResult
+	// 当前默认模型更换连接时，完整能力探测成功后才允许保存，失败继续保留旧连接。
+	if current.IsDefault && input.IsDefault {
+		result = prober.Probe(r.Context(), connection)
+		if result.ProbeMode == "" {
+			result.ProbeMode = "capability"
+		}
+	} else {
+		result = managedQuickProbe(r.Context(), prober, connection)
+	}
+	return connection, result, nil
 }
 
 func (h *Handler) DeleteManagedAPIConfig(w http.ResponseWriter, r *http.Request) {

@@ -1,0 +1,675 @@
+{
+  "started_at": "2026-10-11T19:33:36.678687+08:00",
+  "project": "yuejuan-local-workspace-20261010",
+  "checkpoint_analysis_id": "a741715d-5427-49a6-ac74-7dd92ad5cfa1",
+  "no_rule_or_scope_change": true,
+  "records": [
+    {
+      "key": "eb390af3-af14-4c27-b33c-0b1442f95181",
+      "file": "docs/architecture/tools/build_preview.py",
+      "source_sha256": "56d94138d0123f4ae3f7beba356fbde9703403ba955aa85638871ed6e9bdc9bd",
+      "before": {
+        "key": "eb390af3-af14-4c27-b33c-0b1442f95181",
+        "rule": "python:S125",
+        "severity": "MAJOR",
+        "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/build_preview.py",
+        "project": "yuejuan-local-workspace-20261010",
+        "line": 17,
+        "hash": "6d9b501dacddba24dba88c7c1b744996",
+        "textRange": {
+          "startLine": 17,
+          "endLine": 17,
+          "startOffset": 8,
+          "endOffset": 44
+        },
+        "flows": [],
+        "status": "OPEN",
+        "message": "Remove this commented out code.",
+        "effort": "5min",
+        "debt": "5min",
+        "author": "",
+        "tags": [
+          "unused"
+        ],
+        "transitions": [
+          "accept",
+          "falsepositive",
+          "confirm",
+          "resolve",
+          "wontfix"
+        ],
+        "actions": [
+          "set_type",
+          "set_tags",
+          "comment",
+          "set_severity",
+          "assign"
+        ],
+        "comments": [],
+        "creationDate": "2026-10-11T18:01:26+0800",
+        "updateDate": "2026-10-11T18:01:26+0800",
+        "type": "CODE_SMELL",
+        "scope": "MAIN",
+        "quickFixAvailable": false,
+        "messageFormattings": [],
+        "codeVariants": [],
+        "cleanCodeAttribute": "CLEAR",
+        "cleanCodeAttributeCategory": "INTENTIONAL",
+        "impacts": [
+          {
+            "softwareQuality": "MAINTAINABILITY",
+            "severity": "MEDIUM"
+          }
+        ],
+        "issueStatus": "OPEN",
+        "prioritizedRule": false,
+        "fromSonarQubeUpdate": false,
+        "internalTags": [],
+        "linkedTicketStatus": "NOT_LINKED"
+      },
+      "transition": "falsepositive",
+      "reason": "命中的两行是中文维护说明：离线阅读机缺少微软雅黑时补通用无衬线字体，仅修改HTML内嵌副本。该说明准确对应紧接的svg.replace调用，不是被注释停用的代码；误判由说明中HTML/SVG标识等文本触发。",
+      "comment_result": {
+        "issue": {
+          "key": "eb390af3-af14-4c27-b33c-0b1442f95181",
+          "rule": "python:S125",
+          "severity": "MAJOR",
+          "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/build_preview.py",
+          "project": "yuejuan-local-workspace-20261010",
+          "line": 17,
+          "hash": "6d9b501dacddba24dba88c7c1b744996",
+          "textRange": {
+            "startLine": 17,
+            "endLine": 17,
+            "startOffset": 8,
+            "endOffset": 44
+          },
+          "flows": [],
+          "status": "OPEN",
+          "message": "Remove this commented out code.",
+          "effort": "5min",
+          "debt": "5min",
+          "author": "",
+          "tags": [
+            "unused"
+          ],
+          "transitions": [
+            "accept",
+            "falsepositive",
+            "confirm",
+            "resolve",
+            "wontfix"
+          ],
+          "actions": [
+            "set_type",
+            "set_tags",
+            "comment",
+            "set_severity",
+            "assign"
+          ],
+          "comments": [
+            {
+              "key": "2016205c-c795-4f7e-a348-8d618327cc64",
+              "login": "admin",
+              "htmlText": "本地逐项复核：命中的两行是中文维护说明：离线阅读机缺少微软雅黑时补通用无衬线字体，仅修改HTML内嵌副本。该说明准确对应紧接的svg.replace调用，不是被注释停用的代码；误判由说明中HTML/SVG标识等文本触发。<br/>源码 SHA256：56d94138d0123f4ae3f7beba356fbde9703403ba955aa85638871ed6e9bdc9bd<br/>扫描分析：a741715d-5427-49a6-ac74-7dd92ad5cfa1<br/>复核记录：reports/sonar-remediation-2026-10-11/root-platform-disposition-phase03-plan.json。当前SHA与full03冻结源码一致；已有另外XML解析加固保留，本项没有改动运行输入或删去必要中文说明。",
+              "markdown": "本地逐项复核：命中的两行是中文维护说明：离线阅读机缺少微软雅黑时补通用无衬线字体，仅修改HTML内嵌副本。该说明准确对应紧接的svg.replace调用，不是被注释停用的代码；误判由说明中HTML/SVG标识等文本触发。\n源码 SHA256：56d94138d0123f4ae3f7beba356fbde9703403ba955aa85638871ed6e9bdc9bd\n扫描分析：a741715d-5427-49a6-ac74-7dd92ad5cfa1\n复核记录：reports/sonar-remediation-2026-10-11/root-platform-disposition-phase03-plan.json。当前SHA与full03冻结源码一致；已有另外XML解析加固保留，本项没有改动运行输入或删去必要中文说明。",
+              "updatable": true,
+              "createdAt": "2026-10-11T19:33:37+0800"
+            }
+          ],
+          "creationDate": "2026-10-11T18:01:26+0800",
+          "updateDate": "2026-10-11T19:33:37+0800",
+          "type": "CODE_SMELL",
+          "scope": "MAIN",
+          "quickFixAvailable": false,
+          "messageFormattings": [],
+          "codeVariants": [],
+          "cleanCodeAttribute": "CLEAR",
+          "cleanCodeAttributeCategory": "INTENTIONAL",
+          "impacts": [
+            {
+              "softwareQuality": "MAINTAINABILITY",
+              "severity": "MEDIUM"
+            }
+          ],
+          "issueStatus": "OPEN",
+          "prioritizedRule": false,
+          "fromSonarQubeUpdate": false,
+          "internalTags": [],
+          "linkedTicketStatus": "NOT_LINKED"
+        },
+        "components": [
+          {
+            "key": "yuejuan-local-workspace-20261010",
+            "enabled": true,
+            "qualifier": "TRK",
+            "name": "yuejuan current local workspace 2026-10-10",
+            "longName": "yuejuan current local workspace 2026-10-10"
+          },
+          {
+            "key": "yuejuan-local-workspace-20261010:docs/architecture/tools/build_preview.py",
+            "enabled": true,
+            "qualifier": "FIL",
+            "name": "build_preview.py",
+            "longName": "docs/architecture/tools/build_preview.py",
+            "path": "docs/architecture/tools/build_preview.py"
+          }
+        ],
+        "rules": [
+          {
+            "key": "python:S125",
+            "name": "Sections of code should not be commented out",
+            "lang": "py",
+            "status": "READY",
+            "langName": "Python"
+          }
+        ],
+        "users": [
+          {
+            "login": "admin",
+            "name": "Administrator",
+            "active": true
+          }
+        ]
+      },
+      "transition_result": {
+        "issue": {
+          "key": "eb390af3-af14-4c27-b33c-0b1442f95181",
+          "rule": "python:S125",
+          "severity": "MAJOR",
+          "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/build_preview.py",
+          "project": "yuejuan-local-workspace-20261010",
+          "line": 17,
+          "hash": "6d9b501dacddba24dba88c7c1b744996",
+          "textRange": {
+            "startLine": 17,
+            "endLine": 17,
+            "startOffset": 8,
+            "endOffset": 44
+          },
+          "flows": [],
+          "resolution": "FALSE-POSITIVE",
+          "status": "RESOLVED",
+          "message": "Remove this commented out code.",
+          "effort": "5min",
+          "debt": "5min",
+          "author": "",
+          "tags": [
+            "unused"
+          ],
+          "transitions": [
+            "reopen"
+          ],
+          "actions": [
+            "set_tags",
+            "comment"
+          ],
+          "comments": [
+            {
+              "key": "2016205c-c795-4f7e-a348-8d618327cc64",
+              "login": "admin",
+              "htmlText": "本地逐项复核：命中的两行是中文维护说明：离线阅读机缺少微软雅黑时补通用无衬线字体，仅修改HTML内嵌副本。该说明准确对应紧接的svg.replace调用，不是被注释停用的代码；误判由说明中HTML/SVG标识等文本触发。<br/>源码 SHA256：56d94138d0123f4ae3f7beba356fbde9703403ba955aa85638871ed6e9bdc9bd<br/>扫描分析：a741715d-5427-49a6-ac74-7dd92ad5cfa1<br/>复核记录：reports/sonar-remediation-2026-10-11/root-platform-disposition-phase03-plan.json。当前SHA与full03冻结源码一致；已有另外XML解析加固保留，本项没有改动运行输入或删去必要中文说明。",
+              "markdown": "本地逐项复核：命中的两行是中文维护说明：离线阅读机缺少微软雅黑时补通用无衬线字体，仅修改HTML内嵌副本。该说明准确对应紧接的svg.replace调用，不是被注释停用的代码；误判由说明中HTML/SVG标识等文本触发。\n源码 SHA256：56d94138d0123f4ae3f7beba356fbde9703403ba955aa85638871ed6e9bdc9bd\n扫描分析：a741715d-5427-49a6-ac74-7dd92ad5cfa1\n复核记录：reports/sonar-remediation-2026-10-11/root-platform-disposition-phase03-plan.json。当前SHA与full03冻结源码一致；已有另外XML解析加固保留，本项没有改动运行输入或删去必要中文说明。",
+              "updatable": true,
+              "createdAt": "2026-10-11T19:33:37+0800"
+            }
+          ],
+          "creationDate": "2026-10-11T18:01:26+0800",
+          "updateDate": "2026-10-11T19:33:38+0800",
+          "type": "CODE_SMELL",
+          "scope": "MAIN",
+          "quickFixAvailable": false,
+          "messageFormattings": [],
+          "codeVariants": [],
+          "cleanCodeAttribute": "CLEAR",
+          "cleanCodeAttributeCategory": "INTENTIONAL",
+          "impacts": [
+            {
+              "softwareQuality": "MAINTAINABILITY",
+              "severity": "MEDIUM"
+            }
+          ],
+          "issueStatus": "FALSE_POSITIVE",
+          "prioritizedRule": false,
+          "fromSonarQubeUpdate": false,
+          "internalTags": [],
+          "linkedTicketStatus": "NOT_LINKED"
+        },
+        "components": [
+          {
+            "key": "yuejuan-local-workspace-20261010",
+            "enabled": true,
+            "qualifier": "TRK",
+            "name": "yuejuan current local workspace 2026-10-10",
+            "longName": "yuejuan current local workspace 2026-10-10"
+          },
+          {
+            "key": "yuejuan-local-workspace-20261010:docs/architecture/tools/build_preview.py",
+            "enabled": true,
+            "qualifier": "FIL",
+            "name": "build_preview.py",
+            "longName": "docs/architecture/tools/build_preview.py",
+            "path": "docs/architecture/tools/build_preview.py"
+          }
+        ],
+        "rules": [
+          {
+            "key": "python:S125",
+            "name": "Sections of code should not be commented out",
+            "lang": "py",
+            "status": "READY",
+            "langName": "Python"
+          }
+        ],
+        "users": [
+          {
+            "login": "admin",
+            "name": "Administrator",
+            "active": true
+          }
+        ]
+      },
+      "after": [
+        {
+          "key": "eb390af3-af14-4c27-b33c-0b1442f95181",
+          "rule": "python:S125",
+          "severity": "MAJOR",
+          "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/build_preview.py",
+          "project": "yuejuan-local-workspace-20261010",
+          "line": 17,
+          "hash": "6d9b501dacddba24dba88c7c1b744996",
+          "textRange": {
+            "startLine": 17,
+            "endLine": 17,
+            "startOffset": 8,
+            "endOffset": 44
+          },
+          "flows": [],
+          "resolution": "FALSE-POSITIVE",
+          "status": "RESOLVED",
+          "message": "Remove this commented out code.",
+          "effort": "5min",
+          "debt": "5min",
+          "author": "",
+          "tags": [
+            "unused"
+          ],
+          "transitions": [
+            "reopen"
+          ],
+          "actions": [
+            "set_tags",
+            "comment"
+          ],
+          "comments": [
+            {
+              "key": "2016205c-c795-4f7e-a348-8d618327cc64",
+              "login": "admin",
+              "htmlText": "本地逐项复核：命中的两行是中文维护说明：离线阅读机缺少微软雅黑时补通用无衬线字体，仅修改HTML内嵌副本。该说明准确对应紧接的svg.replace调用，不是被注释停用的代码；误判由说明中HTML/SVG标识等文本触发。<br/>源码 SHA256：56d94138d0123f4ae3f7beba356fbde9703403ba955aa85638871ed6e9bdc9bd<br/>扫描分析：a741715d-5427-49a6-ac74-7dd92ad5cfa1<br/>复核记录：reports/sonar-remediation-2026-10-11/root-platform-disposition-phase03-plan.json。当前SHA与full03冻结源码一致；已有另外XML解析加固保留，本项没有改动运行输入或删去必要中文说明。",
+              "markdown": "本地逐项复核：命中的两行是中文维护说明：离线阅读机缺少微软雅黑时补通用无衬线字体，仅修改HTML内嵌副本。该说明准确对应紧接的svg.replace调用，不是被注释停用的代码；误判由说明中HTML/SVG标识等文本触发。\n源码 SHA256：56d94138d0123f4ae3f7beba356fbde9703403ba955aa85638871ed6e9bdc9bd\n扫描分析：a741715d-5427-49a6-ac74-7dd92ad5cfa1\n复核记录：reports/sonar-remediation-2026-10-11/root-platform-disposition-phase03-plan.json。当前SHA与full03冻结源码一致；已有另外XML解析加固保留，本项没有改动运行输入或删去必要中文说明。",
+              "updatable": true,
+              "createdAt": "2026-10-11T19:33:37+0800"
+            }
+          ],
+          "creationDate": "2026-10-11T18:01:26+0800",
+          "updateDate": "2026-10-11T19:33:38+0800",
+          "type": "CODE_SMELL",
+          "scope": "MAIN",
+          "quickFixAvailable": false,
+          "messageFormattings": [],
+          "codeVariants": [],
+          "cleanCodeAttribute": "CLEAR",
+          "cleanCodeAttributeCategory": "INTENTIONAL",
+          "impacts": [
+            {
+              "softwareQuality": "MAINTAINABILITY",
+              "severity": "MEDIUM"
+            }
+          ],
+          "issueStatus": "FALSE_POSITIVE",
+          "prioritizedRule": false,
+          "fromSonarQubeUpdate": false,
+          "internalTags": [],
+          "linkedTicketStatus": "NOT_LINKED"
+        }
+      ],
+      "status": "platform_disposition_verified"
+    },
+    {
+      "key": "98688ff8-f75e-4bbb-897a-2eaf11ee1c8f",
+      "file": "docs/architecture/tools/check_preview_typography.js",
+      "source_sha256": "1ef9d115d07883936333d8c4b77cbd46832e3a01f563b4c5da45e3a7841714b2",
+      "before": {
+        "key": "98688ff8-f75e-4bbb-897a-2eaf11ee1c8f",
+        "rule": "javascript:S905",
+        "severity": "MAJOR",
+        "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/check_preview_typography.js",
+        "project": "yuejuan-local-workspace-20261010",
+        "line": 2,
+        "hash": "a0e8204a6e0a217cb7d6cccdf0e9b8a2",
+        "textRange": {
+          "startLine": 2,
+          "endLine": 37,
+          "startOffset": 0,
+          "endOffset": 1
+        },
+        "flows": [],
+        "status": "OPEN",
+        "message": "Expected an assignment or function call and instead saw an expression.",
+        "effort": "10min",
+        "debt": "10min",
+        "author": "",
+        "tags": [
+          "cwe",
+          "unused"
+        ],
+        "transitions": [
+          "accept",
+          "falsepositive",
+          "confirm",
+          "resolve",
+          "wontfix"
+        ],
+        "actions": [
+          "set_type",
+          "set_tags",
+          "comment",
+          "set_severity",
+          "assign"
+        ],
+        "comments": [],
+        "creationDate": "2026-10-11T18:01:26+0800",
+        "updateDate": "2026-10-11T18:01:26+0800",
+        "type": "BUG",
+        "scope": "MAIN",
+        "quickFixAvailable": false,
+        "messageFormattings": [],
+        "codeVariants": [],
+        "cleanCodeAttribute": "CLEAR",
+        "cleanCodeAttributeCategory": "INTENTIONAL",
+        "impacts": [
+          {
+            "softwareQuality": "RELIABILITY",
+            "severity": "MEDIUM"
+          }
+        ],
+        "issueStatus": "OPEN",
+        "prioritizedRule": false,
+        "fromSonarQubeUpdate": false,
+        "internalTags": [],
+        "linkedTicketStatus": "NOT_LINKED"
+      },
+      "transition": "falsepositive",
+      "reason": "整个文件中的async(page)=>函数表达式是playwright-cli run-code工具的函数输入。实际本机loader从filename读取代码，runInContext('(' + code + ')')保存函数为__fn__，再await __fn__(page)调用并注入page；不是业务模块中无人使用的表达式。改变为模块导出或自行调用会违反现有工具输入协议。",
+      "comment_result": {
+        "issue": {
+          "key": "98688ff8-f75e-4bbb-897a-2eaf11ee1c8f",
+          "rule": "javascript:S905",
+          "severity": "MAJOR",
+          "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/check_preview_typography.js",
+          "project": "yuejuan-local-workspace-20261010",
+          "line": 2,
+          "hash": "a0e8204a6e0a217cb7d6cccdf0e9b8a2",
+          "textRange": {
+            "startLine": 2,
+            "endLine": 37,
+            "startOffset": 0,
+            "endOffset": 1
+          },
+          "flows": [],
+          "status": "OPEN",
+          "message": "Expected an assignment or function call and instead saw an expression.",
+          "effort": "10min",
+          "debt": "10min",
+          "author": "",
+          "tags": [
+            "cwe",
+            "unused"
+          ],
+          "transitions": [
+            "accept",
+            "falsepositive",
+            "confirm",
+            "resolve",
+            "wontfix"
+          ],
+          "actions": [
+            "set_type",
+            "set_tags",
+            "comment",
+            "set_severity",
+            "assign"
+          ],
+          "comments": [
+            {
+              "key": "dd926624-b807-4c20-9d02-358c3e3512c3",
+              "login": "admin",
+              "htmlText": "本地逐项复核：整个文件中的async(page)=&gt;函数表达式是playwright-cli run-code工具的函数输入。实际本机loader从filename读取代码，runInContext('(' + code + ')')保存函数为__fn__，再await __fn__(page)调用并注入page；不是业务模块中无人使用的表达式。改变为模块导出或自行调用会违反现有工具输入协议。<br/>源码 SHA256：1ef9d115d07883936333d8c4b77cbd46832e3a01f563b4c5da45e3a7841714b2<br/>扫描分析：a741715d-5427-49a6-ac74-7dd92ad5cfa1<br/>复核记录：reports/sonar-remediation-2026-10-11/root-platform-disposition-phase03-plan.json。当前SHA与full03冻结源码一致。本次仅进行语法验证和执行协议审读，没有把Node桩或只读loader检查说成真实浏览器图纸检查。",
+              "markdown": "本地逐项复核：整个文件中的async(page)=>函数表达式是playwright-cli run-code工具的函数输入。实际本机loader从filename读取代码，runInContext('(' + code + ')')保存函数为__fn__，再await __fn__(page)调用并注入page；不是业务模块中无人使用的表达式。改变为模块导出或自行调用会违反现有工具输入协议。\n源码 SHA256：1ef9d115d07883936333d8c4b77cbd46832e3a01f563b4c5da45e3a7841714b2\n扫描分析：a741715d-5427-49a6-ac74-7dd92ad5cfa1\n复核记录：reports/sonar-remediation-2026-10-11/root-platform-disposition-phase03-plan.json。当前SHA与full03冻结源码一致。本次仅进行语法验证和执行协议审读，没有把Node桩或只读loader检查说成真实浏览器图纸检查。",
+              "updatable": true,
+              "createdAt": "2026-10-11T19:33:40+0800"
+            }
+          ],
+          "creationDate": "2026-10-11T18:01:26+0800",
+          "updateDate": "2026-10-11T19:33:40+0800",
+          "type": "BUG",
+          "scope": "MAIN",
+          "quickFixAvailable": false,
+          "messageFormattings": [],
+          "codeVariants": [],
+          "cleanCodeAttribute": "CLEAR",
+          "cleanCodeAttributeCategory": "INTENTIONAL",
+          "impacts": [
+            {
+              "softwareQuality": "RELIABILITY",
+              "severity": "MEDIUM"
+            }
+          ],
+          "issueStatus": "OPEN",
+          "prioritizedRule": false,
+          "fromSonarQubeUpdate": false,
+          "internalTags": [],
+          "linkedTicketStatus": "NOT_LINKED"
+        },
+        "components": [
+          {
+            "key": "yuejuan-local-workspace-20261010:docs/architecture/tools/check_preview_typography.js",
+            "enabled": true,
+            "qualifier": "FIL",
+            "name": "check_preview_typography.js",
+            "longName": "docs/architecture/tools/check_preview_typography.js",
+            "path": "docs/architecture/tools/check_preview_typography.js"
+          },
+          {
+            "key": "yuejuan-local-workspace-20261010",
+            "enabled": true,
+            "qualifier": "TRK",
+            "name": "yuejuan current local workspace 2026-10-10",
+            "longName": "yuejuan current local workspace 2026-10-10"
+          }
+        ],
+        "rules": [
+          {
+            "key": "javascript:S905",
+            "name": "Non-empty statements should change control flow or have at least one side-effect",
+            "lang": "js",
+            "status": "READY",
+            "langName": "JavaScript"
+          }
+        ],
+        "users": [
+          {
+            "login": "admin",
+            "name": "Administrator",
+            "active": true
+          }
+        ]
+      },
+      "transition_result": {
+        "issue": {
+          "key": "98688ff8-f75e-4bbb-897a-2eaf11ee1c8f",
+          "rule": "javascript:S905",
+          "severity": "MAJOR",
+          "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/check_preview_typography.js",
+          "project": "yuejuan-local-workspace-20261010",
+          "line": 2,
+          "hash": "a0e8204a6e0a217cb7d6cccdf0e9b8a2",
+          "textRange": {
+            "startLine": 2,
+            "endLine": 37,
+            "startOffset": 0,
+            "endOffset": 1
+          },
+          "flows": [],
+          "resolution": "FALSE-POSITIVE",
+          "status": "RESOLVED",
+          "message": "Expected an assignment or function call and instead saw an expression.",
+          "effort": "10min",
+          "debt": "10min",
+          "author": "",
+          "tags": [
+            "cwe",
+            "unused"
+          ],
+          "transitions": [
+            "reopen"
+          ],
+          "actions": [
+            "set_tags",
+            "comment"
+          ],
+          "comments": [
+            {
+              "key": "dd926624-b807-4c20-9d02-358c3e3512c3",
+              "login": "admin",
+              "htmlText": "本地逐项复核：整个文件中的async(page)=&gt;函数表达式是playwright-cli run-code工具的函数输入。实际本机loader从filename读取代码，runInContext('(' + code + ')')保存函数为__fn__，再await __fn__(page)调用并注入page；不是业务模块中无人使用的表达式。改变为模块导出或自行调用会违反现有工具输入协议。<br/>源码 SHA256：1ef9d115d07883936333d8c4b77cbd46832e3a01f563b4c5da45e3a7841714b2<br/>扫描分析：a741715d-5427-49a6-ac74-7dd92ad5cfa1<br/>复核记录：reports/sonar-remediation-2026-10-11/root-platform-disposition-phase03-plan.json。当前SHA与full03冻结源码一致。本次仅进行语法验证和执行协议审读，没有把Node桩或只读loader检查说成真实浏览器图纸检查。",
+              "markdown": "本地逐项复核：整个文件中的async(page)=>函数表达式是playwright-cli run-code工具的函数输入。实际本机loader从filename读取代码，runInContext('(' + code + ')')保存函数为__fn__，再await __fn__(page)调用并注入page；不是业务模块中无人使用的表达式。改变为模块导出或自行调用会违反现有工具输入协议。\n源码 SHA256：1ef9d115d07883936333d8c4b77cbd46832e3a01f563b4c5da45e3a7841714b2\n扫描分析：a741715d-5427-49a6-ac74-7dd92ad5cfa1\n复核记录：reports/sonar-remediation-2026-10-11/root-platform-disposition-phase03-plan.json。当前SHA与full03冻结源码一致。本次仅进行语法验证和执行协议审读，没有把Node桩或只读loader检查说成真实浏览器图纸检查。",
+              "updatable": true,
+              "createdAt": "2026-10-11T19:33:40+0800"
+            }
+          ],
+          "creationDate": "2026-10-11T18:01:26+0800",
+          "updateDate": "2026-10-11T19:33:41+0800",
+          "type": "BUG",
+          "scope": "MAIN",
+          "quickFixAvailable": false,
+          "messageFormattings": [],
+          "codeVariants": [],
+          "cleanCodeAttribute": "CLEAR",
+          "cleanCodeAttributeCategory": "INTENTIONAL",
+          "impacts": [
+            {
+              "softwareQuality": "RELIABILITY",
+              "severity": "MEDIUM"
+            }
+          ],
+          "issueStatus": "FALSE_POSITIVE",
+          "prioritizedRule": false,
+          "fromSonarQubeUpdate": false,
+          "internalTags": [],
+          "linkedTicketStatus": "NOT_LINKED"
+        },
+        "components": [
+          {
+            "key": "yuejuan-local-workspace-20261010:docs/architecture/tools/check_preview_typography.js",
+            "enabled": true,
+            "qualifier": "FIL",
+            "name": "check_preview_typography.js",
+            "longName": "docs/architecture/tools/check_preview_typography.js",
+            "path": "docs/architecture/tools/check_preview_typography.js"
+          },
+          {
+            "key": "yuejuan-local-workspace-20261010",
+            "enabled": true,
+            "qualifier": "TRK",
+            "name": "yuejuan current local workspace 2026-10-10",
+            "longName": "yuejuan current local workspace 2026-10-10"
+          }
+        ],
+        "rules": [
+          {
+            "key": "javascript:S905",
+            "name": "Non-empty statements should change control flow or have at least one side-effect",
+            "lang": "js",
+            "status": "READY",
+            "langName": "JavaScript"
+          }
+        ],
+        "users": [
+          {
+            "login": "admin",
+            "name": "Administrator",
+            "active": true
+          }
+        ]
+      },
+      "after": [
+        {
+          "key": "98688ff8-f75e-4bbb-897a-2eaf11ee1c8f",
+          "rule": "javascript:S905",
+          "severity": "MAJOR",
+          "component": "yuejuan-local-workspace-20261010:docs/architecture/tools/check_preview_typography.js",
+          "project": "yuejuan-local-workspace-20261010",
+          "line": 2,
+          "hash": "a0e8204a6e0a217cb7d6cccdf0e9b8a2",
+          "textRange": {
+            "startLine": 2,
+            "endLine": 37,
+            "startOffset": 0,
+            "endOffset": 1
+          },
+          "flows": [],
+          "resolution": "FALSE-POSITIVE",
+          "status": "RESOLVED",
+          "message": "Expected an assignment or function call and instead saw an expression.",
+          "effort": "10min",
+          "debt": "10min",
+          "author": "",
+          "tags": [
+            "cwe",
+            "unused"
+          ],
+          "transitions": [
+            "reopen"
+          ],
+          "actions": [
+            "set_tags",
+            "comment"
+          ],
+          "comments": [
+            {
+              "key": "dd926624-b807-4c20-9d02-358c3e3512c3",
+              "login": "admin",
+              "htmlText": "本地逐项复核：整个文件中的async(page)=&gt;函数表达式是playwright-cli run-code工具的函数输入。实际本机loader从filename读取代码，runInContext('(' + code + ')')保存函数为__fn__，再await __fn__(page)调用并注入page；不是业务模块中无人使用的表达式。改变为模块导出或自行调用会违反现有工具输入协议。<br/>源码 SHA256：1ef9d115d07883936333d8c4b77cbd46832e3a01f563b4c5da45e3a7841714b2<br/>扫描分析：a741715d-5427-49a6-ac74-7dd92ad5cfa1<br/>复核记录：reports/sonar-remediation-2026-10-11/root-platform-disposition-phase03-plan.json。当前SHA与full03冻结源码一致。本次仅进行语法验证和执行协议审读，没有把Node桩或只读loader检查说成真实浏览器图纸检查。",
+              "markdown": "本地逐项复核：整个文件中的async(page)=>函数表达式是playwright-cli run-code工具的函数输入。实际本机loader从filename读取代码，runInContext('(' + code + ')')保存函数为__fn__，再await __fn__(page)调用并注入page；不是业务模块中无人使用的表达式。改变为模块导出或自行调用会违反现有工具输入协议。\n源码 SHA256：1ef9d115d07883936333d8c4b77cbd46832e3a01f563b4c5da45e3a7841714b2\n扫描分析：a741715d-5427-49a6-ac74-7dd92ad5cfa1\n复核记录：reports/sonar-remediation-2026-10-11/root-platform-disposition-phase03-plan.json。当前SHA与full03冻结源码一致。本次仅进行语法验证和执行协议审读，没有把Node桩或只读loader检查说成真实浏览器图纸检查。",
+              "updatable": true,
+              "createdAt": "2026-10-11T19:33:40+0800"
+            }
+          ],
+          "creationDate": "2026-10-11T18:01:26+0800",
+          "updateDate": "2026-10-11T19:33:41+0800",
+          "type": "BUG",
+          "scope": "MAIN",
+          "quickFixAvailable": false,
+          "messageFormattings": [],
+          "codeVariants": [],
+          "cleanCodeAttribute": "CLEAR",
+          "cleanCodeAttributeCategory": "INTENTIONAL",
+          "impacts": [
+            {
+              "softwareQuality": "RELIABILITY",
+              "severity": "MEDIUM"
+            }
+          ],
+          "issueStatus": "FALSE_POSITIVE",
+          "prioritizedRule": false,
+          "fromSonarQubeUpdate": false,
+          "internalTags": [],
+          "linkedTicketStatus": "NOT_LINKED"
+        }
+      ],
+      "status": "platform_disposition_verified"
+    }
+  ],
+  "completed_at": "2026-10-11T19:33:42.334368+08:00"
+}

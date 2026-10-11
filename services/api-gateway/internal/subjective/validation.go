@@ -5,6 +5,7 @@ import (
 	"strings"
 	"unicode"
 
+	"edugrade-enterprise/services/api-gateway/internal/grading"
 	"edugrade-enterprise/services/api-gateway/internal/paper"
 
 	"golang.org/x/text/unicode/norm"
@@ -17,9 +18,8 @@ var supportedQuestionTypes = map[string]bool{
 	"discussion":   true,
 }
 
-// ProjectPanelRubricScore discards all model-authored numeric point and total
-// scores. A panel agent supplies only supported/missing decisions and evidence;
-// the frozen rubric is the sole numeric scoring authority.
+// ProjectPanelRubricScore 丢弃模型生成的全部数值评分点和总分。
+// 评审组 agent 只提供 supported/missing 判断与证据；冻结评分细则是唯一数值评分依据。
 func ProjectPanelRubricScore(output *AdapterOutput, rubric paper.Rubric) error {
 	if output == nil || len(rubric.Points) == 0 {
 		return ErrInvalidModelOutput
@@ -78,7 +78,22 @@ func ValidateOutput(output AdapterOutput, ctx Context) error {
 	if output.Mock {
 		return nil
 	}
-	if strings.TrimSpace(output.RequestID) == "" || strings.TrimSpace(output.ModelVersion) == "" || strings.TrimSpace(output.PromptVersion) == "" || output.RubricVersion != ctx.Rubric.Version {
+	// 模拟结果只经过上面的数值与原始输出检查；真实结果按契约、量规、证据的原顺序拒绝。
+	if err := validateOutputContract(output, ctx.Rubric.Version); err != nil {
+		return err
+	}
+	if err := validateOutputRubric(output, ctx.Rubric.Points); err != nil {
+		return err
+	}
+	evidenceByID, err := outputEvidenceIndex(output.Evidence, ctx.AnswerText)
+	if err != nil {
+		return err
+	}
+	return validateOutputEvidenceLinks(output.MatchedPoints, evidenceByID)
+}
+
+func validateOutputContract(output AdapterOutput, rubricVersion string) error {
+	if strings.TrimSpace(output.RequestID) == "" || strings.TrimSpace(output.ModelVersion) == "" || strings.TrimSpace(output.PromptVersion) == "" || output.RubricVersion != rubricVersion {
 		return ErrInvalidModelOutput
 	}
 	if output.DeliveryMode != "teacher_suggestion" && output.DeliveryMode != "shadow_only" {
@@ -96,8 +111,12 @@ func ValidateOutput(output AdapterOutput, ctx Context) error {
 		output.Telemetry.ElapsedMS < 0 {
 		return ErrInvalidModelOutput
 	}
-	rubricPoints := make(map[string]float64, len(ctx.Rubric.Points))
-	for _, point := range ctx.Rubric.Points {
+	return nil
+}
+
+func validateOutputRubric(output AdapterOutput, points []paper.RubricPoint) error {
+	rubricPoints := make(map[string]float64, len(points))
+	for _, point := range points {
 		if point.ID == "" || point.Score <= 0 {
 			return ErrInvalidModelOutput
 		}
@@ -122,22 +141,30 @@ func ValidateOutput(output AdapterOutput, ctx Context) error {
 	if len(classified) != len(rubricPoints) || math.Abs(matchedTotal-output.SuggestedScore) > 0.000001 {
 		return ErrInvalidModelOutput
 	}
-	evidenceByID := make(map[string]gradingEvidenceLink, len(output.Evidence))
-	normalizedAnswer := normalizeEvidenceText(ctx.AnswerText)
-	for _, evidence := range output.Evidence {
+	return nil
+}
+
+func outputEvidenceIndex(items []grading.Evidence, answerText string) (map[string]gradingEvidenceLink, error) {
+	evidenceByID := make(map[string]gradingEvidenceLink, len(items))
+	normalizedAnswer := normalizeEvidenceText(answerText)
+	for _, evidence := range items {
 		if evidence.EvidenceID == "" || evidence.RubricPointID == "" || evidence.Location != "answer_text" || evidence.Confidence < 0 || evidence.Confidence > 1 || strings.TrimSpace(evidence.AnswerText) == "" {
-			return ErrInvalidModelOutput
+			return nil, ErrInvalidModelOutput
 		}
 		if _, exists := evidenceByID[evidence.EvidenceID]; exists {
-			return ErrInvalidModelOutput
+			return nil, ErrInvalidModelOutput
 		}
 		if !strings.Contains(normalizedAnswer, normalizeEvidenceText(evidence.AnswerText)) {
-			return ErrInvalidModelOutput
+			return nil, ErrInvalidModelOutput
 		}
 		evidenceByID[evidence.EvidenceID] = gradingEvidenceLink{rubricPointID: evidence.RubricPointID}
 	}
+	return evidenceByID, nil
+}
+
+func validateOutputEvidenceLinks(points []grading.PointResult, evidenceByID map[string]gradingEvidenceLink) error {
 	referenced := map[string]bool{}
-	for _, point := range output.MatchedPoints {
+	for _, point := range points {
 		for _, evidenceID := range point.EvidenceIDs {
 			link, exists := evidenceByID[evidenceID]
 			if !exists || link.rubricPointID != point.Code || referenced[evidenceID] {
@@ -152,10 +179,8 @@ func ValidateOutput(output AdapterOutput, ctx Context) error {
 	return nil
 }
 
-// DeriveSuggestedScore deliberately ignores the model's score field after
-// schema validation and recomputes it from accepted frozen-Rubric point
-// observations. The model classifies criteria and supplies evidence; it does
-// not author a final score.
+// DeriveSuggestedScore 在结构校验后忽略模型的 score 字段，按已接受的冻结 Rubric 评分点观察重新计算分数。
+// 模型只分类标准项并提供证据，不生成最终分数。
 func DeriveSuggestedScore(output *AdapterOutput) {
 	if output == nil {
 		return

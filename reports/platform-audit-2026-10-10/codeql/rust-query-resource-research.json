@@ -1,0 +1,134 @@
+{
+  "recorded_at": "2026-10-11T14:52:57.899062+08:00",
+  "method": "Read-only official local QL/help and saved logs; public primary documentation; no query/compiler/database command except --help",
+  "help_command": [
+    "D:\\tools\\audit-codeql-20261010\\codeql\\codeql.exe",
+    "database",
+    "run-queries",
+    "--help",
+    "-v"
+  ],
+  "help_exit_code": 0,
+  "help_sha256": "b5eac5c2aa41b1e46bd0bd15647b2309c46b94775801ddb8e18cae7ad5e8710a",
+  "source_files": [
+    {
+      "path": "D:\\tools\\audit-codeql-20261010\\codeql\\qlpacks\\codeql\\rust-queries\\0.1.44\\queries\\diagnostics\\DataFlowConsistencyCounts.ql",
+      "bytes": 518,
+      "sha256": "f5b11e03eeaa93718cc4b06f8a156572b2dd5bd7670eb60f5ea7ea17754332c9"
+    },
+    {
+      "path": "D:\\tools\\audit-codeql-20261010\\codeql\\qlpacks\\codeql\\rust-queries\\0.1.44\\queries\\summary\\Stats.qll",
+      "bytes": 7874,
+      "sha256": "f414a15e3421085bb1493d7e7677a864dd1edd1e4829d5ec8ad6e771581ac5f9"
+    },
+    {
+      "path": "D:\\tools\\audit-codeql-20261010\\codeql\\qlpacks\\codeql\\rust-queries\\0.1.44\\queries\\security\\CWE-089\\SqlInjection.ql",
+      "bytes": 1309,
+      "sha256": "4f945c5acedc1aec130cc7d603157749e2b24d6e8e90b3972607f2bf7df733a0"
+    },
+    {
+      "path": "D:\\tools\\audit-codeql-20261010\\codeql\\qlpacks\\codeql\\rust-all\\0.2.23\\codeql\\rust\\dataflow\\internal\\DataFlowConsistency.qll",
+      "bytes": 1378,
+      "sha256": "99bc69bbd918ef78fdb01247dca864e2c4f9c0e25db4c3d2d238e3e3138b8959"
+    },
+    {
+      "path": "D:\\tools\\audit-codeql-20261010\\codeql\\qlpacks\\codeql\\rust-all\\0.2.23\\codeql\\rust\\internal\\CachedStages.qll",
+      "bytes": 4542,
+      "sha256": "e9ec32dedd08185b23787efb12879032dc7a7c0cc59db2b48dd49202d54b5754"
+    },
+    {
+      "path": "D:\\tools\\audit-codeql-20261010\\codeql\\qlpacks\\codeql\\rust-all\\0.2.23\\codeql\\rust\\dataflow\\internal\\DataFlowImpl.qll",
+      "bytes": 44729,
+      "sha256": "cb3df72ac2fd766b861853a9adcc17278313e07961fc614ea5b4295ff2039665"
+    },
+    {
+      "path": "D:\\tools\\audit-codeql-20261010\\codeql\\qlpacks\\codeql\\rust-all\\0.2.23\\codeql\\rust\\dataflow\\internal\\SsaImpl.qll",
+      "bytes": 12910,
+      "sha256": "3d3fc513946acf2f71be9d02cd3f3a92a902e6b2a215c2d4660f82c5333776d9"
+    },
+    {
+      "path": "D:\\tools\\audit-codeql-20261010\\codeql\\qlpacks\\codeql\\dataflow\\2.1.15\\codeql\\dataflow\\internal\\DataFlowImplConsistency.qll",
+      "bytes": 17559,
+      "sha256": "5eafefc1b373e161da1389758e6a19bed4dc328899dbe6752b92503c00acbf82"
+    },
+    {
+      "path": "D:\\tools\\audit-codeql-20261010\\codeql\\qlpacks\\codeql\\rust-queries\\0.1.44\\codeql-pack.lock.yml",
+      "bytes": 605,
+      "sha256": "301f1c417913d77b2c2789eb190c38de62f338cf2dcdcf2278ebfa3b92651c75"
+    },
+    {
+      "path": "D:\\tools\\audit-codeql-20261010\\codeql\\tools\\win64\\java\\release",
+      "bytes": 349,
+      "sha256": "ac831cfb7400d62ea4902bd7ba369b624ff0c89568e75549145451b0b48e3d1f"
+    }
+  ],
+  "observed_log_snapshot_file": "D:\\project\\yuejuan\\reports\\platform-audit-2026-10-10\\codeql\\rust-query-resource-observation.log",
+  "observed_log_snapshot_sha256": "eee0345877b9e9305b022138fadd891071baa147537840bf77d3b1f4cc0b5dce",
+  "completed_queries_at_observation": [
+    {
+      "index": 1,
+      "elapsed_display": "16m42s",
+      "result_path": "codeql\\rust-queries\\queries\\diagnostics\\AstConsistencyCounts.bqrs."
+    },
+    {
+      "index": 2,
+      "elapsed_display": "2m36s",
+      "result_path": "codeql\\rust-queries\\queries\\diagnostics\\CfgConsistencyCounts.bqrs."
+    },
+    {
+      "index": 3,
+      "elapsed_display": "9m30s",
+      "result_path": "codeql\\rust-queries\\queries\\diagnostics\\DataFlowConsistencyCounts.bqrs."
+    },
+    {
+      "index": 4,
+      "elapsed_display": "65ms",
+      "result_path": "codeql\\rust-queries\\queries\\diagnostics\\ExtractedFiles.bqrs."
+    },
+    {
+      "index": 5,
+      "elapsed_display": "4.2s",
+      "result_path": "codeql\\rust-queries\\queries\\diagnostics\\ExtractionErrors.bqrs."
+    },
+    {
+      "index": 6,
+      "elapsed_display": "4ms",
+      "result_path": "codeql\\rust-queries\\queries\\diagnostics\\ExtractionWarnings.bqrs."
+    },
+    {
+      "index": 7,
+      "elapsed_display": "3.4s",
+      "result_path": "codeql\\rust-queries\\queries\\diagnostics\\SsaConsistencyCounts.bqrs."
+    }
+  ],
+  "original_query_scope": 41,
+  "retained_maintained_rust_source_scope": 16,
+  "log_cache_warning": "Not caching stages during query-loading, since max heap size is only 1876 MB.",
+  "warning_scope": "query-loading only; does not mean all runtime/disk caching disabled",
+  "perf_sampling_period": [
+    "2026-10-11T14:46:38+08:00",
+    "2026-10-11T14:49:58+08:00"
+  ],
+  "perf_interval_derived": {
+    "collector_0_delta_seconds": 7.4280882,
+    "collector_1_delta_seconds": 20.0258659,
+    "collector_2_delta_seconds": 0.3514387,
+    "safepoint_delta_seconds_by_openjdk25_ns_implementation": 27.8398308,
+    "application_delta_seconds_by_openjdk25_ns_implementation": 172.0530731,
+    "wall_interval_seconds": 200.0,
+    "scope": "200-second two-sample interval, JVM totals; not a per-query timing breakdown"
+  },
+  "perf_source_sha256_at_read": "16e876d8b22517725036a3bd0f70d7f39147277e5f0270efa2f26aec6178fd4e",
+  "optional_future_supported_flags": [
+    "--ram",
+    "--threads",
+    "--max-disk-cache",
+    "--keep-full-cache",
+    "--no-rerun",
+    "--evaluator-log"
+  ],
+  "query_loading_heap_threshold_verified": false,
+  "current_process_modified": false,
+  "database_modified": false,
+  "system_resources_modified": false
+}

@@ -8,8 +8,7 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/auth"
 )
 
-// ActivityStore is an operational projection, not a compliance audit reader.
-// Implementations must enforce the server-derived scope on every query.
+// ActivityStore 是运维投影，不是合规审计读取器；实现必须在每次查询中强制应用服务端派生的作用域。
 type ActivityStore interface {
 	ListRecent(ctx context.Context, tenantID string, scope auth.AccessScope, limit int) ([]RecentActivity, error)
 }

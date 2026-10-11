@@ -58,6 +58,7 @@ export type PanelAgentRole = "primary_a" | "primary_b" | "arbiter";
 export type PanelEducationStage = "junior" | "senior";
 
 export interface PanelModelRoleBinding {
+  revision: string;
   id: string;
   tenant_id: string;
   education_stage: PanelEducationStage;
@@ -75,7 +76,7 @@ export interface PanelModelRoleBinding {
 
 export type PanelModelRoleBindingInput = Pick<PanelModelRoleBinding,
   "education_stage" | "subject_code" | "archetype_code" | "agent_role" |
-  "managed_model_api_config_id" | "prompt_version" | "strength_rank" | "status"> & { tenant_id: string };
+  "managed_model_api_config_id" | "prompt_version" | "strength_rank" | "status"> & { tenant_id: string; expected_revision: string };
 
 export interface ManagedModelAPIConfigInput {
   tenant_id: string;

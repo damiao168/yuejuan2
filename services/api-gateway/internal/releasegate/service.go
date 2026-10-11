@@ -36,9 +36,8 @@ func (s *Service) CreatePolicy(ctx context.Context, tenantID, examID, actorID st
 	return s.store.CreatePolicy(ctx, tenantID, examID, actorID, input)
 }
 
-// Preview recalculates the A18 base gate and captures immutable evidence. It
-// is intentionally useful even when the gate is blocked: it gives operations
-// a precise, non-mutable reason for remediation or a permitted warning waiver.
+// Preview 重新计算 A18 基础门禁并保存不可变证据。
+// 即使门禁阻断，它仍向运维提供准确且不可变的原因，供修正或申请允许的警告豁免。
 func (s *Service) Preview(ctx context.Context, tenantID, examID, releaseID, actorID string) (Evidence, error) {
 	if !validIDs(tenantID, examID, actorID) {
 		return Evidence{}, ErrInvalidInput
@@ -46,8 +45,8 @@ func (s *Service) Preview(ctx context.Context, tenantID, examID, releaseID, acto
 	return s.evaluateAndAppend(ctx, tenantID, examID, strings.TrimSpace(releaseID), actorID, EvidencePreview)
 }
 
-// RecheckForPublish is the only gate API a publication coordinator should
-// call. It never reuses Preview results and always appends fresh evidence.
+// RecheckForPublish 是发布协调器唯一应调用的门禁 API。
+// 它不复用 Preview 结果，始终追加新证据。
 func (s *Service) RecheckForPublish(ctx context.Context, tenantID, examID, releaseID, actorID string) (Evidence, error) {
 	if !validIDs(tenantID, examID, releaseID, actorID) {
 		return Evidence{}, ErrInvalidInput
@@ -91,9 +90,7 @@ func (s *Service) DecideWaiver(ctx context.Context, tenantID, waiverID, actorID 
 	if waiver.Status != WaiverRequested {
 		return Waiver{}, ErrForbiddenWaiver
 	}
-	// Revalidate against immutable evidence immediately before accepting an
-	// approval, so neither a malicious request nor a later policy edit can
-	// turn a base blocker into a waiver.
+	// 接受批准前立即按不可变证据重新校验，避免恶意请求或后续策略编辑将基础阻断项变成可豁免项。
 	evidence, err := s.store.GetEvidence(ctx, tenantID, waiver.EvidenceID)
 	if err != nil {
 		return Waiver{}, err
@@ -111,15 +108,35 @@ func (s *Service) GetEvidence(ctx context.Context, tenantID, evidenceID string) 
 	return s.store.GetEvidence(ctx, tenantID, evidenceID)
 }
 
+// Inspect 读取完整发布条件，但不追加预检或发布证据。
+// 结果只用于说明当前状态；正式发布仍必须调用 RecheckForPublish 重新求值。
+func (s *Service) Inspect(ctx context.Context, tenantID, examID string) (Evaluation, error) {
+	if !validIDs(tenantID, examID) {
+		return Evaluation{}, ErrInvalidInput
+	}
+	return s.loadEvaluation(ctx, tenantID, examID)
+}
+
 func (s *Service) evaluateAndAppend(ctx context.Context, tenantID, examID, releaseID, actorID, phase string) (Evidence, error) {
-	base, err := s.base.Gate(ctx, tenantID, examID)
+	evaluation, err := s.loadEvaluation(ctx, tenantID, examID)
 	if err != nil {
 		return Evidence{}, err
+	}
+	evidence := Evidence{TenantID: tenantID, ExamID: examID, ReleaseID: releaseID, Phase: phase, Evaluation: evaluation, CreatedBy: actorID, CreatedAt: s.now().UTC()}
+	evidence.Hash = evidenceHash(evidence)
+	return s.store.AppendEvidence(ctx, evidence)
+}
+
+// 只读诊断与证据写入共用规则，避免助手遗漏重评阻塞、有效策略或警告确认。
+func (s *Service) loadEvaluation(ctx context.Context, tenantID, examID string) (Evaluation, error) {
+	base, err := s.base.Gate(ctx, tenantID, examID)
+	if err != nil {
+		return Evaluation{}, err
 	}
 	if s.regrades != nil {
 		count, err := s.regrades.BlockingRegradeCount(ctx, tenantID, examID)
 		if err != nil {
-			return Evidence{}, err
+			return Evaluation{}, err
 		}
 		if count > 0 {
 			base.Blocking = append(base.Blocking, scorerelease.GateIssue{Code: "regrade_release_pending", Message: "a regrade job has not been materialised into a successor release", Blocking: true, Count: count, ActionRoute: "regrade"})
@@ -132,19 +149,16 @@ func (s *Service) evaluateAndAppend(ctx context.Context, tenantID, examID, relea
 	}
 	policy, err := s.store.ActivePolicy(ctx, tenantID, examID)
 	if err != nil && err != ErrNotFound {
-		return Evidence{}, err
+		return Evaluation{}, err
 	}
 	if err == ErrNotFound {
 		policy = defaultPolicy(tenantID, examID)
 	}
 	waivers, err := s.store.ApprovedWaivers(ctx, tenantID, examID, policy.ID)
 	if err != nil {
-		return Evidence{}, err
+		return Evaluation{}, err
 	}
-	evaluation := evaluate(policy, base, waivers, s.now().UTC())
-	evidence := Evidence{TenantID: tenantID, ExamID: examID, ReleaseID: releaseID, Phase: phase, Evaluation: evaluation, CreatedBy: actorID, CreatedAt: s.now().UTC()}
-	evidence.Hash = evidenceHash(evidence)
-	return s.store.AppendEvidence(ctx, evidence)
+	return evaluate(policy, base, waivers, s.now().UTC()), nil
 }
 
 func evaluate(policy Policy, baseGate scorerelease.Gate, waivers []Waiver, now time.Time) Evaluation {
@@ -225,14 +239,12 @@ func normalizePolicy(input *CreatePolicyInput) bool {
 	}
 	sort.Strings(clean)
 	input.WaivableWarningCodes = clean
-	// Without acknowledgement a waivable list has no operational meaning and
-	// would make a policy review misleading.
+	// 未经确认，可豁免清单没有业务意义，会误导策略复核。
 	return input.RequireWarningAcknowledgement || len(clean) == 0
 }
 
 func evidenceHash(evidence Evidence) string {
-	// Identity/timestamps are excluded so the hash proves the immutable gate
-	// payload, not a particular storage implementation's identifier format.
+	// 排除身份和时间戳，让哈希证明不可变门禁载荷，而非某个存储实现的标识格式。
 	payload := struct {
 		ExamID     string     `json:"exam_id"`
 		ReleaseID  string     `json:"release_id"`
@@ -252,10 +264,12 @@ func clonePolicy(value Policy) Policy {
 func cloneGate(value scorerelease.Gate) scorerelease.Gate {
 	value.Blocking = append([]scorerelease.GateIssue(nil), value.Blocking...)
 	value.Warnings = append([]scorerelease.GateIssue(nil), value.Warnings...)
-	value.Counts = map[string]int{}
+	// 先复制原计数再替换 map，保留阻断数量且不共享可变的证据内容。
+	counts := make(map[string]int, len(value.Counts))
 	for key, count := range value.Counts {
-		value.Counts[key] = count
+		counts[key] = count
 	}
+	value.Counts = counts
 	return value
 }
 

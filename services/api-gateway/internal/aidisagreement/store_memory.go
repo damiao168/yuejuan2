@@ -7,9 +7,7 @@ import (
 	"time"
 )
 
-// MemoryStore is intentionally fixture-oriented. Production capture always
-// reads the source facts from PostgreSQL; tests register a comparison instead
-// of accepting arbitrary scores through a public HTTP endpoint.
+// MemoryStore 用于测试夹具。生产采集始终从 PostgreSQL 读取来源事实；测试直接登记比较结果，不通过公开 HTTP 端点接收任意分数。
 type MemoryStore struct {
 	mu          sync.RWMutex
 	comparisons map[string]ActualComparison

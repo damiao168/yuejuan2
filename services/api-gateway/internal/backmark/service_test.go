@@ -90,8 +90,7 @@ func TestBackmarkSeparatesCandidateGradeFromOriginalFact(t *testing.T) {
 	if grade.ID == "grade-1" || item.NewGradeID != grade.ID || item.Status != ItemRegradeRequired || item.Diff == nil || *item.Diff != -2 {
 		t.Fatalf("unsafe candidate result: item=%#v grade=%#v", item, grade)
 	}
-	// The original source remains an immutable selection fact; only a separate
-	// backmark_grade is written until an explicit later regrade/release path.
+	// 原始来源保持为不可变的选择事实；在后续显式重评或发布流程前，只写入独立的 backmark_grade。
 	selected, err := store.SelectSourceTasks(context.Background(), "tenant-1", "exam-1", "question-1", Selector{TaskIDs: []string{"task-1"}}, MaxSynchronousItems)
 	if err != nil || selected[0].OriginalGradeID != "grade-1" || selected[0].OriginalScore != 4 {
 		t.Fatalf("source fact mutated: %#v, %v", selected, err)

@@ -126,6 +126,29 @@ func TestDomainDirectIDSegmentsHaveBoundaryResolvers(t *testing.T) {
 	}
 }
 
+func TestResourceBoundaryQueryFamiliesKeepTenantAndOwnerPredicates(t *testing.T) {
+	cases := []struct {
+		resourceType, ownerPredicate string
+	}{
+		{"paper_import", "p.tenant_id=$1::uuid AND p.id=$2::uuid"},
+		{"answer_segment", "seg.tenant_id=s.tenant_id AND seg.submission_id=s.id AND seg.id=$2::uuid"},
+		{"review_task", "t.tenant_id=$1::uuid AND t.id=$2::uuid"},
+		{"school_class", "c.tenant_id=$1::uuid AND c.id=$2::uuid"},
+		{"regrade_item", "i.tenant_id=$1::uuid AND i.id=$2::uuid"},
+	}
+	for _, test := range cases {
+		if query := resourceBoundaryQuery(test.resourceType); !strings.Contains(query, test.ownerPredicate) {
+			t.Fatalf("%s lost its tenant or owning-resource predicate: %s", test.resourceType, query)
+		}
+	}
+	if query := resourceBoundaryQuery("exam"); !strings.Contains(query, "st.id::text=$3") {
+		t.Fatalf("exam access must retain student relationship projection: %s", query)
+	}
+	if query := resourceBoundaryQuery("unknown"); query != "" {
+		t.Fatalf("unknown resource must not fall back to an existing query: %s", query)
+	}
+}
+
 func TestSchoolScopeRejectsKnownForeignDirectIDsAcrossCoreResources(t *testing.T) {
 	store := NewMemoryStore()
 	mux := http.NewServeMux()
@@ -163,19 +186,17 @@ func TestRegisteredDirectIDRoutesDeclareResourceBoundaryOrExplicitTenantScope(t 
 	tenantScopedPrefixes := []string{
 		"/api/v1/auth/sessions/", "/api/v1/users/", "/api/v1/tenants/",
 		"/api/v1/exam-sessions/commands/",
-		// Command recovery resources are not target-resource IDs. Their stores
-		// require the authenticated tenant and actor together with command ID.
+		// 整场接口使用 kind/id 复合标识，由管理存储逐科校验授权和整场完整性。
+		"/api/v1/exam-management/",
+		// 命令恢复资源不是目标资源 ID；其存储查询同时要求已认证的租户、操作者和命令 ID。
 		"/api/v1/subjective-grading-batch-commands/", "/api/v1/review-commands/",
 		"/api/v1/score-commands/", "/api/v1/report-commands/",
 		"/api/v1/review/comment-templates/", "/api/v1/model-", "/api/v1/grading-evaluations/",
 		"/api/v1/ai-eligibility/", "/api/v1/platform/model-api-configs/",
-		// Platform-school routes intentionally address another tenant. Their
-		// dedicated guard requires a platform-tenant platform_admin plus
-		// tenant:manage before the cross-tenant read model is queried.
+		// 平台学校路由会访问其他租户。在查询跨租户读模型前，专用守卫要求平台租户的 platform_admin 角色及 tenant:manage 权限。
 		"/api/v1/platform/schools/",
-		// Reusable items have no exam ancestry. questionbank stores check the
-		// authenticated tenant, school scope and explicit bank action ACL on
-		// every read/write AND durable receipt replay (real PostgreSQL E2E).
+		// 可复用条目不隶属于考试。
+		// questionbank 存储在每次读写及持久回执重放时，都检查已认证租户、学校作用域和明确的题库操作 ACL（真实 PostgreSQL 端到端测试）。
 		"/api/v1/question-banks/", "/api/v1/question-bank/items/", "/api/v1/question-bank/versions/", "/api/v1/question-bank/rubric-templates",
 	}
 	var uncovered []string

@@ -1,0 +1,34 @@
+{
+  "files": [
+    {
+      "file": "services/api-gateway/internal/server/e2e_postgres_test.go",
+      "sha256": "85df88b0f1de589e5e5aa1457ccf152882432520023c505320c382dbe86afd77",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_postgres_test.go"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_postgres_test.go",
+      "sha256": "456ac403e47e04a2240eb6a95041a8905c134ea62051a7efe5cefa4471edd6ab",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_postgres_test.go"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_story056_test.go",
+      "sha256": "72e1f6190e2e8ae1f1e8cb8f81efee3d4a056904662500282a1e0a3e33313f79",
+      "backup": "D:\\tools\\sonar-remediation-20261011\\server-extra-baseline\\services\\api-gateway\\internal\\server\\e2e_story056_test.go"
+    }
+  ],
+  "issue_functions": [
+    {
+      "file": "services/api-gateway/internal/server/e2e_postgres_test.go",
+      "function": "e2eAssertHighRiskTenantRLS"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_postgres_test.go",
+      "function": "e2eSplitSQLStatements"
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_story056_test.go",
+      "function": "TestStory056ObjectiveScoringRecoveryE2EWithPostgresTestDatabase"
+    }
+  ],
+  "checkpoint_relation": "after checkpoint02; requires subsequent scan"
+}

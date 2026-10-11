@@ -3,8 +3,8 @@ import { isTauriRuntime } from "./localRuntime";
 import { invokeScoped } from "./durableStore";
 
 /**
- * Product-facing scanner contract.  It deliberately describes driver/profile
- * facts, rather than binding the React app to WIA, TWAIN or a vendor SDK.
+ * 面向产品层的扫描器契约，只描述驱动和配置的事实，
+ * 避免将 React 应用绑定到 WIA、TWAIN 或厂商 SDK。
  */
 export interface ScannerProfile {
   id: string;
@@ -112,20 +112,20 @@ export interface ScannerSampleQualityCheck {
 }
 
 /**
- * Fast, local sample screening before a batch enters the spool.  The checks
- * only screen for obvious capture faults and intentionally remain separate
- * from the server-side image-quality gate.  Their thresholds must be adjusted
- * from answer-sheet/OCR experiments, not treated as a national fixed rule.
+ * 批次进入暂存区前，先在本地快速筛查样本。
+ * 这些检查只筛除明显的采集问题，
+ * 与服务端图像质量门禁分开。阈值应根据
+ * 答题卡和 OCR 实验调整，不能当作全国统一规则。
  */
 export async function inspectScannerSample(file: File, profile: ScannerProfile): Promise<ScannerSampleQualityCheck[]> {
   if (!file.type.startsWith("image/")) {
     return unavailableSampleChecks("PDF 样张未在本地解码；请以服务端质量门禁为准。");
   }
 
-  // Chromium does not decode every scanner image format (notably TIFF) on
-  // every Windows build. A successful scanner preflight plus a supported
-  // server upload must not be turned into a false local failure just because
-  // this optional, advisory sample decoder is unavailable.
+  // 部分 Windows 构建中的 Chromium 无法解码所有扫描图像格式
+  // （尤其是 TIFF）。如果扫描器预检已通过且服务端支持上传，
+  // 就不能仅因这个可选的辅助样本解码器不可用，
+  // 而误报为本地失败。
   let bitmap: ImageBitmap;
   try {
     bitmap = await createImageBitmap(file);
@@ -219,27 +219,7 @@ async function samplePixels(bitmap: ImageBitmap): Promise<SamplePixels> {
       darkCount += 1;
     }
   }
-  let laplacianSum = 0;
-  let laplacianSquared = 0;
-  let laplacianCount = 0;
-  let edgeDark = 0;
-  let edgeCount = 0;
-  const border = Math.max(3, Math.round(Math.min(width, height) * 0.03));
-  for (let y = 1; y < height - 1; y += 1) {
-    for (let x = 1; x < width - 1; x += 1) {
-      const index = y * width + x;
-      const laplacian = 4 * gray[index] - gray[index - 1] - gray[index + 1] - gray[index - width] - gray[index + width];
-      laplacianSum += laplacian;
-      laplacianSquared += laplacian * laplacian;
-      laplacianCount += 1;
-      if (x < border || y < border || x >= width - border || y >= height - border) {
-        edgeCount += 1;
-        if (gray[index] < 110) edgeDark += 1;
-      }
-    }
-  }
-  const laplacianMean = laplacianSum / Math.max(1, laplacianCount);
-  const laplacianVariance = laplacianSquared / Math.max(1, laplacianCount) - laplacianMean * laplacianMean;
+  const { laplacianVariance, edgeDark, edgeCount } = summarizePixelEdges(gray, width, height);
   let principalAngle: number | null = null;
   if (darkCount >= Math.max(80, (width * height) / 500)) {
     const centerX = sumX / darkCount;
@@ -268,6 +248,32 @@ async function samplePixels(bitmap: ImageBitmap): Promise<SamplePixels> {
     edgeInk: edgeDark / Math.max(1, edgeCount),
     principalAngle
   };
+}
+
+function summarizePixelEdges(gray: Uint8Array, width: number, height: number) {
+  let laplacianSum = 0;
+  let laplacianSquared = 0;
+  let laplacianCount = 0;
+  let edgeDark = 0;
+  let edgeCount = 0;
+  // 边缘带取短边的 3% 且至少 3 像素；最外一圈不参与统计，以便读取四邻域。
+  const border = Math.max(3, Math.round(Math.min(width, height) * 0.03));
+  for (let y = 1; y < height - 1; y += 1) {
+    for (let x = 1; x < width - 1; x += 1) {
+      const index = y * width + x;
+      const laplacian = 4 * gray[index] - gray[index - 1] - gray[index + 1] - gray[index - width] - gray[index + width];
+      laplacianSum += laplacian;
+      laplacianSquared += laplacian * laplacian;
+      laplacianCount += 1;
+      if (x < border || y < border || x >= width - border || y >= height - border) {
+        edgeCount += 1;
+        if (gray[index] < 110) edgeDark += 1;
+      }
+    }
+  }
+  const laplacianMean = laplacianSum / Math.max(1, laplacianCount);
+  const laplacianVariance = laplacianSquared / Math.max(1, laplacianCount) - laplacianMean * laplacianMean;
+  return { laplacianVariance, edgeDark, edgeCount };
 }
 
 function exposureCheck(sample: SamplePixels): ScannerSampleQualityCheck {

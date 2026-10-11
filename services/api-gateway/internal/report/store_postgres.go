@@ -76,7 +76,8 @@ func (s *PostgresStore) exportOnce(ctx context.Context, tenantID string, examID 
 	}
 	defer tx.Rollback()
 	var replay ExportResult
-	if found, err := commandreceipt.Load(ctx, tx, tenantID, actorID, "report.export", examID, nil, &replay); err != nil || found {
+	identity := commandreceipt.Identity{TenantID: tenantID, ActorID: actorID, Operation: "report.export", TargetID: examID}
+	if found, err := commandreceipt.Load(ctx, tx, identity, nil, &replay); err != nil || found {
 		return replay, err
 	}
 	data, err := s.loadDataset(ctx, tx, tenantID, examID)
@@ -104,7 +105,7 @@ RETURNING id::text
 	if err != nil {
 		return ExportResult{}, err
 	}
-	if err := commandreceipt.Save(ctx, tx, tenantID, actorID, "report.export", examID, nil, result); err != nil {
+	if err := commandreceipt.Save(ctx, tx, identity, nil, result); err != nil {
 		return ExportResult{}, err
 	}
 	if err := tx.Commit(); err != nil {

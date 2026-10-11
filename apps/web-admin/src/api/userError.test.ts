@@ -14,6 +14,8 @@ function response(body: unknown, status: number, statusText = "") {
 describe("user-facing API errors", () => {
   it.each([
     ["backmark_preview_stale", "回标范围或原评分已变化，请重新预览影响范围后再创建。"],
+    ["managed_user_access_conflict", "该成员的职责或班级已被更新，请刷新后重新核对授权，当前填写内容已保留。"],
+    ["readiness_configuration_changed", "考试准备内容已变化，请重新核对名单和评分方式后确认。"],
     ["exam_not_collecting", "当前考试尚未进入答卷采集阶段，请先完成考试准备并开始采集。"],
     ["capture_duplicate_file", "该文件已加入当前批次，无需重复导入。"],
     ["unsupported_file_type", "文件内容与格式不匹配，或包含无法识别的隐藏字符。请使用 UTF-8 文本、PDF、Word 或图片后重试。"],

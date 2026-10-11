@@ -36,9 +36,7 @@ func (s *Service) GetActivePolicy(ctx context.Context, tenantID string, subject 
 	return s.store.GetActivePolicy(ctx, tenantID, subject, stage, archetype, risk)
 }
 
-// Decide is idempotent per run item. It records a compact copy of every input
-// fact used for the outcome, so later policy/evaluation changes cannot make a
-// historical external model call appear to have been admitted under new rules.
+// Decide 对每个运行项保持幂等，并记录用于决策的每项输入事实的精简副本，防止后续策略或评测变化使历史外部模型调用看似按新规则获准。
 func (s *Service) Decide(ctx context.Context, tenantID string, input DecisionInput) (Decision, error) {
 	if tenantID == "" || strings.TrimSpace(input.RunItemID) == "" || input.AssessmentSnapshot.ID == "" ||
 		!input.AssessmentSnapshot.SubjectCode.Valid() || !input.AssessmentSnapshot.EducationStage.Valid() ||
@@ -61,9 +59,7 @@ func (s *Service) Decide(ctx context.Context, tenantID string, input DecisionInp
 	decision := Decision{ID: uuid.NewString(), TenantID: tenantID, RunItemID: input.RunItemID,
 		Decision: assessment.ScoringHumanPrimary, InputSnapshot: inputSnapshot(input), Reasons: []Reason{},
 		OutputConstraint: OutputConstraint{CriteriaEvidenceOnly: true, AllowModelFinalScore: false, FinalScoreAuthority: "human_review"}, CreatedAt: s.now()}
-	// This is deliberately before the policy lookup. A missing or malformed
-	// policy must never hide the reason that the risk/archetype itself is a
-	// non-negotiable external-AI prohibition.
+	// 此检查刻意放在策略查询之前。策略缺失或格式错误不能掩盖风险等级、题型本身禁止外部 AI 的原因。
 	if hardProhibited(input.AssessmentSnapshot, input.RequestedMode) {
 		decision.Reasons = append(decision.Reasons, reason("hard_risk_archetype_prohibition", "R3 开放题不得由单次模型快速确认或形成最终分数", true))
 		return s.store.CreateOrGetDecision(ctx, tenantID, decision)
@@ -86,56 +82,61 @@ func (s *Service) Decide(ctx context.Context, tenantID string, input DecisionInp
 		decision.Reasons = append(decision.Reasons, reason("requested_human_mode", "题目冻结评分策略要求人工评分流程", false))
 		return s.store.CreateOrGetDecision(ctx, tenantID, decision)
 	}
-	if qualityBelow(input.OCRQuality, policy.MinOCRQuality) {
-		decision.Reasons = append(decision.Reasons, reason("ocr_quality_below_policy", "文字识别质量不足，禁止模型猜测不可读答案", true))
-		return s.store.CreateOrGetDecision(ctx, tenantID, decision)
-	}
-	if qualityBelow(input.ParserQuality, policy.MinParserQuality) {
-		decision.Reasons = append(decision.Reasons, reason("parser_quality_below_policy", "结构化解析质量不足，必须转人工原图阅卷", true))
-		return s.store.CreateOrGetDecision(ctx, tenantID, decision)
-	}
-	if !input.RubricComplete {
-		decision.Reasons = append(decision.Reasons, reason("rubric_incomplete", "冻结评分标准不完整，不能调用 AI 评分", true))
-		return s.store.CreateOrGetDecision(ctx, tenantID, decision)
-	}
-	if materialEvidenceRequired(input.AssessmentSnapshot) && !input.EvidenceAvailable {
-		decision.Reasons = append(decision.Reasons, reason("material_evidence_missing", "材料题缺少可核验的材料证据引用，模型必须弃权", true))
-		return s.store.CreateOrGetDecision(ctx, tenantID, decision)
-	}
-	if !input.Evaluation.Approved || input.Evaluation.SampleCount < policy.MinEvalN || input.Evaluation.SevereErrorRate > policy.MaxSevereErrorRate {
-		decision.Reasons = append(decision.Reasons, reason("approved_evaluation_insufficient", "未达到已批准评测样本量或严重误差门槛", true))
-		return s.store.CreateOrGetDecision(ctx, tenantID, decision)
-	}
-	if !input.Calibration.Available {
-		decision.Reasons = append(decision.Reasons, reason("calibration_unavailable", "当前模型、提示词和部署缺少可用校准证据", true))
+	if blocked, denied := admissionEvidenceBlock(input, policy); denied {
+		decision.Reasons = append(decision.Reasons, blocked)
 		return s.store.CreateOrGetDecision(ctx, tenantID, decision)
 	}
 
-	// Structured math is deterministic whenever possible. This is evaluated
-	// before allowed AI modes, so a caller cannot bypass rule scoring merely by
-	// requesting an LLM mode.
+	applyAdmittedScoringMode(input, policy, &decision)
+	return s.store.CreateOrGetDecision(ctx, tenantID, decision)
+}
+
+// 同时缺少多项证据时只记录原流程中最先阻止准入的一项，不能改变历史审计原因的优先级。
+func admissionEvidenceBlock(input DecisionInput, policy Policy) (Reason, bool) {
+	if qualityBelow(input.OCRQuality, policy.MinOCRQuality) {
+		return reason("ocr_quality_below_policy", "文字识别质量不足，禁止模型猜测不可读答案", true), true
+	}
+	if qualityBelow(input.ParserQuality, policy.MinParserQuality) {
+		return reason("parser_quality_below_policy", "结构化解析质量不足，必须转人工原图阅卷", true), true
+	}
+	if !input.RubricComplete {
+		return reason("rubric_incomplete", "冻结评分标准不完整，不能调用 AI 评分", true), true
+	}
+	if materialEvidenceRequired(input.AssessmentSnapshot) && !input.EvidenceAvailable {
+		return reason("material_evidence_missing", "材料题缺少可核验的材料证据引用，模型必须弃权", true), true
+	}
+	if !input.Evaluation.Approved || input.Evaluation.SampleCount < policy.MinEvalN || input.Evaluation.SevereErrorRate > policy.MaxSevereErrorRate {
+		return reason("approved_evaluation_insufficient", "未达到已批准评测样本量或严重误差门槛", true), true
+	}
+	if !input.Calibration.Available {
+		return reason("calibration_unavailable", "当前模型、提示词和部署缺少可用校准证据", true), true
+	}
+	return Reason{}, false
+}
+
+func applyAdmittedScoringMode(input DecisionInput, policy Policy, decision *Decision) {
+	// 结构化数学题尽量使用确定性处理；此检查先于允许的 AI 模式判断，调用方不能仅通过请求 LLM 模式绕过规则评分。
 	if prefersRuleAuto(input.AssessmentSnapshot) && containsMode(policy.AllowedModes, assessment.ScoringRuleAuto) {
 		decision.Decision = assessment.ScoringRuleAuto
 		decision.OutputConstraint.FinalScoreAuthority = "server_rubric_and_deterministic_rule"
 		decision.Reasons = append(decision.Reasons, reason("prefer_structured_rule", "数学结构表达式可由确定性规则优先判定，不调用 LLM", false))
-		return s.store.CreateOrGetDecision(ctx, tenantID, decision)
+		return
 	}
 	if !containsMode(policy.AllowedModes, input.RequestedMode) {
 		decision.Reasons = append(decision.Reasons, reason("requested_mode_not_allowed", "请求的评分模式未获当前准入策略批准", true))
-		return s.store.CreateOrGetDecision(ctx, tenantID, decision)
+		return
 	}
 	decision.Decision = input.RequestedMode
 	if input.RequestedMode == assessment.ScoringRuleAuto {
 		decision.OutputConstraint.FinalScoreAuthority = "server_rubric_and_deterministic_rule"
 		decision.Reasons = append(decision.Reasons, reason("rule_auto_allowed", "已满足规则评分准入条件", false))
-		return s.store.CreateOrGetDecision(ctx, tenantID, decision)
+		return
 	}
 	decision.ExternalAIAllowed = input.RequestedMode == assessment.ScoringAIAssist || input.RequestedMode == assessment.ScoringAIFastConfirm
 	if decision.ExternalAIAllowed {
 		decision.OutputConstraint.FinalScoreAuthority = "server_rubric_or_human_confirmation"
 		decision.Reasons = append(decision.Reasons, reason("ai_criteria_evidence_only", "AI 仅可返回结构化评分点与证据；最终分数由服务端 Rubric 计算或人工确认", false))
 	}
-	return s.store.CreateOrGetDecision(ctx, tenantID, decision)
 }
 
 func (s *Service) GetDecision(ctx context.Context, tenantID, runItemID string) (Decision, error) {
@@ -220,8 +221,7 @@ func inputSnapshot(input DecisionInput) map[string]any {
 		"rubric_complete": input.RubricComplete, "evidence_available": input.EvidenceAvailable,
 		"evaluation": input.Evaluation, "calibration": input.Calibration,
 	}
-	// Round-trip through JSON makes the stored audit record detached from every
-	// caller-owned map/pointer without retaining raw answer or image content.
+	// 通过 JSON 往返转换，使保存的审计记录脱离调用方持有的所有映射和指针，同时不保留原始答案或图片内容。
 	raw, _ := json.Marshal(result)
 	var copied map[string]any
 	_ = json.Unmarshal(raw, &copied)

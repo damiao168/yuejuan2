@@ -28,6 +28,7 @@ func registerQuestionBankRoutes(mux *http.ServeMux, ctx routerContext) {
 	mux.Handle("PUT /api/v1/question-banks/{bankId}/metadata-schema", ctx.guards.requireQuestionBank("manage", ctx.modules.Exam.QuestionBankHandler.UpdateMetadataSchema))
 	mux.Handle("POST /api/v1/question-banks/{bankId}/metadata-schema/validate", ctx.guards.requireQuestionBankAny(ctx.modules.Exam.QuestionBankHandler.ValidateMetadata, "read", "manage"))
 	mux.Handle("GET /api/v1/question-banks/{bankId}/acl", ctx.guards.requireQuestionBank("manage", ctx.modules.Exam.QuestionBankHandler.GetACL))
+	mux.Handle("GET /api/v1/question-banks/{bankId}/members", ctx.guards.requireQuestionBankAny(ctx.modules.Exam.QuestionBankHandler.ListMembers, "read", "manage"))
 	mux.Handle("PUT /api/v1/question-banks/{bankId}/acl", ctx.guards.requireQuestionBank("manage", ctx.modules.Exam.QuestionBankHandler.UpdateACL))
 	mux.Handle("GET /api/v1/question-bank/items", ctx.guards.requireQuestionBank("read", ctx.modules.Exam.QuestionBankHandler.SearchItems))
 	mux.Handle("POST /api/v1/question-bank/items/{itemId}/retire", ctx.guards.requireQuestionBank("retire", ctx.modules.Exam.QuestionBankHandler.RetireItem))

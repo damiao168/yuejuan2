@@ -1,0 +1,349 @@
+{
+  "scope": "断言数量辅助核对；消息/条件和顺序仍按每次源码审读核对，不能替代测试",
+  "files": [
+    {
+      "file": "services/api-gateway/internal/server/appeal_route_test.go",
+      "guard_calls": {
+        "before": 25,
+        "after": 25
+      },
+      "count_retained": true
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_anonymous_paper_test.go",
+      "guard_calls": {
+        "before": 25,
+        "after": 25
+      },
+      "count_retained": true
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_auth_security_test.go",
+      "guard_calls": {
+        "before": 48,
+        "after": 48
+      },
+      "count_retained": true
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_business_command_test.go",
+      "guard_calls": {
+        "before": 72,
+        "after": 72
+      },
+      "count_retained": true
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_core_workflow_test.go",
+      "guard_calls": {
+        "before": 46,
+        "after": 46
+      },
+      "count_retained": true
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_exam_archive_commands_test.go",
+      "guard_calls": {
+        "before": 40,
+        "after": 40
+      },
+      "count_retained": true
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_exam_management_test.go",
+      "guard_calls": {
+        "before": 39,
+        "after": 39
+      },
+      "count_retained": true
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_file_reconciliation_test.go",
+      "guard_calls": {
+        "before": 12,
+        "after": 12
+      },
+      "count_retained": true
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_idempotency_test.go",
+      "guard_calls": {
+        "before": 19,
+        "after": 19
+      },
+      "count_retained": true
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_math_effective_evidence_test.go",
+      "guard_calls": {
+        "before": 15,
+        "after": 15
+      },
+      "count_retained": true
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_math_grading_binding_test.go",
+      "guard_calls": {
+        "before": 19,
+        "after": 19
+      },
+      "count_retained": true
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_math_rubric_score_test.go",
+      "guard_calls": {
+        "before": 14,
+        "after": 14
+      },
+      "count_retained": true
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_math_verification_runtime_test.go",
+      "guard_calls": {
+        "before": 16,
+        "after": 16
+      },
+      "count_retained": true
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_mfa_test.go",
+      "guard_calls": {
+        "before": 50,
+        "after": 50
+      },
+      "count_retained": true
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_paper_import_reconciliation_test.go",
+      "guard_calls": {
+        "before": 79,
+        "after": 79
+      },
+      "count_retained": true
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_postgres_test.go",
+      "guard_calls": {
+        "before": 105,
+        "after": 105
+      },
+      "count_retained": true
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_question_bank_import_test.go",
+      "guard_calls": {
+        "before": 40,
+        "after": 40
+      },
+      "count_retained": true
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_question_bank_metadata_acl_search_test.go",
+      "guard_calls": {
+        "before": 30,
+        "after": 30
+      },
+      "count_retained": true
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_question_bank_publication_test.go",
+      "guard_calls": {
+        "before": 37,
+        "after": 37
+      },
+      "count_retained": true
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_question_bank_test.go",
+      "guard_calls": {
+        "before": 44,
+        "after": 44
+      },
+      "count_retained": true
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+      "guard_calls": {
+        "before": 253,
+        "after": 253
+      },
+      "count_retained": true
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_review_recovery_test.go",
+      "guard_calls": {
+        "before": 36,
+        "after": 36
+      },
+      "count_retained": true
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_review_repairs_test.go",
+      "guard_calls": {
+        "before": 107,
+        "after": 107
+      },
+      "count_retained": true
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_scoring_command_test.go",
+      "guard_calls": {
+        "before": 10,
+        "after": 10
+      },
+      "count_retained": true
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_scoring_double_mark_test.go",
+      "guard_calls": {
+        "before": 35,
+        "after": 35
+      },
+      "count_retained": true
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_story056_calibration_test.go",
+      "guard_calls": {
+        "before": 54,
+        "after": 54
+      },
+      "count_retained": true
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_story056_lease_test.go",
+      "guard_calls": {
+        "before": 65,
+        "after": 65
+      },
+      "count_retained": true
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_story056_test.go",
+      "guard_calls": {
+        "before": 56,
+        "after": 56
+      },
+      "count_retained": true
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_story060_capture_recovery_test.go",
+      "guard_calls": {
+        "before": 28,
+        "after": 28
+      },
+      "count_retained": true
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_story060_provision_test.go",
+      "guard_calls": {
+        "before": 6,
+        "after": 6
+      },
+      "count_retained": true
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_story060_roster_test.go",
+      "guard_calls": {
+        "before": 33,
+        "after": 33
+      },
+      "count_retained": true
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_story060_sheet_identity_test.go",
+      "guard_calls": {
+        "before": 58,
+        "after": 58
+      },
+      "count_retained": true
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_story061_governance_test.go",
+      "guard_calls": {
+        "before": 58,
+        "after": 58
+      },
+      "count_retained": true
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_subjective_command_test.go",
+      "guard_calls": {
+        "before": 16,
+        "after": 16
+      },
+      "count_retained": true
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_subjective_panel_test.go",
+      "guard_calls": {
+        "before": 54,
+        "after": 54
+      },
+      "count_retained": true
+    },
+    {
+      "file": "services/api-gateway/internal/server/e2e_worker_runtime_reliability_test.go",
+      "guard_calls": {
+        "before": 40,
+        "after": 40
+      },
+      "count_retained": true
+    },
+    {
+      "file": "services/api-gateway/internal/server/managed_config_postgres_test.go",
+      "guard_calls": {
+        "before": 9,
+        "after": 9
+      },
+      "count_retained": true
+    },
+    {
+      "file": "services/api-gateway/internal/server/migration_upgrade_test.go",
+      "guard_calls": {
+        "before": 22,
+        "after": 22
+      },
+      "count_retained": true
+    },
+    {
+      "file": "services/api-gateway/internal/server/platform_schools_route_test.go",
+      "guard_calls": {
+        "before": 5,
+        "after": 5
+      },
+      "count_retained": true
+    },
+    {
+      "file": "services/api-gateway/internal/server/readers_batch47_test.go",
+      "guard_calls": {
+        "before": 13,
+        "after": 13
+      },
+      "count_retained": true
+    },
+    {
+      "file": "services/api-gateway/internal/server/review_route_test.go",
+      "guard_calls": {
+        "before": 111,
+        "after": 111
+      },
+      "count_retained": true
+    },
+    {
+      "file": "services/api-gateway/internal/server/score_route_test.go",
+      "guard_calls": {
+        "before": 21,
+        "after": 21
+      },
+      "count_retained": true
+    },
+    {
+      "file": "services/api-gateway/internal/server/server_test.go",
+      "guard_calls": {
+        "before": 60,
+        "after": 60
+      },
+      "count_retained": true
+    }
+  ]
+}

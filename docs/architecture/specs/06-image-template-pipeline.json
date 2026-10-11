@@ -1,0 +1,1299 @@
+{
+  "file": "06-image-template-pipeline.drawio",
+  "title": "图像处理与模板识别",
+  "pages": [
+    {
+      "id": "template_routing",
+      "title": "01 采集、质量与已有模板路由",
+      "width": 2340,
+      "height": 1963,
+      "note": "条码观测发生在解码阶段。模板匹配的 unknown 是已有候选无法证明，不代表未知版面检测器。",
+      "nodes": [
+        {
+          "id": "upload",
+          "label": "输入：采集文件资产\nPDF / PNG / JPEG 等支持类型",
+          "x": 228,
+          "y": 253,
+          "w": 312,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/capture/store_postgres.go:80",
+          "display_label": "上传原件",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "decode",
+          "label": "capture_file_decode\ndecode_document → 多页 PNG → 条码观测",
+          "x": 858,
+          "y": 253,
+          "w": 532,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/page-processing-worker/page_processing/runner.py:182",
+          "display_label": "解码 / 条码观测",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "quality",
+          "label": "image_quality\n尺寸上限、EXIF、焦点/遮挡/透视等测量\n有限 deskew；anchor/curvature 未评估",
+          "x": 1710,
+          "y": 253,
+          "w": 312,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/image-quality-worker/image_quality/engine.py:43",
+          "display_label": "图像质量",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "q",
+          "label": "quality_status = passed？",
+          "x": 1588,
+          "y": 600,
+          "w": 555,
+          "h": 152,
+          "status": "implemented",
+          "kind": "decision",
+          "evidence": "services/api-gateway/internal/imagequality/coordinator_postgres.go:79",
+          "display_label": "质量通过？",
+          "show_evidence": false,
+          "title_font_size": 70,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "blocked",
+          "label": "质量 / 身份复核阻塞\nreview / failed → 不自动配准\n条码冲突需人工核对",
+          "x": 968,
+          "y": 604,
+          "w": 312,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/capture/registration_review_store_postgres.go:129",
+          "display_label": "人工复核",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "controlled",
+          "label": "已有可验证模板身份？\n实体纸张模板 → 考试绑定 → 唯一锁定模板",
+          "x": 99,
+          "y": 628,
+          "w": 570,
+          "h": 97,
+          "status": "implemented",
+          "kind": "decision",
+          "evidence": "services/api-gateway/internal/capture/registration_store_postgres.go:240",
+          "display_label": "受控输入已有模板？",
+          "show_evidence": false,
+          "title_font_size": 40,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "bound",
+          "label": "使用现有锁定模板及内容 hash\nbarcode / single_template /\nbound_auto / locked_with_guard",
+          "x": 228,
+          "y": 994,
+          "w": 312,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/capture/registration_store_postgres.go:249",
+          "display_label": "锁定模板",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "candidates",
+          "label": "无直接路由：候选匹配任务\n最多 8 个已有锁定模板/页\n不自动创建未知模板",
+          "x": 848,
+          "y": 998,
+          "w": 552,
+          "h": 104,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/capture/template_match_store_postgres.go:15",
+          "display_label": "已有模板候选匹配",
+          "show_evidence": false,
+          "title_font_size": 66,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "score",
+          "label": "候选粗结构 + OpenCV 几何证据\nscore ≥ 0.70 且 margin ≥ 0.06？",
+          "x": 1586,
+          "y": 1010,
+          "w": 559,
+          "h": 112,
+          "status": "implemented",
+          "kind": "decision",
+          "evidence": "services/page-processing-worker/page_processing/registration.py:77",
+          "display_label": "结构 + 几何验证",
+          "show_evidence": false,
+          "title_font_size": 48,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "match",
+          "label": "matched → bound_auto\n同事务写匹配、绑定、配准任务、runtime成功",
+          "x": 1588,
+          "y": 1386,
+          "w": 556,
+          "h": 108,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/capture/template_match_store_postgres.go:210",
+          "display_label": "匹配成功 → 绑定",
+          "show_evidence": false,
+          "title_font_size": 70,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "unknown",
+          "label": "unknown / ambiguous / conflict\nneeds_review：人工绑定已有锁定模板\n修订号校验后重新处理",
+          "x": 848,
+          "y": 1389,
+          "w": 552,
+          "h": 102,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/paper/store_postgres_template_binding.go:25",
+          "display_label": "未知 / 歧义 / 冲突",
+          "show_evidence": false,
+          "title_font_size": 65,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "next",
+          "label": "排 page_registration\n质量通过的 normalized 页作为 source\n详见下一页",
+          "x": 228,
+          "y": 1384,
+          "w": 312,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/capture/registration_store_postgres.go:321",
+          "display_label": "配准任务",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "missing",
+          "label": "待确认：YOLO 备用识别 / 未知版面建模板\n本次源码与设计检索未发现实现/开发依据\nV1 文档明确不承诺无模板切题",
+          "x": 270,
+          "y": 1700,
+          "w": 969,
+          "h": 111,
+          "status": "unknown",
+          "kind": "note",
+          "evidence": "docs/architecture/evidence/pipeline-audit.md:34",
+          "display_label": "待确认：YOLO 未知版面模板",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        }
+      ],
+      "edges": [
+        {
+          "source": "upload",
+          "target": "decode",
+          "label": "页文件",
+          "dashed": false,
+          "display_label": "页文件"
+        },
+        {
+          "source": "decode",
+          "target": "quality",
+          "label": "ApplyFileResult 排任务",
+          "dashed": false,
+          "display_label": "ApplyFileResult 排任务"
+        },
+        {
+          "source": "quality",
+          "target": "q",
+          "label": "质量输出",
+          "dashed": false,
+          "display_label": "质量输出"
+        },
+        {
+          "source": "q",
+          "target": "blocked",
+          "label": "review / failed",
+          "dashed": false,
+          "display_label": "review / failed"
+        },
+        {
+          "source": "q",
+          "target": "controlled",
+          "label": "passed",
+          "dashed": false,
+          "points": [
+            [
+              1866,
+              845
+            ],
+            [
+              384,
+              845
+            ]
+          ],
+          "display_label": "passed"
+        },
+        {
+          "source": "controlled",
+          "target": "bound",
+          "label": "有",
+          "dashed": false,
+          "display_label": "有"
+        },
+        {
+          "source": "controlled",
+          "target": "candidates",
+          "label": "无",
+          "dashed": false,
+          "exitX": 1,
+          "exitY": 0.75,
+          "entryX": 0,
+          "entryY": 0.25,
+          "points": [
+            [
+              689,
+              728
+            ],
+            [
+              819,
+              728
+            ],
+            [
+              819,
+              1006
+            ]
+          ],
+          "display_label": "无"
+        },
+        {
+          "source": "candidates",
+          "target": "score",
+          "label": "候选证据",
+          "dashed": false,
+          "display_label": "候选证据"
+        },
+        {
+          "source": "score",
+          "target": "match",
+          "label": "matched",
+          "dashed": false,
+          "display_label": "matched"
+        },
+        {
+          "source": "score",
+          "target": "unknown",
+          "label": "其他",
+          "dashed": false,
+          "exitX": 0,
+          "exitY": 0.75,
+          "entryX": 1,
+          "entryY": 0.25,
+          "points": [
+            [
+              1560,
+              1118
+            ],
+            [
+              1430,
+              1118
+            ],
+            [
+              1430,
+              1396
+            ]
+          ],
+          "display_label": "其他"
+        },
+        {
+          "source": "bound",
+          "target": "next",
+          "label": "排配准",
+          "dashed": false,
+          "display_label": "排配准"
+        },
+        {
+          "source": "match",
+          "target": "next",
+          "label": "绑定后继续",
+          "dashed": false,
+          "points": [
+            [
+              1872,
+              1599
+            ],
+            [
+              384,
+              1599
+            ]
+          ],
+          "display_label": "绑定后继续"
+        },
+        {
+          "source": "unknown",
+          "target": "next",
+          "label": "人工绑定后重处理",
+          "dashed": true,
+          "display_label": "人工绑定后重处理"
+        }
+      ],
+      "display_note": "",
+      "typography_layout_base": {
+        "width": 1800,
+        "height": 1510,
+        "nodes": {
+          "upload": {
+            "x": 80,
+            "y": 170,
+            "w": 430,
+            "h": 135
+          },
+          "decode": {
+            "x": 650,
+            "y": 170,
+            "w": 430,
+            "h": 135
+          },
+          "quality": {
+            "x": 1220,
+            "y": 170,
+            "w": 430,
+            "h": 135
+          },
+          "q": {
+            "x": 1220,
+            "y": 440,
+            "w": 430,
+            "h": 160
+          },
+          "blocked": {
+            "x": 650,
+            "y": 440,
+            "w": 430,
+            "h": 135
+          },
+          "controlled": {
+            "x": 80,
+            "y": 440,
+            "w": 430,
+            "h": 160
+          },
+          "bound": {
+            "x": 80,
+            "y": 740,
+            "w": 430,
+            "h": 135
+          },
+          "candidates": {
+            "x": 650,
+            "y": 740,
+            "w": 430,
+            "h": 135
+          },
+          "score": {
+            "x": 1220,
+            "y": 740,
+            "w": 430,
+            "h": 160
+          },
+          "match": {
+            "x": 1220,
+            "y": 1040,
+            "w": 430,
+            "h": 135
+          },
+          "unknown": {
+            "x": 650,
+            "y": 1040,
+            "w": 430,
+            "h": 135
+          },
+          "next": {
+            "x": 80,
+            "y": 1040,
+            "w": 430,
+            "h": 135
+          },
+          "missing": {
+            "x": 80,
+            "y": 1290,
+            "w": 1000,
+            "h": 120
+          }
+        },
+        "points": {
+          "4": [
+            [
+              1435,
+              650
+            ],
+            [
+              295,
+              650
+            ]
+          ],
+          "6": [
+            [
+              530,
+              560.0
+            ],
+            [
+              630,
+              560.0
+            ],
+            [
+              630,
+              773.75
+            ]
+          ],
+          "9": [
+            [
+              1200,
+              860.0
+            ],
+            [
+              1100,
+              860.0
+            ],
+            [
+              1100,
+              1073.75
+            ]
+          ],
+          "11": [
+            [
+              1440,
+              1230
+            ],
+            [
+              295,
+              1230
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "registration_crops",
+      "title": "02 OpenCV 配准、切题与人工纠正",
+      "width": 2340,
+      "height": 1911,
+      "note": "四点校正是用户提交坐标后生成预览；未确认的未知模板不会被自动学习。红色节点表示当前提交边界风险。",
+      "nodes": [
+        {
+          "id": "input",
+          "label": "输入：normalized PNG + 模板页\n冻结模板 hash + question_regions",
+          "x": 104,
+          "y": 258,
+          "w": 559,
+          "h": 101,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/capture/registration_store_postgres.go:344",
+          "display_label": "标准化页面 + 模板",
+          "show_evidence": false,
+          "title_font_size": 64,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "guard",
+          "label": "bound_auto / locked_with_guard？\n静态布局 guard：方向/比例/pHash/边缘",
+          "x": 847,
+          "y": 268,
+          "w": 555,
+          "h": 115,
+          "status": "implemented",
+          "kind": "decision",
+          "evidence": "services/page-processing-worker/page_processing/runner.py:243",
+          "display_label": "需要模板守卫？",
+          "show_evidence": false,
+          "title_font_size": 50,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "fallback",
+          "label": "guard 不通过：少量候选重匹配\n只能诊断；选中不同模板/hash 则拒绝",
+          "x": 1638,
+          "y": 230,
+          "w": 456,
+          "h": 157,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/page-processing-worker/page_processing/runner.py:298",
+          "display_label": "小范围重匹配\n不替换考试锁定模板",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "cv",
+          "label": "pixel_identity 或 ORB → AKAZE\nHamming + ratio test + RANSAC homography",
+          "x": 107,
+          "y": 674,
+          "w": 553,
+          "h": 76,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/page-processing-worker/page_processing/registration.py:234",
+          "display_label": "像素一致 / ORB → AKAZE",
+          "show_evidence": false,
+          "title_font_size": 43,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "safe",
+          "label": "几何证据门槛通过？\n≥8 inlier、ratio≥0.35、平均误差≤8px\n角点变换面积比 coverage≥0.55",
+          "x": 847,
+          "y": 655,
+          "w": 555,
+          "h": 152,
+          "status": "implemented",
+          "kind": "decision",
+          "evidence": "services/page-processing-worker/page_processing/registration.py:283",
+          "display_label": "几何通过？",
+          "show_evidence": false,
+          "title_font_size": 70,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "terminal",
+          "label": "确定算法错误：不可自动重试\nterminal_error → needs_review\nAPI/临时错误依 runtime 次数退避",
+          "x": 1588,
+          "y": 658,
+          "w": 556,
+          "h": 108,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "services/page-processing-worker/page_processing/runner.py:463",
+          "display_label": "算法失败 → 人工",
+          "show_evidence": false,
+          "title_font_size": 70,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "crop",
+          "label": "warpPerspective → registered PNG\nROI 在 [0,1] 归一化坐标裁切\n输出逐题 PNG + bbox + hash",
+          "x": 109,
+          "y": 1083,
+          "w": 550,
+          "h": 89,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/page-processing-worker/page_processing/registration.py:369",
+          "display_label": "透视校正 → ROI 裁片",
+          "show_evidence": false,
+          "title_font_size": 54,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "persist",
+          "label": "提交配准领域事实\nanswer_segment + 注册结果 + page状态\nconfidence <0.75 → needs_review",
+          "x": 896,
+          "y": 1072,
+          "w": 456,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/capture/registration_store_postgres.go:430",
+          "display_label": "保存配准结果",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "runtime",
+          "label": "入口先验租约；领域提交后 runtime.Complete\n领域与任务完成不是同一事务\n入口后失租/最终失败可留下状态分裂",
+          "x": 1617,
+          "y": 1049,
+          "w": 497,
+          "h": 157,
+          "status": "issue",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/capture/handlers.go:760",
+          "display_label": "完成 Runtime\n与领域提交分事务",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "confirm",
+          "label": "用户：ConfirmRegistration\n只确认 completed + needs_review\npage → ready，保存原因",
+          "x": 228,
+          "y": 1488,
+          "w": 312,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/capture/registration_review_store_postgres.go:8",
+          "display_label": "人工确认",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "manual",
+          "label": "用户：手工四点校正\n校验点序/范围/面积/矩阵/coverage\nworker生成预览 registered + ROI",
+          "x": 968,
+          "y": 1488,
+          "w": 312,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/page-processing-worker/page_processing/registration.py:307",
+          "display_label": "四点校正",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "apply",
+          "label": "用户：应用 / 撤销校正\n旧配准失效；裁片/页面快照应用与恢复\n校验来源/base run/expected revision",
+          "x": 1672,
+          "y": 1488,
+          "w": 388,
+          "h": 111,
+          "status": "partial",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/capture/correction_apply_store_postgres.go:14",
+          "display_label": "应用 / 撤销",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        }
+      ],
+      "edges": [
+        {
+          "source": "input",
+          "target": "guard",
+          "label": "冻结路由",
+          "dashed": false,
+          "display_label": "冻结路由"
+        },
+        {
+          "source": "guard",
+          "target": "cv",
+          "label": "非 guard / 通过",
+          "dashed": false,
+          "points": [
+            [
+              780,
+              507
+            ],
+            [
+              384,
+              507
+            ]
+          ],
+          "display_label": "非 guard / 通过"
+        },
+        {
+          "source": "guard",
+          "target": "fallback",
+          "label": "不通过",
+          "dashed": false,
+          "display_label": "不通过"
+        },
+        {
+          "source": "fallback",
+          "target": "cv",
+          "label": "匹配仍为锁定模板",
+          "dashed": false,
+          "points": [
+            [
+              1885,
+              507
+            ],
+            [
+              384,
+              507
+            ]
+          ],
+          "display_label": "匹配仍为锁定模板"
+        },
+        {
+          "source": "fallback",
+          "target": "terminal",
+          "label": "冲突 / 不确定",
+          "dashed": false,
+          "display_label": "冲突 / 不确定"
+        },
+        {
+          "source": "cv",
+          "target": "safe",
+          "label": "矩阵与证据",
+          "dashed": false,
+          "display_label": "矩阵与证据"
+        },
+        {
+          "source": "safe",
+          "target": "terminal",
+          "label": "不通过",
+          "dashed": false,
+          "display_label": "不通过"
+        },
+        {
+          "source": "safe",
+          "target": "crop",
+          "label": "通过",
+          "dashed": false,
+          "points": [
+            [
+              1118,
+              936
+            ],
+            [
+              384,
+              936
+            ]
+          ],
+          "display_label": "通过"
+        },
+        {
+          "source": "crop",
+          "target": "persist",
+          "label": "上传产物",
+          "dashed": false,
+          "display_label": "上传产物"
+        },
+        {
+          "source": "persist",
+          "target": "runtime",
+          "label": "领域提交后",
+          "dashed": false,
+          "display_label": "领域提交后"
+        },
+        {
+          "source": "persist",
+          "target": "confirm",
+          "label": "低置信度",
+          "dashed": false,
+          "points": [
+            [
+              806,
+              1300
+            ],
+            [
+              384,
+              1300
+            ]
+          ],
+          "display_label": "低置信度"
+        },
+        {
+          "source": "terminal",
+          "target": "manual",
+          "label": "人工纠正",
+          "dashed": true,
+          "points": [
+            [
+              2236,
+              1365
+            ],
+            [
+              1131,
+              1365
+            ]
+          ],
+          "display_label": "人工纠正"
+        },
+        {
+          "source": "manual",
+          "target": "apply",
+          "label": "预览审核",
+          "dashed": false,
+          "display_label": "预览审核"
+        }
+      ],
+      "display_note": "",
+      "typography_layout_base": {
+        "width": 1800,
+        "height": 1470,
+        "nodes": {
+          "input": {
+            "x": 80,
+            "y": 170,
+            "w": 430,
+            "h": 135
+          },
+          "guard": {
+            "x": 650,
+            "y": 170,
+            "w": 430,
+            "h": 160
+          },
+          "fallback": {
+            "x": 1220,
+            "y": 170,
+            "w": 430,
+            "h": 135
+          },
+          "cv": {
+            "x": 80,
+            "y": 480,
+            "w": 430,
+            "h": 135
+          },
+          "safe": {
+            "x": 650,
+            "y": 480,
+            "w": 430,
+            "h": 165
+          },
+          "terminal": {
+            "x": 1220,
+            "y": 480,
+            "w": 430,
+            "h": 135
+          },
+          "crop": {
+            "x": 80,
+            "y": 800,
+            "w": 430,
+            "h": 135
+          },
+          "persist": {
+            "x": 650,
+            "y": 800,
+            "w": 430,
+            "h": 135
+          },
+          "runtime": {
+            "x": 1220,
+            "y": 800,
+            "w": 430,
+            "h": 135
+          },
+          "confirm": {
+            "x": 80,
+            "y": 1120,
+            "w": 430,
+            "h": 135
+          },
+          "manual": {
+            "x": 650,
+            "y": 1120,
+            "w": 430,
+            "h": 135
+          },
+          "apply": {
+            "x": 1220,
+            "y": 1120,
+            "w": 430,
+            "h": 135
+          }
+        },
+        "points": {
+          "1": [
+            [
+              600,
+              390
+            ],
+            [
+              295,
+              390
+            ]
+          ],
+          "3": [
+            [
+              1450,
+              390
+            ],
+            [
+              295,
+              390
+            ]
+          ],
+          "7": [
+            [
+              860,
+              720
+            ],
+            [
+              295,
+              720
+            ]
+          ],
+          "10": [
+            [
+              620,
+              1000
+            ],
+            [
+              295,
+              1000
+            ]
+          ],
+          "11": [
+            [
+              1720,
+              1050
+            ],
+            [
+              870,
+              1050
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "blank_boundaries",
+      "title": "03 整页空白、OMR空白与OCR空文本",
+      "width": 2340,
+      "height": 1833,
+      "note": "三处都有真实判断；它们作用于不同对象，没有一个统一结论可把任意主观裁片自动判为零分。",
+      "nodes": [
+        {
+          "id": "page_input",
+          "label": "整页 normalized 输入质量测量\n墨迹 coverage 包括印刷框线/文字",
+          "x": 228,
+          "y": 253,
+          "w": 312,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/image-quality-worker/image_quality/metrics.py:14",
+          "display_label": "整页图像",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "page_detect",
+          "label": "blank_probability = clamp(1-ink/0.012)\n>0.97 → blank_page 质量问题",
+          "x": 896,
+          "y": 253,
+          "w": 456,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/image-quality-worker/image_quality/policy.py:84",
+          "display_label": "像素空白概率",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "page_review",
+          "label": "质量复核：不是学生逐题未作答证明\nreview/failed 不自动进入配准",
+          "x": 1710,
+          "y": 253,
+          "w": 312,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/api-gateway/internal/capture/registration_review_store_postgres.go:129",
+          "display_label": "质量复核",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "omr_input",
+          "label": "选择题裁片 + option ROI\n可使用任务冻结的空白参考图差分\n参考下载字节必须匹配 SHA256",
+          "x": 223,
+          "y": 643,
+          "w": 322,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/page-processing-worker/page_processing/runner.py:409",
+          "display_label": "选项 ROI",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "omr_detect",
+          "label": "最高选项 strength<ambiguous_threshold\n默认 0.10 → decision=blank",
+          "x": 896,
+          "y": 643,
+          "w": 456,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/page-processing-worker/page_processing/omr.py:148",
+          "display_label": "选项强度判断",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "omr_review",
+          "label": "decision!=selected → needs_human_review\n空白与 ambiguous/multiple 转人工\n不直接自动零分",
+          "x": 1588,
+          "y": 649,
+          "w": 556,
+          "h": 99,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/page-processing-worker/page_processing/omr.py:86",
+          "display_label": "未选中 → 人工复核",
+          "show_evidence": false,
+          "title_font_size": 62,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "ocr_input",
+          "label": "TEXT OCR → 可定位文字 blocks\n保留识别事实与裁片证据",
+          "x": 210,
+          "y": 1033,
+          "w": 346,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/ocr-worker/ocr_worker/recognition_router.py:105",
+          "display_label": "文本 OCR",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "ocr_detect",
+          "label": "无 blocks → empty_text_result\n机器读不出文字≠确认学生未作答",
+          "x": 968,
+          "y": 1033,
+          "w": 312,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/ocr-worker/ocr_worker/recognition_router.py:122",
+          "display_label": "无文本块",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "ocr_review",
+          "label": "needs_human_review → 人工判断\nFORMULA/MIXED另有路由；图片继续保留",
+          "x": 1710,
+          "y": 1033,
+          "w": 312,
+          "h": 111,
+          "status": "implemented",
+          "kind": "box",
+          "evidence": "services/ocr-worker/ocr_worker/recognition_router.py:115",
+          "display_label": "人工判断",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        },
+        {
+          "id": "gap",
+          "label": "待确认：任意主观题的统一空白判定与自动零分\nv1/v2 请求仍要求非空 AnswerText；不能用整页指标或 OCR 空文本代替业务确认\n阈值为代码配置/启发式，不代表已校准错误概率",
+          "x": 644,
+          "y": 1456,
+          "w": 960,
+          "h": 111,
+          "status": "unknown",
+          "kind": "box",
+          "evidence": "docs/architecture/evidence/pipeline-audit.md:48",
+          "display_label": "待确认：空白主观题自动零分",
+          "show_evidence": false,
+          "title_font_size": 72,
+          "body_font_size": 32,
+          "title_single_line": true,
+          "text_align": "center"
+        }
+      ],
+      "edges": [
+        {
+          "source": "page_input",
+          "target": "page_detect",
+          "label": "整页质量",
+          "dashed": false,
+          "display_label": "整页质量"
+        },
+        {
+          "source": "page_detect",
+          "target": "page_review",
+          "label": "质量问题",
+          "dashed": false,
+          "display_label": "质量问题"
+        },
+        {
+          "source": "omr_input",
+          "target": "omr_detect",
+          "label": "填涂强度",
+          "dashed": false,
+          "display_label": "填涂强度"
+        },
+        {
+          "source": "omr_detect",
+          "target": "omr_review",
+          "label": "blank",
+          "dashed": false,
+          "display_label": "blank"
+        },
+        {
+          "source": "ocr_input",
+          "target": "ocr_detect",
+          "label": "无文字",
+          "dashed": false,
+          "display_label": "无文字"
+        },
+        {
+          "source": "ocr_detect",
+          "target": "ocr_review",
+          "label": "人工判定",
+          "dashed": false,
+          "display_label": "人工判定"
+        }
+      ],
+      "display_note": "",
+      "typography_layout_base": {
+        "width": 1800,
+        "height": 1410,
+        "nodes": {
+          "page_input": {
+            "x": 80,
+            "y": 170,
+            "w": 430,
+            "h": 135
+          },
+          "page_detect": {
+            "x": 650,
+            "y": 170,
+            "w": 430,
+            "h": 135
+          },
+          "page_review": {
+            "x": 1220,
+            "y": 170,
+            "w": 430,
+            "h": 135
+          },
+          "omr_input": {
+            "x": 80,
+            "y": 470,
+            "w": 430,
+            "h": 135
+          },
+          "omr_detect": {
+            "x": 650,
+            "y": 470,
+            "w": 430,
+            "h": 135
+          },
+          "omr_review": {
+            "x": 1220,
+            "y": 470,
+            "w": 430,
+            "h": 135
+          },
+          "ocr_input": {
+            "x": 80,
+            "y": 770,
+            "w": 430,
+            "h": 135
+          },
+          "ocr_detect": {
+            "x": 650,
+            "y": 770,
+            "w": 430,
+            "h": 135
+          },
+          "ocr_review": {
+            "x": 1220,
+            "y": 770,
+            "w": 430,
+            "h": 135
+          },
+          "gap": {
+            "x": 80,
+            "y": 1090,
+            "w": 1570,
+            "h": 145
+          }
+        },
+        "points": {}
+      }
+    }
+  ],
+  "compact": true
+}

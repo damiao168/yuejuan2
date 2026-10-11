@@ -6,8 +6,7 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/logger"
 )
 
-// LogPublisher is the built-in durable sink. External log/alert pipelines can
-// consume these structured records, while the full payload remains in Postgres.
+// LogPublisher 是内置的持久化输出端。外部日志或告警流水线可消费这些结构化记录，完整载荷仍保存在 Postgres 中。
 type LogPublisher struct{ log *logger.Logger }
 
 func NewLogPublisher(log *logger.Logger) *LogPublisher { return &LogPublisher{log: log} }

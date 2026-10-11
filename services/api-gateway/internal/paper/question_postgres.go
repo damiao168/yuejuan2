@@ -82,7 +82,7 @@ ORDER BY sort_order, question_no
 	for index := range out {
 		var bankContent []byte
 		var options []byte
-		if err := queryer.QueryRowContext(ctx, `SELECT source_type,COALESCE(source_bank_item_id::text,''),COALESCE(source_bank_item_version_id::text,''),COALESCE(source_content_hash,''),bank_content,parent_question_no,subquestion_no,options FROM question WHERE tenant_id=$1 AND id=$2`, tenantID, out[index].ID).Scan(&out[index].SourceType, &out[index].SourceBankItemID, &out[index].SourceBankItemVersionID, &out[index].SourceContentHash, &bankContent, &out[index].ParentQuestionNo, &out[index].SubquestionNo, &options); err != nil {
+		if err := queryer.QueryRowContext(ctx, `SELECT source_type,COALESCE(source_bank_item_id::text,''),COALESCE(source_bank_item_version_id::text,''),COALESCE(source_content_hash,''),bank_content,parent_question_no,subquestion_no,options,score_source FROM question WHERE tenant_id=$1 AND id=$2`, tenantID, out[index].ID).Scan(&out[index].SourceType, &out[index].SourceBankItemID, &out[index].SourceBankItemVersionID, &out[index].SourceContentHash, &bankContent, &out[index].ParentQuestionNo, &out[index].SubquestionNo, &options, &out[index].ScoreSource); err != nil {
 			return nil, err
 		}
 		if err := json.Unmarshal(options, &out[index].Options); err != nil {
@@ -177,10 +177,10 @@ func (s *PostgresStore) UpdateQuestion(ctx context.Context, tenantID string, id 
 	options, _ := json.Marshal(wireList(merged.Options))
 	row := tx.QueryRowContext(ctx, `
 UPDATE question
-SET question_no = $3, question_type = $4, score = $5, stem = $6, knowledge_points = $7, answer_area = $8, sort_order = $9, parent_question_no=$10, subquestion_no=$11, options=$12, updated_at = now()
+SET question_no = $3, question_type = $4, score = $5, stem = $6, knowledge_points = $7, answer_area = $8, sort_order = $9, parent_question_no=$10, subquestion_no=$11, options=$12, score_source=CASE WHEN $13 THEN 'human' ELSE score_source END, updated_at = now()
 WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL
 RETURNING id::text, tenant_id::text, exam_id::text, COALESCE(exam_paper_id::text, ''), question_no, question_type, score::float8, COALESCE(stem, ''), knowledge_points, answer_area, sort_order, status
-`, tenantID, id, merged.QuestionNo, merged.QuestionType, merged.Score, merged.Stem, kp, area, merged.SortOrder, merged.ParentQuestionNo, merged.SubquestionNo, options)
+`, tenantID, id, merged.QuestionNo, merged.QuestionType, merged.Score, merged.Stem, kp, area, merged.SortOrder, merged.ParentQuestionNo, merged.SubquestionNo, options, input.Score != nil)
 	var out Question
 	if err := scanQuestion(row, &out); err != nil {
 		return Question{}, err

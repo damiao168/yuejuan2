@@ -302,7 +302,9 @@ FOR UPDATE
 		if *input.AdjustedScore < 0 || *input.AdjustedScore > final.MaxScore {
 			return Appeal{}, nil, ErrInvalidInput
 		}
-		adj, err := s.applyAdjustmentTx(ctx, tx, tenantID, item, final, actorID, input.Reason, *input.AdjustedScore)
+		adj, err := s.applyAdjustmentTx(ctx, tx, tenantID, item, final, actorID, scoreAdjustmentDecision{
+			Reason: input.Reason, Score: *input.AdjustedScore,
+		})
 		if err != nil {
 			return Appeal{}, nil, err
 		}
@@ -452,10 +454,15 @@ FOR UPDATE
 	return out, nil
 }
 
+type scoreAdjustmentDecision struct {
+	Reason string
+	Score  float64
+}
+
 // 调分流水、单题分数和总分增量共用裁决事务；任何一步失败都不能留下部分调分。
-func (s *PostgresStore) applyAdjustmentTx(ctx context.Context, tx *sql.Tx, tenantID string, item Appeal, final finalGradeRef, actorID string, reason string, adjustedScore float64) (ScoreAdjustment, error) {
+func (s *PostgresStore) applyAdjustmentTx(ctx context.Context, tx *sql.Tx, tenantID string, item Appeal, final finalGradeRef, actorID string, decision scoreAdjustmentDecision) (ScoreAdjustment, error) {
 	previous := final.Score
-	delta := adjustedScore - previous
+	delta := decision.Score - previous
 	adjustment, err := scanAdjustment(tx.QueryRowContext(ctx, `
 INSERT INTO score_adjustment (
   tenant_id, appeal_id, exam_id, submission_id, submission_grade_id, final_grade_id,
@@ -466,7 +473,7 @@ RETURNING id::text, tenant_id::text, appeal_id::text, exam_id::text, submission_
   submission_grade_id::text, final_grade_id::text, question_id::text, question_no,
   previous_score::float8, adjusted_score::float8, delta::float8, reason, adjusted_by::text, created_at
 `, tenantID, item.ID, item.ExamID, item.SubmissionID, item.SubmissionGradeID, final.ID,
-		final.QuestionID, final.QuestionNo, previous, adjustedScore, delta, reason, actorID))
+		final.QuestionID, final.QuestionNo, previous, decision.Score, delta, decision.Reason, actorID))
 	if err != nil {
 		return ScoreAdjustment{}, err
 	}
@@ -474,7 +481,7 @@ RETURNING id::text, tenant_id::text, appeal_id::text, exam_id::text, submission_
 UPDATE final_grade
 SET score = $4, status = 'locked', locked = true, updated_at = now()
 WHERE tenant_id = $1 AND id::text = $2 AND submission_id::text = $3
-`, tenantID, final.ID, item.SubmissionID, adjustedScore); err != nil {
+`, tenantID, final.ID, item.SubmissionID, decision.Score); err != nil {
 		return ScoreAdjustment{}, err
 	}
 	if _, err := tx.ExecContext(ctx, `

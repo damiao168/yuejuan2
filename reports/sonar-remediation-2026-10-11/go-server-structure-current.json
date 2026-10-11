@@ -1,0 +1,3278 @@
+[
+  {
+    "path": "services/api-gateway/internal/server/appeal_route_test.go",
+    "name": "TestAppealRoutesCreateReviewAdjustCloseAndStatistics",
+    "line": 27,
+    "cognitive_estimate": 11,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/appeal_route_test.go",
+    "name": "TestAppealTeacherOnlyWorksAssignedAppealsAndCannotFinalize",
+    "line": 83,
+    "cognitive_estimate": 3,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/appeal_route_test.go",
+    "name": "appealAssertAssignmentBoundaries",
+    "line": 116,
+    "cognitive_estimate": 7,
+    "parameters": 6
+  },
+  {
+    "path": "services/api-gateway/internal/server/appeal_route_test.go",
+    "name": "appealAssertTeacherRecommendationBoundaries",
+    "line": 155,
+    "cognitive_estimate": 8,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/appeal_route_test.go",
+    "name": "TestAppealRoutesRequirePermission",
+    "line": 193,
+    "cognitive_estimate": 1,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/appeal_route_test.go",
+    "name": "appealRouter",
+    "line": 206,
+    "cognitive_estimate": 0,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/appeal_route_test.go",
+    "name": "appealAuthStore",
+    "line": 217,
+    "cognitive_estimate": 2,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/appeal_route_test.go",
+    "name": "appealAuthStoreWithPermissions",
+    "line": 286,
+    "cognitive_estimate": 1,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/appeal_route_test.go",
+    "name": "appealLogin",
+    "line": 309,
+    "cognitive_estimate": 2,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/appeal_route_test.go",
+    "name": "appealAuthedRequest",
+    "line": 327,
+    "cognitive_estimate": 0,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/appeal_route_test.go",
+    "name": "decodeAppealID",
+    "line": 333,
+    "cognitive_estimate": 2,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/appeal_route_test.go",
+    "name": "seededRouteAppealStore",
+    "line": 349,
+    "cognitive_estimate": 0,
+    "parameters": 0
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_anonymous_paper_test.go",
+    "name": "TestHighScorePaperShareRedactsAndRevokesWithPostgresTestDatabase",
+    "line": 21,
+    "cognitive_estimate": 9,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_anonymous_paper_test.go",
+    "name": "e2eSelectAnonymousShareCandidates",
+    "line": 76,
+    "cognitive_estimate": 7,
+    "parameters": 6
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_anonymous_paper_test.go",
+    "name": "e2eSeedAnonymousRegisteredPage",
+    "line": 97,
+    "cognitive_estimate": 7,
+    "parameters": 7
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_anonymous_paper_test.go",
+    "name": "e2eAssertAnonymousSourceAuthorization",
+    "line": 159,
+    "cognitive_estimate": 5,
+    "parameters": 6
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_anonymous_paper_test.go",
+    "name": "e2eAnonymousIdentityImage",
+    "line": 185,
+    "cognitive_estimate": 11,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_anonymous_paper_test.go",
+    "name": "e2eAssertAnonymousIdentityMask",
+    "line": 213,
+    "cognitive_estimate": 8,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_auth_security_test.go",
+    "name": "TestTeacherAccountSecurityE2EWithPostgres",
+    "line": 21,
+    "cognitive_estimate": 8,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_auth_security_test.go",
+    "name": "e2eAssertLegacyPhoneMigration",
+    "line": 93,
+    "cognitive_estimate": 5,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_auth_security_test.go",
+    "name": "e2eActivateInvitedTeacherAndLogin",
+    "line": 120,
+    "cognitive_estimate": 6,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_auth_security_test.go",
+    "name": "e2eAssertTeacherLoginRiskFacts",
+    "line": 159,
+    "cognitive_estimate": 5,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_auth_security_test.go",
+    "name": "e2eAssertPasswordObservedDeviceFacts",
+    "line": 193,
+    "cognitive_estimate": 6,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_auth_security_test.go",
+    "name": "e2eAssertPublicComputerLockAndReauthentication",
+    "line": 227,
+    "cognitive_estimate": 10,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_auth_security_test.go",
+    "name": "e2eAssertPublicLockWinsInFlightVerification",
+    "line": 268,
+    "cognitive_estimate": 6,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_auth_security_test.go",
+    "name": "e2eRecoverTeacherCredentialAndRevokeOldIdentities",
+    "line": 285,
+    "cognitive_estimate": 8,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_auth_security_test.go",
+    "name": "e2eAssertLegacyTeacherPasswordUpgrade",
+    "line": 322,
+    "cognitive_estimate": 4,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_auth_security_test.go",
+    "name": "e2eAssertConcurrentTeacherCredentialConsumption",
+    "line": 341,
+    "cognitive_estimate": 5,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_auth_security_test.go",
+    "name": "e2eAssertPasswordChangeInvalidatesPendingRecovery",
+    "line": 381,
+    "cognitive_estimate": 5,
+    "parameters": 7
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_auth_security_test.go",
+    "name": "e2eAssertDisableInvalidatesPendingRecovery",
+    "line": 399,
+    "cognitive_estimate": 6,
+    "parameters": 7
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_auth_security_test.go",
+    "name": "e2eBrowserLogin",
+    "line": 419,
+    "cognitive_estimate": 5,
+    "parameters": 6
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_auth_security_test.go",
+    "name": "assertOneConcurrentCredentialWinner",
+    "line": 447,
+    "cognitive_estimate": 6,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_business_command_test.go",
+    "name": "Begin",
+    "line": 37,
+    "cognitive_estimate": 2,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_business_command_test.go",
+    "name": "TestBusinessCommandReservationCrashHelper",
+    "line": 48,
+    "cognitive_estimate": 2,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_business_command_test.go",
+    "name": "e2eBusinessCommandReplay",
+    "line": 75,
+    "cognitive_estimate": 8,
+    "parameters": 7
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_business_command_test.go",
+    "name": "e2eArbitrationAndExportCommands",
+    "line": 122,
+    "cognitive_estimate": 0,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_business_command_test.go",
+    "name": "e2eArbitrationReceiptAfterDeletion",
+    "line": 135,
+    "cognitive_estimate": 14,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_business_command_test.go",
+    "name": "e2eConcurrentExportReceipts",
+    "line": 186,
+    "cognitive_estimate": 10,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_business_command_test.go",
+    "name": "e2eReportExportUsesSingleSnapshot",
+    "line": 236,
+    "cognitive_estimate": 20,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_business_command_test.go",
+    "name": "e2eExportCSVValue",
+    "line": 330,
+    "cognitive_estimate": 5,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_business_command_test.go",
+    "name": "e2eReportExportRollsBackWithoutReceipt",
+    "line": 345,
+    "cognitive_estimate": 9,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_business_command_test.go",
+    "name": "e2eInterruptedBusinessCommandRecovery",
+    "line": 393,
+    "cognitive_estimate": 10,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_business_command_test.go",
+    "name": "e2eAssertConcurrentReportTakeover",
+    "line": 443,
+    "cognitive_estimate": 10,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_business_command_test.go",
+    "name": "e2eKillProcessAfterTransportReservation",
+    "line": 477,
+    "cognitive_estimate": 12,
+    "parameters": 6
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_business_command_test.go",
+    "name": "e2eBusinessCommandRecoveryStates",
+    "line": 534,
+    "cognitive_estimate": 4,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_business_command_test.go",
+    "name": "e2eAssertProcessingCommandRecovery",
+    "line": 556,
+    "cognitive_estimate": 9,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_business_command_test.go",
+    "name": "e2eAssertTerminalCommandRecovery",
+    "line": 587,
+    "cognitive_estimate": 8,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_core_workflow_test.go",
+    "name": "TestCoreWorkflowE2EWithSyntheticMemoryStores",
+    "line": 59,
+    "cognitive_estimate": 0,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_core_workflow_test.go",
+    "name": "e2ePrepareMemoryWorkflowExam",
+    "line": 91,
+    "cognitive_estimate": 4,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_core_workflow_test.go",
+    "name": "e2eCollectMemoryWorkflowAnswer",
+    "line": 133,
+    "cognitive_estimate": 13,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_core_workflow_test.go",
+    "name": "e2eReviewMemoryWorkflowEvidence",
+    "line": 205,
+    "cognitive_estimate": 9,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_core_workflow_test.go",
+    "name": "e2ePublishAndAppealMemoryWorkflow",
+    "line": 318,
+    "cognitive_estimate": 11,
+    "parameters": 6
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_core_workflow_test.go",
+    "name": "newE2EMemoryFixture",
+    "line": 404,
+    "cognitive_estimate": 0,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_core_workflow_test.go",
+    "name": "assertUnfinishedReviewCannotPublish",
+    "line": 464,
+    "cognitive_estimate": 1,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_core_workflow_test.go",
+    "name": "e2eAuthStore",
+    "line": 474,
+    "cognitive_estimate": 2,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_core_workflow_test.go",
+    "name": "e2eLogin",
+    "line": 549,
+    "cognitive_estimate": 0,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_core_workflow_test.go",
+    "name": "e2eLoginWithTenant",
+    "line": 554,
+    "cognitive_estimate": 3,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_core_workflow_test.go",
+    "name": "e2ePostJSON",
+    "line": 575,
+    "cognitive_estimate": 2,
+    "parameters": 7
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_core_workflow_test.go",
+    "name": "e2eGetJSON",
+    "line": 588,
+    "cognitive_estimate": 0,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_core_workflow_test.go",
+    "name": "e2eExpectStatus",
+    "line": 593,
+    "cognitive_estimate": 4,
+    "parameters": 7
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_core_workflow_test.go",
+    "name": "e2eUploadSyntheticPDF",
+    "line": 614,
+    "cognitive_estimate": 6,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_core_workflow_test.go",
+    "name": "e2eString",
+    "line": 646,
+    "cognitive_estimate": 2,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_core_workflow_test.go",
+    "name": "e2eFloat",
+    "line": 655,
+    "cognitive_estimate": 1,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_core_workflow_test.go",
+    "name": "e2eAssertAuditActions",
+    "line": 664,
+    "cognitive_estimate": 8,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_exam_archive_commands_test.go",
+    "name": "TestExamArchiveCommandsE2EWithPostgresTestDatabase",
+    "line": 22,
+    "cognitive_estimate": 12,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_exam_archive_commands_test.go",
+    "name": "e2eAssertArchiveCommandReceipts",
+    "line": 119,
+    "cognitive_estimate": 14,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_exam_archive_commands_test.go",
+    "name": "e2eAssertArchiveChildRevisionSet",
+    "line": 168,
+    "cognitive_estimate": 4,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_exam_archive_commands_test.go",
+    "name": "e2ePrepareArchiveProjectionClaim",
+    "line": 192,
+    "cognitive_estimate": 11,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_exam_archive_commands_test.go",
+    "name": "e2eHoldArchiveBusinessLocks",
+    "line": 242,
+    "cognitive_estimate": 4,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_exam_archive_commands_test.go",
+    "name": "e2eAwaitArchiveWriterLock",
+    "line": 256,
+    "cognitive_estimate": 9,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_exam_archive_commands_test.go",
+    "name": "e2eAssertArchivedProjectionAcknowledgement",
+    "line": 279,
+    "cognitive_estimate": 7,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_exam_management_test.go",
+    "name": "TestWholeExamManagementE2EWithPostgresTestDatabase",
+    "line": 19,
+    "cognitive_estimate": 12,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_exam_management_test.go",
+    "name": "e2eAssertWholeExamCursorPages",
+    "line": 81,
+    "cognitive_estimate": 11,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_exam_management_test.go",
+    "name": "e2eEditWholeExamSubjects",
+    "line": 117,
+    "cognitive_estimate": 8,
+    "parameters": 6
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_exam_management_test.go",
+    "name": "e2eArchiveDraftWholeExam",
+    "line": 146,
+    "cognitive_estimate": 12,
+    "parameters": 6
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_exam_management_test.go",
+    "name": "e2eRestoreWholeExamAndCheckPublication",
+    "line": 188,
+    "cognitive_estimate": 5,
+    "parameters": 6
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_exam_management_test.go",
+    "name": "e2eSeedWholeExamPublishedFacts",
+    "line": 210,
+    "cognitive_estimate": 7,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_exam_management_test.go",
+    "name": "e2eArchivePublishedWholeExam",
+    "line": 236,
+    "cognitive_estimate": 10,
+    "parameters": 6
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_exam_management_test.go",
+    "name": "e2eAssertStandaloneAppealArchiveBoundary",
+    "line": 276,
+    "cognitive_estimate": 8,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_exam_management_test.go",
+    "name": "examManagementMutationInput",
+    "line": 306,
+    "cognitive_estimate": 1,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_exam_management_test.go",
+    "name": "e2eExamManagementJSON",
+    "line": 316,
+    "cognitive_estimate": 4,
+    "parameters": 7
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_file_reconciliation_test.go",
+    "name": "TestFileReconciliationWithPostgresTestDatabase",
+    "line": 17,
+    "cognitive_estimate": 16,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_file_reconciliation_test.go",
+    "name": "createReconciliationAsset",
+    "line": 88,
+    "cognitive_estimate": 3,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_idempotency_test.go",
+    "name": "TestRequestIdempotencyWithPostgresTestDatabase",
+    "line": 16,
+    "cognitive_estimate": 13,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_idempotency_test.go",
+    "name": "assertConcurrentIdempotencyOwnership",
+    "line": 84,
+    "cognitive_estimate": 10,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_idempotency_test.go",
+    "name": "TestOutboxLeaseRecoveryWithPostgresTestDatabase",
+    "line": 122,
+    "cognitive_estimate": 13,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_math_effective_evidence_test.go",
+    "name": "TestPostgresMathEffectiveEvidenceProjection",
+    "line": 18,
+    "cognitive_estimate": 9,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_math_effective_evidence_test.go",
+    "name": "assertMathCorrectionHistoryProjection",
+    "line": 107,
+    "cognitive_estimate": 9,
+    "parameters": 7
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_math_effective_evidence_test.go",
+    "name": "assertConcurrentMathCorrectionRevision",
+    "line": 141,
+    "cognitive_estimate": 6,
+    "parameters": 7
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_math_grading_binding_test.go",
+    "name": "TestPostgresMathGradingBindingsRoundTripAndRejectWrongVersion",
+    "line": 20,
+    "cognitive_estimate": 11,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_math_grading_binding_test.go",
+    "name": "e2eAssertMathBindingReviewHistory",
+    "line": 102,
+    "cognitive_estimate": 6,
+    "parameters": 6
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_math_grading_binding_test.go",
+    "name": "e2eAssertMathBindingBatchRecovery",
+    "line": 130,
+    "cognitive_estimate": 6,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_math_grading_binding_test.go",
+    "name": "e2eAssertRejectedMathBinding",
+    "line": 161,
+    "cognitive_estimate": 11,
+    "parameters": 7
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_math_rubric_score_test.go",
+    "name": "HasActiveAssignment",
+    "line": 22,
+    "cognitive_estimate": 0,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_math_rubric_score_test.go",
+    "name": "TestPostgresMathRubricScoreUsesOnlyFrozenExamRubric",
+    "line": 28,
+    "cognitive_estimate": 8,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_math_rubric_score_test.go",
+    "name": "e2eAssertLiveRubricAndScopeFenced",
+    "line": 118,
+    "cognitive_estimate": 6,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_math_rubric_score_test.go",
+    "name": "e2eAssertPendingMathCorrectionHasNoGradeWrites",
+    "line": 143,
+    "cognitive_estimate": 5,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_math_rubric_score_test.go",
+    "name": "seedFrozenMathRubricRows",
+    "line": 167,
+    "cognitive_estimate": 3,
+    "parameters": 6
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_math_rubric_score_test.go",
+    "name": "assertFrozenRubricPreviewAuthority",
+    "line": 187,
+    "cognitive_estimate": 2,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_math_verification_runtime_test.go",
+    "name": "TestPostgresMathVerificationRuntimeAtomicActivation",
+    "line": 22,
+    "cognitive_estimate": 9,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_math_verification_runtime_test.go",
+    "name": "e2eRunMathVerificationActivationScenario",
+    "line": 95,
+    "cognitive_estimate": 11,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_math_verification_runtime_test.go",
+    "name": "e2ePrepareMathVerificationActivation",
+    "line": 138,
+    "cognitive_estimate": 6,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_math_verification_runtime_test.go",
+    "name": "e2eAssertMathVerificationActivationOutcome",
+    "line": 177,
+    "cognitive_estimate": 8,
+    "parameters": 6
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_math_verification_runtime_test.go",
+    "name": "e2eAssertActivatedMathVerificationHistory",
+    "line": 195,
+    "cognitive_estimate": 4,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_mfa_test.go",
+    "name": "TestTOTPManagementE2EWithPostgres",
+    "line": 25,
+    "cognitive_estimate": 3,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_mfa_test.go",
+    "name": "e2eEnrollTOTPManagement",
+    "line": 65,
+    "cognitive_estimate": 9,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_mfa_test.go",
+    "name": "e2eRotateRecoveryWithNotificationRollback",
+    "line": 113,
+    "cognitive_estimate": 10,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_mfa_test.go",
+    "name": "e2eFinishTOTPRecoveryLifecycle",
+    "line": 163,
+    "cognitive_estimate": 11,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_mfa_test.go",
+    "name": "e2eAssertMFAAuditSecretIsolation",
+    "line": 213,
+    "cognitive_estimate": 10,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_mfa_test.go",
+    "name": "e2eAssertMFASecurityNotificationFacts",
+    "line": 238,
+    "cognitive_estimate": 15,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_mfa_test.go",
+    "name": "e2eAssertMFATenantIsolation",
+    "line": 276,
+    "cognitive_estimate": 13,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_mfa_test.go",
+    "name": "e2eAssertMFACredentialTableScope",
+    "line": 312,
+    "cognitive_estimate": 4,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_mfa_test.go",
+    "name": "e2eAssertMFALogPublicationKeepsNotificationPending",
+    "line": 325,
+    "cognitive_estimate": 9,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_mfa_test.go",
+    "name": "e2eMFARuntimeDB",
+    "line": 355,
+    "cognitive_estimate": 9,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_paper_import_reconciliation_test.go",
+    "name": "TestPaperImportApplyGateE2EWithPostgresTestDatabase",
+    "line": 23,
+    "cognitive_estimate": 12,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_paper_import_reconciliation_test.go",
+    "name": "e2eAssertPersistedPaperPages",
+    "line": 160,
+    "cognitive_estimate": 12,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_paper_import_reconciliation_test.go",
+    "name": "e2eAssertPaperStageSnapshotImmutable",
+    "line": 200,
+    "cognitive_estimate": 4,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_paper_import_reconciliation_test.go",
+    "name": "e2eAssertPaperMissingAttemptRollback",
+    "line": 217,
+    "cognitive_estimate": 6,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_paper_import_reconciliation_test.go",
+    "name": "e2eAssertPaperStageAndInputFence",
+    "line": 240,
+    "cognitive_estimate": 1,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_paper_import_reconciliation_test.go",
+    "name": "e2eAssertPaperBindingMutation",
+    "line": 256,
+    "cognitive_estimate": 6,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_paper_import_reconciliation_test.go",
+    "name": "e2eAssertPaperOCRParseRecovery",
+    "line": 281,
+    "cognitive_estimate": 2,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_paper_import_reconciliation_test.go",
+    "name": "e2eCreatePaperOCRRecovery",
+    "line": 318,
+    "cognitive_estimate": 8,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_paper_import_reconciliation_test.go",
+    "name": "e2eCompleteOCRAndAssertParseHandoff",
+    "line": 368,
+    "cognitive_estimate": 3,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_paper_import_reconciliation_test.go",
+    "name": "e2eCreateRestartedPaperParseExecutor",
+    "line": 395,
+    "cognitive_estimate": 3,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_paper_import_reconciliation_test.go",
+    "name": "e2eRollbackAndRecoverPaperParseCommit",
+    "line": 416,
+    "cognitive_estimate": 14,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_paper_import_reconciliation_test.go",
+    "name": "e2eAssertPaperParseExactReceipt",
+    "line": 459,
+    "cognitive_estimate": 6,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_paper_import_reconciliation_test.go",
+    "name": "e2eRacePaperHumanReviewAndSuccessor",
+    "line": 494,
+    "cognitive_estimate": 9,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_paper_import_reconciliation_test.go",
+    "name": "e2eAssertHistoricalPaperReceiptFenced",
+    "line": 544,
+    "cognitive_estimate": 4,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_paper_import_reconciliation_test.go",
+    "name": "e2eAssertInvalidPaperImportGate",
+    "line": 563,
+    "cognitive_estimate": 4,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_paper_import_reconciliation_test.go",
+    "name": "e2eReviewAndApplyPaperImport",
+    "line": 583,
+    "cognitive_estimate": 6,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_paper_import_reconciliation_test.go",
+    "name": "e2eAssertAppliedPaperCanonicalFacts",
+    "line": 612,
+    "cognitive_estimate": 8,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_paper_import_reconciliation_test.go",
+    "name": "e2eAssertPaperSourceReorder",
+    "line": 635,
+    "cognitive_estimate": 7,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_paper_import_reconciliation_test.go",
+    "name": "postgresPaperImportDraft",
+    "line": 665,
+    "cognitive_estimate": 0,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+    "name": "TestCoreWorkflowE2EWithPostgresTestDatabase",
+    "line": 34,
+    "cognitive_estimate": 8,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+    "name": "e2ePreparePostgresExamAndFrozenPaper",
+    "line": 119,
+    "cognitive_estimate": 6,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+    "name": "e2eAssertPostgresExamRosterSnapshot",
+    "line": 160,
+    "cognitive_estimate": 10,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+    "name": "e2eCollectPostgresAnswerAndAbstainFromAI",
+    "line": 191,
+    "cognitive_estimate": 8,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+    "name": "e2eAssertPostgresProcessingProjectionIsReadOnly",
+    "line": 250,
+    "cognitive_estimate": 13,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+    "name": "e2eCompletePostgresReviewWithDraftIsolation",
+    "line": 293,
+    "cognitive_estimate": 5,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+    "name": "e2ePublishPostgresGradeAndReviewAppeal",
+    "line": 334,
+    "cognitive_estimate": 7,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+    "name": "e2eAssertHighRiskTenantRLS",
+    "line": 373,
+    "cognitive_estimate": 11,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+    "name": "e2eAssertPrivilegedTenantRLSLoginRejected",
+    "line": 452,
+    "cognitive_estimate": 3,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+    "name": "e2eAssertStudentTenantRLSScopes",
+    "line": 470,
+    "cognitive_estimate": 8,
+    "parameters": 6
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+    "name": "e2eAssertLoginFactTenantRLSScopes",
+    "line": 489,
+    "cognitive_estimate": 15,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+    "name": "e2eProjectProcessingUntilCurrent",
+    "line": 522,
+    "cognitive_estimate": 9,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+    "name": "e2eAssertSchoolAdminRBACBackfill",
+    "line": 550,
+    "cognitive_estimate": 19,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+    "name": "e2ePostgresRouter",
+    "line": 717,
+    "cognitive_estimate": 0,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+    "name": "e2ePostgresRouterWithObjects",
+    "line": 721,
+    "cognitive_estimate": 3,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+    "name": "e2eBarcodeKeyring",
+    "line": 761,
+    "cognitive_estimate": 0,
+    "parameters": 0
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+    "name": "e2eOpenPostgresTestDB",
+    "line": 768,
+    "cognitive_estimate": 6,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+    "name": "e2eApplyPostgresMigrations",
+    "line": 812,
+    "cognitive_estimate": 0,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+    "name": "e2eApplyPostgresMigrationsThrough",
+    "line": 816,
+    "cognitive_estimate": 20,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+    "name": "e2eSplitSQLStatements",
+    "line": 865,
+    "cognitive_estimate": 3,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+    "name": "consumeDollarQuote",
+    "line": 889,
+    "cognitive_estimate": 1,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+    "name": "consumeSingleQuote",
+    "line": 900,
+    "cognitive_estimate": 4,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+    "name": "consumeOutsideQuote",
+    "line": 913,
+    "cognitive_estimate": 11,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+    "name": "finishStatement",
+    "line": 941,
+    "cognitive_estimate": 1,
+    "parameters": 0
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+    "name": "e2eDollarQuoteTag",
+    "line": 948,
+    "cognitive_estimate": 7,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+    "name": "e2eIsDollarQuoteTagChar",
+    "line": 963,
+    "cognitive_estimate": 6,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+    "name": "e2eLookupUserID",
+    "line": 970,
+    "cognitive_estimate": 1,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+    "name": "e2eSeedPostgresStudentScopes",
+    "line": 984,
+    "cognitive_estimate": 2,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+    "name": "e2eActivatePostgresDemoUsers",
+    "line": 1029,
+    "cognitive_estimate": 0,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+    "name": "e2eBindPostgresSchoolAdmin",
+    "line": 1034,
+    "cognitive_estimate": 6,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+    "name": "e2eActivatePostgresUsers",
+    "line": 1083,
+    "cognitive_estimate": 8,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "Complete",
+    "line": 34,
+    "cognitive_estimate": 1,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "TestReliabilityCommandRecoveryWithPostgresTestDatabase",
+    "line": 42,
+    "cognitive_estimate": 4,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "e2eAssertActualClientCommandRecovery",
+    "line": 145,
+    "cognitive_estimate": 5,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "e2eAssertActualClientCommandResources",
+    "line": 185,
+    "cognitive_estimate": 6,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "e2eAssertProjectionLeaseGenerationFence",
+    "line": 200,
+    "cognitive_estimate": 11,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "e2eAssertPreparationRetryExhaustion",
+    "line": 237,
+    "cognitive_estimate": 6,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "e2eFailPreparationAttempt",
+    "line": 261,
+    "cognitive_estimate": 9,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "e2eAssertExpiredPreparationCallbacks",
+    "line": 296,
+    "cognitive_estimate": 4,
+    "parameters": 6
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "e2eAssertAbandonedPreparationRecovery",
+    "line": 316,
+    "cognitive_estimate": 9,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "e2eRecoverAbandonedPreparationAttempt",
+    "line": 356,
+    "cognitive_estimate": 8,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "e2eAssertPreparationExhaustionRollback",
+    "line": 386,
+    "cognitive_estimate": 6,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "e2eAssertAbandonedPreparationBackoff",
+    "line": 411,
+    "cognitive_estimate": 4,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "e2eAssertFinalAbandonedRuntimeRecovery",
+    "line": 431,
+    "cognitive_estimate": 13,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "e2eCreateExhaustedImportAttempt",
+    "line": 471,
+    "cognitive_estimate": 7,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "e2eAssertCaptureProjectionLifecycle",
+    "line": 502,
+    "cognitive_estimate": 1,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "e2eAssertCaptureCommandRecovery",
+    "line": 518,
+    "cognitive_estimate": 13,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "e2eAssertCaptureLostReceiptTakeover",
+    "line": 571,
+    "cognitive_estimate": 9,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "e2eCreateCaptureProjectionPage",
+    "line": 616,
+    "cognitive_estimate": 9,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "e2eDeleteAndRestoreCaptureProjection",
+    "line": 652,
+    "cognitive_estimate": 10,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "e2eAssertFrozenImportCommands",
+    "line": 685,
+    "cognitive_estimate": 9,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "e2eAssertInitialSessionCommandReplay",
+    "line": 719,
+    "cognitive_estimate": 11,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "e2eAssertSessionCommandRecoveryStates",
+    "line": 753,
+    "cognitive_estimate": 7,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "e2eAssertSeparateAndConcurrentSessionCommands",
+    "line": 781,
+    "cognitive_estimate": 5,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "e2eAssertLostSessionReceiptRecovery",
+    "line": 816,
+    "cognitive_estimate": 11,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "e2eCreateReliableImportCommand",
+    "line": 872,
+    "cognitive_estimate": 7,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "e2eAssertImportDurableDispatchIntent",
+    "line": 916,
+    "cognitive_estimate": 5,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "e2eCreateAndCancelImportRuntime",
+    "line": 936,
+    "cognitive_estimate": 5,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "e2eAssertSuccessorRunRollback",
+    "line": 958,
+    "cognitive_estimate": 8,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "e2eAssertSuccessorImportAndStaleCallback",
+    "line": 989,
+    "cognitive_estimate": 7,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "e2eAssertLegacyImportCallbacksRejected",
+    "line": 1015,
+    "cognitive_estimate": 7,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "e2eCreateImportFailureRuntime",
+    "line": 1041,
+    "cognitive_estimate": 4,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "e2eAssertImportFailureAtomicity",
+    "line": 1060,
+    "cognitive_estimate": 11,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "e2eAssertFailedImportRetryIdentity",
+    "line": 1098,
+    "cognitive_estimate": 3,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "e2eRaceImportCancellationAndCompletion",
+    "line": 1115,
+    "cognitive_estimate": 11,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "e2eCreateAssignedProjectionSource",
+    "line": 1163,
+    "cognitive_estimate": 10,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "e2eDeleteAssignedProjectionSource",
+    "line": 1200,
+    "cognitive_estimate": 9,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "e2eAssertManualProjectionResolutionPreserved",
+    "line": 1229,
+    "cognitive_estimate": 7,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "e2eRefreshResolvedProjectionHistory",
+    "line": 1261,
+    "cognitive_estimate": 7,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "e2eMoveProjectionSourceToDestination",
+    "line": 1280,
+    "cognitive_estimate": 6,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "e2eAssertDestinationFirstProjectionFacts",
+    "line": 1308,
+    "cognitive_estimate": 5,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "e2eRegroupProjectionSource",
+    "line": 1326,
+    "cognitive_estimate": 5,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "e2eDeleteProjectionSubmission",
+    "line": 1347,
+    "cognitive_estimate": 8,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "e2eAssertProjectionAcknowledgesClaimedVersion",
+    "line": 1379,
+    "cognitive_estimate": 13,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "TestReliabilityMigrationFrom000122PostgresTestDatabase",
+    "line": 1420,
+    "cognitive_estimate": 11,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "e2eSeedMigrationReplayCommand",
+    "line": 1483,
+    "cognitive_estimate": 5,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "e2eAssertUnverifiedMigrationHistory",
+    "line": 1521,
+    "cognitive_estimate": 8,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "e2eRepairOrphanedImportGeneration",
+    "line": 1546,
+    "cognitive_estimate": 11,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "e2eRepairLegacyCommandAndReview",
+    "line": 1584,
+    "cognitive_estimate": 8,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+    "name": "e2eAssertReliabilityRepairRepeatNoOp",
+    "line": 1617,
+    "cognitive_estimate": 4,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_review_recovery_test.go",
+    "name": "Put",
+    "line": 31,
+    "cognitive_estimate": 1,
+    "parameters": 6
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_review_recovery_test.go",
+    "name": "TestReviewRepairsRecoveryWithPostgresTestDatabase",
+    "line": 39,
+    "cognitive_estimate": 0,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_review_recovery_test.go",
+    "name": "e2eAssertHiddenSeedAuthenticatedWorkflow",
+    "line": 63,
+    "cognitive_estimate": 9,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_review_recovery_test.go",
+    "name": "e2eAssertCaptureUploadFailureAndLeaseRecovery",
+    "line": 117,
+    "cognitive_estimate": 4,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_review_recovery_test.go",
+    "name": "e2eRecoverOneCaptureUpload",
+    "line": 141,
+    "cognitive_estimate": 7,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_review_recovery_test.go",
+    "name": "e2eAssertFailedUploadAssetReuse",
+    "line": 168,
+    "cognitive_estimate": 3,
+    "parameters": 6
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_review_recovery_test.go",
+    "name": "e2eAssertUploadLeaseTakeover",
+    "line": 184,
+    "cognitive_estimate": 8,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_review_recovery_test.go",
+    "name": "e2eAssertTerminalQualityRetryAtomicity",
+    "line": 222,
+    "cognitive_estimate": 8,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_review_recovery_test.go",
+    "name": "e2eClaimRepairQualityTask",
+    "line": 259,
+    "cognitive_estimate": 3,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_review_recovery_test.go",
+    "name": "e2eFindRepairQualityException",
+    "line": 276,
+    "cognitive_estimate": 7,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_review_recovery_test.go",
+    "name": "e2eAssertRepairQualityRetryRollback",
+    "line": 302,
+    "cognitive_estimate": 8,
+    "parameters": 6
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_review_repairs_test.go",
+    "name": "repairFixture",
+    "line": 28,
+    "cognitive_estimate": 26,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_review_repairs_test.go",
+    "name": "TraceQueryStart",
+    "line": 113,
+    "cognitive_estimate": 0,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_review_repairs_test.go",
+    "name": "TraceQueryEnd",
+    "line": 116,
+    "cognitive_estimate": 2,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_review_repairs_test.go",
+    "name": "TestReviewRepairsReleaseAndStudentReadWithPostgresTestDatabase",
+    "line": 126,
+    "cognitive_estimate": 15,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_review_repairs_test.go",
+    "name": "e2eAssertRegradeSourceAndReceipt",
+    "line": 192,
+    "cognitive_estimate": 9,
+    "parameters": 6
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_review_repairs_test.go",
+    "name": "e2ePrepareLegacyUnsafeAnalyticsRelease",
+    "line": 225,
+    "cognitive_estimate": 8,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_review_repairs_test.go",
+    "name": "e2eAssertUnpublishedQuestionIsolation",
+    "line": 265,
+    "cognitive_estimate": 8,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_review_repairs_test.go",
+    "name": "e2eAssertTotalsOnlyStudentRead",
+    "line": 305,
+    "cognitive_estimate": 6,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_review_repairs_test.go",
+    "name": "TestReleaseFeedbackUsesFinalArbitrationAndFreezesIt",
+    "line": 328,
+    "cognitive_estimate": 11,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_review_repairs_test.go",
+    "name": "e2eAssertArbitrationReleaseSnapshot",
+    "line": 388,
+    "cognitive_estimate": 10,
+    "parameters": 6
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_review_repairs_test.go",
+    "name": "e2eAssertPublishedArbitrationStudentRead",
+    "line": 409,
+    "cognitive_estimate": 7,
+    "parameters": 7
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_review_repairs_test.go",
+    "name": "e2eAssertPublishedArbitrationReport",
+    "line": 429,
+    "cognitive_estimate": 8,
+    "parameters": 7
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_review_repairs_test.go",
+    "name": "TestCancelledScoringRunCannotReassignOrSubmitReview",
+    "line": 450,
+    "cognitive_estimate": 10,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_review_repairs_test.go",
+    "name": "TestRuleConfirmationWaitsForConcurrentCancellation",
+    "line": 489,
+    "cognitive_estimate": 12,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_review_repairs_test.go",
+    "name": "TestScoringAIBatchCancellationBlocksNewTasks",
+    "line": 539,
+    "cognitive_estimate": 22,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_review_repairs_test.go",
+    "name": "TestFailedScoringAIBatchSegmentsRequireOpenTeacherTask",
+    "line": 619,
+    "cognitive_estimate": 10,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_scoring_command_test.go",
+    "name": "TestScoringCommandRecoveryWithPostgresTestDatabase",
+    "line": 19,
+    "cognitive_estimate": 15,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_scoring_command_test.go",
+    "name": "assertScoringCommandTransportRecovery",
+    "line": 84,
+    "cognitive_estimate": 3,
+    "parameters": 6
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_scoring_double_mark_test.go",
+    "name": "TestScoringDoubleMarkLifecycleWithPostgresTestDatabase",
+    "line": 16,
+    "cognitive_estimate": 11,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_scoring_double_mark_test.go",
+    "name": "e2eCollectBlindDoubleMarkTasks",
+    "line": 70,
+    "cognitive_estimate": 7,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_scoring_double_mark_test.go",
+    "name": "e2eSubmitBlindDoubleMarks",
+    "line": 95,
+    "cognitive_estimate": 13,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_scoring_double_mark_test.go",
+    "name": "e2eResolveAndAssertDoubleMarkArbitration",
+    "line": 116,
+    "cognitive_estimate": 15,
+    "parameters": 6
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_scoring_double_mark_test.go",
+    "name": "e2eCancelMixedDoubleMarkRun",
+    "line": 164,
+    "cognitive_estimate": 11,
+    "parameters": 7
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_scoring_double_mark_test.go",
+    "name": "e2eAssertCancelledDoubleMarkFacts",
+    "line": 202,
+    "cognitive_estimate": 6,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_calibration_test.go",
+    "name": "TestStory056TemplateDifferenceCalibrationApprovalAndRevocationE2E",
+    "line": 21,
+    "cognitive_estimate": 11,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_calibration_test.go",
+    "name": "e2eApproveStory056Calibration",
+    "line": 119,
+    "cognitive_estimate": 11,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_calibration_test.go",
+    "name": "TestStory056ApprovedCalibrationIsInheritedByTemplateCloneE2E",
+    "line": 167,
+    "cognitive_estimate": 11,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_calibration_test.go",
+    "name": "TestStory056TemplateCloneIsRejectedAfterReadinessConfirmationE2E",
+    "line": 236,
+    "cognitive_estimate": 4,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_calibration_test.go",
+    "name": "TestReadinessConfirmationSerializesConcurrentConfigurationWriteE2E",
+    "line": 262,
+    "cognitive_estimate": 12,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_calibration_test.go",
+    "name": "e2eCreateStory056CalibrationApprover",
+    "line": 336,
+    "cognitive_estimate": 2,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_calibration_test.go",
+    "name": "e2eSeedStory056CalibrationOMRFacts",
+    "line": 364,
+    "cognitive_estimate": 5,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_calibration_test.go",
+    "name": "e2eSeedStory056MutableCalibrationOMRFacts",
+    "line": 418,
+    "cognitive_estimate": 8,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_calibration_test.go",
+    "name": "e2eStory056CalibrationExpectedOptions",
+    "line": 494,
+    "cognitive_estimate": 8,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_calibration_test.go",
+    "name": "e2eStory056CalibrationCaseForQuestionAndStratum",
+    "line": 528,
+    "cognitive_estimate": 4,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_calibration_test.go",
+    "name": "e2eStory056CalibrationReprocessAndClaim",
+    "line": 540,
+    "cognitive_estimate": 0,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_calibration_test.go",
+    "name": "e2eStory056CalibrationResultPayload",
+    "line": 555,
+    "cognitive_estimate": 0,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_lease_test.go",
+    "name": "TestStory056OMRAutoGradeConfirmationFailureFallsBackToReviewE2E",
+    "line": 18,
+    "cognitive_estimate": 15,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_lease_test.go",
+    "name": "TestStory056ManualOnlyOMRProfileRequiresReviewE2E",
+    "line": 91,
+    "cognitive_estimate": 5,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_lease_test.go",
+    "name": "TestStory056RejectsMismatchedOMRProfileBeforeCompletingTaskE2E",
+    "line": 137,
+    "cognitive_estimate": 12,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_lease_test.go",
+    "name": "TestStory056TemplateDifferenceReferenceSnapshotE2E",
+    "line": 195,
+    "cognitive_estimate": 14,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_lease_test.go",
+    "name": "e2eAssertTemplateDifferenceSnapshot",
+    "line": 283,
+    "cognitive_estimate": 11,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_lease_test.go",
+    "name": "TestStory056OMRSameVersionChangedMeasurementsIsConflictE2E",
+    "line": 327,
+    "cognitive_estimate": 7,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_lease_test.go",
+    "name": "e2eStory056ClaimSingleOMR",
+    "line": 372,
+    "cognitive_estimate": 3,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_lease_test.go",
+    "name": "e2eStory056OMRResultPayload",
+    "line": 389,
+    "cognitive_estimate": 0,
+    "parameters": 7
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_lease_test.go",
+    "name": "e2eStory056ProfileHash",
+    "line": 409,
+    "cognitive_estimate": 0,
+    "parameters": 0
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_lease_test.go",
+    "name": "e2eEnableStory056AutoConfirmation",
+    "line": 416,
+    "cognitive_estimate": 2,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_lease_test.go",
+    "name": "e2eStory056CompletedOMRFacts",
+    "line": 443,
+    "cognitive_estimate": 5,
+    "parameters": 7
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_lease_test.go",
+    "name": "TestStory056ExpiredOMRLeaseLeavesScoringFactsUntouchedE2E",
+    "line": 465,
+    "cognitive_estimate": 19,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+    "name": "TestStory056ObjectiveScoringRecoveryE2EWithPostgresTestDatabase",
+    "line": 45,
+    "cognitive_estimate": 11,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+    "name": "e2eFinalizeAndReprocessStory056",
+    "line": 182,
+    "cognitive_estimate": 8,
+    "parameters": 7
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+    "name": "e2eCreateStory056AcceptanceFixture",
+    "line": 244,
+    "cognitive_estimate": 0,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+    "name": "e2eCreateStory056AcceptanceFixtureWithOMRProfile",
+    "line": 248,
+    "cognitive_estimate": 0,
+    "parameters": 6
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+    "name": "e2eCreateStory056MutableTemplateFixture",
+    "line": 252,
+    "cognitive_estimate": 0,
+    "parameters": 6
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+    "name": "e2eCreateStory056AcceptanceFixtureWithLifecycle",
+    "line": 256,
+    "cognitive_estimate": 6,
+    "parameters": 7
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+    "name": "e2eCreateStory056Question",
+    "line": 341,
+    "cognitive_estimate": 0,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+    "name": "e2eStory056QuestionRegion",
+    "line": 352,
+    "cognitive_estimate": 0,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+    "name": "e2eStory056Options",
+    "line": 356,
+    "cognitive_estimate": 1,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+    "name": "e2eSeedStory056AcceptanceAnswers",
+    "line": 366,
+    "cognitive_estimate": 0,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+    "name": "e2eSeedStory056AcceptanceAnswersCount",
+    "line": 372,
+    "cognitive_estimate": 0,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+    "name": "e2eSeedStory056AcceptanceAnswersWithQuestionTypes",
+    "line": 376,
+    "cognitive_estimate": 15,
+    "parameters": 6
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+    "name": "e2eStartStory056Run",
+    "line": 445,
+    "cognitive_estimate": 0,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+    "name": "e2eStory062ScoringReadiness",
+    "line": 452,
+    "cognitive_estimate": 1,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+    "name": "e2eAssertStory062ScoringReadiness",
+    "line": 462,
+    "cognitive_estimate": 6,
+    "parameters": 7
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+    "name": "e2eAssertStory062ReadinessCheck",
+    "line": 485,
+    "cognitive_estimate": 10,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+    "name": "e2eAssertStory062ReadinessError",
+    "line": 507,
+    "cognitive_estimate": 5,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+    "name": "e2eClaimStory056OMRTasks",
+    "line": 523,
+    "cognitive_estimate": 7,
+    "parameters": 6
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+    "name": "e2eCreateStory056Overlay",
+    "line": 547,
+    "cognitive_estimate": 1,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+    "name": "e2eStory056AssetHash",
+    "line": 565,
+    "cognitive_estimate": 0,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+    "name": "e2eStory056RunItems",
+    "line": 569,
+    "cognitive_estimate": 4,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+    "name": "e2eStory056SelectedOptions",
+    "line": 586,
+    "cognitive_estimate": 1,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+    "name": "e2eAssertStory056Run",
+    "line": 607,
+    "cognitive_estimate": 2,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+    "name": "e2eAssertStory056ItemStates",
+    "line": 621,
+    "cognitive_estimate": 8,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+    "name": "e2eCompleteStory056HumanReviews",
+    "line": 648,
+    "cognitive_estimate": 7,
+    "parameters": 6
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+    "name": "e2eCompleteStory056AssignedHumanReview",
+    "line": 675,
+    "cognitive_estimate": 9,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+    "name": "e2eAssertStory056CancelledWork",
+    "line": 735,
+    "cognitive_estimate": 4,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+    "name": "e2eAssertStory056AnonymousItems",
+    "line": 749,
+    "cognitive_estimate": 6,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+    "name": "e2eAssertStory056ConfirmedScores",
+    "line": 760,
+    "cognitive_estimate": 3,
+    "parameters": 6
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+    "name": "e2eAssertStory056ReprocessVersion",
+    "line": 778,
+    "cognitive_estimate": 3,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+    "name": "story056JSON",
+    "line": 794,
+    "cognitive_estimate": 1,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story060_capture_recovery_test.go",
+    "name": "TestStory060CaptureRecoveryE2EWithPostgresTestDatabase",
+    "line": 21,
+    "cognitive_estimate": 9,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story060_capture_recovery_test.go",
+    "name": "e2eAssertStory060SessionCommandIdentity",
+    "line": 115,
+    "cognitive_estimate": 4,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story060_capture_recovery_test.go",
+    "name": "e2eMaterializeStory060RecoveredQuality",
+    "line": 151,
+    "cognitive_estimate": 12,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story060_capture_recovery_test.go",
+    "name": "e2eAssertStory060QualityAtomicity",
+    "line": 221,
+    "cognitive_estimate": 10,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story060_capture_recovery_test.go",
+    "name": "e2eAssertStory060ManualQualityRecovery",
+    "line": 263,
+    "cognitive_estimate": 4,
+    "parameters": 6
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story060_provision_test.go",
+    "name": "TestStory060ProvisioningWithPostgresIsScopedAndIdempotent",
+    "line": 13,
+    "cognitive_estimate": 2,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story060_provision_test.go",
+    "name": "assertStory060ProvisionCase",
+    "line": 56,
+    "cognitive_estimate": 8,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story060_roster_test.go",
+    "name": "TestStory060RosterReconciliationAndAbsenceE2EWithPostgresTestDatabase",
+    "line": 15,
+    "cognitive_estimate": 14,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story060_roster_test.go",
+    "name": "TestExamRosterFreezeBlocksUpdateAndDirectMutationE2EWithPostgresTestDatabase",
+    "line": 130,
+    "cognitive_estimate": 8,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story060_roster_test.go",
+    "name": "TestStory060FiveHundredStudentRosterScaleE2EWithPostgresTestDatabase",
+    "line": 175,
+    "cognitive_estimate": 7,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story060_roster_test.go",
+    "name": "e2eAssertStory060RosterReadBudget",
+    "line": 274,
+    "cognitive_estimate": 6,
+    "parameters": 6
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story060_roster_test.go",
+    "name": "e2eResolveStory060ScaleAbsences",
+    "line": 312,
+    "cognitive_estimate": 9,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story060_roster_test.go",
+    "name": "e2eAssertStory060QualityIssue",
+    "line": 351,
+    "cognitive_estimate": 6,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story060_roster_test.go",
+    "name": "story060HasQualityIssue",
+    "line": 366,
+    "cognitive_estimate": 3,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story060_sheet_identity_test.go",
+    "name": "TestStory060MultiPageInsertionMissingPageAndPrintPackageE2EWithPostgresTestDatabase",
+    "line": 18,
+    "cognitive_estimate": 13,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story060_sheet_identity_test.go",
+    "name": "e2eIssueThreePageSheet",
+    "line": 129,
+    "cognitive_estimate": 2,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story060_sheet_identity_test.go",
+    "name": "e2eCreateControlledMultiPageCapture",
+    "line": 156,
+    "cognitive_estimate": 5,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story060_sheet_identity_test.go",
+    "name": "e2eAssertThreePagePrintPackage",
+    "line": 204,
+    "cognitive_estimate": 13,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story060_sheet_identity_test.go",
+    "name": "e2eAssertInsertedPageAndFrozenTemplate",
+    "line": 256,
+    "cognitive_estimate": 14,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story060_sheet_identity_test.go",
+    "name": "e2eAssertObservedSheetPackageUnavailable",
+    "line": 350,
+    "cognitive_estimate": 5,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story060_sheet_identity_test.go",
+    "name": "e2eAssertMissingAndRepeatedSheetPages",
+    "line": 379,
+    "cognitive_estimate": 12,
+    "parameters": 6
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story060_sheet_identity_test.go",
+    "name": "TestStory060StudentSheetIdentityE2EWithPostgresTestDatabase",
+    "line": 457,
+    "cognitive_estimate": 6,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story060_sheet_identity_test.go",
+    "name": "e2eAssertSinglePageSheetIssuance",
+    "line": 581,
+    "cognitive_estimate": 6,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story060_sheet_identity_test.go",
+    "name": "e2eAssertDuplicatePhysicalSheetConflict",
+    "line": 651,
+    "cognitive_estimate": 13,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story060_sheet_identity_test.go",
+    "name": "e2eDeleteAndRestoreDuplicateSheetPage",
+    "line": 702,
+    "cognitive_estimate": 10,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story060_sheet_identity_test.go",
+    "name": "e2eRevokeObservedSheet",
+    "line": 773,
+    "cognitive_estimate": 6,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story060_sheet_identity_test.go",
+    "name": "e2eAssertSheetReprintIdentityAndLineage",
+    "line": 800,
+    "cognitive_estimate": 5,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story061_governance_test.go",
+    "name": "TestStory061GovernanceFoundationE2EWithPostgresTestDatabase",
+    "line": 17,
+    "cognitive_estimate": 2,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story061_governance_test.go",
+    "name": "e2eAssertGovernanceDefaultAndSQLConstraints",
+    "line": 55,
+    "cognitive_estimate": 10,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story061_governance_test.go",
+    "name": "e2eAssertGovernanceCallFactsAndRBAC",
+    "line": 151,
+    "cognitive_estimate": 5,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story061_governance_test.go",
+    "name": "e2eRegisterGovernanceLocalBaseline",
+    "line": 229,
+    "cognitive_estimate": 8,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story061_governance_test.go",
+    "name": "e2eCreateGovernedExternalInventory",
+    "line": 264,
+    "cognitive_estimate": 6,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story061_governance_test.go",
+    "name": "e2eCloseGovernanceExternalPolicy",
+    "line": 305,
+    "cognitive_estimate": 5,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story061_governance_test.go",
+    "name": "e2eCompleteGovernanceOfflineEvaluation",
+    "line": 338,
+    "cognitive_estimate": 13,
+    "parameters": 6
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story061_governance_test.go",
+    "name": "e2eAssertGovernanceEvaluationSQLGuards",
+    "line": 422,
+    "cognitive_estimate": 5,
+    "parameters": 6
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story061_governance_test.go",
+    "name": "e2eAssertGovernanceSandboxApprovalLifecycle",
+    "line": 476,
+    "cognitive_estimate": 14,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_story061_governance_test.go",
+    "name": "e2eAssertGovernanceNewTenantIsolation",
+    "line": 581,
+    "cognitive_estimate": 8,
+    "parameters": 7
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_subjective_command_test.go",
+    "name": "TestSubjectiveCommandRecoveryWithPostgresTestDatabase",
+    "line": 15,
+    "cognitive_estimate": 13,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_subjective_command_test.go",
+    "name": "e2eCreateConcurrentSubjectiveBatch",
+    "line": 76,
+    "cognitive_estimate": 4,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_subjective_command_test.go",
+    "name": "e2eCompleteAndRecoverSubjectiveCommand",
+    "line": 109,
+    "cognitive_estimate": 11,
+    "parameters": 7
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_subjective_panel_test.go",
+    "name": "TestPostgresSubjectivePanelAndEvaluationRoundTrip",
+    "line": 21,
+    "cognitive_estimate": 2,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_subjective_panel_test.go",
+    "name": "e2eCreateAndClaimPrimaryPanelRole",
+    "line": 90,
+    "cognitive_estimate": 10,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_subjective_panel_test.go",
+    "name": "e2eAssertPanelFrozenRoleBoundaries",
+    "line": 126,
+    "cognitive_estimate": 6,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_subjective_panel_test.go",
+    "name": "e2eClaimSecondaryPanelRole",
+    "line": 170,
+    "cognitive_estimate": 4,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_subjective_panel_test.go",
+    "name": "e2eCompletePrimaryPanelGrades",
+    "line": 191,
+    "cognitive_estimate": 4,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_subjective_panel_test.go",
+    "name": "e2eResolveAndReplayPanel",
+    "line": 216,
+    "cognitive_estimate": 7,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_subjective_panel_test.go",
+    "name": "e2eAssertPanelHumanFallbackVersions",
+    "line": 251,
+    "cognitive_estimate": 11,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_subjective_panel_test.go",
+    "name": "e2ePersistSinglePanelEvaluation",
+    "line": 295,
+    "cognitive_estimate": 8,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_subjective_panel_test.go",
+    "name": "e2eAssertPanelInsufficientEvidenceClosed",
+    "line": 332,
+    "cognitive_estimate": 4,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_subjective_panel_test.go",
+    "name": "e2eCreateReadyPanelEvidence",
+    "line": 349,
+    "cognitive_estimate": 8,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_subjective_panel_test.go",
+    "name": "e2eApproveAndRetirePanelPolicy",
+    "line": 386,
+    "cognitive_estimate": 8,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_subjective_panel_test.go",
+    "name": "e2eSeedIndependentPanelCredentials",
+    "line": 414,
+    "cognitive_estimate": 6,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_subjective_panel_test.go",
+    "name": "e2eAssertPanelGovernedBindingsAndActor",
+    "line": 452,
+    "cognitive_estimate": 9,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_subjective_panel_test.go",
+    "name": "e2ePanelPolicyInput",
+    "line": 489,
+    "cognitive_estimate": 0,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_subjective_panel_test.go",
+    "name": "e2ePanelModelSetReference",
+    "line": 506,
+    "cognitive_estimate": 0,
+    "parameters": 0
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_worker_runtime_reliability_test.go",
+    "name": "TestWorkerRuntimeReliabilityWithPostgresTestDatabase",
+    "line": 19,
+    "cognitive_estimate": 1,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_worker_runtime_reliability_test.go",
+    "name": "e2eAssertExhaustedRuntimeDeadLetter",
+    "line": 56,
+    "cognitive_estimate": 10,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_worker_runtime_reliability_test.go",
+    "name": "e2eCreateExpiredFinalRuntimeAttempt",
+    "line": 92,
+    "cognitive_estimate": 4,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_worker_runtime_reliability_test.go",
+    "name": "e2eAssertRuntimeTransactionOwnership",
+    "line": 111,
+    "cognitive_estimate": 1,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_worker_runtime_reliability_test.go",
+    "name": "e2ePersistTrustedRuntimeSuccess",
+    "line": 124,
+    "cognitive_estimate": 5,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_worker_runtime_reliability_test.go",
+    "name": "e2eCommitRuntimeFailure",
+    "line": 146,
+    "cognitive_estimate": 7,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_worker_runtime_reliability_test.go",
+    "name": "e2eAssertRuntimeStaleLeaseRace",
+    "line": 179,
+    "cognitive_estimate": 0,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_worker_runtime_reliability_test.go",
+    "name": "e2eCreateExpiredRuntimeRace",
+    "line": 187,
+    "cognitive_estimate": 4,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_worker_runtime_reliability_test.go",
+    "name": "e2eRaceStaleRuntimeOperations",
+    "line": 206,
+    "cognitive_estimate": 11,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_worker_runtime_reliability_test.go",
+    "name": "e2eAssertReclaimedRuntimeHistory",
+    "line": 266,
+    "cognitive_estimate": 5,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_worker_runtime_reliability_test.go",
+    "name": "e2eAssertOCRStartIdempotency",
+    "line": 283,
+    "cognitive_estimate": 11,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_worker_runtime_reliability_test.go",
+    "name": "e2eAssertOCRFailureRetryAndTerminalFence",
+    "line": 319,
+    "cognitive_estimate": 5,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_worker_runtime_reliability_test.go",
+    "name": "postgresRuntimeTaskInput",
+    "line": 338,
+    "cognitive_estimate": 0,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_worker_runtime_reliability_test.go",
+    "name": "postgresClaimInput",
+    "line": 346,
+    "cognitive_estimate": 0,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/e2e_worker_runtime_reliability_test.go",
+    "name": "insertPostgresOCRFixture",
+    "line": 352,
+    "cognitive_estimate": 4,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/managed_config_postgres_test.go",
+    "name": "TestPostgresManagedConfigProbeTimestamps",
+    "line": 15,
+    "cognitive_estimate": 4,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/managed_config_postgres_test.go",
+    "name": "assertManagedConfigProbeLifecycle",
+    "line": 62,
+    "cognitive_estimate": 12,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/migration_upgrade_test.go",
+    "name": "TestPostgresMigrationUpgradeFrom000154",
+    "line": 21,
+    "cognitive_estimate": 10,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/migration_upgrade_test.go",
+    "name": "assertUpgradePreservedGradingGraph",
+    "line": 72,
+    "cognitive_estimate": 3,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/migration_upgrade_test.go",
+    "name": "assertUpgradePreservedModelCredentials",
+    "line": 102,
+    "cognitive_estimate": 9,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/migration_upgrade_test.go",
+    "name": "assertUpgradeModelBindingsAndDeletion",
+    "line": 127,
+    "cognitive_estimate": 12,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/migration_upgrade_test.go",
+    "name": "seedPre155UpgradeFixture",
+    "line": 183,
+    "cognitive_estimate": 6,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/migration_upgrade_test.go",
+    "name": "mustUpgradeExec",
+    "line": 257,
+    "cognitive_estimate": 1,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/platform_schools_route_test.go",
+    "name": "TestPlatformSchoolRoutesRequirePlatformRoleAndTenantManage",
+    "line": 18,
+    "cognitive_estimate": 6,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/platform_schools_route_test.go",
+    "name": "assertPlatformSchoolRoleCase",
+    "line": 60,
+    "cognitive_estimate": 6,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/readers_batch47_test.go",
+    "name": "record",
+    "line": 37,
+    "cognitive_estimate": 1,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/readers_batch47_test.go",
+    "name": "ListSchools",
+    "line": 45,
+    "cognitive_estimate": 0,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/readers_batch47_test.go",
+    "name": "ListGrades",
+    "line": 50,
+    "cognitive_estimate": 0,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/readers_batch47_test.go",
+    "name": "ListClasses",
+    "line": 55,
+    "cognitive_estimate": 0,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/readers_batch47_test.go",
+    "name": "ListStudents",
+    "line": 60,
+    "cognitive_estimate": 0,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/readers_batch47_test.go",
+    "name": "TestBatch47OnboardingOrganizationFallbackPreservesScope",
+    "line": 65,
+    "cognitive_estimate": 1,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/readers_batch47_test.go",
+    "name": "assertBatch47OrganizationScopeCase",
+    "line": 88,
+    "cognitive_estimate": 8,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/readers_batch47_test.go",
+    "name": "TestBatch47OnboardingOrganizationFallbackRetainsPartialSummaryAndFirstError",
+    "line": 117,
+    "cognitive_estimate": 5,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/readers_batch47_test.go",
+    "name": "TestBatch47OnboardingOrganizationReadsClassesWithoutActiveGrade",
+    "line": 145,
+    "cognitive_estimate": 4,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/readers_batch47_test.go",
+    "name": "HasManagedTenant",
+    "line": 176,
+    "cognitive_estimate": 0,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/readers_batch47_test.go",
+    "name": "OnboardingReadiness",
+    "line": 180,
+    "cognitive_estimate": 0,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/readers_batch47_test.go",
+    "name": "TestBatch47OnboardingOrganizationPrefersReadinessIncludingItsError",
+    "line": 186,
+    "cognitive_estimate": 9,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/readers_batch47_test.go",
+    "name": "TestBatch47ProductionStoreGraphPreservesOptionalQueueAndFirstMissingField",
+    "line": 218,
+    "cognitive_estimate": 7,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/readers_batch47_test.go",
+    "name": "assertBatch47OrganizationCalls",
+    "line": 249,
+    "cognitive_estimate": 2,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/review_route_test.go",
+    "name": "TestReviewTaskRoutesCreateAssignSubmitAndAudit",
+    "line": 33,
+    "cognitive_estimate": 14,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/review_route_test.go",
+    "name": "TestReviewSubmitRejectsInconsistentRubric",
+    "line": 97,
+    "cognitive_estimate": 4,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/review_route_test.go",
+    "name": "TestReviewTaskRoutesRequirePermission",
+    "line": 119,
+    "cognitive_estimate": 3,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/review_route_test.go",
+    "name": "TestQualityManagementRoutesDoNotExposeGoldOrSeedEvidenceToGraders",
+    "line": 148,
+    "cognitive_estimate": 3,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/review_route_test.go",
+    "name": "TestReviewWorkPermissionIsScopedToAssignedTasks",
+    "line": 183,
+    "cognitive_estimate": 2,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/review_route_test.go",
+    "name": "reviewAssertAssignedTaskVisibility",
+    "line": 229,
+    "cognitive_estimate": 12,
+    "parameters": 6
+  },
+  {
+    "path": "services/api-gateway/internal/server/review_route_test.go",
+    "name": "reviewAssertDraftAndImageAuthority",
+    "line": 283,
+    "cognitive_estimate": 11,
+    "parameters": 7
+  },
+  {
+    "path": "services/api-gateway/internal/server/review_route_test.go",
+    "name": "TestReviewWorkerCanReturnOnlyOwnActiveClaim",
+    "line": 350,
+    "cognitive_estimate": 12,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/review_route_test.go",
+    "name": "TestReviewTaskClaimNextNeverImplicitlyAssignsPendingTask",
+    "line": 426,
+    "cognitive_estimate": 7,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/review_route_test.go",
+    "name": "TestReviewWorkbenchClaimDraftRefreshSubmitAndNext",
+    "line": 477,
+    "cognitive_estimate": 8,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/review_route_test.go",
+    "name": "reviewAssertNextContextPrefetchIsReadOnly",
+    "line": 528,
+    "cognitive_estimate": 5,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/review_route_test.go",
+    "name": "reviewAssertDraftRefreshAndVersionConflict",
+    "line": 548,
+    "cognitive_estimate": 6,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/review_route_test.go",
+    "name": "TestReviewTaskReleaseKeepsAssignmentAndAllowsResume",
+    "line": 575,
+    "cognitive_estimate": 11,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/review_route_test.go",
+    "name": "TestReviewTaskListFiltersByExam",
+    "line": 631,
+    "cognitive_estimate": 2,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/review_route_test.go",
+    "name": "TestReviewTaskBatchAssignRoute",
+    "line": 655,
+    "cognitive_estimate": 2,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/review_route_test.go",
+    "name": "TestReviewTaskAssignmentRequiresActiveGrader",
+    "line": 676,
+    "cognitive_estimate": 5,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/review_route_test.go",
+    "name": "TestReviewOriginalImageRequiresAdministratorRole",
+    "line": 705,
+    "cognitive_estimate": 10,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/review_route_test.go",
+    "name": "TestDoubleMarkSessionRequiresActiveSameTenantGraders",
+    "line": 750,
+    "cognitive_estimate": 6,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/review_route_test.go",
+    "name": "TestArbitrationTaskCreateRequiresActiveSameTenantArbitrator",
+    "line": 802,
+    "cognitive_estimate": 5,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/review_route_test.go",
+    "name": "TestArbitrationWorkPermissionIsScopedToAssignedTasks",
+    "line": 845,
+    "cognitive_estimate": 5,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/review_route_test.go",
+    "name": "reviewAssertArbitrationFilterAndUnassignedSubmission",
+    "line": 920,
+    "cognitive_estimate": 5,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/review_route_test.go",
+    "name": "reviewAssertInvalidArbitrationAssignees",
+    "line": 946,
+    "cognitive_estimate": 4,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/review_route_test.go",
+    "name": "reviewAssertUnassignedArbitrationAccess",
+    "line": 967,
+    "cognitive_estimate": 5,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/review_route_test.go",
+    "name": "reviewAssertAssignedArbitrationMaterialsAndSubmission",
+    "line": 993,
+    "cognitive_estimate": 8,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/review_route_test.go",
+    "name": "TestDoubleMarkAndArbitrationRoutes",
+    "line": 1036,
+    "cognitive_estimate": 11,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/review_route_test.go",
+    "name": "reviewSubmitBlindDoubleMarks",
+    "line": 1100,
+    "cognitive_estimate": 6,
+    "parameters": 6
+  },
+  {
+    "path": "services/api-gateway/internal/server/review_route_test.go",
+    "name": "reviewRouter",
+    "line": 1126,
+    "cognitive_estimate": 0,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/review_route_test.go",
+    "name": "createReviewTaskForRoute",
+    "line": 1137,
+    "cognitive_estimate": 1,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/review_route_test.go",
+    "name": "loggerForReviewTest",
+    "line": 1148,
+    "cognitive_estimate": 0,
+    "parameters": 0
+  },
+  {
+    "path": "services/api-gateway/internal/server/review_route_test.go",
+    "name": "reviewAuthStore",
+    "line": 1152,
+    "cognitive_estimate": 0,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/review_route_test.go",
+    "name": "reviewAuthStoreByUser",
+    "line": 1162,
+    "cognitive_estimate": 5,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/review_route_test.go",
+    "name": "addReviewManagedUser",
+    "line": 1231,
+    "cognitive_estimate": 4,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/review_route_test.go",
+    "name": "reviewLogin",
+    "line": 1252,
+    "cognitive_estimate": 2,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/review_route_test.go",
+    "name": "reviewAuthedRequest",
+    "line": 1270,
+    "cognitive_estimate": 0,
+    "parameters": 4
+  },
+  {
+    "path": "services/api-gateway/internal/server/review_route_test.go",
+    "name": "decodeReviewTaskID",
+    "line": 1276,
+    "cognitive_estimate": 2,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/review_route_test.go",
+    "name": "assignReviewTaskForRoute",
+    "line": 1292,
+    "cognitive_estimate": 1,
+    "parameters": 5
+  },
+  {
+    "path": "services/api-gateway/internal/server/review_route_test.go",
+    "name": "decodeDoubleMarkSession",
+    "line": 1302,
+    "cognitive_estimate": 3,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/review_route_test.go",
+    "name": "decodeArbitrationIDFromSubmit",
+    "line": 1324,
+    "cognitive_estimate": 2,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/review_route_test.go",
+    "name": "reviewRouteContext",
+    "line": 1340,
+    "cognitive_estimate": 0,
+    "parameters": 0
+  },
+  {
+    "path": "services/api-gateway/internal/server/review_route_test.go",
+    "name": "reviewAssertAuditAction",
+    "line": 1373,
+    "cognitive_estimate": 3,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/score_route_test.go",
+    "name": "TestScoreRoutesFinalizeConfirmPublishStudentLookupAndExport",
+    "line": 18,
+    "cognitive_estimate": 12,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/score_route_test.go",
+    "name": "scoreAssertUnconfirmedPublicationBlocked",
+    "line": 75,
+    "cognitive_estimate": 6,
+    "parameters": 3
+  },
+  {
+    "path": "services/api-gateway/internal/server/score_route_test.go",
+    "name": "TestScoreRoutesRequirePermission",
+    "line": 99,
+    "cognitive_estimate": 2,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/score_route_test.go",
+    "name": "TestStudentGradeRouteEnforcesStudentScope",
+    "line": 119,
+    "cognitive_estimate": 7,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/score_route_test.go",
+    "name": "TestRosterRoutesRequireAdministrativeRole",
+    "line": 161,
+    "cognitive_estimate": 2,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/score_route_test.go",
+    "name": "TestRosterRoutesRejectMalformedIdentifiers",
+    "line": 186,
+    "cognitive_estimate": 4,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/score_route_test.go",
+    "name": "scoreRouter",
+    "line": 206,
+    "cognitive_estimate": 0,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/score_route_test.go",
+    "name": "seededRouteScoreStore",
+    "line": 217,
+    "cognitive_estimate": 0,
+    "parameters": 0
+  },
+  {
+    "path": "services/api-gateway/internal/server/score_route_test.go",
+    "name": "scoreAuthStoreWithStudents",
+    "line": 226,
+    "cognitive_estimate": 2,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/server_test.go",
+    "name": "testConfig",
+    "line": 23,
+    "cognitive_estimate": 0,
+    "parameters": 0
+  },
+  {
+    "path": "services/api-gateway/internal/server/server_test.go",
+    "name": "testAuthStore",
+    "line": 56,
+    "cognitive_estimate": 0,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/server_test.go",
+    "name": "testAuthStoreWithPermissions",
+    "line": 61,
+    "cognitive_estimate": 1,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/server_test.go",
+    "name": "TestHealth",
+    "line": 85,
+    "cognitive_estimate": 6,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/server_test.go",
+    "name": "TestModelGovernanceRoutesEnforceSeparateReadAndManagePermissions",
+    "line": 109,
+    "cognitive_estimate": 9,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/server_test.go",
+    "name": "TestModelEvaluationManagePermissionAllowsMutationRoute",
+    "line": 201,
+    "cognitive_estimate": 1,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/server_test.go",
+    "name": "TestRequestTraceHeadersAndAccessLog",
+    "line": 224,
+    "cognitive_estimate": 7,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/server_test.go",
+    "name": "TestSystemInfo",
+    "line": 252,
+    "cognitive_estimate": 8,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/server_test.go",
+    "name": "TestReadyHealthy",
+    "line": 280,
+    "cognitive_estimate": 2,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/server_test.go",
+    "name": "TestReadyUnhealthy",
+    "line": 299,
+    "cognitive_estimate": 2,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/server_test.go",
+    "name": "TestPublicHealthProbesAreAnonymousAndReadinessIsRedacted",
+    "line": 317,
+    "cognitive_estimate": 7,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/server_test.go",
+    "name": "TestSystemStatusIncludesDependencyAndObservabilityState",
+    "line": 347,
+    "cognitive_estimate": 4,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/server_test.go",
+    "name": "TestSystemStatusReportsIdleOCRWorkerAsOnline",
+    "line": 383,
+    "cognitive_estimate": 8,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/server_test.go",
+    "name": "TestSystemStatusRequiresAuthenticationAndSystemRead",
+    "line": 424,
+    "cognitive_estimate": 2,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/server_test.go",
+    "name": "TestOCRAvailabilityUsesScopedPermissionsAndResponse",
+    "line": 443,
+    "cognitive_estimate": 1,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/server_test.go",
+    "name": "assertOCRAvailabilityForPermission",
+    "line": 461,
+    "cognitive_estimate": 11,
+    "parameters": 2
+  },
+  {
+    "path": "services/api-gateway/internal/server/server_test.go",
+    "name": "TestOCRAvailabilityRequiresAuthenticationAndConsumerPermission",
+    "line": 496,
+    "cognitive_estimate": 2,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/server_test.go",
+    "name": "TestOCRConsumerStillCannotReadFullSystemStatus",
+    "line": 515,
+    "cognitive_estimate": 2,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/server_test.go",
+    "name": "TestWorkerRuntimeSeparatesReadAndExecutePermissions",
+    "line": 536,
+    "cognitive_estimate": 3,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/server_test.go",
+    "name": "TestCORSAllowlistAndBodyLimit",
+    "line": 567,
+    "cognitive_estimate": 5,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/server_test.go",
+    "name": "TestNotFoundUsesUnifiedError",
+    "line": 598,
+    "cognitive_estimate": 3,
+    "parameters": 1
+  },
+  {
+    "path": "services/api-gateway/internal/server/server_test.go",
+    "name": "serverLogin",
+    "line": 614,
+    "cognitive_estimate": 2,
+    "parameters": 2
+  }
+]

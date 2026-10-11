@@ -14,6 +14,25 @@ from edugrade_worker_runtime import (
 )
 
 PAPER_IMPORT_COMPLETION_TIMEOUT_SECONDS = 720
+WORKER_TASK_CLAIM_PATH = "/api/v1/internal/worker/tasks/claim"
+
+
+class _RejectRedirects(request.HTTPRedirectHandler):
+    def http_error_302(self, req, fp, code, msg, headers):
+        # 初始目标校验不覆盖跳转；同源跳转也拒绝，避免令牌、租约或登录正文被再次转发。
+        # 尚未进入调用方的 with；先释放原连接，避免异常链长期保留响应套接字。
+        fp.close()
+        raise error.HTTPError(req.full_url, code, "redirects are not allowed", headers, None)
+
+    http_error_301 = http_error_302
+    http_error_303 = http_error_302
+    http_error_307 = http_error_302
+    http_error_308 = http_error_302
+
+
+def _open_request(req: request.Request, *, timeout: float) -> Any:
+    # 独立 opener 不修改进程全局设置；HTTPS 仍使用标准库的默认证书验证。
+    return request.build_opener(_RejectRedirects()).open(req, timeout=timeout)
 
 
 class APIError(RuntimeError):
@@ -63,7 +82,7 @@ class EduGradeClient:
         self.worker_instance_id = worker_instance_id
         response = self._request(
             "POST",
-            "/api/v1/internal/worker/tasks/claim",
+            WORKER_TASK_CLAIM_PATH,
             {
                 "queue_name": "ocr",
                 "worker_service": "ocr-worker",
@@ -79,7 +98,7 @@ class EduGradeClient:
         self.worker_instance_id = worker_instance_id
         response = self._request(
             "POST",
-            "/api/v1/internal/worker/tasks/claim",
+            WORKER_TASK_CLAIM_PATH,
             {
                 "queue_name": "math-understanding",
                 "worker_service": "ocr-worker",
@@ -93,7 +112,7 @@ class EduGradeClient:
 
     def claim_paper_formula_tasks(self, worker_instance_id: str, lease_seconds: int) -> list[dict[str, Any]]:
         self.worker_instance_id = worker_instance_id
-        response = self._request("POST", "/api/v1/internal/worker/tasks/claim", {
+        response = self._request("POST", WORKER_TASK_CLAIM_PATH, {
             "queue_name": "paper-formula", "worker_service": "ocr-worker",
             "worker_instance_id": worker_instance_id, "limit": 1, "lease_seconds": lease_seconds,
         })
@@ -102,24 +121,24 @@ class EduGradeClient:
 
     def claim_math_verification_tasks(self, worker_instance_id: str, lease_seconds: int) -> list[dict[str, Any]]:
         self.worker_instance_id = worker_instance_id
-        response = self._request("POST", "/api/v1/internal/worker/tasks/claim", {
+        response = self._request("POST", WORKER_TASK_CLAIM_PATH, {
             "queue_name": "math-verification", "worker_service": "ocr-worker",
             "worker_instance_id": worker_instance_id, "limit": 1, "lease_seconds": lease_seconds,
         })
         tasks = response.get("tasks", [])
         return tasks if isinstance(tasks, list) else []
 
-    def get_math_verification_input(self, task_id: str, tenant_id: str) -> dict[str, Any]:
-        return self._request("GET", f"/api/v1/internal/math-verification/tasks/{task_id}/input", tenant_id=tenant_id)
+    def get_math_verification_input(self, task_id: str) -> dict[str, Any]:
+        return self._request("GET", f"/api/v1/internal/math-verification/tasks/{task_id}/input")
 
-    def complete_math_verification_task(self, task_id: str, payload: dict[str, Any], tenant_id: str) -> None:
-        self._request("POST", f"/api/v1/internal/math-verification/tasks/{task_id}/complete", payload, tenant_id=tenant_id)
+    def complete_math_verification_task(self, task_id: str, payload: dict[str, Any]) -> None:
+        self._request("POST", f"/api/v1/internal/math-verification/tasks/{task_id}/complete", payload)
 
-    def fail_math_verification_task(self, task_id: str, payload: dict[str, Any], tenant_id: str) -> None:
-        self._request("POST", f"/api/v1/internal/math-verification/tasks/{task_id}/fail", payload, tenant_id=tenant_id)
+    def fail_math_verification_task(self, task_id: str, payload: dict[str, Any]) -> None:
+        self._request("POST", f"/api/v1/internal/math-verification/tasks/{task_id}/fail", payload)
 
-    def get_math_task_input(self, runtime_task_id: str, tenant_id: str | None = None) -> dict[str, Any]:
-        return self._request("GET", f"/api/v1/internal/math-understanding/tasks/{runtime_task_id}/input", tenant_id=tenant_id)
+    def get_math_task_input(self, runtime_task_id: str) -> dict[str, Any]:
+        return self._request("GET", f"/api/v1/internal/math-understanding/tasks/{runtime_task_id}/input")
 
     def complete_math_task(
         self,
@@ -127,13 +146,11 @@ class EduGradeClient:
         lease_token: str,
         artifact: dict[str, Any],
         duration_ms: int,
-        tenant_id: str | None = None,
     ) -> None:
         self._request(
             "POST",
             f"/api/v1/internal/math-understanding/tasks/{runtime_task_id}/complete",
             {"lease_token": lease_token, "duration_ms": duration_ms, "artifact": artifact},
-            tenant_id=tenant_id,
         )
 
     def fail_runtime_task(
@@ -143,7 +160,6 @@ class EduGradeClient:
         error_code: str,
         retryable: bool,
         duration_ms: int,
-        tenant_id: str | None = None,
     ) -> None:
         self._request(
             "POST",
@@ -155,7 +171,6 @@ class EduGradeClient:
                 "error_detail": {},
                 "duration_ms": duration_ms,
             },
-            tenant_id=tenant_id,
         )
 
     def activate_task(self, task: dict[str, Any], worker_instance_id: str | None = None) -> None:
@@ -171,6 +186,7 @@ class EduGradeClient:
             "worker_instance_id": instance_id,
         }
 
+    # 进度显式按名称传递，旧位置参数不能被误当成续约进度。
     def heartbeat_task(
         self,
         runtime_task_id: str,
@@ -178,7 +194,7 @@ class EduGradeClient:
         worker_instance_id: str,
         lease_seconds: int,
         timeout_seconds: float,
-        tenant_id: str | None = None,
+        *,
         progress: dict[str, Any] | None = None,
     ) -> None:
         self.current_task = {
@@ -201,14 +217,14 @@ class EduGradeClient:
             timeout=timeout_seconds,
         )
 
-    def start_task(self, task_id: str, tenant_id: str | None = None) -> None:
-        self._request("POST", f"/api/v1/ocr-tasks/{task_id}/start", {}, tenant_id=tenant_id)
+    def start_task(self, task_id: str) -> None:
+        self._request("POST", f"/api/v1/ocr-tasks/{task_id}/start", {})
 
-    def get_task_input(self, task_id: str, tenant_id: str | None = None) -> dict[str, Any]:
-        return self._request("GET", f"/api/v1/ocr-tasks/{task_id}/input", tenant_id=tenant_id)
+    def get_task_input(self, task_id: str) -> dict[str, Any]:
+        return self._request("GET", f"/api/v1/ocr-tasks/{task_id}/input")
 
-    def complete_task(self, task_id: str, payload: dict[str, Any], tenant_id: str | None = None) -> None:
-        self._request("POST", f"/api/v1/ocr-tasks/{task_id}/results", payload, tenant_id=tenant_id)
+    def complete_task(self, task_id: str, payload: dict[str, Any]) -> None:
+        self._request("POST", f"/api/v1/ocr-tasks/{task_id}/results", payload)
 
     def fail_task(
         self,
@@ -217,7 +233,6 @@ class EduGradeClient:
         runtime_task_id: str,
         lease_token: str,
         retryable: bool,
-        tenant_id: str | None = None,
     ) -> None:
         self._request(
             "POST",
@@ -228,36 +243,45 @@ class EduGradeClient:
                 "runtime_lease_token": lease_token,
                 "retryable": retryable,
             },
-            tenant_id=tenant_id,
         )
 
-    def complete_paper_import_ocr(self, import_id: str, payload: dict[str, Any], tenant_id: str | None = None) -> None:
-        # The gateway performs model-backed question parsing after persisting the
-        # OCR result. Local CPU inference for a full paper can legitimately take
-        # several minutes, so this terminal callback must not inherit the generic
-        # 60-second control-plane timeout.
+    def complete_paper_import_ocr(self, import_id: str, payload: dict[str, Any]) -> None:
+        # 网关在持久化 OCR 结果后，通过模型解析题目。
+        # 本地 CPU 对整份试卷进行推理可能正常耗时
+        # 数分钟，因此这个终态回调不能沿用通用的
+        # 60 秒控制面超时。
         self._request(
             "POST",
             f"/api/v1/internal/paper-imports/{import_id}/ocr-result",
             payload,
             timeout=PAPER_IMPORT_COMPLETION_TIMEOUT_SECONDS,
-            tenant_id=tenant_id,
         )
 
-    def complete_paper_import_formula(self, import_id: str, payload: dict[str, Any], tenant_id: str | None = None) -> None:
+    def complete_paper_import_formula(self, import_id: str, payload: dict[str, Any]) -> None:
         self._request("POST", f"/api/v1/internal/paper-imports/{import_id}/formula-result", payload,
-                      timeout=PAPER_IMPORT_COMPLETION_TIMEOUT_SECONDS, tenant_id=tenant_id)
+                      timeout=PAPER_IMPORT_COMPLETION_TIMEOUT_SECONDS)
 
-    def fail_paper_import(self, import_id: str, runtime_task_id: str, lease_token: str, error_code: str, retryable: bool, tenant_id: str | None = None, error_detail: dict[str, Any] | None = None, duration_ms: int = 0) -> None:
+    # 详情与耗时按名称传递，旧位置参数不能误绑到失败终态字段。
+    def fail_paper_import(
+        self,
+        import_id: str,
+        runtime_task_id: str,
+        lease_token: str,
+        error_code: str,
+        retryable: bool,
+        *,
+        error_detail: dict[str, Any] | None = None,
+        duration_ms: int = 0,
+    ) -> None:
         self._request("POST", f"/api/v1/internal/paper-imports/{import_id}/failure", {
             "task_id": runtime_task_id, "lease_token": lease_token, "retryable": retryable,
             "error_code": error_code, "error_detail": error_detail or {}, "duration_ms": duration_ms,
-        }, tenant_id=tenant_id)
+        })
 
-    def download(self, url: str, tenant_id: str | None = None) -> bytes:
-        req = self._build_request("GET", url, None, tenant_id=tenant_id)
+    def download(self, url: str) -> bytes:
+        req = self._build_request("GET", url, None)
         try:
-            with request.urlopen(req, timeout=60) as response:
+            with _open_request(req, timeout=60) as response:
                 return read_bounded(response, MAX_DOCUMENT_RESPONSE_BYTES)
         except error.HTTPError as exc:
             if exc.code == 401:
@@ -273,17 +297,15 @@ class EduGradeClient:
         payload: dict[str, Any] | None = None,
         require_auth: bool = True,
         timeout: float = 60,
-        tenant_id: str | None = None,
     ) -> dict[str, Any]:
         req = self._build_request(
             method,
             path,
             payload if method != "GET" else None,
             require_auth=require_auth,
-            tenant_id=tenant_id,
         )
         try:
-            with request.urlopen(req, timeout=timeout) as response:
+            with _open_request(req, timeout=timeout) as response:
                 raw = read_json_response(response)
         except error.HTTPError as exc:
             if exc.code == 401:
@@ -301,7 +323,6 @@ class EduGradeClient:
         path_or_url: str,
         payload: dict[str, Any] | None,
         require_auth: bool = True,
-        tenant_id: str | None = None,
     ) -> request.Request:
         # 附带令牌前先校验初始目标同源；任务权限来自租约头，不发送调用方指定的租户头。
         url = _trusted_service_url(self.base_url, path_or_url)

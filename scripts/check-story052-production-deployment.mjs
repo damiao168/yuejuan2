@@ -66,8 +66,8 @@ for (const check of checks) {
 const migrationDir = path.join(root, 'services/api-gateway/migrations');
 const latestMigration = fs.readdirSync(migrationDir)
   .map((name) => /^(\d{6})_.*\.sql$/.exec(name)?.[1])
-  .filter(Boolean)
-  .sort()
+  .filter((value) => typeof value === 'string')
+  .sort((left, right) => left.localeCompare(right))
   .at(-1);
 if (!latestMigration) {
   failures.push('schema release metadata: no numbered migration found');

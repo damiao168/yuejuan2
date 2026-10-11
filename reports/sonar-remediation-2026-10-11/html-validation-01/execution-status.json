@@ -1,0 +1,6 @@
+{
+  "status": "failed",
+  "current_results_valid": false,
+  "error": "HTML scanner did not return a successful fresh receipt",
+  "failed_at": "2026-10-11T17:17:27.254288+08:00"
+}

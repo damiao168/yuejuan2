@@ -1,0 +1,19 @@
+.student-score-preview-student-selector {
+  display: grid;
+  gap: 8px;
+  margin: 20px 0;
+}
+
+.student-score-preview-student-selector small {
+  color: var(--text-secondary, #64748b);
+}
+
+.student-score-preview-content {
+  overflow-wrap: anywhere;
+}
+
+.student-score-preview-question {
+  border-top: 1px solid var(--border-color, #e2e8f0);
+  margin-top: 20px;
+  padding-top: 12px;
+}

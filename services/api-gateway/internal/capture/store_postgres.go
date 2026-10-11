@@ -268,13 +268,8 @@ ON CONFLICT (tenant_id,task_type,idempotency_key) DO NOTHING`, tenantID, item.ID
 }
 
 func (s *PostgresStore) ApplyFileResult(ctx context.Context, tenantID, fileID string, pages []DecodedPageInput) (File, error) {
-	if len(pages) == 0 {
-		return File{}, ErrInvalidInput
-	}
-	for i, p := range pages {
-		if p.SourceIndex != i+1 || p.FileAssetID == "" || p.SHA256 == "" || p.Width <= 0 || p.Height <= 0 || !validBarcodeObservations(p.Barcodes, p.Width, p.Height) {
-			return File{}, ErrInvalidInput
-		}
+	if err := validateDecodedFilePages(pages); err != nil {
+		return File{}, err
 	}
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -295,108 +290,200 @@ func (s *PostgresStore) ApplyFileResult(ctx context.Context, tenantID, fileID st
 	if item.Status != "queued" && item.Status != "processing" && item.Status != "failed" {
 		return File{}, ErrInvalidTransition
 	}
-	var examID string
-	if err = tx.QueryRowContext(ctx, `SELECT exam_id::text FROM capture_batch WHERE tenant_id=$1 AND id=$2::uuid`, tenantID, item.CaptureBatchID).Scan(&examID); err != nil {
+	scope, err := createDecodedSubmissionTx(ctx, tx, tenantID, item, len(pages))
+	if err != nil {
 		return File{}, err
+	}
+	identity, conflictBatchIDs, err := s.applyDecodedPagesTx(ctx, tx, scope, pages)
+	if err != nil {
+		return File{}, err
+	}
+	if err = reconcileDecodedFileIdentityTx(ctx, tx, scope, identity); err != nil {
+		return File{}, err
+	}
+	item, err = scanFile(tx.QueryRowContext(ctx, `UPDATE capture_file SET status='completed',page_count=$3,error_code=NULL,updated_at=now() WHERE tenant_id=$1 AND id=$2::uuid RETURNING `+fileColumns, tenantID, fileID, len(pages)))
+	if err != nil {
+		return File{}, err
+	}
+	if err = s.aggregateDecodedFileBatchesTx(ctx, tx, tenantID, item.CaptureBatchID, conflictBatchIDs); err != nil {
+		return File{}, err
+	}
+	return item, tx.Commit()
+}
+
+type decodedFileScope struct {
+	tenantID, examID, submissionID string
+	file                           File
+	sequenceBase                   int
+}
+
+type decodedCapturePageResult struct {
+	barcode                      barcodeEvaluation
+	assignedPageNo, sequenceNo   int
+	barcodeStatus, capturePageID string
+	submissionPageID             string
+	duplicate                    sheetPageDuplicate
+}
+
+type decodedFileIdentity struct {
+	studentID, templateID, sheetSerial string
+	conflict                           bool
+	verifiedPageNumbers                map[int]bool
+	unverifiedCapturePageIDs           []string
+}
+
+func validateDecodedFilePages(pages []DecodedPageInput) error {
+	if len(pages) == 0 {
+		return ErrInvalidInput
+	}
+	for i, page := range pages {
+		if page.SourceIndex != i+1 || page.FileAssetID == "" || page.SHA256 == "" || page.Width <= 0 || page.Height <= 0 || !validBarcodeObservations(page.Barcodes, page.Width, page.Height) {
+			return ErrInvalidInput
+		}
+	}
+	return nil
+}
+
+func createDecodedSubmissionTx(ctx context.Context, tx *sql.Tx, tenantID string, item File, pageCount int) (decodedFileScope, error) {
+	var examID string
+	if err := tx.QueryRowContext(ctx, `SELECT exam_id::text FROM capture_batch WHERE tenant_id=$1 AND id=$2::uuid`, tenantID, item.CaptureBatchID).Scan(&examID); err != nil {
+		return decodedFileScope{}, err
 	}
 	sourceType := "image_upload"
 	if strings.Contains(item.ContentType, "pdf") {
 		sourceType = "pdf_upload"
 	}
 	var submissionID string
-	if err = tx.QueryRowContext(ctx, `INSERT INTO submission (tenant_id,exam_id,source_type,status,expected_page_count,actual_page_count,quality_status,quality_issues,collected_by)
-VALUES ($1,$2::uuid,$3,'pages_uploaded',$4,$4,'unchecked','[]',$5::uuid) RETURNING id::text`, tenantID, examID, sourceType, len(pages), item.UploadedBy).Scan(&submissionID); err != nil {
-		return File{}, err
+	if err := tx.QueryRowContext(ctx, `INSERT INTO submission (tenant_id,exam_id,source_type,status,expected_page_count,actual_page_count,quality_status,quality_issues,collected_by)
+VALUES ($1,$2::uuid,$3,'pages_uploaded',$4,$4,'unchecked','[]',$5::uuid) RETURNING id::text`, tenantID, examID, sourceType, pageCount, item.UploadedBy).Scan(&submissionID); err != nil {
+		return decodedFileScope{}, err
 	}
 	var sequenceBase int
-	if err = tx.QueryRowContext(ctx, `SELECT COALESCE(max(sequence_no),0) FROM capture_page WHERE tenant_id=$1 AND capture_batch_id=$2::uuid AND deleted_at IS NULL`, tenantID, item.CaptureBatchID).Scan(&sequenceBase); err != nil {
-		return File{}, err
+	if err := tx.QueryRowContext(ctx, `SELECT COALESCE(max(sequence_no),0) FROM capture_page WHERE tenant_id=$1 AND capture_batch_id=$2::uuid AND deleted_at IS NULL`, tenantID, item.CaptureBatchID).Scan(&sequenceBase); err != nil {
+		return decodedFileScope{}, err
 	}
+	return decodedFileScope{tenantID: tenantID, examID: examID, submissionID: submissionID, file: item, sequenceBase: sequenceBase}, nil
+}
+
+func (s *PostgresStore) applyDecodedPagesTx(ctx context.Context, tx *sql.Tx, scope decodedFileScope, pages []DecodedPageInput) (decodedFileIdentity, map[string]bool, error) {
+	identity := decodedFileIdentity{verifiedPageNumbers: map[int]bool{}}
 	conflictBatchIDs := map[string]bool{}
-	verifiedPageNumbers := map[int]bool{}
-	identifiedStudentID := ""
-	identifiedTemplateID := ""
-	identifiedSheetSerial := ""
-	identityConflict := false
-	unverifiedCapturePageIDs := []string{}
-	for i, p := range pages {
-		barcode := s.evaluateBarcodesTx(ctx, tx, tenantID, examID, p.Barcodes)
-		assignedPageNo := p.SourceIndex
-		if barcode.AssignedPageNo > 0 {
-			assignedPageNo = barcode.AssignedPageNo
+	for i, page := range pages {
+		result, err := s.applyDecodedPageTx(ctx, tx, scope, page, scope.sequenceBase+i+1)
+		if err != nil {
+			return decodedFileIdentity{}, nil, err
 		}
-		var duplicate sheetPageDuplicate
-		if barcode.AssignedSheetSerial != "" {
-			duplicate, err = lockIssuedSheetAndFindDuplicateTx(
-				ctx, tx, tenantID, barcode.AssignedSheetSerial, assignedPageNo,
-			)
-			if err != nil {
-				return File{}, err
-			}
-			if duplicate.PageID != "" {
-				barcode.NeedsReview = true
-			}
+		identity.observePage(result)
+		if result.duplicate.BatchID != "" {
+			conflictBatchIDs[result.duplicate.BatchID] = true
 		}
-		submissionPageNo := assignedPageNo
-		var pageNumberExists bool
-		if err = tx.QueryRowContext(ctx, `
+	}
+	return identity, conflictBatchIDs, nil
+}
+
+// 页面、纸张冲突与质检任务共用文件结果事务；任一步失败都不提交半套页面。
+func (s *PostgresStore) applyDecodedPageTx(ctx context.Context, tx *sql.Tx, scope decodedFileScope, p DecodedPageInput, sequenceNo int) (decodedCapturePageResult, error) {
+	tenantID, examID, submissionID := scope.tenantID, scope.examID, scope.submissionID
+	barcode := s.evaluateBarcodesTx(ctx, tx, tenantID, examID, p.Barcodes)
+	assignedPageNo := p.SourceIndex
+	if barcode.AssignedPageNo > 0 {
+		assignedPageNo = barcode.AssignedPageNo
+	}
+	var duplicate sheetPageDuplicate
+	var err error
+	if barcode.AssignedSheetSerial != "" {
+		duplicate, err = lockIssuedSheetAndFindDuplicateTx(ctx, tx, tenantID, barcode.AssignedSheetSerial, assignedPageNo)
+		if err != nil {
+			return decodedCapturePageResult{}, err
+		}
+		if duplicate.PageID != "" {
+			barcode.NeedsReview = true
+		}
+	}
+	submissionPageID, err := insertDecodedSubmissionPageTx(ctx, tx, scope, p, assignedPageNo)
+	if err != nil {
+		return decodedCapturePageResult{}, err
+	}
+	result := decodedCapturePageResult{
+		barcode: barcode, assignedPageNo: assignedPageNo, sequenceNo: sequenceNo,
+		barcodeStatus: decodedBarcodeStatus(barcode), duplicate: duplicate, submissionPageID: submissionPageID,
+	}
+	result.capturePageID, err = insertDecodedCapturePageTx(ctx, tx, scope, p, result)
+	if err != nil {
+		return decodedCapturePageResult{}, err
+	}
+	if barcode.AssignedSheetSerial != "" {
+		if err = markSheetPageObservedTx(ctx, tx, tenantID, barcode.AssignedSheetSerial, result.capturePageID, submissionID, duplicate); err != nil {
+			return decodedCapturePageResult{}, err
+		}
+	}
+	if err = queueDecodedPageQualityTx(ctx, tx, scope, p, submissionPageID, result.capturePageID); err != nil {
+		return decodedCapturePageResult{}, err
+	}
+	return result, nil
+}
+
+// 受控条码页码用于归组；同号扫描仍需独立保存，使用新的提交页号避开唯一约束。
+func insertDecodedSubmissionPageTx(ctx context.Context, tx *sql.Tx, scope decodedFileScope, p DecodedPageInput, assignedPageNo int) (string, error) {
+	tenantID, submissionID := scope.tenantID, scope.submissionID
+	submissionPageNo := assignedPageNo
+	var pageNumberExists bool
+	if err := tx.QueryRowContext(ctx, `
 SELECT EXISTS (
   SELECT 1
   FROM submission_page
   WHERE tenant_id=$1 AND submission_id=$2::uuid AND page_no=$3 AND deleted_at IS NULL
 )
 `, tenantID, submissionID, submissionPageNo).Scan(&pageNumberExists); err != nil {
-			return File{}, err
-		}
-		if pageNumberExists {
-			if err = tx.QueryRowContext(ctx, `
+		return "", err
+	}
+	if pageNumberExists {
+		if err := tx.QueryRowContext(ctx, `
 SELECT COALESCE(max(page_no),0)+1
 FROM submission_page
 WHERE tenant_id=$1 AND submission_id=$2::uuid AND deleted_at IS NULL
 `, tenantID, submissionID).Scan(&submissionPageNo); err != nil {
-				return File{}, err
-			}
+			return "", err
 		}
-		var submissionPageID string
-		if err = tx.QueryRowContext(ctx, `INSERT INTO submission_page (tenant_id,submission_id,file_asset_id,page_no,status,quality_status,quality_override,quality_issues)
-VALUES ($1,$2::uuid,$3::uuid,$4,'uploaded','unchecked','{}','[]') RETURNING id::text`, tenantID, submissionID, p.FileAssetID, submissionPageNo).Scan(&submissionPageID); err != nil {
-			return File{}, err
-		}
-		barcodeStatus := "none"
-		if len(barcode.Candidates) == 1 && !barcode.NeedsReview {
-			barcodeStatus = "verified"
-		} else if barcode.NeedsReview {
-			barcodeStatus = "needs_review"
-		}
-		if barcodeStatus == "verified" && barcode.AssignedStudentID != "" &&
-			barcode.AssignedTemplateID != "" && barcode.AssignedSheetSerial != "" {
-			if identifiedSheetSerial == "" {
-				identifiedStudentID = barcode.AssignedStudentID
-				identifiedTemplateID = barcode.AssignedTemplateID
-				identifiedSheetSerial = barcode.AssignedSheetSerial
-			} else if identifiedStudentID != barcode.AssignedStudentID ||
-				identifiedTemplateID != barcode.AssignedTemplateID ||
-				identifiedSheetSerial != barcode.AssignedSheetSerial {
-				identityConflict = true
-			}
-			verifiedPageNumbers[assignedPageNo] = true
-		}
-		identityFields := map[string]any{
-			"decoder": "page-processing", "width": p.Width, "height": p.Height,
-			"sha256": p.SHA256, "barcode_status": barcodeStatus, "barcode_observations": barcode.Evidence,
-		}
-		if duplicate.PageID != "" {
-			identityFields["barcode_conflict_code"] = "sheet_page_duplicate"
-			identityFields["barcode_conflict_page_id"] = duplicate.PageID
-		}
-		identity, _ := json.Marshal(identityFields)
-		candidates, _ := json.Marshal(barcode.Candidates)
-		pageStatus := "quality_checking"
-		if duplicate.PageID != "" {
-			pageStatus = "needs_review"
-		}
-		var capturePageID string
-		err = tx.QueryRowContext(ctx, `INSERT INTO capture_page (
+	}
+	var submissionPageID string
+	err := tx.QueryRowContext(ctx, `INSERT INTO submission_page (tenant_id,submission_id,file_asset_id,page_no,status,quality_status,quality_override,quality_issues)
+VALUES ($1,$2::uuid,$3::uuid,$4,'uploaded','unchecked','{}','[]') RETURNING id::text`, tenantID, submissionID, p.FileAssetID, submissionPageNo).Scan(&submissionPageID)
+	if err != nil {
+		return "", err
+	}
+	return submissionPageID, nil
+}
+
+func decodedBarcodeStatus(barcode barcodeEvaluation) string {
+	if len(barcode.Candidates) == 1 && !barcode.NeedsReview {
+		return "verified"
+	}
+	if barcode.NeedsReview {
+		return "needs_review"
+	}
+	return "none"
+}
+
+func insertDecodedCapturePageTx(ctx context.Context, tx *sql.Tx, scope decodedFileScope, p DecodedPageInput, result decodedCapturePageResult) (string, error) {
+	tenantID, submissionID, item, barcode := scope.tenantID, scope.submissionID, scope.file, result.barcode
+	duplicate := result.duplicate
+	identityFields := map[string]any{
+		"decoder": "page-processing", "width": p.Width, "height": p.Height,
+		"sha256": p.SHA256, "barcode_status": result.barcodeStatus, "barcode_observations": barcode.Evidence,
+	}
+	if duplicate.PageID != "" {
+		identityFields["barcode_conflict_code"] = "sheet_page_duplicate"
+		identityFields["barcode_conflict_page_id"] = duplicate.PageID
+	}
+	identity, _ := json.Marshal(identityFields)
+	candidates, _ := json.Marshal(barcode.Candidates)
+	pageStatus := "quality_checking"
+	if duplicate.PageID != "" {
+		pageStatus = "needs_review"
+	}
+	var capturePageID string
+	err := tx.QueryRowContext(ctx, `INSERT INTO capture_page (
 tenant_id,capture_batch_id,capture_file_id,source_index,submission_id,submission_page_id,
 assigned_page_no,sequence_no,decoded_file_asset_id,barcode_student_id,barcode_template_id,
 sheet_serial,status,duplicate_of_page_id,page_identity,match_candidates
@@ -407,76 +494,109 @@ NULLIF($10,'')::uuid,NULLIF($11,'')::uuid,NULLIF($12,'')::uuid,$13,
 NULLIF($14,'')::uuid,$15,$16
 )
 RETURNING id::text`, tenantID, item.CaptureBatchID, item.ID, p.SourceIndex, submissionID,
-			submissionPageID, assignedPageNo, sequenceBase+i+1, p.FileAssetID,
-			barcode.AssignedStudentID, barcode.AssignedTemplateID, barcode.AssignedSheetSerial,
-			pageStatus, duplicate.PageID, identity, candidates).Scan(&capturePageID)
-		if err != nil {
-			return File{}, err
-		}
-		if barcodeStatus != "verified" {
-			unverifiedCapturePageIDs = append(unverifiedCapturePageIDs, capturePageID)
-		}
-		if barcode.AssignedSheetSerial != "" {
-			if err = markSheetPageObservedTx(
-				ctx, tx, tenantID, barcode.AssignedSheetSerial, capturePageID, submissionID, duplicate,
-			); err != nil {
-				return File{}, err
-			}
-			if duplicate.BatchID != "" {
-				conflictBatchIDs[duplicate.BatchID] = true
-			}
-		}
-		var qualityRunID string
-		err = tx.QueryRowContext(ctx, `INSERT INTO submission_page_quality_run (
+		result.submissionPageID, result.assignedPageNo, result.sequenceNo, p.FileAssetID,
+		barcode.AssignedStudentID, barcode.AssignedTemplateID, barcode.AssignedSheetSerial,
+		pageStatus, duplicate.PageID, identity, candidates).Scan(&capturePageID)
+	return capturePageID, err
+}
+
+func queueDecodedPageQualityTx(ctx context.Context, tx *sql.Tx, scope decodedFileScope, p DecodedPageInput, submissionPageID, capturePageID string) error {
+	tenantID, submissionID, item := scope.tenantID, scope.submissionID, scope.file
+	var qualityRunID string
+	err := tx.QueryRowContext(ctx, `INSERT INTO submission_page_quality_run (
 tenant_id,submission_id,submission_page_id,source_file_asset_id,source_sha256,processing_status,
 profile_name,profile_version,profile_config_hash,metric_schema_version,report_schema_version)
 VALUES ($1,$2::uuid,$3::uuid,$4::uuid,$5,'pending','opencv-default','v2','sha256:opencv-default-v2-local-focus-hard-gates','image-quality-metrics-v2','image-quality-report-v2') RETURNING id::text`, tenantID, submissionID, submissionPageID, p.FileAssetID, p.SHA256).Scan(&qualityRunID)
-		if err != nil {
-			return File{}, err
-		}
-		payload, _ := json.Marshal(map[string]any{
-			"run_id": qualityRunID, "submission_id": submissionID, "submission_page_id": submissionPageID,
-			"capture_page_id": capturePageID, "page_no": p.SourceIndex, "source_file_asset_id": p.FileAssetID,
-			"source_sha256": p.SHA256, "download_url": "/api/v1/files/" + p.FileAssetID + "/download",
-			"profile_name": "opencv-default", "profile_version": "v2", "profile_config_hash": "sha256:opencv-default-v2-local-focus-hard-gates",
-			"metric_schema_version": "image-quality-metrics-v2", "report_schema_version": "image-quality-report-v2",
-		})
-		key := "capture-quality:" + capturePageID + ":" + p.SHA256
-		_, err = tx.ExecContext(ctx, `INSERT INTO agent_worker_task (tenant_id,task_type,queue_name,source_type,source_id,priority,payload,payload_schema_version,idempotency_key,dedupe_key,max_attempts,retry_backoff_seconds,created_by)
-VALUES ($1,'image_quality','image-quality','image_quality_run',$2::uuid,70,$3,'image-quality.v1',$4,$4,3,30,$5::uuid)`, tenantID, qualityRunID, payload, key, item.UploadedBy)
-		if err != nil {
-			return File{}, err
-		}
+	if err != nil {
+		return err
 	}
-	// 只有整批页面指向同一受控纸张且没有重复身份时才自动绑定学生，否则保留人工处理状态。
-	if identifiedSheetSerial != "" && !identityConflict {
-		var expectedPageCount int
-		if err = tx.QueryRowContext(ctx, `
+	payload, _ := json.Marshal(map[string]any{
+		"run_id": qualityRunID, "submission_id": submissionID, "submission_page_id": submissionPageID,
+		"capture_page_id": capturePageID, "page_no": p.SourceIndex, "source_file_asset_id": p.FileAssetID,
+		"source_sha256": p.SHA256, "download_url": "/api/v1/files/" + p.FileAssetID + "/download",
+		"profile_name": "opencv-default", "profile_version": "v2", "profile_config_hash": "sha256:opencv-default-v2-local-focus-hard-gates",
+		"metric_schema_version": "image-quality-metrics-v2", "report_schema_version": "image-quality-report-v2",
+	})
+	key := "capture-quality:" + capturePageID + ":" + p.SHA256
+	_, err = tx.ExecContext(ctx, `INSERT INTO agent_worker_task (tenant_id,task_type,queue_name,source_type,source_id,priority,payload,payload_schema_version,idempotency_key,dedupe_key,max_attempts,retry_backoff_seconds,created_by)
+VALUES ($1,'image_quality','image-quality','image_quality_run',$2::uuid,70,$3,'image-quality.v1',$4,$4,3,30,$5::uuid)`, tenantID, qualityRunID, payload, key, item.UploadedBy)
+	return err
+}
+
+func (identity *decodedFileIdentity) observePage(page decodedCapturePageResult) {
+	if page.barcodeStatus != "verified" {
+		identity.unverifiedCapturePageIDs = append(identity.unverifiedCapturePageIDs, page.capturePageID)
+		return
+	}
+	barcode := page.barcode
+	if barcode.AssignedStudentID == "" || barcode.AssignedTemplateID == "" || barcode.AssignedSheetSerial == "" {
+		return
+	}
+	if identity.sheetSerial == "" {
+		identity.studentID, identity.templateID, identity.sheetSerial = barcode.AssignedStudentID, barcode.AssignedTemplateID, barcode.AssignedSheetSerial
+	} else if identity.studentID != barcode.AssignedStudentID || identity.templateID != barcode.AssignedTemplateID || identity.sheetSerial != barcode.AssignedSheetSerial {
+		identity.conflict = true
+	}
+	identity.verifiedPageNumbers[page.assignedPageNo] = true
+}
+
+// 已验证页的身份一致时可以绑定学生；无条码页仍单独转人工，混入不同纸张则整份标记冲突。
+func reconcileDecodedFileIdentityTx(ctx context.Context, tx *sql.Tx, scope decodedFileScope, identity decodedFileIdentity) error {
+	if identity.conflict {
+		return markMixedDecodedSheetIdentityTx(ctx, tx, scope)
+	}
+	if identity.sheetSerial == "" {
+		return nil
+	}
+	tenantID, examID, submissionID := scope.tenantID, scope.examID, scope.submissionID
+	var expectedPageCount int
+	if err := tx.QueryRowContext(ctx, `
 SELECT page_count
 FROM answer_sheet_template
 WHERE tenant_id=$1 AND id=$2::uuid AND status='locked' AND deleted_at IS NULL
-`, tenantID, identifiedTemplateID).Scan(&expectedPageCount); err != nil {
-			return File{}, mapNotFound(err)
-		}
-		evidence, _ := json.Marshal(map[string]any{
-			"method":       "controlled_barcode",
-			"confidence":   1.0,
-			"sheet_serial": identifiedSheetSerial,
-			"template_id":  identifiedTemplateID,
-		})
-		var existingSubmissionID string
-		existingErr := tx.QueryRowContext(ctx, `
+`, tenantID, identity.templateID).Scan(&expectedPageCount); err != nil {
+		return mapNotFound(err)
+	}
+	evidence, _ := json.Marshal(map[string]any{
+		"method":       "controlled_barcode",
+		"confidence":   1.0,
+		"sheet_serial": identity.sheetSerial,
+		"template_id":  identity.templateID,
+	})
+	var existingSubmissionID string
+	existingErr := tx.QueryRowContext(ctx, `
 SELECT id::text
 FROM submission
 WHERE tenant_id=$1 AND exam_id=$2::uuid AND student_id=$3::uuid
   AND id<>$4::uuid AND deleted_at IS NULL
 FOR UPDATE
-`, tenantID, examID, identifiedStudentID, submissionID).Scan(&existingSubmissionID)
-		if existingErr != nil && existingErr != sql.ErrNoRows {
-			return File{}, existingErr
-		}
-		if existingSubmissionID != "" {
-			if _, err = tx.ExecContext(ctx, `
+`, tenantID, examID, identity.studentID, submissionID).Scan(&existingSubmissionID)
+	if existingErr != nil && existingErr != sql.ErrNoRows {
+		return existingErr
+	}
+	if existingSubmissionID != "" {
+		return markDecodedStudentConflictTx(ctx, tx, scope, identity, evidence, expectedPageCount, existingSubmissionID)
+	}
+	if _, err := tx.ExecContext(ctx, `
+UPDATE submission
+SET student_id=$3::uuid,
+    identity_status='matched',
+    identity_revision=identity_revision+1,
+    identity_evidence=$4,
+    expected_page_count=$5,
+    actual_page_count=$6,
+    updated_at=now()
+WHERE tenant_id=$1 AND id=$2::uuid AND deleted_at IS NULL
+`, tenantID, submissionID, identity.studentID, evidence, expectedPageCount, len(identity.verifiedPageNumbers)); err != nil {
+		return err
+	}
+	return markUnverifiedDecodedPagesTx(ctx, tx, tenantID, identity.unverifiedCapturePageIDs)
+}
+
+// 已有有效提交时，新的扫描与纸张转冲突，不能覆盖先前学生归属。
+func markDecodedStudentConflictTx(ctx context.Context, tx *sql.Tx, scope decodedFileScope, identity decodedFileIdentity, evidence []byte, expectedPageCount int, existingSubmissionID string) error {
+	tenantID, submissionID := scope.tenantID, scope.submissionID
+	if _, err := tx.ExecContext(ctx, `
 UPDATE submission
 SET identity_status='conflict',
     identity_revision=identity_revision+1,
@@ -488,10 +608,10 @@ SET identity_status='conflict',
     actual_page_count=$6,
     updated_at=now()
 WHERE tenant_id=$1 AND id=$2::uuid AND deleted_at IS NULL
-`, tenantID, submissionID, string(evidence), existingSubmissionID, expectedPageCount, len(verifiedPageNumbers)); err != nil {
-				return File{}, err
-			}
-			if _, err = tx.ExecContext(ctx, `
+`, tenantID, submissionID, string(evidence), existingSubmissionID, expectedPageCount, len(identity.verifiedPageNumbers)); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `
 UPDATE capture_page
 SET status='needs_review',
     page_identity=page_identity || jsonb_build_object(
@@ -505,33 +625,19 @@ WHERE tenant_id=$1
   AND submission_id=$2::uuid
   AND deleted_at IS NULL
 `, tenantID, submissionID); err != nil {
-				return File{}, err
-			}
-			if _, err = tx.ExecContext(ctx, `
+		return err
+	}
+	_, err := tx.ExecContext(ctx, `
 UPDATE answer_sheet_print_sheet
 SET status='conflict',updated_at=now()
 WHERE tenant_id=$1 AND id=$2::uuid
-`, tenantID, identifiedSheetSerial); err != nil {
-				return File{}, err
-			}
-		} else if _, err = tx.ExecContext(ctx, `
-UPDATE submission
-SET student_id=$3::uuid,
-    identity_status='matched',
-    identity_revision=identity_revision+1,
-    identity_evidence=$4,
-    expected_page_count=$5,
-    actual_page_count=$6,
-    updated_at=now()
-WHERE tenant_id=$1 AND id=$2::uuid AND deleted_at IS NULL
-`, tenantID, submissionID, identifiedStudentID, evidence, expectedPageCount, len(verifiedPageNumbers)); err != nil {
-			return File{}, err
-		}
-		for _, capturePageID := range unverifiedCapturePageIDs {
-			if existingSubmissionID != "" {
-				break
-			}
-			if _, err = tx.ExecContext(ctx, `
+`, tenantID, identity.sheetSerial)
+	return err
+}
+
+func markUnverifiedDecodedPagesTx(ctx context.Context, tx *sql.Tx, tenantID string, pageIDs []string) error {
+	for _, capturePageID := range pageIDs {
+		if _, err := tx.ExecContext(ctx, `
 UPDATE capture_page
 SET status='needs_review',
     page_identity=page_identity || jsonb_build_object(
@@ -542,11 +648,14 @@ SET status='needs_review',
     updated_at=now()
 WHERE tenant_id=$1 AND id=$2::uuid AND deleted_at IS NULL
 `, tenantID, capturePageID); err != nil {
-				return File{}, err
-			}
+			return err
 		}
-	} else if identityConflict {
-		if _, err = tx.ExecContext(ctx, `
+	}
+	return nil
+}
+
+func markMixedDecodedSheetIdentityTx(ctx context.Context, tx *sql.Tx, scope decodedFileScope) error {
+	_, err := tx.ExecContext(ctx, `
 UPDATE submission
 SET identity_status='conflict',
     identity_revision=identity_revision+1,
@@ -556,26 +665,23 @@ SET identity_status='conflict',
     ),
     updated_at=now()
 WHERE tenant_id=$1 AND id=$2::uuid AND deleted_at IS NULL
-`, tenantID, submissionID); err != nil {
-			return File{}, err
-		}
-	}
-	item, err = scanFile(tx.QueryRowContext(ctx, `UPDATE capture_file SET status='completed',page_count=$3,error_code=NULL,updated_at=now() WHERE tenant_id=$1 AND id=$2::uuid RETURNING `+fileColumns, tenantID, fileID, len(pages)))
-	if err != nil {
-		return File{}, err
-	}
-	if err = s.aggregateBatchTx(ctx, tx, tenantID, item.CaptureBatchID); err != nil {
-		return File{}, err
+`, scope.tenantID, scope.submissionID)
+	return err
+}
+
+func (s *PostgresStore) aggregateDecodedFileBatchesTx(ctx context.Context, tx *sql.Tx, tenantID, batchID string, conflictBatchIDs map[string]bool) error {
+	if err := s.aggregateBatchTx(ctx, tx, tenantID, batchID); err != nil {
+		return err
 	}
 	for conflictBatchID := range conflictBatchIDs {
-		if conflictBatchID == item.CaptureBatchID {
+		if conflictBatchID == batchID {
 			continue
 		}
-		if err = s.aggregateBatchTx(ctx, tx, tenantID, conflictBatchID); err != nil {
-			return File{}, err
+		if err := s.aggregateBatchTx(ctx, tx, tenantID, conflictBatchID); err != nil {
+			return err
 		}
 	}
-	return item, tx.Commit()
+	return nil
 }
 
 type sheetPageDuplicate struct {
@@ -700,8 +806,7 @@ func (s *PostgresStore) ApplyQualityOutcome(ctx context.Context, tenantID, submi
 	return tx.Commit()
 }
 
-// ApplyQualityOutcomeInTx updates a linked capture page and aggregate. A
-// submission created outside capture is reported as linked=false, not an error.
+// ApplyQualityOutcomeInTx 更新关联采集页及聚合数据。非采集流程创建的提交返回 linked=false，不视为错误。
 // 质检结果与批次聚合必须在同一事务中提交；找不到采集页时返回 linked=false，供外部提交保持兼容。
 func ApplyQualityOutcomeInTx(ctx context.Context, tx *sql.Tx, tenantID, submissionPageID, qualityStatus string) (bool, error) {
 	pageStatus := "quality_rejected"
