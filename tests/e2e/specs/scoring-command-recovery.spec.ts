@@ -11,7 +11,16 @@ test("scoring start double click and reload retain the same command", async ({ p
     await route.fulfill({ status: 503, json: { error: { code: "idempotency_persist_failed" } } });
   });
   await page.route("**/api/v1/exams/exam-1/scoring-runs/commands/*", route => route.fulfill({ json: { command_id: route.request().url().split("/").at(-1), status: "not_accepted" } }));
-  await page.goto("/#/exams/exam-1/grading");
+  // 惰性工作区读到当前考试的就绪与汇总后，才进入双击恢复场景；原按钮和幂等断言仍独立核对。
+  const [readiness, summary] = await Promise.all([
+    page.waitForResponse(response => response.request().method() === "GET"
+      && new URL(response.url()).pathname === "/api/v1/exams/exam-1/scoring-readiness"),
+    page.waitForResponse(response => response.request().method() === "GET"
+      && new URL(response.url()).pathname === "/api/v1/exams/exam-1/scoring-summary"),
+    page.goto("/#/exams/exam-1/grading")
+  ]);
+  expect(readiness.status()).toBe(200);
+  expect(summary.status()).toBe(200);
   const start = page.getByRole("button", { name: "开始评分", exact: true });
   await expect(start).toBeEnabled();
   await start.click();

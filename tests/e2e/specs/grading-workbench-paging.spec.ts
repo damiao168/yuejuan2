@@ -28,7 +28,22 @@ test("120 份任务跨三页连续提交到最后，进度与下一份无重复�
     expect(state.submissions[index]).toBe(task.id);
     if (index + 1 < 120) {
       // 每份填分前已核实身份：首份在循环前，其余由上一轮切换后的检查覆盖，避免重复同一断言。
-      await expect(page.locator(".answer-panel")).toContainText(taskOrder[index + 1].anonymous_code);
+      const nextCode = taskOrder[index + 1].anonymous_code;
+      // 每个动画帧核对下一份身份，保留原 5 秒上限；返回当时的正文供立即断言，不再叠加轮询等待。
+      const nextAnswer = await page.waitForFunction((code) => {
+        const panels = document.querySelectorAll(".answer-panel");
+        if (panels.length !== 1) return false;
+        const panel = panels[0];
+        const bounds = panel.getBoundingClientRect();
+        const text = panel.textContent ?? "";
+        return bounds.width > 0 && bounds.height > 0 && getComputedStyle(panel).visibility !== "hidden" && text.includes(code)
+          ? text : false;
+      }, nextCode, { timeout: 5_000, polling: "raf" });
+      try {
+        expect(await nextAnswer.jsonValue()).toContain(nextCode);
+      } finally {
+        await nextAnswer.dispose();
+      }
     }
     if (index === 59 || index === 119) {
       await expect(page.locator(".grading-work-title")).toContainText(`已完成 ${index + 1} / 共 120`);
