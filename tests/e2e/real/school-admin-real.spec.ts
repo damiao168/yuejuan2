@@ -3,6 +3,8 @@ import { loginAsSchoolAdmin } from "../fixtures/schoolAdminLogin";
 
 // 依赖隔离 STORY-060 环境预置账号和考试；本文件没有 API 拦截，验证浏览器到真实网关的路径。
 test("学校管理员通过真实网关登录并查看已持久化考试", async ({ page }, testInfo) => {
+  const examId = "00000000-0000-0000-0000-000000000604";
+  const examName = "STORY-060 Synthetic Chinese Exam";
   const serverErrors: string[] = [];
   const forbiddenResponses: string[] = [];
   let authenticated = false;
@@ -35,26 +37,27 @@ test("学校管理员通过真实网关登录并查看已持久化考试", async
   }
   await page.getByText("考试列表", { exact: true }).click();
   await expect(page).toHaveURL(/#\/admin\/exams/);
-  const examLink = page.getByText("STORY-060 Synthetic Chinese Exam", { exact: true });
+  const examLink = page.getByText(examName, { exact: true });
   await expect(examLink).toBeVisible();
   await examLink.click();
-  await expect(page).toHaveURL(/\/exams\/[^/]+\/(settings|capture|grading|overview)/);
-  const examId = decodeURIComponent(page.url().match(/\/exams\/([^/]+)\/(?:settings|capture|grading|overview)/)?.[1] ?? "");
-  expect(examId).not.toBe("");
-  const examStatus = await page.evaluate(async (id) => {
+  // 列表先进入整场总览，再由学科入口进入工作区；固定种子 ID 防止误读另一场同名考试。
+  await expect(page).toHaveURL(new URL(`/#/admin/exams/overview/standalone/${examId}`, page.url()).href);
+  await expect(page.getByRole("heading", { name: examName, exact: true })).toBeVisible();
+  const persistedExam = await page.evaluate(async (id) => {
     const response = await fetch(`/api/v1/exams/${encodeURIComponent(id)}`, { credentials: "include" });
     if (!response.ok) throw new Error(`exam request failed: ${response.status}`);
-    const payload = await response.json() as { exam: { status: string } };
-    return payload.exam.status;
+    const payload = await response.json() as { exam: { id: string; name: string; status: string } };
+    return payload.exam;
   }, examId);
-  const expectedSection = ["draft", "configured", "ready"].includes(examStatus) ? "settings"
-    : examStatus === "collecting" ? "capture"
-    : ["grading", "reviewing"].includes(examStatus) ? "grading" : "overview";
-  expect(page.url()).toContain(`/exams/${encodeURIComponent(examId)}/${expectedSection}`);
+  // 夹具已按正式生命周期进入 grading，真实 worker 完成批次后仍应保留考试阶段。
+  expect(persistedExam).toMatchObject({ id: examId, name: examName, status: "grading" });
+  const subjectRow = page.getByRole("row").filter({ has: page.getByRole("cell", { name: "语文", exact: true }) });
+  await subjectRow.getByRole("button", { name: "继续阅卷", exact: true }).click();
+  await expect(page).toHaveURL(new URL(`/#/admin/exams/${examId}/grading`, page.url()).href);
 
   for (const section of ["overview", "students", "paper", "questions", "capture", "processing", "grading", "scores", "reports"]) {
     await page.goto(`/#/admin/exams/${encodeURIComponent(examId)}/${section}`);
-    await expect(page.getByRole("heading", { name: "STORY-060 Synthetic Chinese Exam" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: examName, exact: true })).toBeVisible();
   }
 
   const foreignExamID = process.env.EDUGRADE_E2E_FOREIGN_EXAM_ID;

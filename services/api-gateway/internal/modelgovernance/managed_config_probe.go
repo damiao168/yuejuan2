@@ -420,7 +420,14 @@ func (p *HTTPManagedAPIProber) doRequest(ctx context.Context, client *http.Clien
 
 func readManagedProbeBody(response *http.Response) ([]byte, error) {
 	defer response.Body.Close()
-	return io.ReadAll(io.LimitReader(response.Body, managedProbeResponseLimit))
+	body, err := io.ReadAll(io.LimitReader(response.Body, managedProbeResponseLimit))
+	// 预算耗尽时传输层也可能以正常 EOF 结束；关闭正文会取消预算，必须在关闭前核对请求状态。
+	if response.Request != nil {
+		if requestErr := response.Request.Context().Err(); requestErr != nil {
+			return body, requestErr
+		}
+	}
+	return body, err
 }
 
 func bodyManagedProbeFailure(result ManagedAPIProbeResult, err error, stage string) ManagedAPIProbeResult {

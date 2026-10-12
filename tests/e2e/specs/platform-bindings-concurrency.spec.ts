@@ -23,7 +23,23 @@ test("角色配置冲突保留所有草稿，明确刷新核对后才使用新�
     binding = { ...binding, ...body, revision: "10000000-0000-4000-8000-000000000003" };
     return route.fulfill({ json: { binding } });
   });
-  await page.goto("/#/platform/model-config?tab=bindings", { waitUntil: "domcontentloaded" });
+  // DOMContentLoaded 不代表惰性页面已读到当前学校配置；先订阅这两个初始 GET，
+  // 再用原有按钮断言核对业务就绪，避免把模块装载耗时算进冲突场景的 5 秒断言。
+  const [modelsResponse, bindingsResponse] = await Promise.all([
+    page.waitForResponse(response => {
+      const url = new URL(response.url());
+      return response.request().method() === "GET" && url.pathname === "/api/v1/platform/model-api-configs" &&
+        url.searchParams.get("tenant_id") === "school-a";
+    }),
+    page.waitForResponse(response => {
+      const url = new URL(response.url());
+      return response.request().method() === "GET" && url.pathname === "/api/v1/platform/panel-model-bindings" &&
+        url.searchParams.get("tenant_id") === "school-a" && url.searchParams.get("education_stage") === "senior" &&
+        url.searchParams.get("subject_code") === "mathematics" && url.searchParams.get("archetype_code") === "*";
+    }),
+    page.goto("/#/platform/model-config?tab=bindings", { waitUntil: "domcontentloaded" })
+  ]);
+  for (const response of [modelsResponse, bindingsResponse]) expect(response.status()).toBe(200);
   await expect(page.getByRole("button", { name: "保存主评 A" })).toBeEnabled();
   await page.getByRole("button", { name: "高级设置", exact: true }).click();
   await page.getByRole("textbox", { name: "主评 A自定义 Prompt 版本" }).fill("A-local-draft");
