@@ -78,7 +78,7 @@ jobs:
       - run: npm --workspace apps/web-admin run check:bundle -- --out ../../output/build-performance/web-admin.json
       - name: Preserve Web Admin build performance
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: web-admin-build-performance
           path: |
@@ -155,7 +155,7 @@ jobs:
       # 失败时保留断言、页面和 trace，避免作业超时后只剩进度日志。
       - name: Preserve mocked browser diagnostics
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: web-e2e-mocked-evidence
           path: |
@@ -606,7 +606,7 @@ jobs:
           ignore-unfixed: true
           exit-code: '1'
       - name: Upload SBOM evidence
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: edugrade-sboms
           path: sbom-*.cdx.json
@@ -678,7 +678,7 @@ jobs:
         run: docker compose -f infra/docker-compose/docker-compose.story060-e2e.yml logs --no-color --tail 300
       - name: Upload real browser evidence
         if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: real-system-e2e-evidence
           path: output/playwright/real-test-results
