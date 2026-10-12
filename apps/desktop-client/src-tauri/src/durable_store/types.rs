@@ -101,7 +101,8 @@ mod tests {
             "progress": 0, "detail": "", "updatedAt": "2026-10-10T00:00:00Z",
             "examId": "exam-original", "captureBatchId": "batch-original"
         });
-        let item: DurableQueueItem = serde_json::from_value(payload).expect("old queue compatibility");
+        let item: DurableQueueItem =
+            serde_json::from_value(payload).expect("old queue compatibility");
         assert!(item.capture_batch_name.is_none());
         assert!(item.capture_batch_created_at.is_none());
         assert_eq!(item.capture_batch_id.as_deref(), Some("batch-original"));
@@ -116,10 +117,19 @@ mod tests {
             "examName": "英语月考", "captureBatchName": "教务处上午扫描",
             "captureBatchCreatedAt": "2026-10-10T01:00:00Z"
         });
-        let item: DurableQueueItem = serde_json::from_value(payload).expect("metadata from frontend");
-        let restored: DurableQueueItem = serde_json::from_slice(&serde_json::to_vec(&item).expect("serialize queue")).expect("restore queue");
-        assert_eq!(restored.capture_batch_name.as_deref(), Some("教务处上午扫描"));
-        assert_eq!(restored.capture_batch_created_at.as_deref(), Some("2026-10-10T01:00:00Z"));
+        let item: DurableQueueItem =
+            serde_json::from_value(payload).expect("metadata from frontend");
+        let restored: DurableQueueItem =
+            serde_json::from_slice(&serde_json::to_vec(&item).expect("serialize queue"))
+                .expect("restore queue");
+        assert_eq!(
+            restored.capture_batch_name.as_deref(),
+            Some("教务处上午扫描")
+        );
+        assert_eq!(
+            restored.capture_batch_created_at.as_deref(),
+            Some("2026-10-10T01:00:00Z")
+        );
         assert_eq!(restored.exam_id.as_deref(), Some("exam-original"));
         assert_eq!(restored.capture_batch_id.as_deref(), Some("batch-original"));
     }

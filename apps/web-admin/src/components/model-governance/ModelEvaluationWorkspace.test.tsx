@@ -1,23 +1,30 @@
 // @vitest-environment jsdom
 import type { ReactNode } from "react";
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { TableColumnsType } from "antd";
 import type { EvaluationCandidate, EvaluationRun } from "../../api/modelGovernance";
 import type { ManagedModelAPIConfig } from "../../api/modelApiConfig";
 import { ModelEvaluationWorkspace } from "./ModelEvaluationWorkspace";
 
-const mocks = vi.hoisted(() => ({ form: { resetFields: vi.fn(), setFieldsValue: vi.fn() } }));
+const mocks = vi.hoisted(() => ({
+  form: { resetFields: vi.fn(), setFieldsValue: vi.fn(), validateFields: vi.fn() },
+  addCandidate: vi.fn(), completeRun: vi.fn(), invalidateRun: vi.fn(), createRun: vi.fn()
+}));
+vi.mock("../../api/modelGovernance", () => ({
+  addModelEvaluationCandidate: mocks.addCandidate, completeModelEvaluationRun: mocks.completeRun,
+  invalidateModelEvaluationRun: mocks.invalidateRun, createModelEvaluationRun: mocks.createRun
+}));
 vi.mock("antd", () => {
   const passthrough = ({ children }: { children?: ReactNode }) => <>{children}</>;
   return {
     App: { useApp: () => ({ message: { success: vi.fn(), error: vi.fn() } }) },
     Button: ({ children, onClick, disabled }: { children?: ReactNode; onClick?: () => void; disabled?: boolean }) => <button type="button" onClick={onClick} disabled={disabled}>{children}</button>,
-    Drawer: ({ open, title, children }: { open: boolean; title: string; children?: ReactNode }) => open ? <aside aria-label={title}><h3>{title}</h3>{children}</aside> : null,
+    Drawer: ({ open, title, children, extra }: { open: boolean; title: string; children?: ReactNode; extra?: ReactNode }) => open ? <aside aria-label={title}><h3>{title}</h3>{extra}{children}</aside> : null,
     Alert: ({ type, message, description }: { type: string; message: ReactNode; description?: ReactNode }) => <div data-alert-type={type}><span>{message}</span><p>{description}</p></div>,
     Form: Object.assign(passthrough, { Item: passthrough, useForm: () => [mocks.form] }),
     Input: Object.assign(() => null, { TextArea: () => null }), InputNumber: () => null,
-    Select: () => null, Modal: () => null, Empty: Object.assign(() => null, { PRESENTED_IMAGE_SIMPLE: "simple" }),
+    Select: () => null, Modal: ({ open, title, children, onOk, okText }: { open: boolean; title: string; children?: ReactNode; onOk: () => void; okText: string }) => open ? <section role="dialog" aria-label={title}>{children}<button onClick={onOk}>{okText}</button></section> : null, Empty: Object.assign(() => null, { PRESENTED_IMAGE_SIMPLE: "simple" }),
     Space: passthrough, Tag: passthrough, Tooltip: passthrough
   };
 });
@@ -54,6 +61,7 @@ const availableConfig: ManagedModelAPIConfig = {
   last_capability_probe_version: "structured-json-v3", config_source: "auto", created_at: "", updated_at: ""
 };
 
+beforeEach(() => { vi.clearAllMocks(); mocks.form.validateFields.mockResolvedValue({ reason: "人工核对证据" }); });
 afterEach(cleanup);
 describe("模型评测展示", () => {
   it.each<{ status: EvaluationRun["status"]; evidence: EvaluationRun["evidence_class"]; title: string; type: string }>([
@@ -91,4 +99,56 @@ describe("模型评测展示", () => {
     view.rerender(<ModelEvaluationWorkspace {...props} runs={[{ ...selected, status: "invalidated" }]} />);
     expect(screen.queryByRole("button", { name: "标记失效" })).toBeNull();
   });
+  it.each([
+    { status: "draft", canManage: false }, { status: "completed", canManage: false }, { status: "invalidated", canManage: false },
+    { status: "draft", canManage: true }, { status: "completed", canManage: true }, { status: "invalidated", canManage: true },
+  ] as const)("权限/状态矩阵 canManage=$canManage status=$status 保留生命周期边界", async ({ status, canManage }) => {
+    render(<ModelEvaluationWorkspace runs={[run({ status, candidates: [candidate("a", 0), candidate("b", 0)] })]} tenantID="school" configs={[availableConfig]} loading={false} canManage={canManage} onRefresh={vi.fn()} />);
+    await screen.findByRole("heading", { name: "数学评测" });
+    expect(Boolean(screen.queryByRole("button", { name: "登记已有评测报告" }))).toBe(canManage);
+    expect(Boolean(screen.queryByRole("button", { name: "添加候选" }))).toBe(canManage && status === "draft");
+    expect(Boolean(screen.queryByRole("button", { name: "冻结完成" }))).toBe(canManage && status === "draft");
+    expect(Boolean(screen.queryByRole("button", { name: "标记失效" }))).toBe(canManage && status !== "invalidated");
+    expect(mocks.addCandidate).not.toHaveBeenCalled(); expect(mocks.completeRun).not.toHaveBeenCalled(); expect(mocks.invalidateRun).not.toHaveBeenCalled();
+  });
+
+  it.each(["permission", "completed", "invalidated"] as const)("候选抽屉打开后 $0 更新，旧保存入口不能写入", async (change) => {
+    const selected = run();
+    const props = { tenantID: "school", configs: [availableConfig], loading: false, canManage: true, onRefresh: vi.fn() };
+    const view = render(<ModelEvaluationWorkspace {...props} runs={[selected]} />);
+    await screen.findByRole("button", { name: "添加候选" });
+    fireEvent.click(screen.getByRole("button", { name: "添加候选" }));
+    view.rerender(<ModelEvaluationWorkspace {...props} canManage={change !== "permission"} runs={[{ ...selected, status: change === "permission" ? "draft" : change }]} />);
+    fireEvent.click(screen.getByRole("button", { name: "保存候选" }));
+    expect(mocks.form.validateFields).not.toHaveBeenCalled();
+    expect(mocks.addCandidate).not.toHaveBeenCalled();
+  });
+
+  it("冻结确认经过异步表单校验后再次核对最新状态", async () => {
+    let finishValidation!: (values: { reason: string }) => void;
+    mocks.form.validateFields.mockImplementation(() => new Promise((resolve) => { finishValidation = resolve; }));
+    const selected = run({ candidates: [candidate("a", 0), candidate("b", 0)] });
+    const props = { tenantID: "school", configs: [availableConfig], loading: false, canManage: true, onRefresh: vi.fn() };
+    const view = render(<ModelEvaluationWorkspace {...props} runs={[selected]} />);
+    await screen.findByRole("button", { name: "冻结完成" });
+    fireEvent.click(screen.getByRole("button", { name: "冻结完成" }));
+    fireEvent.click(screen.getByRole("button", { name: "确认冻结" }));
+    await waitFor(() => expect(mocks.form.validateFields).toHaveBeenCalledOnce());
+    view.rerender(<ModelEvaluationWorkspace {...props} runs={[{ ...selected, status: "completed" }]} />);
+    finishValidation({ reason: "批次由其他负责人冻结" });
+    await waitFor(() => expect(screen.queryByRole("button", { name: "冻结完成" })).toBeNull());
+    expect(mocks.completeRun).not.toHaveBeenCalled();
+  });
+
+  it("候选输入属于打开时的学校，切换学校后旧抽屉不能借新范围保存", async () => {
+    const props = { configs: [availableConfig], loading: false, canManage: true, onRefresh: vi.fn(), runs: [run()] };
+    const view = render(<ModelEvaluationWorkspace {...props} tenantID="school-a" />);
+    await screen.findByRole("button", { name: "添加候选" });
+    fireEvent.click(screen.getByRole("button", { name: "添加候选" }));
+    view.rerender(<ModelEvaluationWorkspace {...props} tenantID="school-b" />);
+    fireEvent.click(screen.getByRole("button", { name: "保存候选" }));
+    expect(mocks.form.validateFields).not.toHaveBeenCalled();
+    expect(mocks.addCandidate).not.toHaveBeenCalled();
+  });
+
 });

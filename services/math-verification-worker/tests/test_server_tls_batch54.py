@@ -94,8 +94,10 @@ def _running_verifier(monkeypatch, tls_files: dict[str, Path], certificate: str 
         try:
             server.main()
         except Exception as exc:
+            # 将启动失败同步给主测试线程，同时保留线程自身的异常诊断。
             failures.append(exc)
             ready.set()
+            raise
 
     monkeypatch.setattr(server, "ThreadingHTTPServer", create_listener)
     thread = threading.Thread(target=run, daemon=True, name="math-tls-batch54")
@@ -209,9 +211,11 @@ def test_actual_tls_listener_negotiates_supported_protocols(monkeypatch, tls_fil
     context.minimum_version = version
     context.maximum_version = version
     with _running_verifier(monkeypatch, tls_files) as port:
-        with socket.create_connection(("127.0.0.1", port), timeout=10) as raw:
-            with context.wrap_socket(raw, server_hostname="math-verification-worker") as connection:
-                assert connection.version() == expected
+        with (
+            socket.create_connection(("127.0.0.1", port), timeout=10) as raw,
+            context.wrap_socket(raw, server_hostname="math-verification-worker") as connection,
+        ):
+            assert connection.version() == expected
         assert _health(port, context) == {"status": "ok"}
 
 

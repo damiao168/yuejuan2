@@ -144,7 +144,7 @@ func (c publishedQuestionPostgresConnector) Connect(context.Context) (driver.Con
 }
 
 func (c publishedQuestionPostgresConnector) Driver() driver.Driver {
-	return publishedQuestionPostgresDriver{c.scenario}
+	return publishedQuestionPostgresDriver(c)
 }
 
 type publishedQuestionPostgresDriver struct {

@@ -16,7 +16,6 @@ from ocr_worker import formula_calibration as calibration
 from ocr_worker import symbolic_runner as symbolic
 from ocr_worker.api import AuthenticationError
 
-
 spec = importlib.util.spec_from_file_location(
     "benchmark_batch37", Path(__file__).parents[1] / "benchmarks" / "benchmark_local.py",
 )
@@ -317,8 +316,8 @@ class OCRWorkflowsBatch37Tests(unittest.TestCase):
             engine = SimpleNamespace(initialize=Mock(), recognize_formulas=Mock(return_value=[SimpleNamespace(canonical_latex="x")]))
             detector = SimpleNamespace(initialize=Mock())
             if stage in {"detector", "engine"}:
-                getattr(detector if stage == "detector" else engine, "initialize").side_effect = RuntimeError(stage)
-            def progress(event):
+                (detector if stage == "detector" else engine).initialize.side_effect = RuntimeError(stage)
+            def progress(event, stage=stage):
                 if event["phase"] == stage:
                     raise RuntimeError(stage)
             with self.subTest(stage=stage), self.assertRaisesRegex(RuntimeError, stage):

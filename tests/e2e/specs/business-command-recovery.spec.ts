@@ -23,7 +23,12 @@ test("stale human-submit command resumes after reload without changing score or 
   await submit.evaluate(button => { (button as HTMLButtonElement).click(); (button as HTMLButtonElement).click(); });
   await expect.poll(() => requests.length).toBe(1);
   await page.reload();
-  await page.getByRole("button", { name: "继续确认人工评分" }).click();
+  // 查看回执只能读取；用户核对服务端冻结内容后才显式重放原命令。
+  await page.getByRole("button", { name: "查看操作结果", exact: true }).click();
+  await expect(page.getByText("原请求可继续提交", { exact: true })).toBeVisible();
+  await expect(page.getByText(/原提交内容：评分 4；/)).toBeVisible();
+  expect(requests).toHaveLength(1);
+  await page.getByRole("button", { name: "按以上原内容继续提交", exact: true }).click();
   await expect.poll(() => requests.length).toBe(2);
   expect(requests[1]).toEqual(requests[0]);
 });
@@ -36,18 +41,25 @@ test("refresh exposes recovery for terminal publish, arbitration and expired exp
     }
   });
   let writes = 0;
+  await page.route("**/api/v1/exams/target", route => route.fulfill({ json: { exam: { id: "target", name: "待恢复考试" } } }));
+  await page.route("**/api/v1/arbitration-tasks/target", route => route.fulfill({ json: { arbitration_task: { question_no: "2" } } }));
   await page.route("**/api/v1/*-commands/*", async route => {
     const id = decodeURIComponent(route.request().url().split("/").at(-1)!);
     await route.fulfill({ json: { command_id: id, status: "succeeded", result: id === "report.export" ? { Content: btoa("original,csv\n1,2\n"), ContentType: "text/csv", Filename: "original.csv" } : {} } });
   });
   page.on("request", request => { if (request.method() === "POST" && /\/publish|\/confirm-grades|\/arbitration-tasks|\/reports\/export/.test(request.url())) writes++; });
   await page.goto("/#/dashboard");
-  for (const label of ["成绩确认", "成绩发布", "仲裁评分"]) {
-    await page.getByRole("button", { name: `继续确认${label}` }).click();
-    await expect(page.getByRole("button", { name: `继续确认${label}` })).toHaveCount(0);
+  for (const [label, objectLabel] of [["成绩确认", "待恢复考试"], ["成绩发布", "待恢复考试"], ["仲裁评分", "第 2 题"]]) {
+    const pending = page.getByRole("alert").getByText(label, { exact: true }).locator("..");
+    await pending.getByRole("button", { name: "查看操作结果", exact: true }).click();
+    await expect(page.getByText(`${label}已完成 · 对象 ${objectLabel}`, { exact: true })).toBeVisible();
+    await expect(pending.getByRole("button", { name: "查看操作结果", exact: true })).toHaveCount(0);
   }
+  await page.getByRole("button", { name: "查看操作结果", exact: true }).click();
+  await expect(page.getByText("报表导出已完成 · 对象 待恢复考试", { exact: true })).toBeVisible();
   const download = page.waitForEvent("download");
-  await page.getByRole("button", { name: "继续确认报表导出" }).click();
+  await page.getByRole("button", { name: "下载已完成的报表", exact: true }).click();
   expect((await download).suggestedFilename()).toBe("original.csv");
   expect(writes).toBe(0);
+  expect(await page.evaluate(() => Object.keys(localStorage).filter(key => key.startsWith("business-command:demo-school:user-school_admin:")))).toEqual([]);
 });

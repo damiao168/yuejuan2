@@ -16,7 +16,14 @@ for (const viewport of viewports) {
     await installApiMocks(page, { role: "school_admin", initiallyAuthenticated: true });
     await page.goto("/#/admin/exams/new", { waitUntil: "domcontentloaded" });
     await expect(page.locator(".exam-composer")).toBeVisible({ timeout: 30_000 });
-    await expect(page.locator(".sidebar")).toHaveCount(0);
+    // 桌面创建页沿用管理端导航；窄屏从移动导航进入，不能把新布局误判为旧版专注模式。
+    if (viewport.width >= 960) {
+      await expect(page.locator(".sidebar")).toBeVisible();
+      await expect(page.locator(".sidebar").getByRole("menuitem", { name: "考试列表", exact: true })).toBeVisible();
+    } else {
+      await expect(page.locator(".sidebar")).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "打开主导航", exact: true })).toBeVisible();
+    }
     await expect(page.locator(".ant-steps")).toHaveCount(0);
     await page.evaluate(async () => document.fonts.ready);
 

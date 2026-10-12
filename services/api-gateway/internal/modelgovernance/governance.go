@@ -81,16 +81,16 @@ type Deployment struct {
 }
 
 type TenantPolicy struct {
-	ID                       string    `json:"id,omitempty"`
-	TenantID                 string    `json:"tenant_id,omitempty"`
-	PolicyKey                string    `json:"policy_key,omitempty"`
-	DisplayName              string    `json:"display_name,omitempty"`
-	Mode                     string    `json:"mode"`
-	ExternalEnabled          bool      `json:"external_enabled"`
-	TextExportEnabled        bool      `json:"text_export_enabled"`
-	ImageExportEnabled       bool      `json:"image_export_enabled"`
-	AllowedDeployments       []string  `json:"allowed_deployments"`
-	AllowedModelConfigIDs    []string  `json:"allowed_model_config_ids"`
+	ID                    string   `json:"id,omitempty"`
+	TenantID              string   `json:"tenant_id,omitempty"`
+	PolicyKey             string   `json:"policy_key,omitempty"`
+	DisplayName           string   `json:"display_name,omitempty"`
+	Mode                  string   `json:"mode"`
+	ExternalEnabled       bool     `json:"external_enabled"`
+	TextExportEnabled     bool     `json:"text_export_enabled"`
+	ImageExportEnabled    bool     `json:"image_export_enabled"`
+	AllowedDeployments    []string `json:"allowed_deployments"`
+	AllowedModelConfigIDs []string `json:"allowed_model_config_ids"`
 	// 预算与调用账本统一为微美元；0 表示未配置，不表示无限额。
 	MaxCostMicrosPerQuestion int64     `json:"max_cost_micros_per_question"`
 	MaxCostMicrosPerExam     int64     `json:"max_cost_micros_per_exam"`

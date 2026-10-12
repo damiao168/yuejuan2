@@ -29,6 +29,8 @@ export function ExamWorkspaceLayout({ data, section, moduleContent, onNavigate }
   const module = <ErrorBoundary resetKey={`${data.exam_id}:${section}`}><Suspense fallback={<LoadingState label={`正在加载${currentSectionName}`} />}>{moduleContent}</Suspense></ErrorBoundary>;
   const content = <div className={`exam-workspace-content${inPreparation ? " is-preparation" : ""}`} data-stage={sectionBusinessStage[section]}>
     {data.read_only || data.exam_status === "archived" ? <Alert className="drawer-alert" type="info" showIcon message={readOnlyNotice} /> : null}
+    {/* 只读学科不能推荐写入工作流；入口直接使用服务端当前考试的待办路由，不自行推断准备完成。 */}
+    {!data.read_only && data.exam_status !== "archived" && data.next_actions.length ? <section aria-label="当前下一步" className="exam-workspace-next-actions"><strong>当前下一步</strong><div className="exam-next-actions">{data.next_actions.map((action) => <button key={action.code} type="button" onClick={() => onNavigate(action.route)}><span><b>{action.label}</b><small>{action.description}</small></span></button>)}</div></section> : null}
     {moduleContent ? <div className="exam-workspace-module" aria-label={currentSectionName}>{module}</div> : <main className="eg-workspace-panel eg-workspace-section-empty"><div><span>考试工作区</span><h2>{currentSectionName}</h2><p>该环节暂时没有独立页面，请从左侧菜单选择可用入口。</p></div></main>}
   </div>;
   const subjectExams = data.subject_exams ?? [];
@@ -41,9 +43,11 @@ export function ExamWorkspaceLayout({ data, section, moduleContent, onNavigate }
       <div className="exam-context-status">
         <Button size="small" onClick={() => onNavigate(managementExamRoute({ kind: data.exam_session_id ? "session" : "standalone", id: data.exam_session_id || data.exam_id }))}>整场总览</Button>
         {assistant ? <Button className="exam-assistant-trigger" type="text" size="small" icon={<MessageCircle size={15} />} onClick={() => assistant.open({ exam_id: data.exam_id, exam_name: `${workspaceName} · ${data.subject_summary.label}`, revision: data.revision, origin_module: "exam_workspace", origin_section: section })}>问助手</Button> : null}
+        <Select size="small" aria-label="切换考试环节" value={sectionBusinessStage[section] ?? "preparation"} options={businessStages.map((stage) => ({ value: stage.key, label: stage.label }))} onChange={(stageKey) => { const stage = businessStages.find((item) => item.key === stageKey); if (stage) onNavigate(stage.action_route); }} />
         <ExamStageIndicator stage={currentStage} /><QualityIndicator blockers={data.blockers.length} warnings={data.warnings.length} /><StatusBadge tone={examStatusTone(data.exam_status)}>{examStatusLabels[data.exam_status] ?? "未知状态"}</StatusBadge>
       </div>
     </header>}
+    // 紧凑环节选择器保留当前考试，左侧主导航仍进入学校总入口；准备任务使用页内步骤导航。
     stageRail={null}
   >
     {inPreparation ? <div className="exam-preparation-shell"><nav className="exam-preparation-nav" aria-label="考试准备"><strong>考试准备</strong>{preparationLinks.map((link, index) => <button key={link.route} type="button" className={section === link.route ? "is-active" : ""} aria-current={section === link.route ? "step" : undefined} onClick={() => onNavigate(`/exams/${encodeURIComponent(data.exam_id)}/${link.route}`)}><span className="exam-preparation-step-number" aria-hidden="true">{index + 1}</span><span>{link.label}</span></button>)}</nav>{content}</div> : content}

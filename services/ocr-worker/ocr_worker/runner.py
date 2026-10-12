@@ -206,7 +206,7 @@ class OCRRunner:
         try:
             recognize_region = getattr(self.engine, "recognize_region", None)
             blocks = recognize_region(input_bytes) if region is not None and callable(recognize_region) else self.engine.recognize(input_bytes)
-        except Exception as exc:  # noqa: BLE001 - Paddle 后端可能抛出不同类型的运行时异常。
+        except Exception as exc:
             raise _OCRProcessingError("ocr_engine_failed", True) from exc
         result.ocr_ms += int((time.monotonic() - ocr_start) * 1000)
         # 遍历和结果属性错误不属于引擎调用失败，保留原来的异常传播边界。

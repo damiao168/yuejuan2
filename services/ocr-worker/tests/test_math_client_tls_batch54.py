@@ -13,7 +13,11 @@ from urllib import error, request
 import pytest
 from ocr_worker.api import APIError
 from ocr_worker.math_runner import MathVerificationClient, _build_artifact
-from ocr_worker.recognition_router import FormulaRecognitionResult, RegionKind, RoutedRecognitionResult
+from ocr_worker.recognition_router import (
+    FormulaRecognitionResult,
+    RegionKind,
+    RoutedRecognitionResult,
+)
 
 TOKEN = "synthetic-batch54-ocr-token-" + "x" * 32
 RESULT = {"ast": {"kind": "number", "value": "2"}, "canonical": "2"}
@@ -120,7 +124,9 @@ def _running_https_verifier(tls_files: dict[str, Path], certificate: str = "serv
             try:
                 listener.serve_forever(poll_interval=0.05)
             except Exception as exc:
+                # 主线程检查错误列表；重新抛出也保留后台监听器的异常诊断。
                 failures.append(exc)
+                raise
 
         thread = threading.Thread(target=run, daemon=True, name="ocr-math-tls-batch54")
         thread.start()

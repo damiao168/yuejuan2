@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { runWebContractTests } from "./ci/run-web-contract-tests.mjs";
 
 const root = process.cwd();
 const checks = [
@@ -46,7 +47,7 @@ const checks = [
   {
     name: "exam workspace",
     file: "apps/web-admin/src/features/exams/workspace/ExamWorkspaceLayout.tsx",
-    includes: ["WorkspaceStageRail", "ExamStageIndicator", "QualityIndicator", "data.exam_id", "当前下一步"]
+    includes: ["ExamStageIndicator", "QualityIndicator", "data.exam_id", "当前下一步", "data.next_actions", "exam-preparation-nav", "切换考试环节"]
   },
   {
     name: "URL exam context",
@@ -79,4 +80,5 @@ if (failures.length) {
   for (const failure of failures) console.error(`- ${failure}`);
   process.exit(1);
 }
+runWebContractTests(["src/features/exams/workspace/ExamWorkspaceLayout.test.tsx"]);
 console.log("STORY-053 product shell check passed.");

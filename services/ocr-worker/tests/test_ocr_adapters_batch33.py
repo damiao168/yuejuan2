@@ -2,7 +2,6 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-
 from ocr_worker.api import EduGradeClient
 from ocr_worker.engine import PaddleOCREngine
 from ocr_worker.math_layout import PaddleFormulaLayoutDetector

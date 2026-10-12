@@ -1,8 +1,11 @@
 import math
 
 import pytest
-
-from ocr_worker.formula_validation import _unit, normalize_latex, validate_latex_structure
+from ocr_worker.formula_validation import (
+    _unit,
+    normalize_latex,
+    validate_latex_structure,
+)
 
 
 @pytest.mark.parametrize("gap", ["", " ", "   ", "\t", "\n", "\u2003", " \t\n "])

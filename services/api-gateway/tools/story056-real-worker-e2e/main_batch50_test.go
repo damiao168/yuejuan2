@@ -47,7 +47,7 @@ func (s *fixtureBatch50Script) take(kind, query string, args []driver.NamedValue
 type fixtureBatch50Connector struct{ script *fixtureBatch50Script }
 
 func (c fixtureBatch50Connector) Connect(context.Context) (driver.Conn, error) {
-	return fixtureBatch50Conn{c.script}, nil
+	return fixtureBatch50Conn(c), nil
 }
 func (c fixtureBatch50Connector) Driver() driver.Driver { return c }
 func (fixtureBatch50Connector) Open(string) (driver.Conn, error) {

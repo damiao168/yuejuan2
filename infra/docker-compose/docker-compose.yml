@@ -266,7 +266,7 @@ services:
       context: ../..
       dockerfile: services/api-gateway/Dockerfile
       args:
-        GO_BUILD_IMAGE: ${EDUGRADE_GO_BUILD_IMAGE:-golang:1.26.6-alpine}
+        GO_BUILD_IMAGE: ${EDUGRADE_GO_BUILD_IMAGE:-golang:1.26.9-alpine}
         API_RUNTIME_IMAGE: ${EDUGRADE_API_RUNTIME_IMAGE:-alpine:3.22}
         APP_VERSION: ${EDUGRADE_APP_VERSION:-dev}
         GIT_SHA: ${EDUGRADE_GIT_SHA:-unknown}

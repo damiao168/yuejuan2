@@ -52,7 +52,7 @@
 | --- | --- | --- |
 | 语言 | Go、Python、TypeScript／TSX、Rust、JavaScript；SQL、PowerShell、Shell 辅助 | 实际源码及各 manifest |
 | 后端 | Go 标准库 net/http、http.NewServeMux，手动依赖注入 | cmd/api-gateway/main.go、internal/server/{server,modules,infrastructure}.go；未使用 Gin／Echo |
-| Go 版本 | go.mod 声明 go 1.25.12，toolchain go1.26.6 | 表示仓库声明，不表示当前机器安装版本 |
+| Go 版本 | go.mod 最低 Go 1.26.9，CI 与镜像构建使用 1.26.9 | 表示仓库声明，不表示当前机器安装版本 |
 | 管理端 | React 19、TypeScript、Vite 6、Ant Design 5、TanStack Router／Query | package.json、main.tsx、App.tsx、router/appRouter.tsx；hash history + AppShell 业务视图映射 |
 | 管理端配套 | Recharts、Framer Motion、Lucide、PapaParse、pdfjs-dist | 图表、交互、CSV、PDF 显示；不构成后端数据权限 |
 | 学生端 | 独立 React 19／Vite／TS SPA，消费 SDK | apps/student-portal/src/{main,App}.tsx、api.ts；当前主 Compose 未单独装配学生端容器 |

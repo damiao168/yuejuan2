@@ -8,7 +8,6 @@ from edugrade_worker_runtime import validate_lease_timing, validate_service_url
 
 from .deployment_profile import FormulaRuntimePlan, resolve_formula_runtime_plan
 
-
 # 数学表达式和内部令牌跨容器传输；默认 HTTPS，由客户端验证内部 CA 和服务主机名。
 _DEFAULT_MATH_VERIFY_BASE_URL = "https://math-verification-worker:8092"
 

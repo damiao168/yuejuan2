@@ -1,7 +1,6 @@
 import copy
 
 import pytest
-
 from grading_agent.errors import AgentError
 from grading_agent.paper_visual import PaperVisualParser
 

@@ -1078,6 +1078,15 @@ func getPaperImportInTx(ctx context.Context, tx *sql.Tx, tenantID, importID stri
 	return job, rows.Err()
 }
 
+// 审核保存需要完整回执；解析入队仍使用最小读取，先拒绝错误来源绑定，再进入运行详情查询。
+func getPaperImportDetailsInTx(ctx context.Context, tx *sql.Tx, tenantID, importID string) (PaperImportJob, error) {
+	job, err := scanPaperImport(tx.QueryRowContext(ctx, `SELECT id::text,tenant_id::text,exam_id::text,COALESCE(exam_paper_id::text,''),COALESCE(paper_file_asset_id::text,''),COALESCE(answer_file_asset_id::text,''),status,subject,draft_questions,issues,error_code,created_by::text,created_at,updated_at,applied_at FROM paper_import_job WHERE tenant_id=$1 AND id=$2::uuid AND deleted_at IS NULL`, tenantID, importID))
+	if err != nil {
+		return PaperImportJob{}, err
+	}
+	return loadPaperImportDetails(ctx, tx, tenantID, job)
+}
+
 func (s *PostgresStore) LoadPaperImportParseInput(ctx context.Context, tenantID, inputID string) (string, PaperImportParseRequest, error) {
 	var importID string
 	var documents, pages, issues []byte

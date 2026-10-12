@@ -254,7 +254,8 @@ class ServerTLSHandshakeTests(unittest.TestCase):
             servers = []
 
             class ObservedServer(GradingAgentHTTPServer):
-                def __init__(self, address, application):
+                # 实例归属当前证书场景，避免闭包随下一轮复用资源观察列表。
+                def __init__(self, address, application, servers=servers):
                     super().__init__(address, application)
                     servers.append(self)
 

@@ -1,7 +1,9 @@
 import pytest
 import sympy
-
-from math_verification_worker.parser import UnsupportedExpression, parse_restricted_latex
+from math_verification_worker.parser import (
+    UnsupportedExpression,
+    parse_restricted_latex,
+)
 from math_verification_worker.verifier import VerificationError, ast_to_sympy
 
 

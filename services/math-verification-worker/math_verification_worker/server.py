@@ -148,7 +148,7 @@ def _validate_listener_policy(environment: str, host: str, allow_http: bool, has
         raise ValueError("math verifier insecure HTTP opt-in must be a boolean")
     # IPv4Address 也接受整数；只接收字符串，避免直接调用绕过字面地址限制。
     if not isinstance(host, str):
-        raise ValueError("EDUGRADE_MATH_VERIFY_HOST must be a string")
+        raise TypeError("EDUGRADE_MATH_VERIFY_HOST must be a string")
     if not host:
         raise ValueError("EDUGRADE_MATH_VERIFY_HOST must not be empty")
     if has_certificate:

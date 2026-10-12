@@ -65,6 +65,8 @@
 .exam-workspace-content { min-width: 0; }
 .exam-workspace-content.is-preparation { width: 100%; max-width: none; }
 .exam-workspace-module { min-width: 0; }
+.exam-workspace-next-actions { margin-bottom: 16px; }
+.exam-workspace-next-actions > strong { display: block; margin-bottom: 8px; }
 
 .exam-legacy-overview { display: grid; gap: 18px; padding: 24px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
 .exam-legacy-overview h2 { margin: 3px 0 5px; }

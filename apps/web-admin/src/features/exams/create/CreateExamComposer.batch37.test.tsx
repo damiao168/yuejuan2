@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import type { School } from "../../../api/org";
 import { createSubjectDraft, initialCreateExamDraft } from "./createExamDraft";
 import { CreateExamComposer } from "./CreateExamComposer";
@@ -39,15 +39,15 @@ const schools: School[] = [
 describe("考试创建展示与学校范围", () => {
   let host: HTMLDivElement;
   let root: Root;
-  let onChange: ReturnType<typeof vi.fn>;
-  let onSubmit: ReturnType<typeof vi.fn>;
+  let onChange: Mock<(patch: Partial<CreateExamDraft>) => void>;
+  let onSubmit: Mock<() => void>;
   beforeEach(() => {
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
     host = document.createElement("div");
     document.body.append(host);
     root = createRoot(host);
-    onChange = vi.fn();
-    onSubmit = vi.fn();
+    onChange = vi.fn<(patch: Partial<CreateExamDraft>) => void>();
+    onSubmit = vi.fn<() => void>();
   });
   afterEach(async () => {
     await act(async () => { root.unmount(); });

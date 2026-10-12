@@ -169,7 +169,8 @@ class DashScopeNativeTransportTests(unittest.TestCase):
             with self.subTest(error_code=error_code):
                 captured = []
 
-                def send(_transport, *, body, headers, **_kwargs):
+                # 每个替身绑定当前场景，避免后续循环改变响应和待检查的缓冲列表。
+                def send(_transport, *, body, headers, captured=captured, response=response, **_kwargs):
                     captured.append(body)
                     self.assertEqual(headers["X-DashScope-SSE"], "disable")
                     self.assertTrue(body)

@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { installApiMocks } from "../fixtures/apiMocks";
+import { openAssessmentConfiguration } from "../fixtures/assessmentNavigation";
 
 const examID = "exam-created-math";
 const examPath = `/api/v1/exams/${examID}`;
@@ -62,8 +63,7 @@ for (const scenario of scenarios) {
     await expect(page.getByRole("button", { name: "确认冻结并完成准备", exact: true })).toBeDisabled();
     await page.getByRole("button", { name: "前往题目配置", exact: true }).click();
     await page.getByRole("tab", { name: "评分配置", exact: true }).click();
-    await page.getByText("高级评分配置", { exact: true }).click();
-    await page.getByRole("button", { name: "配置", exact: true }).click();
+    await openAssessmentConfiguration(page);
     const save = page.getByRole("button", { name: "保存配置", exact: true });
     await expect(save).toBeEnabled();
     await save.click();

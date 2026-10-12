@@ -34,27 +34,31 @@ test("mock API 支持动态考试 ID，并在测试层拦截未配置接口", as
   await expect.poll(() => capabilitiesSucceeded).toBe(true);
 });
 
-test("考试工作区按四阶段导航，并让阻断项跳到可处理环节", async ({ page }) => {
+test("考试工作区以紧凑选择器保留四阶段和当前考试，让阻断项跳到可处理环节", async ({ page }) => {
   await installApiMocks(page, { role: "school_admin", initiallyAuthenticated: true });
   await page.goto("/#/admin/exams/exam-1/overview", { waitUntil: "domcontentloaded" });
 
   await expect(page.getByRole("heading", { name: "2026 春季数学期中考试" })).toBeVisible({ timeout: 30_000 });
-  const stageRail = page.getByRole("navigation", { name: "考试流程" });
-  await expect(stageRail.getByRole("button")).toHaveCount(4);
-  await expect(stageRail).toContainText("考试准备");
-  await expect(stageRail).toContainText("答卷导入");
-  await expect(stageRail).toContainText("阅卷");
-  await expect(stageRail).toContainText("成绩");
+  const stages = page.getByRole("combobox", { name: "切换考试环节", exact: true });
+  await expect(stages).toBeVisible();
+  await expect(page.locator(".exam-context-status")).toContainText("答卷导入");
+  await stages.press("ArrowDown");
+  await expect(page.locator(".ant-select-dropdown:not(.ant-select-dropdown-hidden) .ant-select-item-option-content")).toHaveText(["考试准备", "答卷导入", "阅卷", "成绩"]);
+  await stages.press("Escape");
   await expect(page.locator("#primary-navigation")).toBeVisible();
 
-  await page.getByRole("button", { name: "查看并重试", exact: true }).click();
+  const nextAction = page.getByRole("region", { name: "当前下一步", exact: true });
+  await expect(nextAction).toContainText("答卷处理失败");
+  await nextAction.getByRole("button", { name: "查看并重试 答卷处理失败", exact: true }).click();
   await expect(page).toHaveURL(/#\/admin\/exams\/exam-1\/capture/);
   await expect(page.locator("#primary-navigation")).toBeVisible();
 
-  await page.getByRole("button", { name: /阅卷/ }).click();
+  await stages.press("ArrowDown");
+  await page.getByTitle("阅卷", { exact: true }).click();
   await expect(page).toHaveURL(/#\/admin\/exams\/exam-1\/grading/);
   await expect(page.locator("#primary-navigation")).toBeVisible();
-  await page.getByRole("button", { name: /成绩/ }).click();
+  await stages.press("ArrowDown");
+  await page.getByTitle("成绩", { exact: true }).click();
   await expect(page).toHaveURL(/#\/admin\/exams\/exam-1\/scores/);
   await expect(page.locator("#primary-navigation")).toBeVisible();
 });
@@ -94,10 +98,14 @@ test("没有考试资料时仍可手动配置小题", async ({ page }) => {
 
 test("阅卷员无法通过考试工作区深链访问学校管理员环节", async ({ page }) => {
   await installApiMocks(page, { role: "grader", initiallyAuthenticated: true });
+  let workspaceReads = 0;
+  page.on("request", (request) => { if (/\/api\/v1\/exams\/[^/]+\/workspace$/.test(new URL(request.url()).pathname)) workspaceReads++; });
   await page.goto("/#/admin/exams/exam-1/overview", { waitUntil: "domcontentloaded" });
 
-  await expect(page.getByText("无权限", { exact: true })).toBeVisible();
-  await expect(page.getByRole("navigation", { name: "考试流程" })).toHaveCount(0);
+  await expect(page.getByText("暂时不能使用考试工作区", { exact: true })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "切换考试环节", exact: true })).toHaveCount(0);
+  await expect(page.locator(".exam-workspace-canvas")).toHaveCount(0);
+  expect(workspaceReads).toBe(0);
 });
 
 test("嵌入式考试资料固定当前考试，并直接显示空资料上传入口", async ({ page }) => {

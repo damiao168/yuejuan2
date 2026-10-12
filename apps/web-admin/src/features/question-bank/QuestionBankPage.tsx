@@ -5,13 +5,9 @@ import {
 	Button,
 	Empty,
 	Form,
-	Input,
 	Modal,
-	Pagination,
-	Select,
 	Space,
 } from "antd";
-import { Filter, Plus, RefreshCw } from "lucide-react";
 import type {
 	CreateQuestionBankItemRequest,
 	CreateQuestionBankRequest,
@@ -27,62 +23,14 @@ import { hasEveryPermission, type SessionUser } from "../../auth/session";
 import { ErrorState } from "../../components/PageState";
 import { useUnsavedChangesGuard } from "../../router/useUnsavedChangesGuard";
 import "./question-bank.css";
+import { defaults, contentFrom, matchingVersionForItem, metadataSchemaReadState, metadataSchemaUpdate } from "./questionBankPageState";
+import { QuestionBankHeader } from "./QuestionBankHeader";
 import { QuestionBankWorkspace } from "./QuestionBankWorkspace";
 import { QuestionBankDialogs } from "./QuestionBankDialogs";
 import { QuestionBankConflictComparison } from "./QuestionBankConflictComparison";
 import { emptySearch, isEditableACLRole, type ACLFormValues, type MetadataSchemaFormValues, type SearchFilters } from "./questionBankTypes";
 import { listQuestionBankMembers, bankRoleLabels, questionBankMemberAmbiguous, questionBankMemberLabel } from "./questionBankMembers";
 import { hashQueryParam } from "../../router/query";
-
-const defaults: Omit<CreateQuestionBankItemRequest, "metadata"> & {metadata: Partial<CreateQuestionBankItemRequest["metadata"]>} = {
-	item_code: "",
-	question_type: "short_answer",
-	assessment_archetype: "short_constructed",
-	stem: "",
-	default_score: 5,
-	options: [],
-	knowledge_points: [],
-	metadata: {
-		subject_code: "mathematics",
-		difficulty_band: "unclassified",
-		cognitive_level: "unclassified",
-		copyright: "unknown",
-		language: "zh-CN",
-		intended_use: "practice",
-	},
-};
-function contentFrom(
-	v: QuestionBankVersion,
-): Omit<UpdateQuestionBankVersionRequest, "expected_revision"> {
-	return {
-		question_type: v.question_type,
-		assessment_archetype: v.assessment_archetype,
-		stem: v.stem,
-		default_score: v.default_score,
-		options: v.options,
-		knowledge_points: v.knowledge_points,
-		metadata: v.metadata,
-		custom_metadata: v.custom_metadata,
-	};
-}
-
-// 深链接中的题目和版本分别读取，必须核对所属关系后再显示或编辑，避免在另一题标题下操作。
-function matchingVersionForItem(item: QuestionBankItem | null, candidate: QuestionBankVersion | undefined) {
-	return item && candidate?.item_id === item.id ? candidate : undefined;
-}
-
-function metadataSchemaReadState({ bankId, loadedBankId, query, formBankId, failureBankId }: Readonly<{
-	bankId: string;
-	loadedBankId?: string;
-	query: Readonly<{ isSuccess: boolean; isError: boolean; data?: { schema?: unknown } }>;
-	formBankId: string | null;
-	failureBankId: string | null;
-}>) {
-	const schemaReadable = Boolean(loadedBankId === bankId && query.isSuccess && query.data?.schema);
-	const schemaFormReady = schemaReadable && formBankId === bankId;
-	const schemaLoadFailed = !query.isSuccess && (query.isError || failureBankId === bankId);
-	return { schemaReadable, schemaFormReady, schemaLoadFailed };
-}
 
 const transitionSuccessMessages = {
 	publish: "已发布到学校题库。请在考试的题目页选择此版本；已有考试不受影响。",
@@ -643,24 +591,8 @@ export function QuestionBankPage({ user }: Readonly<{ user: SessionUser }>) {
 			message.warning("请先成功读取当前题库的分类规则，再保存修改。");
 			return;
 		}
-		const fields = (values.fields ?? []).map(({ options_text, ...field }) => ({
-			...field,
-			options:
-				field.type === "enum"
-					? field.options ?? (options_text ?? "").split("\n").map((line) => line.trim()).filter(Boolean).map((line) => {
-							const [value, label = value] = line.split("|");
-							return { value: value.trim(), label: label.trim(), active: true };
-						})
-					: undefined,
-		}));
-		const taxonomies = (values.taxonomies ?? []).map(({ terms_text, ...taxonomy }) => ({
-			...taxonomy,
-			terms: taxonomy.terms ?? (terms_text ?? "").split("\n").map((line) => line.trim()).filter(Boolean).map((line) => {
-				const [id, label = id] = line.split("|");
-				return { id: id.trim(), label: label.trim(), active: true };
-			}),
-		}));
-		const body = { expected_revision: bank.revision, fields, taxonomies } as UpdateQuestionBankMetadataSchemaRequest;
+		const body = metadataSchemaUpdate(values, bank.revision);
+		const { fields, taxonomies } = body;
 		// 空规则是有效配置，但从已有配置清空会改变新题目的填写和目录检索，须先确认影响。
 		const existingSchema = currentSchema.data!.schema;
 		if (!fields.length && !taxonomies.length && (existingSchema.fields.length || existingSchema.taxonomies.length)) {
@@ -714,70 +646,11 @@ export function QuestionBankPage({ user }: Readonly<{ user: SessionUser }>) {
 		<div className="question-bank-page">
 			{linkedItem.isError ? <ErrorState message="这道题目暂不可打开。请核对题库授权，或联系题库负责人；其他题库仍可浏览。" onRetry={()=>void linkedItem.refetch()} /> : null}
             {versionMismatch ? <ErrorState message="链接中的版本不属于当前题目，已停止显示和编辑。请打开本题最新版本。" onRetry={()=>setVersionId(versions.data?.versions[0]?.id ?? "")} /> : null}
-			<section className="question-bank-heading">
-				<div>
-					<h1>题库</h1>
-					<p>维护题目、答案和评分标准。发布后供授权教师选入考试；已开展考试使用的版本不随题库更新改变。</p>
-				</div>
-				<Space>
-					<Button icon={<RefreshCw size={15} />} onClick={() => void refresh()}>
-						刷新
-					</Button>
-					{canCreate && (
-						<Button icon={<Plus size={15} />} onClick={() => setDialog("bank")}>
-							新建题库
-						</Button>
-					)}
-				</Space>
-			</section>
-			<div className="question-bank-toolbar">
-				<Select
-					aria-label="选择题库"
-					placeholder={banks.isLoading ? "正在加载题库" : "选择题库"}
-					value={bankId || undefined}
-					onChange={selectBank}
-					options={banks.data?.banks.map((b) => ({
-						value: b.id,
-						label: `${b.name}${b.status === "archived" ? "（已归档）" : ""}`,
-					}))}
-				/>
-				<Input.Search
-					aria-label="搜索题目编号"
-					placeholder="搜索题目编号"
-					onSearch={(value) => {
-						setQuery(value);
-						setOffset(0);
-					}}
-					allowClear
-					disabled={!bankId}
-				/>
-				<Button icon={<Filter size={15} />} disabled={!bankId} onClick={() => setSearchOpen(true)}>
-					组合检索
-				</Button>
-				{canCreate && (
-					<Button
-						type="primary"
-						icon={<Plus size={15} />}
-						disabled={!bankId || bank?.status !== "active"}
-						onClick={() => setDialog("item")}
-					>
-						{kind === "rubric_template" ? "新建评分标准模板" : "新建题目"}
-					</Button>
-				)}
-			</div>
-			{(banks.data?.total ?? 0) > 20 && (
-				<Pagination
-					size="small"
-					current={bankOffset / 20 + 1}
-					pageSize={20}
-					total={banks.data?.total}
-					showSizeChanger={false}
-					onChange={(page) => confirmDiscard(() => {
-						setBankOffset((page - 1) * 20);
-						applyBankSelection("");
-					})}
-				/>
-			)}
+			<QuestionBankHeader canCreate={canCreate} loading={banks.isLoading} banks={banks.data?.banks} bankId={bankId}
+				selectBank={selectBank} bankStatus={bank?.status} kind={kind} bankOffset={bankOffset} total={banks.data?.total ?? 0}
+				onRefresh={() => void refresh()} onCreateBank={() => setDialog("bank")} onCreateItem={() => setDialog("item")}
+				onSearchOpen={() => setSearchOpen(true)} onSearch={(value) => { setQuery(value); setOffset(0); }}
+				onBankPageChange={(page) => confirmDiscard(() => { setBankOffset((page - 1) * 20); applyBankSelection(""); })} />
 			{!banks.isLoading && !banks.data?.total ? (
 				<Empty description="尚无获授权的题库，可新建题库开始维护题目。" />
 			) : (

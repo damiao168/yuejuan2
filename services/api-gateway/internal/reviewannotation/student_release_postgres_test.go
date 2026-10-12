@@ -46,7 +46,7 @@ type studentReleaseConnector struct{ scenario *studentReleaseScenario }
 func (c studentReleaseConnector) Connect(context.Context) (driver.Conn, error) {
 	return &studentReleaseConn{c.scenario}, nil
 }
-func (c studentReleaseConnector) Driver() driver.Driver { return studentReleaseDriver{c.scenario} }
+func (c studentReleaseConnector) Driver() driver.Driver { return studentReleaseDriver(c) }
 
 type studentReleaseDriver struct{ scenario *studentReleaseScenario }
 

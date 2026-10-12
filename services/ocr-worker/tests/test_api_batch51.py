@@ -5,14 +5,12 @@ from types import SimpleNamespace
 from unittest.mock import call, create_autospec, patch
 
 import pytest
-
 from ocr_worker.api import EduGradeClient
 from ocr_worker.math_runner import MathUnderstandingRunner
 from ocr_worker.paper_formula import PaperFormulaRunner
 from ocr_worker.recognition_router import RecognitionRouter, RegionKind
 from ocr_worker.runner import OCRRunner, WorkerConfig, _LeaseHeartbeat
 from ocr_worker.symbolic_runner import SymbolicVerificationRunner
-
 
 CLIENT_CALLS = [
     ("get_math_verification_input", ("task-51",)),

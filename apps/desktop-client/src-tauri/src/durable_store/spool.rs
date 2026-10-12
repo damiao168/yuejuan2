@@ -14,7 +14,7 @@ use super::{
         ensure_controlled_path, reject_symbolic_path, spool_path, store_root,
         write_new_private_file,
     },
-    queue::{read_queue_item, existing_queue_item_for_import},
+    queue::{existing_queue_item_for_import, read_queue_item},
     schema::initialize_schema,
     types::{DurableQueueItem, DurableSpoolFile, SpoolAssetInput, SpoolAssetSession},
 };

@@ -267,7 +267,8 @@ export function ModelApprovalWorkspace({
           message="批准范围由冻结证据自动带入"
           description="不能在这里修改学科、年级、题型或版本；若范围不正确，应重新生成授权冻结集评测。"
         />
-        <Form form={form} layout="vertical" className="model-evaluation-form">
+        {/* 与仍挂载的候选抽屉区分字段 id，批准标签必须关联当前可见的评测模型输入。 */}
+        <Form name="model-approval-create" form={form} layout="vertical" className="model-evaluation-form">
           <Form.Item name="evaluation_run_id" label="授权冻结集评测" rules={[{ required: true }]}>
             <Select
               onChange={() => form.setFieldValue("model_config_id", undefined)}
@@ -339,7 +340,7 @@ export function ModelApprovalWorkspace({
           message="撤销后，新任务不能继续使用该模型范围"
           description="历史建议和批准证据保留用于回放与审计，不会被删除。"
         />
-        <Form form={revokeForm} layout="vertical" className="model-evaluation-transition-form">
+        <Form name="model-approval-revoke" form={revokeForm} layout="vertical" className="model-evaluation-transition-form">
           <Form.Item name="reason" label="撤销原因" rules={[{ required: true, min: 4, max: 256 }]}>
             <Input.TextArea rows={3} placeholder="填写质量变化、授权撤回或版本替换等原因" />
           </Form.Item>

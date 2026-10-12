@@ -11,7 +11,10 @@ test("资料优先创建允许空试卷结构并直接进入资料配置", async
   });
 
   await page.goto("/#/admin/exams/new", { waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("heading", { name: "你准备怎样开始？" })).toBeVisible({ timeout: 30_000 });
+  const creationModes = page.getByRole("region", { name: "创建方式", exact: true });
+  await expect(creationModes).toBeVisible({ timeout: 30_000 });
+  await expect(creationModes.getByRole("button", { name: /^从试卷资料创建/ })).toHaveAttribute("aria-pressed", "true");
+  await expect(creationModes.getByRole("button")).toHaveCount(3);
   await expect(page.locator(".ant-steps")).toHaveCount(0);
 
   await page.getByRole("button", { name: /创建考试并上传试卷/ }).click();

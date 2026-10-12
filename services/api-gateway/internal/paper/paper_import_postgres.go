@@ -414,7 +414,7 @@ func (s *PostgresStore) SavePaperImportReview(ctx context.Context, tenantID, id,
 	if err = lockPaperImportReviewVersion(ctx, tx, tenantID, id, input.ExpectedGeneration, expectedUpdatedAt); err != nil {
 		return PaperImportJob{}, err
 	}
-	job, err := getPaperImportInTx(ctx, tx, tenantID, id)
+	job, err := getPaperImportDetailsInTx(ctx, tx, tenantID, id)
 	if err != nil {
 		return PaperImportJob{}, err
 	}
@@ -447,7 +447,7 @@ func (s *PostgresStore) SavePaperImportReview(ctx context.Context, tenantID, id,
 		return PaperImportJob{}, ErrConflict
 	}
 	// 在仍持行锁时读取本次写入回执；提交后重读可能把其他人的下一次保存冒充成本次结果。
-	saved, err := getPaperImportInTx(ctx, tx, tenantID, id)
+	saved, err := getPaperImportDetailsInTx(ctx, tx, tenantID, id)
 	if err != nil {
 		return PaperImportJob{}, err
 	}
@@ -758,11 +758,16 @@ func (s *PostgresStore) ListPaperImports(ctx context.Context, tenantID, examID s
 }
 
 func (s *PostgresStore) loadPaperImportDetails(ctx context.Context, tenantID string, job PaperImportJob) (PaperImportJob, error) {
-	if err := s.hydratePaperImportRun(ctx, tenantID, &job); err != nil {
+	return loadPaperImportDetails(ctx, s.db, tenantID, job)
+}
+
+// 事务内回执与普通详情共享字段装载；传入事务时所有查询均在提交前执行，不能改用连接池重读下一次保存。
+func loadPaperImportDetails(ctx context.Context, queryer postgresQueryer, tenantID string, job PaperImportJob) (PaperImportJob, error) {
+	if err := hydratePaperImportRun(ctx, queryer, tenantID, &job); err != nil {
 		return PaperImportJob{}, err
 	}
 	var q, a, so, r, si, usage []byte
-	if err := s.db.QueryRowContext(ctx, `SELECT question_candidates,answer_candidates,solution_candidates,rubric_candidates,structured_issues,model_usage,COALESCE(structure_confirmed_generation,0) FROM paper_import_job WHERE tenant_id=$1 AND id=$2::uuid`, tenantID, job.ID).Scan(&q, &a, &so, &r, &si, &usage, &job.StructureConfirmedGeneration); err != nil {
+	if err := queryer.QueryRowContext(ctx, `SELECT question_candidates,answer_candidates,solution_candidates,rubric_candidates,structured_issues,model_usage,COALESCE(structure_confirmed_generation,0) FROM paper_import_job WHERE tenant_id=$1 AND id=$2::uuid`, tenantID, job.ID).Scan(&q, &a, &so, &r, &si, &usage, &job.StructureConfirmedGeneration); err != nil {
 		return PaperImportJob{}, err
 	}
 	_ = json.Unmarshal(q, &job.QuestionCandidates)
@@ -771,7 +776,7 @@ func (s *PostgresStore) loadPaperImportDetails(ctx context.Context, tenantID str
 	_ = json.Unmarshal(r, &job.RubricCandidates)
 	_ = json.Unmarshal(si, &job.StructuredIssues)
 	_ = json.Unmarshal(usage, &job.ModelUsage)
-	rows, err := s.db.QueryContext(ctx, `SELECT s.id::text,s.file_asset_id::text,s.document_index,s.role_hint,s.detected_role,s.role_confidence::float8,s.processing_status,f.original_name,f.content_type,s.created_at FROM paper_import_source s JOIN file_asset f ON f.tenant_id=s.tenant_id AND f.id=s.file_asset_id WHERE s.tenant_id=$1 AND s.paper_import_id=$2::uuid AND s.deleted_at IS NULL ORDER BY s.document_index`, tenantID, job.ID)
+	rows, err := queryer.QueryContext(ctx, `SELECT s.id::text,s.file_asset_id::text,s.document_index,s.role_hint,s.detected_role,s.role_confidence::float8,s.processing_status,f.original_name,f.content_type,s.created_at FROM paper_import_source s JOIN file_asset f ON f.tenant_id=s.tenant_id AND f.id=s.file_asset_id WHERE s.tenant_id=$1 AND s.paper_import_id=$2::uuid AND s.deleted_at IS NULL ORDER BY s.document_index`, tenantID, job.ID)
 	if err != nil {
 		return PaperImportJob{}, err
 	}

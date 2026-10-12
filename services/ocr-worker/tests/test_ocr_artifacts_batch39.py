@@ -4,8 +4,6 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
-from PIL import Image
-
 from ocr_worker import runner as runner_module
 from ocr_worker.api import APIError, AuthenticationError
 from ocr_worker.engine import OCRBlock
@@ -17,6 +15,7 @@ from ocr_worker.recognition_router import (
     RoutedRecognitionResult,
 )
 from ocr_worker.runner import OCRRunner, WorkerConfig
+from PIL import Image
 from test_runner import FakeAPI, FakeEngine
 
 

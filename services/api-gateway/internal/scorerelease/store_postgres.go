@@ -530,21 +530,6 @@ FROM population p CROSS JOIN target t
 	return &out, err
 }
 
-func (s *PostgresStore) studentSessionTotal(ctx context.Context, tenantID, examID, studentID string) (float64, float64, error) {
-	var score, maxScore float64
-	err := s.db.QueryRowContext(ctx, `
-SELECT COALESCE(sum(mine.total_score),0)::float8,COALESCE(sum(mine.max_score),0)::float8
-FROM exam target
-JOIN exam sibling ON sibling.tenant_id=target.tenant_id AND sibling.deleted_at IS NULL
- AND ((target.exam_session_id IS NOT NULL AND sibling.exam_session_id=target.exam_session_id) OR sibling.id=target.id)
-JOIN score_release_current current_release ON current_release.tenant_id=sibling.tenant_id AND current_release.exam_id=sibling.id
-JOIN score_release release ON release.tenant_id=current_release.tenant_id AND release.id=current_release.release_id AND release.status='published'
-JOIN score_release_item mine ON mine.tenant_id=release.tenant_id AND mine.release_id=release.id AND mine.student_id=$3::uuid
-WHERE target.tenant_id=$1::uuid AND target.id=$2::uuid AND target.deleted_at IS NULL
-`, tenantID, examID, studentID).Scan(&score, &maxScore)
-	return score, maxScore, err
-}
-
 func (s *PostgresStore) studentSubjectBalance(ctx context.Context, tenantID, examID, studentID string) ([]StudentSubjectBalance, error) {
 	// 同一考次中每科只取最新且允许展示统计的发布版本；人数不足的科目直接省略。
 	rows, err := s.db.QueryContext(ctx, `

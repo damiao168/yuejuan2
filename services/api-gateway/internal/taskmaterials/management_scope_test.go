@@ -32,7 +32,7 @@ type sqlScript struct {
 }
 type connector struct{ script *sqlScript }
 
-func (c connector) Connect(context.Context) (driver.Conn, error) { return connection{c.script}, nil }
+func (c connector) Connect(context.Context) (driver.Conn, error) { return connection(c), nil }
 func (connector) Driver() driver.Driver                          { return fixtureDriver{} }
 
 type fixtureDriver struct{}
@@ -118,7 +118,7 @@ const submission = "00000000-0000-0000-0000-000000000015"
 var now = time.Date(2026, 10, 8, 1, 0, 0, 0, time.UTC)
 
 func materialStep() sqlStep {
-	return sqlStep{required: []string{"snap.tenant_id=$1::uuid", "snap.exam_id=$2::uuid", "snap.question_id=$3::uuid", "snap.id=$4::uuid", "created_at<=snap.created_at", "'rubric',snap.rubric_snapshot"}, args: []any{tenant, exam, question, snapshot}, rows: [][]driver.Value{{[]byte(`{"id":"` + question + `","exam_id":"` + exam + `","question_no":"1","score":5,"stem":"冻结题干","options":["A.冻结选项"],"answer_key":{"standard_answer":"冻结答案"},"solution":{"raw_text":"冻结解析"},"rubric":{"version":"freeze","deductions":[{"rule":"冻结例外"}]}}`)}}}
+	return sqlStep{required: []string{"snap.tenant_id=$1::uuid", "snap.exam_id=$2::uuid", "snap.question_id=$3::uuid", "snap.id=$4::uuid", "created_at<=snap.created_at", "'rubric',snap.rubric_snapshot_json"}, args: []any{tenant, exam, question, snapshot}, rows: [][]driver.Value{{[]byte(`{"id":"` + question + `","exam_id":"` + exam + `","question_no":"1","score":5,"stem":"冻结题干","options":["A.冻结选项"],"answer_key":{"standard_answer":"冻结答案"},"solution":{"raw_text":"冻结解析"},"rubric":{"version":"freeze","deductions":[{"rule":"冻结例外"}]}}`)}}}
 }
 func TestQuestionMaterialUsesExactTaskSnapshotAndHistoricalReferences(t *testing.T) {
 	db := openDB(t, materialStep())

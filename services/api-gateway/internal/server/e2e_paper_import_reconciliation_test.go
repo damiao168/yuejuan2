@@ -597,6 +597,22 @@ func e2eReviewAndApplyPaperImport(t *testing.T, scenario paperApplyGateScenario)
 	if reviewed.Generation != beforeReview.Generation || reviewed.UpdatedAt.Equal(beforeReview.UpdatedAt) {
 		t.Fatalf("review save must change the DB-backed review version within one generation: before=%d/%s after=%d/%s", beforeReview.Generation, beforeReview.UpdatedAt, reviewed.Generation, reviewed.UpdatedAt)
 	}
+	// 回执必须携带普通详情的运行、候选和来源信息；完整对比可发现只补 Generation 而遗漏其他装载字段的回归。
+	persistedReview, err := store.GetPaperImport(ctx, tenantID, job.ID)
+	if err != nil {
+		t.Fatalf("read persisted review receipt: %v", err)
+	}
+	reviewJSON, err := json.Marshal(reviewed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	persistedJSON, err := json.Marshal(persistedReview)
+	if err != nil || string(reviewJSON) != string(persistedJSON) {
+		t.Fatalf("review transaction receipt lost detail fields: receipt=%s persisted=%s err=%v", reviewJSON, persistedJSON, err)
+	}
+	if _, err := store.SavePaperImportReview(ctx, tenantID, job.ID, userID, paper.ReviewPaperImportInput{ExpectedGeneration: beforeReview.Generation, ExpectedUpdatedAt: beforeReview.UpdatedAt.Format(time.RFC3339Nano), Questions: []paper.PaperImportDraftQuestion{valid}}); !errors.Is(err, paper.ErrConflict) {
+		t.Fatalf("stale review version must remain rejected after returning complete receipt: %v", err)
+	}
 	var previousRuleID string
 	if err := db.QueryRowContext(ctx, `INSERT INTO scoring_rule(tenant_id,exam_id,question_id,version,rule_type,config,status,revision,content_hash,created_by,published_by,published_at)
 VALUES($1::uuid,$2::uuid,$3::uuid,1,'manual','{}'::jsonb,'published',1,$4,$5::uuid,$5::uuid,now()) RETURNING id::text`, tenantID, examID, questionID, strings.Repeat("a", 64), userID).Scan(&previousRuleID); err != nil {

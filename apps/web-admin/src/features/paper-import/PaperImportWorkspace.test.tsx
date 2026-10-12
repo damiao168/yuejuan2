@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import type { PaperImportDraftQuestion, PaperImportIssue, PaperImportJob, PaperImportSource } from "../../api/papers";
 import { PaperImportWorkspace } from "./PaperImportWorkspace";
 import { importSourceDescription, importSourceStatus, importVisibleIssues } from "./paperImportPresentation";
@@ -75,16 +75,16 @@ describe("paper import workspace", () => {
   let root: Root;
   let container: HTMLDivElement;
   let workflow: ReturnType<typeof usePaperImportWorkflow>;
-  let onNavigate: ReturnType<typeof vi.fn>;
-  let showEditor: ReturnType<typeof vi.fn>;
+  let onNavigate: Mock<(path: string) => void>;
+  let showEditor: Mock<(show: boolean) => void>;
 
   beforeEach(() => {
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
     container = document.createElement("div");
     document.body.appendChild(container);
     root = createRoot(container);
-    onNavigate = vi.fn();
-    showEditor = vi.fn();
+    onNavigate = vi.fn<(path: string) => void>();
+    showEditor = vi.fn<(show: boolean) => void>();
     workflow = {
       uploadProps: {}, parsing: false, reviewDrafts: [], savingImportReview: false, updatingImportSources: false,
       stoppingImport: false, retryingParse: false, invalidReviewRubric: false, invalidReviewScore: false,

@@ -46,22 +46,25 @@ test("学校模型与治理使用同一学校配置，旧治理地址转入模�
     } } });
   });
 
-  await page.goto("/#/system/models", { waitUntil: "domcontentloaded" });
-  await expect(page).toHaveURL(/platform\/model-config\?tab=governance/);
-  await expect(page.getByRole("heading", { name: "模型管理" })).toBeVisible();
-  await expect(page.getByText("模型评测", { exact: true })).toBeVisible();
-  await expect.poll(() => tenantsSeen.length).toBeGreaterThanOrEqual(3);
-  expect(tenantsSeen.every(id => id === "school-a")).toBe(true);
-  await expect(page.getByText("登记供应商")).toHaveCount(0);
-  await expect(page.getByText("登记部署")).toHaveCount(0);
   const assuranceTenants: string[] = [];
+  // 正式检查面板保留挂载并预加载；监听必须先于页面打开，才能核对初始请求的学校范围。
   page.on("request", request => {
     const url = new URL(request.url());
     if (url.pathname === "/api/v1/ai-eligibility/policy" || url.pathname === "/api/v1/grading-evaluations") {
       assuranceTenants.push(url.searchParams.get("tenant_id") ?? "");
     }
   });
-  await page.getByText("评分保障", { exact: true }).click();
+  await page.goto("/#/system/models", { waitUntil: "domcontentloaded" });
+  await expect(page).toHaveURL(/platform\/model-config\?tab=governance/);
+  await expect(page.getByRole("heading", { name: "模型管理" })).toBeVisible();
+  await expect(page.getByRole("radio", { name: "对比候选模型", exact: true })).toBeChecked();
+  await expect(page.getByRole("button", { name: "登记已有评测报告", exact: true })).toBeVisible();
+  await expect.poll(() => tenantsSeen.length).toBeGreaterThanOrEqual(3);
+  expect(tenantsSeen.every(id => id === "school-a")).toBe(true);
+  await expect(page.getByText("登记供应商")).toHaveCount(0);
+  await expect(page.getByText("登记部署")).toHaveCount(0);
+  await page.getByTitle("正式评分使用检查", { exact: true }).click();
+  await expect(page.getByRole("radio", { name: "正式评分使用检查", exact: true })).toBeChecked();
   await expect.poll(() => assuranceTenants.length).toBeGreaterThan(0);
   expect(assuranceTenants.every(id => id === "school-a")).toBe(true);
   await page.getByText("三智能体配置", { exact: true }).click();
@@ -120,13 +123,20 @@ test("治理操作只提交学校模型配置 ID", async ({ page }) => {
   expect(candidateBody).not.toHaveProperty("deployment_id");
   await page.getByText("模型批准", { exact: true }).click();
   await page.getByRole("button", { name: "新建批准" }).click();
-  await page.getByLabel("授权冻结集评测").click();
+  const approvalDrawer = page.getByRole("dialog", { name: "新建题型级模型批准", exact: true });
+  await approvalDrawer.getByLabel("授权冻结集评测").click();
   await page.locator(".ant-select-dropdown:visible .ant-select-item-option-content", { hasText: "已冻结" }).click();
-  await page.getByLabel("评测模型").click();
+  // 候选抽屉关闭后仍在 DOM；批准标签只能对应当前抽屉输入，不能关联隐藏的候选输入。
+  const approvalModel = approvalDrawer.getByLabel("评测模型", { exact: true });
+  await expect(approvalModel).toBeVisible();
+  const approvalModelID = await approvalModel.getAttribute("id");
+  expect(approvalModelID).toBeTruthy();
+  await expect(page.locator(`[id="${approvalModelID}"]`)).toHaveCount(1);
+  await approvalModel.click();
   await page.locator(".ant-select-dropdown:visible .ant-select-item-option-content", { hasText: "deepseek-v4" }).click();
-  await page.getByLabel("决策引用").fill("school-decision");
-  await page.getByLabel("批准原因").fill("授权冻结集复核完成");
-  await page.getByRole("button", { name: "确认批准" }).click();
+  await approvalDrawer.getByLabel("决策引用").fill("school-decision");
+  await approvalDrawer.getByLabel("批准原因").fill("授权冻结集复核完成");
+  await approvalDrawer.getByRole("button", { name: "确认批准" }).click();
   await expect.poll(() => approvalBody?.model_config_id).toBe("model-a");
   expect(approvalBody?.tenant_id).toBe("school-a");
   expect(approvalBody).not.toHaveProperty("deployment_id");
@@ -267,28 +277,30 @@ test("从添加模型到三智能体、评测、批准和策略使用同一学�
   expect(bindings.map(item => item.managed_model_api_config_id)).toEqual(["model-a", "model-b", "model-c"]);
 
   await page.getByText("治理与评测", { exact: true }).click();
-  await page.getByRole("button", { name: "新建评测" }).click();
-  await page.getByLabel("批次标识").fill("full-school-eval");
-  await page.getByLabel("批次名称").fill("完整学校评测");
-  await page.getByLabel("数据集引用").fill("frozen-school-set");
-  await page.getByLabel("数据集 SHA-256").fill("a".repeat(64));
-  await page.getByText("协议样例（不代表模型效果）", { exact: true }).click();
+  await page.getByRole("button", { name: "登记已有评测报告", exact: true }).click();
+  const evaluationDrawer = page.getByRole("dialog", { name: "登记已有离线评测报告", exact: true });
+  await evaluationDrawer.getByLabel("批次标识").fill("full-school-eval");
+  await evaluationDrawer.getByLabel("批次名称").fill("完整学校评测");
+  await evaluationDrawer.getByLabel("数据集引用").fill("frozen-school-set");
+  await evaluationDrawer.getByLabel("数据集 SHA-256").fill("a".repeat(64));
+  await evaluationDrawer.getByLabel("证据类别").press("ArrowDown");
   await page.locator(".ant-select-dropdown:visible .ant-select-item-option-content", { hasText: "授权冻结集" }).click();
-  await page.getByLabel("授权引用").fill("school-approved-set");
-  await page.getByLabel("学科").fill("mathematics");
-  await page.getByLabel("年级").fill("senior");
-  await page.getByLabel("题型标识").fill("short_answer");
-  await page.getByLabel("创建原因").fill("学校模型完整流程评测");
-  await page.getByRole("button", { name: "创建批次" }).click();
+  await evaluationDrawer.getByLabel("授权引用").fill("school-approved-set");
+  await evaluationDrawer.getByLabel("学科").fill("mathematics");
+  await evaluationDrawer.getByLabel("年级").fill("senior");
+  await evaluationDrawer.getByLabel("题型标识").fill("short_answer");
+  await evaluationDrawer.getByLabel("创建原因").fill("学校模型完整流程评测");
+  await evaluationDrawer.getByRole("button", { name: "创建批次" }).click();
   await expect(page.getByRole("heading", { name: "完整学校评测" })).toBeVisible();
   for (const model of ["deepseek-v4", "qwen-vl"]) {
     await page.getByRole("button", { name: "添加候选" }).click();
-    await page.getByLabel("评测模型").click();
+    const candidateDrawer = page.getByRole("dialog", { name: "添加候选结果 · 完整学校评测", exact: true });
+    await candidateDrawer.getByLabel("评测模型").click();
     await page.locator(".ant-select-dropdown:visible .ant-select-item-option-content", { hasText: model }).click();
-    await page.getByLabel("提示词版本").fill("prompt-v1");
-    await page.getByLabel("Rubric 版本").fill("rubric-v1");
-    await page.getByPlaceholder("说明离线运行来源和数据核验情况").fill("学校模型冻结证据");
-    await page.getByRole("button", { name: "保存候选" }).click();
+    await candidateDrawer.getByLabel("提示词版本").fill("prompt-v1");
+    await candidateDrawer.getByLabel("Rubric 版本").fill("rubric-v1");
+    await candidateDrawer.getByLabel("录入原因").fill("学校模型冻结证据");
+    await candidateDrawer.getByRole("button", { name: "保存候选" }).click();
     await expect.poll(() => (runs[0].candidates as unknown[]).length).toBe(model === "deepseek-v4" ? 1 : 2);
   }
   await page.getByRole("button", { name: "冻结完成" }).click();

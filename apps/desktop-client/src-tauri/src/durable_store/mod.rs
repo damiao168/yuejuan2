@@ -2,8 +2,8 @@ mod claim;
 mod connection;
 mod crypto;
 mod drafts;
-mod paths;
 pub mod offline_access;
+mod paths;
 mod queue;
 mod schema;
 mod spool;
@@ -24,7 +24,8 @@ pub use drafts::{
     update_durable_draft_status,
 };
 pub use queue::{
-    archive_durable_scan_queue_items, list_durable_scan_queue, persist_durable_scan_queue_item, remove_unstarted_scan_queue_item,
+    archive_durable_scan_queue_items, list_durable_scan_queue, persist_durable_scan_queue_item,
+    remove_unstarted_scan_queue_item,
 };
 pub use spool::{
     begin_spool_local_asset, complete_spool_local_asset, read_durable_local_asset,
@@ -516,9 +517,24 @@ mod tests {
         );
         clear_scope().expect("restart clears in-memory lease");
         assert!(with_session(&lease_other_server, || Ok(())).is_err());
-        let expired_lease = super::paths::bind_scope_with_expiry("https://example.test/api", &tenant, &actor_a, Some(chrono::Utc::now() - chrono::Duration::seconds(1))).expect("expired lease");
-        assert!(with_session(&expired_lease, || Ok(())).is_err(), "expiry is checked before local data access");
-        let lease_a_after_restart = super::paths::bind_scope_with_expiry("https://example.test/api", &tenant, &actor_a, Some(chrono::Utc::now() + chrono::Duration::hours(1))).expect("offline return A");
+        let expired_lease = super::paths::bind_scope_with_expiry(
+            "https://example.test/api",
+            &tenant,
+            &actor_a,
+            Some(chrono::Utc::now() - chrono::Duration::seconds(1)),
+        )
+        .expect("expired lease");
+        assert!(
+            with_session(&expired_lease, || Ok(())).is_err(),
+            "expiry is checked before local data access"
+        );
+        let lease_a_after_restart = super::paths::bind_scope_with_expiry(
+            "https://example.test/api",
+            &tenant,
+            &actor_a,
+            Some(chrono::Utc::now() + chrono::Duration::hours(1)),
+        )
+        .expect("offline return A");
         assert_ne!(lease_a, lease_a_after_restart);
         assert!(with_session(&lease_a, || Ok(())).is_err());
         assert!(with_session(&lease_a_after_restart, || Ok(())).is_ok());

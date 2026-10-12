@@ -6,7 +6,12 @@ import pytest
 from ocr_worker import recognition_router as module
 from ocr_worker.engine import OCRBlock
 from ocr_worker.math_layout import FormulaRegion
-from ocr_worker.recognition_router import FormulaRecognitionResult, PaddleFormulaNetEngine, RecognitionRouter, RegionKind
+from ocr_worker.recognition_router import (
+    FormulaRecognitionResult,
+    PaddleFormulaNetEngine,
+    RecognitionRouter,
+    RegionKind,
+)
 from PIL import Image
 
 

@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { installApiMocks } from "../fixtures/apiMocks";
+import { openAssessmentConfiguration } from "../fixtures/assessmentNavigation";
 
 test.setTimeout(90_000);
 
@@ -62,8 +63,7 @@ async function openAssessment(page: Page, subject = "math", questionType = "shor
   await page.getByRole("button", { name: "前往题目配置", exact: true }).click();
   await page.getByRole("tab", { name: "评分配置", exact: true }).click();
   if (!openDrawer) return writes;
-  await page.getByText("高级评分配置", { exact: true }).click();
-  await page.getByRole("button", { name: "配置", exact: true }).click();
+  await openAssessmentConfiguration(page, frozen);
   if (frozen) await expect(page.getByText("考试配置已冻结", { exact: true })).toBeVisible();
   else await expect(page.getByRole("button", { name: "保存配置", exact: true })).toBeVisible();
   return writes;
@@ -112,8 +112,7 @@ test("公式题规则和 AI 模式均说明人工要求，显式策略保持原�
   const writes = await openAssessment(page, "math", "formula", false, false);
   await expect(page.getByText("本题需要教师人工评分", { exact: true })).toBeVisible();
   await expect(page.getByText(/最终分数仍由规则或教师确认/)).toHaveCount(0);
-  await page.getByText("高级评分配置", { exact: true }).click();
-  await page.getByRole("button", { name: "配置", exact: true }).click();
+  await openAssessmentConfiguration(page);
   const drawer = page.getByRole("dialog", { name: "1 · 学科评分配置", exact: true });
   await expect(drawer.getByText(/如需自动判分，请选择规则自动评分/)).toHaveCount(0);
   await expect(drawer.getByText(/本题.*人工评分/, { exact: true })).toBeVisible();
@@ -155,12 +154,11 @@ for (const questionType of ["short_answer", "calculation", "essay", "discussion"
   });
 }
 
-test("编程题在高级配置折叠与只查看主界面时也说明教师人工评分", async ({ page }) => {
+test("编程题在主界面和配置抽屉均说明教师人工评分", async ({ page }) => {
   await openAssessment(page, "math", "coding", false, false);
   await expect(page.getByText("本题需要教师人工评分", { exact: true })).toBeVisible();
   await expect(page.getByText(/编程题目前需要教师人工评分/)).toBeVisible();
-  await page.getByText("高级评分配置", { exact: true }).click();
-  await page.getByRole("button", { name: "配置", exact: true }).click();
+  await openAssessmentConfiguration(page);
   const drawer = page.getByRole("dialog", { name: "1 · 学科评分配置", exact: true });
   await expect(drawer.getByText("本题需要教师人工评分", { exact: true })).toBeVisible();
   await drawer.getByRole("button", { name: "关闭", exact: true }).click();
@@ -172,8 +170,7 @@ test("计算题的步骤证据不承诺规则路径，AI 建议仍说明教师�
   await openAssessment(page, "math", "calculation", false, false);
   await expect(page.getByText(/证据本身不会自动给分/)).toBeVisible();
   await expect(page.getByText(/最终分数仍由规则或教师确认/)).toHaveCount(0);
-  await page.getByText("高级评分配置", { exact: true }).click();
-  await page.getByRole("button", { name: "配置", exact: true }).click();
+  await openAssessmentConfiguration(page);
   const drawer = page.getByRole("dialog", { name: "1 · 学科评分配置", exact: true });
   await expect(drawer.getByText("AI 建议分数仍须教师确认", { exact: true })).toBeVisible();
 });

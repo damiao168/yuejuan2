@@ -49,29 +49,29 @@ type EvaluationListFilter struct {
 }
 
 type EvaluationCandidate struct {
-	ID                     string            `json:"id"`
-	TenantID               string            `json:"tenant_id,omitempty"`
-	RunID                  string            `json:"run_id"`
-	DeploymentID           string            `json:"deployment_id"`
-	ModelConfigID          string            `json:"model_config_id,omitempty"`
-	ProviderKey            string            `json:"provider_key"`
-	DeploymentKey          string            `json:"deployment_key"`
-	ModelName              string            `json:"model_name"`
-	ModelVersion           string            `json:"model_version"`
-	PromptVersion          string            `json:"prompt_version"`
-	RubricVersion          string            `json:"rubric_version"`
-	EvaluatedSamples       int               `json:"evaluated_samples"`
-	TeacherReviewedSamples int               `json:"teacher_reviewed_samples"`
-	TeacherAcceptedSamples int               `json:"teacher_accepted_samples"`
-	SeriousErrorSamples    int               `json:"serious_error_samples"`
-	EvidenceValidSamples   int               `json:"evidence_valid_samples"`
-	RepeatComparisons      int               `json:"repeat_comparisons"`
-	StableRepeatSamples    int               `json:"stable_repeat_samples"`
-	P95LatencyMS           int64             `json:"p95_latency_ms"`
+	ID                     string `json:"id"`
+	TenantID               string `json:"tenant_id,omitempty"`
+	RunID                  string `json:"run_id"`
+	DeploymentID           string `json:"deployment_id"`
+	ModelConfigID          string `json:"model_config_id,omitempty"`
+	ProviderKey            string `json:"provider_key"`
+	DeploymentKey          string `json:"deployment_key"`
+	ModelName              string `json:"model_name"`
+	ModelVersion           string `json:"model_version"`
+	PromptVersion          string `json:"prompt_version"`
+	RubricVersion          string `json:"rubric_version"`
+	EvaluatedSamples       int    `json:"evaluated_samples"`
+	TeacherReviewedSamples int    `json:"teacher_reviewed_samples"`
+	TeacherAcceptedSamples int    `json:"teacher_accepted_samples"`
+	SeriousErrorSamples    int    `json:"serious_error_samples"`
+	EvidenceValidSamples   int    `json:"evidence_valid_samples"`
+	RepeatComparisons      int    `json:"repeat_comparisons"`
+	StableRepeatSamples    int    `json:"stable_repeat_samples"`
+	P95LatencyMS           int64  `json:"p95_latency_ms"`
 	// 成本登记与调用账本统一为微美元；这是报告估算，不是供应商最终账单。
-	TotalCostMicros        int64             `json:"total_cost_micros"`
-	Metrics                EvaluationMetrics `json:"metrics"`
-	CreatedAt              time.Time         `json:"created_at"`
+	TotalCostMicros int64             `json:"total_cost_micros"`
+	Metrics         EvaluationMetrics `json:"metrics"`
+	CreatedAt       time.Time         `json:"created_at"`
 }
 
 type EvaluationMetrics struct {

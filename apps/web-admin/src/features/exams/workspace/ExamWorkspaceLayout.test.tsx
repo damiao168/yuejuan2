@@ -8,12 +8,12 @@ import { ExamWorkspaceLayout } from "./ExamWorkspaceLayout";
 vi.mock("../../school-assistant/SchoolAssistantProvider", () => ({ useSchoolAssistantContext: () => null }));
 vi.mock("@edugrade/ui", () => ({
   WorkspaceLayout: ({ header, children }: { header: ReactNode; children: ReactNode }) => <>{header}{children}</>,
-  ExamStageIndicator: () => null, QualityIndicator: () => null,
+  ExamStageIndicator: ({ stage }: { stage?: { label: string } }) => <span aria-label="当前考试阶段">{stage?.label}</span>, QualityIndicator: () => null,
   StatusBadge: ({ children }: { children: ReactNode }) => <span>{children}</span>
 }));
 vi.mock("antd", () => ({
   Button: ({ children, onClick }: { children: ReactNode; onClick: () => void }) => <button onClick={onClick}>{children}</button>,
-  Select: () => null,
+  Select: ({ value, options, onChange, "aria-label": label }: { value: string; options: { value: string; label: string }[]; onChange: (value: string) => void; "aria-label": string }) => <select aria-label={label} value={value} onChange={(event) => onChange(event.target.value)}>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select>,
   Alert: ({ message }: { message: string }) => <p>{message}</p>
 }));
 
@@ -25,11 +25,11 @@ function workspace(overrides: Partial<ExamWorkspaceProjection> = {}): ExamWorksp
   };
 }
 
-async function render(data: ExamWorkspaceProjection) {
+async function render(data: ExamWorkspaceProjection, section = "students") {
   (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
   const container = document.createElement("div"); document.body.append(container); const root = createRoot(container);
   const navigate = vi.fn();
-  await act(async () => root.render(<ExamWorkspaceLayout data={data} section="students" moduleContent={<p>学生范围</p>} onNavigate={navigate} />));
+  await act(async () => root.render(<ExamWorkspaceLayout data={data} section={section} moduleContent={<p>学生范围</p>} onNavigate={navigate} />));
   return { container, navigate, close: async () => { await act(async () => root.unmount()); container.remove(); } };
 }
 
@@ -53,4 +53,35 @@ describe("学科工作台整场上下文", () => {
       expect(view.container.textContent).not.toContain("考试已归档");
     } finally { await view.close(); }
   });
+  it("新导航保留生命周期和准备步骤，当前下一步进入服务端提供的考试入口", async () => {
+    const data = workspace({ next_actions: [{ code: "review_import", label: "核对考试资料", description: "导入内容需要人工确认", route: "/exams/math/paper?import=review", priority: "high" }] });
+    const view = await render(data);
+    try {
+      expect(view.container.querySelector('[aria-label="当前考试阶段"]')?.textContent).toBe("考试准备");
+      expect(view.container.querySelector('[aria-label="考试准备"]')?.textContent).toContain("确认准备完成");
+      const next = view.container.querySelector('[aria-label="当前下一步"]')!;
+      expect(next.textContent).toContain("导入内容需要人工确认");
+      await act(async () => next.querySelector("button")!.click());
+      expect(view.navigate).toHaveBeenCalledWith("/exams/math/paper?import=review");
+    } finally { await view.close(); }
+  });
+
+  it.each([{ read_only: true }, { exam_status: "archived" }])("只读或归档学科不显示写入下一步 $read_only/$exam_status", async (state) => {
+    const view = await render(workspace({ ...state, next_actions: [{ code: "prepare", label: "继续配置", description: "配置题目", route: "/exams/math/questions", priority: "normal" }] }));
+    try { expect(view.container.querySelector('[aria-label="当前下一步"]')).toBeNull(); }
+    finally { await view.close(); }
+  });
+
+  it("紧凑环节导航保留四阶段和同一考试的编码路径", async () => {
+    const view = await render(workspace({ exam_id: "exam /1", stage: "capture" }));
+    try {
+      const select = view.container.querySelector<HTMLSelectElement>('[aria-label="切换考试环节"]')!;
+      expect([...select.options].map((option) => option.textContent)).toEqual(["考试准备", "答卷导入", "阅卷", "成绩"]);
+      for (const [value, path] of [["capture", "capture"], ["grading", "grading"], ["results", "scores"], ["preparation", "students"]]) {
+        await act(async () => { select.value = value; select.dispatchEvent(new Event("change", { bubbles: true })); });
+        expect(view.navigate).toHaveBeenLastCalledWith(`/exams/exam%20%2F1/${path}`);
+      }
+    } finally { await view.close(); }
+  });
+
 });

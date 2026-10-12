@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { runWebContractTests } from "./ci/run-web-contract-tests.mjs";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -47,7 +48,8 @@ for (const invariant of [
 
 assert.ok(routes.includes('anyPermissions: ["model:config:manage", "model:provider:manage"]'), "model management must be permission gated");
 assert.ok(managedWorkspace.includes("<ModelEvaluationWorkspace tenantID={tenantID}"), "evaluation mutations must use the selected school context");
-assert.ok(workspace.includes("canManage && selectedRun.status"), "lifecycle controls must be permission and state gated");
+// 生命周期组件可抽取和改名；验收权限/状态的可见操作及过期弹窗提交，不依赖局部变量的字串。
+runWebContractTests(["src/components/model-governance/ModelEvaluationWorkspace.test.tsx"]);
 assert.ok(workspace.includes("至少需要两个候选；新评测请选择两个学校模型"), "completion readiness must explain the managed model gate");
 assert.equal(workspace.includes("/promote"), false, "STORY-061C2 must not expose promotion");
 assert.equal(workspace.includes("promoteModel"), false, "STORY-061C2 must not implement promotion");

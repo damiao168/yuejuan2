@@ -267,10 +267,10 @@ FROM agent_worker_task WHERE tenant_id=$1 AND id=$2::uuid FOR UPDATE`, tenantID,
 	return nil
 }
 
-func (s *PostgresStore) hydratePaperImportRun(ctx context.Context, tenantID string, job *PaperImportJob) error {
+func hydratePaperImportRun(ctx context.Context, queryer postgresQueryer, tenantID string, job *PaperImportJob) error {
 	var resultGeneration sql.NullInt64
 	var policyJSON, formulaResult []byte
-	err := s.db.QueryRowContext(ctx, `SELECT j.current_generation,j.source_revision,COALESCE(r.id::text,''),j.result_generation,
+	err := queryer.QueryRowContext(ctx, `SELECT j.current_generation,j.source_revision,COALESCE(r.id::text,''),j.result_generation,
 COALESCE(r.authoritative_subject_code,''),COALESCE(r.recognition_policy_hash,''),COALESCE(r.recognition_policy_snapshot,'{}'::jsonb),
 COALESCE(f.status,''),COALESCE(f.result,'{}'::jsonb)
 FROM paper_import_job j
@@ -302,7 +302,7 @@ WHERE j.tenant_id=$1 AND j.id=$2::uuid`, tenantID, job.ID).Scan(&job.Generation,
 	var runtime PaperImportRuntimeProgress
 	var runtimeJSON []byte
 	var startedAt sql.NullTime
-	err = s.db.QueryRowContext(ctx, `SELECT task_type,status,progress,started_at,updated_at
+	err = queryer.QueryRowContext(ctx, `SELECT task_type,status,progress,started_at,updated_at
 FROM agent_worker_task
 WHERE tenant_id=$1 AND paper_import_run_id=$2::uuid AND paper_import_generation=$3
 ORDER BY CASE status WHEN 'running' THEN 0 WHEN 'leased' THEN 1 WHEN 'queued' THEN 2 ELSE 3 END,

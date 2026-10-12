@@ -112,7 +112,12 @@ test("只填供应商和 API Key 即可零 Token 获取模型并保存", async (
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.getByText("DeepSeek", { exact: true })).toBeVisible();
   await expect(page.getByText("备用", { exact: true })).toBeVisible();
-  await expect(page.getByText(/API Key 有效 · 模型可用 · 0 生成 Token · 18ms/)).toBeVisible();
+  await expect(page.getByText("DeepSeek：密钥及模型访问权限检查通过", { exact: true })).toBeVisible();
+  await expect(page.getByText(/^此次保存未生成回复，尚未验证回复与结构化能力/)).toBeVisible();
+  const savedModel = page.getByRole("row", { name: /DeepSeek deepseek-v4-pro 配置 model-1/ });
+  await expect(savedModel.getByText("连接正常", { exact: true })).toBeVisible();
+  await expect(savedModel.getByText(/^18ms/)).toBeVisible();
+  await expect(savedModel.getByText("结构化能力：未验证", { exact: true })).toBeVisible();
 });
 
 test("新建模型遇到网络超时时使用警告提示并保留当前输入", async ({ page }) => {

@@ -7,7 +7,6 @@ from dataclasses import dataclass
 
 from edugrade_worker_runtime import validate_lease_timing, validate_service_url
 
-
 # 仅本地开发支持 HTTP 部署；当 EDUGRADE_ENV 选择
 # 类生产环境时，validate_service_url 会拒绝这个默认地址。
 _LOCAL_API_BASE_URL = "http" + "://localhost:8080"

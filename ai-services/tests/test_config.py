@@ -128,9 +128,8 @@ class SettingsTests(unittest.TestCase):
                 INSECURE_HTTP_ENV: "true",
             },
             clear=True,
-        ):
-            with self.assertRaisesRegex(ValueError, "TLS certificate"):
-                Settings.from_env()
+        ), self.assertRaisesRegex(ValueError, "TLS certificate"):
+            Settings.from_env()
 
     def test_plaintext_requires_explicit_development_environment(self):
         for environment in ("", "production", "staging", "unknown", "testing"):
@@ -143,9 +142,8 @@ class SettingsTests(unittest.TestCase):
                     INSECURE_HTTP_ENV: "true",
                 },
                 clear=True,
-            ):
-                with self.assertRaisesRegex(ValueError, "TLS certificate"):
-                    Settings.from_env()
+            ), self.assertRaisesRegex(ValueError, "TLS certificate"):
+                Settings.from_env()
 
     def test_development_plaintext_requires_explicit_opt_in(self):
         for environment in ("local", "development", "dev", "test"):
@@ -159,9 +157,8 @@ class SettingsTests(unittest.TestCase):
                     values[INSECURE_HTTP_ENV] = opt_in
                 with self.subTest(environment=environment, opt_in=opt_in), patch.dict(
                     os.environ, values, clear=True
-                ):
-                    with self.assertRaisesRegex(ValueError, "TLS certificate"):
-                        Settings.from_env()
+                ), self.assertRaisesRegex(ValueError, "TLS certificate"):
+                    Settings.from_env()
 
     def test_explicit_development_http_accepts_only_literal_ipv4_loopback(self):
         for environment in ("local", "development", "dev", "test"):
@@ -195,9 +192,8 @@ class SettingsTests(unittest.TestCase):
                     INSECURE_HTTP_ENV: "true",
                 },
                 clear=True,
-            ):
-                with self.assertRaisesRegex(ValueError, "TLS certificate"):
-                    Settings.from_env()
+            ), self.assertRaisesRegex(ValueError, "TLS certificate"):
+                Settings.from_env()
 
     def test_plaintext_opt_in_environment_value_must_be_canonical_boolean(self):
         for raw in ("", "TRUE", "False", "1", "0", "yes", " true ", " false ", "null"):
@@ -210,9 +206,8 @@ class SettingsTests(unittest.TestCase):
                     INSECURE_HTTP_ENV: raw,
                 },
                 clear=True,
-            ):
-                with self.assertRaisesRegex(ValueError, "must be true or false"):
-                    Settings.from_env()
+            ), self.assertRaisesRegex(ValueError, "must be true or false"):
+                Settings.from_env()
 
     def test_complete_tls_configuration_accepts_all_environment_classes(self):
         for environment in (None, "", "production", "staging", "unknown", "local", "dev", "test"):
@@ -242,9 +237,8 @@ class SettingsTests(unittest.TestCase):
                     f"EDUGRADE_GRADING_AGENT_{configured_path}": "/run/secrets/tls/server.pem",
                 },
                 clear=True,
-            ):
-                with self.assertRaisesRegex(ValueError, "configured together"):
-                    Settings.from_env()
+            ), self.assertRaisesRegex(ValueError, "configured together"):
+                Settings.from_env()
 
     def test_empty_listener_host_is_rejected_before_tls_selection(self):
         with patch.dict(
@@ -256,9 +250,8 @@ class SettingsTests(unittest.TestCase):
                 INSECURE_HTTP_ENV: "true",
             },
             clear=True,
-        ):
-            with self.assertRaisesRegex(ValueError, "HOST"):
-                Settings.from_env()
+        ), self.assertRaisesRegex(ValueError, "HOST"):
+            Settings.from_env()
 
 
 if __name__ == "__main__":

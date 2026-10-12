@@ -25,7 +25,7 @@ import {
   ShieldCheck,
   TriangleAlert
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getUserErrorMessage } from "../../api/client";
 import type { ManagedModelAPIConfig } from "../../api/modelApiConfig";
 import { modelConfigOptionLabel } from "../../features/platform-model-config/lib/modelConfig";
@@ -145,6 +145,9 @@ export function ModelEvaluationWorkspace({
   const [candidateDrawerOpen, setCandidateDrawerOpen] = useState(false);
   const [transitionKind, setTransitionKind] = useState<TransitionKind>();
   const [saving, setSaving] = useState(false);
+  const createScope = useRef<string | undefined>(undefined);
+  const candidateScope = useRef<{ tenantID: string; runID: string } | undefined>(undefined);
+  const transitionScope = useRef<{ tenantID: string; runID: string } | undefined>(undefined);
   const [createForm] = Form.useForm<CreateEvaluationRunInput>();
   const [candidateForm] = Form.useForm<AddEvaluationCandidateInput>();
   const [transitionForm] = Form.useForm<{ reason: string }>();
@@ -175,6 +178,14 @@ export function ModelEvaluationWorkspace({
   }, [runs, selectedRunID]);
 
   const selectedRun = runs.find((run) => run.id === selectedRunID);
+  // 弹窗或异步表单校验可能跨过权限、学校或冻结状态更新；提交前只认最新范围，不能沿用打开时的条件。
+  const currentContext = useRef({ tenantID, canManage, run: selectedRun });
+  currentContext.current = { tenantID, canManage, run: selectedRun };
+  const canMutateRun = (runID: string, kind: "candidate" | TransitionKind) => {
+    const current = currentContext.current;
+    return current.canManage && current.tenantID === tenantID && current.run?.id === runID
+      && (kind === "invalidate" ? current.run.status !== "invalidated" : current.run.status === "draft");
+  };
   const availableConfigs = selectedRun
     ? configs.filter((config) => config.status === "active"
       && config.last_capability_status === "success"
@@ -347,6 +358,8 @@ export function ModelEvaluationWorkspace({
   ];
 
   const openCreateDrawer = () => {
+    if (!canManage) return;
+    createScope.current = tenantID;
     createForm.resetFields();
     createForm.setFieldsValue({
       evidence_class: "protocol_fixture",
@@ -358,7 +371,8 @@ export function ModelEvaluationWorkspace({
   };
 
   const openCandidateDrawer = () => {
-    if (!selectedRun) return;
+    if (!selectedRun || !canMutateRun(selectedRun.id, "candidate")) return;
+    candidateScope.current = { tenantID, runID: selectedRun.id };
     const repeatComparisons = selectedRun.sample_count * Math.max(0, selectedRun.repeat_count - 1);
     candidateForm.resetFields();
     candidateForm.setFieldsValue({
@@ -376,7 +390,9 @@ export function ModelEvaluationWorkspace({
   };
 
   const submitCreate = async () => {
+    if (!currentContext.current.canManage || createScope.current !== tenantID) return;
     const values = await createForm.validateFields();
+    if (!currentContext.current.canManage || currentContext.current.tenantID !== tenantID || createScope.current !== tenantID) return;
     setSaving(true); onSavingChange?.(true);
     try {
       const response = await createModelEvaluationRun({
@@ -398,8 +414,9 @@ export function ModelEvaluationWorkspace({
   };
 
   const submitCandidate = async () => {
-    if (!selectedRun) return;
+    if (!selectedRun || !canMutateRun(selectedRun.id, "candidate") || candidateScope.current?.tenantID !== tenantID || candidateScope.current.runID !== selectedRun.id) return;
     const values = await candidateForm.validateFields();
+    if (!canMutateRun(selectedRun.id, "candidate")) return;
     setSaving(true); onSavingChange?.(true);
     try {
       await addModelEvaluationCandidate(tenantID, selectedRun.id, {
@@ -424,8 +441,9 @@ export function ModelEvaluationWorkspace({
   };
 
   const submitTransition = async () => {
-    if (!selectedRun || !transitionKind) return;
+    if (!selectedRun || !transitionKind || !canMutateRun(selectedRun.id, transitionKind) || transitionScope.current?.tenantID !== tenantID || transitionScope.current.runID !== selectedRun.id) return;
     const { reason } = await transitionForm.validateFields();
+    if (!canMutateRun(selectedRun.id, transitionKind)) return;
     setSaving(true); onSavingChange?.(true);
     try {
       if (transitionKind === "complete") {
@@ -446,6 +464,8 @@ export function ModelEvaluationWorkspace({
   };
 
   const openTransition = (kind: TransitionKind) => {
+    if (!selectedRun || !canMutateRun(selectedRun.id, kind)) return;
+    transitionScope.current = { tenantID, runID: selectedRun.id };
     transitionForm.resetFields();
     setTransitionKind(kind);
   };
@@ -579,7 +599,7 @@ export function ModelEvaluationWorkspace({
           message="登记已有报告，不运行模型"
           description="由评测负责人先完成授权数据的离线评分和人工核验，再登记数据集引用、版本与候选汇总。登记后仍须冻结和人工批准；不会调用外部模型或改变评分路由。"
         />
-        <Form form={createForm} layout="vertical" className="model-evaluation-form">
+        <Form name="model-evaluation-create" form={createForm} layout="vertical" className="model-evaluation-form">
           <div className="model-governance-form-row two">
             <Form.Item
               name="run_key"
@@ -670,7 +690,8 @@ export function ModelEvaluationWorkspace({
               message={selectedRun.evidence_class === "protocol_fixture" ? "协议样例不录入教师接受数据" : "教师复核数固定为全部样本"}
               description={`批次固定 ${selectedRun.sample_count} 个样本、重复 ${selectedRun.repeat_count} 次；候选版本写入后不可修改。`}
             />
-            <Form form={candidateForm} layout="vertical" className="model-evaluation-form">
+            {/* 抽屉关闭后仍保留表单；独立名称避免与批准表单的同名字段争用 DOM id 和标签关联。 */}
+            <Form name="model-evaluation-candidate" form={candidateForm} layout="vertical" className="model-evaluation-form">
               <Form.Item name="model_config_id" label="评测模型" rules={[{ required: true }]}>
                 <Select
                   options={availableConfigs.map((config) => ({
@@ -746,7 +767,7 @@ export function ModelEvaluationWorkspace({
             ? "本操作仍不会批准模型或改变评分路由。"
             : "若数据授权撤回、版本不一致或证据被替代，应立即标记失效。"}
         />
-        <Form form={transitionForm} layout="vertical" className="model-evaluation-transition-form">
+        <Form name="model-evaluation-transition" form={transitionForm} layout="vertical" className="model-evaluation-transition-form">
           <Form.Item name="reason" label="操作原因" rules={[{ required: true, min: 4, max: 256 }]}>
             <Input.TextArea rows={3} placeholder="填写可审计的操作原因" />
           </Form.Item>

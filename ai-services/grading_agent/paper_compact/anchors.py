@@ -7,7 +7,6 @@ from dataclasses import dataclass, field
 
 from .layout import _box, _reading_order
 from .schema import (
-    MAX_PAGE_FOOTER_TEXT_CHARS,
     _ANSWER_MARKER,
     _DISTRIBUTION_MARKER,
     _OPTION,
@@ -17,6 +16,7 @@ from .schema import (
     _REPEATED_FURNITURE_MARKER,
     _SECTION_START,
     _SOLUTION_MARKER,
+    MAX_PAGE_FOOTER_TEXT_CHARS,
 )
 
 _NUMBER = r"\d+(?:\.\d+)?"

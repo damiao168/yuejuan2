@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import { ApiClientError, RECENT_AUTH_REQUIRED_EVENT } from "../api/client";
 import { isStepUpCancelledError, StepUpProvider, useStepUp } from "./stepUpContext";
 
@@ -11,7 +11,7 @@ describe("StepUpProvider", () => {
   let root: Root;
   let container: HTMLDivElement;
   let current: ReturnType<typeof useStepUp>;
-  let reauthenticate: ReturnType<typeof vi.fn>;
+  let reauthenticate: Mock<(password: string) => Promise<void>>;
   let renderProvider: (onReauthenticate?: (password: string) => Promise<void>) => Promise<void>;
 
   beforeEach(async () => {
@@ -19,7 +19,7 @@ describe("StepUpProvider", () => {
     container = document.createElement("div");
     document.body.appendChild(container);
     root = createRoot(container);
-    reauthenticate = vi.fn().mockResolvedValue(undefined);
+    reauthenticate = vi.fn<(password: string) => Promise<void>>().mockResolvedValue(undefined);
     function Probe() {
       current = useStepUp();
       return null;

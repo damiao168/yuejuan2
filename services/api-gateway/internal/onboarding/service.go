@@ -157,7 +157,7 @@ func aiCheck(summary SystemReadinessSummary) ReadinessCheck {
 
 func dataPolicyCheck(policy DataPolicySummary) ReadinessCheck {
 	metadata := map[string]any{
-		"policy_scope": "platform_default",
+		"policy_scope":     "platform_default",
 		"external_enabled": policy.ExternalEnabled, "text_export_enabled": policy.TextExportEnabled,
 		"image_export_enabled": policy.ImageExportEnabled, "fallback_mode": policy.FallbackMode,
 	}

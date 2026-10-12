@@ -44,7 +44,7 @@ type exceptionPresentationDriver struct {
 }
 
 func (d exceptionPresentationDriver) Open(string) (driver.Conn, error) {
-	return exceptionPresentationConn{d.config}, nil
+	return exceptionPresentationConn(d), nil
 }
 
 type exceptionPresentationConn struct {

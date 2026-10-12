@@ -37,15 +37,14 @@ class PaperInputTests(unittest.TestCase):
             {"source_id": "question", "document_index": 1, "content": "second"},
             {"source_id": "answer", "document_index": 0, "content": "second"},
         ):
-            with self.subTest(second=second):
-                with self.assertRaisesRegex(AgentError, "unique"):
-                    normalize_paper_input(
-                        {
-                            "request_id": "job",
-                            "subject": "数学",
-                            "documents": [{"source_id": "question", "document_index": 0, "content": "first"}, second],
-                        }
-                    )
+            with self.subTest(second=second), self.assertRaisesRegex(AgentError, "unique"):
+                normalize_paper_input(
+                    {
+                        "request_id": "job",
+                        "subject": "数学",
+                        "documents": [{"source_id": "question", "document_index": 0, "content": "first"}, second],
+                    }
+                )
 
     def test_visual_pages_are_sorted_after_all_pages_are_validated(self):
         pages = clean_visual_pages([visual_page(2), visual_page(1)], self.documents, "job")

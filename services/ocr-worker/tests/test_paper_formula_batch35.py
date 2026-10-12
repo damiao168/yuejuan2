@@ -2,7 +2,6 @@ import hashlib
 from types import SimpleNamespace
 
 import pytest
-
 from ocr_worker import paper_formula
 from ocr_worker.formula_validation import FormulaAction, FormulaValidationResult
 from ocr_worker.runner import WorkerConfig

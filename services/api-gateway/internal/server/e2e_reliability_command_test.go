@@ -47,14 +47,19 @@ func TestReliabilityCommandRecoveryWithPostgresTestDatabase(t *testing.T) {
 	db := e2eOpenPostgresTestDB(t, dsn)
 	e2eApplyPostgresMigrations(t, db)
 	tenantID, userID, schoolID, gradeID, classID := uuid.NewString(), uuid.NewString(), uuid.NewString(), uuid.NewString(), uuid.NewString()
-	academicYearID, cohortID := uuid.NewString(), uuid.NewString()
+	academicYearID, cohortID, captureRoleID, capturePermissionID := uuid.NewString(), uuid.NewString(), uuid.NewString(), uuid.NewString()
 	statements := []struct {
 		query string
 		args  []any
 	}{
 		{`INSERT INTO tenant(id,tenant_id,name,code,status) VALUES($1::uuid,$1::uuid,'Reliability tenant',$2,'active')`, []any{tenantID, "reliability-" + uuid.NewString()}},
-		{`INSERT INTO app_user(id,tenant_id,username,display_name,password_hash,status) VALUES($1::uuid,$2::uuid,'reliability-admin','Reliability admin','not-used','active')`, []any{userID, tenantID}},
 		{`INSERT INTO school(id,tenant_id,name,code,status) VALUES($1::uuid,$2::uuid,'Reliability school','reliability-school','active')`, []any{schoolID, tenantID}},
+		// 恢复场景中的处理人必须具备真实同校授权，不能靠 tenant-wide 业务调用上下文替代数据库分派校验。
+		{`INSERT INTO app_user(id,tenant_id,school_id,username,display_name,password_hash,status) VALUES($1::uuid,$2::uuid,$3::uuid,'reliability-admin','Reliability admin','not-used','active')`, []any{userID, tenantID, schoolID}},
+		{`INSERT INTO role(id,tenant_id,code,name,scope_type) VALUES($1::uuid,$2::uuid,'reliability-capture-manager','Reliability capture manager','school')`, []any{captureRoleID, tenantID}},
+		{`INSERT INTO permission(id,tenant_id,code,name,resource,action) VALUES($1::uuid,$2::uuid,'capture:manage','Manage capture','capture','manage')`, []any{capturePermissionID, tenantID}},
+		{`INSERT INTO user_role(tenant_id,user_id,role_id,data_scope) VALUES($1::uuid,$2::uuid,$3::uuid,jsonb_build_object('scope','school','school_id',$4::text))`, []any{tenantID, userID, captureRoleID, schoolID}},
+		{`INSERT INTO role_permission(tenant_id,role_id,permission_id) VALUES($1::uuid,$2::uuid,$3::uuid)`, []any{tenantID, captureRoleID, capturePermissionID}},
 		{`INSERT INTO academic_year(id,tenant_id,school_id,name,start_year,end_year,starts_at,ends_at,is_current,status) VALUES($1::uuid,$2::uuid,$3::uuid,'2026-2027',2026,2027,'2026-09-01','2027-08-31',true,'active')`, []any{academicYearID, tenantID, schoolID}},
 		{`INSERT INTO grade_cohort(id,tenant_id,school_id,education_stage,entry_year,expected_graduation_year,name,status) VALUES($1::uuid,$2::uuid,$3::uuid,'senior',2026,2029,'2026 cohort','active')`, []any{cohortID, tenantID, schoolID}},
 		{`INSERT INTO grade(id,tenant_id,school_id,name,level_no,academic_year,status,education_stage,academic_year_id,grade_cohort_id) VALUES($1::uuid,$2::uuid,$3::uuid,'Grade 10',10,'2026-2027','active','senior',$4::uuid,$5::uuid)`, []any{gradeID, tenantID, schoolID, academicYearID, cohortID}},

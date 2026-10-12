@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import { ApiClientError } from "../../../api/client";
 import type { ManagementExam } from "../../../api/exams";
 import { ManagementExamArchiveDialog } from "./ManagementExamArchiveDialog";
@@ -26,8 +26,8 @@ const key = managementCommandKey("tenant:actor", "session", "session", "archive"
 const original: ManagementArchiveCommand = { version: 1, commandId: "original-command", kind: "session", examId: "session", action: "archive", input: { expected_revision: 1, expected_subject_revisions: { math: 1 } }, createdAt: "2026-10-04T00:00:00Z" };
 let container: HTMLDivElement;
 let root: Root;
-let onSaved: ReturnType<typeof vi.fn>;
-let onClose: ReturnType<typeof vi.fn>;
+let onSaved: Mock<() => Promise<void>>;
+let onClose: Mock<() => void>;
 beforeEach(() => {
   vi.clearAllMocks();
   (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -36,7 +36,7 @@ beforeEach(() => {
   mocks.check.mockResolvedValue({ check: { allowed: true, blockers: [] } });
   mocks.recover.mockResolvedValue({ command: { command_id: original.commandId, status: "not_accepted" } });
   mocks.archive.mockResolvedValue({ exam: { ...exam, archived_at: "2026-10-04T00:00:00Z" } });
-  onSaved = vi.fn(async () => undefined); onClose = vi.fn();
+  onSaved = vi.fn<() => Promise<void>>(async () => undefined); onClose = vi.fn<() => void>();
   container = document.createElement("div"); document.body.append(container); root = createRoot(container);
 });
 afterEach(async () => { await act(async () => root.unmount()); container.remove(); localStorage.clear(); });

@@ -156,7 +156,7 @@ def test_listener_policy_requires_an_actual_boolean(opt_in) -> None:
 
 @pytest.mark.parametrize("host", [2130706433, 0, None, b"127.0.0.1", ["127.0.0.1"]])
 def test_listener_policy_rejects_non_string_hosts(host) -> None:
-    with pytest.raises(ValueError, match="HOST must be a string"):
+    with pytest.raises(TypeError, match="HOST must be a string"):
         server._validate_listener_policy("test", host, True, False)
 
 

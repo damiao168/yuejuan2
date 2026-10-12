@@ -1,5 +1,4 @@
 import pytest
-
 from grading_agent.paper_compact import anchored_paper_result
 
 

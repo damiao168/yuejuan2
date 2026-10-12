@@ -1,9 +1,12 @@
 import copy
 
 import pytest
-
 from grading_agent.errors import AgentError
-from grading_agent.paper_validation import normalize_direct_text_refs, validate_paper_output, validate_refs
+from grading_agent.paper_validation import (
+    normalize_direct_text_refs,
+    validate_paper_output,
+    validate_refs,
+)
 
 
 def _document():

@@ -194,6 +194,8 @@ describe("复核回执与重新登录的顺序保护", () => {
       return resultRoute(call, result);
     });
     render(<App />);
+    // 先让整页批注占用迟到响应；否则逐题点击可能先发请求，导致表单等待本应属于整页的响应。
+    await waitFor(() => expect(annotationReads).toBe(1));
     fireEvent.click(await prepareAppeal());
     await act(async () => paperAnnotation.resolve(expired()));
     const paper = document.querySelector(".paper-viewer");

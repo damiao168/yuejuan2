@@ -17,7 +17,7 @@ type PostgresReader struct{ DB *sql.DB }
 // 参考答案和解析只取该快照之前的版本，不用当前题库的新标准替换历史任务依据。
 func (s PostgresReader) QuestionForSnapshot(ctx context.Context, tenantID, examID, questionID, snapshotID string) (paper.Question, error) {
 	var raw []byte
-	err := s.DB.QueryRowContext(ctx, `SELECT to_jsonb(q) || jsonb_build_object('answer_key',to_jsonb(k),'solution',to_jsonb(sol),'rubric',snap.rubric_snapshot)
+	err := s.DB.QueryRowContext(ctx, `SELECT to_jsonb(q) || jsonb_build_object('answer_key',to_jsonb(k),'solution',to_jsonb(sol),'rubric',snap.rubric_snapshot_json)
 FROM exam_question_snapshot snap
 JOIN question q ON q.tenant_id=snap.tenant_id AND q.id=snap.question_id AND q.exam_id=snap.exam_id AND q.deleted_at IS NULL
 LEFT JOIN LATERAL (SELECT id,question_id,answer_version,standard_answer,equivalent_answers,tolerance FROM question_answer_key

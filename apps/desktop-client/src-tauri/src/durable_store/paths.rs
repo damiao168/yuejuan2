@@ -22,7 +22,12 @@ pub(crate) fn bind_scope(server: &str, tenant_id: &str, actor_id: &str) -> Resul
     bind_scope_with_expiry(server, tenant_id, actor_id, None)
 }
 
-pub(crate) fn bind_scope_with_expiry(server: &str, tenant_id: &str, actor_id: &str, valid_until: Option<chrono::DateTime<chrono::Utc>>) -> Result<String, String> {
+pub(crate) fn bind_scope_with_expiry(
+    server: &str,
+    tenant_id: &str,
+    actor_id: &str,
+    valid_until: Option<chrono::DateTime<chrono::Utc>>,
+) -> Result<String, String> {
     let scope = scope_path_component(server, tenant_id, actor_id)?;
     let session_id = uuid::Uuid::new_v4().to_string();
     let _operation = OPERATION_LOCK
@@ -88,7 +93,11 @@ pub(crate) fn with_session<T>(
         return Err("durable session changed; retry after login".into());
     }
     // 离线授权只决定本机解密；每次原生读写都检查有效期，前端定时器不能延长已过期的租约。
-    if active.as_ref().and_then(|scope| scope.offline_valid_until).is_some_and(|until| until <= chrono::Utc::now()) {
+    if active
+        .as_ref()
+        .and_then(|scope| scope.offline_valid_until)
+        .is_some_and(|until| until <= chrono::Utc::now())
+    {
         return Err("本机离线授权已过期，请联网登录后续期。".into());
     }
     drop(active);

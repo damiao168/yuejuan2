@@ -36,13 +36,13 @@ func TestMemberManualReviewProjectsActualScopedTaskOrNoTask(t *testing.T) {
 type memberReviewConnector struct{ exists bool }
 
 func (c memberReviewConnector) Connect(context.Context) (driver.Conn, error) {
-	return memberReviewConn{c.exists}, nil
+	return memberReviewConn(c), nil
 }
-func (c memberReviewConnector) Driver() driver.Driver { return memberReviewDriver{c.exists} }
+func (c memberReviewConnector) Driver() driver.Driver { return memberReviewDriver(c) }
 
 type memberReviewDriver struct{ exists bool }
 
-func (d memberReviewDriver) Open(string) (driver.Conn, error) { return memberReviewConn{d.exists}, nil }
+func (d memberReviewDriver) Open(string) (driver.Conn, error) { return memberReviewConn(d), nil }
 
 type memberReviewConn struct{ exists bool }
 

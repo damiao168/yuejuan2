@@ -2,10 +2,8 @@ import copy
 from itertools import product
 
 import pytest
-
-from grading_agent.paper_compact import page_furniture_issues
-from grading_agent.paper_compact import anchors
-from grading_agent.paper_compact.schema import MAX_PAGE_FOOTER_TEXT_CHARS, _PAGE_FOOTER
+from grading_agent.paper_compact import anchors, page_furniture_issues
+from grading_agent.paper_compact.schema import _PAGE_FOOTER, MAX_PAGE_FOOTER_TEXT_CHARS
 
 
 def _document(footer):

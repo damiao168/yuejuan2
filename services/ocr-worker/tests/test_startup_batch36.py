@@ -52,9 +52,12 @@ class StartupConfigBatch36Tests(unittest.TestCase):
             ({"EDUGRADE_OCR_RUNTIME_ENABLED": "false"}, "at least one"),
         ]
         for overrides, first_error in cases:
-            with self.subTest(first_error=first_error), patch.dict(os.environ, {**BASE_ENV, **overrides}, clear=True):
-                with self.assertRaisesRegex(ValueError, first_error):
-                    load_settings()
+            with (
+                self.subTest(first_error=first_error),
+                patch.dict(os.environ, {**BASE_ENV, **overrides}, clear=True),
+                self.assertRaisesRegex(ValueError, first_error),
+            ):
+                load_settings()
 
     def test_math_validation_precedes_governed_paper_model_pair(self):
         math_env = {
@@ -69,9 +72,12 @@ class StartupConfigBatch36Tests(unittest.TestCase):
             ({"EDUGRADE_MATH_VERIFY_TOKEN": "t" * 32, "EDUGRADE_FORMULA_MODEL_VERSION": "PP-FormulaNet_plus-L"}, "governed plus-M then plus-L"),
         ]
         for overrides, first_error in cases:
-            with self.subTest(first_error=first_error), patch.dict(os.environ, {**math_env, **overrides}, clear=True):
-                with self.assertRaisesRegex(ValueError, first_error):
-                    load_settings()
+            with (
+                self.subTest(first_error=first_error),
+                patch.dict(os.environ, {**math_env, **overrides}, clear=True),
+                self.assertRaisesRegex(ValueError, first_error),
+            ):
+                load_settings()
 
     def test_numeric_bounds_and_non_finite_values_keep_original_contract(self):
         bounded_fields = {
@@ -98,9 +104,12 @@ class StartupConfigBatch36Tests(unittest.TestCase):
             "EDUGRADE_FORMULA_RENDER_SIMILARITY_THRESHOLD",
         ):
             for value in ("NaN", "inf", "-inf"):
-                with self.subTest(name=name, value=value), patch.dict(os.environ, {**BASE_ENV, name: value}, clear=True):
-                    with self.assertRaisesRegex(ValueError, name):
-                        load_settings()
+                with (
+                    self.subTest(name=name, value=value),
+                    patch.dict(os.environ, {**BASE_ENV, name: value}, clear=True),
+                    self.assertRaisesRegex(ValueError, name),
+                ):
+                    load_settings()
 
 
 class FormulaProfileBatch36Tests(unittest.TestCase):

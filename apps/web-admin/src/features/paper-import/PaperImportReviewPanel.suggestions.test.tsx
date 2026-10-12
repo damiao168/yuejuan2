@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, type ButtonHTMLAttributes } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import type { PaperImportDraftQuestion, PaperImportJob, SuggestedRubricCandidate } from "../../api/papers";
 import { PaperImportReviewPanel } from "./PaperImportReviewPanel";
 
@@ -30,14 +30,14 @@ const job = { id: "import-1", generation: 7, updated_at: "2026-09-26T08:00:00Z",
 describe("math rubric suggestion review", () => {
   let root: Root;
   let container: HTMLDivElement;
-  let onChange: ReturnType<typeof vi.fn>;
+  let onChange: Mock<(index: number, field: string, patch: Partial<PaperImportDraftQuestion>) => void>;
   beforeEach(() => {
     vi.clearAllMocks();
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
     container = document.createElement("div");
     document.body.appendChild(container);
     root = createRoot(container);
-    onChange = vi.fn();
+    onChange = vi.fn<(index: number, field: string, patch: Partial<PaperImportDraftQuestion>) => void>();
     mocks.generate.mockResolvedValue({ suggested_rubric_candidates: [suggestion] });
   });
   afterEach(async () => { await act(async () => root.unmount()); container.remove(); });

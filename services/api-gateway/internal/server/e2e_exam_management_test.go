@@ -66,9 +66,9 @@ func TestWholeExamManagementE2EWithPostgresTestDatabase(t *testing.T) {
 	e2eAssertWholeExamCursorPages(t, db, router, token, scope)
 	item = e2eEditWholeExamSubjects(t, db, router, token, scope, item)
 	item = e2eArchiveDraftWholeExam(t, db, router, token, scope, item)
-	item = e2eRestoreWholeExamAndCheckPublication(t, db, router, token, scope, item)
+	e2eRestoreWholeExamAndCheckPublication(t, db, router, token, scope, item)
 	item, scope.TenantID, scope.ActorID = e2eSeedWholeExamPublishedFacts(t, db, router, token, scope)
-	item = e2eArchivePublishedWholeExam(t, db, router, token, scope, item)
+	e2eArchivePublishedWholeExam(t, db, router, token, scope, item)
 	e2eAssertStandaloneAppealArchiveBoundary(t, db, router, token, scope)
 }
 

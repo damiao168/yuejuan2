@@ -18,7 +18,7 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/submission"
 )
 
-var batch24SourceUnavailable = errors.New("batch24 source unavailable")
+var errBatch24SourceUnavailable = errors.New("batch24 source unavailable")
 
 type batch24WorkspaceReader struct {
 	t             *testing.T
@@ -67,7 +67,7 @@ func (f *batch24WorkspaceReader) recordData(ctx context.Context, tenantID, examI
 
 func (f *batch24WorkspaceReader) sourceError() error {
 	if f.failSources {
-		return batch24SourceUnavailable
+		return errBatch24SourceUnavailable
 	}
 	return nil
 }
@@ -117,7 +117,7 @@ func (f *batch24WorkspaceReader) ListQuestions(ctx context.Context, tenantID, ex
 func (f *batch24WorkspaceReader) Readiness(ctx context.Context, tenantID, examID string) (paper.ReadinessResult, error) {
 	f.recordData(ctx, tenantID, examID, "readiness")
 	if f.failReadiness || f.failSources {
-		return paper.ReadinessResult{}, batch24SourceUnavailable
+		return paper.ReadinessResult{}, errBatch24SourceUnavailable
 	}
 	return paper.ReadinessResult{Ready: true, Checks: []paper.ReadinessCheck{{Passed: true}}}, nil
 }

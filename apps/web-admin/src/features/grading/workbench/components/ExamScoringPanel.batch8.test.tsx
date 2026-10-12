@@ -3,6 +3,7 @@ import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReviewTask, ScoringRunItem } from "../../../../api/review";
+import { setBusinessCommandScope } from "../../../../api/businessCommand";
 import type { ExamScoringController } from "../hooks/useExamScoring";
 import { ExamScoringPanel, type ExamScoringPanelProps } from "./ExamScoringPanel";
 
@@ -70,6 +71,7 @@ describe("batch8 scoring panel common original/current contract (mock UI/control
   let props: ExamScoringPanelProps;
 
   beforeEach(() => {
+    setBusinessCommandScope("tenant", "teacher");
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
     rendered.widgets.length = 0; rendered.tables.length = 0; rendered.fast.length = 0; rendered.nextToken = 0;
     host = document.createElement("div");
@@ -171,6 +173,24 @@ describe("batch8 scoring panel common original/current contract (mock UI/control
     expect(button("开始评分")).toBeUndefined();
     await (rendered.fast[rendered.fast.length - 1]!.props.onScoringChanged as () => Promise<void>)();
     expect(props.scoring.loadSummary).not.toHaveBeenCalled();
+  });
+
+  it("keeps the final fast-confirm receipt mounted after its own queue becomes empty", async () => {
+    await render({ initialExamId: "", canGrade: false, tasks: [{ exam_id: "exam-A", assigned_to: "teacher" } as ReviewTask] });
+    const token = host.querySelector("[data-fast-token]")?.getAttribute("data-fast-token");
+    await render({ tasks: [] });
+    expect(host.querySelector("[data-fast-token]")?.getAttribute("data-fast-token")).toBe(token);
+    expect(host.querySelector("[data-fast-token]")?.textContent).toBe("exam-A");
+    expect(rendered.fast[rendered.fast.length - 1]?.props.tasks).toEqual([]);
+    expect(props.scoring.loadSummary).not.toHaveBeenCalled();
+  });
+
+  it.each(["different-user", "new-session"])("does not reuse an empty-queue receipt in a %s", async (change) => {
+    await render({ initialExamId: "", canGrade: false, tasks: [{ exam_id: "exam-A", assigned_to: "teacher" } as ReviewTask] });
+    await render({ tasks: [] });
+    if (change === "new-session") setBusinessCommandScope("tenant", "teacher");
+    await render(change === "different-user" ? { currentUserId: "other" } : {});
+    expect(host.querySelector("[data-fast-token]")).toBeNull();
   });
 
   it("preserves result row identity, pagination, filter setters and callback return values", async () => {

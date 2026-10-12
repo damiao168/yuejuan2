@@ -176,13 +176,13 @@ EDUGRADE_PAGE_PROCESSING_PYTHON_IMAGE
 联网机器准备离线包：
 
 ```powershell
-docker pull golang:1.26.6-alpine
+docker pull golang:1.26.9-alpine
 docker pull alpine:3.22
 docker pull node:24-alpine
 docker pull nginx:1.29-alpine
 docker pull python:3.12.13-alpine3.24
 docker pull python:3.11.15-slim-trixie
-docker save -o edugrade-base-images.tar golang:1.26.6-alpine alpine:3.22 node:24-alpine nginx:1.29-alpine python:3.12.13-alpine3.24 python:3.11.15-slim-trixie
+docker save -o edugrade-base-images.tar golang:1.26.9-alpine alpine:3.22 node:24-alpine nginx:1.29-alpine python:3.12.13-alpine3.24 python:3.11.15-slim-trixie
 ```
 
 离线机器导入：
