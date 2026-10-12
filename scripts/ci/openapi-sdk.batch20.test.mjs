@@ -3,18 +3,51 @@ import test from "node:test";
 
 import { generateClient, generateTypes, schemaToType } from "../lib/openapi-sdk.mjs";
 
-test("schema references and literal schemas retain precedence over sibling type modifiers", () => {
+test("schema references retain nullable and precedence over sibling type modifiers", () => {
   assert.equal(schemaToType({
     $ref: "#/components/schemas/Referenced",
     const: "ignored",
     type: "object",
     allOf: [{ type: "boolean" }],
     nullable: true,
-  }), "Referenced");
+  }), "Referenced | null");
+  assert.equal(schemaToType({ $ref: "#/components/schemas/Referenced" }), "Referenced");
+  assert.equal(schemaToType({ $ref: "#/components/schemas/Referenced", nullable: false }), "Referenced");
   assert.equal(schemaToType({ const: null, enum: ["ignored"], type: "string", nullable: true }), "null | null");
   assert.equal(schemaToType({ enum: [], oneOf: [{ type: "string" }], type: "string" }), "never");
   assert.equal(schemaToType({ oneOf: [], anyOf: [{ type: "string" }], type: "boolean" }), "");
   assert.equal(schemaToType({ anyOf: [{ type: "integer" }, { type: "boolean" }], type: "string" }), "number | boolean");
+});
+
+test("nullable references survive nested properties, arrays and schema compositions", () => {
+  const nullableReference = { $ref: "#/components/schemas/Referenced", nullable: true };
+  const cases = [
+    [{ type: "object", required: ["draft"], properties: { draft: nullableReference } }, '{ "draft": Referenced | null; }'],
+    [{ type: "object", additionalProperties: nullableReference }, "(Record<string, never> & Record<string, Referenced | null>)"],
+    [{ type: "array", items: nullableReference }, "Array<Referenced | null>"],
+    [{ type: "array", items: nullableReference, nullable: true }, "Array<Referenced | null> | null"],
+    [{ oneOf: [nullableReference, { type: "string" }] }, "Referenced | null | string"],
+    [{ anyOf: [nullableReference, { type: "boolean" }] }, "Referenced | null | boolean"],
+    [{ type: "object", allOf: [nullableReference] }, "(Record<string, never>) & (Referenced | null)"],
+    [{ enum: ["ready"], oneOf: [nullableReference], nullable: true }, '"ready" | null'],
+  ];
+  for (const [schema, expected] of cases) assert.equal(schemaToType(schema), expected, JSON.stringify(schema));
+});
+
+test("generated types and client responses preserve nullable references from the contract", () => {
+  const nullableDraft = { $ref: "#/components/schemas/Draft", nullable: true };
+  const spec = {
+    components: { schemas: {
+      Draft: { type: "object", required: ["score"], properties: { score: { type: "number" } } },
+      Context: { type: "object", required: ["draft"], properties: { draft: nullableDraft } },
+    } },
+    paths: { "/draft": { get: {
+      operationId: "getDraft",
+      responses: { 200: { content: { "application/json": { schema: nullableDraft } } } },
+    } } },
+  };
+  assert.ok(generateTypes(spec).includes('export type Context = { "draft": Draft | null; };'));
+  assert.ok(generateClient(spec).includes('"getDraft": { args: { signal?: AbortSignal; }; response: Draft | null; };'));
 });
 
 test("object schemas preserve required keys, property order and additional-property composition", () => {

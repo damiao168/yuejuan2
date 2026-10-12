@@ -350,7 +350,7 @@ export type ReviewSubjectToolHints = { "subject_code": SubjectCode; "archetype_c
 
 export type ReviewAutomationResult = { "source"?: string; "recognized_answer"?: string; "confidence"?: number; "decision"?: string; "standard_answer"?: unknown; "rule_type"?: string; "score"?: number; "max_score"?: number; "grade_source"?: string; };
 
-export type ReviewTaskContext = { "task": ReviewTask; "expected_revision": number; "question_snapshot": ExamQuestionAssessmentSnapshot; "question": ReviewQuestion; "answer_artifact": ReviewAnswerArtifact; "frozen_rubric": FrozenReviewRubric; "ai_candidates": Array<ReviewAnswerCandidate>; "scoring_evidence": Array<ScoringEvidence>; "ai_second_opinion"?: ReviewAISecondOpinion; "claim": ReviewTaskClaim; "draft": ReviewDraft; "subject_tool_hints": ReviewSubjectToolHints; "automation_result"?: ReviewAutomationResult; };
+export type ReviewTaskContext = { "task": ReviewTask; "expected_revision": number; "question_snapshot": ExamQuestionAssessmentSnapshot; "question": ReviewQuestion; "answer_artifact": ReviewAnswerArtifact; "frozen_rubric": FrozenReviewRubric; "ai_candidates": Array<ReviewAnswerCandidate>; "scoring_evidence": Array<ScoringEvidence>; "ai_second_opinion"?: ReviewAISecondOpinion; "claim": ReviewTaskClaim; "draft": ReviewDraft | null; "subject_tool_hints": ReviewSubjectToolHints; "automation_result"?: ReviewAutomationResult; };
 
 export type ReviewTaskContextResponse = { "context": ReviewTaskContext; };
 
@@ -1082,7 +1082,7 @@ export type SubjectiveBatchCommandRecovery = { "command_id": string; "status": "
 
 export type SubjectiveEnqueueCommandRecovery = { "command_id": string; "batch_id": string; "status": "not_accepted" | "processing" | "succeeded"; "run_request_ids": Array<string>; };
 
-export type ReviewCommandSubmitResult = { "task": { "id": string; "status": string; "revision": number; }; "human_grade"?: ReviewCommandHumanGrade; "question_grade_id"?: string; "double_mark_session"?: ReviewCommandDoubleMarkSession; "final_grade"?: ReviewCommandFinalGrade; "arbitration_task"?: ReviewCommandArbitrationTask; };
+export type ReviewCommandSubmitResult = { "task": { "id": string; "status": string; "revision": number; }; "human_grade"?: ReviewCommandHumanGrade; "question_grade_id"?: string; "double_mark_session"?: ReviewCommandDoubleMarkSession | null; "final_grade"?: ReviewCommandFinalGrade | null; "arbitration_task"?: ReviewCommandArbitrationTask | null; };
 
 export type ReviewCommandReviewTask = { "id": string; "tenant_id": string; "exam_id": string; "question_id": string; "question_no": string; "answer_segment_id": string; "submission_id": string; "anonymous_code": string; "source": string; "status": string; "priority": number; "assigned_to"?: string; "return_reason"?: string; "grade_round": string; "due_at"?: string | null; "revision": number; "created_by": string; "created_at": string; "updated_at": string; };
 

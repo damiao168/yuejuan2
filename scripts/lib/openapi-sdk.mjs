@@ -40,8 +40,11 @@ function primitiveSchemaToType(schema) {
 
 export function schemaToType(schema) {
   if (!schema || typeof schema !== "object") return "unknown";
-  // $ref 直接输出引用名；其余节点先算基础类型，再拼接 allOf，最后追加 nullable。
-  if (schema.$ref) return refName(schema.$ref);
+  // 引用仍优先于 const、type 和 allOf；nullable 描述引用允许的空值，不能随提前返回丢掉。
+  if (schema.$ref) {
+    const reference = refName(schema.$ref);
+    return schema.nullable ? `${reference} | null` : reference;
+  }
 
   let result;
   if (Object.hasOwn(schema, "const")) {

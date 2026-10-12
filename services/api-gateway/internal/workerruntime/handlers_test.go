@@ -135,6 +135,103 @@ func TestPlatformPageWorkerCannotClaimSubjectiveGradingTask(t *testing.T) {
 	}
 }
 
+func TestMathUnderstandingWorkerIdentityAndLeaseBoundaries(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		roles   []string
+		service string
+		allowed bool
+	}{
+		{name: "OCR identity", roles: []string{"page_processing_worker"}, service: "ocr-worker", allowed: true},
+		{name: "wrong service", roles: []string{"page_processing_worker"}, service: "page-processing"},
+		{name: "unrecognized worker role", roles: []string{"other_worker"}, service: "ocr-worker"},
+		{name: "subjective worker", roles: []string{"subjective_grading_worker"}, service: "ocr-worker"},
+		{name: "subjective role still restricts mixed roles", roles: []string{"page_processing_worker", "subjective_grading_worker"}, service: "ocr-worker"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			store := workerruntime.NewMemoryStore()
+			handler := workerruntime.NewHandler(store, auth.NewMemoryStore())
+			task, err := store.CreateTask(t.Context(), runtimeTenantID, "school-actor", workerruntime.CreateTaskInput{
+				TaskType: "ocr", QueueName: "math-understanding", SourceType: "answer_segment", SourceID: "math-segment",
+				Payload: map[string]any{"exam_id": "math-exam"}, PayloadSchemaVersion: "math-understanding-input-v1", IdempotencyKey: "math-understanding:1",
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			worker := auth.User{ID: auth.PlatformTenantID, TenantID: auth.PlatformTenantID, Roles: tc.roles, Permissions: []string{"ocr:manage"}}
+			t.Run("claim", func(t *testing.T) {
+				body := `{"queue_name":"math-understanding","worker_service":"` + tc.service + `","worker_instance_id":"math-worker","limit":1,"lease_seconds":300}`
+				req := httptest.NewRequest(http.MethodPost, "/api/v1/internal/worker/tasks/claim", bytes.NewBufferString(body))
+				req = req.WithContext(auth.WithUser(req.Context(), worker))
+				rec := httptest.NewRecorder()
+				handler.Claim(rec, req)
+				if !tc.allowed {
+					if rec.Code != http.StatusForbidden || !bytes.Contains(rec.Body.Bytes(), []byte("worker_service_forbidden")) {
+						t.Fatalf("claim expected identity rejection, got %d %s", rec.Code, rec.Body.String())
+					}
+					return
+				}
+				var response struct {
+					Tasks []workerruntime.Task `json:"tasks"`
+				}
+				if rec.Code != http.StatusOK || json.Unmarshal(rec.Body.Bytes(), &response) != nil || len(response.Tasks) != 1 || response.Tasks[0].TenantID != runtimeTenantID {
+					t.Fatalf("claim expected school math task, got %d %s", rec.Code, rec.Body.String())
+				}
+			})
+
+			// 直接建立测试租约，让错误服务/角色即使持有完整租约也必须再次通过身份白名单。
+			scopeStore := workerruntime.NewMemoryStore()
+			_, err = scopeStore.CreateTask(t.Context(), runtimeTenantID, "school-actor", workerruntime.CreateTaskInput{
+				TaskType: "ocr", QueueName: "math-understanding", SourceType: "answer_segment", SourceID: "math-segment",
+				Payload: map[string]any{"exam_id": "math-exam"}, PayloadSchemaVersion: "math-understanding-input-v1", IdempotencyKey: "math-understanding:scope",
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			claimed, err := scopeStore.Claim(t.Context(), runtimeTenantID, workerruntime.ClaimInput{QueueName: "math-understanding", WorkerService: tc.service, WorkerInstanceID: "math-worker", Limit: 1, LeaseSeconds: 300})
+			if err != nil || len(claimed) != 1 {
+				t.Fatalf("seed lease: %v %#v", err, claimed)
+			}
+			task = claimed[0]
+			for _, boundary := range []struct {
+				name, lease, resource string
+				allowed               bool
+			}{
+				{name: "current lease", lease: task.LeaseToken, resource: task.SourceID, allowed: tc.allowed},
+				{name: "forged lease", lease: "forged-lease", resource: task.SourceID},
+				{name: "different resource", lease: task.LeaseToken, resource: "other-segment"},
+			} {
+				t.Run(boundary.name, func(t *testing.T) {
+					req := httptest.NewRequest(http.MethodPost, "/resource/"+boundary.resource, nil)
+					req.SetPathValue("id", boundary.resource)
+					req.Header.Set(workerruntime.TaskIDHeader, task.ID)
+					req.Header.Set(workerruntime.TaskLeaseHeader, boundary.lease)
+					req.Header.Set(workerruntime.WorkerServiceHeader, tc.service)
+					req.Header.Set(workerruntime.WorkerInstanceIDHeader, "math-worker")
+					req.Header.Set("X-EduGrade-Tenant-ID", "caller-selected-tenant")
+					req = req.WithContext(auth.WithUser(req.Context(), worker))
+					rec := httptest.NewRecorder()
+					workerruntime.TaskScope(scopeStore)(workerruntime.RequireTaskSource("answer_segment", "id")(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						user, _ := auth.UserFromContext(r.Context())
+						scope, _ := auth.AccessScopeFromContext(r.Context())
+						if user.TenantID != runtimeTenantID || user.ID != "" || !scope.AllowsExam("math-exam") {
+							t.Fatal("scope must derive school and exam from the persisted task")
+						}
+						w.WriteHeader(http.StatusNoContent)
+					}))).ServeHTTP(rec, req)
+					want := http.StatusForbidden
+					if boundary.allowed {
+						want = http.StatusNoContent
+					}
+					if rec.Code != want {
+						t.Fatalf("scope expected %d, got %d %s", want, rec.Code, rec.Body.String())
+					}
+				})
+			}
+		})
+	}
+}
+
 func TestHandlerRejectsSensitivePayload(t *testing.T) {
 	store := workerruntime.NewMemoryStore()
 	handler := workerruntime.NewHandler(store, auth.NewMemoryStore())

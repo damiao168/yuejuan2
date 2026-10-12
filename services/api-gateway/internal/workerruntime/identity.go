@@ -17,7 +17,8 @@ func workerIdentityAllows(user auth.User, queueName, workerService string) bool 
 	switch queueName {
 	case "page-processing":
 		return workerService == "page-processing"
-	case "ocr", "paper-formula", "math-verification":
+	// 数学理解与 OCR 共用 page_processing_worker 身份，仍只接受 ocr-worker 服务声明。
+	case "ocr", "math-understanding", "paper-formula", "math-verification":
 		return workerService == "ocr-worker"
 	case "image-quality":
 		return workerService == "image-quality-worker"
