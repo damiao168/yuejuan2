@@ -158,6 +158,8 @@ func TestHTTPManagedAPIQuickProbeKeepsShortTimeout(t *testing.T) {
 		}
 		gets.Add(1)
 		<-r.Context().Done()
+		// 取消后正常返回会补写空的 200 响应，并与客户端超时竞争；中断响应以避免空响应绕过响应头失败的重试路径。
+		panic(http.ErrAbortHandler)
 	}))
 	defer server.Close()
 	prober := newTestHTTPManagedAPIProber(server.Client())
